@@ -166,46 +166,48 @@ export default function Home() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto">
-      {/* User info/sign in/out UI removed, now in header */}
-      {/* Removed large title and subtitle for minimal layout */}
-      <form onSubmit={handleSubmit} className="space-y-4">
+    <div className="max-w-2xl mx-auto font-mono text-base" style={{ color: '#E9E0D2' }}>
+      {/* Input Area */}
+      <form onSubmit={handleSubmit} className="space-y-4 mt-8">
         <div className="flex gap-2">
           <input
             type="text"
             value={term}
             onChange={(e) => setTerm(e.target.value)}
             placeholder="Enter a term..."
-            className="flex-1 p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="flex-1 p-3 rounded-lg bg-[#173F35] border border-[#418E7B] focus:outline-none focus:ring-2 focus:ring-[#EAA09C] text-[#E9E0D2] placeholder-[#418E7B]"
             disabled={loading}
+            autoFocus
           />
           <button
             type="submit"
-            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-5 py-2 rounded-lg bg-[#EAA09C] text-[#173F35] font-bold hover:bg-[#E9E0D2] hover:text-[#173F35] focus:outline-none focus:ring-2 focus:ring-[#EAA09C] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             disabled={loading}
           >
-            {loading ? 'Loading...' : 'Learn'}
+            {loading ? '...' : 'Learn'}
           </button>
         </div>
       </form>
 
+      {/* Error Message */}
       {error && (
-        <div className="mt-4 p-4 bg-red-50 text-red-600 rounded-lg">
+        <div className="mt-4 p-4 rounded-lg bg-[#EAA09C] text-[#173F35] font-semibold">
           {error}
         </div>
       )}
 
+      {/* Explanation Card */}
       {explanation && (
-        <div className="mt-8 p-6 bg-white rounded-lg shadow-md">
-          <h2 className="text-2xl font-bold mb-4">{explanation.term}</h2>
+        <div className="mt-10 p-6 rounded-xl bg-[#1e5246] shadow-lg border border-[#418E7B]">
+          <h2 className="text-2xl font-bold mb-4 text-[#EAA09C]">{explanation.term}</h2>
           <div className="space-y-4">
             <div>
-              <h3 className="font-semibold text-gray-700">Definition</h3>
-              <p className="text-gray-600">{explanation.definition}</p>
+              <h3 className="font-semibold text-[#E9E0D2]">Definition</h3>
+              <p className="text-[#E9E0D2] opacity-80">{explanation.definition}</p>
             </div>
             <div>
-              <h3 className="font-semibold text-gray-700">Examples</h3>
-              <ul className="list-disc list-inside text-gray-600">
+              <h3 className="font-semibold text-[#E9E0D2]">Examples</h3>
+              <ul className="list-disc list-inside text-[#E9E0D2] opacity-80">
                 {explanation.examples.map((example, index) => (
                   <li key={index}>{example}</li>
                 ))}
@@ -213,13 +215,13 @@ export default function Home() {
             </div>
             {explanation.notes && (
               <div>
-                <h3 className="font-semibold text-gray-700">Notes</h3>
-                <p className="text-gray-600">{explanation.notes}</p>
+                <h3 className="font-semibold text-[#E9E0D2]">Notes</h3>
+                <p className="text-[#E9E0D2] opacity-70">{explanation.notes}</p>
               </div>
             )}
           </div>
           <button
-            className="mt-6 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500"
+            className="mt-6 px-4 py-2 rounded-lg bg-[#418E7B] text-[#E9E0D2] font-bold hover:bg-[#EAA09C] hover:text-[#173F35] focus:outline-none focus:ring-2 focus:ring-[#EAA09C] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             onClick={() => {
               setFlashcardDraft(explanation as Flashcard);
               setShowFlashcardForm(true);
@@ -230,53 +232,54 @@ export default function Home() {
             Save as Flashcard
           </button>
           {!user && (
-            <div className="mt-2 text-sm text-gray-500">Sign in to save flashcards.</div>
+            <div className="mt-2 text-sm text-[#E9E0D2] opacity-60">Sign in to save flashcards.</div>
           )}
         </div>
       )}
 
+      {/* Flashcard Edit/Save Form */}
       {showFlashcardForm && flashcardDraft && (
-        <div className="mt-8 p-6 bg-blue-50 rounded-lg shadow-md">
-          <h2 className="text-xl font-bold mb-4">Review & Edit Flashcard</h2>
+        <div className="mt-10 p-6 rounded-xl bg-[#173F35] border border-[#418E7B] shadow-lg">
+          <h2 className="text-xl font-bold mb-4 text-[#EAA09C]">Review & Edit Flashcard</h2>
           <div className="space-y-4">
             <div>
-              <label className="block font-semibold mb-1">Term</label>
+              <label className="block font-semibold mb-1 text-[#E9E0D2]">Term</label>
               <input
                 type="text"
                 value={flashcardDraft.term}
                 onChange={e => setFlashcardDraft({ ...flashcardDraft, term: e.target.value })}
-                className="w-full p-2 border border-gray-300 rounded-lg"
+                className="w-full p-2 rounded-lg bg-[#1e5246] border border-[#418E7B] text-[#E9E0D2]"
               />
             </div>
             <div>
-              <label className="block font-semibold mb-1">Definition</label>
+              <label className="block font-semibold mb-1 text-[#E9E0D2]">Definition</label>
               <textarea
                 value={flashcardDraft.definition}
                 onChange={e => setFlashcardDraft({ ...flashcardDraft, definition: e.target.value })}
-                className="w-full p-2 border border-gray-300 rounded-lg"
+                className="w-full p-2 rounded-lg bg-[#1e5246] border border-[#418E7B] text-[#E9E0D2]"
                 rows={2}
               />
             </div>
             <div>
-              <label className="block font-semibold mb-1">Examples</label>
+              <label className="block font-semibold mb-1 text-[#E9E0D2]">Examples</label>
               <textarea
                 value={flashcardDraft.examples.join('\n')}
                 onChange={e => setFlashcardDraft({ ...flashcardDraft, examples: e.target.value.split('\n') })}
-                className="w-full p-2 border border-gray-300 rounded-lg"
+                className="w-full p-2 rounded-lg bg-[#1e5246] border border-[#418E7B] text-[#E9E0D2]"
                 rows={3}
               />
             </div>
             <div>
-              <label className="block font-semibold mb-1">Notes</label>
+              <label className="block font-semibold mb-1 text-[#E9E0D2]">Notes</label>
               <textarea
                 value={flashcardDraft.notes}
                 onChange={e => setFlashcardDraft({ ...flashcardDraft, notes: e.target.value })}
-                className="w-full p-2 border border-gray-300 rounded-lg"
+                className="w-full p-2 rounded-lg bg-[#1e5246] border border-[#418E7B] text-[#E9E0D2]"
                 rows={2}
               />
             </div>
             <button
-              className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="mt-4 px-4 py-2 rounded-lg bg-[#EAA09C] text-[#173F35] font-bold hover:bg-[#E9E0D2] hover:text-[#173F35] focus:outline-none focus:ring-2 focus:ring-[#EAA09C] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               onClick={handleSaveFlashcard}
               disabled={saving}
             >
@@ -286,59 +289,60 @@ export default function Home() {
         </div>
       )}
 
+      {/* Flashcard Save Success Message */}
       {saveSuccess && (
-        <div className="mt-4 p-4 bg-green-50 text-green-700 rounded-lg">
-          Flashcard saved to Firestore!
+        <div className="mt-4 p-4 rounded-lg bg-[#418E7B] text-[#E9E0D2] font-semibold">
+          Flashcard saved!
         </div>
       )}
 
-      {/* Display saved flashcards */}
+      {/* Saved Flashcards List */}
       {user && (
-        <div className="mt-12">
-          <h2 className="text-xl font-bold mb-4">Your Saved Flashcards</h2>
+        <div className="mt-16">
+          <h2 className="text-xl font-bold mb-4 text-[#EAA09C]">Your Saved Flashcards</h2>
           {flashcardsLoading ? (
-            <div className="text-gray-500">Loading flashcards...</div>
+            <div className="text-[#418E7B]">Loading flashcards...</div>
           ) : userFlashcards.length === 0 ? (
-            <div className="text-gray-500">No flashcards saved yet.</div>
+            <div className="text-[#418E7B]">No flashcards saved yet.</div>
           ) : (
             <ul className="space-y-4">
               {userFlashcards.map((card, idx) => (
-                <li key={idx} className="p-4 bg-white rounded-lg shadow border">
+                <li key={idx} className="p-4 rounded-xl bg-[#1e5246] border border-[#418E7B] shadow flex flex-col gap-2">
                   {editingCardId === card.id ? (
                     <div className="space-y-2">
                       <input
                         type="text"
                         value={editDraft?.term || ''}
                         onChange={e => handleEditChange('term', e.target.value)}
-                        className="w-full p-2 border border-gray-300 rounded-lg"
+                        className="w-full p-2 rounded-lg bg-[#173F35] border border-[#418E7B] text-[#E9E0D2]"
                       />
                       <textarea
                         value={editDraft?.definition || ''}
                         onChange={e => handleEditChange('definition', e.target.value)}
-                        className="w-full p-2 border border-gray-300 rounded-lg"
+                        className="w-full p-2 rounded-lg bg-[#173F35] border border-[#418E7B] text-[#E9E0D2]"
                         rows={2}
                       />
                       <textarea
                         value={(editDraft?.examples || []).join('\n')}
                         onChange={e => handleEditChange('examples', e.target.value.split('\n'))}
-                        className="w-full p-2 border border-gray-300 rounded-lg"
+                        className="w-full p-2 rounded-lg bg-[#173F35] border border-[#418E7B] text-[#E9E0D2]"
                         rows={3}
                       />
                       <textarea
                         value={editDraft?.notes || ''}
                         onChange={e => handleEditChange('notes', e.target.value)}
-                        className="w-full p-2 border border-gray-300 rounded-lg"
+                        className="w-full p-2 rounded-lg bg-[#173F35] border border-[#418E7B] text-[#E9E0D2]"
                         rows={2}
                       />
                       <div className="flex gap-2 mt-2">
                         <button
-                          className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+                          className="px-4 py-2 rounded-lg bg-[#EAA09C] text-[#173F35] font-bold hover:bg-[#E9E0D2] hover:text-[#173F35]"
                           onClick={() => handleEditSave(card)}
                         >
                           Save
                         </button>
                         <button
-                          className="px-4 py-2 bg-gray-300 text-black rounded-lg hover:bg-gray-400"
+                          className="px-4 py-2 rounded-lg bg-[#418E7B] text-[#E9E0D2] font-bold hover:bg-[#EAA09C] hover:text-[#173F35]"
                           onClick={handleEditCancel}
                         >
                           Cancel
@@ -347,33 +351,35 @@ export default function Home() {
                     </div>
                   ) : (
                     <>
-                      <div className="font-semibold text-lg mb-1">{card.term}</div>
-                      <div className="text-gray-700 mb-1">{card.definition}</div>
+                      <div className="font-semibold text-lg text-[#E9E0D2]">{card.term}</div>
+                      <div className="text-[#E9E0D2] opacity-80">{card.definition}</div>
                       {card.examples && card.examples.length > 0 && (
-                        <ul className="list-disc list-inside text-gray-600 mb-1">
+                        <ul className="list-disc list-inside text-[#E9E0D2] opacity-80 mb-1">
                           {card.examples.map((ex, i) => (
                             <li key={i}>{ex}</li>
                           ))}
                         </ul>
                       )}
                       {card.notes && (
-                        <div className="text-gray-500 text-sm">{card.notes}</div>
+                        <div className="text-[#E9E0D2] opacity-60 text-sm">{card.notes}</div>
                       )}
-                      <div className="text-xs text-gray-400 mt-2">
+                      <div className="text-xs text-[#418E7B] mt-2">
                         Saved: {card.createdAt instanceof Date ? card.createdAt.toLocaleString() : String(card.createdAt)}
                       </div>
-                      <button
-                        className="mt-2 px-3 py-1 bg-yellow-400 text-black rounded hover:bg-yellow-500"
-                        onClick={() => handleEditClick(card)}
-                      >
-                        Edit
-                      </button>
-                      <button
-                        className="mt-2 px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 ml-2"
-                        onClick={() => handleDeleteCard(card)}
-                      >
-                        Delete
-                      </button>
+                      <div className="flex gap-2 mt-2">
+                        <button
+                          className="px-3 py-1 rounded-lg bg-[#EAA09C] text-[#173F35] font-bold hover:bg-[#E9E0D2] hover:text-[#173F35]"
+                          onClick={() => handleEditClick(card)}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          className="px-3 py-1 rounded-lg bg-[#418E7B] text-[#E9E0D2] font-bold hover:bg-[#EAA09C] hover:text-[#173F35]"
+                          onClick={() => handleDeleteCard(card)}
+                        >
+                          Delete
+                        </button>
+                      </div>
                     </>
                   )}
                 </li>
