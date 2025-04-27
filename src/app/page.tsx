@@ -33,6 +33,10 @@ export default function Home() {
   const [reviewComplete, setReviewComplete] = useState(false);
   const [editingCardId, setEditingCardId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState<Partial<Flashcard> | null>(null);
+  const [showContext, setShowContext] = useState(false);
+  const [showHanja, setShowHanja] = useState(false);
+  const [showExamples, setShowExamples] = useState(false);
+  const [showFlashcard, setShowFlashcard] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -201,24 +205,74 @@ export default function Home() {
         <div className="mt-10 p-6 rounded-xl bg-[#1e5246] shadow-lg border border-[#418E7B]">
           <h2 className="text-2xl font-bold mb-4 text-[#EAA09C]">{explanation.term}</h2>
           <div className="space-y-4">
+            {/* Always show definition */}
             <div>
               <h3 className="font-semibold text-[#E9E0D2]">Definition</h3>
               <p className="text-[#E9E0D2] opacity-80">{explanation.definition}</p>
             </div>
+            {/* Expandable: Cultural/Social Context */}
             <div>
-              <h3 className="font-semibold text-[#E9E0D2]">Examples</h3>
-              <ul className="list-disc list-inside text-[#E9E0D2] opacity-80">
-                {explanation.examples.map((example, index) => (
-                  <li key={index}>{example}</li>
-                ))}
-              </ul>
+              <button
+                className="flex items-center gap-2 text-[#EAA09C] font-semibold focus:outline-none"
+                onClick={() => setShowContext((v) => !v)}
+              >
+                {showContext ? '▼' : '▶'} Cultural/Social Context
+              </button>
+              {showContext && (
+                <div className="mt-2 text-[#E9E0D2] opacity-80">
+                  {/* Placeholder: Replace with real context from explanation.notes or future API */}
+                  {explanation.notes || 'No additional context available.'}
+                </div>
+              )}
             </div>
-            {explanation.notes && (
-              <div>
-                <h3 className="font-semibold text-[#E9E0D2]">Notes</h3>
-                <p className="text-[#E9E0D2] opacity-70">{explanation.notes}</p>
-              </div>
-            )}
+            {/* Expandable: Hanja Breakdown */}
+            <div>
+              <button
+                className="flex items-center gap-2 text-[#EAA09C] font-semibold focus:outline-none"
+                onClick={() => setShowHanja((v) => !v)}
+              >
+                {showHanja ? '▼' : '▶'} Hanja Breakdown
+              </button>
+              {showHanja && (
+                <div className="mt-2 text-[#E9E0D2] opacity-80">
+                  {/* Placeholder: Replace with real hanja breakdown from API */}
+                  {'Hanja breakdown coming soon.'}
+                </div>
+              )}
+            </div>
+            {/* Expandable: Example Usage */}
+            <div>
+              <button
+                className="flex items-center gap-2 text-[#EAA09C] font-semibold focus:outline-none"
+                onClick={() => setShowExamples((v) => !v)}
+              >
+                {showExamples ? '▼' : '▶'} Example Usage
+              </button>
+              {showExamples && (
+                <ul className="list-disc list-inside text-[#E9E0D2] opacity-80 mt-2">
+                  {explanation.examples.map((example, index) => (
+                    <li key={index}>{example}</li>
+                  ))}
+                </ul>
+              )}
+            </div>
+            {/* Expandable: Suggested Flashcard */}
+            <div>
+              <button
+                className="flex items-center gap-2 text-[#EAA09C] font-semibold focus:outline-none"
+                onClick={() => setShowFlashcard((v) => !v)}
+              >
+                {showFlashcard ? '▼' : '▶'} Suggested Flashcard
+              </button>
+              {showFlashcard && (
+                <div className="mt-2 text-[#E9E0D2] opacity-80">
+                  <div className="mb-1 font-semibold">Front:</div>
+                  <div className="mb-2 bg-[#173F35] rounded p-2">{explanation.term}</div>
+                  <div className="mb-1 font-semibold">Back:</div>
+                  <div className="bg-[#173F35] rounded p-2">{explanation.definition}</div>
+                </div>
+              )}
+            </div>
           </div>
           <button
             className="mt-6 px-4 py-2 rounded-lg bg-[#418E7B] text-[#E9E0D2] font-bold hover:bg-[#EAA09C] hover:text-[#173F35] focus:outline-none focus:ring-2 focus:ring-[#EAA09C] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
