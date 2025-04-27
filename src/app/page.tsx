@@ -1,18 +1,23 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { getTermExplanation, TermExplanation } from '@/services/gemini';
+import { getTermExplanation, TermExplanation, ExamplePair } from '@/services/gemini';
 import { db } from '@/config/firebase';
 import { saveFlashcardToFirestore, fetchUserFlashcards, Flashcard } from '@/services/firestore';
 import { doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { getNextReviewData } from '@/services/sm2';
 import { useUser } from '@/components/UserContext';
+import React from 'react';
 
 function isDue(card: Flashcard) {
   if (!card.nextReview) return true;
   const now = new Date();
   const reviewDate = card.nextReview instanceof Date ? card.nextReview : new Date(card.nextReview);
   return reviewDate <= now;
+}
+
+function isExamplePairArray(arr: unknown[]): arr is ExamplePair[] {
+  return arr.length === 0 || (typeof arr[0] === 'object' && arr[0] !== null && 'korean' in arr[0]);
 }
 
 export default function Home() {
@@ -202,93 +207,111 @@ export default function Home() {
 
       {/* Explanation Card */}
       {explanation && (
-        <div className="mt-10 p-6 rounded-xl bg-[#1e5246] shadow-lg border border-[#418E7B]">
-          <h2 className="text-2xl font-bold mb-4 text-[#EAA09C]">{explanation.term}</h2>
-          <div className="space-y-4">
-            {/* Always show definition */}
-            <div>
-              <h3 className="font-semibold text-[#E9E0D2]">Definition</h3>
-              <p className="text-[#E9E0D2] opacity-80">{explanation.definition}</p>
-            </div>
-            {/* Expandable: Cultural/Social Context */}
-            <div>
-              <button
-                className="flex items-center gap-2 text-[#EAA09C] font-semibold focus:outline-none"
-                onClick={() => setShowContext((v) => !v)}
-              >
-                {showContext ? '▼' : '▶'} Cultural/Social Context
-              </button>
-              {showContext && (
-                <div className="mt-2 text-[#E9E0D2] opacity-80">
-                  {/* Placeholder: Replace with real context from explanation.notes or future API */}
-                  {explanation.notes || 'No additional context available.'}
+        (() => {
+          // When using explanation.examples, always treat as unknown[] and only map after runtime check
+          let mappedExamples: ExamplePair[] = [];
+          const rawExamples = explanation.examples as unknown[];
+          if (Array.isArray(rawExamples) && rawExamples.length > 0 && typeof rawExamples[0] === 'string') {
+            mappedExamples = (rawExamples as string[]).filter(Boolean).map(korean => ({ korean, english: '' }));
+          } else if (Array.isArray(rawExamples) && isExamplePairArray(rawExamples)) {
+            mappedExamples = (rawExamples as ExamplePair[]).filter(Boolean);
+          }
+          return (
+            <div className="mt-10 p-6 rounded-xl bg-[#1e5246] shadow-lg border border-[#418E7B]">
+              <h2 className="text-2xl font-bold mb-4 text-[#EAA09C]">{explanation.term}</h2>
+              <div className="space-y-4">
+                {/* Always show translation */}
+                <div>
+                  <h3 className="font-semibold text-[#E9E0D2]">Translation</h3>
+                  <p className="text-[#E9E0D2] opacity-90">{explanation.translation || 'No translation available.'}</p>
                 </div>
-              )}
-            </div>
-            {/* Expandable: Hanja Breakdown */}
-            <div>
-              <button
-                className="flex items-center gap-2 text-[#EAA09C] font-semibold focus:outline-none"
-                onClick={() => setShowHanja((v) => !v)}
-              >
-                {showHanja ? '▼' : '▶'} Hanja Breakdown
-              </button>
-              {showHanja && (
-                <div className="mt-2 text-[#E9E0D2] opacity-80">
-                  {/* Placeholder: Replace with real hanja breakdown from API */}
-                  {'Hanja breakdown coming soon.'}
+                {/* Always show definition */}
+                <div>
+                  <h3 className="font-semibold text-[#E9E0D2]">Definition</h3>
+                  <p className="text-[#E9E0D2] opacity-80">{explanation.definition}</p>
                 </div>
-              )}
-            </div>
-            {/* Expandable: Example Usage */}
-            <div>
-              <button
-                className="flex items-center gap-2 text-[#EAA09C] font-semibold focus:outline-none"
-                onClick={() => setShowExamples((v) => !v)}
-              >
-                {showExamples ? '▼' : '▶'} Example Usage
-              </button>
-              {showExamples && (
-                <ul className="list-disc list-inside text-[#E9E0D2] opacity-80 mt-2">
-                  {explanation.examples.map((example, index) => (
-                    <li key={index}>{example}</li>
-                  ))}
-                </ul>
-              )}
-            </div>
-            {/* Expandable: Suggested Flashcard */}
-            <div>
-              <button
-                className="flex items-center gap-2 text-[#EAA09C] font-semibold focus:outline-none"
-                onClick={() => setShowFlashcard((v) => !v)}
-              >
-                {showFlashcard ? '▼' : '▶'} Suggested Flashcard
-              </button>
-              {showFlashcard && (
-                <div className="mt-2 text-[#E9E0D2] opacity-80">
-                  <div className="mb-1 font-semibold">Front:</div>
-                  <div className="mb-2 bg-[#173F35] rounded p-2">{explanation.term}</div>
-                  <div className="mb-1 font-semibold">Back:</div>
-                  <div className="bg-[#173F35] rounded p-2">{explanation.definition}</div>
+                {/* Expandable: Cultural/Social Context */}
+                <div>
+                  <button
+                    className="flex items-center gap-2 text-[#EAA09C] font-semibold focus:outline-none"
+                    onClick={() => setShowContext((v) => !v)}
+                  >
+                    {showContext ? '▼' : '▶'} Cultural/Social Context
+                  </button>
+                  {showContext && (
+                    <div className="mt-2 text-[#E9E0D2] opacity-80">
+                      {explanation.notes || 'No additional context available.'}
+                    </div>
+                  )}
                 </div>
+                {/* Expandable: Hanja Breakdown */}
+                <div>
+                  <button
+                    className="flex items-center gap-2 text-[#EAA09C] font-semibold focus:outline-none"
+                    onClick={() => setShowHanja((v) => !v)}
+                  >
+                    {showHanja ? '▼' : '▶'} Hanja Breakdown
+                  </button>
+                  {showHanja && (
+                    <div className="mt-2 text-[#E9E0D2] opacity-80">
+                      {explanation.hanja ? explanation.hanja : 'No hanja breakdown available.'}
+                    </div>
+                  )}
+                </div>
+                {/* Expandable: Example Usage */}
+                <div>
+                  <button
+                    className="flex items-center gap-2 text-[#EAA09C] font-semibold focus:outline-none"
+                    onClick={() => setShowExamples((v) => !v)}
+                  >
+                    {showExamples ? '▼' : '▶'} Example Usage
+                  </button>
+                  {showExamples && mappedExamples.length > 0 && (
+                    <ul className="list-disc list-inside text-[#E9E0D2] opacity-80 mt-2 space-y-2">
+                      {mappedExamples.map((ex, index) => (
+                        <li key={index}>
+                          {ex.korean && <div>{ex.korean}</div>}
+                          {ex.english && <div className="text-[#EAA09C] text-sm">{ex.english}</div>}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+                {/* Expandable: Suggested Flashcard */}
+                <div>
+                  <button
+                    className="flex items-center gap-2 text-[#EAA09C] font-semibold focus:outline-none"
+                    onClick={() => setShowFlashcard((v) => !v)}
+                  >
+                    {showFlashcard ? '▼' : '▶'} Suggested Flashcard
+                  </button>
+                  {showFlashcard && (
+                    <div className="mt-2 text-[#E9E0D2] opacity-80">
+                      <div className="mb-1 font-semibold">Front:</div>
+                      <div className="mb-2 bg-[#173F35] rounded p-2">{explanation.term}</div>
+                      <div className="mb-1 font-semibold">Back:</div>
+                      <div className="bg-[#173F35] rounded p-2">{explanation.translation}</div>
+                    </div>
+                  )}
+                </div>
+              </div>
+              <button
+                className="mt-6 px-4 py-2 rounded-lg bg-[#418E7B] text-[#E9E0D2] font-bold hover:bg-[#EAA09C] hover:text-[#173F35] focus:outline-none focus:ring-2 focus:ring-[#EAA09C] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                onClick={() => {
+                  setFlashcardDraft(explanation as Flashcard);
+                  setShowFlashcardForm(true);
+                  setSaveSuccess(false);
+                }}
+                disabled={!user}
+              >
+                Save as Flashcard
+              </button>
+              {!user && (
+                <div className="mt-2 text-sm text-[#E9E0D2] opacity-60">Sign in to save flashcards.</div>
               )}
             </div>
-          </div>
-          <button
-            className="mt-6 px-4 py-2 rounded-lg bg-[#418E7B] text-[#E9E0D2] font-bold hover:bg-[#EAA09C] hover:text-[#173F35] focus:outline-none focus:ring-2 focus:ring-[#EAA09C] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            onClick={() => {
-              setFlashcardDraft(explanation as Flashcard);
-              setShowFlashcardForm(true);
-              setSaveSuccess(false);
-            }}
-            disabled={!user}
-          >
-            Save as Flashcard
-          </button>
-          {!user && (
-            <div className="mt-2 text-sm text-[#E9E0D2] opacity-60">Sign in to save flashcards.</div>
-          )}
-        </div>
+          );
+        })()
       )}
 
       {/* Flashcard Edit/Save Form */}
@@ -306,30 +329,12 @@ export default function Home() {
               />
             </div>
             <div>
-              <label className="block font-semibold mb-1 text-[#E9E0D2]">Definition</label>
-              <textarea
-                value={flashcardDraft.definition}
-                onChange={e => setFlashcardDraft({ ...flashcardDraft, definition: e.target.value })}
+              <label className="block font-semibold mb-1 text-[#E9E0D2]">Translation</label>
+              <input
+                type="text"
+                value={flashcardDraft.translation || ''}
+                onChange={e => setFlashcardDraft({ ...flashcardDraft, translation: e.target.value })}
                 className="w-full p-2 rounded-lg bg-[#1e5246] border border-[#418E7B] text-[#E9E0D2]"
-                rows={2}
-              />
-            </div>
-            <div>
-              <label className="block font-semibold mb-1 text-[#E9E0D2]">Examples</label>
-              <textarea
-                value={flashcardDraft.examples.join('\n')}
-                onChange={e => setFlashcardDraft({ ...flashcardDraft, examples: e.target.value.split('\n') })}
-                className="w-full p-2 rounded-lg bg-[#1e5246] border border-[#418E7B] text-[#E9E0D2]"
-                rows={3}
-              />
-            </div>
-            <div>
-              <label className="block font-semibold mb-1 text-[#E9E0D2]">Notes</label>
-              <textarea
-                value={flashcardDraft.notes}
-                onChange={e => setFlashcardDraft({ ...flashcardDraft, notes: e.target.value })}
-                className="w-full p-2 rounded-lg bg-[#1e5246] border border-[#418E7B] text-[#E9E0D2]"
-                rows={2}
               />
             </div>
             <button
@@ -370,23 +375,11 @@ export default function Home() {
                         onChange={e => handleEditChange('term', e.target.value)}
                         className="w-full p-2 rounded-lg bg-[#173F35] border border-[#418E7B] text-[#E9E0D2]"
                       />
-                      <textarea
-                        value={editDraft?.definition || ''}
-                        onChange={e => handleEditChange('definition', e.target.value)}
+                      <input
+                        type="text"
+                        value={editDraft?.translation || ''}
+                        onChange={e => handleEditChange('translation', e.target.value)}
                         className="w-full p-2 rounded-lg bg-[#173F35] border border-[#418E7B] text-[#E9E0D2]"
-                        rows={2}
-                      />
-                      <textarea
-                        value={(editDraft?.examples || []).join('\n')}
-                        onChange={e => handleEditChange('examples', e.target.value.split('\n'))}
-                        className="w-full p-2 rounded-lg bg-[#173F35] border border-[#418E7B] text-[#E9E0D2]"
-                        rows={3}
-                      />
-                      <textarea
-                        value={editDraft?.notes || ''}
-                        onChange={e => handleEditChange('notes', e.target.value)}
-                        className="w-full p-2 rounded-lg bg-[#173F35] border border-[#418E7B] text-[#E9E0D2]"
-                        rows={2}
                       />
                       <div className="flex gap-2 mt-2">
                         <button
@@ -406,17 +399,7 @@ export default function Home() {
                   ) : (
                     <>
                       <div className="font-semibold text-lg text-[#E9E0D2]">{card.term}</div>
-                      <div className="text-[#E9E0D2] opacity-80">{card.definition}</div>
-                      {card.examples && card.examples.length > 0 && (
-                        <ul className="list-disc list-inside text-[#E9E0D2] opacity-80 mb-1">
-                          {card.examples.map((ex, i) => (
-                            <li key={i}>{ex}</li>
-                          ))}
-                        </ul>
-                      )}
-                      {card.notes && (
-                        <div className="text-[#E9E0D2] opacity-60 text-sm">{card.notes}</div>
-                      )}
+                      <div className="text-[#EAA09C] text-base">{card.translation}</div>
                       <div className="text-xs text-[#418E7B] mt-2">
                         Saved: {card.createdAt instanceof Date ? card.createdAt.toLocaleString() : String(card.createdAt)}
                       </div>
