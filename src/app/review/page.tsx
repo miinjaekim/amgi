@@ -5,12 +5,17 @@ import { fetchUserFlashcards, Flashcard } from '@/services/firestore';
 import { db } from '@/config/firebase';
 import { doc, updateDoc } from 'firebase/firestore';
 import { getNextReviewData } from '@/services/sm2';
+import { ExamplePair } from '@/services/gemini';
 
 function isDue(card: Flashcard) {
   if (!card.nextReview) return true;
   const now = new Date();
   const reviewDate = card.nextReview instanceof Date ? card.nextReview : new Date(card.nextReview);
   return reviewDate <= now;
+}
+
+function isExamplePairArray(arr: unknown[]): arr is { korean: string; english: string }[] {
+  return arr.length === 0 || (typeof arr[0] === 'object' && arr[0] !== null && 'korean' in arr[0]);
 }
 
 export default function ReviewPage() {
@@ -98,18 +103,40 @@ export default function ReviewPage() {
             ) : (
               <>
                 <h2 className="text-xl font-bold mb-4">Review Card {currentReviewIdx + 1} of {dueCards.length}</h2>
-                <div className="mb-4">
-                  <div className="font-semibold text-lg mb-1">{dueCards[currentReviewIdx].term}</div>
-                  <div className="text-gray-700 mb-1">{dueCards[currentReviewIdx].definition}</div>
+                <div className="mb-4 p-6 rounded-xl bg-[#173F35] border border-[#418E7B] shadow-lg">
+                  <div className="font-semibold text-2xl mb-2 text-[#EAA09C]">{dueCards[currentReviewIdx].term}</div>
+                  {dueCards[currentReviewIdx].translation && (
+                    <div className="text-lg mb-2 text-[#E9E0D2]">{dueCards[currentReviewIdx].translation}</div>
+                  )}
+                  {dueCards[currentReviewIdx].definition && (
+                    <div className="mb-4 text-[#E9E0D2] opacity-90">{dueCards[currentReviewIdx].definition}</div>
+                  )}
                   {dueCards[currentReviewIdx].examples && dueCards[currentReviewIdx].examples.length > 0 && (
-                    <ul className="list-disc list-inside text-gray-600 mb-1">
-                      {dueCards[currentReviewIdx].examples.map((ex, i) => (
-                        <li key={i}>{ex}</li>
-                      ))}
-                    </ul>
+                    <div className="mb-4">
+                      <div className="font-semibold text-[#EAA09C] mb-1">Example Usage</div>
+                      <ul className="list-disc list-inside text-[#E9E0D2] opacity-90 space-y-2">
+                        {(() => {
+                          const rawExamples = dueCards[currentReviewIdx].examples as unknown[];
+                          if (Array.isArray(rawExamples) && rawExamples.length > 0 && typeof rawExamples[0] === 'string') {
+                            return (rawExamples as string[]).map((ex, i) => (
+                              <li key={i}>{ex}</li>
+                            ));
+                          } else if (Array.isArray(rawExamples) && isExamplePairArray(rawExamples)) {
+                            return (rawExamples as ExamplePair[]).map((ex, i) => (
+                              <li key={i}>
+                                <div>{ex.korean}</div>
+                                <div className="text-[#EAA09C] text-sm">{ex.english}</div>
+                              </li>
+                            ));
+                          } else {
+                            return null;
+                          }
+                        })()}
+                      </ul>
+                    </div>
                   )}
                   {dueCards[currentReviewIdx].notes && (
-                    <div className="text-gray-500 text-sm">{dueCards[currentReviewIdx].notes}</div>
+                    <div className="mt-2 text-[#E9E0D2] opacity-70 text-sm">{dueCards[currentReviewIdx].notes}</div>
                   )}
                 </div>
                 <div className="flex gap-2 mt-4">

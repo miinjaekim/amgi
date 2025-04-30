@@ -1,10 +1,17 @@
 import { getGeminiModel } from '@/config/gemini';
 
+export interface ExamplePair {
+  korean: string;
+  english: string;
+}
+
 export interface TermExplanation {
   term: string;
+  translation: string; // short, comma-separated
   definition: string;
-  examples: string[];
-  notes: string;
+  hanja?: string;
+  examples: ExamplePair[];
+  notes?: string;
 }
 
 function stripMarkdownCodeBlock(text: string): string {
@@ -16,16 +23,23 @@ export async function getTermExplanation(term: string): Promise<TermExplanation>
   const model = getGeminiModel();
   
   const prompt = `Please provide a detailed explanation for the Korean term "${term}". Include:
-1. A clear definition
-2. 2-3 example sentences
-3. Any important notes about usage, context, or cultural significance
+1. A short, comma-separated English translation (e.g., 'insight, discernment, taste')
+2. A clear, detailed definition
+3. Hanja breakdown (if available)
+4. 2-3 example sentences, each with both Korean and English translation
+5. Any important notes about usage, context, or cultural significance
 
 Format the response as JSON with the following structure:
 {
   "term": "${term}",
+  "translation": "short translation here",
   "definition": "definition here",
-  "examples": ["example1", "example2"],
-  "notes": "additional notes here"
+  "hanja": "hanja breakdown here (or empty string if not available)",
+  "examples": [
+    { "korean": "example sentence in Korean", "english": "English translation" },
+    { "korean": "...", "english": "..." }
+  ],
+  "notes": "additional notes here (optional)"
 }`;
 
   try {
