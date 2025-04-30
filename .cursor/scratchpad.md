@@ -87,9 +87,10 @@ Feel like "chatting with a brilliant native speaker who instantly turns each exp
 - [x] **Bidirectional Review System:** Implement complete bidirectional flashcard review with independent tracking
 
 ### In Progress
-- [ ] **Review System Improvements:**
+- [x] **Review System Improvements:**
   - [x] Simplify card backs to show only translation initially
   - [x] Change "Again" behavior to schedule for next session instead of current session
+  - [x] Fix scheduling bug and create tests
 - [ ] **UI/UX Polish:** Improve responsiveness and accessibility
 - [ ] **Redesign Explanation Output:** Make definition always visible with expandable context/hanja/examples
 
@@ -121,6 +122,12 @@ Feel like "chatting with a brilliant native speaker who instantly turns each exp
    - [x] Schedule failed cards for immediate review in the next session
    - [x] Remove current re-insertion into the active queue
    - **Success Criteria:** Failed cards appear at the beginning of the next review session but don't extend the current session
+
+3. **Testing and Bug Fixes** [COMPLETED]
+   - [x] Create tests for review scheduling logic
+   - [x] Fix bug with cards always being scheduled for immediate review
+   - [x] Add logging for better debugging
+   - **Success Criteria:** Cards are scheduled according to SM-2 algorithm with correct interval calculation
 
 ## 5. UI/UX Guidelines
 
