@@ -23,8 +23,17 @@ function isDue(card: Flashcard): { due: boolean, directions: ReviewDirection[] }
     if (fbReviewDate <= now) {
       directions.push('frontToBack');
     }
+  } else if (card.nextReview) {
+    // If no frontToBack tracking but legacy nextReview exists and is due,
+    // consider frontToBack due (needs migration)
+    const legacyReviewDate = card.nextReview instanceof Date ? 
+      card.nextReview : 
+      new Date(card.nextReview);
+    if (legacyReviewDate <= now) {
+      directions.push('frontToBack');
+    }
   } else {
-    // If no frontToBack tracking, consider it due (needs migration)
+    // If no tracking at all, consider it due (needs initialization)
     directions.push('frontToBack');
   }
   
@@ -36,19 +45,18 @@ function isDue(card: Flashcard): { due: boolean, directions: ReviewDirection[] }
     if (bfReviewDate <= now) {
       directions.push('backToFront');
     }
-  } else {
-    // If no backToFront tracking, consider it due (needs migration)
-    directions.push('backToFront');
-  }
-  
-  // Legacy support - if no directions are due but legacy nextReview is due, add frontToBack
-  if (directions.length === 0 && card.nextReview) {
+  } else if (card.nextReview && directions.length === 0) {
+    // If no backToFront tracking but legacy nextReview exists and is due,
+    // and frontToBack is not already due, consider backToFront due
     const legacyReviewDate = card.nextReview instanceof Date ? 
       card.nextReview : 
       new Date(card.nextReview);
     if (legacyReviewDate <= now) {
-      directions.push('frontToBack');
+      directions.push('backToFront');
     }
+  } else if (!card.frontToBack) {
+    // If no tracking at all, consider it due (needs initialization)
+    directions.push('backToFront');
   }
   
   return { due: directions.length > 0, directions };
@@ -75,42 +83,64 @@ export default function ReviewPage() {
   const [reviewComplete, setReviewComplete] = useState(false);
   const [showAnswer, setShowAnswer] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+  
+  // Check if we're in development mode
+  const isDevelopment = process.env.NODE_ENV === 'development';
 
   // Run migration on initial load for the user
   useEffect(() => {
     if (user && !migrationComplete) {
-      setFlashcardsLoading(true);
-      migrateExistingCards(user.uid)
-        .then(count => {
-          console.log(`Migrated ${count} cards to bidirectional tracking`);
-          setMigrationComplete(true);
-          return fetchUserFlashcards(user.uid);
-        })
-        .then(cards => {
-          setUserFlashcards(cards);
-          // Create review queue with all due cards and their directions
-          const queue: ReviewQueueItem[] = [];
-          cards.forEach(card => {
-            const { due, directions } = isDue(card);
-            if (due) {
-              directions.forEach(dir => {
-                queue.push({ card, direction: dir });
-              });
-            }
-          });
-          setDueCards(queue);
-        })
-        .catch(error => {
-          console.error('Error during migration or fetching cards:', error);
-          setUserFlashcards([]);
-          setDueCards([]);
-        })
-        .finally(() => setFlashcardsLoading(false));
+      loadCards();
     } else if (!user) {
       setUserFlashcards([]);
       setDueCards([]);
     }
   }, [user, migrationComplete]);
+
+  // Load cards with optional force migration
+  const loadCards = async (forceMigration = false) => {
+    if (!user) return;
+    
+    setFlashcardsLoading(true);
+    try {
+      // If forcing migration or not migrated yet, run migration first
+      if (forceMigration || !migrationComplete) {
+        const count = await migrateExistingCards(user.uid);
+        console.log(`Migrated/updated ${count} cards to bidirectional tracking`);
+        setMigrationComplete(true);
+      }
+      
+      // Fetch updated cards
+      const cards = await fetchUserFlashcards(user.uid);
+      setUserFlashcards(cards);
+      
+      // Create review queue with all due cards and their directions
+      const queue: ReviewQueueItem[] = [];
+      cards.forEach(card => {
+        const { due, directions } = isDue(card);
+        if (due) {
+          directions.forEach(dir => {
+            queue.push({ card, direction: dir });
+          });
+        }
+      });
+      setDueCards(queue);
+    } catch (error) {
+      console.error('Error during migration or fetching cards:', error);
+      setUserFlashcards([]);
+      setDueCards([]);
+    } finally {
+      setFlashcardsLoading(false);
+      setIsSyncing(false);
+    }
+  };
+
+  // Force sync all cards to ensure consistency
+  const handleForceSynchronize = async () => {
+    setIsSyncing(true);
+    await loadCards(true);
+  };
 
   const handleStartReview = () => {
     setReviewMode(true);
@@ -149,12 +179,30 @@ export default function ReviewPage() {
       update[`${direction}.ease`] = ease;
       update[`${direction}.repetitions`] = repetitions;
       
-      // For "again" responses, set to review immediately but don't add to current queue
+      // For "again" responses, override nextReview to be immediate (now)
+      // For other responses, use the calculated nextReview from SM-2
       if (response === 'again') {
         // Set next review to now (will be shown in next session)
         update[`${direction}.nextReview`] = new Date();
+        
+        // Also update legacy nextReview field at the root level
+        update.nextReview = new Date();
+        
+        // For debugging
+        console.log('Again response:', update);
       } else {
+        // Use the calculated nextReview from SM-2 algorithm (future date)
         update[`${direction}.nextReview`] = nextReview;
+        
+        // Also update legacy nextReview field at the root level to be the same
+        update.nextReview = nextReview;
+        
+        // For debugging
+        console.log(`${response} response:`, {
+          interval, 
+          nextReview: nextReview.toISOString(),
+          daysFromNow: interval
+        });
       }
       
       await updateDoc(doc(db, 'cards', card.id), update);
@@ -178,6 +226,9 @@ export default function ReviewPage() {
     setCurrentReviewIdx(0);
     setShowAnswer(false);
     setShowDetails(false);
+    
+    // Refresh cards to update due cards count
+    loadCards();
   };
 
   // Get the current review item from the queue
@@ -191,7 +242,20 @@ export default function ReviewPage() {
           flashcardsLoading ? (
             <div className="text-[#418E7B]">Loading flashcards...</div>
           ) : dueCards.length === 0 ? (
-            <div className="text-[#418E7B]">No cards due for review.</div>
+            <div>
+              <div className="text-[#418E7B] mb-4">No cards due for review.</div>
+              
+              {/* Sync button only in development mode */}
+              {isDevelopment && (
+                <button
+                  className="px-3 py-1 bg-[#418E7B] text-white rounded hover:bg-[#2d6355] text-sm"
+                  onClick={handleForceSynchronize}
+                  disabled={isSyncing}
+                >
+                  {isSyncing ? 'Synchronizing...' : 'Force Synchronize Cards'}
+                </button>
+              )}
+            </div>
           ) : reviewMode ? (
             reviewComplete ? (
               <>
@@ -399,13 +463,24 @@ export default function ReviewPage() {
               </>
             )
           ) : (
-            <div className="flex justify-center">
+            <div className="flex flex-col items-center">
               <button
-                className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-lg font-semibold"
+                className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-lg font-semibold mb-4"
                 onClick={handleStartReview}
               >
                 Review {dueCards.length} Card{dueCards.length > 1 ? 's' : ''} Due
               </button>
+              
+              {/* Sync button only in development mode */}
+              {isDevelopment && (
+                <button
+                  className="px-3 py-1 bg-[#418E7B] text-white rounded hover:bg-[#2d6355] text-sm"
+                  onClick={handleForceSynchronize}
+                  disabled={isSyncing}
+                >
+                  {isSyncing ? 'Synchronizing...' : 'Force Synchronize Cards'}
+                </button>
+              )}
             </div>
           )
         ) : (
