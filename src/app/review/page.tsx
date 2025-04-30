@@ -74,6 +74,7 @@ export default function ReviewPage() {
   const [currentReviewIdx, setCurrentReviewIdx] = useState(0);
   const [reviewComplete, setReviewComplete] = useState(false);
   const [showAnswer, setShowAnswer] = useState(false);
+  const [showDetails, setShowDetails] = useState(false);
 
   // Run migration on initial load for the user
   useEffect(() => {
@@ -116,10 +117,16 @@ export default function ReviewPage() {
     setCurrentReviewIdx(0);
     setReviewComplete(false);
     setShowAnswer(false);
+    setShowDetails(false);
   };
 
   const handleShowAnswer = () => {
     setShowAnswer(true);
+    setShowDetails(false); // Reset details visibility on new answer
+  };
+  
+  const handleToggleDetails = () => {
+    setShowDetails(!showDetails);
   };
 
   const handleReviewResponse = async (response: 'again' | 'hard' | 'good' | 'easy') => {
@@ -141,19 +148,16 @@ export default function ReviewPage() {
       update[`${direction}.interval`] = interval;
       update[`${direction}.ease`] = ease;
       update[`${direction}.repetitions`] = repetitions;
-      update[`${direction}.nextReview`] = nextReview;
+      
+      // For "again" responses, set to review immediately but don't add to current queue
+      if (response === 'again') {
+        // Set next review to now (will be shown in next session)
+        update[`${direction}.nextReview`] = new Date();
+      } else {
+        update[`${direction}.nextReview`] = nextReview;
+      }
       
       await updateDoc(doc(db, 'cards', card.id), update);
-      
-      // If response is "again", add this card back to the queue
-      if (response === 'again') {
-        // Add to the end of the queue
-        setDueCards(prev => {
-          const newQueue = [...prev];
-          newQueue.push({ card, direction });
-          return newQueue;
-        });
-      }
     } catch (err) {
       console.error('Failed to update card scheduling:', err);
     }
@@ -162,6 +166,7 @@ export default function ReviewPage() {
     if (currentReviewIdx + 1 < dueCards.length) {
       setCurrentReviewIdx(currentReviewIdx + 1);
       setShowAnswer(false); // Reset for next card
+      setShowDetails(false); // Reset details visibility
     } else {
       setReviewComplete(true);
     }
@@ -172,6 +177,7 @@ export default function ReviewPage() {
     setReviewComplete(false);
     setCurrentReviewIdx(0);
     setShowAnswer(false);
+    setShowDetails(false);
   };
 
   // Get the current review item from the queue
@@ -214,40 +220,62 @@ export default function ReviewPage() {
                       <div className="font-semibold text-2xl mb-2 text-[#EAA09C]">{currentReview.card.term}</div>
                       
                       {showAnswer ? (
-                        // Show answer content when revealed
+                        // Show answer content when revealed - just translation initially
                         <>
                           {currentReview.card.translation && (
-                            <div className="text-lg mb-2 text-[#E9E0D2]">{currentReview.card.translation}</div>
+                            <div className="text-lg mb-3 text-[#E9E0D2] font-semibold">{currentReview.card.translation}</div>
                           )}
-                          {currentReview.card.definition && (
-                            <div className="mb-4 text-[#E9E0D2] opacity-90">{currentReview.card.definition}</div>
-                          )}
-                          {currentReview.card.examples && currentReview.card.examples.length > 0 && (
-                            <div className="mb-4">
-                              <div className="font-semibold text-[#EAA09C] mb-1">Example Usage</div>
-                              <ul className="list-disc list-inside text-[#E9E0D2] opacity-90 space-y-2">
-                                {(() => {
-                                  const rawExamples = currentReview.card.examples as unknown[];
-                                  if (Array.isArray(rawExamples) && rawExamples.length > 0 && typeof rawExamples[0] === 'string') {
-                                    return (rawExamples as string[]).map((ex, i) => (
-                                      <li key={i}>{ex}</li>
-                                    ));
-                                  } else if (Array.isArray(rawExamples) && isExamplePairArray(rawExamples)) {
-                                    return (rawExamples as ExamplePair[]).map((ex, i) => (
-                                      <li key={i}>
-                                        <div>{ex.korean}</div>
-                                        <div className="text-[#EAA09C] text-sm">{ex.english}</div>
-                                      </li>
-                                    ));
-                                  } else {
-                                    return null;
-                                  }
-                                })()}
-                              </ul>
+                          
+                          {/* Show Details button */}
+                          <button 
+                            onClick={handleToggleDetails}
+                            className="text-sm px-3 py-1 bg-[#2d6355] text-[#E9E0D2] rounded hover:bg-[#418E7B] mb-4"
+                          >
+                            {showDetails ? 'Hide Details' : 'Show Details'}
+                          </button>
+                          
+                          {/* Additional details that can be expanded */}
+                          {showDetails && (
+                            <div className="mt-3 pt-3 border-t border-[#418E7B]">
+                              {currentReview.card.definition && (
+                                <div className="mb-4">
+                                  <div className="font-semibold text-[#EAA09C] text-sm mb-1">Definition</div>
+                                  <div className="text-[#E9E0D2] opacity-90">{currentReview.card.definition}</div>
+                                </div>
+                              )}
+                              
+                              {currentReview.card.examples && currentReview.card.examples.length > 0 && (
+                                <div className="mb-4">
+                                  <div className="font-semibold text-[#EAA09C] text-sm mb-1">Example Usage</div>
+                                  <ul className="list-disc list-inside text-[#E9E0D2] opacity-90 space-y-2">
+                                    {(() => {
+                                      const rawExamples = currentReview.card.examples as unknown[];
+                                      if (Array.isArray(rawExamples) && rawExamples.length > 0 && typeof rawExamples[0] === 'string') {
+                                        return (rawExamples as string[]).map((ex, i) => (
+                                          <li key={i}>{ex}</li>
+                                        ));
+                                      } else if (Array.isArray(rawExamples) && isExamplePairArray(rawExamples)) {
+                                        return (rawExamples as ExamplePair[]).map((ex, i) => (
+                                          <li key={i}>
+                                            <div>{ex.korean}</div>
+                                            <div className="text-[#EAA09C] text-sm">{ex.english}</div>
+                                          </li>
+                                        ));
+                                      } else {
+                                        return null;
+                                      }
+                                    })()}
+                                  </ul>
+                                </div>
+                              )}
+                              
+                              {currentReview.card.notes && (
+                                <div className="mt-2">
+                                  <div className="font-semibold text-[#EAA09C] text-sm mb-1">Notes</div>
+                                  <div className="text-[#E9E0D2] opacity-70 text-sm">{currentReview.card.notes}</div>
+                                </div>
+                              )}
                             </div>
-                          )}
-                          {currentReview.card.notes && (
-                            <div className="mt-2 text-[#E9E0D2] opacity-70 text-sm">{currentReview.card.notes}</div>
                           )}
                         </>
                       ) : (
@@ -263,41 +291,62 @@ export default function ReviewPage() {
                       {currentReview.card.translation && (
                         <div className="text-lg mb-2 text-[#E9E0D2]">{currentReview.card.translation}</div>
                       )}
-                      {currentReview.card.definition && (
-                        <div className="mb-4 text-[#E9E0D2] opacity-90">{currentReview.card.definition}</div>
-                      )}
                       
                       {showAnswer ? (
-                        // Show answer content when revealed
+                        // Show answer content when revealed - just the term initially
                         <>
-                          <div className="font-semibold text-2xl mb-2 text-[#EAA09C] mt-4">{currentReview.card.term}</div>
+                          <div className="font-semibold text-2xl mb-3 text-[#EAA09C] mt-4">{currentReview.card.term}</div>
                           
-                          {currentReview.card.examples && currentReview.card.examples.length > 0 && (
-                            <div className="mb-4">
-                              <div className="font-semibold text-[#EAA09C] mb-1">Example Usage</div>
-                              <ul className="list-disc list-inside text-[#E9E0D2] opacity-90 space-y-2">
-                                {(() => {
-                                  const rawExamples = currentReview.card.examples as unknown[];
-                                  if (Array.isArray(rawExamples) && rawExamples.length > 0 && typeof rawExamples[0] === 'string') {
-                                    return (rawExamples as string[]).map((ex, i) => (
-                                      <li key={i}>{ex}</li>
-                                    ));
-                                  } else if (Array.isArray(rawExamples) && isExamplePairArray(rawExamples)) {
-                                    return (rawExamples as ExamplePair[]).map((ex, i) => (
-                                      <li key={i}>
-                                        <div>{ex.korean}</div>
-                                        <div className="text-[#EAA09C] text-sm">{ex.english}</div>
-                                      </li>
-                                    ));
-                                  } else {
-                                    return null;
-                                  }
-                                })()}
-                              </ul>
+                          {/* Show Details button */}
+                          <button 
+                            onClick={handleToggleDetails}
+                            className="text-sm px-3 py-1 bg-[#2d6355] text-[#E9E0D2] rounded hover:bg-[#418E7B] mb-4"
+                          >
+                            {showDetails ? 'Hide Details' : 'Show Details'}
+                          </button>
+                          
+                          {/* Additional details that can be expanded */}
+                          {showDetails && (
+                            <div className="mt-3 pt-3 border-t border-[#418E7B]">
+                              {currentReview.card.definition && (
+                                <div className="mb-4">
+                                  <div className="font-semibold text-[#EAA09C] text-sm mb-1">Definition</div>
+                                  <div className="text-[#E9E0D2] opacity-90">{currentReview.card.definition}</div>
+                                </div>
+                              )}
+                              
+                              {currentReview.card.examples && currentReview.card.examples.length > 0 && (
+                                <div className="mb-4">
+                                  <div className="font-semibold text-[#EAA09C] text-sm mb-1">Example Usage</div>
+                                  <ul className="list-disc list-inside text-[#E9E0D2] opacity-90 space-y-2">
+                                    {(() => {
+                                      const rawExamples = currentReview.card.examples as unknown[];
+                                      if (Array.isArray(rawExamples) && rawExamples.length > 0 && typeof rawExamples[0] === 'string') {
+                                        return (rawExamples as string[]).map((ex, i) => (
+                                          <li key={i}>{ex}</li>
+                                        ));
+                                      } else if (Array.isArray(rawExamples) && isExamplePairArray(rawExamples)) {
+                                        return (rawExamples as ExamplePair[]).map((ex, i) => (
+                                          <li key={i}>
+                                            <div>{ex.korean}</div>
+                                            <div className="text-[#EAA09C] text-sm">{ex.english}</div>
+                                          </li>
+                                        ));
+                                      } else {
+                                        return null;
+                                      }
+                                    })()}
+                                  </ul>
+                                </div>
+                              )}
+                              
+                              {currentReview.card.notes && (
+                                <div className="mt-2">
+                                  <div className="font-semibold text-[#EAA09C] text-sm mb-1">Notes</div>
+                                  <div className="text-[#E9E0D2] opacity-70 text-sm">{currentReview.card.notes}</div>
+                                </div>
+                              )}
                             </div>
-                          )}
-                          {currentReview.card.notes && (
-                            <div className="mt-2 text-[#E9E0D2] opacity-70 text-sm">{currentReview.card.notes}</div>
                           )}
                         </>
                       ) : (

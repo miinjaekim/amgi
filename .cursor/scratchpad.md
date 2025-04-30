@@ -87,9 +87,11 @@ Feel like "chatting with a brilliant native speaker who instantly turns each exp
 - [x] **Bidirectional Review System:** Implement complete bidirectional flashcard review with independent tracking
 
 ### In Progress
+- [ ] **Review System Improvements:**
+  - [x] Simplify card backs to show only translation initially
+  - [x] Change "Again" behavior to schedule for next session instead of current session
 - [ ] **UI/UX Polish:** Improve responsiveness and accessibility
 - [ ] **Redesign Explanation Output:** Make definition always visible with expandable context/hanja/examples
-- [ ] **Minimal Flashcard Save Flow:** Streamline term + concise definition/translation saving
 
 ### Upcoming Tasks
 - [ ] Fix review page route (implement `/review` page)
@@ -100,66 +102,25 @@ Feel like "chatting with a brilliant native speaker who instantly turns each exp
 - [ ] UI/UX Polish
 - [ ] Card Management Improvements (search, filter, export)
 
-## 4. Current Sprint: Bidirectional Review System
+## 4. Current Sprint: Review System Refinements
 
 ### Background & Requirements
-- Current review flow shows all card info at once, which does not match the classic flashcard experience
-- Users should see only one side (front or back), try to recall the other, then reveal and rate themselves
-- Each direction (front→back, back→front) should be tracked separately with its own scheduling
-- If a user marks a card as "Again" (wrong), it should be shown again immediately in the same session
-
-### Data Model Updates
-```typescript
-interface ReviewTracking {
-  nextReview: Date;
-  interval: number;
-  ease: number;
-  repetitions: number;
-}
-
-interface Flashcard {
-  id?: string;
-  uid: string;
-  term: string;
-  definition: string;
-  examples?: string[];
-  notes?: string;
-  createdAt: Date;
-  // New bidirectional review tracking
-  frontToBack: ReviewTracking;
-  backToFront: ReviewTracking;
-  // Legacy fields (for backward compatibility)
-  nextReview?: Date | string;
-  interval?: number;
-  ease?: number;
-  repetitions?: number;
-}
-```
+- Current implementation shows too much information on the back of flashcards
+- The "Again" feature currently adds cards back to the current session, which could make sessions too long
+- Users need a cleaner, more focused review experience with just-in-time supplemental information
 
 ### Implementation Tasks
-1. **Data Model & Migration** [COMPLETED]
-   - [x] Update Flashcard type in `src/services/firestore.ts`
-   - [x] Create migration utility for existing cards
-   - [x] Update card creation to initialize both direction trackers
-   - **Success Criteria:** Each new card has separate tracking for each direction
+1. **Simplified Card Back** [COMPLETED]
+   - [x] Update review UI to only show translation on initial card flip
+   - [x] Add expandable sections for definition, examples, and notes
+   - [x] Create toggle controls to show/hide additional information
+   - **Success Criteria:** Card backs initially show only translation with optional expansion for details
 
-2. **Review Session Queue** [COMPLETED]
-   - [x] Update due card fetching to check both directions independently
-   - [x] Update session queue to track direction with each card
-   - [x] Implement re-insertion logic for "Again" responses
-   - **Success Criteria:** Failed cards are shown again soon in the same session
-
-3. **Reversible Review Card UX** [COMPLETED]
-   - [x] Update review UI to clearly indicate which direction is being tested
-   - [x] Add "Show Answer" button and flip interaction
-   - [x] After reveal, show the answer and all extra info
-   - [x] Track progress through the session
-   - **Success Criteria:** User can effectively review cards in both directions
-
-4. **Spaced Repetition Logic** [COMPLETED]
-   - [x] Update SM-2 implementation to handle direction-specific scheduling
-   - [x] Ensure "Again" responses update the correct direction's stats
-   - **Success Criteria:** Each direction's scheduling is updated independently
+2. **Improved "Again" Handling** [COMPLETED]
+   - [x] Modify the "Again" response scheduling logic
+   - [x] Schedule failed cards for immediate review in the next session
+   - [x] Remove current re-insertion into the active queue
+   - **Success Criteria:** Failed cards appear at the beginning of the next review session but don't extend the current session
 
 ## 5. UI/UX Guidelines
 
