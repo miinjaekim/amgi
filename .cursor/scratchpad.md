@@ -84,13 +84,12 @@ Feel like "chatting with a brilliant native speaker who instantly turns each exp
 - [x] Remove branding and user info from main content for minimal layout
 - [x] Refactor input, explanation, and flashcard list for minimalism and focus
 - [x] Make background uniform with main palette color (#173F35)
+- [x] **Bidirectional Review System:** Implement complete bidirectional flashcard review with independent tracking
 
 ### In Progress
-- [ ] Flashcard Review Interface & Spaced Repetition
-- [ ] Bidirectional Review Tracking
-- [ ] Reversible Review Card UX
-- [ ] Immediate Re-show for "Again"
-- [ ] Responsiveness and accessibility improvements
+- [ ] **UI/UX Polish:** Improve responsiveness and accessibility
+- [ ] **Redesign Explanation Output:** Make definition always visible with expandable context/hanja/examples
+- [ ] **Minimal Flashcard Save Flow:** Streamline term + concise definition/translation saving
 
 ### Upcoming Tasks
 - [ ] Fix review page route (implement `/review` page)
@@ -138,28 +137,28 @@ interface Flashcard {
 ```
 
 ### Implementation Tasks
-1. **Data Model & Migration**
-   - [ ] Update Flashcard type in `src/services/firestore.ts`
-   - [ ] Create migration utility for existing cards
-   - [ ] Update card creation to initialize both direction trackers
+1. **Data Model & Migration** [COMPLETED]
+   - [x] Update Flashcard type in `src/services/firestore.ts`
+   - [x] Create migration utility for existing cards
+   - [x] Update card creation to initialize both direction trackers
    - **Success Criteria:** Each new card has separate tracking for each direction
 
-2. **Review Session Queue**
-   - [ ] Update due card fetching to check both directions independently
-   - [ ] Update session queue to track direction with each card
-   - [ ] Implement re-insertion logic for "Again" responses
+2. **Review Session Queue** [COMPLETED]
+   - [x] Update due card fetching to check both directions independently
+   - [x] Update session queue to track direction with each card
+   - [x] Implement re-insertion logic for "Again" responses
    - **Success Criteria:** Failed cards are shown again soon in the same session
 
-3. **Reversible Review Card UX**
-   - [ ] Update review UI to clearly indicate which direction is being tested
-   - [ ] Add "Show Answer" button and flip interaction
-   - [ ] After reveal, show the answer and all extra info
-   - [ ] Track progress through the session
+3. **Reversible Review Card UX** [COMPLETED]
+   - [x] Update review UI to clearly indicate which direction is being tested
+   - [x] Add "Show Answer" button and flip interaction
+   - [x] After reveal, show the answer and all extra info
+   - [x] Track progress through the session
    - **Success Criteria:** User can effectively review cards in both directions
 
-4. **Spaced Repetition Logic**
-   - [ ] Update SM-2 implementation to handle direction-specific scheduling
-   - [ ] Ensure "Again" responses update the correct direction's stats
+4. **Spaced Repetition Logic** [COMPLETED]
+   - [x] Update SM-2 implementation to handle direction-specific scheduling
+   - [x] Ensure "Again" responses update the correct direction's stats
    - **Success Criteria:** Each direction's scheduling is updated independently
 
 ## 5. UI/UX Guidelines

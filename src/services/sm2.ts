@@ -1,6 +1,13 @@
-import { Flashcard } from './firestore';
+import { Flashcard, ReviewTracking } from './firestore';
 
-export function getNextReviewData(card: Flashcard, response: 'again' | 'hard' | 'good' | 'easy') {
+// Type for card parameter - can be either a full Flashcard or just ReviewTracking
+type CardForReview = Flashcard | ReviewTracking | {
+  interval?: number;
+  ease?: number;
+  repetitions?: number;
+};
+
+export function getNextReviewData(card: CardForReview, response: 'again' | 'hard' | 'good' | 'easy') {
   // Defaults for new cards
   let interval = card.interval ?? 0;
   let ease = card.ease ?? 2.5;
