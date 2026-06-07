@@ -261,7 +261,7 @@ export default function ReviewPage() {
               <>
                 <h2 className="text-2xl font-bold mb-4">Review Complete!</h2>
                 <button
-                  className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+                  className="mt-4 px-4 py-2 rounded-lg bg-[#418E7B] text-[#E9E0D2] hover:bg-[#2d6355]"
                   onClick={handleExitReview}
                 >
                   Exit Review
@@ -427,25 +427,25 @@ export default function ReviewPage() {
                   // Rating buttons when answer is shown
                   <div className="flex gap-2 mt-4">
                     <button
-                      className="flex-1 px-4 py-2 bg-red-400 text-white rounded-lg hover:bg-red-500"
+                      className="flex-1 px-4 py-2 rounded-lg bg-red-400 text-white hover:bg-red-500"
                       onClick={() => handleReviewResponse('again')}
                     >
                       Again
                     </button>
                     <button
-                      className="flex-1 px-4 py-2 bg-yellow-400 text-black rounded-lg hover:bg-yellow-500"
+                      className="flex-1 px-4 py-2 rounded-lg bg-[#EAA09C] text-[#173F35] hover:bg-[#E9E0D2]"
                       onClick={() => handleReviewResponse('hard')}
                     >
                       Hard
                     </button>
                     <button
-                      className="flex-1 px-4 py-2 bg-blue-400 text-white rounded-lg hover:bg-blue-500"
+                      className="flex-1 px-4 py-2 rounded-lg bg-[#418E7B] text-[#E9E0D2] hover:bg-[#2d6355]"
                       onClick={() => handleReviewResponse('good')}
                     >
                       Good
                     </button>
                     <button
-                      className="flex-1 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600"
+                      className="flex-1 px-4 py-2 rounded-lg bg-[#173F35] text-[#E9E0D2] border border-[#418E7B] hover:bg-[#418E7B]"
                       onClick={() => handleReviewResponse('easy')}
                     >
                       Easy
@@ -465,7 +465,7 @@ export default function ReviewPage() {
           ) : (
             <div className="flex flex-col items-center">
               <button
-                className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-lg font-semibold mb-4"
+                className="px-6 py-3 rounded-lg text-lg font-semibold mb-4 bg-[#EAA09C] text-[#173F35] hover:bg-[#E9E0D2]"
                 onClick={handleStartReview}
               >
                 Review {dueCards.length} Card{dueCards.length > 1 ? 's' : ''} Due

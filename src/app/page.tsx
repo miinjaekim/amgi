@@ -5,16 +5,8 @@ import { getTermExplanation, TermExplanation, ExamplePair } from '@/services/gem
 import { db } from '@/config/firebase';
 import { saveFlashcardToFirestore, fetchUserFlashcards, Flashcard } from '@/services/firestore';
 import { doc, updateDoc, deleteDoc } from 'firebase/firestore';
-import { getNextReviewData } from '@/services/sm2';
 import { useUser } from '@/components/UserContext';
 import React from 'react';
-
-function isDue(card: Flashcard) {
-  if (!card.nextReview) return true;
-  const now = new Date();
-  const reviewDate = card.nextReview instanceof Date ? card.nextReview : new Date(card.nextReview);
-  return reviewDate <= now;
-}
 
 function isExamplePairArray(arr: unknown[]): arr is ExamplePair[] {
   return arr.length === 0 || (typeof arr[0] === 'object' && arr[0] !== null && 'korean' in arr[0]);
@@ -32,10 +24,6 @@ export default function Home() {
   const [saving, setSaving] = useState(false);
   const [userFlashcards, setUserFlashcards] = useState<Flashcard[]>([]);
   const [flashcardsLoading, setFlashcardsLoading] = useState(false);
-  const [reviewMode, setReviewMode] = useState(false);
-  const [dueCards, setDueCards] = useState<Flashcard[]>([]);
-  const [currentReviewIdx, setCurrentReviewIdx] = useState(0);
-  const [reviewComplete, setReviewComplete] = useState(false);
   const [editingCardId, setEditingCardId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState<Partial<Flashcard> | null>(null);
   const [showContext, setShowContext] = useState(false);
@@ -49,16 +37,13 @@ export default function Home() {
       fetchUserFlashcards(user.uid)
         .then(cards => {
           setUserFlashcards(cards);
-          setDueCards(cards.filter(isDue));
         })
         .catch(() => {
           setUserFlashcards([]);
-          setDueCards([]);
         })
         .finally(() => setFlashcardsLoading(false));
     } else {
       setUserFlashcards([]);
-      setDueCards([]);
     }
   }, [user, saveSuccess]);
 
@@ -93,43 +78,6 @@ export default function Home() {
         setSaving(false);
       }
     }
-  };
-
-  const handleStartReview = () => {
-    setReviewMode(true);
-    setCurrentReviewIdx(0);
-    setReviewComplete(false);
-  };
-
-  const handleReviewResponse = async (response: 'again' | 'hard' | 'good' | 'easy') => {
-    const card = dueCards[currentReviewIdx];
-    if (!card || !card.id) return;
-    // Calculate next review data
-    const { interval, ease, repetitions, nextReview } = getNextReviewData(card, response);
-    // Update in Firestore
-    try {
-      await updateDoc(doc(db, 'cards', card.id), {
-        interval,
-        ease,
-        repetitions,
-        nextReview,
-      });
-    } catch (err) {
-      // Optionally show error to user
-      console.error('Failed to update card scheduling:', err);
-    }
-    // Move to next card
-    if (currentReviewIdx + 1 < dueCards.length) {
-      setCurrentReviewIdx(currentReviewIdx + 1);
-    } else {
-      setReviewComplete(true);
-    }
-  };
-
-  const handleExitReview = () => {
-    setReviewMode(false);
-    setReviewComplete(false);
-    setCurrentReviewIdx(0);
   };
 
   const handleEditClick = (card: Flashcard) => {

@@ -37,151 +37,64 @@ Feel like "chatting with a brilliant native speaker who instantly turns each exp
 ## 2. Technical Architecture
 
 ### Technology Stack
-- **Frontend:** React (with Next.js for SSR and routing)
-- **Backend:** Firebase (for real-time data, authentication, and hosting)
-- **Database:** Firebase Firestore (for flexible schema and scalability)
-- **AI Integration:** Google Gemini API for nuanced explanations and flashcard generation
-- **Authentication:** Firebase Authentication
-- **Deployment:** Firebase Hosting (frontend) and Google Cloud Platform (GCP) (backend)
-
-**Technology Decisions:**
-- **Firebase vs. MongoDB:** Firebase offers real-time capabilities, built-in authentication, and seamless integration with Google services
-- **Google Gemini vs. OpenAI API:** Google Gemini chosen for newer features and Google ecosystem integration
-- **GCP vs. AWS:** GCP selected for deep integration with Firebase and other Google services
+- **Frontend:** React with Next.js 16 (App Router)
+- **Database:** Firebase Firestore
+- **AI Integration:** Google Gemini 2.5 Flash (proxied through Next.js API route)
+- **Authentication:** Firebase Authentication (Google provider)
+- **Deployment:** Vercel
 
 ### Data Model
-- **User:** Profile, preferences (explanation depth, language), streaks, XP
-- **Word:** Term, explanation, examples, metadata (etymology, cultural notes)
-- **Flashcard:** Word reference, review status, next review date
-- **Progress:** Daily streaks, review counts, XP history
-
-### Implementation Phases
-1. **MVP (Korean Language)**
-   - Basic chat interface for word explanations
-   - Simple flashcard creation and review
-   - User authentication and profile management
-   - Streak and XP tracking
-
-2. **Enhancement Phase**
-   - Adaptive explanation depth
-   - Export functionality (CSV, Anki)
-   - Onboarding flow and UX improvements
-
-3. **Expansion Phase**
-   - Support for additional languages
-   - Multi-media prompts (image, audio)
-   - Social features (deck sharing, challenges)
+- **Flashcard:** term, translation, definition, hanja, examples, notes, uid, createdAt
+  - `frontToBack`: { nextReview, interval, ease, repetitions }
+  - `backToFront`: { nextReview, interval, ease, repetitions }
+- **User:** Firebase Auth user (no separate Firestore user doc yet)
+- **Progress/Streaks:** not yet implemented
 
 ## 3. Project Status
 
-### Completed Items
-- [x] Initial planning and vision documentation
-- [x] Core functionality (Gemini, flashcard creation, authentication, Firestore, display)
-- [x] Create AmgiLogo React component with dynamic color/size props
-- [x] Implement header/navigation bar with logo, navigation buttons, and profile/user button
-- [x] Move user state/auth logic to React context
-- [x] Header uses context for user info and sign in/out
-- [x] Remove branding and user info from main content for minimal layout
-- [x] Refactor input, explanation, and flashcard list for minimalism and focus
-- [x] Make background uniform with main palette color (#173F35)
-- [x] **Bidirectional Review System:** Implement complete bidirectional flashcard review with independent tracking
+### Completed
+- [x] Core learn flow: enter term → Gemini explanation → save as flashcard
+- [x] Explanation output: definition always visible, expandable context/hanja/examples/flashcard
+- [x] Firebase Auth (Google sign-in) and Firestore persistence
+- [x] Bidirectional spaced repetition review (SM-2 algorithm)
+- [x] Review on dedicated `/review` page (Korean→English and English→Korean)
+- [x] Simplified card backs: translation shown first, details expandable
+- [x] "Again" scheduling: failed cards queued for next session, not current
+- [x] AmgiLogo component and design system (color palette, mono font)
+- [x] Header with nav, logo, profile picture with fallback avatar
+- [x] Gemini API key proxied server-side (not exposed in browser bundle)
+- [x] Firestore security rules restrict reads/writes to card owner
+- [x] Next.js upgraded to 16.2.7 (security fix)
+- [x] Review page styled to match design system palette
 
-### In Progress
-- [x] **Review System Improvements:**
-  - [x] Simplify card backs to show only translation initially
-  - [x] Change "Again" behavior to schedule for next session instead of current session
-  - [x] Fix scheduling bug and create tests
-- [ ] **UI/UX Polish:** Improve responsiveness and accessibility
-- [ ] **Redesign Explanation Output:** Make definition always visible with expandable context/hanja/examples
+### Upcoming
+- [ ] **Streaks and progress visibility** — core to daily engagement; nothing built yet
+- [ ] **Onboarding** — new users land with no guidance on what the app does
+- [ ] **Export** — CSV/Anki export for data ownership
+- [ ] **Adaptive explanation depth** — beginner vs. advanced explanations
+- [ ] **Responsiveness** — mobile layout not yet verified
+- [ ] **Card search/filter** — becomes important as card count grows
 
-### Upcoming Tasks
-- [ ] Fix review page route (implement `/review` page)
-- [ ] Redesign explanation output (definition always, expandable context/hanja/examples)
-- [ ] Minimal flashcard save flow (term + concise definition/translation)
-- [ ] Move review UI to dedicated page
-- [ ] Add deck management UI (list decks, review/manage by deck)
-- [ ] UI/UX Polish
-- [ ] Card Management Improvements (search, filter, export)
-
-## 4. Current Sprint: Review System Refinements
-
-### Background & Requirements
-- Current implementation shows too much information on the back of flashcards
-- The "Again" feature currently adds cards back to the current session, which could make sessions too long
-- Users need a cleaner, more focused review experience with just-in-time supplemental information
-
-### Implementation Tasks
-1. **Simplified Card Back** [COMPLETED]
-   - [x] Update review UI to only show translation on initial card flip
-   - [x] Add expandable sections for definition, examples, and notes
-   - [x] Create toggle controls to show/hide additional information
-   - **Success Criteria:** Card backs initially show only translation with optional expansion for details
-
-2. **Improved "Again" Handling** [COMPLETED]
-   - [x] Modify the "Again" response scheduling logic
-   - [x] Schedule failed cards for immediate review in the next session
-   - [x] Remove current re-insertion into the active queue
-   - **Success Criteria:** Failed cards appear at the beginning of the next review session but don't extend the current session
-
-3. **Testing and Bug Fixes** [COMPLETED]
-   - [x] Create tests for review scheduling logic
-   - [x] Fix bug with cards always being scheduled for immediate review
-   - [x] Add logging for better debugging
-   - **Success Criteria:** Cards are scheduled according to SM-2 algorithm with correct interval calculation
-
-## 5. UI/UX Guidelines
+## 4. UI/UX Guidelines
 
 ### Design System
 - **Color Palette:**
   - Background: #173F35
-  - Background text: #418E7B
+  - Muted/secondary: #418E7B
   - Text: #E9E0D2
   - Highlight: #EAA09C
-- **Typography:** Code-style font for technical feel
-- **Layout:** Minimal, focused design inspired by Monkeytype
+- **Typography:** Source Code Pro (mono)
+- **Layout:** Minimal, focused — inspired by Monkeytype
 
-### Navigation Structure
-- Logo (top left)
-- Nav buttons for "Learn" and "Review"
-- Profile/user button (top right)
-- Minimal transitions and animations
-
-### Responsive Design
-- Fully responsive and optimized for mobile devices
-- Touch-friendly interface with accessible buttons
-- Optimized load times for varying network conditions
-
-### Explanation Output Redesign
-- For each inputted term, show:
-  - Concise definition (always visible)
-  - Relevant cultural/social context (expandable)
-  - Hanja/component breakdown (expandable)
-  - Example usage (expandable)
-  - Suggested flashcard (expandable)
-- Always show the core definition, but let users expand other sections based on curiosity
-
-## 6. Notes & Planning Documents
-
-### Open Questions
+### Open Design Questions
 1. How does the user set or change their explanation-depth preference?
 2. What does the onboarding flow look like for a new user?
-3. How are streaks and XP visually represented and tracked?
-4. How does the user "save" a word or explanation from chat?
-5. What export formats are supported (CSV, Anki, etc.)?
-6. How do we handle "depth on demand" for etymology and cultural notes?
-7. What are the default encouragements or notifications (if any)?
+3. How are streaks and XP visually represented? (header? dedicated page?)
+4. What export formats are supported (CSV, Anki)?
 
-### Implementation Notes
-- When creating new cards, initialize both directions with the same default values
-- Consider adding a user preference for which direction they want to prioritize
-- Consider showing stats per direction (e.g., "Korean→English: 80% correct")
-- Consider allowing users to disable review in one direction if they prefer
-
-### Lessons Learned
-- Git pushes and scratchpad updates will now happen in parallel, not strictly after every code change
-- Main content is now minimal and focused, using the new palette and code font
-- Background is uniform (#173F35) for a cohesive look
-- Include info useful for debugging in the program output
-- Read files before trying to edit them
-- Run npm audit before proceeding if vulnerabilities appear in the terminal
-- Always ask before using the -force git command
+## 5. Lessons Learned
+- Git pushes and scratchpad updates happen in parallel with code changes
+- Always proxy third-party API keys through a server-side route — never use NEXT_PUBLIC_ for secret keys
+- Run `npm audit` if vulnerabilities appear in the terminal
+- Always ask before using `git --force`
+- Firestore rules must be updated manually in the Firebase console — they are not part of the codebase
