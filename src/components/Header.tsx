@@ -43,7 +43,16 @@ const Header: React.FC<HeaderProps> = ({ user, handleSignIn, handleSignOut }) =>
       <div className="flex items-center gap-3">
         {user ? (
           <>
-            <img src={user.photoURL || ''} alt="User avatar" className="w-8 h-8 rounded-full" />
+            {user.photoURL ? (
+              <img src={user.photoURL} alt="User avatar" className="w-8 h-8 rounded-full" referrerPolicy="no-referrer" />
+            ) : (
+              <div
+                className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold"
+                style={{ background: palette.highlight, color: palette.background }}
+              >
+                {user.displayName?.[0]?.toUpperCase() ?? '?'}
+              </div>
+            )}
             <span className="font-medium" style={{ color: palette.text }}>{user.displayName}</span>
             <button
               onClick={handleSignOut}
