@@ -13,7 +13,7 @@ function isExamplePairArray(arr: unknown[]): arr is ExamplePair[] {
 }
 
 export default function Home() {
-  const { user } = useUser();
+  const { user, nativeLanguage } = useUser();
   const [term, setTerm] = useState('');
   const [explanation, setExplanation] = useState<TermExplanation | null>(null);
   const [loading, setLoading] = useState(false);
@@ -54,7 +54,7 @@ export default function Home() {
     setShowFlashcardForm(false);
     setSaveSuccess(false);
     try {
-      const result = await getTermExplanation(term);
+      const result = await getTermExplanation(term, nativeLanguage ?? 'English');
       setExplanation(result);
     } catch (err) {
       setError('Failed to get explanation. Please try again.');

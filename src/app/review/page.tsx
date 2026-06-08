@@ -73,7 +73,7 @@ function isExamplePairArray(arr: unknown[]): arr is { korean: string; english: s
 }
 
 export default function ReviewPage() {
-  const { user } = useUser();
+  const { user, nativeLanguage } = useUser();
   const [userFlashcards, setUserFlashcards] = useState<Flashcard[]>([]);
   const [flashcardsLoading, setFlashcardsLoading] = useState(false);
   const [migrationComplete, setMigrationComplete] = useState(false);
@@ -345,7 +345,7 @@ export default function ReviewPage() {
                       ) : (
                         // Prompt before revealing answer
                         <div className="text-[#418E7B] text-lg mt-4 italic">
-                          What does this mean in English?
+                          {nativeLanguage === 'Korean' ? '이 단어는 한국어로 무슨 뜻인가요?' : 'What does this mean in English?'}
                         </div>
                       )}
                     </>
@@ -416,7 +416,7 @@ export default function ReviewPage() {
                       ) : (
                         // Prompt before revealing answer
                         <div className="text-[#418E7B] text-lg mt-4 italic">
-                          How do you say this in Korean?
+                          {nativeLanguage === 'Korean' ? '영어로 어떻게 말하나요?' : 'How do you say this in Korean?'}
                         </div>
                       )}
                     </>

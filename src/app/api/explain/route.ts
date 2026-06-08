@@ -6,7 +6,7 @@ function stripMarkdownCodeBlock(text: string): string {
 }
 
 export async function POST(req: NextRequest) {
-  const { term } = await req.json();
+  const { term, nativeLanguage = 'English' } = await req.json();
 
   if (!term || typeof term !== 'string') {
     return NextResponse.json({ error: 'term is required' }, { status: 400 });
@@ -20,24 +20,28 @@ export async function POST(req: NextRequest) {
   const genAI = new GoogleGenerativeAI(apiKey);
   const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
-  const prompt = `Please provide a detailed explanation for the Korean term "${term}". Include:
-1. A short, comma-separated English translation (e.g., 'insight, discernment, taste')
-2. A clear, detailed definition
-3. Hanja breakdown (if available)
-4. 2-3 example sentences, each with both Korean and English translation
-5. Any important notes about usage, context, or cultural significance
+  const prompt = `Please provide a detailed explanation for the term "${term}".
+Write all explanations, definitions, and notes in ${nativeLanguage}.
+The example sentences should always include both the original language version and a ${nativeLanguage} translation.
 
-Format the response as JSON with the following structure:
+Include:
+1. A short, comma-separated translation in ${nativeLanguage}
+2. A clear, detailed definition written in ${nativeLanguage}
+3. Hanja breakdown (if the term is Korean and hanja applies; otherwise omit or leave empty)
+4. 2-3 example sentences, each with the original language and a ${nativeLanguage} translation
+5. Any important notes about usage, context, or cultural significance, written in ${nativeLanguage}
+
+Format the response as JSON:
 {
   "term": "${term}",
-  "translation": "short translation here",
-  "definition": "definition here",
-  "hanja": "hanja breakdown here (or empty string if not available)",
+  "translation": "short translation in ${nativeLanguage}",
+  "definition": "definition in ${nativeLanguage}",
+  "hanja": "hanja breakdown or empty string",
   "examples": [
-    { "korean": "example sentence in Korean", "english": "English translation" },
+    { "korean": "example sentence in the term's original language", "english": "${nativeLanguage} translation" },
     { "korean": "...", "english": "..." }
   ],
-  "notes": "additional notes here (optional)"
+  "notes": "notes in ${nativeLanguage} (optional)"
 }`;
 
   const result = await model.generateContent(prompt);
