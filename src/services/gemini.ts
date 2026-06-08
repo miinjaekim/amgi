@@ -12,11 +12,11 @@ export interface TermExplanation {
   notes?: string;
 }
 
-export async function getTermExplanation(term: string): Promise<TermExplanation> {
+export async function getTermExplanation(term: string, nativeLanguage = 'English'): Promise<TermExplanation> {
   const res = await fetch('/api/explain', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ term }),
+    body: JSON.stringify({ term, nativeLanguage }),
   });
 
   if (!res.ok) {
