@@ -74,7 +74,7 @@ See section 4 for full detail. Cards should always have a fixed Korean side and 
 - [x] Review prompts are language-aware (English and Korean)
 
 ### Upcoming — Multi-Language & UX
-- [ ] **Settings menu** — users need a way to change their native language after the initial setup. A settings page or dropdown accessible from the header (e.g., clicking the profile picture).
+- [x] **Settings menu** — dropdown from the header avatar; shows native language selector and sign out.
 - [ ] **UI localization** — translate all interface text based on native language setting. Korean UI for Korean native speakers (buttons, placeholders, prompts, headers). English first pass is already the default.
 - [ ] **Fixed card sides with language detection** — see section 4 for full detail.
 
@@ -118,7 +118,6 @@ Every card should have a fixed **Korean side** and a fixed **English side**, reg
 - Review prompts are language-aware
 
 ### What's Next
-- **Settings menu** to change language after initial setup
 - **UI localization** — interface text in Korean for Korean native speakers
 - **Speech level / register tagging** — tag terms with formality level (존댓말/반말). Low effort (prompt update), high value.
 - **Hanja-focus mode** — emphasize Chinese character breakdown for users studying 한자. Defer until demand.
