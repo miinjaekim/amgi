@@ -6,6 +6,7 @@ import { db } from '@/config/firebase';
 import { saveFlashcardToFirestore, fetchUserFlashcards, Flashcard } from '@/services/firestore';
 import { doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { useUser } from '@/components/UserContext';
+import { t } from '@/lib/i18n';
 import React from 'react';
 
 function isExamplePairArray(arr: unknown[]): arr is ExamplePair[] {
@@ -57,7 +58,7 @@ export default function Home() {
       const result = await getTermExplanation(term, nativeLanguage ?? 'English');
       setExplanation(result);
     } catch (err) {
-      setError('Failed to get explanation. Please try again.');
+      setError(t(nativeLanguage, 'errorExplanation'));
       console.error(err);
     } finally {
       setLoading(false);
@@ -73,7 +74,7 @@ export default function Home() {
         setShowFlashcardForm(false);
         setSaveSuccess(true);
       } catch (err) {
-        setError('Failed to save flashcard to Firestore.');
+        setError(t(nativeLanguage, 'errorSaveFlashcard'));
       } finally {
         setSaving(false);
       }
@@ -102,7 +103,7 @@ export default function Home() {
       setEditDraft(null);
       setSaveSuccess(true);
     } catch (err) {
-      setError('Failed to save changes.');
+      setError(t(nativeLanguage, 'errorSaveChanges'));
     }
   };
 
@@ -113,12 +114,12 @@ export default function Home() {
 
   const handleDeleteCard = async (card: Flashcard) => {
     if (!card.id) return;
-    if (!window.confirm('Are you sure you want to delete this flashcard?')) return;
+    if (!window.confirm(t(nativeLanguage, 'confirmDelete'))) return;
     try {
       await deleteDoc(doc(db, 'cards', card.id));
       setSaveSuccess(true);
     } catch (err) {
-      setError('Failed to delete flashcard.');
+      setError(t(nativeLanguage, 'errorDeleteFlashcard'));
     }
   };
 
@@ -131,7 +132,7 @@ export default function Home() {
             type="text"
             value={term}
             onChange={(e) => setTerm(e.target.value)}
-            placeholder="Enter a term..."
+            placeholder={t(nativeLanguage, 'inputPlaceholder')}
             className="flex-1 p-3 rounded-lg bg-[#173F35] border border-[#418E7B] focus:outline-none focus:ring-2 focus:ring-[#EAA09C] text-[#E9E0D2] placeholder-[#418E7B]"
             disabled={loading}
             autoFocus
@@ -141,7 +142,7 @@ export default function Home() {
             className="px-5 py-2 rounded-lg bg-[#EAA09C] text-[#173F35] font-bold hover:bg-[#E9E0D2] hover:text-[#173F35] focus:outline-none focus:ring-2 focus:ring-[#EAA09C] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             disabled={loading}
           >
-            {loading ? '...' : 'Learn'}
+            {loading ? '...' : t(nativeLanguage, 'learnButton')}
           </button>
         </div>
       </form>
@@ -156,7 +157,6 @@ export default function Home() {
       {/* Explanation Card */}
       {explanation && (
         (() => {
-          // When using explanation.examples, always treat as unknown[] and only map after runtime check
           let mappedExamples: ExamplePair[] = [];
           const rawExamples = explanation.examples as unknown[];
           if (Array.isArray(rawExamples) && rawExamples.length > 0 && typeof rawExamples[0] === 'string') {
@@ -168,51 +168,46 @@ export default function Home() {
             <div className="mt-10 p-6 rounded-xl bg-[#1e5246] shadow-lg border border-[#418E7B]">
               <h2 className="text-2xl font-bold mb-4 text-[#EAA09C]">{explanation.term}</h2>
               <div className="space-y-4">
-                {/* Always show translation */}
                 <div>
-                  <h3 className="font-semibold text-[#E9E0D2]">Translation</h3>
-                  <p className="text-[#E9E0D2] opacity-90">{explanation.translation || 'No translation available.'}</p>
+                  <h3 className="font-semibold text-[#E9E0D2]">{t(nativeLanguage, 'sectionTranslation')}</h3>
+                  <p className="text-[#E9E0D2] opacity-90">{explanation.translation || t(nativeLanguage, 'noTranslation')}</p>
                 </div>
-                {/* Always show definition */}
                 <div>
-                  <h3 className="font-semibold text-[#E9E0D2]">Definition</h3>
+                  <h3 className="font-semibold text-[#E9E0D2]">{t(nativeLanguage, 'sectionDefinition')}</h3>
                   <p className="text-[#E9E0D2] opacity-80">{explanation.definition}</p>
                 </div>
-                {/* Expandable: Cultural/Social Context */}
                 <div>
                   <button
                     className="flex items-center gap-2 text-[#EAA09C] font-semibold focus:outline-none"
                     onClick={() => setShowContext((v) => !v)}
                   >
-                    {showContext ? '▼' : '▶'} Cultural/Social Context
+                    {showContext ? '▼' : '▶'} {t(nativeLanguage, 'sectionContext')}
                   </button>
                   {showContext && (
                     <div className="mt-2 text-[#E9E0D2] opacity-80">
-                      {explanation.notes || 'No additional context available.'}
+                      {explanation.notes || t(nativeLanguage, 'noContext')}
                     </div>
                   )}
                 </div>
-                {/* Expandable: Hanja Breakdown */}
                 <div>
                   <button
                     className="flex items-center gap-2 text-[#EAA09C] font-semibold focus:outline-none"
                     onClick={() => setShowHanja((v) => !v)}
                   >
-                    {showHanja ? '▼' : '▶'} Hanja Breakdown
+                    {showHanja ? '▼' : '▶'} {t(nativeLanguage, 'sectionHanja')}
                   </button>
                   {showHanja && (
                     <div className="mt-2 text-[#E9E0D2] opacity-80">
-                      {explanation.hanja ? explanation.hanja : 'No hanja breakdown available.'}
+                      {explanation.hanja ? explanation.hanja : t(nativeLanguage, 'noHanja')}
                     </div>
                   )}
                 </div>
-                {/* Expandable: Example Usage */}
                 <div>
                   <button
                     className="flex items-center gap-2 text-[#EAA09C] font-semibold focus:outline-none"
                     onClick={() => setShowExamples((v) => !v)}
                   >
-                    {showExamples ? '▼' : '▶'} Example Usage
+                    {showExamples ? '▼' : '▶'} {t(nativeLanguage, 'sectionExamples')}
                   </button>
                   {showExamples && mappedExamples.length > 0 && (
                     <ul className="list-disc list-inside text-[#E9E0D2] opacity-80 mt-2 space-y-2">
@@ -225,19 +220,18 @@ export default function Home() {
                     </ul>
                   )}
                 </div>
-                {/* Expandable: Suggested Flashcard */}
                 <div>
                   <button
                     className="flex items-center gap-2 text-[#EAA09C] font-semibold focus:outline-none"
                     onClick={() => setShowFlashcard((v) => !v)}
                   >
-                    {showFlashcard ? '▼' : '▶'} Suggested Flashcard
+                    {showFlashcard ? '▼' : '▶'} {t(nativeLanguage, 'sectionSuggestedFlashcard')}
                   </button>
                   {showFlashcard && (
                     <div className="mt-2 text-[#E9E0D2] opacity-80">
-                      <div className="mb-1 font-semibold">Front:</div>
+                      <div className="mb-1 font-semibold">{t(nativeLanguage, 'flashcardFront')}</div>
                       <div className="mb-2 bg-[#173F35] rounded p-2">{explanation.term}</div>
-                      <div className="mb-1 font-semibold">Back:</div>
+                      <div className="mb-1 font-semibold">{t(nativeLanguage, 'flashcardBack')}</div>
                       <div className="bg-[#173F35] rounded p-2">{explanation.translation}</div>
                     </div>
                   )}
@@ -252,10 +246,10 @@ export default function Home() {
                 }}
                 disabled={!user}
               >
-                Save as Flashcard
+                {t(nativeLanguage, 'saveAsFlashcard')}
               </button>
               {!user && (
-                <div className="mt-2 text-sm text-[#E9E0D2] opacity-60">Sign in to save flashcards.</div>
+                <div className="mt-2 text-sm text-[#E9E0D2] opacity-60">{t(nativeLanguage, 'signInToSave')}</div>
               )}
             </div>
           );
@@ -265,10 +259,10 @@ export default function Home() {
       {/* Flashcard Edit/Save Form */}
       {showFlashcardForm && flashcardDraft && (
         <div className="mt-10 p-6 rounded-xl bg-[#173F35] border border-[#418E7B] shadow-lg">
-          <h2 className="text-xl font-bold mb-4 text-[#EAA09C]">Review & Edit Flashcard</h2>
+          <h2 className="text-xl font-bold mb-4 text-[#EAA09C]">{t(nativeLanguage, 'reviewEditFlashcard')}</h2>
           <div className="space-y-4">
             <div>
-              <label className="block font-semibold mb-1 text-[#E9E0D2]">Term</label>
+              <label className="block font-semibold mb-1 text-[#E9E0D2]">{t(nativeLanguage, 'labelTerm')}</label>
               <input
                 type="text"
                 value={flashcardDraft.term}
@@ -277,7 +271,7 @@ export default function Home() {
               />
             </div>
             <div>
-              <label className="block font-semibold mb-1 text-[#E9E0D2]">Translation</label>
+              <label className="block font-semibold mb-1 text-[#E9E0D2]">{t(nativeLanguage, 'labelTranslation')}</label>
               <input
                 type="text"
                 value={flashcardDraft.translation || ''}
@@ -290,7 +284,7 @@ export default function Home() {
               onClick={handleSaveFlashcard}
               disabled={saving}
             >
-              {saving ? 'Saving...' : 'Save'}
+              {saving ? t(nativeLanguage, 'saving') : t(nativeLanguage, 'save')}
             </button>
           </div>
         </div>
@@ -299,18 +293,18 @@ export default function Home() {
       {/* Flashcard Save Success Message */}
       {saveSuccess && (
         <div className="mt-4 p-4 rounded-lg bg-[#418E7B] text-[#E9E0D2] font-semibold">
-          Flashcard saved!
+          {t(nativeLanguage, 'flashcardSaved')}
         </div>
       )}
 
       {/* Saved Flashcards List */}
       {user && (
         <div className="mt-16">
-          <h2 className="text-xl font-bold mb-4 text-[#EAA09C]">Your Saved Flashcards</h2>
+          <h2 className="text-xl font-bold mb-4 text-[#EAA09C]">{t(nativeLanguage, 'savedFlashcardsHeading')}</h2>
           {flashcardsLoading ? (
-            <div className="text-[#418E7B]">Loading flashcards...</div>
+            <div className="text-[#418E7B]">{t(nativeLanguage, 'loadingFlashcards')}</div>
           ) : userFlashcards.length === 0 ? (
-            <div className="text-[#418E7B]">No flashcards saved yet.</div>
+            <div className="text-[#418E7B]">{t(nativeLanguage, 'noFlashcardsSaved')}</div>
           ) : (
             <ul className="space-y-4">
               {userFlashcards.map((card, idx) => (
@@ -334,13 +328,13 @@ export default function Home() {
                           className="px-4 py-2 rounded-lg bg-[#EAA09C] text-[#173F35] font-bold hover:bg-[#E9E0D2] hover:text-[#173F35]"
                           onClick={() => handleEditSave(card)}
                         >
-                          Save
+                          {t(nativeLanguage, 'save')}
                         </button>
                         <button
                           className="px-4 py-2 rounded-lg bg-[#418E7B] text-[#E9E0D2] font-bold hover:bg-[#EAA09C] hover:text-[#173F35]"
                           onClick={handleEditCancel}
                         >
-                          Cancel
+                          {t(nativeLanguage, 'cancel')}
                         </button>
                       </div>
                     </div>
@@ -349,20 +343,20 @@ export default function Home() {
                       <div className="font-semibold text-lg text-[#E9E0D2]">{card.term}</div>
                       <div className="text-[#EAA09C] text-base">{card.translation}</div>
                       <div className="text-xs text-[#418E7B] mt-2">
-                        Saved: {card.createdAt instanceof Date ? card.createdAt.toLocaleString() : String(card.createdAt)}
+                        {t(nativeLanguage, 'savedAt')} {card.createdAt instanceof Date ? card.createdAt.toLocaleString() : String(card.createdAt)}
                       </div>
                       <div className="flex gap-2 mt-2">
                         <button
                           className="px-3 py-1 rounded-lg bg-[#EAA09C] text-[#173F35] font-bold hover:bg-[#E9E0D2] hover:text-[#173F35]"
                           onClick={() => handleEditClick(card)}
                         >
-                          Edit
+                          {t(nativeLanguage, 'edit')}
                         </button>
                         <button
                           className="px-3 py-1 rounded-lg bg-[#418E7B] text-[#E9E0D2] font-bold hover:bg-[#EAA09C] hover:text-[#173F35]"
                           onClick={() => handleDeleteCard(card)}
                         >
-                          Delete
+                          {t(nativeLanguage, 'delete')}
                         </button>
                       </div>
                     </>

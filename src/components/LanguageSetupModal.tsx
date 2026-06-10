@@ -2,6 +2,7 @@
 import React from 'react';
 import { SUPPORTED_LANGUAGES } from '@/services/userPreferences';
 import { useUser } from '@/components/UserContext';
+import { t } from '@/lib/i18n';
 
 export default function LanguageSetupModal() {
   const { setNativeLanguage } = useUser();
@@ -12,9 +13,9 @@ export default function LanguageSetupModal() {
         className="w-full max-w-sm mx-4 p-8 rounded-2xl shadow-2xl border border-[#418E7B]"
         style={{ background: '#1e5246' }}
       >
-        <h2 className="text-2xl font-bold mb-2 text-[#EAA09C]">Welcome to Amgi</h2>
+        <h2 className="text-2xl font-bold mb-2 text-[#EAA09C]">{t(null, 'welcomeTitle')}</h2>
         <p className="text-[#E9E0D2] opacity-80 mb-8 text-sm">
-          What is your native language? Explanations will be written in this language.
+          {t(null, 'welcomeSubtitle')}
         </p>
         <div className="flex flex-col gap-3">
           {SUPPORTED_LANGUAGES.map((lang) => (

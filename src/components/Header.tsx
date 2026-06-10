@@ -3,6 +3,7 @@ import React, { useRef, useState, useEffect } from 'react';
 import AmgiLogo from './AmgiLogo';
 import { useUser } from '@/components/UserContext';
 import { SUPPORTED_LANGUAGES } from '@/services/userPreferences';
+import { t } from '@/lib/i18n';
 
 const palette = {
   background: '#173F35',
@@ -11,13 +12,13 @@ const palette = {
   bgText: '#418E7B',
 };
 
-const navItems = [
-  { label: 'Learn', href: '/' },
-  { label: 'Review', href: '/review' },
-];
-
 const Header: React.FC = () => {
   const { user, nativeLanguage, setNativeLanguage, handleSignIn, handleSignOut } = useUser();
+
+  const navItems = [
+    { label: t(nativeLanguage, 'navLearn'), href: '/' },
+    { label: t(nativeLanguage, 'navReview'), href: '/review' },
+  ];
   const [open, setOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -86,7 +87,7 @@ const Header: React.FC = () => {
                 style={{ background: '#1e5246' }}
               >
                 <div className="px-4 py-3 border-b border-[#418E7B]/50">
-                  <p className="text-xs font-mono uppercase tracking-widest" style={{ color: palette.bgText }}>Language</p>
+                  <p className="text-xs font-mono uppercase tracking-widest" style={{ color: palette.bgText }}>{t(nativeLanguage, 'settingsLanguage')}</p>
                   <div className="flex gap-2 mt-2">
                     {SUPPORTED_LANGUAGES.map((lang) => (
                       <button
@@ -110,7 +111,7 @@ const Header: React.FC = () => {
                   className="w-full text-left px-4 py-3 text-sm font-mono hover:bg-[#418E7B]/30 transition-colors"
                   style={{ color: palette.text }}
                 >
-                  Sign out
+                  {t(nativeLanguage, 'signOut')}
                 </button>
               </div>
             )}
@@ -120,7 +121,7 @@ const Header: React.FC = () => {
             onClick={handleSignIn}
             className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-mono"
           >
-            Sign in
+            {t(nativeLanguage, 'signIn')}
           </button>
         )}
       </div>
