@@ -5,7 +5,8 @@ import Header from '@/components/Header';
 import LanguageSetupModal from '@/components/LanguageSetupModal';
 
 export default function LayoutWithUser({ children }: { children: React.ReactNode }) {
-  const { user, nativeLanguage } = useUser();
+  const { user, authLoading, nativeLanguage } = useUser();
+  if (authLoading) return null;
   return (
     <>
       <Header />
