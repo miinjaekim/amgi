@@ -6,6 +6,7 @@ import { db } from '@/config/firebase';
 import { doc, updateDoc } from 'firebase/firestore';
 import { getNextReviewData } from '@/services/sm2';
 import { ExamplePair } from '@/services/gemini';
+import { t } from '@/lib/i18n';
 
 // Direction for review
 export type ReviewDirection = 'frontToBack' | 'backToFront';
@@ -14,51 +15,45 @@ export type ReviewDirection = 'frontToBack' | 'backToFront';
 function isDue(card: Flashcard): { due: boolean, directions: ReviewDirection[] } {
   const now = new Date();
   const directions: ReviewDirection[] = [];
-  
+
   // Check frontToBack direction
   if (card.frontToBack) {
-    const fbReviewDate = card.frontToBack.nextReview instanceof Date ? 
-      card.frontToBack.nextReview : 
+    const fbReviewDate = card.frontToBack.nextReview instanceof Date ?
+      card.frontToBack.nextReview :
       new Date(card.frontToBack.nextReview);
     if (fbReviewDate <= now) {
       directions.push('frontToBack');
     }
   } else if (card.nextReview) {
-    // If no frontToBack tracking but legacy nextReview exists and is due,
-    // consider frontToBack due (needs migration)
-    const legacyReviewDate = card.nextReview instanceof Date ? 
-      card.nextReview : 
+    const legacyReviewDate = card.nextReview instanceof Date ?
+      card.nextReview :
       new Date(card.nextReview);
     if (legacyReviewDate <= now) {
       directions.push('frontToBack');
     }
   } else {
-    // If no tracking at all, consider it due (needs initialization)
     directions.push('frontToBack');
   }
-  
+
   // Check backToFront direction
   if (card.backToFront) {
-    const bfReviewDate = card.backToFront.nextReview instanceof Date ? 
-      card.backToFront.nextReview : 
+    const bfReviewDate = card.backToFront.nextReview instanceof Date ?
+      card.backToFront.nextReview :
       new Date(card.backToFront.nextReview);
     if (bfReviewDate <= now) {
       directions.push('backToFront');
     }
   } else if (card.nextReview && directions.length === 0) {
-    // If no backToFront tracking but legacy nextReview exists and is due,
-    // and frontToBack is not already due, consider backToFront due
-    const legacyReviewDate = card.nextReview instanceof Date ? 
-      card.nextReview : 
+    const legacyReviewDate = card.nextReview instanceof Date ?
+      card.nextReview :
       new Date(card.nextReview);
     if (legacyReviewDate <= now) {
       directions.push('backToFront');
     }
   } else if (!card.frontToBack) {
-    // If no tracking at all, consider it due (needs initialization)
     directions.push('backToFront');
   }
-  
+
   return { due: directions.length > 0, directions };
 }
 
@@ -84,11 +79,9 @@ export default function ReviewPage() {
   const [showAnswer, setShowAnswer] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
-  
-  // Check if we're in development mode
+
   const isDevelopment = process.env.NODE_ENV === 'development';
 
-  // Run migration on initial load for the user
   useEffect(() => {
     if (user && !migrationComplete) {
       loadCards();
@@ -98,24 +91,20 @@ export default function ReviewPage() {
     }
   }, [user, migrationComplete]);
 
-  // Load cards with optional force migration
   const loadCards = async (forceMigration = false) => {
     if (!user) return;
-    
+
     setFlashcardsLoading(true);
     try {
-      // If forcing migration or not migrated yet, run migration first
       if (forceMigration || !migrationComplete) {
         const count = await migrateExistingCards(user.uid);
         console.log(`Migrated/updated ${count} cards to bidirectional tracking`);
         setMigrationComplete(true);
       }
-      
-      // Fetch updated cards
+
       const cards = await fetchUserFlashcards(user.uid);
       setUserFlashcards(cards);
-      
-      // Create review queue with all due cards and their directions
+
       const queue: ReviewQueueItem[] = [];
       cards.forEach(card => {
         const { due, directions } = isDue(card);
@@ -136,7 +125,6 @@ export default function ReviewPage() {
     }
   };
 
-  // Force sync all cards to ensure consistency
   const handleForceSynchronize = async () => {
     setIsSyncing(true);
     await loadCards(true);
@@ -152,9 +140,9 @@ export default function ReviewPage() {
 
   const handleShowAnswer = () => {
     setShowAnswer(true);
-    setShowDetails(false); // Reset details visibility on new answer
+    setShowDetails(false);
   };
-  
+
   const handleToggleDetails = () => {
     setShowDetails(!showDetails);
   };
@@ -162,59 +150,43 @@ export default function ReviewPage() {
   const handleReviewResponse = async (response: 'again' | 'hard' | 'good' | 'easy') => {
     const { card, direction } = dueCards[currentReviewIdx];
     if (!card || !card.id) return;
-    
-    // Get updated scheduling data
+
     const { interval, ease, repetitions, nextReview } = getNextReviewData(
-      // Use the appropriate direction's tracking data
-      direction === 'frontToBack' ? 
-        (card.frontToBack || { interval: card.interval, ease: card.ease, repetitions: card.repetitions }) : 
+      direction === 'frontToBack' ?
+        (card.frontToBack || { interval: card.interval, ease: card.ease, repetitions: card.repetitions }) :
         (card.backToFront || { interval: card.interval, ease: card.ease, repetitions: card.repetitions }),
       response
     );
-    
+
     try {
-      // Update the specific direction's tracking
       const update: Record<string, any> = {};
       update[`${direction}.interval`] = interval;
       update[`${direction}.ease`] = ease;
       update[`${direction}.repetitions`] = repetitions;
-      
-      // For "again" responses, override nextReview to be immediate (now)
-      // For other responses, use the calculated nextReview from SM-2
+
       if (response === 'again') {
-        // Set next review to now (will be shown in next session)
         update[`${direction}.nextReview`] = new Date();
-        
-        // Also update legacy nextReview field at the root level
         update.nextReview = new Date();
-        
-        // For debugging
         console.log('Again response:', update);
       } else {
-        // Use the calculated nextReview from SM-2 algorithm (future date)
         update[`${direction}.nextReview`] = nextReview;
-        
-        // Also update legacy nextReview field at the root level to be the same
         update.nextReview = nextReview;
-        
-        // For debugging
         console.log(`${response} response:`, {
-          interval, 
+          interval,
           nextReview: nextReview.toISOString(),
           daysFromNow: interval
         });
       }
-      
+
       await updateDoc(doc(db, 'cards', card.id), update);
     } catch (err) {
       console.error('Failed to update card scheduling:', err);
     }
-    
-    // Move to next card
+
     if (currentReviewIdx + 1 < dueCards.length) {
       setCurrentReviewIdx(currentReviewIdx + 1);
-      setShowAnswer(false); // Reset for next card
-      setShowDetails(false); // Reset details visibility
+      setShowAnswer(false);
+      setShowDetails(false);
     } else {
       setReviewComplete(true);
     }
@@ -226,91 +198,92 @@ export default function ReviewPage() {
     setCurrentReviewIdx(0);
     setShowAnswer(false);
     setShowDetails(false);
-    
-    // Refresh cards to update due cards count
     loadCards();
   };
 
-  // Get the current review item from the queue
   const currentReview = dueCards[currentReviewIdx];
+
+  const reviewCardsDueLabel = nativeLanguage === 'Korean'
+    ? `${dueCards.length}개 카드 복습하기`
+    : `Review ${dueCards.length} Card${dueCards.length > 1 ? 's' : ''} Due`;
+
+  const reviewCardProgressLabel = nativeLanguage === 'Korean'
+    ? `카드 ${currentReviewIdx + 1} / ${dueCards.length}`
+    : `Review Card ${currentReviewIdx + 1} of ${dueCards.length}`;
 
   return (
     <div className="max-w-2xl mx-auto font-mono text-base" style={{ color: '#E9E0D2' }}>
-      <h1 className="text-2xl font-bold mb-8 mt-8 text-[#EAA09C]">Review</h1>
+      <h1 className="text-2xl font-bold mb-8 mt-8 text-[#EAA09C]">{t(nativeLanguage, 'reviewPageTitle')}</h1>
       <div className="p-6 rounded-xl bg-[#1e5246] border border-[#418E7B] shadow-lg">
         {user ? (
           flashcardsLoading ? (
-            <div className="text-[#418E7B]">Loading flashcards...</div>
+            <div className="text-[#418E7B]">{t(nativeLanguage, 'loadingFlashcards')}</div>
           ) : dueCards.length === 0 ? (
             <div>
-              <div className="text-[#418E7B] mb-4">No cards due for review.</div>
-              
-              {/* Sync button only in development mode */}
+              <div className="text-[#418E7B] mb-4">{t(nativeLanguage, 'noCardsDue')}</div>
+
               {isDevelopment && (
                 <button
                   className="px-3 py-1 bg-[#418E7B] text-white rounded hover:bg-[#2d6355] text-sm"
                   onClick={handleForceSynchronize}
                   disabled={isSyncing}
                 >
-                  {isSyncing ? 'Synchronizing...' : 'Force Synchronize Cards'}
+                  {isSyncing ? t(nativeLanguage, 'synchronizing') : t(nativeLanguage, 'forceSyncCards')}
                 </button>
               )}
             </div>
           ) : reviewMode ? (
             reviewComplete ? (
               <>
-                <h2 className="text-2xl font-bold mb-4">Review Complete!</h2>
+                <h2 className="text-2xl font-bold mb-4">{t(nativeLanguage, 'reviewComplete')}</h2>
                 <button
                   className="mt-4 px-4 py-2 rounded-lg bg-[#418E7B] text-[#E9E0D2] hover:bg-[#2d6355]"
                   onClick={handleExitReview}
                 >
-                  Exit Review
+                  {t(nativeLanguage, 'exitReview')}
                 </button>
               </>
             ) : (
               <>
                 <h2 className="text-xl font-bold mb-4">
-                  Review Card {currentReviewIdx + 1} of {dueCards.length}
+                  {reviewCardProgressLabel}
                   <span className="ml-2 px-2 py-1 text-sm bg-[#418E7B] rounded-md">
-                    {currentReview.direction === 'frontToBack' ? 'Korean → English' : 'English → Korean'}
+                    {currentReview.direction === 'frontToBack'
+                      ? t(nativeLanguage, 'directionKoreanToEnglish')
+                      : t(nativeLanguage, 'directionEnglishToKorean')}
                   </span>
                 </h2>
-                
+
                 <div className="mb-4 p-6 rounded-xl bg-[#173F35] border border-[#418E7B] shadow-lg">
-                  {/* Show different content based on direction and answer reveal state */}
                   {currentReview.direction === 'frontToBack' ? (
-                    // Front to Back: Show Korean term, ask for English definition
                     <>
                       <div className="font-semibold text-2xl mb-2 text-[#EAA09C]">{currentReview.card.term}</div>
-                      
+
                       {showAnswer ? (
-                        // Show answer content when revealed - just translation initially
                         <>
                           {currentReview.card.translation && (
                             <div className="text-lg mb-3 text-[#E9E0D2] font-semibold">{currentReview.card.translation}</div>
                           )}
-                          
-                          {/* Show Details button */}
-                          <button 
+
+                          <button
                             onClick={handleToggleDetails}
                             className="text-sm px-3 py-1 bg-[#2d6355] text-[#E9E0D2] rounded hover:bg-[#418E7B] mb-4"
                           >
-                            {showDetails ? 'Hide Details' : 'Show Details'}
+                            {showDetails ? t(nativeLanguage, 'hideDetails') : t(nativeLanguage, 'showDetails')}
                           </button>
-                          
-                          {/* Additional details that can be expanded */}
+
                           {showDetails && (
                             <div className="mt-3 pt-3 border-t border-[#418E7B]">
                               {currentReview.card.definition && (
                                 <div className="mb-4">
-                                  <div className="font-semibold text-[#EAA09C] text-sm mb-1">Definition</div>
+                                  <div className="font-semibold text-[#EAA09C] text-sm mb-1">{t(nativeLanguage, 'sectionDefinition')}</div>
                                   <div className="text-[#E9E0D2] opacity-90">{currentReview.card.definition}</div>
                                 </div>
                               )}
-                              
+
                               {currentReview.card.examples && currentReview.card.examples.length > 0 && (
                                 <div className="mb-4">
-                                  <div className="font-semibold text-[#EAA09C] text-sm mb-1">Example Usage</div>
+                                  <div className="font-semibold text-[#EAA09C] text-sm mb-1">{t(nativeLanguage, 'sectionExamples')}</div>
                                   <ul className="list-disc list-inside text-[#E9E0D2] opacity-90 space-y-2">
                                     {(() => {
                                       const rawExamples = currentReview.card.examples as unknown[];
@@ -332,10 +305,10 @@ export default function ReviewPage() {
                                   </ul>
                                 </div>
                               )}
-                              
+
                               {currentReview.card.notes && (
                                 <div className="mt-2">
-                                  <div className="font-semibold text-[#EAA09C] text-sm mb-1">Notes</div>
+                                  <div className="font-semibold text-[#EAA09C] text-sm mb-1">{t(nativeLanguage, 'sectionNotes')}</div>
                                   <div className="text-[#E9E0D2] opacity-70 text-sm">{currentReview.card.notes}</div>
                                 </div>
                               )}
@@ -343,45 +316,40 @@ export default function ReviewPage() {
                           )}
                         </>
                       ) : (
-                        // Prompt before revealing answer
                         <div className="text-[#418E7B] text-lg mt-4 italic">
-                          {nativeLanguage === 'Korean' ? '이 단어는 한국어로 무슨 뜻인가요?' : 'What does this mean in English?'}
+                          {t(nativeLanguage, 'promptKoreanToEnglish')}
                         </div>
                       )}
                     </>
                   ) : (
-                    // Back to Front: Show English definition, ask for Korean term
                     <>
                       {currentReview.card.translation && (
                         <div className="text-lg mb-2 text-[#E9E0D2]">{currentReview.card.translation}</div>
                       )}
-                      
+
                       {showAnswer ? (
-                        // Show answer content when revealed - just the term initially
                         <>
                           <div className="font-semibold text-2xl mb-3 text-[#EAA09C] mt-4">{currentReview.card.term}</div>
-                          
-                          {/* Show Details button */}
-                          <button 
+
+                          <button
                             onClick={handleToggleDetails}
                             className="text-sm px-3 py-1 bg-[#2d6355] text-[#E9E0D2] rounded hover:bg-[#418E7B] mb-4"
                           >
-                            {showDetails ? 'Hide Details' : 'Show Details'}
+                            {showDetails ? t(nativeLanguage, 'hideDetails') : t(nativeLanguage, 'showDetails')}
                           </button>
-                          
-                          {/* Additional details that can be expanded */}
+
                           {showDetails && (
                             <div className="mt-3 pt-3 border-t border-[#418E7B]">
                               {currentReview.card.definition && (
                                 <div className="mb-4">
-                                  <div className="font-semibold text-[#EAA09C] text-sm mb-1">Definition</div>
+                                  <div className="font-semibold text-[#EAA09C] text-sm mb-1">{t(nativeLanguage, 'sectionDefinition')}</div>
                                   <div className="text-[#E9E0D2] opacity-90">{currentReview.card.definition}</div>
                                 </div>
                               )}
-                              
+
                               {currentReview.card.examples && currentReview.card.examples.length > 0 && (
                                 <div className="mb-4">
-                                  <div className="font-semibold text-[#EAA09C] text-sm mb-1">Example Usage</div>
+                                  <div className="font-semibold text-[#EAA09C] text-sm mb-1">{t(nativeLanguage, 'sectionExamples')}</div>
                                   <ul className="list-disc list-inside text-[#E9E0D2] opacity-90 space-y-2">
                                     {(() => {
                                       const rawExamples = currentReview.card.examples as unknown[];
@@ -403,10 +371,10 @@ export default function ReviewPage() {
                                   </ul>
                                 </div>
                               )}
-                              
+
                               {currentReview.card.notes && (
                                 <div className="mt-2">
-                                  <div className="font-semibold text-[#EAA09C] text-sm mb-1">Notes</div>
+                                  <div className="font-semibold text-[#EAA09C] text-sm mb-1">{t(nativeLanguage, 'sectionNotes')}</div>
                                   <div className="text-[#E9E0D2] opacity-70 text-sm">{currentReview.card.notes}</div>
                                 </div>
                               )}
@@ -414,50 +382,47 @@ export default function ReviewPage() {
                           )}
                         </>
                       ) : (
-                        // Prompt before revealing answer
                         <div className="text-[#418E7B] text-lg mt-4 italic">
-                          {nativeLanguage === 'Korean' ? '영어로 어떻게 말하나요?' : 'How do you say this in Korean?'}
+                          {t(nativeLanguage, 'promptEnglishToKorean')}
                         </div>
                       )}
                     </>
                   )}
                 </div>
-                
+
                 {showAnswer ? (
-                  // Rating buttons when answer is shown
                   <div className="flex gap-2 mt-4">
                     <button
                       className="flex-1 px-4 py-2 rounded-lg bg-red-400 text-white hover:bg-red-500"
                       onClick={() => handleReviewResponse('again')}
                     >
-                      Again
+                      {t(nativeLanguage, 'ratingAgain')}
                     </button>
                     <button
                       className="flex-1 px-4 py-2 rounded-lg bg-[#EAA09C] text-[#173F35] hover:bg-[#E9E0D2]"
                       onClick={() => handleReviewResponse('hard')}
                     >
-                      Hard
+                      {t(nativeLanguage, 'ratingHard')}
                     </button>
                     <button
                       className="flex-1 px-4 py-2 rounded-lg bg-[#418E7B] text-[#E9E0D2] hover:bg-[#2d6355]"
                       onClick={() => handleReviewResponse('good')}
                     >
-                      Good
+                      {t(nativeLanguage, 'ratingGood')}
                     </button>
                     <button
                       className="flex-1 px-4 py-2 rounded-lg bg-[#173F35] text-[#E9E0D2] border border-[#418E7B] hover:bg-[#418E7B]"
                       onClick={() => handleReviewResponse('easy')}
                     >
-                      Easy
+                      {t(nativeLanguage, 'ratingEasy')}
                     </button>
                   </div>
                 ) : (
-                  // Show Answer button when answer is hidden
                   <button
                     className="w-full mt-4 px-4 py-3 bg-[#418E7B] text-white rounded-lg hover:bg-[#2d6355] text-lg font-semibold"
                     onClick={handleShowAnswer}
                   >
-                    Show Answer
+                    {t(nativeLanguage, 'showAnswer')}
                   </button>
                 )}
               </>
@@ -468,25 +433,24 @@ export default function ReviewPage() {
                 className="px-6 py-3 rounded-lg text-lg font-semibold mb-4 bg-[#EAA09C] text-[#173F35] hover:bg-[#E9E0D2]"
                 onClick={handleStartReview}
               >
-                Review {dueCards.length} Card{dueCards.length > 1 ? 's' : ''} Due
+                {reviewCardsDueLabel}
               </button>
-              
-              {/* Sync button only in development mode */}
+
               {isDevelopment && (
                 <button
                   className="px-3 py-1 bg-[#418E7B] text-white rounded hover:bg-[#2d6355] text-sm"
                   onClick={handleForceSynchronize}
                   disabled={isSyncing}
                 >
-                  {isSyncing ? 'Synchronizing...' : 'Force Synchronize Cards'}
+                  {isSyncing ? t(nativeLanguage, 'synchronizing') : t(nativeLanguage, 'forceSyncCards')}
                 </button>
               )}
             </div>
           )
         ) : (
-          <div className="text-[#418E7B]">Sign in to review your flashcards.</div>
+          <div className="text-[#418E7B]">{t(nativeLanguage, 'signInToReview')}</div>
         )}
       </div>
     </div>
   );
-} 
+}
