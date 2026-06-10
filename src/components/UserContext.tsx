@@ -20,13 +20,12 @@ const UserContext = createContext<UserContextType | undefined>(undefined);
 export const UserProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
-  const [nativeLanguage, setNativeLanguageState] = useState<string | null | undefined>(() => {
-    if (typeof window !== 'undefined') {
-      const cached = localStorage.getItem(LANG_CACHE_KEY);
-      return cached ?? undefined;
-    }
-    return undefined;
-  });
+  const [nativeLanguage, setNativeLanguageState] = useState<string | null | undefined>(undefined);
+
+  useEffect(() => {
+    const cached = localStorage.getItem(LANG_CACHE_KEY);
+    if (cached) setNativeLanguageState(cached);
+  }, []);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
