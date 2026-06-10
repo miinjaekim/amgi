@@ -13,7 +13,7 @@ const palette = {
 };
 
 const Header: React.FC = () => {
-  const { user, nativeLanguage, setNativeLanguage, handleSignIn, handleSignOut } = useUser();
+  const { user, authLoading, nativeLanguage, setNativeLanguage, handleSignIn, handleSignOut } = useUser();
 
   const navItems = [
     { label: t(nativeLanguage, 'navLearn'), href: '/' },
@@ -55,7 +55,7 @@ const Header: React.FC = () => {
       </div>
 
       <div className="flex items-center gap-3">
-        {user ? (
+        {authLoading ? null : user ? (
           <div className="relative" ref={dropdownRef}>
             <button
               onClick={() => setOpen((v) => !v)}

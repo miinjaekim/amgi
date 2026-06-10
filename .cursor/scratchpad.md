@@ -75,7 +75,7 @@ See section 4 for full detail. Cards should always have a fixed Korean side and 
 
 ### Upcoming — Multi-Language & UX
 - [x] **Settings menu** — dropdown from the header avatar; shows native language selector and sign out.
-- [ ] **UI localization** — translate all interface text based on native language setting. Korean UI for Korean native speakers (buttons, placeholders, prompts, headers). English first pass is already the default.
+- [x] **UI localization** — all interface strings routed through `src/lib/i18n.ts`; English and Korean supported.
 - [ ] **Fixed card sides with language detection** — see section 4 for full detail.
 
 ### Upcoming — Engagement & Polish
