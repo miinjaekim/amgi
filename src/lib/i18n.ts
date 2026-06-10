@@ -133,7 +133,7 @@ const translations = {
 
 type TranslationKey = keyof typeof translations.English;
 
-export function t(lang: string | null, key: TranslationKey): string {
+export function t(lang: string | null | undefined, key: TranslationKey): string {
   const language = lang === 'Korean' ? 'Korean' : 'English';
   return translations[language][key];
 }
