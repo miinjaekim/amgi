@@ -257,12 +257,12 @@ export default function ReviewPage() {
                 <div className="mb-4 p-6 rounded-xl bg-[#173F35] border border-[#418E7B] shadow-lg">
                   {currentReview.direction === 'frontToBack' ? (
                     <>
-                      <div className="font-semibold text-2xl mb-2 text-[#EAA09C]">{currentReview.card.term}</div>
+                      <div className="font-semibold text-2xl mb-2 text-[#EAA09C]">{currentReview.card.korean || currentReview.card.term}</div>
 
                       {showAnswer ? (
                         <>
-                          {currentReview.card.translation && (
-                            <div className="text-lg mb-3 text-[#E9E0D2] font-semibold">{currentReview.card.translation}</div>
+                          {(currentReview.card.english || currentReview.card.translation) && (
+                            <div className="text-lg mb-3 text-[#E9E0D2] font-semibold">{currentReview.card.english || currentReview.card.translation}</div>
                           )}
 
                           <button
@@ -323,13 +323,13 @@ export default function ReviewPage() {
                     </>
                   ) : (
                     <>
-                      {currentReview.card.translation && (
-                        <div className="text-lg mb-2 text-[#E9E0D2]">{currentReview.card.translation}</div>
+                      {(currentReview.card.english || currentReview.card.translation) && (
+                        <div className="text-lg mb-2 text-[#E9E0D2]">{currentReview.card.english || currentReview.card.translation}</div>
                       )}
 
                       {showAnswer ? (
                         <>
-                          <div className="font-semibold text-2xl mb-3 text-[#EAA09C] mt-4">{currentReview.card.term}</div>
+                          <div className="font-semibold text-2xl mb-3 text-[#EAA09C] mt-4">{currentReview.card.korean || currentReview.card.term}</div>
 
                           <button
                             onClick={handleToggleDetails}
