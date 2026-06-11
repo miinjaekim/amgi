@@ -5,6 +5,9 @@ export interface ExamplePair {
 
 export interface TermExplanation {
   term: string;
+  termLanguage: 'Korean' | 'English';
+  korean: string;
+  english: string;
   translation: string;
   definition: string;
   hanja?: string;

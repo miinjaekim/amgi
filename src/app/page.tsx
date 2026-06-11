@@ -170,7 +170,11 @@ export default function Home() {
               <div className="space-y-4">
                 <div>
                   <h3 className="font-semibold text-[#E9E0D2]">{t(nativeLanguage, 'sectionTranslation')}</h3>
-                  <p className="text-[#E9E0D2] opacity-90">{explanation.translation || t(nativeLanguage, 'noTranslation')}</p>
+                  <p className="text-[#E9E0D2] opacity-90">
+                    {explanation.termLanguage === 'Korean'
+                      ? (explanation.english || explanation.translation || t(nativeLanguage, 'noTranslation'))
+                      : (explanation.korean || explanation.translation || t(nativeLanguage, 'noTranslation'))}
+                  </p>
                 </div>
                 <div>
                   <h3 className="font-semibold text-[#E9E0D2]">{t(nativeLanguage, 'sectionDefinition')}</h3>

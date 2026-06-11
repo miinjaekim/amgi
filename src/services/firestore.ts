@@ -2,6 +2,10 @@ import { db } from '@/config/firebase';
 import { collection, addDoc, Timestamp, query, where, orderBy, getDocs, doc, updateDoc } from 'firebase/firestore';
 import { TermExplanation } from './gemini';
 
+function detectTermLanguage(term: string): 'Korean' | 'English' {
+  return /[가-힣ᄀ-ᇿ㄰-㆏]/.test(term) ? 'Korean' : 'English';
+}
+
 export interface ReviewTracking {
   nextReview: Date | string;
   interval: number;
@@ -145,6 +149,15 @@ export async function migrateExistingCards(uid: string): Promise<number> {
       const update: Record<string, any> = {};
       let needsUpdate = false;
       
+      // Case 0: Cards without fixed korean/english sides
+      if (!data.korean || !data.english) {
+        const lang = detectTermLanguage(data.term || '');
+        update.termLanguage = lang;
+        update.korean = lang === 'Korean' ? data.term : (data.translation || '');
+        update.english = lang === 'English' ? data.term : (data.translation || '');
+        needsUpdate = true;
+      }
+
       // Case 1: Cards without direction tracking need full migration
       if (!data.frontToBack || !data.backToFront) {
         // Create tracking objects based on legacy fields or defaults
