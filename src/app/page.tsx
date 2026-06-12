@@ -31,6 +31,7 @@ export default function Home() {
   const [showHanja, setShowHanja] = useState(false);
   const [showExamples, setShowExamples] = useState(false);
   const [showFlashcard, setShowFlashcard] = useState(false);
+  const [cardOrder, setCardOrder] = useState<'korean-first' | 'english-first'>('korean-first');
 
   useEffect(() => {
     if (user) {
@@ -304,7 +305,15 @@ export default function Home() {
       {/* Saved Flashcards List */}
       {user && (
         <div className="mt-16">
-          <h2 className="text-xl font-bold mb-4 text-[#EAA09C]">{t(nativeLanguage, 'savedFlashcardsHeading')}</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold text-[#EAA09C]">{t(nativeLanguage, 'savedFlashcardsHeading')}</h2>
+            <button
+              onClick={() => setCardOrder(o => o === 'korean-first' ? 'english-first' : 'korean-first')}
+              className="text-sm font-mono px-3 py-1 rounded-lg border border-[#418E7B] text-[#E9E0D2] hover:bg-[#418E7B]/30 transition-colors"
+            >
+              {cardOrder === 'korean-first' ? t(nativeLanguage, 'koreanOnTop') : t(nativeLanguage, 'englishOnTop')}
+            </button>
+          </div>
           {flashcardsLoading ? (
             <div className="text-[#418E7B]">{t(nativeLanguage, 'loadingFlashcards')}</div>
           ) : userFlashcards.length === 0 ? (
@@ -344,8 +353,12 @@ export default function Home() {
                     </div>
                   ) : (
                     <>
-                      <div className="font-semibold text-lg text-[#E9E0D2]">{card.term}</div>
-                      <div className="text-[#EAA09C] text-base">{card.translation}</div>
+                      <div className="font-semibold text-lg text-[#E9E0D2]">
+                        {cardOrder === 'korean-first' ? (card.korean || card.term) : (card.english || card.translation)}
+                      </div>
+                      <div className="text-[#EAA09C] text-base">
+                        {cardOrder === 'korean-first' ? (card.english || card.translation) : (card.korean || card.term)}
+                      </div>
                       <div className="text-xs text-[#418E7B] mt-2">
                         {t(nativeLanguage, 'savedAt')} {card.createdAt instanceof Date ? card.createdAt.toLocaleString() : String(card.createdAt)}
                       </div>
