@@ -44,15 +44,15 @@ Language learners bounce between two tools — an LLM for nuanced explanations a
 
 **Flashcard** (`cards` collection):
 - `term`, `translation`, `definition`, `hanja`, `examples`, `notes`
+- `termLanguage`: 'Korean' | 'English' — language of the input term
+- `korean`: fixed Korean side of the card
+- `english`: fixed English side of the card
 - `uid`, `createdAt`
-- `frontToBack`: { nextReview, interval, ease, repetitions }
-- `backToFront`: { nextReview, interval, ease, repetitions }
+- `frontToBack`: { nextReview, interval, ease, repetitions } — Korean → English direction
+- `backToFront`: { nextReview, interval, ease, repetitions } — English → Korean direction
 
 **User preferences** (`users` collection):
 - `nativeLanguage`: string ("English" | "Korean")
-
-### Planned Data Model Change — Fixed Card Sides
-See section 4 for full detail. Cards should always have a fixed Korean side and a fixed English side, regardless of which language was used to look up the term. This requires language detection on input and a schema update.
 
 ---
 
@@ -72,11 +72,9 @@ See section 4 for full detail. Cards should always have a fixed Korean side and 
 - [x] Next.js upgraded to 16.2.7 (security fix)
 - [x] Native language setting: first-time modal, stored in Firestore, explanations written in user's language
 - [x] Review prompts are language-aware (English and Korean)
-
-### Upcoming — Multi-Language & UX
-- [x] **Settings menu** — dropdown from the header avatar; shows native language selector and sign out.
-- [x] **UI localization** — all interface strings routed through `src/lib/i18n.ts`; English and Korean supported.
-- [ ] **Fixed card sides with language detection** — see section 4 for full detail.
+- [x] Settings menu — dropdown from header avatar; native language selector and sign out
+- [x] UI localization — all interface strings routed through `src/lib/i18n.ts`; English and Korean supported
+- [x] Fixed card sides — `korean`/`english` fields on every card; API detects `termLanguage` via Unicode heuristic; Gemini always returns both sides in their respective languages; migration backfills existing cards; learn page shows opposite-language translation
 
 ### Upcoming — Engagement & Polish
 - [ ] **Streaks and progress visibility** — core to daily engagement; nothing built yet. Show streak count and cards reviewed in header or dashboard.
@@ -88,43 +86,13 @@ See section 4 for full detail. Cards should always have a fixed Korean side and 
 - [ ] **Card search/filter** — becomes important as card count grows
 - [ ] **Adaptive explanation depth** — beginner vs. advanced setting
 
----
-
-## 4. Fixed Card Sides (Planned)
-
-### Problem
-Cards currently store `term` (whatever language was typed) and `translation`. If a user types a Korean word, `term` is Korean and `translation` is English. If they type an English word, it's reversed. This makes the deck inconsistent — some cards show Korean on the front, others show English — and the review directions `frontToBack`/`backToFront` have no fixed meaning relative to language.
-
-### Goal
-Every card should have a fixed **Korean side** and a fixed **English side**, regardless of which language was used to look up the term. Review directions become `koreanToEnglish` and `englishToKorean` — always meaningful, always consistent.
-
-### Implementation Plan
-1. **Language detection on input** — when a user submits a term, detect its language (can be done in the API route via Gemini or a simple heuristic). Return a `termLanguage` field in the API response.
-2. **Card schema update** — add `korean` and `english` fields explicitly. On save:
-   - If `termLanguage` is Korean: `korean = term`, `english = translation`
-   - If `termLanguage` is English: `english = term`, `korean = translation` (AI provides Korean)
-3. **Rename review tracking fields** — `frontToBack` → `koreanToEnglish`, `backToFront` → `englishToKorean` (or keep names and just fix the display logic).
-4. **Migration** — existing cards need a migration pass to set `korean`/`english` from their existing `term`/`translation` based on detected language.
-5. **Update review UI** — Korean side always shows on the Korean→English pass; English side always shows on the English→Korean pass.
+### Upcoming — Multi-Language
+- [ ] **Speech level / register tagging** — tag terms with formality level (존댓말/반말). Low effort (prompt update), high value.
+- [ ] **Hanja-focus mode** — emphasize Chinese character breakdown for users studying 한자. Defer until demand.
 
 ---
 
-## 5. Multi-Language Support
-
-### What's Done
-- Native language setting (English or Korean) stored in Firestore
-- First-time modal prompts users on sign-in
-- AI explanations written in the user's native language
-- Review prompts are language-aware
-
-### What's Next
-- **UI localization** — interface text in Korean for Korean native speakers
-- **Speech level / register tagging** — tag terms with formality level (존댓말/반말). Low effort (prompt update), high value.
-- **Hanja-focus mode** — emphasize Chinese character breakdown for users studying 한자. Defer until demand.
-
----
-
-## 6. UI/UX Guidelines
+## 4. UI/UX Guidelines
 
 ### Design System
 - **Background:** #173F35
@@ -141,9 +109,11 @@ Every card should have a fixed **Korean side** and a fixed **English side**, reg
 
 ---
 
-## 7. Lessons Learned
+## 5. Lessons Learned
 - Always proxy third-party API keys through a server-side route — never use `NEXT_PUBLIC_` for secret keys
 - Firestore security rules must be updated manually in the Firebase console — they are not part of the codebase. Remember to add rules for any new collection.
 - Run `npm audit` if vulnerabilities appear in the terminal
 - Always ask before using `git --force`
 - Work on features in a separate branch, not directly on `main`
+- In Next.js App Router, reading `localStorage` in a `useState` initializer causes a hydration mismatch (server has no `window`). Always read it in a `useEffect` instead.
+- `nativeLanguage` uses `undefined` (not yet loaded) vs `null` (loaded, not set) vs `string` (set) — this distinction drives the language modal and avoids false positives.
