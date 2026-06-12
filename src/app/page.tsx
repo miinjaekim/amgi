@@ -1,7 +1,14 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { getTermExplanation, TermExplanation, ExamplePair } from '@/services/gemini';
+import {
+  getTermExplanation,
+  getTermDepth,
+  getTermExamples,
+  TermCore,
+  TermDepth,
+  ExamplePair,
+} from '@/services/gemini';
 import { db } from '@/config/firebase';
 import { saveFlashcardToFirestore, fetchUserFlashcards, Flashcard } from '@/services/firestore';
 import { doc, updateDoc, deleteDoc } from 'firebase/firestore';
@@ -9,40 +16,32 @@ import { useUser } from '@/components/UserContext';
 import { t } from '@/lib/i18n';
 import React from 'react';
 
-function isExamplePairArray(arr: unknown[]): arr is ExamplePair[] {
-  return arr.length === 0 || (typeof arr[0] === 'object' && arr[0] !== null && 'korean' in arr[0]);
-}
-
 export default function Home() {
   const { user, nativeLanguage } = useUser();
   const [term, setTerm] = useState('');
-  const [explanation, setExplanation] = useState<TermExplanation | null>(null);
+  const [core, setCore] = useState<TermCore | null>(null);
+  const [depth, setDepth] = useState<TermDepth | null>(null);
+  const [examples, setExamples] = useState<ExamplePair[] | null>(null);
   const [loading, setLoading] = useState(false);
+  const [loadingDepth, setLoadingDepth] = useState(false);
+  const [loadingExamples, setLoadingExamples] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showFlashcardForm, setShowFlashcardForm] = useState(false);
-  const [flashcardDraft, setFlashcardDraft] = useState<Flashcard | null>(null);
+  const [flashcardDraft, setFlashcardDraft] = useState<Partial<Flashcard> | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [saving, setSaving] = useState(false);
   const [userFlashcards, setUserFlashcards] = useState<Flashcard[]>([]);
   const [flashcardsLoading, setFlashcardsLoading] = useState(false);
   const [editingCardId, setEditingCardId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState<Partial<Flashcard> | null>(null);
-  const [showContext, setShowContext] = useState(false);
-  const [showHanja, setShowHanja] = useState(false);
-  const [showExamples, setShowExamples] = useState(false);
-  const [showFlashcard, setShowFlashcard] = useState(false);
   const [cardOrder, setCardOrder] = useState<'korean-first' | 'english-first'>('korean-first');
 
   useEffect(() => {
     if (user) {
       setFlashcardsLoading(true);
       fetchUserFlashcards(user.uid)
-        .then(cards => {
-          setUserFlashcards(cards);
-        })
-        .catch(() => {
-          setUserFlashcards([]);
-        })
+        .then(cards => setUserFlashcards(cards))
+        .catch(() => setUserFlashcards([]))
         .finally(() => setFlashcardsLoading(false));
     } else {
       setUserFlashcards([]);
@@ -51,13 +50,17 @@ export default function Home() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!term.trim()) return;
     setLoading(true);
     setError(null);
+    setCore(null);
+    setDepth(null);
+    setExamples(null);
     setShowFlashcardForm(false);
     setSaveSuccess(false);
     try {
-      const result = await getTermExplanation(term, nativeLanguage ?? 'English');
-      setExplanation(result);
+      const result = await getTermExplanation(term.trim(), nativeLanguage ?? 'English');
+      setCore(result);
     } catch (err) {
       setError(t(nativeLanguage, 'errorExplanation'));
       console.error(err);
@@ -66,12 +69,38 @@ export default function Home() {
     }
   };
 
+  const handleLoadDepth = async () => {
+    if (!core) return;
+    setLoadingDepth(true);
+    try {
+      const result = await getTermDepth(core.term, core.termLanguage, nativeLanguage ?? 'English');
+      setDepth(result);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingDepth(false);
+    }
+  };
+
+  const handleLoadExamples = async () => {
+    if (!core) return;
+    setLoadingExamples(true);
+    try {
+      const result = await getTermExamples(core.term, core.termLanguage, nativeLanguage ?? 'English');
+      setExamples(result);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingExamples(false);
+    }
+  };
+
   const handleSaveFlashcard = async () => {
     if (flashcardDraft && user) {
       setSaving(true);
       setError(null);
       try {
-        await saveFlashcardToFirestore({ ...flashcardDraft, uid: user.uid });
+        await saveFlashcardToFirestore({ ...(flashcardDraft as Omit<Flashcard, 'createdAt' | 'id'>), uid: user.uid });
         setShowFlashcardForm(false);
         setSaveSuccess(true);
       } catch (err) {
@@ -96,8 +125,7 @@ export default function Home() {
     try {
       await updateDoc(doc(db, 'cards', card.id), {
         term: editDraft.term,
-        definition: editDraft.definition,
-        examples: (editDraft.examples as string[] | undefined) || [],
+        translation: editDraft.translation,
         notes: editDraft.notes,
       });
       setEditingCardId(null);
@@ -123,6 +151,10 @@ export default function Home() {
       setError(t(nativeLanguage, 'errorDeleteFlashcard'));
     }
   };
+
+  const translation = core
+    ? (core.termLanguage === 'Korean' ? core.english : core.korean) || core.translation
+    : null;
 
   return (
     <div className="max-w-2xl mx-auto font-mono text-base" style={{ color: '#E9E0D2' }}>
@@ -156,109 +188,100 @@ export default function Home() {
       )}
 
       {/* Explanation Card */}
-      {explanation && (
-        (() => {
-          let mappedExamples: ExamplePair[] = [];
-          const rawExamples = explanation.examples as unknown[];
-          if (Array.isArray(rawExamples) && rawExamples.length > 0 && typeof rawExamples[0] === 'string') {
-            mappedExamples = (rawExamples as string[]).filter(Boolean).map(korean => ({ korean, english: '' }));
-          } else if (Array.isArray(rawExamples) && isExamplePairArray(rawExamples)) {
-            mappedExamples = (rawExamples as ExamplePair[]).filter(Boolean);
-          }
-          return (
-            <div className="mt-10 p-6 rounded-xl bg-[#1e5246] shadow-lg border border-[#418E7B]">
-              <h2 className="text-2xl font-bold mb-4 text-[#EAA09C]">{explanation.term}</h2>
-              <div className="space-y-4">
+      {core && (
+        <div className="mt-10 p-6 rounded-xl bg-[#1e5246] shadow-lg border border-[#418E7B]">
+          <div className="flex items-center gap-3 mb-4 flex-wrap">
+            <h2 className="text-2xl font-bold text-[#EAA09C]">{core.term}</h2>
+            {core.formality && core.formality !== 'N/A' && (
+              <span className="px-2 py-0.5 text-xs rounded-full border border-[#418E7B] text-[#418E7B]">
+                {core.formality}
+              </span>
+            )}
+          </div>
+
+          {/* Translation — always shown */}
+          <div className="mb-6">
+            <h3 className="font-semibold text-[#E9E0D2] mb-1">{t(nativeLanguage, 'sectionTranslation')}</h3>
+            <p className="text-[#E9E0D2] opacity-90 text-lg">
+              {translation || t(nativeLanguage, 'noTranslation')}
+            </p>
+          </div>
+
+          {/* Depth section — user-triggered */}
+          {!depth ? (
+            <button
+              className="mb-4 px-4 py-2 rounded-lg border border-[#418E7B] text-[#E9E0D2] hover:bg-[#418E7B]/30 transition-colors disabled:opacity-50 text-sm"
+              onClick={handleLoadDepth}
+              disabled={loadingDepth}
+            >
+              {loadingDepth ? t(nativeLanguage, 'loadingDefinition') : t(nativeLanguage, 'loadDefinition')}
+            </button>
+          ) : (
+            <div className="mb-6 space-y-4">
+              {depth.definition && (
                 <div>
-                  <h3 className="font-semibold text-[#E9E0D2]">{t(nativeLanguage, 'sectionTranslation')}</h3>
-                  <p className="text-[#E9E0D2] opacity-90">
-                    {explanation.termLanguage === 'Korean'
-                      ? (explanation.english || explanation.translation || t(nativeLanguage, 'noTranslation'))
-                      : (explanation.korean || explanation.translation || t(nativeLanguage, 'noTranslation'))}
-                  </p>
+                  <h3 className="font-semibold text-[#E9E0D2] mb-1">{t(nativeLanguage, 'sectionDefinition')}</h3>
+                  <p className="text-[#E9E0D2] opacity-80">{depth.definition}</p>
                 </div>
+              )}
+              {depth.hanja && (
                 <div>
-                  <h3 className="font-semibold text-[#E9E0D2]">{t(nativeLanguage, 'sectionDefinition')}</h3>
-                  <p className="text-[#E9E0D2] opacity-80">{explanation.definition}</p>
+                  <h3 className="font-semibold text-[#E9E0D2] mb-1">{t(nativeLanguage, 'sectionHanja')}</h3>
+                  <p className="text-[#E9E0D2] opacity-80">{depth.hanja}</p>
                 </div>
+              )}
+              {depth.notes && (
                 <div>
-                  <button
-                    className="flex items-center gap-2 text-[#EAA09C] font-semibold focus:outline-none"
-                    onClick={() => setShowContext((v) => !v)}
-                  >
-                    {showContext ? '▼' : '▶'} {t(nativeLanguage, 'sectionContext')}
-                  </button>
-                  {showContext && (
-                    <div className="mt-2 text-[#E9E0D2] opacity-80">
-                      {explanation.notes || t(nativeLanguage, 'noContext')}
-                    </div>
-                  )}
+                  <h3 className="font-semibold text-[#E9E0D2] mb-1">{t(nativeLanguage, 'sectionContext')}</h3>
+                  <p className="text-[#E9E0D2] opacity-80">{depth.notes}</p>
                 </div>
-                <div>
-                  <button
-                    className="flex items-center gap-2 text-[#EAA09C] font-semibold focus:outline-none"
-                    onClick={() => setShowHanja((v) => !v)}
-                  >
-                    {showHanja ? '▼' : '▶'} {t(nativeLanguage, 'sectionHanja')}
-                  </button>
-                  {showHanja && (
-                    <div className="mt-2 text-[#E9E0D2] opacity-80">
-                      {explanation.hanja ? explanation.hanja : t(nativeLanguage, 'noHanja')}
-                    </div>
-                  )}
-                </div>
-                <div>
-                  <button
-                    className="flex items-center gap-2 text-[#EAA09C] font-semibold focus:outline-none"
-                    onClick={() => setShowExamples((v) => !v)}
-                  >
-                    {showExamples ? '▼' : '▶'} {t(nativeLanguage, 'sectionExamples')}
-                  </button>
-                  {showExamples && mappedExamples.length > 0 && (
-                    <ul className="list-disc list-inside text-[#E9E0D2] opacity-80 mt-2 space-y-2">
-                      {mappedExamples.map((ex, index) => (
-                        <li key={index}>
-                          {ex.korean && <div>{ex.korean}</div>}
-                          {ex.english && <div className="text-[#EAA09C] text-sm">{ex.english}</div>}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-                <div>
-                  <button
-                    className="flex items-center gap-2 text-[#EAA09C] font-semibold focus:outline-none"
-                    onClick={() => setShowFlashcard((v) => !v)}
-                  >
-                    {showFlashcard ? '▼' : '▶'} {t(nativeLanguage, 'sectionSuggestedFlashcard')}
-                  </button>
-                  {showFlashcard && (
-                    <div className="mt-2 text-[#E9E0D2] opacity-80">
-                      <div className="mb-1 font-semibold">{t(nativeLanguage, 'flashcardFront')}</div>
-                      <div className="mb-2 bg-[#173F35] rounded p-2">{explanation.term}</div>
-                      <div className="mb-1 font-semibold">{t(nativeLanguage, 'flashcardBack')}</div>
-                      <div className="bg-[#173F35] rounded p-2">{explanation.translation}</div>
-                    </div>
-                  )}
-                </div>
-              </div>
-              <button
-                className="mt-6 px-4 py-2 rounded-lg bg-[#418E7B] text-[#E9E0D2] font-bold hover:bg-[#EAA09C] hover:text-[#173F35] focus:outline-none focus:ring-2 focus:ring-[#EAA09C] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                onClick={() => {
-                  setFlashcardDraft(explanation as Flashcard);
-                  setShowFlashcardForm(true);
-                  setSaveSuccess(false);
-                }}
-                disabled={!user}
-              >
-                {t(nativeLanguage, 'saveAsFlashcard')}
-              </button>
-              {!user && (
-                <div className="mt-2 text-sm text-[#E9E0D2] opacity-60">{t(nativeLanguage, 'signInToSave')}</div>
               )}
             </div>
-          );
-        })()
+          )}
+
+          {/* Examples section — user-triggered */}
+          {!examples ? (
+            <button
+              className="mb-6 px-4 py-2 rounded-lg border border-[#418E7B] text-[#E9E0D2] hover:bg-[#418E7B]/30 transition-colors disabled:opacity-50 text-sm"
+              onClick={handleLoadExamples}
+              disabled={loadingExamples}
+            >
+              {loadingExamples ? t(nativeLanguage, 'loadingExamples') : t(nativeLanguage, 'loadExamples')}
+            </button>
+          ) : (
+            <div className="mb-6">
+              <h3 className="font-semibold text-[#E9E0D2] mb-2">{t(nativeLanguage, 'sectionExamples')}</h3>
+              <ul className="space-y-3">
+                {examples.map((ex, i) => (
+                  <li key={i} className="text-[#E9E0D2] opacity-80">
+                    {ex.korean && <div>{ex.korean}</div>}
+                    {ex.english && <div className="text-[#EAA09C] text-sm mt-0.5">{ex.english}</div>}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Save button */}
+          <button
+            className="px-4 py-2 rounded-lg bg-[#418E7B] text-[#E9E0D2] font-bold hover:bg-[#EAA09C] hover:text-[#173F35] focus:outline-none focus:ring-2 focus:ring-[#EAA09C] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            onClick={() => {
+              setFlashcardDraft({
+                ...core,
+                ...(depth || {}),
+                examples: examples || [],
+              });
+              setShowFlashcardForm(true);
+              setSaveSuccess(false);
+            }}
+            disabled={!user}
+          >
+            {t(nativeLanguage, 'saveAsFlashcard')}
+          </button>
+          {!user && (
+            <div className="mt-2 text-sm text-[#E9E0D2] opacity-60">{t(nativeLanguage, 'signInToSave')}</div>
+          )}
+        </div>
       )}
 
       {/* Flashcard Edit/Save Form */}
@@ -270,7 +293,7 @@ export default function Home() {
               <label className="block font-semibold mb-1 text-[#E9E0D2]">{t(nativeLanguage, 'labelTerm')}</label>
               <input
                 type="text"
-                value={flashcardDraft.term}
+                value={flashcardDraft.term || ''}
                 onChange={e => setFlashcardDraft({ ...flashcardDraft, term: e.target.value })}
                 className="w-full p-2 rounded-lg bg-[#1e5246] border border-[#418E7B] text-[#E9E0D2]"
               />

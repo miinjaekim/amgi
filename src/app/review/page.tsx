@@ -295,6 +295,13 @@ export default function ReviewPage() {
 
                           {showDetails && (
                             <div className="mt-3 pt-3 border-t border-[#418E7B]">
+                              {currentReview.card.formality && currentReview.card.formality !== 'N/A' && (
+                                <div className="mb-3">
+                                  <span className="px-2 py-0.5 text-xs rounded-full border border-[#418E7B] text-[#418E7B]">
+                                    {currentReview.card.formality}
+                                  </span>
+                                </div>
+                              )}
                               {currentReview.card.definition && (
                                 <div className="mb-4">
                                   <div className="font-semibold text-[#EAA09C] text-sm mb-1">{t(nativeLanguage, 'sectionDefinition')}</div>
@@ -361,6 +368,13 @@ export default function ReviewPage() {
 
                           {showDetails && (
                             <div className="mt-3 pt-3 border-t border-[#418E7B]">
+                              {currentReview.card.formality && currentReview.card.formality !== 'N/A' && (
+                                <div className="mb-3">
+                                  <span className="px-2 py-0.5 text-xs rounded-full border border-[#418E7B] text-[#418E7B]">
+                                    {currentReview.card.formality}
+                                  </span>
+                                </div>
+                              )}
                               {currentReview.card.definition && (
                                 <div className="mb-4">
                                   <div className="font-semibold text-[#EAA09C] text-sm mb-1">{t(nativeLanguage, 'sectionDefinition')}</div>

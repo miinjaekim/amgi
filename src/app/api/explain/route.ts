@@ -26,43 +26,30 @@ export async function POST(req: NextRequest) {
   const genAI = new GoogleGenerativeAI(apiKey);
   const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
-  const prompt = `Please provide a detailed explanation for the term "${term}".
-Write all explanations, definitions, and notes in ${nativeLanguage}.
-The example sentences should always include both the original language version and a ${nativeLanguage} translation.
+  const prompt = `Provide a concise translation for the term "${term}".
+Write the translation in ${nativeLanguage}.
 
-Include:
-1. A short, comma-separated translation in ${nativeLanguage}
-2. A clear, detailed definition written in ${nativeLanguage}
-3. Hanja breakdown (if the term is Korean and hanja applies; otherwise omit or leave empty)
-4. 2-3 example sentences, each with the original language and a ${nativeLanguage} translation
-5. Any important notes about usage, context, or cultural significance, written in ${nativeLanguage}
-
-IMPORTANT: The "korean" and "english" fields below must ALWAYS be in their respective languages regardless of the user's native language or the input term's language:
-- "korean" must always be the Korean word or phrase written in Korean (한국어)
+IMPORTANT: The "korean" and "english" fields must ALWAYS be in their respective languages:
+- "korean" must always be the Korean word or phrase written in Korean script (한국어)
 - "english" must always be the English word or phrase written in English
 
-Format the response as JSON:
+For "formality", if the term is Korean, classify it as one of: Casual, Standard, Formal, Honorific, Slang. If the term is English, use "N/A".
+
+Respond with only this JSON:
 {
   "term": "${term}",
   "termLanguage": "${termLanguage}",
-  "korean": "Korean word/phrase in 한국어 — MUST be in Korean script",
-  "english": "English word/phrase — MUST be in English",
+  "korean": "Korean word/phrase in 한국어",
+  "english": "English word/phrase",
   "translation": "short translation in ${nativeLanguage}",
-  "definition": "definition in ${nativeLanguage}",
-  "hanja": "hanja breakdown or empty string",
-  "examples": [
-    { "korean": "example sentence in the term's original language", "english": "${nativeLanguage} translation" },
-    { "korean": "...", "english": "..." }
-  ],
-  "notes": "notes in ${nativeLanguage} (optional)"
+  "formality": "formality level"
 }`;
 
   const result = await model.generateContent(prompt);
   const text = result.response.text();
-  const explanation = JSON.parse(stripMarkdownCodeBlock(text));
+  const core = JSON.parse(stripMarkdownCodeBlock(text));
 
-  // Ensure termLanguage is always set from our server-side detection
-  explanation.termLanguage = termLanguage;
+  core.termLanguage = termLanguage;
 
-  return NextResponse.json(explanation);
+  return NextResponse.json(core);
 }
