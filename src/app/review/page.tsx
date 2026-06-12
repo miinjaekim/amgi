@@ -63,6 +63,17 @@ interface ReviewQueueItem {
   direction: ReviewDirection;
 }
 
+type DirectionFilter = 'both' | 'frontToBack' | 'backToFront';
+
+function shuffle<T>(arr: T[]): T[] {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
 function isExamplePairArray(arr: unknown[]): arr is { korean: string; english: string }[] {
   return arr.length === 0 || (typeof arr[0] === 'object' && arr[0] !== null && 'korean' in arr[0]);
 }
@@ -73,6 +84,8 @@ export default function ReviewPage() {
   const [flashcardsLoading, setFlashcardsLoading] = useState(false);
   const [migrationComplete, setMigrationComplete] = useState(false);
   const [dueCards, setDueCards] = useState<ReviewQueueItem[]>([]);
+  const [directionFilter, setDirectionFilter] = useState<DirectionFilter>('both');
+  const [activeQueue, setActiveQueue] = useState<ReviewQueueItem[]>([]);
   const [reviewMode, setReviewMode] = useState(false);
   const [currentReviewIdx, setCurrentReviewIdx] = useState(0);
   const [reviewComplete, setReviewComplete] = useState(false);
@@ -131,6 +144,10 @@ export default function ReviewPage() {
   };
 
   const handleStartReview = () => {
+    const filtered = directionFilter === 'both'
+      ? dueCards
+      : dueCards.filter(item => item.direction === directionFilter);
+    setActiveQueue(shuffle(filtered));
     setReviewMode(true);
     setCurrentReviewIdx(0);
     setReviewComplete(false);
@@ -148,7 +165,7 @@ export default function ReviewPage() {
   };
 
   const handleReviewResponse = async (response: 'again' | 'hard' | 'good' | 'easy') => {
-    const { card, direction } = dueCards[currentReviewIdx];
+    const { card, direction } = activeQueue[currentReviewIdx];
     if (!card || !card.id) return;
 
     const { interval, ease, repetitions, nextReview } = getNextReviewData(
@@ -183,7 +200,7 @@ export default function ReviewPage() {
       console.error('Failed to update card scheduling:', err);
     }
 
-    if (currentReviewIdx + 1 < dueCards.length) {
+    if (currentReviewIdx + 1 < activeQueue.length) {
       setCurrentReviewIdx(currentReviewIdx + 1);
       setShowAnswer(false);
       setShowDetails(false);
@@ -201,15 +218,19 @@ export default function ReviewPage() {
     loadCards();
   };
 
-  const currentReview = dueCards[currentReviewIdx];
+  const currentReview = activeQueue[currentReviewIdx];
+
+  const filteredCount = directionFilter === 'both'
+    ? dueCards.length
+    : dueCards.filter(item => item.direction === directionFilter).length;
 
   const reviewCardsDueLabel = nativeLanguage === 'Korean'
-    ? `${dueCards.length}개 카드 복습하기`
-    : `Review ${dueCards.length} Card${dueCards.length > 1 ? 's' : ''} Due`;
+    ? `${filteredCount}개 카드 복습하기`
+    : `Review ${filteredCount} Card${filteredCount !== 1 ? 's' : ''} Due`;
 
   const reviewCardProgressLabel = nativeLanguage === 'Korean'
-    ? `카드 ${currentReviewIdx + 1} / ${dueCards.length}`
-    : `Review Card ${currentReviewIdx + 1} of ${dueCards.length}`;
+    ? `카드 ${currentReviewIdx + 1} / ${activeQueue.length}`
+    : `Review Card ${currentReviewIdx + 1} of ${activeQueue.length}`;
 
   return (
     <div className="max-w-2xl mx-auto font-mono text-base" style={{ color: '#E9E0D2' }}>
@@ -429,9 +450,30 @@ export default function ReviewPage() {
             )
           ) : (
             <div className="flex flex-col items-center">
+              <div className="flex gap-2 mb-6">
+                {(['both', 'frontToBack', 'backToFront'] as DirectionFilter[]).map(dir => (
+                  <button
+                    key={dir}
+                    onClick={() => setDirectionFilter(dir)}
+                    className="px-3 py-1.5 rounded-lg text-sm font-mono border transition-colors"
+                    style={
+                      directionFilter === dir
+                        ? { background: '#EAA09C', color: '#173F35', borderColor: '#EAA09C' }
+                        : { background: 'transparent', color: '#E9E0D2', borderColor: '#418E7B' }
+                    }
+                  >
+                    {dir === 'both'
+                      ? t(nativeLanguage, 'directionBoth')
+                      : dir === 'frontToBack'
+                        ? t(nativeLanguage, 'directionKoreanToEnglish')
+                        : t(nativeLanguage, 'directionEnglishToKorean')}
+                  </button>
+                ))}
+              </div>
               <button
-                className="px-6 py-3 rounded-lg text-lg font-semibold mb-4 bg-[#EAA09C] text-[#173F35] hover:bg-[#E9E0D2]"
+                className="px-6 py-3 rounded-lg text-lg font-semibold mb-4 bg-[#EAA09C] text-[#173F35] hover:bg-[#E9E0D2] disabled:opacity-40 disabled:cursor-not-allowed"
                 onClick={handleStartReview}
+                disabled={filteredCount === 0}
               >
                 {reviewCardsDueLabel}
               </button>
