@@ -82,7 +82,10 @@ Language learners bounce between two tools — an LLM for nuanced explanations a
 - [ ] **Responsiveness** — mobile layout not yet verified or optimized.
 
 ### Upcoming — Card Organization
-- [ ] **Consistent card display order** — cards on the learn page currently show whatever language was typed on top. Since we now have `korean`/`english` fields, always render one language on top consistently. Add a user preference (e.g. "Korean on top" vs "English on top") stored in Firestore alongside `nativeLanguage`. Toggle could live in the settings menu or as an inline control on the learn page. Open question: does this preference also affect the review page card display?
+- [ ] **Consistent card display order** — cards on the learn page currently show whatever language was typed on top. Since we now have `korean`/`english` fields, always render one language on top consistently. Add an inline toggle on the learn page (Korean on top vs English on top). Open question: does this preference also affect the review page card display?
+
+### Upcoming — Review Improvements
+- [ ] **Randomized review order** — cards during review are currently shown in a fixed order, and a given term always appears twice in sequence (once Korean→English, once English→Korean). Randomizing the queue would make review sessions less predictable and more effective. Also worth exploring: an option to filter review to just one direction (Korean only or English only) rather than always doing both. Needs more scoping before implementation.
 
 ### Upcoming — Language-Specific Explanation Generation
 - [ ] **Tailored explanation fields by term language** — English terms don't benefit from a hanja section; Korean terms do (when applicable) and may benefit from a formality/speech-level note (존댓말/반말). The API route already knows `termLanguage`, so the prompt can branch: English terms get etymology or Greek/Latin roots instead of hanja; Korean terms get hanja (when it applies) plus an optional formality note. The "only when applicable" behavior is already partially in place — Gemini returns an empty string for hanja when irrelevant. Extend that pattern to other fields. **To explore:** whether Tambo (a company the user mentioned) is relevant here — need more context on what they offer.
