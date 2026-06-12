@@ -43,13 +43,18 @@ Language learners bounce between two tools — an LLM for nuanced explanations a
 ### Current Data Model
 
 **Flashcard** (`cards` collection):
-- `term`, `translation`, `definition`, `hanja`, `examples`, `notes`
+- `term`, `translation`, `formality` (optional), `definition` (optional), `hanja` (optional), `examples` (optional), `notes` (optional)
 - `termLanguage`: 'Korean' | 'English' — language of the input term
 - `korean`: fixed Korean side of the card
 - `english`: fixed English side of the card
 - `uid`, `createdAt`
 - `frontToBack`: { nextReview, interval, ease, repetitions } — Korean → English direction
 - `backToFront`: { nextReview, interval, ease, repetitions } — English → Korean direction
+
+**API shape (term explanation):**
+- Fast call (`/api/explain`): `term, termLanguage, korean, english, translation, formality`
+- Depth call (`/api/explain/depth`, user-triggered): `definition, hanja?, notes?`
+- Examples call (`/api/explain/examples`, user-triggered): `{ examples: ExamplePair[] }`
 
 **User preferences** (`users` collection):
 - `nativeLanguage`: string ("English" | "Korean")
@@ -77,14 +82,15 @@ Language learners bounce between two tools — an LLM for nuanced explanations a
 - [x] Fixed card sides — `korean`/`english` fields on every card; API detects `termLanguage` via Unicode heuristic; Gemini always returns both sides in their respective languages; migration backfills existing cards; learn page shows opposite-language translation
 - [x] Consistent card display order — inline toggle on learn page (Korean/English on top)
 - [x] Randomized review + direction filter — pre-review selector for Both / Korean→English / English→Korean; queue shuffled each session
+- [x] Adaptive term explanation — fast call returns translation + formality tag immediately; definition/hanja/cultural notes and examples are separate user-triggered calls; card backs store translation only, definition surfaces in review detail drawer; formality tag shown in review details for Korean cards
+
+### Upcoming — Term Disambiguation & Context
+- [ ] **Disambiguation for ambiguous terms** — when a user enters a term with several common meanings (e.g. 배: boat / belly / pear) or context-dependent usage, the current flow picks one interpretation silently. Two things to address: (1) detect ambiguous terms and surface the possible meanings so the user can pick the one they intended before a full explanation is generated; (2) after any explanation is shown, provide a lightweight "not what you meant?" path where the user can supply context (e.g. "I mean the medical usage" or "in casual speech") and regenerate. Goal is to avoid silent wrong answers without adding friction for unambiguous terms.
 
 ### Upcoming — Engagement & Polish
 - [ ] **Streaks and progress visibility** — core to daily engagement; nothing built yet. Show streak count and cards reviewed in header or dashboard.
 - [ ] **Onboarding** — new users land with no guidance. A brief first-use walkthrough or empty-state copy explaining what to do.
 - [ ] **Responsiveness** — mobile layout not yet verified or optimized.
-
-### Upcoming — Language-Specific Explanation Generation
-- [ ] **Tailored explanation fields by term language** — English terms don't benefit from a hanja section; Korean terms do (when applicable) and may benefit from a formality/speech-level note (존댓말/반말). The API route already knows `termLanguage`, so the prompt can branch: English terms get etymology or Greek/Latin roots instead of hanja; Korean terms get hanja (when it applies) plus an optional formality note. The "only when applicable" behavior is already partially in place — Gemini returns an empty string for hanja when irrelevant. Extend that pattern to other fields. **To explore:** whether Tambo (a company the user mentioned) is relevant here — need more context on what they offer.
 
 ### Upcoming — Conversation Practice
 - [ ] **Live conversation transcription + feedback page** — a new page where users record a real conversation with another person. Amgi transcribes it live and gives per-participant feedback based on what each speaker said. Key open questions before scoping:
@@ -99,7 +105,6 @@ Language learners bounce between two tools — an LLM for nuanced explanations a
 - [ ] **Adaptive explanation depth** — beginner vs. advanced setting
 
 ### Upcoming — Multi-Language
-- [ ] **Speech level / register tagging** — tag terms with formality level (존댓말/반말). Low effort (prompt update), high value.
 - [ ] **Hanja-focus mode** — emphasize Chinese character breakdown for users studying 한자. Defer until demand.
 
 ---
@@ -122,6 +127,7 @@ Language learners bounce between two tools — an LLM for nuanced explanations a
 ---
 
 ## 5. Lessons Learned
+- Always use Git to manage progress — new branch for every feature, commit changes as work completes. This keeps the project organized and ensures there's always a working version to return to if something breaks.
 - Always proxy third-party API keys through a server-side route — never use `NEXT_PUBLIC_` for secret keys
 - Firestore security rules must be updated manually in the Firebase console — they are not part of the codebase. Remember to add rules for any new collection.
 - Run `npm audit` if vulnerabilities appear in the terminal
