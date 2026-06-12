@@ -81,6 +81,19 @@ Language learners bounce between two tools — an LLM for nuanced explanations a
 - [ ] **Onboarding** — new users land with no guidance. A brief first-use walkthrough or empty-state copy explaining what to do.
 - [ ] **Responsiveness** — mobile layout not yet verified or optimized.
 
+### Upcoming — Card Organization
+- [ ] **Consistent card display order** — cards on the learn page currently show whatever language was typed on top. Since we now have `korean`/`english` fields, always render one language on top consistently. Add a user preference (e.g. "Korean on top" vs "English on top") stored in Firestore alongside `nativeLanguage`. Toggle could live in the settings menu or as an inline control on the learn page. Open question: does this preference also affect the review page card display?
+
+### Upcoming — Language-Specific Explanation Generation
+- [ ] **Tailored explanation fields by term language** — English terms don't benefit from a hanja section; Korean terms do (when applicable) and may benefit from a formality/speech-level note (존댓말/반말). The API route already knows `termLanguage`, so the prompt can branch: English terms get etymology or Greek/Latin roots instead of hanja; Korean terms get hanja (when it applies) plus an optional formality note. The "only when applicable" behavior is already partially in place — Gemini returns an empty string for hanja when irrelevant. Extend that pattern to other fields. **To explore:** whether Tambo (a company the user mentioned) is relevant here — need more context on what they offer.
+
+### Upcoming — Conversation Practice
+- [ ] **Live conversation transcription + feedback page** — a new page where users record a real conversation with another person. Amgi transcribes it live and gives per-participant feedback based on what each speaker said. Key open questions before scoping:
+  - **Input model:** single device in a room (one mic, two voices) vs. two separate devices? Diarization (splitting audio by speaker) is the hard part — two devices is simpler.
+  - **Transcription:** browser Web Speech API (free, limited) vs. a streaming service like Deepgram or AssemblyAI (better accuracy, paid).
+  - **Feedback granularity:** real-time mid-sentence, or end-of-conversation summary? Real-time is much more complex.
+  - **MVP definition:** likely end-of-conversation feedback on a recorded audio file is the right starting point before attempting live streaming.
+
 ### Upcoming — Data & Features
 - [ ] **Export** — CSV/Anki export for data ownership
 - [ ] **Card search/filter** — becomes important as card count grows
