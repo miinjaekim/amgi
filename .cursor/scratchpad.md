@@ -75,17 +75,13 @@ Language learners bounce between two tools — an LLM for nuanced explanations a
 - [x] Settings menu — dropdown from header avatar; native language selector and sign out
 - [x] UI localization — all interface strings routed through `src/lib/i18n.ts`; English and Korean supported
 - [x] Fixed card sides — `korean`/`english` fields on every card; API detects `termLanguage` via Unicode heuristic; Gemini always returns both sides in their respective languages; migration backfills existing cards; learn page shows opposite-language translation
+- [x] Consistent card display order — inline toggle on learn page (Korean/English on top)
+- [x] Randomized review + direction filter — pre-review selector for Both / Korean→English / English→Korean; queue shuffled each session
 
 ### Upcoming — Engagement & Polish
 - [ ] **Streaks and progress visibility** — core to daily engagement; nothing built yet. Show streak count and cards reviewed in header or dashboard.
 - [ ] **Onboarding** — new users land with no guidance. A brief first-use walkthrough or empty-state copy explaining what to do.
 - [ ] **Responsiveness** — mobile layout not yet verified or optimized.
-
-### Upcoming — Card Organization
-- [ ] **Consistent card display order** — cards on the learn page currently show whatever language was typed on top. Since we now have `korean`/`english` fields, always render one language on top consistently. Add an inline toggle on the learn page (Korean on top vs English on top). Open question: does this preference also affect the review page card display?
-
-### Upcoming — Review Improvements
-- [ ] **Randomized review order** — cards during review are currently shown in a fixed order, and a given term always appears twice in sequence (once Korean→English, once English→Korean). Randomizing the queue would make review sessions less predictable and more effective. Also worth exploring: an option to filter review to just one direction (Korean only or English only) rather than always doing both. Needs more scoping before implementation.
 
 ### Upcoming — Language-Specific Explanation Generation
 - [ ] **Tailored explanation fields by term language** — English terms don't benefit from a hanja section; Korean terms do (when applicable) and may benefit from a formality/speech-level note (존댓말/반말). The API route already knows `termLanguage`, so the prompt can branch: English terms get etymology or Greek/Latin roots instead of hanja; Korean terms get hanja (when it applies) plus an optional formality note. The "only when applicable" behavior is already partially in place — Gemini returns an empty string for hanja when irrelevant. Extend that pattern to other fields. **To explore:** whether Tambo (a company the user mentioned) is relevant here — need more context on what they offer.
