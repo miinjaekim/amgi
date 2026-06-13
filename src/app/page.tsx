@@ -7,6 +7,7 @@ import {
   getTermExamples,
   TermCore,
   TermDepth,
+  TermAmbiguous,
   ExamplePair,
 } from '@/services/gemini';
 import { db } from '@/config/firebase';
@@ -20,6 +21,7 @@ export default function Home() {
   const { user, nativeLanguage } = useUser();
   const [term, setTerm] = useState('');
   const [core, setCore] = useState<TermCore | null>(null);
+  const [ambiguity, setAmbiguity] = useState<TermAmbiguous | null>(null);
   const [depth, setDepth] = useState<TermDepth | null>(null);
   const [examples, setExamples] = useState<ExamplePair[] | null>(null);
   const [loading, setLoading] = useState(false);
@@ -35,6 +37,8 @@ export default function Home() {
   const [editingCardId, setEditingCardId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState<Partial<Flashcard> | null>(null);
   const [cardOrder, setCardOrder] = useState<'korean-first' | 'english-first'>('korean-first');
+  const [showContextInput, setShowContextInput] = useState(false);
+  const [contextInput, setContextInput] = useState('');
 
   useEffect(() => {
     if (user) {
@@ -48,25 +52,47 @@ export default function Home() {
     }
   }, [user, saveSuccess]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!term.trim()) return;
+  const resolveExplanation = async (termValue: string, context?: string) => {
     setLoading(true);
     setError(null);
     setCore(null);
+    setAmbiguity(null);
     setDepth(null);
     setExamples(null);
     setShowFlashcardForm(false);
     setSaveSuccess(false);
+    setShowContextInput(false);
+    setContextInput('');
     try {
-      const result = await getTermExplanation(term.trim(), nativeLanguage ?? 'English');
-      setCore(result);
+      const result = await getTermExplanation(termValue, nativeLanguage ?? 'English', context);
+      if ('ambiguous' in result && result.ambiguous) {
+        setAmbiguity(result);
+      } else {
+        setCore(result as TermCore);
+      }
     } catch (err) {
       setError(t(nativeLanguage, 'errorExplanation'));
       console.error(err);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!term.trim()) return;
+    await resolveExplanation(term.trim());
+  };
+
+  const handleDisambiguate = async (meaningLabel: string) => {
+    if (!ambiguity) return;
+    await resolveExplanation(ambiguity.term, meaningLabel);
+  };
+
+  const handleRegenerate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!core || !contextInput.trim()) return;
+    await resolveExplanation(core.term, contextInput.trim());
   };
 
   const handleLoadDepth = async () => {
@@ -187,6 +213,28 @@ export default function Home() {
         </div>
       )}
 
+      {/* Disambiguation Picker */}
+      {ambiguity && (
+        <div className="mt-10 p-6 rounded-xl bg-[#1e5246] shadow-lg border border-[#418E7B]">
+          <h2 className="text-2xl font-bold text-[#EAA09C] mb-2">{ambiguity.term}</h2>
+          <p className="text-[#E9E0D2] opacity-70 text-sm mb-5">{t(nativeLanguage, 'disambiguationPrompt')}</p>
+          <ul className="space-y-3">
+            {ambiguity.meanings.map((meaning, i) => (
+              <li key={i}>
+                <button
+                  className="w-full text-left px-4 py-3 rounded-lg border border-[#418E7B] hover:bg-[#418E7B]/30 transition-colors"
+                  onClick={() => handleDisambiguate(meaning.label)}
+                  disabled={loading}
+                >
+                  <div className="font-semibold text-[#EAA09C]">{meaning.label}</div>
+                  <div className="text-sm text-[#E9E0D2] opacity-70 mt-0.5">{meaning.hint}</div>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       {/* Explanation Card */}
       {core && (
         <div className="mt-10 p-6 rounded-xl bg-[#1e5246] shadow-lg border border-[#418E7B]">
@@ -281,6 +329,37 @@ export default function Home() {
           {!user && (
             <div className="mt-2 text-sm text-[#E9E0D2] opacity-60">{t(nativeLanguage, 'signInToSave')}</div>
           )}
+
+          {/* Not what you meant? */}
+          <div className="mt-5 pt-4 border-t border-[#418E7B]/40">
+            {!showContextInput ? (
+              <button
+                className="text-sm text-[#418E7B] hover:text-[#E9E0D2] transition-colors underline underline-offset-2"
+                onClick={() => setShowContextInput(true)}
+              >
+                {t(nativeLanguage, 'notWhatYouMeant')}
+              </button>
+            ) : (
+              <form onSubmit={handleRegenerate} className="flex gap-2">
+                <input
+                  type="text"
+                  value={contextInput}
+                  onChange={e => setContextInput(e.target.value)}
+                  placeholder={t(nativeLanguage, 'addContextPlaceholder')}
+                  className="flex-1 p-2 text-sm rounded-lg bg-[#173F35] border border-[#418E7B] focus:outline-none focus:ring-2 focus:ring-[#EAA09C] text-[#E9E0D2] placeholder-[#418E7B]"
+                  autoFocus
+                  disabled={loading}
+                />
+                <button
+                  type="submit"
+                  className="px-3 py-2 text-sm rounded-lg bg-[#418E7B] text-[#E9E0D2] font-bold hover:bg-[#EAA09C] hover:text-[#173F35] disabled:opacity-50 transition-colors"
+                  disabled={loading || !contextInput.trim()}
+                >
+                  {loading ? '...' : t(nativeLanguage, 'regenerate')}
+                </button>
+              </form>
+            )}
+          </div>
         </div>
       )}
 
