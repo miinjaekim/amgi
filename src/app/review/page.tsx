@@ -7,6 +7,7 @@ import { doc, updateDoc } from 'firebase/firestore';
 import { getNextReviewData } from '@/services/sm2';
 import { ExamplePair } from '@/services/gemini';
 import { t } from '@/lib/i18n';
+import Markdown from '@/components/Markdown';
 
 // Direction for review
 export type ReviewDirection = 'frontToBack' | 'backToFront';
@@ -305,7 +306,7 @@ export default function ReviewPage() {
                               {currentReview.card.definition && (
                                 <div className="mb-4">
                                   <div className="font-semibold text-[#EAA09C] text-sm mb-1">{t(nativeLanguage, 'sectionDefinition')}</div>
-                                  <div className="text-[#E9E0D2] opacity-90">{currentReview.card.definition}</div>
+                                  <Markdown className="text-[#E9E0D2] opacity-90">{currentReview.card.definition}</Markdown>
                                 </div>
                               )}
 
@@ -337,7 +338,7 @@ export default function ReviewPage() {
                               {currentReview.card.notes && (
                                 <div className="mt-2">
                                   <div className="font-semibold text-[#EAA09C] text-sm mb-1">{t(nativeLanguage, 'sectionNotes')}</div>
-                                  <div className="text-[#E9E0D2] opacity-70 text-sm">{currentReview.card.notes}</div>
+                                  <Markdown className="text-[#E9E0D2] opacity-70 text-sm">{currentReview.card.notes}</Markdown>
                                 </div>
                               )}
                             </div>
@@ -378,7 +379,7 @@ export default function ReviewPage() {
                               {currentReview.card.definition && (
                                 <div className="mb-4">
                                   <div className="font-semibold text-[#EAA09C] text-sm mb-1">{t(nativeLanguage, 'sectionDefinition')}</div>
-                                  <div className="text-[#E9E0D2] opacity-90">{currentReview.card.definition}</div>
+                                  <Markdown className="text-[#E9E0D2] opacity-90">{currentReview.card.definition}</Markdown>
                                 </div>
                               )}
 
@@ -410,7 +411,7 @@ export default function ReviewPage() {
                               {currentReview.card.notes && (
                                 <div className="mt-2">
                                   <div className="font-semibold text-[#EAA09C] text-sm mb-1">{t(nativeLanguage, 'sectionNotes')}</div>
-                                  <div className="text-[#E9E0D2] opacity-70 text-sm">{currentReview.card.notes}</div>
+                                  <Markdown className="text-[#E9E0D2] opacity-70 text-sm">{currentReview.card.notes}</Markdown>
                                 </div>
                               )}
                             </div>

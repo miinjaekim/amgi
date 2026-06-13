@@ -10,6 +10,7 @@ import {
   TermAmbiguous,
   ExamplePair,
 } from '@/services/gemini';
+import Markdown from '@/components/Markdown';
 import { db } from '@/config/firebase';
 import { saveFlashcardToFirestore, fetchUserFlashcards, Flashcard } from '@/services/firestore';
 import { doc, updateDoc, deleteDoc } from 'firebase/firestore';
@@ -269,19 +270,19 @@ export default function Home() {
               {depth.definition && (
                 <div>
                   <h3 className="font-semibold text-[#E9E0D2] mb-1">{t(nativeLanguage, 'sectionDefinition')}</h3>
-                  <p className="text-[#E9E0D2] opacity-80">{depth.definition}</p>
+                  <Markdown className="text-[#E9E0D2] opacity-80">{depth.definition}</Markdown>
                 </div>
               )}
               {depth.hanja && (
                 <div>
                   <h3 className="font-semibold text-[#E9E0D2] mb-1">{t(nativeLanguage, 'sectionHanja')}</h3>
-                  <p className="text-[#E9E0D2] opacity-80">{depth.hanja}</p>
+                  <Markdown className="text-[#E9E0D2] opacity-80">{depth.hanja}</Markdown>
                 </div>
               )}
               {depth.notes && (
                 <div>
                   <h3 className="font-semibold text-[#E9E0D2] mb-1">{t(nativeLanguage, 'sectionContext')}</h3>
-                  <p className="text-[#E9E0D2] opacity-80">{depth.notes}</p>
+                  <Markdown className="text-[#E9E0D2] opacity-80">{depth.notes}</Markdown>
                 </div>
               )}
             </div>
