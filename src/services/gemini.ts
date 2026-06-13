@@ -22,11 +22,29 @@ export interface TermExplanation extends TermCore, TermDepth {
   examples?: ExamplePair[];
 }
 
-export async function getTermExplanation(term: string, nativeLanguage = 'English'): Promise<TermCore> {
+export interface DisambiguationMeaning {
+  label: string;
+  hint: string;
+}
+
+export interface TermAmbiguous {
+  ambiguous: true;
+  term: string;
+  termLanguage: 'Korean' | 'English';
+  meanings: DisambiguationMeaning[];
+}
+
+export type ExplainResult = TermCore | TermAmbiguous;
+
+export async function getTermExplanation(
+  term: string,
+  nativeLanguage = 'English',
+  context?: string
+): Promise<ExplainResult> {
   const res = await fetch('/api/explain', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ term, nativeLanguage }),
+    body: JSON.stringify({ term, nativeLanguage, context }),
   });
 
   if (!res.ok) {

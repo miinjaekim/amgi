@@ -71,6 +71,11 @@ const translations = {
     // Language setup modal
     welcomeTitle: 'Welcome to Amgi',
     welcomeSubtitle: 'What is your native language? Explanations will be written in this language.',
+    // Disambiguation
+    disambiguationPrompt: 'This term has multiple meanings. Which one do you mean?',
+    notWhatYouMeant: 'Not what you meant?',
+    addContextPlaceholder: 'Add context (e.g. "the fruit", "casual speech")',
+    regenerate: 'Regenerate',
   },
   Korean: {
     // Learn page
@@ -144,6 +149,11 @@ const translations = {
     // Language setup modal
     welcomeTitle: 'Amgi에 오신 것을 환영합니다',
     welcomeSubtitle: '모국어가 무엇인가요? 설명은 이 언어로 작성됩니다.',
+    // Disambiguation
+    disambiguationPrompt: '이 단어는 여러 의미가 있습니다. 어떤 의미인가요?',
+    notWhatYouMeant: '원하시는 내용이 아닌가요?',
+    addContextPlaceholder: '맥락 추가 (예: "과일", "구어체")',
+    regenerate: '다시 생성',
   },
 } as const;
 
