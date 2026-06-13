@@ -87,6 +87,9 @@ Language learners bounce between two tools — an LLM for nuanced explanations a
 ### Upcoming — Term Disambiguation & Context
 - [ ] **Disambiguation for ambiguous terms** — when a user enters a term with several common meanings (e.g. 배: boat / belly / pear) or context-dependent usage, the current flow picks one interpretation silently. Two things to address: (1) detect ambiguous terms and surface the possible meanings so the user can pick the one they intended before a full explanation is generated; (2) after any explanation is shown, provide a lightweight "not what you meant?" path where the user can supply context (e.g. "I mean the medical usage" or "in casual speech") and regenerate. Goal is to avoid silent wrong answers without adding friction for unambiguous terms.
 
+### Upcoming — Explanation Formatting
+- [ ] **Fix explanation display formatting** — two issues visible in the current UI: (1) the LLM returns markdown syntax (`**bold**`, `*bullets*`) that renders as raw text instead of styled HTML — need to either parse and render markdown in the UI or instruct the prompt to return plain text / structured JSON instead of prose with markdown; (2) the depth endpoint returns dense wall-of-text definitions and notes with no visual breathing room — improve prompt to return concise, focused content, and review the UI layout for spacing and readability.
+
 ### Upcoming — Engagement & Polish
 - [ ] **Streaks and progress visibility** — core to daily engagement; nothing built yet. Show streak count and cards reviewed in header or dashboard.
 - [ ] **Onboarding** — new users land with no guidance. A brief first-use walkthrough or empty-state copy explaining what to do.
