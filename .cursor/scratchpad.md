@@ -83,12 +83,9 @@ Language learners bounce between two tools — an LLM for nuanced explanations a
 - [x] Consistent card display order — inline toggle on learn page (Korean/English on top)
 - [x] Randomized review + direction filter — pre-review selector for Both / Korean→English / English→Korean; queue shuffled each session
 - [x] Adaptive term explanation — fast call returns translation + formality tag immediately; definition/hanja/cultural notes and examples are separate user-triggered calls; card backs store translation only, definition surfaces in review detail drawer; formality tag shown in review details for Korean cards
-
-### Upcoming — Term Disambiguation & Context
-- [ ] **Disambiguation for ambiguous terms** — when a user enters a term with several common meanings (e.g. 배: boat / belly / pear) or context-dependent usage, the current flow picks one interpretation silently. Two things to address: (1) detect ambiguous terms and surface the possible meanings so the user can pick the one they intended before a full explanation is generated; (2) after any explanation is shown, provide a lightweight "not what you meant?" path where the user can supply context (e.g. "I mean the medical usage" or "in casual speech") and regenerate. Goal is to avoid silent wrong answers without adding friction for unambiguous terms.
-
-### Upcoming — Explanation Formatting
-- [ ] **Fix explanation display formatting** — two issues visible in the current UI: (1) the LLM returns markdown syntax (`**bold**`, `*bullets*`) that renders as raw text instead of styled HTML — need to either parse and render markdown in the UI or instruct the prompt to return plain text / structured JSON instead of prose with markdown; (2) the depth endpoint returns dense wall-of-text definitions and notes with no visual breathing room — improve prompt to return concise, focused content, and review the UI layout for spacing and readability.
+- [x] Term disambiguation — ambiguous terms (e.g. 배: boat / belly / pear) surface possible meanings for the user to choose before explanation is generated; "not what you meant?" path lets users supply context and regenerate
+- [x] Markdown rendering — explanation content now renders markdown (bold, bullets, etc.) as styled HTML instead of raw text
+- [x] Gemini rate limit errors handled gracefully across all API routes — users see a friendly message instead of a crash
 
 ### Upcoming — Engagement & Polish
 - [ ] **Streaks and progress visibility** — core to daily engagement; nothing built yet. Show streak count and cards reviewed in header or dashboard.
