@@ -110,6 +110,9 @@ Focus for introducing Amgi to unfamiliar users. Ordered by impact.
   - **Feedback granularity:** real-time mid-sentence, or end-of-conversation summary? Real-time is much more complex.
   - **MVP definition:** likely end-of-conversation feedback on a recorded audio file is the right starting point before attempting live streaming.
 
+### Future — Themes & Polish
+- [x] **Theme system** — CSS custom property–based theming with three palettes: Forest (current), Slate (dark, indigo accent), Paper (light, deep green accent). Stored in localStorage. Switcher in settings dropdown.
+
 ### Future — Data & Infrastructure
 - [ ] **Shared term cache** — second Firestore collection (`terms`) keyed by normalized term + native language. Check cache before calling LLM; write on miss. At scale, popular terms are served from cache and LLM calls drop significantly. Could evolve into a community-driven dictionary.
 - [ ] **Export** — CSV/Anki export for data ownership

@@ -184,7 +184,7 @@ export default function Home() {
     : null;
 
   return (
-    <div className="max-w-2xl mx-auto font-mono text-base" style={{ color: '#E9E0D2' }}>
+    <div className="max-w-2xl mx-auto font-mono text-base" style={{ color: 'var(--color-text)' }}>
       {/* Input Area */}
       <form onSubmit={handleSubmit} className="space-y-4 mt-8">
         <div className="flex gap-2">
@@ -193,13 +193,13 @@ export default function Home() {
             value={term}
             onChange={(e) => setTerm(e.target.value)}
             placeholder={t(nativeLanguage, 'inputPlaceholder')}
-            className="flex-1 p-3 rounded-lg bg-[#173F35] border border-[#418E7B] focus:outline-none focus:ring-2 focus:ring-[#EAA09C] text-[#E9E0D2] placeholder-[#418E7B]"
+            className="flex-1 p-3 rounded-lg bg-[var(--color-bg)] border border-[var(--color-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--color-highlight)] text-[var(--color-text)] placeholder-[var(--color-muted)]"
             disabled={loading}
             autoFocus
           />
           <button
             type="submit"
-            className="px-5 py-2 rounded-lg bg-[#EAA09C] text-[#173F35] font-bold hover:bg-[#E9E0D2] hover:text-[#173F35] focus:outline-none focus:ring-2 focus:ring-[#EAA09C] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="px-5 py-2 rounded-lg bg-[var(--color-highlight)] text-[var(--color-bg)] font-bold hover:bg-[var(--color-text)] hover:text-[var(--color-bg)] focus:outline-none focus:ring-2 focus:ring-[var(--color-highlight)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             disabled={loading}
           >
             {loading ? '...' : t(nativeLanguage, 'learnButton')}
@@ -209,26 +209,26 @@ export default function Home() {
 
       {/* Error Message */}
       {error && (
-        <div className="mt-4 p-4 rounded-lg bg-[#EAA09C] text-[#173F35] font-semibold">
+        <div className="mt-4 p-4 rounded-lg bg-[var(--color-highlight)] text-[var(--color-bg)] font-semibold">
           {error}
         </div>
       )}
 
       {/* Disambiguation Picker */}
       {ambiguity && (
-        <div className="mt-10 p-6 rounded-xl bg-[#1e5246] shadow-lg border border-[#418E7B]">
-          <h2 className="text-2xl font-bold text-[#EAA09C] mb-2">{ambiguity.term}</h2>
-          <p className="text-[#E9E0D2] opacity-70 text-sm mb-5">{t(nativeLanguage, 'disambiguationPrompt')}</p>
+        <div className="mt-10 p-6 rounded-xl bg-[var(--color-surface)] shadow-lg border border-[var(--color-muted)]">
+          <h2 className="text-2xl font-bold text-[var(--color-highlight)] mb-2">{ambiguity.term}</h2>
+          <p className="text-[var(--color-text)] opacity-70 text-sm mb-5">{t(nativeLanguage, 'disambiguationPrompt')}</p>
           <ul className="space-y-3">
             {ambiguity.meanings.map((meaning, i) => (
               <li key={i}>
                 <button
-                  className="w-full text-left px-4 py-3 rounded-lg border border-[#418E7B] hover:bg-[#418E7B]/30 transition-colors"
+                  className="w-full text-left px-4 py-3 rounded-lg border border-[var(--color-muted)] hover:bg-[var(--color-muted)]/30 transition-colors"
                   onClick={() => handleDisambiguate(meaning.label)}
                   disabled={loading}
                 >
-                  <div className="font-semibold text-[#EAA09C]">{meaning.label}</div>
-                  <div className="text-sm text-[#E9E0D2] opacity-70 mt-0.5">{meaning.hint}</div>
+                  <div className="font-semibold text-[var(--color-highlight)]">{meaning.label}</div>
+                  <div className="text-sm text-[var(--color-text)] opacity-70 mt-0.5">{meaning.hint}</div>
                 </button>
               </li>
             ))}
@@ -238,11 +238,11 @@ export default function Home() {
 
       {/* Explanation Card */}
       {core && (
-        <div className="mt-10 p-6 rounded-xl bg-[#1e5246] shadow-lg border border-[#418E7B]">
+        <div className="mt-10 p-6 rounded-xl bg-[var(--color-surface)] shadow-lg border border-[var(--color-muted)]">
           <div className="flex items-center gap-3 mb-4 flex-wrap">
-            <h2 className="text-2xl font-bold text-[#EAA09C]">{core.term}</h2>
+            <h2 className="text-2xl font-bold text-[var(--color-highlight)]">{core.term}</h2>
             {core.formality && core.formality !== 'N/A' && (
-              <span className="px-2 py-0.5 text-xs rounded-full border border-[#418E7B] text-[#418E7B]">
+              <span className="px-2 py-0.5 text-xs rounded-full border border-[var(--color-muted)] text-[var(--color-muted)]">
                 {core.formality}
               </span>
             )}
@@ -250,8 +250,8 @@ export default function Home() {
 
           {/* Translation — always shown */}
           <div className="mb-6">
-            <h3 className="font-semibold text-[#E9E0D2] mb-1">{t(nativeLanguage, 'sectionTranslation')}</h3>
-            <p className="text-[#E9E0D2] opacity-90 text-lg">
+            <h3 className="font-semibold text-[var(--color-text)] mb-1">{t(nativeLanguage, 'sectionTranslation')}</h3>
+            <p className="text-[var(--color-text)] opacity-90 text-lg">
               {translation || t(nativeLanguage, 'noTranslation')}
             </p>
           </div>
@@ -259,7 +259,7 @@ export default function Home() {
           {/* Depth section — user-triggered */}
           {!depth ? (
             <button
-              className="mb-4 px-4 py-2 rounded-lg border border-[#418E7B] text-[#E9E0D2] hover:bg-[#418E7B]/30 transition-colors disabled:opacity-50 text-sm"
+              className="mb-4 px-4 py-2 rounded-lg border border-[var(--color-muted)] text-[var(--color-text)] hover:bg-[var(--color-muted)]/30 transition-colors disabled:opacity-50 text-sm"
               onClick={handleLoadDepth}
               disabled={loadingDepth}
             >
@@ -269,20 +269,20 @@ export default function Home() {
             <div className="mb-6 space-y-4">
               {depth.definition && (
                 <div>
-                  <h3 className="font-semibold text-[#E9E0D2] mb-1">{t(nativeLanguage, 'sectionDefinition')}</h3>
-                  <Markdown className="text-[#E9E0D2] opacity-80">{depth.definition}</Markdown>
+                  <h3 className="font-semibold text-[var(--color-text)] mb-1">{t(nativeLanguage, 'sectionDefinition')}</h3>
+                  <Markdown className="text-[var(--color-text)] opacity-80">{depth.definition}</Markdown>
                 </div>
               )}
               {depth.hanja && (
                 <div>
-                  <h3 className="font-semibold text-[#E9E0D2] mb-1">{t(nativeLanguage, 'sectionHanja')}</h3>
-                  <Markdown className="text-[#E9E0D2] opacity-80">{depth.hanja}</Markdown>
+                  <h3 className="font-semibold text-[var(--color-text)] mb-1">{t(nativeLanguage, 'sectionHanja')}</h3>
+                  <Markdown className="text-[var(--color-text)] opacity-80">{depth.hanja}</Markdown>
                 </div>
               )}
               {depth.notes && (
                 <div>
-                  <h3 className="font-semibold text-[#E9E0D2] mb-1">{t(nativeLanguage, 'sectionContext')}</h3>
-                  <Markdown className="text-[#E9E0D2] opacity-80">{depth.notes}</Markdown>
+                  <h3 className="font-semibold text-[var(--color-text)] mb-1">{t(nativeLanguage, 'sectionContext')}</h3>
+                  <Markdown className="text-[var(--color-text)] opacity-80">{depth.notes}</Markdown>
                 </div>
               )}
             </div>
@@ -291,7 +291,7 @@ export default function Home() {
           {/* Examples section — user-triggered */}
           {!examples ? (
             <button
-              className="mb-6 px-4 py-2 rounded-lg border border-[#418E7B] text-[#E9E0D2] hover:bg-[#418E7B]/30 transition-colors disabled:opacity-50 text-sm"
+              className="mb-6 px-4 py-2 rounded-lg border border-[var(--color-muted)] text-[var(--color-text)] hover:bg-[var(--color-muted)]/30 transition-colors disabled:opacity-50 text-sm"
               onClick={handleLoadExamples}
               disabled={loadingExamples}
             >
@@ -299,12 +299,12 @@ export default function Home() {
             </button>
           ) : (
             <div className="mb-6">
-              <h3 className="font-semibold text-[#E9E0D2] mb-2">{t(nativeLanguage, 'sectionExamples')}</h3>
+              <h3 className="font-semibold text-[var(--color-text)] mb-2">{t(nativeLanguage, 'sectionExamples')}</h3>
               <ul className="space-y-3">
                 {examples.map((ex, i) => (
-                  <li key={i} className="text-[#E9E0D2] opacity-80">
+                  <li key={i} className="text-[var(--color-text)] opacity-80">
                     {ex.korean && <div>{ex.korean}</div>}
-                    {ex.english && <div className="text-[#EAA09C] text-sm mt-0.5">{ex.english}</div>}
+                    {ex.english && <div className="text-[var(--color-highlight)] text-sm mt-0.5">{ex.english}</div>}
                   </li>
                 ))}
               </ul>
@@ -313,7 +313,7 @@ export default function Home() {
 
           {/* Save button */}
           <button
-            className="px-4 py-2 rounded-lg bg-[#418E7B] text-[#E9E0D2] font-bold hover:bg-[#EAA09C] hover:text-[#173F35] focus:outline-none focus:ring-2 focus:ring-[#EAA09C] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="px-4 py-2 rounded-lg bg-[var(--color-muted)] text-[var(--color-text)] font-bold hover:bg-[var(--color-highlight)] hover:text-[var(--color-bg)] focus:outline-none focus:ring-2 focus:ring-[var(--color-highlight)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             onClick={() => {
               setFlashcardDraft({
                 ...core,
@@ -328,14 +328,14 @@ export default function Home() {
             {t(nativeLanguage, 'saveAsFlashcard')}
           </button>
           {!user && (
-            <div className="mt-2 text-sm text-[#E9E0D2] opacity-60">{t(nativeLanguage, 'signInToSave')}</div>
+            <div className="mt-2 text-sm text-[var(--color-text)] opacity-60">{t(nativeLanguage, 'signInToSave')}</div>
           )}
 
           {/* Not what you meant? */}
-          <div className="mt-5 pt-4 border-t border-[#418E7B]/40">
+          <div className="mt-5 pt-4 border-t border-[var(--color-muted)]/40">
             {!showContextInput ? (
               <button
-                className="text-sm text-[#418E7B] hover:text-[#E9E0D2] transition-colors underline underline-offset-2"
+                className="text-sm text-[var(--color-muted)] hover:text-[var(--color-text)] transition-colors underline underline-offset-2"
                 onClick={() => setShowContextInput(true)}
               >
                 {t(nativeLanguage, 'notWhatYouMeant')}
@@ -347,13 +347,13 @@ export default function Home() {
                   value={contextInput}
                   onChange={e => setContextInput(e.target.value)}
                   placeholder={t(nativeLanguage, 'addContextPlaceholder')}
-                  className="flex-1 p-2 text-sm rounded-lg bg-[#173F35] border border-[#418E7B] focus:outline-none focus:ring-2 focus:ring-[#EAA09C] text-[#E9E0D2] placeholder-[#418E7B]"
+                  className="flex-1 p-2 text-sm rounded-lg bg-[var(--color-bg)] border border-[var(--color-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--color-highlight)] text-[var(--color-text)] placeholder-[var(--color-muted)]"
                   autoFocus
                   disabled={loading}
                 />
                 <button
                   type="submit"
-                  className="px-3 py-2 text-sm rounded-lg bg-[#418E7B] text-[#E9E0D2] font-bold hover:bg-[#EAA09C] hover:text-[#173F35] disabled:opacity-50 transition-colors"
+                  className="px-3 py-2 text-sm rounded-lg bg-[var(--color-muted)] text-[var(--color-text)] font-bold hover:bg-[var(--color-highlight)] hover:text-[var(--color-bg)] disabled:opacity-50 transition-colors"
                   disabled={loading || !contextInput.trim()}
                 >
                   {loading ? '...' : t(nativeLanguage, 'regenerate')}
@@ -366,29 +366,29 @@ export default function Home() {
 
       {/* Flashcard Edit/Save Form */}
       {showFlashcardForm && flashcardDraft && (
-        <div className="mt-10 p-6 rounded-xl bg-[#173F35] border border-[#418E7B] shadow-lg">
-          <h2 className="text-xl font-bold mb-4 text-[#EAA09C]">{t(nativeLanguage, 'reviewEditFlashcard')}</h2>
+        <div className="mt-10 p-6 rounded-xl bg-[var(--color-bg)] border border-[var(--color-muted)] shadow-lg">
+          <h2 className="text-xl font-bold mb-4 text-[var(--color-highlight)]">{t(nativeLanguage, 'reviewEditFlashcard')}</h2>
           <div className="space-y-4">
             <div>
-              <label className="block font-semibold mb-1 text-[#E9E0D2]">{t(nativeLanguage, 'labelTerm')}</label>
+              <label className="block font-semibold mb-1 text-[var(--color-text)]">{t(nativeLanguage, 'labelTerm')}</label>
               <input
                 type="text"
                 value={flashcardDraft.term || ''}
                 onChange={e => setFlashcardDraft({ ...flashcardDraft, term: e.target.value })}
-                className="w-full p-2 rounded-lg bg-[#1e5246] border border-[#418E7B] text-[#E9E0D2]"
+                className="w-full p-2 rounded-lg bg-[var(--color-surface)] border border-[var(--color-muted)] text-[var(--color-text)]"
               />
             </div>
             <div>
-              <label className="block font-semibold mb-1 text-[#E9E0D2]">{t(nativeLanguage, 'labelTranslation')}</label>
+              <label className="block font-semibold mb-1 text-[var(--color-text)]">{t(nativeLanguage, 'labelTranslation')}</label>
               <input
                 type="text"
                 value={flashcardDraft.translation || ''}
                 onChange={e => setFlashcardDraft({ ...flashcardDraft, translation: e.target.value })}
-                className="w-full p-2 rounded-lg bg-[#1e5246] border border-[#418E7B] text-[#E9E0D2]"
+                className="w-full p-2 rounded-lg bg-[var(--color-surface)] border border-[var(--color-muted)] text-[var(--color-text)]"
               />
             </div>
             <button
-              className="mt-4 px-4 py-2 rounded-lg bg-[#EAA09C] text-[#173F35] font-bold hover:bg-[#E9E0D2] hover:text-[#173F35] focus:outline-none focus:ring-2 focus:ring-[#EAA09C] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="mt-4 px-4 py-2 rounded-lg bg-[var(--color-highlight)] text-[var(--color-bg)] font-bold hover:bg-[var(--color-text)] hover:text-[var(--color-bg)] focus:outline-none focus:ring-2 focus:ring-[var(--color-highlight)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               onClick={handleSaveFlashcard}
               disabled={saving}
             >
@@ -400,7 +400,7 @@ export default function Home() {
 
       {/* Flashcard Save Success Message */}
       {saveSuccess && (
-        <div className="mt-4 p-4 rounded-lg bg-[#418E7B] text-[#E9E0D2] font-semibold">
+        <div className="mt-4 p-4 rounded-lg bg-[var(--color-muted)] text-[var(--color-text)] font-semibold">
           {t(nativeLanguage, 'flashcardSaved')}
         </div>
       )}
@@ -409,45 +409,45 @@ export default function Home() {
       {user && (
         <div className="mt-16">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold text-[#EAA09C]">{t(nativeLanguage, 'savedFlashcardsHeading')}</h2>
+            <h2 className="text-xl font-bold text-[var(--color-highlight)]">{t(nativeLanguage, 'savedFlashcardsHeading')}</h2>
             <button
               onClick={() => setCardOrder(o => o === 'korean-first' ? 'english-first' : 'korean-first')}
-              className="text-sm font-mono px-3 py-1 rounded-lg border border-[#418E7B] text-[#E9E0D2] hover:bg-[#418E7B]/30 transition-colors"
+              className="text-sm font-mono px-3 py-1 rounded-lg border border-[var(--color-muted)] text-[var(--color-text)] hover:bg-[var(--color-muted)]/30 transition-colors"
             >
               {cardOrder === 'korean-first' ? t(nativeLanguage, 'koreanOnTop') : t(nativeLanguage, 'englishOnTop')}
             </button>
           </div>
           {flashcardsLoading ? (
-            <div className="text-[#418E7B]">{t(nativeLanguage, 'loadingFlashcards')}</div>
+            <div className="text-[var(--color-muted)]">{t(nativeLanguage, 'loadingFlashcards')}</div>
           ) : userFlashcards.length === 0 ? (
-            <div className="text-[#418E7B]">{t(nativeLanguage, 'noFlashcardsSaved')}</div>
+            <div className="text-[var(--color-muted)]">{t(nativeLanguage, 'noFlashcardsSaved')}</div>
           ) : (
             <ul className="space-y-4">
               {userFlashcards.map((card, idx) => (
-                <li key={idx} className="p-4 rounded-xl bg-[#1e5246] border border-[#418E7B] shadow flex flex-col gap-2">
+                <li key={idx} className="p-4 rounded-xl bg-[var(--color-surface)] border border-[var(--color-muted)] shadow flex flex-col gap-2">
                   {editingCardId === card.id ? (
                     <div className="space-y-2">
                       <input
                         type="text"
                         value={editDraft?.term || ''}
                         onChange={e => handleEditChange('term', e.target.value)}
-                        className="w-full p-2 rounded-lg bg-[#173F35] border border-[#418E7B] text-[#E9E0D2]"
+                        className="w-full p-2 rounded-lg bg-[var(--color-bg)] border border-[var(--color-muted)] text-[var(--color-text)]"
                       />
                       <input
                         type="text"
                         value={editDraft?.translation || ''}
                         onChange={e => handleEditChange('translation', e.target.value)}
-                        className="w-full p-2 rounded-lg bg-[#173F35] border border-[#418E7B] text-[#E9E0D2]"
+                        className="w-full p-2 rounded-lg bg-[var(--color-bg)] border border-[var(--color-muted)] text-[var(--color-text)]"
                       />
                       <div className="flex gap-2 mt-2">
                         <button
-                          className="px-4 py-2 rounded-lg bg-[#EAA09C] text-[#173F35] font-bold hover:bg-[#E9E0D2] hover:text-[#173F35]"
+                          className="px-4 py-2 rounded-lg bg-[var(--color-highlight)] text-[var(--color-bg)] font-bold hover:bg-[var(--color-text)] hover:text-[var(--color-bg)]"
                           onClick={() => handleEditSave(card)}
                         >
                           {t(nativeLanguage, 'save')}
                         </button>
                         <button
-                          className="px-4 py-2 rounded-lg bg-[#418E7B] text-[#E9E0D2] font-bold hover:bg-[#EAA09C] hover:text-[#173F35]"
+                          className="px-4 py-2 rounded-lg bg-[var(--color-muted)] text-[var(--color-text)] font-bold hover:bg-[var(--color-highlight)] hover:text-[var(--color-bg)]"
                           onClick={handleEditCancel}
                         >
                           {t(nativeLanguage, 'cancel')}
@@ -456,24 +456,24 @@ export default function Home() {
                     </div>
                   ) : (
                     <>
-                      <div className="font-semibold text-lg text-[#E9E0D2]">
+                      <div className="font-semibold text-lg text-[var(--color-text)]">
                         {cardOrder === 'korean-first' ? (card.korean || card.term) : (card.english || card.translation)}
                       </div>
-                      <div className="text-[#EAA09C] text-base">
+                      <div className="text-[var(--color-highlight)] text-base">
                         {cardOrder === 'korean-first' ? (card.english || card.translation) : (card.korean || card.term)}
                       </div>
-                      <div className="text-xs text-[#418E7B] mt-2">
+                      <div className="text-xs text-[var(--color-muted)] mt-2">
                         {t(nativeLanguage, 'savedAt')} {card.createdAt instanceof Date ? card.createdAt.toLocaleString() : String(card.createdAt)}
                       </div>
                       <div className="flex gap-2 mt-2">
                         <button
-                          className="px-3 py-1 rounded-lg bg-[#EAA09C] text-[#173F35] font-bold hover:bg-[#E9E0D2] hover:text-[#173F35]"
+                          className="px-3 py-1 rounded-lg bg-[var(--color-highlight)] text-[var(--color-bg)] font-bold hover:bg-[var(--color-text)] hover:text-[var(--color-bg)]"
                           onClick={() => handleEditClick(card)}
                         >
                           {t(nativeLanguage, 'edit')}
                         </button>
                         <button
-                          className="px-3 py-1 rounded-lg bg-[#418E7B] text-[#E9E0D2] font-bold hover:bg-[#EAA09C] hover:text-[#173F35]"
+                          className="px-3 py-1 rounded-lg bg-[var(--color-muted)] text-[var(--color-text)] font-bold hover:bg-[var(--color-highlight)] hover:text-[var(--color-bg)]"
                           onClick={() => handleDeleteCard(card)}
                         >
                           {t(nativeLanguage, 'delete')}
