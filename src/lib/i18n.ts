@@ -66,6 +66,7 @@ const translations = {
     navLearn: 'Learn',
     navReview: 'Review',
     settingsLanguage: 'Language',
+    settingsTheme: 'Theme',
     signOut: 'Sign out',
     signIn: 'Sign in',
     // Language setup modal
@@ -151,6 +152,7 @@ const translations = {
     navLearn: '학습',
     navReview: '복습',
     settingsLanguage: '언어',
+    settingsTheme: '테마',
     signOut: '로그아웃',
     signIn: '로그인',
     // Language setup modal

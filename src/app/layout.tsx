@@ -3,6 +3,7 @@ import { Source_Code_Pro } from "next/font/google";
 import "./globals.css";
 import Header from "@/components/Header";
 import { UserProvider } from "@/components/UserContext";
+import { ThemeProvider } from "@/components/ThemeContext";
 import LayoutWithUser from "./LayoutWithUser";
 
 // Source Code Pro is a clean, modern coding font with excellent readability
@@ -25,10 +26,12 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={`${sourceCodePro.className} min-h-screen font-mono`} style={{ background: '#173F35' }}>
-        <UserProvider>
-          <LayoutWithUser>{children}</LayoutWithUser>
-        </UserProvider>
+      <body className={`${sourceCodePro.className} min-h-screen font-mono`}>
+        <ThemeProvider>
+          <UserProvider>
+            <LayoutWithUser>{children}</LayoutWithUser>
+          </UserProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

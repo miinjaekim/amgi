@@ -234,19 +234,19 @@ export default function ReviewPage() {
     : `Review Card ${currentReviewIdx + 1} of ${activeQueue.length}`;
 
   return (
-    <div className="max-w-2xl mx-auto font-mono text-base" style={{ color: '#E9E0D2' }}>
-      <h1 className="text-2xl font-bold mb-8 mt-8 text-[#EAA09C]">{t(nativeLanguage, 'reviewPageTitle')}</h1>
-      <div className="p-6 rounded-xl bg-[#1e5246] border border-[#418E7B] shadow-lg">
+    <div className="max-w-2xl mx-auto font-mono text-base" style={{ color: 'var(--color-text)' }}>
+      <h1 className="text-2xl font-bold mb-8 mt-8 text-[var(--color-highlight)]">{t(nativeLanguage, 'reviewPageTitle')}</h1>
+      <div className="p-6 rounded-xl bg-[var(--color-surface)] border border-[var(--color-muted)] shadow-lg">
         {user ? (
           flashcardsLoading ? (
-            <div className="text-[#418E7B]">{t(nativeLanguage, 'loadingFlashcards')}</div>
+            <div className="text-[var(--color-muted)]">{t(nativeLanguage, 'loadingFlashcards')}</div>
           ) : dueCards.length === 0 ? (
             <div>
-              <div className="text-[#418E7B] mb-4">{t(nativeLanguage, 'noCardsDue')}</div>
+              <div className="text-[var(--color-muted)] mb-4">{t(nativeLanguage, 'noCardsDue')}</div>
 
               {isDevelopment && (
                 <button
-                  className="px-3 py-1 bg-[#418E7B] text-white rounded hover:bg-[#2d6355] text-sm"
+                  className="px-3 py-1 bg-[var(--color-muted)] text-[var(--color-text)] rounded hover:bg-[var(--color-muted-dark)] text-sm"
                   onClick={handleForceSynchronize}
                   disabled={isSyncing}
                 >
@@ -259,7 +259,7 @@ export default function ReviewPage() {
               <>
                 <h2 className="text-2xl font-bold mb-4">{t(nativeLanguage, 'reviewComplete')}</h2>
                 <button
-                  className="mt-4 px-4 py-2 rounded-lg bg-[#418E7B] text-[#E9E0D2] hover:bg-[#2d6355]"
+                  className="mt-4 px-4 py-2 rounded-lg bg-[var(--color-muted)] text-[var(--color-text)] hover:bg-[var(--color-muted-dark)]"
                   onClick={handleExitReview}
                 >
                   {t(nativeLanguage, 'exitReview')}
@@ -269,51 +269,51 @@ export default function ReviewPage() {
               <>
                 <h2 className="text-xl font-bold mb-4">
                   {reviewCardProgressLabel}
-                  <span className="ml-2 px-2 py-1 text-sm bg-[#418E7B] rounded-md">
+                  <span className="ml-2 px-2 py-1 text-sm bg-[var(--color-muted)] rounded-md">
                     {currentReview.direction === 'frontToBack'
                       ? t(nativeLanguage, 'directionKoreanToEnglish')
                       : t(nativeLanguage, 'directionEnglishToKorean')}
                   </span>
                 </h2>
 
-                <div className="mb-4 p-6 rounded-xl bg-[#173F35] border border-[#418E7B] shadow-lg">
+                <div className="mb-4 p-6 rounded-xl bg-[var(--color-bg)] border border-[var(--color-muted)] shadow-lg">
                   {currentReview.direction === 'frontToBack' ? (
                     <>
-                      <div className="font-semibold text-2xl mb-2 text-[#EAA09C]">{currentReview.card.korean || currentReview.card.term}</div>
+                      <div className="font-semibold text-2xl mb-2 text-[var(--color-highlight)]">{currentReview.card.korean || currentReview.card.term}</div>
 
                       {showAnswer ? (
                         <>
                           {(currentReview.card.english || currentReview.card.translation) && (
-                            <div className="text-lg mb-3 text-[#E9E0D2] font-semibold">{currentReview.card.english || currentReview.card.translation}</div>
+                            <div className="text-lg mb-3 text-[var(--color-text)] font-semibold">{currentReview.card.english || currentReview.card.translation}</div>
                           )}
 
                           <button
                             onClick={handleToggleDetails}
-                            className="text-sm px-3 py-1 bg-[#2d6355] text-[#E9E0D2] rounded hover:bg-[#418E7B] mb-4"
+                            className="text-sm px-3 py-1 bg-[var(--color-muted-dark)] text-[var(--color-text)] rounded hover:bg-[var(--color-muted)] mb-4"
                           >
                             {showDetails ? t(nativeLanguage, 'hideDetails') : t(nativeLanguage, 'showDetails')}
                           </button>
 
                           {showDetails && (
-                            <div className="mt-3 pt-3 border-t border-[#418E7B]">
+                            <div className="mt-3 pt-3 border-t border-[var(--color-muted)]">
                               {currentReview.card.formality && currentReview.card.formality !== 'N/A' && (
                                 <div className="mb-3">
-                                  <span className="px-2 py-0.5 text-xs rounded-full border border-[#418E7B] text-[#418E7B]">
+                                  <span className="px-2 py-0.5 text-xs rounded-full border border-[var(--color-muted)] text-[var(--color-muted)]">
                                     {currentReview.card.formality}
                                   </span>
                                 </div>
                               )}
                               {currentReview.card.definition && (
                                 <div className="mb-4">
-                                  <div className="font-semibold text-[#EAA09C] text-sm mb-1">{t(nativeLanguage, 'sectionDefinition')}</div>
-                                  <Markdown className="text-[#E9E0D2] opacity-90">{currentReview.card.definition}</Markdown>
+                                  <div className="font-semibold text-[var(--color-highlight)] text-sm mb-1">{t(nativeLanguage, 'sectionDefinition')}</div>
+                                  <Markdown className="text-[var(--color-text)] opacity-90">{currentReview.card.definition}</Markdown>
                                 </div>
                               )}
 
                               {currentReview.card.examples && currentReview.card.examples.length > 0 && (
                                 <div className="mb-4">
-                                  <div className="font-semibold text-[#EAA09C] text-sm mb-1">{t(nativeLanguage, 'sectionExamples')}</div>
-                                  <ul className="list-disc list-inside text-[#E9E0D2] opacity-90 space-y-2">
+                                  <div className="font-semibold text-[var(--color-highlight)] text-sm mb-1">{t(nativeLanguage, 'sectionExamples')}</div>
+                                  <ul className="list-disc list-inside text-[var(--color-text)] opacity-90 space-y-2">
                                     {(() => {
                                       const rawExamples = currentReview.card.examples as unknown[];
                                       if (Array.isArray(rawExamples) && rawExamples.length > 0 && typeof rawExamples[0] === 'string') {
@@ -324,7 +324,7 @@ export default function ReviewPage() {
                                         return (rawExamples as ExamplePair[]).map((ex, i) => (
                                           <li key={i}>
                                             <div>{ex.korean}</div>
-                                            <div className="text-[#EAA09C] text-sm">{ex.english}</div>
+                                            <div className="text-[var(--color-highlight)] text-sm">{ex.english}</div>
                                           </li>
                                         ));
                                       } else {
@@ -337,15 +337,15 @@ export default function ReviewPage() {
 
                               {currentReview.card.notes && (
                                 <div className="mt-2">
-                                  <div className="font-semibold text-[#EAA09C] text-sm mb-1">{t(nativeLanguage, 'sectionNotes')}</div>
-                                  <Markdown className="text-[#E9E0D2] opacity-70 text-sm">{currentReview.card.notes}</Markdown>
+                                  <div className="font-semibold text-[var(--color-highlight)] text-sm mb-1">{t(nativeLanguage, 'sectionNotes')}</div>
+                                  <Markdown className="text-[var(--color-text)] opacity-70 text-sm">{currentReview.card.notes}</Markdown>
                                 </div>
                               )}
                             </div>
                           )}
                         </>
                       ) : (
-                        <div className="text-[#418E7B] text-lg mt-4 italic">
+                        <div className="text-[var(--color-muted)] text-lg mt-4 italic">
                           {t(nativeLanguage, 'promptKoreanToEnglish')}
                         </div>
                       )}
@@ -353,40 +353,40 @@ export default function ReviewPage() {
                   ) : (
                     <>
                       {(currentReview.card.english || currentReview.card.translation) && (
-                        <div className="text-lg mb-2 text-[#E9E0D2]">{currentReview.card.english || currentReview.card.translation}</div>
+                        <div className="text-lg mb-2 text-[var(--color-text)]">{currentReview.card.english || currentReview.card.translation}</div>
                       )}
 
                       {showAnswer ? (
                         <>
-                          <div className="font-semibold text-2xl mb-3 text-[#EAA09C] mt-4">{currentReview.card.korean || currentReview.card.term}</div>
+                          <div className="font-semibold text-2xl mb-3 text-[var(--color-highlight)] mt-4">{currentReview.card.korean || currentReview.card.term}</div>
 
                           <button
                             onClick={handleToggleDetails}
-                            className="text-sm px-3 py-1 bg-[#2d6355] text-[#E9E0D2] rounded hover:bg-[#418E7B] mb-4"
+                            className="text-sm px-3 py-1 bg-[var(--color-muted-dark)] text-[var(--color-text)] rounded hover:bg-[var(--color-muted)] mb-4"
                           >
                             {showDetails ? t(nativeLanguage, 'hideDetails') : t(nativeLanguage, 'showDetails')}
                           </button>
 
                           {showDetails && (
-                            <div className="mt-3 pt-3 border-t border-[#418E7B]">
+                            <div className="mt-3 pt-3 border-t border-[var(--color-muted)]">
                               {currentReview.card.formality && currentReview.card.formality !== 'N/A' && (
                                 <div className="mb-3">
-                                  <span className="px-2 py-0.5 text-xs rounded-full border border-[#418E7B] text-[#418E7B]">
+                                  <span className="px-2 py-0.5 text-xs rounded-full border border-[var(--color-muted)] text-[var(--color-muted)]">
                                     {currentReview.card.formality}
                                   </span>
                                 </div>
                               )}
                               {currentReview.card.definition && (
                                 <div className="mb-4">
-                                  <div className="font-semibold text-[#EAA09C] text-sm mb-1">{t(nativeLanguage, 'sectionDefinition')}</div>
-                                  <Markdown className="text-[#E9E0D2] opacity-90">{currentReview.card.definition}</Markdown>
+                                  <div className="font-semibold text-[var(--color-highlight)] text-sm mb-1">{t(nativeLanguage, 'sectionDefinition')}</div>
+                                  <Markdown className="text-[var(--color-text)] opacity-90">{currentReview.card.definition}</Markdown>
                                 </div>
                               )}
 
                               {currentReview.card.examples && currentReview.card.examples.length > 0 && (
                                 <div className="mb-4">
-                                  <div className="font-semibold text-[#EAA09C] text-sm mb-1">{t(nativeLanguage, 'sectionExamples')}</div>
-                                  <ul className="list-disc list-inside text-[#E9E0D2] opacity-90 space-y-2">
+                                  <div className="font-semibold text-[var(--color-highlight)] text-sm mb-1">{t(nativeLanguage, 'sectionExamples')}</div>
+                                  <ul className="list-disc list-inside text-[var(--color-text)] opacity-90 space-y-2">
                                     {(() => {
                                       const rawExamples = currentReview.card.examples as unknown[];
                                       if (Array.isArray(rawExamples) && rawExamples.length > 0 && typeof rawExamples[0] === 'string') {
@@ -397,7 +397,7 @@ export default function ReviewPage() {
                                         return (rawExamples as ExamplePair[]).map((ex, i) => (
                                           <li key={i}>
                                             <div>{ex.korean}</div>
-                                            <div className="text-[#EAA09C] text-sm">{ex.english}</div>
+                                            <div className="text-[var(--color-highlight)] text-sm">{ex.english}</div>
                                           </li>
                                         ));
                                       } else {
@@ -410,15 +410,15 @@ export default function ReviewPage() {
 
                               {currentReview.card.notes && (
                                 <div className="mt-2">
-                                  <div className="font-semibold text-[#EAA09C] text-sm mb-1">{t(nativeLanguage, 'sectionNotes')}</div>
-                                  <Markdown className="text-[#E9E0D2] opacity-70 text-sm">{currentReview.card.notes}</Markdown>
+                                  <div className="font-semibold text-[var(--color-highlight)] text-sm mb-1">{t(nativeLanguage, 'sectionNotes')}</div>
+                                  <Markdown className="text-[var(--color-text)] opacity-70 text-sm">{currentReview.card.notes}</Markdown>
                                 </div>
                               )}
                             </div>
                           )}
                         </>
                       ) : (
-                        <div className="text-[#418E7B] text-lg mt-4 italic">
+                        <div className="text-[var(--color-muted)] text-lg mt-4 italic">
                           {t(nativeLanguage, 'promptEnglishToKorean')}
                         </div>
                       )}
@@ -435,19 +435,19 @@ export default function ReviewPage() {
                       {t(nativeLanguage, 'ratingAgain')}
                     </button>
                     <button
-                      className="flex-1 px-4 py-2 rounded-lg bg-[#EAA09C] text-[#173F35] hover:bg-[#E9E0D2]"
+                      className="flex-1 px-4 py-2 rounded-lg bg-[var(--color-highlight)] text-[var(--color-bg)] hover:bg-[var(--color-text)]"
                       onClick={() => handleReviewResponse('hard')}
                     >
                       {t(nativeLanguage, 'ratingHard')}
                     </button>
                     <button
-                      className="flex-1 px-4 py-2 rounded-lg bg-[#418E7B] text-[#E9E0D2] hover:bg-[#2d6355]"
+                      className="flex-1 px-4 py-2 rounded-lg bg-[var(--color-muted)] text-[var(--color-text)] hover:bg-[var(--color-muted-dark)]"
                       onClick={() => handleReviewResponse('good')}
                     >
                       {t(nativeLanguage, 'ratingGood')}
                     </button>
                     <button
-                      className="flex-1 px-4 py-2 rounded-lg bg-[#173F35] text-[#E9E0D2] border border-[#418E7B] hover:bg-[#418E7B]"
+                      className="flex-1 px-4 py-2 rounded-lg bg-[var(--color-bg)] text-[var(--color-text)] border border-[var(--color-muted)] hover:bg-[var(--color-muted)]"
                       onClick={() => handleReviewResponse('easy')}
                     >
                       {t(nativeLanguage, 'ratingEasy')}
@@ -455,7 +455,7 @@ export default function ReviewPage() {
                   </div>
                 ) : (
                   <button
-                    className="w-full mt-4 px-4 py-3 bg-[#418E7B] text-white rounded-lg hover:bg-[#2d6355] text-lg font-semibold"
+                    className="w-full mt-4 px-4 py-3 bg-[var(--color-muted)] text-[var(--color-text)] rounded-lg hover:bg-[var(--color-muted-dark)] text-lg font-semibold"
                     onClick={handleShowAnswer}
                   >
                     {t(nativeLanguage, 'showAnswer')}
@@ -473,8 +473,8 @@ export default function ReviewPage() {
                     className="px-3 py-1.5 rounded-lg text-sm font-mono border transition-colors"
                     style={
                       directionFilter === dir
-                        ? { background: '#EAA09C', color: '#173F35', borderColor: '#EAA09C' }
-                        : { background: 'transparent', color: '#E9E0D2', borderColor: '#418E7B' }
+                        ? { background: 'var(--color-highlight)', color: 'var(--color-bg)', borderColor: 'var(--color-highlight)' }
+                        : { background: 'transparent', color: 'var(--color-text)', borderColor: 'var(--color-muted)' }
                     }
                   >
                     {dir === 'both'
@@ -486,7 +486,7 @@ export default function ReviewPage() {
                 ))}
               </div>
               <button
-                className="px-6 py-3 rounded-lg text-lg font-semibold mb-4 bg-[#EAA09C] text-[#173F35] hover:bg-[#E9E0D2] disabled:opacity-40 disabled:cursor-not-allowed"
+                className="px-6 py-3 rounded-lg text-lg font-semibold mb-4 bg-[var(--color-highlight)] text-[var(--color-bg)] hover:bg-[var(--color-text)] disabled:opacity-40 disabled:cursor-not-allowed"
                 onClick={handleStartReview}
                 disabled={filteredCount === 0}
               >
@@ -495,7 +495,7 @@ export default function ReviewPage() {
 
               {isDevelopment && (
                 <button
-                  className="px-3 py-1 bg-[#418E7B] text-white rounded hover:bg-[#2d6355] text-sm"
+                  className="px-3 py-1 bg-[var(--color-muted)] text-[var(--color-text)] rounded hover:bg-[var(--color-muted-dark)] text-sm"
                   onClick={handleForceSynchronize}
                   disabled={isSyncing}
                 >
@@ -505,7 +505,7 @@ export default function ReviewPage() {
             </div>
           )
         ) : (
-          <div className="text-[#418E7B]">{t(nativeLanguage, 'signInToReview')}</div>
+          <div className="text-[var(--color-muted)]">{t(nativeLanguage, 'signInToReview')}</div>
         )}
       </div>
     </div>
