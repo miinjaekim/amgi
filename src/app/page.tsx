@@ -19,7 +19,7 @@ import { t } from '@/lib/i18n';
 import React from 'react';
 
 export default function Home() {
-  const { user, nativeLanguage } = useUser();
+  const { user, nativeLanguage, handleSignIn } = useUser();
   const [term, setTerm] = useState('');
   const [core, setCore] = useState<TermCore | null>(null);
   const [ambiguity, setAmbiguity] = useState<TermAmbiguous | null>(null);
@@ -103,6 +103,7 @@ export default function Home() {
       const result = await getTermDepth(core.term, core.termLanguage, nativeLanguage ?? 'English');
       setDepth(result);
     } catch (err) {
+      setError(t(nativeLanguage, 'errorLoadDepth'));
       console.error(err);
     } finally {
       setLoadingDepth(false);
@@ -116,6 +117,7 @@ export default function Home() {
       const result = await getTermExamples(core.term, core.termLanguage, nativeLanguage ?? 'English');
       setExamples(result);
     } catch (err) {
+      setError(t(nativeLanguage, 'errorLoadExamples'));
       console.error(err);
     } finally {
       setLoadingExamples(false);
@@ -206,6 +208,26 @@ export default function Home() {
           </button>
         </div>
       </form>
+
+      {/* Empty state — shown before any search */}
+      {!loading && !core && !ambiguity && !error && (
+        <div className="mt-12 text-center">
+          <p className="text-[#E9E0D2] text-lg font-semibold mb-2">{t(nativeLanguage, 'tagline')}</p>
+          <p className="text-[#E9E0D2] opacity-60 text-sm mb-8 max-w-md mx-auto">{t(nativeLanguage, 'taglineSubtitle')}</p>
+          <div className="flex flex-wrap gap-2 justify-center">
+            <span className="text-[#418E7B] text-sm mr-1">{t(nativeLanguage, 'exampleTermsLabel')}</span>
+            {['배', 'longing', '눈치', 'awkward', '사랑'].map((example) => (
+              <button
+                key={example}
+                onClick={() => { setTerm(example); resolveExplanation(example); }}
+                className="px-3 py-1 rounded-full border border-[#418E7B] text-[#E9E0D2] text-sm hover:bg-[#418E7B]/30 transition-colors"
+              >
+                {example}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Error Message */}
       {error && (
@@ -328,7 +350,12 @@ export default function Home() {
             {t(nativeLanguage, 'saveAsFlashcard')}
           </button>
           {!user && (
-            <div className="mt-2 text-sm text-[var(--color-text)] opacity-60">{t(nativeLanguage, 'signInToSave')}</div>
+            <button
+              onClick={handleSignIn}
+              className="mt-2 block text-sm text-[var(--color-muted)] hover:text-[var(--color-text)] transition-colors underline underline-offset-2"
+            >
+              {t(nativeLanguage, 'signInToSave')}
+            </button>
           )}
 
           {/* Not what you meant? */}

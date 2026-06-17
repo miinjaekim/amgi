@@ -72,6 +72,13 @@ const translations = {
     // Language setup modal
     welcomeTitle: 'Welcome to Amgi',
     welcomeSubtitle: 'What is your native language? Explanations will be written in this language.',
+    // Empty state / onboarding
+    tagline: 'Look up any word or phrase.',
+    taglineSubtitle: 'Get an instant AI-powered explanation, then save it as a flashcard to review with spaced repetition.',
+    exampleTermsLabel: 'Try:',
+    // Depth / examples errors
+    errorLoadDepth: 'Failed to load definition. Please try again.',
+    errorLoadExamples: 'Failed to load examples. Please try again.',
     // Disambiguation
     disambiguationPrompt: 'This term has multiple meanings. Which one do you mean?',
     notWhatYouMeant: 'Not what you meant?',
@@ -151,6 +158,13 @@ const translations = {
     // Language setup modal
     welcomeTitle: 'Amgi에 오신 것을 환영합니다',
     welcomeSubtitle: '모국어가 무엇인가요? 설명은 이 언어로 작성됩니다.',
+    // Empty state / onboarding
+    tagline: '단어나 표현을 검색해보세요.',
+    taglineSubtitle: 'AI로 즉각적인 설명을 받고, 플래시카드로 저장해 간격 반복 학습을 시작하세요.',
+    exampleTermsLabel: '예시:',
+    // Depth / examples errors
+    errorLoadDepth: '정의를 불러오지 못했습니다. 다시 시도해주세요.',
+    errorLoadExamples: '예문을 불러오지 못했습니다. 다시 시도해주세요.',
     // Disambiguation
     disambiguationPrompt: '이 단어는 여러 의미가 있습니다. 어떤 의미인가요?',
     notWhatYouMeant: '원하시는 내용이 아닌가요?',

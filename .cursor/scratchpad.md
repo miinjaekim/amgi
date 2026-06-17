@@ -92,9 +92,9 @@ Language learners bounce between two tools — an LLM for nuanced explanations a
 Focus for introducing Amgi to unfamiliar users. Ordered by impact.
 
 **High — blockers for strangers**
-- [ ] **Onboarding / empty state** — new users land with no context. Need a brief explainer, example term, or guided first search so strangers know what to do immediately.
-- [ ] **Auth flow placement** — confirm sign-in wall appears *after* a user has seen value, not before. Strangers who hit a login gate too early will leave.
-- [ ] **Error state visibility** — verify that API failures and edge cases surface a clear message at every point in the flow, not a broken/blank state.
+- [x] **Onboarding / empty state** — tagline, subtitle, and bilingual example term chips (배, longing, 눈치, awkward, 사랑) shown before any search so new users know what to do and that both directions work.
+- [x] **Auth flow placement** — confirmed sign-in wall only blocks saving, not exploring. "Sign in to save" nudge converted from passive gray text to a clickable button that triggers Google sign-in directly.
+- [x] **Error state visibility** — definition and examples failures now surface an error message instead of silently failing; all major API failure paths covered.
 
 **Medium — affects whether users return**
 - [ ] **Mobile experience** — likely the primary device for a language tool; layout not yet verified or optimized.
