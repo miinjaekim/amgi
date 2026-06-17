@@ -212,15 +212,15 @@ export default function Home() {
       {/* Empty state — shown before any search */}
       {!loading && !core && !ambiguity && !error && (
         <div className="mt-12 text-center">
-          <p className="text-[#E9E0D2] text-lg font-semibold mb-2">{t(nativeLanguage, 'tagline')}</p>
-          <p className="text-[#E9E0D2] opacity-60 text-sm mb-8 max-w-md mx-auto">{t(nativeLanguage, 'taglineSubtitle')}</p>
+          <p className="text-[var(--color-text)] text-lg font-semibold mb-2">{t(nativeLanguage, 'tagline')}</p>
+          <p className="text-[var(--color-text)] opacity-60 text-sm mb-8 max-w-md mx-auto">{t(nativeLanguage, 'taglineSubtitle')}</p>
           <div className="flex flex-wrap gap-2 justify-center">
-            <span className="text-[#418E7B] text-sm mr-1">{t(nativeLanguage, 'exampleTermsLabel')}</span>
+            <span className="text-[var(--color-muted)] text-sm mr-1">{t(nativeLanguage, 'exampleTermsLabel')}</span>
             {['배', 'longing', '눈치', 'awkward', '사랑'].map((example) => (
               <button
                 key={example}
                 onClick={() => { setTerm(example); resolveExplanation(example); }}
-                className="px-3 py-1 rounded-full border border-[#418E7B] text-[#E9E0D2] text-sm hover:bg-[#418E7B]/30 transition-colors"
+                className="px-3 py-1 rounded-full border border-[var(--color-muted)] text-[var(--color-text)] text-sm hover:bg-[var(--color-muted)]/30 transition-colors"
               >
                 {example}
               </button>

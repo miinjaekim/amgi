@@ -1,53 +1,47 @@
 @import "tailwindcss";
 
-/* Forest (default) */
-html, html.theme-forest {
-  --color-bg: #173F35;
-  --color-surface: #1E5246;
-  --color-muted: #418E7B;
-  --color-muted-dark: #2D6355;
-  --color-text: #E9E0D2;
-  --color-highlight: #EAA09C;
-}
+@layer base {
+  /* Forest (default) */
+  html, html.theme-forest {
+    --color-bg: #173F35;
+    --color-surface: #1E5246;
+    --color-muted: #418E7B;
+    --color-muted-dark: #2D6355;
+    --color-text: #E9E0D2;
+    --color-highlight: #EAA09C;
+  }
 
-/* Slate — dark mode */
-html.theme-slate {
-  --color-bg: #111318;
-  --color-surface: #1C1F2B;
-  --color-muted: #383D5C;
-  --color-muted-dark: #252838;
-  --color-text: #E2E6F3;
-  --color-highlight: #818CF8;
-}
+  /* Slate — dark mode */
+  html.theme-slate {
+    --color-bg: #111318;
+    --color-surface: #1C1F2B;
+    --color-muted: #383D5C;
+    --color-muted-dark: #252838;
+    --color-text: #E2E6F3;
+    --color-highlight: #818CF8;
+  }
 
-/* Paper — light mode */
-html.theme-paper {
-  --color-bg: #F5F4F0;
-  --color-surface: #FFFFFF;
-  --color-muted: #94A3B8;
-  --color-muted-dark: #64748B;
-  --color-text: #1E2235;
-  --color-highlight: #2D6A4F;
-}
+  /* Paper — light mode */
+  html.theme-paper {
+    --color-bg: #F5F4F0;
+    --color-surface: #FFFFFF;
+    --color-muted: #94A3B8;
+    --color-muted-dark: #64748B;
+    --color-text: #1E2235;
+    --color-highlight: #2D6A4F;
+  }
 
-@theme inline {
-  --color-background: var(--color-bg);
-  --color-foreground: var(--color-text);
-  --color-highlight: var(--color-highlight);
-  --color-secondary: var(--color-muted);
-  --font-mono: var(--font-mono);
-}
+  body {
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-family: var(--font-mono), 'JetBrains Mono', 'Fira Code', 'Roboto Mono', monospace;
+  }
 
-body {
-  background: var(--color-bg);
-  color: var(--color-text);
-  font-family: var(--font-mono), 'JetBrains Mono', 'Fira Code', 'Roboto Mono', monospace;
-}
+  * {
+    font-family: inherit;
+  }
 
-* {
-  font-family: inherit;
-}
-
-code, pre {
-  font-family: inherit;
+  code, pre {
+    font-family: inherit;
+  }
 }
