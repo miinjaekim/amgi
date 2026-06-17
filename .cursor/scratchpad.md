@@ -86,25 +86,37 @@ Language learners bounce between two tools — an LLM for nuanced explanations a
 - [x] Term disambiguation — ambiguous terms (e.g. 배: boat / belly / pear) surface possible meanings for the user to choose before explanation is generated; "not what you meant?" path lets users supply context and regenerate
 - [x] Markdown rendering — explanation content now renders markdown (bold, bullets, etc.) as styled HTML instead of raw text
 - [x] Gemini rate limit errors handled gracefully across all API routes — users see a friendly message instead of a crash
+- [x] Bold markdown rendering fixed for Korean text — custom remark plugin handles CommonMark delimiter edge cases with CJK characters
 
-### Upcoming — Engagement & Polish
+### Priority: Initial User Readiness
+Focus for introducing Amgi to unfamiliar users. Ordered by impact.
+
+**High — blockers for strangers**
+- [ ] **Onboarding / empty state** — new users land with no context. Need a brief explainer, example term, or guided first search so strangers know what to do immediately.
+- [ ] **Auth flow placement** — confirm sign-in wall appears *after* a user has seen value, not before. Strangers who hit a login gate too early will leave.
+- [ ] **Error state visibility** — verify that API failures and edge cases surface a clear message at every point in the flow, not a broken/blank state.
+
+**Medium — affects whether users return**
+- [ ] **Mobile experience** — likely the primary device for a language tool; layout not yet verified or optimized.
+- [ ] **Review loop clarity** — first-time users may not understand what "Review" means or why to come back. Copy and empty state on the review page should make the SRS value obvious.
+
+**Engagement (post-launch)**
 - [ ] **Streaks and progress visibility** — core to daily engagement; nothing built yet. Show streak count and cards reviewed in header or dashboard.
-- [ ] **Onboarding** — new users land with no guidance. A brief first-use walkthrough or empty-state copy explaining what to do.
-- [ ] **Responsiveness** — mobile layout not yet verified or optimized.
 
-### Upcoming — Conversation Practice
+### On Hold — Conversation Practice
 - [ ] **Live conversation transcription + feedback page** — a new page where users record a real conversation with another person. Amgi transcribes it live and gives per-participant feedback based on what each speaker said. Key open questions before scoping:
   - **Input model:** single device in a room (one mic, two voices) vs. two separate devices? Diarization (splitting audio by speaker) is the hard part — two devices is simpler.
   - **Transcription:** browser Web Speech API (free, limited) vs. a streaming service like Deepgram or AssemblyAI (better accuracy, paid).
   - **Feedback granularity:** real-time mid-sentence, or end-of-conversation summary? Real-time is much more complex.
   - **MVP definition:** likely end-of-conversation feedback on a recorded audio file is the right starting point before attempting live streaming.
 
-### Upcoming — Data & Features
+### Future — Data & Infrastructure
+- [ ] **Shared term cache** — second Firestore collection (`terms`) keyed by normalized term + native language. Check cache before calling LLM; write on miss. At scale, popular terms are served from cache and LLM calls drop significantly. Could evolve into a community-driven dictionary.
 - [ ] **Export** — CSV/Anki export for data ownership
 - [ ] **Card search/filter** — becomes important as card count grows
 - [ ] **Adaptive explanation depth** — beginner vs. advanced setting
 
-### Upcoming — Multi-Language
+### Future — Multi-Language
 - [ ] **Hanja-focus mode** — emphasize Chinese character breakdown for users studying 한자. Defer until demand.
 
 ---
