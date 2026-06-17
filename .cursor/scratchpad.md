@@ -97,6 +97,7 @@ Focus for introducing Amgi to unfamiliar users. Ordered by impact.
 - [x] **Error state visibility** — definition and examples failures now surface an error message instead of silently failing; all major API failure paths covered.
 
 **Medium — affects whether users return**
+- [ ] **Guest language + theme persistence** — language preference is currently stored in Firestore, so unauthenticated users can't set it without signing in. Theme already works via localStorage. Language should also fall back to localStorage for guests so strangers can use the app in their language before deciding to sign up.
 - [ ] **Mobile experience** — likely the primary device for a language tool; layout not yet verified or optimized.
 - [ ] **Review loop clarity** — first-time users may not understand what "Review" means or why to come back. Copy and empty state on the review page should make the SRS value obvious.
 
@@ -118,6 +119,9 @@ Focus for introducing Amgi to unfamiliar users. Ordered by impact.
 - [ ] **Export** — CSV/Anki export for data ownership
 - [ ] **Card search/filter** — becomes important as card count grows
 - [ ] **Adaptive explanation depth** — beginner vs. advanced setting
+
+### Future — Offline / Privacy
+- [ ] **Offline mode via on-device model** — explore running a small open-source LLM (e.g. Gemma via WebGPU, or Ollama for desktop) so Amgi works without an internet connection or API key. Open questions: model quality vs. Gemini for nuanced language explanations; WebGPU browser support; bundle size. Most viable path short-term may be a desktop companion app rather than a browser feature.
 
 ### Future — Multi-Language
 - [ ] **Hanja-focus mode** — emphasize Chinese character breakdown for users studying 한자. Defer until demand.
