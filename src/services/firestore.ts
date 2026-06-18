@@ -112,6 +112,32 @@ export async function fetchUserFlashcards(uid: string): Promise<Flashcard[]> {
   }
 }
 
+export async function fetchAllUserFlashcards(uid: string): Promise<Flashcard[]> {
+  try {
+    const q = query(
+      collection(db, 'cards'),
+      where('uid', '==', uid),
+      orderBy('createdAt', 'desc')
+    );
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(docSnapshot => {
+      const data = docSnapshot.data();
+      const processTimestamp = (ts: any) => ts?.toDate?.() || ts;
+      return {
+        id: docSnapshot.id,
+        ...(data as Omit<Flashcard, 'createdAt' | 'id'>),
+        createdAt: processTimestamp(data.createdAt) || new Date(),
+        nextReview: processTimestamp(data.nextReview),
+        frontToBack: data.frontToBack ? { ...data.frontToBack, nextReview: processTimestamp(data.frontToBack.nextReview) } : undefined,
+        backToFront: data.backToFront ? { ...data.backToFront, nextReview: processTimestamp(data.backToFront.nextReview) } : undefined,
+      };
+    });
+  } catch (error) {
+    console.error('[Firestore] Error in fetchAllUserFlashcards:', error);
+    throw error;
+  }
+}
+
 export async function fetchArchivedFlashcards(uid: string): Promise<Flashcard[]> {
   try {
     const q = query(
