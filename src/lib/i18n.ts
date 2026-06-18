@@ -121,8 +121,6 @@ const translations = {
     cardsEmpty: 'No cards found.',
     cardsSignInPrompt: 'Sign in to see your flashcards.',
     cardsGoLearn: 'Go to Learn →',
-    archive: 'Archive',
-    restore: 'Restore',
     errorArchiveFlashcard: 'Failed to archive flashcard.',
     errorRestoreFlashcard: 'Failed to restore flashcard.',
     // Bulk actions
@@ -257,8 +255,6 @@ const translations = {
     cardsEmpty: '카드가 없습니다.',
     cardsSignInPrompt: '플래시카드를 보려면 로그인하세요.',
     cardsGoLearn: '학습 페이지로 →',
-    archive: '보관',
-    restore: '복원',
     errorArchiveFlashcard: '플래시카드 보관에 실패했습니다.',
     errorRestoreFlashcard: '플래시카드 복원에 실패했습니다.',
     // Bulk actions

@@ -47,7 +47,7 @@ Language learners bounce between two tools — an LLM for nuanced explanations a
 - `termLanguage`: 'Korean' | 'English' — language of the input term
 - `korean`: fixed Korean side of the card
 - `english`: fixed English side of the card
-- `uid`, `createdAt`
+- `uid`, `createdAt`, `archived` (boolean, optional — false = active, true = archived)
 - `frontToBack`: { nextReview, interval, ease, repetitions } — Korean → English direction
 - `backToFront`: { nextReview, interval, ease, repetitions } — English → Korean direction
 
@@ -75,10 +75,10 @@ Language learners bounce between two tools — an LLM for nuanced explanations a
 
 **1. Card management** — highest priority
 - [x] **Card detail view** — tapping a saved card opens a modal showing its full stored explanation (definition, hanja, cultural context, examples). Cards saved without depth show a prompt to load details before saving next time.
-- [ ] **Manage cards during review** — edit, archive, or delete a card from the review screen without leaving the session. Useful for fixing typos or retiring mastered cards.
-- [ ] **Dedicated cards page (`/cards`)** — the scrolling list on Learn doesn't scale past ~20 cards. A separate page with search, filter, and sort; natural home for bulk actions. Supersedes the standalone "Card search/filter" item.
-- [ ] **Archive instead of delete** — soft-delete cards you're pausing. Archived cards skip the review queue but remain accessible and restorable.
-- [ ] **Bulk actions** — select multiple cards to delete or archive. Depends on the dedicated cards page.
+- [x] **Manage cards during review** — edit, archive, or delete a card from the review screen without leaving the session.
+- [x] **Dedicated cards page (`/cards`)** — search, filter (active/archived/all), sort (newest/oldest/A→Z), card order toggle (KO/EN swap icon).
+- [x] **Archive instead of delete** — soft-delete cards you're pausing. Archived cards skip the review queue but remain accessible and restorable.
+- [x] **Bulk actions** — select multiple cards to archive or delete from the cards page.
 
 **2. Engagement**
 - [ ] **Streaks and progress visibility** — streak count and cards reviewed today, shown in the header or a dashboard. Core to daily habit formation; nothing built yet.
@@ -127,3 +127,5 @@ Language learners bounce between two tools — an LLM for nuanced explanations a
 - Work on features in a separate branch, not directly on `main`
 - In Next.js App Router, reading `localStorage` in a `useState` initializer causes a hydration mismatch (server has no `window`). Always read it in a `useEffect` instead.
 - `nativeLanguage` uses `undefined` (not yet loaded) vs `null` (loaded, not set) vs `string` (set) — this distinction drives the language modal and avoids false positives.
+- Firestore requires a composite index for any query that filters on multiple fields or filters + sorts. The error message includes a direct link to create it in the console. For new features with compound queries, create and commit the index in `firestore.indexes.json` before deploying.
+- When adding a new boolean field to existing Firestore documents, backfill old records — Firestore's `!=` and `==` operators exclude documents where the field is missing entirely.
