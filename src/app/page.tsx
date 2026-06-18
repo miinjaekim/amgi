@@ -151,15 +151,24 @@ export default function Home() {
 
   const handleEditSave = async (card: Flashcard) => {
     if (!card.id || !editDraft) return;
+    const isKoreanTerm = card.termLanguage === 'Korean';
+    const korean = isKoreanTerm ? (editDraft.term ?? card.korean) : (editDraft.translation ?? card.korean);
+    const english = isKoreanTerm ? (editDraft.translation ?? card.english) : (editDraft.term ?? card.english);
     try {
       await updateDoc(doc(db, 'cards', card.id), {
         term: editDraft.term,
         translation: editDraft.translation,
         notes: editDraft.notes,
+        korean,
+        english,
       });
+      setUserFlashcards(prev => prev.map(c =>
+        c.id === card.id
+          ? { ...c, term: editDraft.term!, translation: editDraft.translation!, notes: editDraft.notes, korean, english }
+          : c
+      ));
       setEditingCardId(null);
       setEditDraft(null);
-      setSaveSuccess(true);
     } catch (err) {
       setError(t(nativeLanguage, 'errorSaveChanges'));
     }
@@ -175,7 +184,7 @@ export default function Home() {
     if (!window.confirm(t(nativeLanguage, 'confirmDelete'))) return;
     try {
       await deleteDoc(doc(db, 'cards', card.id));
-      setSaveSuccess(true);
+      setUserFlashcards(prev => prev.filter(c => c.id !== card.id));
     } catch (err) {
       setError(t(nativeLanguage, 'errorDeleteFlashcard'));
     }
@@ -401,7 +410,15 @@ export default function Home() {
               <input
                 type="text"
                 value={flashcardDraft.term || ''}
-                onChange={e => setFlashcardDraft({ ...flashcardDraft, term: e.target.value })}
+                onChange={e => {
+                  const v = e.target.value;
+                  setFlashcardDraft(prev => ({
+                    ...prev,
+                    term: v,
+                    korean: prev?.termLanguage === 'Korean' ? v : prev?.korean,
+                    english: prev?.termLanguage === 'English' ? v : prev?.english,
+                  }));
+                }}
                 className="w-full p-2 rounded-lg bg-[var(--color-surface)] border border-[var(--color-muted)] text-[var(--color-text)]"
               />
             </div>
@@ -410,7 +427,15 @@ export default function Home() {
               <input
                 type="text"
                 value={flashcardDraft.translation || ''}
-                onChange={e => setFlashcardDraft({ ...flashcardDraft, translation: e.target.value })}
+                onChange={e => {
+                  const v = e.target.value;
+                  setFlashcardDraft(prev => ({
+                    ...prev,
+                    translation: v,
+                    korean: prev?.termLanguage === 'English' ? v : prev?.korean,
+                    english: prev?.termLanguage === 'Korean' ? v : prev?.english,
+                  }));
+                }}
                 className="w-full p-2 rounded-lg bg-[var(--color-surface)] border border-[var(--color-muted)] text-[var(--color-text)]"
               />
             </div>
