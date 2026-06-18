@@ -13,6 +13,7 @@ const Header: React.FC = () => {
   const navItems = [
     { label: t(nativeLanguage, 'navLearn'), href: '/' },
     { label: t(nativeLanguage, 'navReview'), href: '/review' },
+    { label: t(nativeLanguage, 'navCards'), href: '/cards' },
   ];
   const [open, setOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);

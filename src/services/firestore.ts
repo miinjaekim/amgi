@@ -1,5 +1,5 @@
 import { db } from '@/config/firebase';
-import { collection, addDoc, Timestamp, query, where, orderBy, getDocs, doc, updateDoc } from 'firebase/firestore';
+import { collection, addDoc, Timestamp, query, where, orderBy, getDocs, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { TermExplanation } from './gemini';
 
 function detectTermLanguage(term: string): 'Korean' | 'English' {
@@ -17,6 +17,7 @@ export interface Flashcard extends TermExplanation {
   id?: string;
   uid: string;
   createdAt: Date;
+  archived?: boolean;
   // Direction-specific review tracking
   frontToBack?: ReviewTracking;
   backToFront?: ReviewTracking;
@@ -111,6 +112,44 @@ export async function fetchUserFlashcards(uid: string): Promise<Flashcard[]> {
     console.error('[Firestore] Error in fetchUserFlashcards:', error);
     throw error;
   }
+}
+
+export async function fetchAllUserFlashcards(uid: string): Promise<Flashcard[]> {
+  try {
+    const q = query(
+      collection(db, 'cards'),
+      where('uid', '==', uid),
+      orderBy('createdAt', 'desc')
+    );
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(docSnapshot => {
+      const data = docSnapshot.data();
+      const processTimestamp = (ts: any) => ts?.toDate?.() || ts;
+      return {
+        id: docSnapshot.id,
+        ...(data as Omit<Flashcard, 'createdAt' | 'id'>),
+        createdAt: processTimestamp(data.createdAt) || new Date(),
+        nextReview: processTimestamp(data.nextReview),
+        frontToBack: data.frontToBack ? { ...data.frontToBack, nextReview: processTimestamp(data.frontToBack.nextReview) } : undefined,
+        backToFront: data.backToFront ? { ...data.backToFront, nextReview: processTimestamp(data.backToFront.nextReview) } : undefined,
+      };
+    });
+  } catch (error) {
+    console.error('[Firestore] Error in fetchAllUserFlashcards:', error);
+    throw error;
+  }
+}
+
+export async function archiveFlashcard(cardId: string): Promise<void> {
+  await updateDoc(doc(db, 'cards', cardId), { archived: true });
+}
+
+export async function restoreFlashcard(cardId: string): Promise<void> {
+  await updateDoc(doc(db, 'cards', cardId), { archived: false });
+}
+
+export async function deleteFlashcard(cardId: string): Promise<void> {
+  await deleteDoc(doc(db, 'cards', cardId));
 }
 
 // Debug: Fetch all cards without filters
