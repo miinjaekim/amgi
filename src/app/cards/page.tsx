@@ -242,9 +242,6 @@ export default function CardsPage() {
           {/* Sort + count + Select row */}
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
-              <span className="text-sm text-[var(--color-muted)]">
-                {visibleCards.length} {nativeLanguage === 'Korean' ? '개' : `card${visibleCards.length !== 1 ? 's' : ''}`}
-              </span>
               {!selectMode ? (
                 <button
                   onClick={() => setSelectMode(true)}
