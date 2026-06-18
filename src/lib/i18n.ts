@@ -84,6 +84,13 @@ const translations = {
     notWhatYouMeant: 'Not what you meant?',
     addContextPlaceholder: 'Add context (e.g. "the fruit", "casual speech")',
     regenerate: 'Regenerate',
+    // Review page — clarity
+    reviewPageDescription: 'Each card reappears right before you\'d forget it — less time studying, more time remembering.',
+    noFlashcardsForReview: 'No flashcards saved yet.',
+    goToLearnPage: 'Go to Learn to save your first card →',
+    allCaughtUp: 'You\'re all caught up!',
+    nextReviewOn: 'Next review:',
+    reviewCompleteMessage: 'Good work. Head to Learn to keep building your vocabulary.',
   },
   Korean: {
     // Learn page
@@ -170,6 +177,13 @@ const translations = {
     notWhatYouMeant: '원하시는 내용이 아닌가요?',
     addContextPlaceholder: '맥락 추가 (예: "과일", "구어체")',
     regenerate: '다시 생성',
+    // Review page — clarity
+    reviewPageDescription: '각 카드는 잊어버리기 직전에 다시 나타납니다 — 적은 노력으로 더 많이 기억해요.',
+    noFlashcardsForReview: '아직 저장된 플래시카드가 없습니다.',
+    goToLearnPage: '학습 페이지에서 첫 카드를 저장해보세요 →',
+    allCaughtUp: '모두 완료했습니다!',
+    nextReviewOn: '다음 복습:',
+    reviewCompleteMessage: '수고했습니다. 학습 페이지에서 어휘를 계속 늘려보세요.',
   },
 } as const;
 
