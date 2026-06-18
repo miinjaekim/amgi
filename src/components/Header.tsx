@@ -33,14 +33,14 @@ const Header: React.FC = () => {
       className="w-full flex items-center justify-between px-4 py-2 shadow-md"
       style={{ background: 'var(--color-bg)' }}
     >
-      <div className="flex items-center gap-6">
-        <AmgiLogo color="var(--color-highlight)" stroke="var(--color-text)" size={36} />
-        <nav className="flex items-center gap-6 ml-2">
+      <div className="flex items-center gap-3 sm:gap-6">
+        <AmgiLogo color="var(--color-highlight)" stroke="var(--color-text)" size={30} />
+        <nav className="hidden sm:flex items-center gap-4 sm:gap-6">
           {navItems.map((item) => (
             <a
               key={item.label}
               href={item.href}
-              className="text-base font-mono hover:underline"
+              className="text-sm sm:text-base font-mono hover:underline"
               style={{ color: 'var(--color-text)' }}
             >
               {item.label}
@@ -83,7 +83,7 @@ const Header: React.FC = () => {
                       {user.displayName?.[0]?.toUpperCase() ?? '?'}
                     </div>
                   )}
-                  <span className="font-medium font-mono text-sm">{user.displayName}</span>
+                  <span className="hidden sm:inline font-medium font-mono text-sm">{user.displayName}</span>
                 </>
               ) : (
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -115,7 +115,7 @@ const Header: React.FC = () => {
                       <button
                         key={lang.code}
                         onClick={() => { setNativeLanguage(lang.code); setOpen(false); }}
-                        className="flex-1 py-1.5 rounded-lg text-sm font-mono border transition-colors"
+                        className="flex-1 py-2.5 rounded-lg text-sm font-mono border transition-colors"
                         style={
                           nativeLanguage === lang.code
                             ? { background: 'var(--color-highlight)', color: 'var(--color-bg)', borderColor: 'var(--color-highlight)' }
@@ -138,7 +138,7 @@ const Header: React.FC = () => {
                       <button
                         key={th.value}
                         onClick={() => setTheme(th.value)}
-                        className="flex-1 py-1.5 rounded-lg text-sm font-mono border transition-colors"
+                        className="flex-1 py-2.5 rounded-lg text-sm font-mono border transition-colors"
                         style={
                           theme === th.value
                             ? { background: 'var(--color-highlight)', color: 'var(--color-bg)', borderColor: 'var(--color-highlight)' }

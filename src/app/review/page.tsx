@@ -427,27 +427,27 @@ export default function ReviewPage() {
                 </div>
 
                 {showAnswer ? (
-                  <div className="flex gap-2 mt-4">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-4">
                     <button
-                      className="flex-1 px-4 py-2 rounded-lg bg-red-400 text-white hover:bg-red-500"
+                      className="px-4 py-3 rounded-lg bg-red-400 text-white hover:bg-red-500 font-semibold"
                       onClick={() => handleReviewResponse('again')}
                     >
                       {t(nativeLanguage, 'ratingAgain')}
                     </button>
                     <button
-                      className="flex-1 px-4 py-2 rounded-lg bg-[var(--color-highlight)] text-[var(--color-bg)] hover:bg-[var(--color-text)]"
+                      className="px-4 py-3 rounded-lg bg-[var(--color-highlight)] text-[var(--color-bg)] hover:bg-[var(--color-text)] font-semibold"
                       onClick={() => handleReviewResponse('hard')}
                     >
                       {t(nativeLanguage, 'ratingHard')}
                     </button>
                     <button
-                      className="flex-1 px-4 py-2 rounded-lg bg-[var(--color-muted)] text-[var(--color-text)] hover:bg-[var(--color-muted-dark)]"
+                      className="px-4 py-3 rounded-lg bg-[var(--color-muted)] text-[var(--color-text)] hover:bg-[var(--color-muted-dark)] font-semibold"
                       onClick={() => handleReviewResponse('good')}
                     >
                       {t(nativeLanguage, 'ratingGood')}
                     </button>
                     <button
-                      className="flex-1 px-4 py-2 rounded-lg bg-[var(--color-bg)] text-[var(--color-text)] border border-[var(--color-muted)] hover:bg-[var(--color-muted)]"
+                      className="px-4 py-3 rounded-lg bg-[var(--color-bg)] text-[var(--color-text)] border border-[var(--color-muted)] hover:bg-[var(--color-muted)] font-semibold"
                       onClick={() => handleReviewResponse('easy')}
                     >
                       {t(nativeLanguage, 'ratingEasy')}
@@ -465,12 +465,12 @@ export default function ReviewPage() {
             )
           ) : (
             <div className="flex flex-col items-center">
-              <div className="flex gap-2 mb-6">
+              <div className="flex flex-wrap gap-2 mb-6 justify-center">
                 {(['both', 'frontToBack', 'backToFront'] as DirectionFilter[]).map(dir => (
                   <button
                     key={dir}
                     onClick={() => setDirectionFilter(dir)}
-                    className="px-3 py-1.5 rounded-lg text-sm font-mono border transition-colors"
+                    className="px-3 py-2.5 rounded-lg text-sm font-mono border transition-colors"
                     style={
                       directionFilter === dir
                         ? { background: 'var(--color-highlight)', color: 'var(--color-bg)', borderColor: 'var(--color-highlight)' }

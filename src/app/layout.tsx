@@ -15,8 +15,8 @@ const sourceCodePro = Source_Code_Pro({
 });
 
 export const metadata: Metadata = {
-  title: "Amgi AI - Language Learning Made Simple",
-  description: "Learn languages effortlessly with AI-powered explanations and spaced repetition.",
+  title: "Amgi · 암기",
+  description: "Look up any word or phrase. Get an AI-powered explanation and save it as a flashcard to review with spaced repetition.",
 };
 
 export default function RootLayout({
