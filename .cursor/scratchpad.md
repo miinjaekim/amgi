@@ -74,7 +74,7 @@ Language learners bounce between two tools — an LLM for nuanced explanations a
 ### Up Next
 
 **1. Card management** — highest priority
-- [ ] **Card detail view** — tapping a saved card shows the full explanation (definition, cultural context, hanja, examples) generated at save time. Data is already on the card; needs a drawer or `/cards/[id]` page to surface it.
+- [x] **Card detail view** — tapping a saved card opens a modal showing its full stored explanation (definition, hanja, cultural context, examples). Cards saved without depth show a prompt to load details before saving next time.
 - [ ] **Manage cards during review** — edit, archive, or delete a card from the review screen without leaving the session. Useful for fixing typos or retiring mastered cards.
 - [ ] **Dedicated cards page (`/cards`)** — the scrolling list on Learn doesn't scale past ~20 cards. A separate page with search, filter, and sort; natural home for bulk actions. Supersedes the standalone "Card search/filter" item.
 - [ ] **Archive instead of delete** — soft-delete cards you're pausing. Archived cards skip the review queue but remain accessible and restorable.
