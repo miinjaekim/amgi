@@ -48,6 +48,13 @@ const translations = {
     noArchivedCards: 'No archived cards.',
     errorArchiveFlashcard: 'Failed to archive flashcard.',
     errorRestoreFlashcard: 'Failed to restore flashcard.',
+    // Review page — card management
+    reviewManageCard: 'Manage Card',
+    reviewEditTerm: 'Term',
+    reviewEditTranslation: 'Translation',
+    reviewCardSaved: 'Card updated.',
+    reviewCardArchived: 'Card archived.',
+    reviewCardDeleted: 'Card deleted.',
     // Review page
     reviewPageTitle: 'Review',
     noCardsDue: 'No cards due for review.',
@@ -150,6 +157,13 @@ const translations = {
     noArchivedCards: '보관된 카드가 없습니다.',
     errorArchiveFlashcard: '플래시카드 보관에 실패했습니다.',
     errorRestoreFlashcard: '플래시카드 복원에 실패했습니다.',
+    // Review page — card management
+    reviewManageCard: '카드 관리',
+    reviewEditTerm: '단어',
+    reviewEditTranslation: '번역',
+    reviewCardSaved: '카드가 업데이트되었습니다.',
+    reviewCardArchived: '카드가 보관되었습니다.',
+    reviewCardDeleted: '카드가 삭제되었습니다.',
     // Review page
     reviewPageTitle: '복습',
     noCardsDue: '복습할 카드가 없습니다.',

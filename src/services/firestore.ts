@@ -1,5 +1,5 @@
 import { db } from '@/config/firebase';
-import { collection, addDoc, Timestamp, query, where, orderBy, getDocs, doc, updateDoc } from 'firebase/firestore';
+import { collection, addDoc, Timestamp, query, where, orderBy, getDocs, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { TermExplanation } from './gemini';
 
 function detectTermLanguage(term: string): 'Korean' | 'English' {
@@ -134,6 +134,10 @@ export async function archiveFlashcard(cardId: string): Promise<void> {
 
 export async function restoreFlashcard(cardId: string): Promise<void> {
   await updateDoc(doc(db, 'cards', cardId), { archived: false });
+}
+
+export async function deleteFlashcard(cardId: string): Promise<void> {
+  await deleteDoc(doc(db, 'cards', cardId));
 }
 
 // Debug: Fetch all cards without filters
