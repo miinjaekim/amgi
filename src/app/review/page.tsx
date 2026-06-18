@@ -79,6 +79,27 @@ function isExamplePairArray(arr: unknown[]): arr is { korean: string; english: s
   return arr.length === 0 || (typeof arr[0] === 'object' && arr[0] !== null && 'korean' in arr[0]);
 }
 
+function getEarliestNextReview(cards: Flashcard[]): Date | null {
+  const now = new Date();
+  const dates: Date[] = [];
+  for (const card of cards) {
+    if (card.frontToBack?.nextReview) dates.push(new Date(card.frontToBack.nextReview as string));
+    if (card.backToFront?.nextReview) dates.push(new Date(card.backToFront.nextReview as string));
+    if (!card.frontToBack && !card.backToFront && card.nextReview) dates.push(new Date(card.nextReview as string));
+  }
+  const future = dates.filter(d => d > now);
+  if (future.length === 0) return null;
+  return new Date(Math.min(...future.map(d => d.getTime())));
+}
+
+function formatRelativeDate(date: Date, lang: string | null | undefined, now: Date): string {
+  const tomorrow = new Date(now);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  if (date.toDateString() === now.toDateString()) return lang === 'Korean' ? '오늘' : 'today';
+  if (date.toDateString() === tomorrow.toDateString()) return lang === 'Korean' ? '내일' : 'tomorrow';
+  return date.toLocaleDateString(lang === 'Korean' ? 'ko-KR' : 'en-US', { month: 'short', day: 'numeric' });
+}
+
 export default function ReviewPage() {
   const { user, nativeLanguage } = useUser();
   const [userFlashcards, setUserFlashcards] = useState<Flashcard[]>([]);
@@ -95,6 +116,10 @@ export default function ReviewPage() {
   const [isSyncing, setIsSyncing] = useState(false);
 
   const isDevelopment = process.env.NODE_ENV === 'development';
+  const [nextReviewDate, setNextReviewDate] = useState<Date | null>(null);
+  const [clientNow, setClientNow] = useState<Date | null>(null);
+
+  useEffect(() => { setClientNow(new Date()); }, []);
 
   useEffect(() => {
     if (user && !migrationComplete) {
@@ -104,6 +129,10 @@ export default function ReviewPage() {
       setDueCards([]);
     }
   }, [user, migrationComplete]);
+
+  useEffect(() => {
+    setNextReviewDate(dueCards.length === 0 ? getEarliestNextReview(userFlashcards) : null);
+  }, [userFlashcards, dueCards]);
 
   const loadCards = async (forceMigration = false) => {
     if (!user) return;
@@ -235,18 +264,34 @@ export default function ReviewPage() {
 
   return (
     <div className="max-w-2xl mx-auto font-mono text-base" style={{ color: 'var(--color-text)' }}>
-      <h1 className="text-2xl font-bold mb-8 mt-8 text-[var(--color-highlight)]">{t(nativeLanguage, 'reviewPageTitle')}</h1>
+      <h1 className="text-2xl font-bold mb-2 mt-8 text-[var(--color-highlight)]">{t(nativeLanguage, 'reviewPageTitle')}</h1>
+      <p className="text-sm mb-6 text-[var(--color-muted)]">{t(nativeLanguage, 'reviewPageDescription')}</p>
       <div className="p-6 rounded-xl bg-[var(--color-surface)] border border-[var(--color-muted)] shadow-lg">
         {user ? (
           flashcardsLoading ? (
             <div className="text-[var(--color-muted)]">{t(nativeLanguage, 'loadingFlashcards')}</div>
+          ) : userFlashcards.length === 0 ? (
+            <div className="text-center py-4">
+              <p className="text-[var(--color-muted)] mb-6">{t(nativeLanguage, 'noFlashcardsForReview')}</p>
+              <a
+                href="/"
+                className="inline-block px-5 py-2.5 rounded-lg font-semibold transition-colors"
+                style={{ background: 'var(--color-highlight)', color: 'var(--color-bg)' }}
+              >
+                {t(nativeLanguage, 'goToLearnPage')}
+              </a>
+            </div>
           ) : dueCards.length === 0 ? (
-            <div>
-              <div className="text-[var(--color-muted)] mb-4">{t(nativeLanguage, 'noCardsDue')}</div>
-
+            <div className="text-center py-4">
+              <p className="text-xl font-bold mb-2">{t(nativeLanguage, 'allCaughtUp')}</p>
+              {nextReviewDate && clientNow && (
+                <p className="text-[var(--color-muted)] text-sm">
+                  {t(nativeLanguage, 'nextReviewOn')} {formatRelativeDate(nextReviewDate, nativeLanguage, clientNow)}
+                </p>
+              )}
               {isDevelopment && (
                 <button
-                  className="px-3 py-1 bg-[var(--color-muted)] text-[var(--color-text)] rounded hover:bg-[var(--color-muted-dark)] text-sm"
+                  className="mt-4 px-3 py-1 bg-[var(--color-muted)] text-[var(--color-text)] rounded hover:bg-[var(--color-muted-dark)] text-sm"
                   onClick={handleForceSynchronize}
                   disabled={isSyncing}
                 >
@@ -256,15 +301,31 @@ export default function ReviewPage() {
             </div>
           ) : reviewMode ? (
             reviewComplete ? (
-              <>
-                <h2 className="text-2xl font-bold mb-4">{t(nativeLanguage, 'reviewComplete')}</h2>
-                <button
-                  className="mt-4 px-4 py-2 rounded-lg bg-[var(--color-muted)] text-[var(--color-text)] hover:bg-[var(--color-muted-dark)]"
-                  onClick={handleExitReview}
-                >
-                  {t(nativeLanguage, 'exitReview')}
-                </button>
-              </>
+              <div className="text-center py-4">
+                <h2 className="text-2xl font-bold mb-2">{t(nativeLanguage, 'reviewComplete')}</h2>
+                <p className="text-[var(--color-muted)] text-sm mb-1">
+                  {nativeLanguage === 'Korean'
+                    ? `${activeQueue.length}개 카드를 복습했습니다.`
+                    : `You reviewed ${activeQueue.length} card${activeQueue.length !== 1 ? 's' : ''}.`}
+                </p>
+                <p className="text-[var(--color-muted)] text-sm mb-6">{t(nativeLanguage, 'reviewCompleteMessage')}</p>
+                <div className="flex gap-3 justify-center flex-wrap">
+                  <button
+                    className="px-5 py-2.5 rounded-lg font-semibold transition-colors"
+                    style={{ background: 'var(--color-highlight)', color: 'var(--color-bg)' }}
+                    onClick={handleExitReview}
+                  >
+                    {t(nativeLanguage, 'exitReview')}
+                  </button>
+                  <a
+                    href="/"
+                    className="px-5 py-2.5 rounded-lg border font-semibold transition-colors hover:bg-[var(--color-muted)]/20"
+                    style={{ borderColor: 'var(--color-muted)', color: 'var(--color-text)' }}
+                  >
+                    {t(nativeLanguage, 'navLearn')}
+                  </a>
+                </div>
+              </div>
             ) : (
               <>
                 <h2 className="text-xl font-bold mb-4">

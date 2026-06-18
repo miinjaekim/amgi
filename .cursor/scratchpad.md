@@ -99,7 +99,7 @@ Focus for introducing Amgi to unfamiliar users. Ordered by impact.
 **Medium — affects whether users return**
 - [x] **Guest language + theme persistence** — language defaults to Korean and theme to Paper for new visitors; both stored in localStorage so guests can change them via the settings dropdown (gear icon) without signing in. Signed-in users get a bordered button trigger for the same dropdown for better discoverability.
 - [x] **Mobile experience** — header compacted (smaller logo/gaps, display name hidden), bottom navigation bar (Learn/Review with active highlight) replaces header nav on mobile, review rating buttons in 2×2 grid with larger touch targets, direction selector wraps, main content padded to clear fixed bottom nav. Page title updated to "Amgi · 암기".
-- [ ] **Review loop clarity** — first-time users may not understand what "Review" means or why to come back. Copy and empty state on the review page should make the SRS value obvious.
+- [x] **Review loop clarity** — page subtitle explains SRS value; empty states distinguish "no cards saved" (link to Learn) from "all caught up" (next review date); review complete screen shows card count and links to Learn.
 
 **Engagement (post-launch)**
 - [ ] **Streaks and progress visibility** — core to daily engagement; nothing built yet. Show streak count and cards reviewed in header or dashboard.
