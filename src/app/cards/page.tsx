@@ -43,6 +43,7 @@ export default function CardsPage() {
   const [editDraft, setEditDraft] = useState<{ term: string; translation: string } | null>(null);
   const [detailCard, setDetailCard] = useState<Flashcard | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [cardOrder, setCardOrder] = useState<'korean-first' | 'english-first'>('korean-first');
 
   useEffect(() => {
     if (!user) { setAllCards([]); return; }
@@ -194,7 +195,7 @@ export default function CardsPage() {
             <span className="text-sm text-[var(--color-muted)]">
               {visibleCards.length} {nativeLanguage === 'Korean' ? '개' : `card${visibleCards.length !== 1 ? 's' : ''}`}
             </span>
-            <div className="flex gap-1">
+            <div className="flex items-center gap-1">
               {sortOptions.map(opt => (
                 <button
                   key={opt.key}
@@ -207,6 +208,16 @@ export default function CardsPage() {
                   {opt.label}
                 </button>
               ))}
+              <button
+                onClick={() => setCardOrder(o => o === 'korean-first' ? 'english-first' : 'korean-first')}
+                title={cardOrder === 'korean-first' ? 'Korean on top' : 'English on top'}
+                className="ml-1 p-1 rounded-lg border transition-colors"
+                style={{ background: 'transparent', color: 'var(--color-muted)', borderColor: 'var(--color-muted)' }}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M7 16V4m0 0L3 8m4-4 4 4M17 8v12m0 0 4-4m-4 4-4-4" />
+                </svg>
+              </button>
             </div>
           </div>
 
@@ -279,10 +290,10 @@ export default function CardsPage() {
                         onClick={() => setDetailCard(card)}
                       >
                         <div className="font-semibold text-lg text-[var(--color-text)]">
-                          {highlight(card.korean || card.term, search)}
+                          {highlight(cardOrder === 'korean-first' ? (card.korean || card.term) : (card.english || card.translation || ''), search)}
                         </div>
                         <div className="text-[var(--color-highlight)] text-base">
-                          {highlight(card.english || card.translation || '', search)}
+                          {highlight(cardOrder === 'korean-first' ? (card.english || card.translation || '') : (card.korean || card.term), search)}
                         </div>
                       </button>
                       <div className="text-xs text-[var(--color-muted)]">
