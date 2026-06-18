@@ -1,7 +1,7 @@
 'use client';
 import React, { useEffect, useState } from 'react';
 import { useUser } from '@/components/UserContext';
-import { fetchUserFlashcards, Flashcard, ReviewTracking, migrateExistingCards } from '@/services/firestore';
+import { fetchUserFlashcards, Flashcard, ReviewTracking, migrateExistingCards, archiveFlashcard, deleteFlashcard } from '@/services/firestore';
 import { db } from '@/config/firebase';
 import { doc, updateDoc } from 'firebase/firestore';
 import { getNextReviewData } from '@/services/sm2';
@@ -114,6 +114,9 @@ export default function ReviewPage() {
   const [showAnswer, setShowAnswer] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [showManage, setShowManage] = useState(false);
+  const [manageEditDraft, setManageEditDraft] = useState<{ term: string; translation: string } | null>(null);
+  const [manageStatus, setManageStatus] = useState<string | null>(null);
 
   const isDevelopment = process.env.NODE_ENV === 'development';
   const [nextReviewDate, setNextReviewDate] = useState<Date | null>(null);
@@ -234,6 +237,9 @@ export default function ReviewPage() {
       setCurrentReviewIdx(currentReviewIdx + 1);
       setShowAnswer(false);
       setShowDetails(false);
+      setShowManage(false);
+      setManageEditDraft(null);
+      setManageStatus(null);
     } else {
       setReviewComplete(true);
     }
@@ -245,7 +251,82 @@ export default function ReviewPage() {
     setCurrentReviewIdx(0);
     setShowAnswer(false);
     setShowDetails(false);
+    setShowManage(false);
+    setManageEditDraft(null);
+    setManageStatus(null);
     loadCards();
+  };
+
+  const handleOpenManage = (card: Flashcard) => {
+    setManageEditDraft({ term: card.term, translation: card.translation || '' });
+    setManageStatus(null);
+    setShowManage(true);
+  };
+
+  const handleManageEditSave = async () => {
+    if (!manageEditDraft) return;
+    const { card } = activeQueue[currentReviewIdx];
+    if (!card.id) return;
+    const isKoreanTerm = card.termLanguage === 'Korean';
+    const korean = isKoreanTerm ? manageEditDraft.term : manageEditDraft.translation;
+    const english = isKoreanTerm ? manageEditDraft.translation : manageEditDraft.term;
+    try {
+      await updateDoc(doc(db, 'cards', card.id), {
+        term: manageEditDraft.term,
+        translation: manageEditDraft.translation,
+        korean,
+        english,
+      });
+      setActiveQueue(prev => prev.map((item, i) =>
+        i === currentReviewIdx
+          ? { ...item, card: { ...item.card, term: manageEditDraft.term, translation: manageEditDraft.translation, korean, english } }
+          : item
+      ));
+      setManageStatus(t(nativeLanguage, 'reviewCardSaved'));
+      setShowManage(false);
+    } catch {
+      setManageStatus(t(nativeLanguage, 'errorSaveChanges'));
+    }
+  };
+
+  const handleManageArchive = async () => {
+    const { card } = activeQueue[currentReviewIdx];
+    if (!card.id) return;
+    if (!window.confirm(t(nativeLanguage, 'confirmArchive'))) return;
+    try {
+      await archiveFlashcard(card.id);
+      setManageStatus(t(nativeLanguage, 'reviewCardArchived'));
+      setShowManage(false);
+      advanceAfterManage();
+    } catch {
+      setManageStatus(t(nativeLanguage, 'errorArchiveFlashcard'));
+    }
+  };
+
+  const handleManageDelete = async () => {
+    const { card } = activeQueue[currentReviewIdx];
+    if (!card.id) return;
+    if (!window.confirm(t(nativeLanguage, 'confirmDelete'))) return;
+    try {
+      await deleteFlashcard(card.id);
+      setManageStatus(t(nativeLanguage, 'reviewCardDeleted'));
+      setShowManage(false);
+      advanceAfterManage();
+    } catch {
+      setManageStatus(t(nativeLanguage, 'errorDeleteFlashcard'));
+    }
+  };
+
+  const advanceAfterManage = () => {
+    const remaining = activeQueue.filter((_, i) => i !== currentReviewIdx);
+    if (remaining.length === 0) {
+      setReviewComplete(true);
+    } else {
+      setActiveQueue(remaining);
+      setCurrentReviewIdx(idx => Math.min(idx, remaining.length - 1));
+      setShowAnswer(false);
+      setShowDetails(false);
+    }
   };
 
   const currentReview = activeQueue[currentReviewIdx];
@@ -328,14 +409,80 @@ export default function ReviewPage() {
               </div>
             ) : (
               <>
-                <h2 className="text-xl font-bold mb-4">
-                  {reviewCardProgressLabel}
-                  <span className="ml-2 px-2 py-1 text-sm bg-[var(--color-muted)] rounded-md">
-                    {currentReview.direction === 'frontToBack'
-                      ? t(nativeLanguage, 'directionKoreanToEnglish')
-                      : t(nativeLanguage, 'directionEnglishToKorean')}
-                  </span>
-                </h2>
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-xl font-bold">
+                    {reviewCardProgressLabel}
+                    <span className="ml-2 px-2 py-1 text-sm bg-[var(--color-muted)] rounded-md">
+                      {currentReview.direction === 'frontToBack'
+                        ? t(nativeLanguage, 'directionKoreanToEnglish')
+                        : t(nativeLanguage, 'directionEnglishToKorean')}
+                    </span>
+                  </h2>
+                  <button
+                    onClick={() => showManage ? setShowManage(false) : handleOpenManage(currentReview.card)}
+                    className="text-sm px-3 py-1 rounded-lg border border-[var(--color-muted)] text-[var(--color-muted)] hover:text-[var(--color-text)] hover:border-[var(--color-text)] transition-colors"
+                  >
+                    {t(nativeLanguage, 'reviewManageCard')}
+                  </button>
+                </div>
+
+                {/* Inline manage panel */}
+                {showManage && manageEditDraft && (
+                  <div className="mb-4 p-4 rounded-xl border border-[var(--color-muted)] bg-[var(--color-surface)] space-y-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-[var(--color-muted)] mb-1">{t(nativeLanguage, 'reviewEditTerm')}</label>
+                      <input
+                        type="text"
+                        value={manageEditDraft.term}
+                        onChange={e => setManageEditDraft(d => d ? { ...d, term: e.target.value } : d)}
+                        className="w-full p-2 rounded-lg bg-[var(--color-bg)] border border-[var(--color-muted)] text-[var(--color-text)] text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-[var(--color-muted)] mb-1">{t(nativeLanguage, 'reviewEditTranslation')}</label>
+                      <input
+                        type="text"
+                        value={manageEditDraft.translation}
+                        onChange={e => setManageEditDraft(d => d ? { ...d, translation: e.target.value } : d)}
+                        className="w-full p-2 rounded-lg bg-[var(--color-bg)] border border-[var(--color-muted)] text-[var(--color-text)] text-sm"
+                      />
+                    </div>
+                    <div className="flex gap-2 flex-wrap">
+                      <button
+                        onClick={handleManageEditSave}
+                        className="px-3 py-1.5 rounded-lg text-sm font-semibold"
+                        style={{ background: 'var(--color-highlight)', color: 'var(--color-bg)' }}
+                      >
+                        {t(nativeLanguage, 'save')}
+                      </button>
+                      <button
+                        onClick={handleManageArchive}
+                        className="px-3 py-1.5 rounded-lg text-sm font-semibold bg-[var(--color-muted)] text-[var(--color-text)] hover:bg-[var(--color-muted-dark)]"
+                      >
+                        {t(nativeLanguage, 'archive')}
+                      </button>
+                      <button
+                        onClick={handleManageDelete}
+                        className="px-3 py-1.5 rounded-lg text-sm font-semibold border border-[var(--color-muted)] text-[var(--color-muted)] hover:border-red-400 hover:text-red-400"
+                      >
+                        {t(nativeLanguage, 'delete')}
+                      </button>
+                      <button
+                        onClick={() => setShowManage(false)}
+                        className="px-3 py-1.5 rounded-lg text-sm text-[var(--color-muted)] hover:text-[var(--color-text)]"
+                      >
+                        {t(nativeLanguage, 'cancel')}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Status toast for manage actions */}
+                {manageStatus && !showManage && (
+                  <div className="mb-3 px-4 py-2 rounded-lg bg-[var(--color-muted)] text-[var(--color-text)] text-sm">
+                    {manageStatus}
+                  </div>
+                )}
 
                 <div className="mb-4 p-6 rounded-xl bg-[var(--color-bg)] border border-[var(--color-muted)] shadow-lg">
                   {currentReview.direction === 'frontToBack' ? (
