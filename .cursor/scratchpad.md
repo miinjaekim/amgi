@@ -97,7 +97,7 @@ Focus for introducing Amgi to unfamiliar users. Ordered by impact.
 - [x] **Error state visibility** — definition and examples failures now surface an error message instead of silently failing; all major API failure paths covered.
 
 **Medium — affects whether users return**
-- [ ] **Guest language + theme persistence** — language preference is currently stored in Firestore, so unauthenticated users can't set it without signing in. Theme already works via localStorage. Language should also fall back to localStorage for guests so strangers can use the app in their language before deciding to sign up.
+- [x] **Guest language + theme persistence** — language defaults to Korean and theme to Paper for new visitors; both stored in localStorage so guests can change them via the settings dropdown (gear icon) without signing in. Signed-in users get a bordered button trigger for the same dropdown for better discoverability.
 - [ ] **Mobile experience** — likely the primary device for a language tool; layout not yet verified or optimized.
 - [ ] **Review loop clarity** — first-time users may not understand what "Review" means or why to come back. Copy and empty state on the review page should make the SRS value obvious.
 
