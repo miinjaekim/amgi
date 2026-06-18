@@ -40,8 +40,13 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
           localStorage.removeItem(LANG_CACHE_KEY);
         }
       } else {
-        setNativeLanguageState(null);
-        localStorage.removeItem(LANG_CACHE_KEY);
+        const cached = localStorage.getItem(LANG_CACHE_KEY);
+        if (cached) {
+          setNativeLanguageState(cached);
+        } else {
+          setNativeLanguageState('Korean');
+          localStorage.setItem(LANG_CACHE_KEY, 'Korean');
+        }
       }
       setAuthLoading(false);
     });
@@ -49,10 +54,11 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const setNativeLanguage = async (lang: string) => {
-    if (!user) return;
-    await saveUserPreferences(user.uid, { nativeLanguage: lang });
     setNativeLanguageState(lang);
     localStorage.setItem(LANG_CACHE_KEY, lang);
+    if (user) {
+      await saveUserPreferences(user.uid, { nativeLanguage: lang });
+    }
   };
 
   const handleSignIn = async () => {
@@ -61,7 +67,6 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
 
   const handleSignOut = async () => {
     await signOut(auth);
-    localStorage.removeItem(LANG_CACHE_KEY);
   };
 
   return (
