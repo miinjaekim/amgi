@@ -130,7 +130,15 @@ export default function Home() {
       setError(null);
       try {
         await saveFlashcardToFirestore({ ...(flashcardDraft as Omit<Flashcard, 'createdAt' | 'id'>), uid: user.uid });
+        setCore(null);
+        setDepth(null);
+        setExamples(null);
+        setAmbiguity(null);
+        setTerm('');
         setShowFlashcardForm(false);
+        setFlashcardDraft(null);
+        setShowContextInput(false);
+        setContextInput('');
         setSaveSuccess(true);
       } catch (err) {
         setError(t(nativeLanguage, 'errorSaveFlashcard'));
