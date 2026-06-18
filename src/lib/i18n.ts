@@ -84,6 +84,8 @@ const translations = {
     notWhatYouMeant: 'Not what you meant?',
     addContextPlaceholder: 'Add context (e.g. "the fruit", "casual speech")',
     regenerate: 'Regenerate',
+    // Card detail modal
+    noCardDetails: 'No additional details saved. Load definition and examples on the Learn page before saving to capture them.',
     // Review page — clarity
     reviewPageDescription: 'Each card reappears right before you\'d forget it — less time studying, more time remembering.',
     noFlashcardsForReview: 'No flashcards saved yet.',
@@ -177,6 +179,8 @@ const translations = {
     notWhatYouMeant: '원하시는 내용이 아닌가요?',
     addContextPlaceholder: '맥락 추가 (예: "과일", "구어체")',
     regenerate: '다시 생성',
+    // Card detail modal
+    noCardDetails: '저장된 추가 정보가 없습니다. 학습 페이지에서 정의와 예문을 불러온 후 저장하면 여기에 표시됩니다.',
     // Review page — clarity
     reviewPageDescription: '각 카드는 잊어버리기 직전에 다시 나타납니다 — 적은 노력으로 더 많이 기억해요.',
     noFlashcardsForReview: '아직 저장된 플래시카드가 없습니다.',
