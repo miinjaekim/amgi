@@ -16,6 +16,7 @@ import { saveFlashcardToFirestore, fetchUserFlashcards, Flashcard } from '@/serv
 import { doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { useUser } from '@/components/UserContext';
 import { t } from '@/lib/i18n';
+import CardDetailModal from '@/components/CardDetailModal';
 import React from 'react';
 
 export default function Home() {
@@ -40,6 +41,7 @@ export default function Home() {
   const [cardOrder, setCardOrder] = useState<'korean-first' | 'english-first'>('korean-first');
   const [showContextInput, setShowContextInput] = useState(false);
   const [contextInput, setContextInput] = useState('');
+  const [detailCard, setDetailCard] = useState<Flashcard | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -516,13 +518,18 @@ export default function Home() {
                     </div>
                   ) : (
                     <>
-                      <div className="font-semibold text-lg text-[var(--color-text)]">
-                        {cardOrder === 'korean-first' ? (card.korean || card.term) : (card.english || card.translation)}
-                      </div>
-                      <div className="text-[var(--color-highlight)] text-base">
-                        {cardOrder === 'korean-first' ? (card.english || card.translation) : (card.korean || card.term)}
-                      </div>
-                      <div className="text-xs text-[var(--color-muted)] mt-2">
+                      <button
+                        className="w-full text-left hover:bg-[var(--color-muted)]/10 rounded-lg -mx-1 px-1 py-1 transition-colors"
+                        onClick={() => setDetailCard(card)}
+                      >
+                        <div className="font-semibold text-lg text-[var(--color-text)]">
+                          {cardOrder === 'korean-first' ? (card.korean || card.term) : (card.english || card.translation)}
+                        </div>
+                        <div className="text-[var(--color-highlight)] text-base">
+                          {cardOrder === 'korean-first' ? (card.english || card.translation) : (card.korean || card.term)}
+                        </div>
+                      </button>
+                      <div className="text-xs text-[var(--color-muted)] mt-1">
                         {t(nativeLanguage, 'savedAt')} {card.createdAt instanceof Date ? card.createdAt.toLocaleString() : String(card.createdAt)}
                       </div>
                       <div className="flex gap-2 mt-2">
@@ -546,6 +553,14 @@ export default function Home() {
             </ul>
           )}
         </div>
+      )}
+
+      {detailCard && (
+        <CardDetailModal
+          card={detailCard}
+          nativeLanguage={nativeLanguage}
+          onClose={() => setDetailCard(null)}
+        />
       )}
     </div>
   );
