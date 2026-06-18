@@ -12,7 +12,7 @@ import {
 } from '@/services/gemini';
 import Markdown from '@/components/Markdown';
 import { db } from '@/config/firebase';
-import { saveFlashcardToFirestore, fetchUserFlashcards, Flashcard } from '@/services/firestore';
+import { saveFlashcardToFirestore, fetchUserFlashcards, fetchArchivedFlashcards, archiveFlashcard, restoreFlashcard, Flashcard } from '@/services/firestore';
 import { doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { useUser } from '@/components/UserContext';
 import { t } from '@/lib/i18n';
@@ -42,6 +42,9 @@ export default function Home() {
   const [showContextInput, setShowContextInput] = useState(false);
   const [contextInput, setContextInput] = useState('');
   const [detailCard, setDetailCard] = useState<Flashcard | null>(null);
+  const [archivedCards, setArchivedCards] = useState<Flashcard[]>([]);
+  const [showArchived, setShowArchived] = useState(false);
+  const [archivedLoading, setArchivedLoading] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -52,8 +55,30 @@ export default function Home() {
         .finally(() => setFlashcardsLoading(false));
     } else {
       setUserFlashcards([]);
+      setArchivedCards([]);
     }
   }, [user, saveSuccess]);
+
+  const loadArchivedCards = async () => {
+    if (!user) return;
+    setArchivedLoading(true);
+    try {
+      const cards = await fetchArchivedFlashcards(user.uid);
+      setArchivedCards(cards);
+    } catch {
+      setArchivedCards([]);
+    } finally {
+      setArchivedLoading(false);
+    }
+  };
+
+  const handleToggleArchived = () => {
+    const next = !showArchived;
+    setShowArchived(next);
+    if (next && archivedCards.length === 0) {
+      loadArchivedCards();
+    }
+  };
 
   const resolveExplanation = async (termValue: string, context?: string) => {
     setLoading(true);
@@ -196,6 +221,39 @@ export default function Home() {
       await deleteDoc(doc(db, 'cards', card.id));
       setUserFlashcards(prev => prev.filter(c => c.id !== card.id));
     } catch (err) {
+      setError(t(nativeLanguage, 'errorDeleteFlashcard'));
+    }
+  };
+
+  const handleArchiveCard = async (card: Flashcard) => {
+    if (!card.id) return;
+    try {
+      await archiveFlashcard(card.id);
+      setUserFlashcards(prev => prev.filter(c => c.id !== card.id));
+      if (showArchived) setArchivedCards(prev => [{ ...card, archived: true }, ...prev]);
+    } catch {
+      setError(t(nativeLanguage, 'errorArchiveFlashcard'));
+    }
+  };
+
+  const handleRestoreCard = async (card: Flashcard) => {
+    if (!card.id) return;
+    try {
+      await restoreFlashcard(card.id);
+      setArchivedCards(prev => prev.filter(c => c.id !== card.id));
+      setUserFlashcards(prev => [{ ...card, archived: false }, ...prev]);
+    } catch {
+      setError(t(nativeLanguage, 'errorRestoreFlashcard'));
+    }
+  };
+
+  const handleDeleteArchivedCard = async (card: Flashcard) => {
+    if (!card.id) return;
+    if (!window.confirm(t(nativeLanguage, 'confirmDelete'))) return;
+    try {
+      await deleteDoc(doc(db, 'cards', card.id));
+      setArchivedCards(prev => prev.filter(c => c.id !== card.id));
+    } catch {
       setError(t(nativeLanguage, 'errorDeleteFlashcard'));
     }
   };
@@ -541,6 +599,12 @@ export default function Home() {
                         </button>
                         <button
                           className="px-3 py-1 rounded-lg bg-[var(--color-muted)] text-[var(--color-text)] font-bold hover:bg-[var(--color-highlight)] hover:text-[var(--color-bg)]"
+                          onClick={() => handleArchiveCard(card)}
+                        >
+                          {t(nativeLanguage, 'archive')}
+                        </button>
+                        <button
+                          className="px-3 py-1 rounded-lg text-[var(--color-muted)] border border-[var(--color-muted)] font-bold hover:border-red-400 hover:text-red-400"
                           onClick={() => handleDeleteCard(card)}
                         >
                           {t(nativeLanguage, 'delete')}
@@ -551,6 +615,57 @@ export default function Home() {
                 </li>
               ))}
             </ul>
+          )}
+        </div>
+      )}
+
+      {/* Archived Cards Section */}
+      {user && (
+        <div className="mt-8 mb-16">
+          <button
+            onClick={handleToggleArchived}
+            className="flex items-center gap-2 text-sm text-[var(--color-muted)] hover:text-[var(--color-text)] transition-colors"
+          >
+            <span>{showArchived ? '▾' : '▸'}</span>
+            <span>{t(nativeLanguage, 'archivedCardsHeading')}</span>
+          </button>
+          {showArchived && (
+            <div className="mt-3">
+              {archivedLoading ? (
+                <div className="text-[var(--color-muted)] text-sm">{t(nativeLanguage, 'loadingFlashcards')}</div>
+              ) : archivedCards.length === 0 ? (
+                <div className="text-[var(--color-muted)] text-sm">{t(nativeLanguage, 'noArchivedCards')}</div>
+              ) : (
+                <ul className="space-y-3">
+                  {archivedCards.map((card, idx) => (
+                    <li key={idx} className="p-4 rounded-xl bg-[var(--color-surface)] border border-[var(--color-muted)]/50 shadow flex flex-col gap-2 opacity-70">
+                      <div>
+                        <div className="font-semibold text-[var(--color-text)]">
+                          {cardOrder === 'korean-first' ? (card.korean || card.term) : (card.english || card.translation)}
+                        </div>
+                        <div className="text-[var(--color-highlight)] text-sm">
+                          {cardOrder === 'korean-first' ? (card.english || card.translation) : (card.korean || card.term)}
+                        </div>
+                      </div>
+                      <div className="flex gap-2 mt-1">
+                        <button
+                          className="px-3 py-1 rounded-lg bg-[var(--color-muted)] text-[var(--color-text)] text-sm font-bold hover:bg-[var(--color-highlight)] hover:text-[var(--color-bg)]"
+                          onClick={() => handleRestoreCard(card)}
+                        >
+                          {t(nativeLanguage, 'restore')}
+                        </button>
+                        <button
+                          className="px-3 py-1 rounded-lg text-[var(--color-muted)] border border-[var(--color-muted)] text-sm font-bold hover:border-red-400 hover:text-red-400"
+                          onClick={() => handleDeleteArchivedCard(card)}
+                        >
+                          {t(nativeLanguage, 'delete')}
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
           )}
         </div>
       )}
