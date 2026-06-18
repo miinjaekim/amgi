@@ -111,6 +111,15 @@ const translations = {
     restore: 'Restore',
     errorArchiveFlashcard: 'Failed to archive flashcard.',
     errorRestoreFlashcard: 'Failed to restore flashcard.',
+    // Bulk actions
+    bulkSelect: 'Select',
+    bulkCancel: 'Cancel',
+    bulkSelectAll: 'Select all',
+    bulkDeselectAll: 'Deselect all',
+    bulkArchiveSelected: 'Archive selected',
+    bulkDeleteSelected: 'Delete selected',
+    bulkConfirmDelete: 'Delete selected cards? This cannot be undone.',
+    bulkConfirmArchive: 'Archive selected cards?',
   },
   Korean: {
     // Learn page
@@ -224,6 +233,15 @@ const translations = {
     restore: '복원',
     errorArchiveFlashcard: '플래시카드 보관에 실패했습니다.',
     errorRestoreFlashcard: '플래시카드 복원에 실패했습니다.',
+    // Bulk actions
+    bulkSelect: '선택',
+    bulkCancel: '취소',
+    bulkSelectAll: '전체 선택',
+    bulkDeselectAll: '선택 해제',
+    bulkArchiveSelected: '선택 항목 보관',
+    bulkDeleteSelected: '선택 항목 삭제',
+    bulkConfirmDelete: '선택한 카드를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.',
+    bulkConfirmArchive: '선택한 카드를 보관하시겠습니까?',
   },
 } as const;
 

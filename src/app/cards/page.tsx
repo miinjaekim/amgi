@@ -43,6 +43,9 @@ export default function CardsPage() {
   const [editDraft, setEditDraft] = useState<{ term: string; translation: string } | null>(null);
   const [detailCard, setDetailCard] = useState<Flashcard | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkWorking, setBulkWorking] = useState(false);
 
   useEffect(() => {
     if (!user) { setAllCards([]); return; }
@@ -55,12 +58,8 @@ export default function CardsPage() {
 
   const visibleCards = useMemo(() => {
     let cards = allCards;
-
-    // Filter
     if (filterKey === 'active') cards = cards.filter(c => !c.archived);
     else if (filterKey === 'archived') cards = cards.filter(c => c.archived);
-
-    // Search
     if (search.trim()) {
       const q = search.trim().toLowerCase();
       cards = cards.filter(c =>
@@ -68,14 +67,64 @@ export default function CardsPage() {
         (c.english || c.translation || '').toLowerCase().includes(q)
       );
     }
-
-    // Sort
     if (sortKey === 'newest') cards = [...cards].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
     else if (sortKey === 'oldest') cards = [...cards].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
     else if (sortKey === 'az') cards = [...cards].sort((a, b) => (a.korean || a.term || '').localeCompare(b.korean || b.term || ''));
-
     return cards;
   }, [allCards, filterKey, search, sortKey]);
+
+  const exitSelectMode = () => {
+    setSelectMode(false);
+    setSelectedIds(new Set());
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const allVisibleSelected = visibleCards.length > 0 && visibleCards.every(c => selectedIds.has(c.id!));
+
+  const toggleSelectAll = () => {
+    if (allVisibleSelected) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(visibleCards.map(c => c.id!).filter(Boolean)));
+    }
+  };
+
+  const handleBulkArchive = async () => {
+    if (selectedIds.size === 0) return;
+    if (!window.confirm(t(nativeLanguage, 'bulkConfirmArchive'))) return;
+    setBulkWorking(true);
+    try {
+      await Promise.all([...selectedIds].map(id => archiveFlashcard(id)));
+      setAllCards(prev => prev.map(c => selectedIds.has(c.id!) ? { ...c, archived: true } : c));
+      exitSelectMode();
+    } catch {
+      setError(t(nativeLanguage, 'errorArchiveFlashcard'));
+    } finally {
+      setBulkWorking(false);
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+    if (!window.confirm(t(nativeLanguage, 'bulkConfirmDelete'))) return;
+    setBulkWorking(true);
+    try {
+      await Promise.all([...selectedIds].map(id => deleteFlashcard(id)));
+      setAllCards(prev => prev.filter(c => !selectedIds.has(c.id!)));
+      exitSelectMode();
+    } catch {
+      setError(t(nativeLanguage, 'errorDeleteFlashcard'));
+    } finally {
+      setBulkWorking(false);
+    }
+  };
 
   const handleEditStart = (card: Flashcard) => {
     setEditingCardId(card.id || null);
@@ -147,7 +196,7 @@ export default function CardsPage() {
   ];
 
   return (
-    <div className="max-w-2xl mx-auto font-mono text-base pb-24" style={{ color: 'var(--color-text)' }}>
+    <div className="max-w-2xl mx-auto font-mono text-base pb-36" style={{ color: 'var(--color-text)' }}>
       <h1 className="text-2xl font-bold mb-2 mt-8 text-[var(--color-highlight)]">{t(nativeLanguage, 'cardsPageTitle')}</h1>
       <p className="text-sm mb-6 text-[var(--color-muted)]">{t(nativeLanguage, 'cardsPageDescription')}</p>
 
@@ -177,7 +226,7 @@ export default function CardsPage() {
             {filterOptions.map(opt => (
               <button
                 key={opt.key}
-                onClick={() => setFilterKey(opt.key)}
+                onClick={() => { setFilterKey(opt.key); exitSelectMode(); }}
                 className="px-3 py-1.5 rounded-lg text-sm font-mono border transition-colors"
                 style={filterKey === opt.key
                   ? { background: 'var(--color-highlight)', color: 'var(--color-bg)', borderColor: 'var(--color-highlight)' }
@@ -189,11 +238,37 @@ export default function CardsPage() {
             ))}
           </div>
 
-          {/* Sort + count row */}
+          {/* Sort + count + Select row */}
           <div className="flex items-center justify-between mb-4">
-            <span className="text-sm text-[var(--color-muted)]">
-              {visibleCards.length} {nativeLanguage === 'Korean' ? '개' : `card${visibleCards.length !== 1 ? 's' : ''}`}
-            </span>
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-[var(--color-muted)]">
+                {visibleCards.length} {nativeLanguage === 'Korean' ? '개' : `card${visibleCards.length !== 1 ? 's' : ''}`}
+              </span>
+              {!selectMode ? (
+                <button
+                  onClick={() => setSelectMode(true)}
+                  disabled={visibleCards.length === 0}
+                  className="text-xs px-2.5 py-1 rounded-lg border border-[var(--color-muted)] text-[var(--color-muted)] hover:text-[var(--color-text)] hover:border-[var(--color-text)] transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  {t(nativeLanguage, 'bulkSelect')}
+                </button>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={toggleSelectAll}
+                    className="text-xs px-2.5 py-1 rounded-lg border border-[var(--color-muted)] text-[var(--color-muted)] hover:text-[var(--color-text)] transition-colors"
+                  >
+                    {allVisibleSelected ? t(nativeLanguage, 'bulkDeselectAll') : t(nativeLanguage, 'bulkSelectAll')}
+                  </button>
+                  <button
+                    onClick={exitSelectMode}
+                    className="text-xs px-2.5 py-1 rounded-lg border border-[var(--color-muted)] text-[var(--color-muted)] hover:text-[var(--color-text)] transition-colors"
+                  >
+                    {t(nativeLanguage, 'bulkCancel')}
+                  </button>
+                </div>
+              )}
+            </div>
             <div className="flex gap-1">
               {sortOptions.map(opt => (
                 <button
@@ -232,106 +307,163 @@ export default function CardsPage() {
             </div>
           ) : (
             <ul className="space-y-3">
-              {visibleCards.map(card => (
-                <li
-                  key={card.id}
-                  className="p-4 rounded-xl border shadow flex flex-col gap-2 transition-opacity"
-                  style={{
-                    background: 'var(--color-surface)',
-                    borderColor: 'var(--color-muted)',
-                    opacity: card.archived ? 0.65 : 1,
-                  }}
-                >
-                  {editingCardId === card.id && editDraft ? (
-                    <div className="space-y-2">
-                      <input
-                        type="text"
-                        value={editDraft.term}
-                        onChange={e => setEditDraft(d => d ? { ...d, term: e.target.value } : d)}
-                        className="w-full p-2 rounded-lg bg-[var(--color-bg)] border border-[var(--color-muted)] text-[var(--color-text)]"
-                      />
-                      <input
-                        type="text"
-                        value={editDraft.translation}
-                        onChange={e => setEditDraft(d => d ? { ...d, translation: e.target.value } : d)}
-                        className="w-full p-2 rounded-lg bg-[var(--color-bg)] border border-[var(--color-muted)] text-[var(--color-text)]"
-                      />
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => handleEditSave(card)}
-                          className="px-4 py-2 rounded-lg font-bold"
-                          style={{ background: 'var(--color-highlight)', color: 'var(--color-bg)' }}
-                        >
-                          {t(nativeLanguage, 'save')}
-                        </button>
-                        <button
-                          onClick={() => { setEditingCardId(null); setEditDraft(null); }}
-                          className="px-4 py-2 rounded-lg bg-[var(--color-muted)] text-[var(--color-text)] font-bold"
-                        >
-                          {t(nativeLanguage, 'cancel')}
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <>
+              {visibleCards.map(card => {
+                const isSelected = card.id ? selectedIds.has(card.id) : false;
+                return (
+                  <li
+                    key={card.id}
+                    className="p-4 rounded-xl border shadow flex gap-3 transition-all"
+                    style={{
+                      background: isSelected ? 'var(--color-muted-dark, var(--color-surface))' : 'var(--color-surface)',
+                      borderColor: isSelected ? 'var(--color-highlight)' : 'var(--color-muted)',
+                      opacity: card.archived ? 0.65 : 1,
+                    }}
+                  >
+                    {/* Checkbox in select mode */}
+                    {selectMode && (
                       <button
-                        className="w-full text-left hover:bg-[var(--color-muted)]/10 rounded-lg -mx-1 px-1 py-1 transition-colors"
-                        onClick={() => setDetailCard(card)}
+                        onClick={() => card.id && toggleSelect(card.id)}
+                        className="flex-shrink-0 w-5 h-5 mt-1 rounded border-2 flex items-center justify-center transition-colors"
+                        style={{
+                          borderColor: isSelected ? 'var(--color-highlight)' : 'var(--color-muted)',
+                          background: isSelected ? 'var(--color-highlight)' : 'transparent',
+                        }}
                       >
-                        <div className="font-semibold text-lg text-[var(--color-text)]">
-                          {highlight(card.korean || card.term, search)}
-                        </div>
-                        <div className="text-[var(--color-highlight)] text-base">
-                          {highlight(card.english || card.translation || '', search)}
-                        </div>
-                      </button>
-                      <div className="text-xs text-[var(--color-muted)]">
-                        {t(nativeLanguage, 'savedAt')} {card.createdAt instanceof Date ? card.createdAt.toLocaleDateString() : String(card.createdAt)}
-                        {card.archived && (
-                          <span className="ml-2 px-1.5 py-0.5 rounded text-xs border border-[var(--color-muted)]">
-                            {t(nativeLanguage, 'cardsFilterArchived')}
-                          </span>
+                        {isSelected && (
+                          <svg className="w-3 h-3" fill="none" stroke="var(--color-bg)" strokeWidth={3} viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                          </svg>
                         )}
-                      </div>
-                      <div className="flex gap-2 mt-1 flex-wrap">
-                        {!card.archived ? (
-                          <>
+                      </button>
+                    )}
+
+                    <div className="flex-1 flex flex-col gap-2 min-w-0">
+                      {editingCardId === card.id && editDraft ? (
+                        <div className="space-y-2">
+                          <input
+                            type="text"
+                            value={editDraft.term}
+                            onChange={e => setEditDraft(d => d ? { ...d, term: e.target.value } : d)}
+                            className="w-full p-2 rounded-lg bg-[var(--color-bg)] border border-[var(--color-muted)] text-[var(--color-text)]"
+                          />
+                          <input
+                            type="text"
+                            value={editDraft.translation}
+                            onChange={e => setEditDraft(d => d ? { ...d, translation: e.target.value } : d)}
+                            className="w-full p-2 rounded-lg bg-[var(--color-bg)] border border-[var(--color-muted)] text-[var(--color-text)]"
+                          />
+                          <div className="flex gap-2">
                             <button
-                              onClick={() => handleEditStart(card)}
-                              className="px-3 py-1 rounded-lg text-sm font-bold"
+                              onClick={() => handleEditSave(card)}
+                              className="px-4 py-2 rounded-lg font-bold"
                               style={{ background: 'var(--color-highlight)', color: 'var(--color-bg)' }}
                             >
-                              {t(nativeLanguage, 'edit')}
+                              {t(nativeLanguage, 'save')}
                             </button>
                             <button
-                              onClick={() => handleArchive(card)}
-                              className="px-3 py-1 rounded-lg text-sm font-bold bg-[var(--color-muted)] text-[var(--color-text)]"
+                              onClick={() => { setEditingCardId(null); setEditDraft(null); }}
+                              className="px-4 py-2 rounded-lg bg-[var(--color-muted)] text-[var(--color-text)] font-bold"
                             >
-                              {t(nativeLanguage, 'archive')}
+                              {t(nativeLanguage, 'cancel')}
                             </button>
-                          </>
-                        ) : (
+                          </div>
+                        </div>
+                      ) : (
+                        <>
                           <button
-                            onClick={() => handleRestore(card)}
-                            className="px-3 py-1 rounded-lg text-sm font-bold bg-[var(--color-muted)] text-[var(--color-text)]"
+                            className="w-full text-left hover:bg-[var(--color-muted)]/10 rounded-lg -mx-1 px-1 py-1 transition-colors"
+                            onClick={() => selectMode && card.id ? toggleSelect(card.id) : setDetailCard(card)}
                           >
-                            {t(nativeLanguage, 'restore')}
+                            <div className="font-semibold text-lg text-[var(--color-text)]">
+                              {highlight(card.korean || card.term, search)}
+                            </div>
+                            <div className="text-[var(--color-highlight)] text-base">
+                              {highlight(card.english || card.translation || '', search)}
+                            </div>
                           </button>
-                        )}
-                        <button
-                          onClick={() => handleDelete(card)}
-                          className="px-3 py-1 rounded-lg text-sm font-bold border border-[var(--color-muted)] text-[var(--color-muted)] hover:border-red-400 hover:text-red-400"
-                        >
-                          {t(nativeLanguage, 'delete')}
-                        </button>
-                      </div>
-                    </>
-                  )}
-                </li>
-              ))}
+                          <div className="text-xs text-[var(--color-muted)]">
+                            {t(nativeLanguage, 'savedAt')} {card.createdAt instanceof Date ? card.createdAt.toLocaleDateString() : String(card.createdAt)}
+                            {card.archived && (
+                              <span className="ml-2 px-1.5 py-0.5 rounded text-xs border border-[var(--color-muted)]">
+                                {t(nativeLanguage, 'cardsFilterArchived')}
+                              </span>
+                            )}
+                          </div>
+                          {!selectMode && (
+                            <div className="flex gap-2 mt-1 flex-wrap">
+                              {!card.archived ? (
+                                <>
+                                  <button
+                                    onClick={() => handleEditStart(card)}
+                                    className="px-3 py-1 rounded-lg text-sm font-bold"
+                                    style={{ background: 'var(--color-highlight)', color: 'var(--color-bg)' }}
+                                  >
+                                    {t(nativeLanguage, 'edit')}
+                                  </button>
+                                  <button
+                                    onClick={() => handleArchive(card)}
+                                    className="px-3 py-1 rounded-lg text-sm font-bold bg-[var(--color-muted)] text-[var(--color-text)]"
+                                  >
+                                    {t(nativeLanguage, 'archive')}
+                                  </button>
+                                </>
+                              ) : (
+                                <button
+                                  onClick={() => handleRestore(card)}
+                                  className="px-3 py-1 rounded-lg text-sm font-bold bg-[var(--color-muted)] text-[var(--color-text)]"
+                                >
+                                  {t(nativeLanguage, 'restore')}
+                                </button>
+                              )}
+                              <button
+                                onClick={() => handleDelete(card)}
+                                className="px-3 py-1 rounded-lg text-sm font-bold border border-[var(--color-muted)] text-[var(--color-muted)] hover:border-red-400 hover:text-red-400"
+                              >
+                                {t(nativeLanguage, 'delete')}
+                              </button>
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </>
+      )}
+
+      {/* Bulk action bar */}
+      {selectMode && (
+        <div
+          className="fixed bottom-16 sm:bottom-0 left-0 right-0 z-40 border-t"
+          style={{ background: 'var(--color-bg)', borderColor: 'var(--color-muted)' }}
+        >
+          <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
+            <span className="text-sm text-[var(--color-muted)]">
+              {selectedIds.size} {nativeLanguage === 'Korean' ? '개 선택됨' : `selected`}
+            </span>
+            <div className="flex gap-2">
+              {filterKey !== 'archived' && (
+                <button
+                  onClick={handleBulkArchive}
+                  disabled={selectedIds.size === 0 || bulkWorking}
+                  className="px-4 py-2 rounded-lg text-sm font-bold bg-[var(--color-muted)] text-[var(--color-text)] disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  {t(nativeLanguage, 'bulkArchiveSelected')}
+                </button>
+              )}
+              <button
+                onClick={handleBulkDelete}
+                disabled={selectedIds.size === 0 || bulkWorking}
+                className="px-4 py-2 rounded-lg text-sm font-bold border border-red-400 text-red-400 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-red-400/10"
+              >
+                {t(nativeLanguage, 'bulkDeleteSelected')}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {detailCard && (
