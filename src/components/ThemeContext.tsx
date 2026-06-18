@@ -17,7 +17,7 @@ const ThemeContext = createContext<{
 }>({ theme: 'forest', setTheme: () => {}, themes: THEMES });
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>('forest');
+  const [theme, setThemeState] = useState<Theme>('paper');
 
   useEffect(() => {
     const saved = localStorage.getItem(STORAGE_KEY) as Theme | null;
