@@ -35,7 +35,7 @@ const Header: React.FC = () => {
     >
       <div className="flex items-center gap-3 sm:gap-6">
         <AmgiLogo color="var(--color-highlight)" stroke="var(--color-text)" size={30} />
-        <nav className="flex items-center gap-4 sm:gap-6">
+        <nav className="hidden sm:flex items-center gap-4 sm:gap-6">
           {navItems.map((item) => (
             <a
               key={item.label}
