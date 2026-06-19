@@ -8,7 +8,7 @@ export interface TermCore {
   termLanguage: 'Korean' | 'English';
   korean: string;
   english: string;
-  translation: string;
+  translation?: string;
   formality?: string;
 }
 

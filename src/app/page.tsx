@@ -186,20 +186,15 @@ export default function Home() {
 
   const handleEditSave = async (card: Flashcard) => {
     if (!card.id || !editDraft) return;
-    const isKoreanTerm = card.termLanguage === 'Korean';
-    const korean = isKoreanTerm ? (editDraft.term ?? card.korean) : (editDraft.translation ?? card.korean);
-    const english = isKoreanTerm ? (editDraft.translation ?? card.english) : (editDraft.term ?? card.english);
     try {
       await updateDoc(doc(db, 'cards', card.id), {
-        term: editDraft.term,
-        translation: editDraft.translation,
+        korean: editDraft.korean,
+        english: editDraft.english,
         notes: editDraft.notes,
-        korean,
-        english,
       });
       setUserFlashcards(prev => prev.map(c =>
         c.id === card.id
-          ? { ...c, term: editDraft.term!, translation: editDraft.translation!, notes: editDraft.notes, korean, english }
+          ? { ...c, korean: editDraft.korean!, english: editDraft.english! }
           : c
       ));
       setEditingCardId(null);
@@ -414,10 +409,14 @@ export default function Home() {
           <button
             className="px-4 py-2 rounded-lg bg-[var(--color-muted)] text-[var(--color-text)] font-bold hover:bg-[var(--color-highlight)] hover:text-[var(--color-bg)] focus:outline-none focus:ring-2 focus:ring-[var(--color-highlight)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             onClick={() => {
+              const koreanSide = core.termLanguage === 'Korean' ? core.term : (core.korean || '');
+              const englishSide = core.termLanguage === 'English' ? core.term : (core.english || '');
               setFlashcardDraft({
                 ...core,
                 ...(depth || {}),
                 examples: examples || [],
+                korean: koreanSide,
+                english: englishSide,
               });
               setShowFlashcardForm(true);
               setSaveSuccess(false);
@@ -474,36 +473,20 @@ export default function Home() {
           <h2 className="text-xl font-bold mb-4 text-[var(--color-highlight)]">{t(nativeLanguage, 'reviewEditFlashcard')}</h2>
           <div className="space-y-4">
             <div>
-              <label className="block font-semibold mb-1 text-[var(--color-text)]">{t(nativeLanguage, 'labelTerm')}</label>
+              <label className="block font-semibold mb-1 text-[var(--color-text)]">{t(nativeLanguage, 'labelKorean')}</label>
               <input
                 type="text"
-                value={flashcardDraft.term || ''}
-                onChange={e => {
-                  const v = e.target.value;
-                  setFlashcardDraft(prev => ({
-                    ...prev,
-                    term: v,
-                    korean: prev?.termLanguage === 'Korean' ? v : prev?.korean,
-                    english: prev?.termLanguage === 'English' ? v : prev?.english,
-                  }));
-                }}
+                value={flashcardDraft.korean || ''}
+                onChange={e => setFlashcardDraft(prev => ({ ...prev, korean: e.target.value }))}
                 className="w-full p-2 rounded-lg bg-[var(--color-surface)] border border-[var(--color-muted)] text-[var(--color-text)]"
               />
             </div>
             <div>
-              <label className="block font-semibold mb-1 text-[var(--color-text)]">{t(nativeLanguage, 'labelTranslation')}</label>
+              <label className="block font-semibold mb-1 text-[var(--color-text)]">{t(nativeLanguage, 'labelEnglish')}</label>
               <input
                 type="text"
-                value={flashcardDraft.translation || ''}
-                onChange={e => {
-                  const v = e.target.value;
-                  setFlashcardDraft(prev => ({
-                    ...prev,
-                    translation: v,
-                    korean: prev?.termLanguage === 'English' ? v : prev?.korean,
-                    english: prev?.termLanguage === 'Korean' ? v : prev?.english,
-                  }));
-                }}
+                value={flashcardDraft.english || ''}
+                onChange={e => setFlashcardDraft(prev => ({ ...prev, english: e.target.value }))}
                 className="w-full p-2 rounded-lg bg-[var(--color-surface)] border border-[var(--color-muted)] text-[var(--color-text)]"
               />
             </div>
@@ -549,14 +532,14 @@ export default function Home() {
                     <div className="space-y-2">
                       <input
                         type="text"
-                        value={editDraft?.term || ''}
-                        onChange={e => handleEditChange('term', e.target.value)}
+                        value={editDraft?.korean || ''}
+                        onChange={e => handleEditChange('korean', e.target.value)}
                         className="w-full p-2 rounded-lg bg-[var(--color-bg)] border border-[var(--color-muted)] text-[var(--color-text)]"
                       />
                       <input
                         type="text"
-                        value={editDraft?.translation || ''}
-                        onChange={e => handleEditChange('translation', e.target.value)}
+                        value={editDraft?.english || ''}
+                        onChange={e => handleEditChange('english', e.target.value)}
                         className="w-full p-2 rounded-lg bg-[var(--color-bg)] border border-[var(--color-muted)] text-[var(--color-text)]"
                       />
                       <div className="flex gap-2 mt-2">
