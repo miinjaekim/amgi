@@ -43,16 +43,17 @@ Language learners bounce between two tools — an LLM for nuanced explanations a
 ### Current Data Model
 
 **Flashcard** (`cards` collection):
-- `term`, `translation`, `formality` (optional), `definition` (optional), `hanja` (optional), `examples` (optional), `notes` (optional)
+- `term`, `formality` (optional), `definition` (optional), `hanja` (optional), `examples` (optional), `notes` (optional)
 - `termLanguage`: 'Korean' | 'English' — language of the input term
 - `korean`: fixed Korean side of the card
 - `english`: fixed English side of the card
 - `uid`, `createdAt`, `archived` (boolean, optional — false = active, true = archived)
 - `frontToBack`: { nextReview, interval, ease, repetitions } — Korean → English direction
 - `backToFront`: { nextReview, interval, ease, repetitions } — English → Korean direction
+- `translation` (optional, legacy): kept as read-only fallback for old cards missing `korean`/`english`
 
 **API shape (term explanation):**
-- Fast call (`/api/explain`): `term, termLanguage, korean, english, translation, formality`
+- Fast call (`/api/explain`): `term, termLanguage, korean, english, formality`
 - Depth call (`/api/explain/depth`, user-triggered): `definition, hanja?, notes?`
 - Examples call (`/api/explain/examples`, user-triggered): `{ examples: ExamplePair[] }`
 
@@ -79,6 +80,7 @@ Language learners bounce between two tools — an LLM for nuanced explanations a
 - [x] **Dedicated cards page (`/cards`)** — search, filter (active/archived/all), sort (newest/oldest/A→Z), card order toggle (KO/EN swap icon).
 - [x] **Archive instead of delete** — soft-delete cards you're pausing. Archived cards skip the review queue but remain accessible and restorable.
 - [x] **Bulk actions** — select multiple cards to archive or delete from the cards page.
+- [x] **Learn page cleanup** — removed card list from learn page; cards managed exclusively on `/cards`.
 
 **2. Engagement**
 - [ ] **Streaks and progress visibility** — streak count and cards reviewed today, shown in the header or a dashboard. Core to daily habit formation; nothing built yet.
