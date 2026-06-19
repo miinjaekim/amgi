@@ -81,6 +81,8 @@ Language learners bounce between two tools — an LLM for nuanced explanations a
 - [x] **Archive instead of delete** — soft-delete cards you're pausing. Archived cards skip the review queue but remain accessible and restorable.
 - [x] **Bulk actions** — select multiple cards to archive or delete from the cards page.
 - [x] **Learn page cleanup** — removed card list from learn page; cards managed exclusively on `/cards`.
+- [x] **Save flashcard modal** — save/edit form now appears as a modal overlay instead of an inline section below the explanation.
+- [x] **Animated loading states** — replaced static '...' / 'Loading...' text with a spinning indicator across all async buttons.
 
 **2. Engagement**
 - [ ] **Streaks and progress visibility** — streak count and cards reviewed today, shown in the header or a dashboard. Core to daily habit formation; nothing built yet.
