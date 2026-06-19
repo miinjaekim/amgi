@@ -14,6 +14,8 @@ import Markdown from '@/components/Markdown';
 import { saveFlashcardToFirestore, Flashcard } from '@/services/firestore';
 import { useUser } from '@/components/UserContext';
 import { t } from '@/lib/i18n';
+import SaveFlashcardModal from '@/components/SaveFlashcardModal';
+import Spinner from '@/components/Spinner';
 import React from 'react';
 
 export default function Home() {
@@ -152,7 +154,7 @@ export default function Home() {
             className="px-5 py-2 rounded-lg bg-[var(--color-highlight)] text-[var(--color-bg)] font-bold hover:bg-[var(--color-text)] hover:text-[var(--color-bg)] focus:outline-none focus:ring-2 focus:ring-[var(--color-highlight)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             disabled={loading}
           >
-            {loading ? '...' : t(nativeLanguage, 'learnButton')}
+            {loading ? <Spinner className="w-5 h-5 mx-auto" /> : t(nativeLanguage, 'learnButton')}
           </button>
         </div>
       </form>
@@ -233,7 +235,7 @@ export default function Home() {
               onClick={handleLoadDepth}
               disabled={loadingDepth}
             >
-              {loadingDepth ? t(nativeLanguage, 'loadingDefinition') : t(nativeLanguage, 'loadDefinition')}
+              {loadingDepth ? <Spinner /> : t(nativeLanguage, 'loadDefinition')}
             </button>
           ) : (
             <div className="mb-6 space-y-4">
@@ -265,7 +267,7 @@ export default function Home() {
               onClick={handleLoadExamples}
               disabled={loadingExamples}
             >
-              {loadingExamples ? t(nativeLanguage, 'loadingExamples') : t(nativeLanguage, 'loadExamples')}
+              {loadingExamples ? <Spinner /> : t(nativeLanguage, 'loadExamples')}
             </button>
           ) : (
             <div className="mb-6">
@@ -335,44 +337,10 @@ export default function Home() {
                   className="px-3 py-2 text-sm rounded-lg bg-[var(--color-muted)] text-[var(--color-text)] font-bold hover:bg-[var(--color-highlight)] hover:text-[var(--color-bg)] disabled:opacity-50 transition-colors"
                   disabled={loading || !contextInput.trim()}
                 >
-                  {loading ? '...' : t(nativeLanguage, 'regenerate')}
+                  {loading ? <Spinner /> : t(nativeLanguage, 'regenerate')}
                 </button>
               </form>
             )}
-          </div>
-        </div>
-      )}
-
-      {/* Flashcard Edit/Save Form */}
-      {showFlashcardForm && flashcardDraft && (
-        <div className="mt-10 p-6 rounded-xl bg-[var(--color-bg)] border border-[var(--color-muted)] shadow-lg">
-          <h2 className="text-xl font-bold mb-4 text-[var(--color-highlight)]">{t(nativeLanguage, 'reviewEditFlashcard')}</h2>
-          <div className="space-y-4">
-            <div>
-              <label className="block font-semibold mb-1 text-[var(--color-text)]">{t(nativeLanguage, 'labelKorean')}</label>
-              <input
-                type="text"
-                value={flashcardDraft.korean || ''}
-                onChange={e => setFlashcardDraft(prev => ({ ...prev, korean: e.target.value }))}
-                className="w-full p-2 rounded-lg bg-[var(--color-surface)] border border-[var(--color-muted)] text-[var(--color-text)]"
-              />
-            </div>
-            <div>
-              <label className="block font-semibold mb-1 text-[var(--color-text)]">{t(nativeLanguage, 'labelEnglish')}</label>
-              <input
-                type="text"
-                value={flashcardDraft.english || ''}
-                onChange={e => setFlashcardDraft(prev => ({ ...prev, english: e.target.value }))}
-                className="w-full p-2 rounded-lg bg-[var(--color-surface)] border border-[var(--color-muted)] text-[var(--color-text)]"
-              />
-            </div>
-            <button
-              className="mt-4 px-4 py-2 rounded-lg bg-[var(--color-highlight)] text-[var(--color-bg)] font-bold hover:bg-[var(--color-text)] hover:text-[var(--color-bg)] focus:outline-none focus:ring-2 focus:ring-[var(--color-highlight)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              onClick={handleSaveFlashcard}
-              disabled={saving}
-            >
-              {saving ? t(nativeLanguage, 'saving') : t(nativeLanguage, 'save')}
-            </button>
           </div>
         </div>
       )}
@@ -382,6 +350,17 @@ export default function Home() {
         <div className="mt-4 p-4 rounded-lg bg-[var(--color-muted)] text-[var(--color-text)] font-semibold">
           {t(nativeLanguage, 'flashcardSaved')}
         </div>
+      )}
+
+      {showFlashcardForm && flashcardDraft && (
+        <SaveFlashcardModal
+          draft={flashcardDraft}
+          nativeLanguage={nativeLanguage}
+          saving={saving}
+          onChange={(field, value) => setFlashcardDraft(prev => ({ ...prev, [field]: value }))}
+          onSave={handleSaveFlashcard}
+          onClose={() => { setShowFlashcardForm(false); setFlashcardDraft(null); }}
+        />
       )}
     </div>
   );
