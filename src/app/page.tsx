@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
   getTermExplanation,
   getTermDepth,
@@ -11,12 +11,9 @@ import {
   ExamplePair,
 } from '@/services/gemini';
 import Markdown from '@/components/Markdown';
-import { db } from '@/config/firebase';
-import { saveFlashcardToFirestore, fetchUserFlashcards, fetchArchivedFlashcards, archiveFlashcard, restoreFlashcard, Flashcard } from '@/services/firestore';
-import { doc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { saveFlashcardToFirestore, Flashcard } from '@/services/firestore';
 import { useUser } from '@/components/UserContext';
 import { t } from '@/lib/i18n';
-import CardDetailModal from '@/components/CardDetailModal';
 import React from 'react';
 
 export default function Home() {
@@ -34,51 +31,8 @@ export default function Home() {
   const [flashcardDraft, setFlashcardDraft] = useState<Partial<Flashcard> | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [userFlashcards, setUserFlashcards] = useState<Flashcard[]>([]);
-  const [flashcardsLoading, setFlashcardsLoading] = useState(false);
-  const [editingCardId, setEditingCardId] = useState<string | null>(null);
-  const [editDraft, setEditDraft] = useState<Partial<Flashcard> | null>(null);
-  const [cardOrder, setCardOrder] = useState<'korean-first' | 'english-first'>('korean-first');
   const [showContextInput, setShowContextInput] = useState(false);
   const [contextInput, setContextInput] = useState('');
-  const [detailCard, setDetailCard] = useState<Flashcard | null>(null);
-  const [archivedCards, setArchivedCards] = useState<Flashcard[]>([]);
-  const [showArchived, setShowArchived] = useState(false);
-  const [archivedLoading, setArchivedLoading] = useState(false);
-
-  useEffect(() => {
-    if (user) {
-      setFlashcardsLoading(true);
-      fetchUserFlashcards(user.uid)
-        .then(cards => setUserFlashcards(cards))
-        .catch(() => setUserFlashcards([]))
-        .finally(() => setFlashcardsLoading(false));
-    } else {
-      setUserFlashcards([]);
-      setArchivedCards([]);
-    }
-  }, [user, saveSuccess]);
-
-  const loadArchivedCards = async () => {
-    if (!user) return;
-    setArchivedLoading(true);
-    try {
-      const cards = await fetchArchivedFlashcards(user.uid);
-      setArchivedCards(cards);
-    } catch {
-      setArchivedCards([]);
-    } finally {
-      setArchivedLoading(false);
-    }
-  };
-
-  const handleToggleArchived = () => {
-    const next = !showArchived;
-    setShowArchived(next);
-    if (next && archivedCards.length === 0) {
-      loadArchivedCards();
-    }
-  };
 
   const resolveExplanation = async (termValue: string, context?: string) => {
     setLoading(true);
@@ -172,89 +126,6 @@ export default function Home() {
       } finally {
         setSaving(false);
       }
-    }
-  };
-
-  const handleEditClick = (card: Flashcard) => {
-    setEditingCardId(card.id || null);
-    setEditDraft({ ...card });
-  };
-
-  const handleEditChange = (field: keyof Flashcard, value: any) => {
-    setEditDraft((prev) => ({ ...prev, [field]: value }));
-  };
-
-  const handleEditSave = async (card: Flashcard) => {
-    if (!card.id || !editDraft) return;
-    const isKoreanTerm = card.termLanguage === 'Korean';
-    const korean = isKoreanTerm ? (editDraft.term ?? card.korean) : (editDraft.translation ?? card.korean);
-    const english = isKoreanTerm ? (editDraft.translation ?? card.english) : (editDraft.term ?? card.english);
-    try {
-      await updateDoc(doc(db, 'cards', card.id), {
-        term: editDraft.term,
-        translation: editDraft.translation,
-        notes: editDraft.notes,
-        korean,
-        english,
-      });
-      setUserFlashcards(prev => prev.map(c =>
-        c.id === card.id
-          ? { ...c, term: editDraft.term!, translation: editDraft.translation!, notes: editDraft.notes, korean, english }
-          : c
-      ));
-      setEditingCardId(null);
-      setEditDraft(null);
-    } catch (err) {
-      setError(t(nativeLanguage, 'errorSaveChanges'));
-    }
-  };
-
-  const handleEditCancel = () => {
-    setEditingCardId(null);
-    setEditDraft(null);
-  };
-
-  const handleDeleteCard = async (card: Flashcard) => {
-    if (!card.id) return;
-    if (!window.confirm(t(nativeLanguage, 'confirmDelete'))) return;
-    try {
-      await deleteDoc(doc(db, 'cards', card.id));
-      setUserFlashcards(prev => prev.filter(c => c.id !== card.id));
-    } catch (err) {
-      setError(t(nativeLanguage, 'errorDeleteFlashcard'));
-    }
-  };
-
-  const handleArchiveCard = async (card: Flashcard) => {
-    if (!card.id) return;
-    try {
-      await archiveFlashcard(card.id);
-      setUserFlashcards(prev => prev.filter(c => c.id !== card.id));
-      if (showArchived) setArchivedCards(prev => [{ ...card, archived: true }, ...prev]);
-    } catch {
-      setError(t(nativeLanguage, 'errorArchiveFlashcard'));
-    }
-  };
-
-  const handleRestoreCard = async (card: Flashcard) => {
-    if (!card.id) return;
-    try {
-      await restoreFlashcard(card.id);
-      setArchivedCards(prev => prev.filter(c => c.id !== card.id));
-      setUserFlashcards(prev => [{ ...card, archived: false }, ...prev]);
-    } catch {
-      setError(t(nativeLanguage, 'errorRestoreFlashcard'));
-    }
-  };
-
-  const handleDeleteArchivedCard = async (card: Flashcard) => {
-    if (!card.id) return;
-    if (!window.confirm(t(nativeLanguage, 'confirmDelete'))) return;
-    try {
-      await deleteDoc(doc(db, 'cards', card.id));
-      setArchivedCards(prev => prev.filter(c => c.id !== card.id));
-    } catch {
-      setError(t(nativeLanguage, 'errorDeleteFlashcard'));
     }
   };
 
@@ -414,10 +285,14 @@ export default function Home() {
           <button
             className="px-4 py-2 rounded-lg bg-[var(--color-muted)] text-[var(--color-text)] font-bold hover:bg-[var(--color-highlight)] hover:text-[var(--color-bg)] focus:outline-none focus:ring-2 focus:ring-[var(--color-highlight)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             onClick={() => {
+              const koreanSide = core.termLanguage === 'Korean' ? core.term : (core.korean || '');
+              const englishSide = core.termLanguage === 'English' ? core.term : (core.english || '');
               setFlashcardDraft({
                 ...core,
                 ...(depth || {}),
                 examples: examples || [],
+                korean: koreanSide,
+                english: englishSide,
               });
               setShowFlashcardForm(true);
               setSaveSuccess(false);
@@ -474,36 +349,20 @@ export default function Home() {
           <h2 className="text-xl font-bold mb-4 text-[var(--color-highlight)]">{t(nativeLanguage, 'reviewEditFlashcard')}</h2>
           <div className="space-y-4">
             <div>
-              <label className="block font-semibold mb-1 text-[var(--color-text)]">{t(nativeLanguage, 'labelTerm')}</label>
+              <label className="block font-semibold mb-1 text-[var(--color-text)]">{t(nativeLanguage, 'labelKorean')}</label>
               <input
                 type="text"
-                value={flashcardDraft.term || ''}
-                onChange={e => {
-                  const v = e.target.value;
-                  setFlashcardDraft(prev => ({
-                    ...prev,
-                    term: v,
-                    korean: prev?.termLanguage === 'Korean' ? v : prev?.korean,
-                    english: prev?.termLanguage === 'English' ? v : prev?.english,
-                  }));
-                }}
+                value={flashcardDraft.korean || ''}
+                onChange={e => setFlashcardDraft(prev => ({ ...prev, korean: e.target.value }))}
                 className="w-full p-2 rounded-lg bg-[var(--color-surface)] border border-[var(--color-muted)] text-[var(--color-text)]"
               />
             </div>
             <div>
-              <label className="block font-semibold mb-1 text-[var(--color-text)]">{t(nativeLanguage, 'labelTranslation')}</label>
+              <label className="block font-semibold mb-1 text-[var(--color-text)]">{t(nativeLanguage, 'labelEnglish')}</label>
               <input
                 type="text"
-                value={flashcardDraft.translation || ''}
-                onChange={e => {
-                  const v = e.target.value;
-                  setFlashcardDraft(prev => ({
-                    ...prev,
-                    translation: v,
-                    korean: prev?.termLanguage === 'English' ? v : prev?.korean,
-                    english: prev?.termLanguage === 'Korean' ? v : prev?.english,
-                  }));
-                }}
+                value={flashcardDraft.english || ''}
+                onChange={e => setFlashcardDraft(prev => ({ ...prev, english: e.target.value }))}
                 className="w-full p-2 rounded-lg bg-[var(--color-surface)] border border-[var(--color-muted)] text-[var(--color-text)]"
               />
             </div>
@@ -523,159 +382,6 @@ export default function Home() {
         <div className="mt-4 p-4 rounded-lg bg-[var(--color-muted)] text-[var(--color-text)] font-semibold">
           {t(nativeLanguage, 'flashcardSaved')}
         </div>
-      )}
-
-      {/* Saved Flashcards List */}
-      {user && (
-        <div className="mt-16">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold text-[var(--color-highlight)]">{t(nativeLanguage, 'savedFlashcardsHeading')}</h2>
-            <button
-              onClick={() => setCardOrder(o => o === 'korean-first' ? 'english-first' : 'korean-first')}
-              className="text-sm font-mono px-3 py-1 rounded-lg border border-[var(--color-muted)] text-[var(--color-text)] hover:bg-[var(--color-muted)]/30 transition-colors"
-            >
-              {cardOrder === 'korean-first' ? t(nativeLanguage, 'koreanOnTop') : t(nativeLanguage, 'englishOnTop')}
-            </button>
-          </div>
-          {flashcardsLoading ? (
-            <div className="text-[var(--color-muted)]">{t(nativeLanguage, 'loadingFlashcards')}</div>
-          ) : userFlashcards.length === 0 ? (
-            <div className="text-[var(--color-muted)]">{t(nativeLanguage, 'noFlashcardsSaved')}</div>
-          ) : (
-            <ul className="space-y-4">
-              {userFlashcards.map((card, idx) => (
-                <li key={idx} className="p-4 rounded-xl bg-[var(--color-surface)] border border-[var(--color-muted)] shadow flex flex-col gap-2">
-                  {editingCardId === card.id ? (
-                    <div className="space-y-2">
-                      <input
-                        type="text"
-                        value={editDraft?.term || ''}
-                        onChange={e => handleEditChange('term', e.target.value)}
-                        className="w-full p-2 rounded-lg bg-[var(--color-bg)] border border-[var(--color-muted)] text-[var(--color-text)]"
-                      />
-                      <input
-                        type="text"
-                        value={editDraft?.translation || ''}
-                        onChange={e => handleEditChange('translation', e.target.value)}
-                        className="w-full p-2 rounded-lg bg-[var(--color-bg)] border border-[var(--color-muted)] text-[var(--color-text)]"
-                      />
-                      <div className="flex gap-2 mt-2">
-                        <button
-                          className="px-4 py-2 rounded-lg bg-[var(--color-highlight)] text-[var(--color-bg)] font-bold hover:bg-[var(--color-text)] hover:text-[var(--color-bg)]"
-                          onClick={() => handleEditSave(card)}
-                        >
-                          {t(nativeLanguage, 'save')}
-                        </button>
-                        <button
-                          className="px-4 py-2 rounded-lg bg-[var(--color-muted)] text-[var(--color-text)] font-bold hover:bg-[var(--color-highlight)] hover:text-[var(--color-bg)]"
-                          onClick={handleEditCancel}
-                        >
-                          {t(nativeLanguage, 'cancel')}
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <>
-                      <button
-                        className="w-full text-left hover:bg-[var(--color-muted)]/10 rounded-lg -mx-1 px-1 py-1 transition-colors"
-                        onClick={() => setDetailCard(card)}
-                      >
-                        <div className="font-semibold text-lg text-[var(--color-text)]">
-                          {cardOrder === 'korean-first' ? (card.korean || card.term) : (card.english || card.translation)}
-                        </div>
-                        <div className="text-[var(--color-highlight)] text-base">
-                          {cardOrder === 'korean-first' ? (card.english || card.translation) : (card.korean || card.term)}
-                        </div>
-                      </button>
-                      <div className="text-xs text-[var(--color-muted)] mt-1">
-                        {t(nativeLanguage, 'savedAt')} {card.createdAt instanceof Date ? card.createdAt.toLocaleString() : String(card.createdAt)}
-                      </div>
-                      <div className="flex gap-2 mt-2">
-                        <button
-                          className="px-3 py-1 rounded-lg bg-[var(--color-highlight)] text-[var(--color-bg)] font-bold hover:bg-[var(--color-text)] hover:text-[var(--color-bg)]"
-                          onClick={() => handleEditClick(card)}
-                        >
-                          {t(nativeLanguage, 'edit')}
-                        </button>
-                        <button
-                          className="px-3 py-1 rounded-lg bg-[var(--color-muted)] text-[var(--color-text)] font-bold hover:bg-[var(--color-highlight)] hover:text-[var(--color-bg)]"
-                          onClick={() => handleArchiveCard(card)}
-                        >
-                          {t(nativeLanguage, 'archive')}
-                        </button>
-                        <button
-                          className="px-3 py-1 rounded-lg text-[var(--color-muted)] border border-[var(--color-muted)] font-bold hover:border-red-400 hover:text-red-400"
-                          onClick={() => handleDeleteCard(card)}
-                        >
-                          {t(nativeLanguage, 'delete')}
-                        </button>
-                      </div>
-                    </>
-                  )}
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      )}
-
-      {/* Archived Cards Section */}
-      {user && (
-        <div className="mt-8 mb-16">
-          <button
-            onClick={handleToggleArchived}
-            className="flex items-center gap-2 text-sm text-[var(--color-muted)] hover:text-[var(--color-text)] transition-colors"
-          >
-            <span>{showArchived ? '▾' : '▸'}</span>
-            <span>{t(nativeLanguage, 'archivedCardsHeading')}</span>
-          </button>
-          {showArchived && (
-            <div className="mt-3">
-              {archivedLoading ? (
-                <div className="text-[var(--color-muted)] text-sm">{t(nativeLanguage, 'loadingFlashcards')}</div>
-              ) : archivedCards.length === 0 ? (
-                <div className="text-[var(--color-muted)] text-sm">{t(nativeLanguage, 'noArchivedCards')}</div>
-              ) : (
-                <ul className="space-y-3">
-                  {archivedCards.map((card, idx) => (
-                    <li key={idx} className="p-4 rounded-xl bg-[var(--color-surface)] border border-[var(--color-muted)]/50 shadow flex flex-col gap-2 opacity-70">
-                      <div>
-                        <div className="font-semibold text-[var(--color-text)]">
-                          {cardOrder === 'korean-first' ? (card.korean || card.term) : (card.english || card.translation)}
-                        </div>
-                        <div className="text-[var(--color-highlight)] text-sm">
-                          {cardOrder === 'korean-first' ? (card.english || card.translation) : (card.korean || card.term)}
-                        </div>
-                      </div>
-                      <div className="flex gap-2 mt-1">
-                        <button
-                          className="px-3 py-1 rounded-lg bg-[var(--color-muted)] text-[var(--color-text)] text-sm font-bold hover:bg-[var(--color-highlight)] hover:text-[var(--color-bg)]"
-                          onClick={() => handleRestoreCard(card)}
-                        >
-                          {t(nativeLanguage, 'restore')}
-                        </button>
-                        <button
-                          className="px-3 py-1 rounded-lg text-[var(--color-muted)] border border-[var(--color-muted)] text-sm font-bold hover:border-red-400 hover:text-red-400"
-                          onClick={() => handleDeleteArchivedCard(card)}
-                        >
-                          {t(nativeLanguage, 'delete')}
-                        </button>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          )}
-        </div>
-      )}
-
-      {detailCard && (
-        <CardDetailModal
-          card={detailCard}
-          nativeLanguage={nativeLanguage}
-          onClose={() => setDetailCard(null)}
-        />
       )}
     </div>
   );

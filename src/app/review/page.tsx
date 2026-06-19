@@ -115,7 +115,7 @@ export default function ReviewPage() {
   const [showDetails, setShowDetails] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [showManage, setShowManage] = useState(false);
-  const [manageEditDraft, setManageEditDraft] = useState<{ term: string; translation: string } | null>(null);
+  const [manageEditDraft, setManageEditDraft] = useState<{ korean: string; english: string } | null>(null);
   const [manageStatus, setManageStatus] = useState<string | null>(null);
 
   const isDevelopment = process.env.NODE_ENV === 'development';
@@ -258,7 +258,7 @@ export default function ReviewPage() {
   };
 
   const handleOpenManage = (card: Flashcard) => {
-    setManageEditDraft({ term: card.term, translation: card.translation || '' });
+    setManageEditDraft({ korean: card.korean || card.term, english: card.english || card.translation || '' });
     setManageStatus(null);
     setShowManage(true);
   };
@@ -267,19 +267,14 @@ export default function ReviewPage() {
     if (!manageEditDraft) return;
     const { card } = activeQueue[currentReviewIdx];
     if (!card.id) return;
-    const isKoreanTerm = card.termLanguage === 'Korean';
-    const korean = isKoreanTerm ? manageEditDraft.term : manageEditDraft.translation;
-    const english = isKoreanTerm ? manageEditDraft.translation : manageEditDraft.term;
     try {
       await updateDoc(doc(db, 'cards', card.id), {
-        term: manageEditDraft.term,
-        translation: manageEditDraft.translation,
-        korean,
-        english,
+        korean: manageEditDraft.korean,
+        english: manageEditDraft.english,
       });
       setActiveQueue(prev => prev.map((item, i) =>
         i === currentReviewIdx
-          ? { ...item, card: { ...item.card, term: manageEditDraft.term, translation: manageEditDraft.translation, korean, english } }
+          ? { ...item, card: { ...item.card, korean: manageEditDraft.korean, english: manageEditDraft.english } }
           : item
       ));
       setManageStatus(t(nativeLanguage, 'reviewCardSaved'));
@@ -430,20 +425,20 @@ export default function ReviewPage() {
                 {showManage && manageEditDraft && (
                   <div className="mb-4 p-4 rounded-xl border border-[var(--color-muted)] bg-[var(--color-surface)] space-y-3">
                     <div>
-                      <label className="block text-xs font-semibold text-[var(--color-muted)] mb-1">{t(nativeLanguage, 'reviewEditTerm')}</label>
+                      <label className="block text-xs font-semibold text-[var(--color-muted)] mb-1">{t(nativeLanguage, 'reviewEditKorean')}</label>
                       <input
                         type="text"
-                        value={manageEditDraft.term}
-                        onChange={e => setManageEditDraft(d => d ? { ...d, term: e.target.value } : d)}
+                        value={manageEditDraft.korean}
+                        onChange={e => setManageEditDraft(d => d ? { ...d, korean: e.target.value } : d)}
                         className="w-full p-2 rounded-lg bg-[var(--color-bg)] border border-[var(--color-muted)] text-[var(--color-text)] text-sm"
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-[var(--color-muted)] mb-1">{t(nativeLanguage, 'reviewEditTranslation')}</label>
+                      <label className="block text-xs font-semibold text-[var(--color-muted)] mb-1">{t(nativeLanguage, 'reviewEditEnglish')}</label>
                       <input
                         type="text"
-                        value={manageEditDraft.translation}
-                        onChange={e => setManageEditDraft(d => d ? { ...d, translation: e.target.value } : d)}
+                        value={manageEditDraft.english}
+                        onChange={e => setManageEditDraft(d => d ? { ...d, english: e.target.value } : d)}
                         className="w-full p-2 rounded-lg bg-[var(--color-bg)] border border-[var(--color-muted)] text-[var(--color-text)] text-sm"
                       />
                     </div>

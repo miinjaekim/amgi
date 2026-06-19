@@ -40,7 +40,7 @@ export default function CardsPage() {
   const [sortKey, setSortKey] = useState<SortKey>('newest');
   const [filterKey, setFilterKey] = useState<FilterKey>('active');
   const [editingCardId, setEditingCardId] = useState<string | null>(null);
-  const [editDraft, setEditDraft] = useState<{ term: string; translation: string } | null>(null);
+  const [editDraft, setEditDraft] = useState<{ korean: string; english: string } | null>(null);
   const [detailCard, setDetailCard] = useState<Flashcard | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [selectMode, setSelectMode] = useState(false);
@@ -129,19 +129,16 @@ export default function CardsPage() {
 
   const handleEditStart = (card: Flashcard) => {
     setEditingCardId(card.id || null);
-    setEditDraft({ term: card.term, translation: card.translation || '' });
+    setEditDraft({ korean: card.korean || card.term, english: card.english || card.translation || '' });
     setError(null);
   };
 
   const handleEditSave = async (card: Flashcard) => {
     if (!card.id || !editDraft) return;
-    const isKoreanTerm = card.termLanguage === 'Korean';
-    const korean = isKoreanTerm ? editDraft.term : editDraft.translation;
-    const english = isKoreanTerm ? editDraft.translation : editDraft.term;
     try {
-      await updateDoc(doc(db, 'cards', card.id), { term: editDraft.term, translation: editDraft.translation, korean, english });
+      await updateDoc(doc(db, 'cards', card.id), { korean: editDraft.korean, english: editDraft.english });
       setAllCards(prev => prev.map(c =>
-        c.id === card.id ? { ...c, term: editDraft.term, translation: editDraft.translation, korean, english } : c
+        c.id === card.id ? { ...c, korean: editDraft.korean, english: editDraft.english } : c
       ));
       setEditingCardId(null);
       setEditDraft(null);
@@ -350,14 +347,14 @@ export default function CardsPage() {
                         <div className="space-y-2">
                           <input
                             type="text"
-                            value={editDraft.term}
-                            onChange={e => setEditDraft(d => d ? { ...d, term: e.target.value } : d)}
+                            value={editDraft.korean}
+                            onChange={e => setEditDraft(d => d ? { ...d, korean: e.target.value } : d)}
                             className="w-full p-2 rounded-lg bg-[var(--color-bg)] border border-[var(--color-muted)] text-[var(--color-text)]"
                           />
                           <input
                             type="text"
-                            value={editDraft.translation}
-                            onChange={e => setEditDraft(d => d ? { ...d, translation: e.target.value } : d)}
+                            value={editDraft.english}
+                            onChange={e => setEditDraft(d => d ? { ...d, english: e.target.value } : d)}
                             className="w-full p-2 rounded-lg bg-[var(--color-bg)] border border-[var(--color-muted)] text-[var(--color-text)]"
                           />
                           <div className="flex gap-2">

@@ -31,7 +31,6 @@ export async function POST(req: NextRequest) {
   if (context) {
     // Context provided — skip ambiguity check, resolve directly
     prompt = `Provide a concise translation for the term "${term}" with this context: "${context}".
-Write the translation in ${nativeLanguage}.
 
 IMPORTANT: The "korean" and "english" fields must ALWAYS be in their respective languages:
 - "korean" must always be the Korean word or phrase written in Korean script (한국어)
@@ -45,7 +44,6 @@ Respond with only this JSON:
   "termLanguage": "${termLanguage}",
   "korean": "Korean word/phrase in 한국어",
   "english": "English word/phrase",
-  "translation": "short translation in ${nativeLanguage} matching the given context",
   "formality": "formality level"
 }`;
   } else {
@@ -78,7 +76,6 @@ If NOT ambiguous, respond with only this JSON:
   "termLanguage": "${termLanguage}",
   "korean": "Korean word/phrase in 한국어",
   "english": "English word/phrase",
-  "translation": "short translation in ${nativeLanguage}",
   "formality": "Casual | Standard | Formal | Honorific | Slang | N/A"
 }
 
