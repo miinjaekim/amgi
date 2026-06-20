@@ -1,36 +1,11 @@
 import { db } from '@/config/firebase';
 import { collection, addDoc, Timestamp, query, where, orderBy, getDocs, doc, updateDoc, deleteDoc } from 'firebase/firestore';
-import { TermExplanation } from './gemini';
+import type { Flashcard, ReviewTracking } from '@amgi/core';
+
+export type { Flashcard, ReviewTracking } from '@amgi/core';
 
 function detectTermLanguage(term: string): 'Korean' | 'English' {
   return /[가-힣ᄀ-ᇿ㄰-㆏]/.test(term) ? 'Korean' : 'English';
-}
-
-export interface ReviewTracking {
-  nextReview: Date | string;
-  interval: number;
-  ease: number;
-  repetitions: number;
-}
-
-export interface Flashcard extends TermExplanation {
-  id?: string;
-  uid: string;
-  createdAt: Date;
-  archived?: boolean;
-  // Direction-specific review tracking
-  frontToBack?: ReviewTracking;
-  backToFront?: ReviewTracking;
-
-  // Legacy fields (deprecated, kept for backward compatibility)
-  /** @deprecated Use frontToBack.nextReview or backToFront.nextReview instead */
-  nextReview?: Date | string;
-  /** @deprecated Use frontToBack.interval or backToFront.interval instead */
-  interval?: number;
-  /** @deprecated Use frontToBack.ease or backToFront.ease instead */
-  ease?: number;
-  /** @deprecated Use frontToBack.repetitions or backToFront.repetitions instead */
-  repetitions?: number;
 }
 
 export async function saveFlashcardToFirestore(flashcard: Omit<Flashcard, 'createdAt' | 'id'>) {

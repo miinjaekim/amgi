@@ -25,6 +25,9 @@
     "paths": {
       "@/*": [
         "./src/*"
+      ],
+      "@amgi/core": [
+        "../../packages/core/src/index.ts"
       ]
     }
   },
