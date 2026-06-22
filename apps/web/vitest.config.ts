@@ -11,6 +11,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+      '@amgi/core': path.resolve(__dirname, '../../packages/core/src/index.ts'),
     },
   },
 }); 

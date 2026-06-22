@@ -1,14 +1,6 @@
-import { db } from '@/config/firebase';
+import { db } from '../config/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-
-export interface UserPreferences {
-  nativeLanguage: string;
-}
-
-export const SUPPORTED_LANGUAGES = [
-  { code: 'English', label: 'English' },
-  { code: 'Korean', label: '한국어' },
-];
+import type { UserPreferences } from '@amgi/core';
 
 export async function getUserPreferences(uid: string): Promise<UserPreferences | null> {
   const snap = await getDoc(doc(db, 'users', uid));
