@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { Platform } from 'react-native';
 import { GoogleAuthProvider, signInWithCredential, signOut, onAuthStateChanged, User } from 'firebase/auth';
 import * as Google from 'expo-auth-session/providers/google';
 import * as WebBrowser from 'expo-web-browser';
@@ -9,6 +10,15 @@ import { getUserPreferences, saveUserPreferences } from '../services/userPrefere
 WebBrowser.maybeCompleteAuthSession();
 
 const LANG_CACHE_KEY = 'amgi_native_language';
+
+// In Expo Go, makeRedirectUri always returns exp://... which Google rejects.
+// Passing redirectUri explicitly bypasses that override.
+// ASWebAuthenticationSession intercepts custom schemes without Info.plist registration.
+const iosClientId = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID ?? '';
+const nativeRedirectUri =
+  Platform.OS === 'ios' && iosClientId
+    ? `${iosClientId.split('.').reverse().join('.')}:/oauthredirect`
+    : undefined;
 
 interface UserContextType {
   user: User | null;
@@ -28,14 +38,18 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
   const [, response, promptAsync] = Google.useAuthRequest({
     webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
+    iosClientId,
+    ...(nativeRedirectUri ? { redirectUri: nativeRedirectUri } : {}),
   });
 
-  // Sign into Firebase once Google OAuth completes
+  // Sign into Firebase once Google OAuth completes (after auto code exchange, id_token is in params)
   useEffect(() => {
     if (response?.type === 'success') {
       const { id_token } = response.params;
-      const credential = GoogleAuthProvider.credential(id_token);
-      signInWithCredential(auth, credential).catch(console.error);
+      if (id_token) {
+        const credential = GoogleAuthProvider.credential(id_token);
+        signInWithCredential(auth, credential).catch(console.error);
+      }
     }
   }, [response]);
 

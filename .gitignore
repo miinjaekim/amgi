@@ -25,6 +25,9 @@
 *.pem
 .cursor/scratchpad copy.md
 
+# expo
+**/.expo/
+
 # debug
 npm-debug.log*
 yarn-debug.log*
