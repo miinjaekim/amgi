@@ -17,4 +17,13 @@ config.resolver.nodeModulesPaths = [
   path.resolve(monorepoRoot, 'node_modules'),
 ];
 
+// Force singleton packages to always resolve from the local workspace.
+// Without this, packages that live at root (e.g. react-native) resolve
+// their own imports of "react" from root node_modules (react@19.2.7),
+// which mismatches the react-native-renderer version bundled with
+// react-native@0.81.5 (expects react@19.1.0).
+config.resolver.extraNodeModules = {
+  react: path.resolve(projectRoot, 'node_modules/react'),
+};
+
 module.exports = config;
