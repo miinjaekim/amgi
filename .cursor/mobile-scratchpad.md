@@ -84,16 +84,20 @@ Key gotchas solved:
 - iOS OAuth client created in Google Cloud Console with bundle ID `host.exp.Exponent` (Expo Go's bundle ID).
 - `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID` added to `.env.local`.
 
-### Step 5 — Build screens
+### ✅ Step 5 — Build screens
 
-| Screen | Web equivalent | Notes |
+| Screen | Status | Notes |
 |---|---|---|
-| Learn | `app/page.tsx` | Search bar + AI explanation card + save modal |
-| Cards | `app/cards/page.tsx` | List with search/filter/sort + edit |
-| Review | `app/review/page.tsx` | Card flip + SM-2 rating buttons |
-| Settings | Header settings panel | Language picker + sign out |
+| Learn | ✅ | Search + disambiguation + explanation card + lazy depth/examples + save modal |
+| Cards | ✅ | FlatList, search/filter/sort, inline edit, archive/delete via Alert |
+| Review | ✅ | Due-card queue (both directions), reveal animation, SM-2 ratings (Again/Hard/Good/Easy) |
+| Settings | — | Sign-out in Learn auth bar; language picker deferred |
 
-Navigation: Expo Router tabs (Learn / Review / Cards) + Settings accessible from Learn header.
+Key gotchas solved:
+- **`initializeAuth` already-initialized on fast refresh:** wrap in try/catch, fall back to `getAuth(app)`.
+- **API base URL trailing slash:** strip with `.replace(/\/$/, '')` — double slash caused Vercel redirect hang.
+- `EXPO_PUBLIC_*` env vars are baked at bundle time; always restart with `--clear` after `.env.local` changes.
+- API calls the production Vercel URL (`EXPO_PUBLIC_API_BASE_URL`) — Gemini key stays server-side.
 
 ---
 
