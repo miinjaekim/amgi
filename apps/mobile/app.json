@@ -16,6 +16,22 @@
     ],
     "ios": {
       "supportsTablet": true
-    }
+    },
+    "updates": {
+      "url": "https://u.expo.dev/bc217cdf-916f-409f-868a-5994ff9813bf",
+      "enabled": true,
+      "checkAutomatically": "ON_LOAD",
+      "fallbackToCacheTimeout": 0
+    },
+    "runtimeVersion": {
+      "policy": "sdkVersion"
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "bc217cdf-916f-409f-868a-5994ff9813bf"
+      }
+    },
+    "owner": "mjkim314"
   }
 }
