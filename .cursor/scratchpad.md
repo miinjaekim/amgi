@@ -84,15 +84,24 @@ Language learners bounce between two tools — an LLM for nuanced explanations a
 - [x] **Save flashcard modal** — save/edit form now appears as a modal overlay instead of an inline section below the explanation.
 - [x] **Animated loading states** — replaced static '...' / 'Loading...' text with a spinning indicator across all async buttons.
 
-**2. Engagement**
+**2. Performance**
+- [ ] **Speed up search/review** — LLM response latency is noticeable on the Learn screen; Firestore reads on review load can be slow. Investigate: streaming the Gemini response token-by-token so the UI starts rendering immediately, and caching/prefetching flashcards so the review queue is ready before the user navigates there.
+
+**3. Deployment**
+- [ ] **Fix GitHub deployment errors** — CI/CD pipeline has unresolved build or deploy failures. Investigate error logs and ensure main branch deploys cleanly to Vercel.
+
+**4. Engagement**
 - [ ] **Streaks and progress visibility** — streak count and cards reviewed today, shown in the header or a dashboard. Core to daily habit formation; nothing built yet.
 
-**3. Infrastructure**
+**5. Infrastructure**
 - [ ] **Export** — CSV/Anki export for data ownership and portability.
 - [ ] **Shared term cache** — Firestore `terms` collection keyed by normalized term + language. Check before calling LLM; write on miss. Could evolve into a community dictionary.
 - [ ] **Adaptive explanation depth** — beginner vs. advanced setting that adjusts how much detail Gemini returns.
 
 **4. Future / speculative**
+- [ ] **Personalised explanation preferences** — users set preferences for depth, formality, emphasis (etymology, cultural context, example-heavy) stored in `users/{uid}`. Gemini prompt includes a preferences block so explanations feel tailored over time. Start with 2–3 simple knobs in Settings, expand based on what users actually adjust.
+- [ ] **Offline flashcard review** — cache the due queue locally (AsyncStorage or SQLite), sync on reconnect. Useful for subway/no-signal situations.
+- [ ] **Push notifications** — daily review reminders. Open question: Day 1 feature or post-launch?
 - [ ] **Offline mode via on-device model** — Gemma via WebGPU or Ollama for desktop. Open questions: model quality, WebGPU browser support, bundle size. Desktop companion app may be more viable short-term.
 - [ ] **Hanja-focus mode** — emphasize Chinese character breakdown for 한자 learners. Defer until there's clear demand.
 
@@ -119,6 +128,8 @@ Language learners bounce between two tools — an LLM for nuanced explanations a
 - How are streaks and XP visually represented? (in header? dedicated progress page?)
 - What does the onboarding flow look like — tooltip hints or a guided first search?
 - What export formats are supported (CSV, Anki, JSON)?
+- Should saved cards sync instantly or batch-sync to Firestore?
+- Theme (Forest/Slate/Paper) on mobile: keep as-is or design a simpler native dark/light toggle?
 
 ---
 
@@ -133,3 +144,8 @@ Language learners bounce between two tools — an LLM for nuanced explanations a
 - `nativeLanguage` uses `undefined` (not yet loaded) vs `null` (loaded, not set) vs `string` (set) — this distinction drives the language modal and avoids false positives.
 - Firestore requires a composite index for any query that filters on multiple fields or filters + sorts. The error message includes a direct link to create it in the console. For new features with compound queries, create and commit the index in `firestore.indexes.json` before deploying.
 - When adding a new boolean field to existing Firestore documents, backfill old records — Firestore's `!=` and `==` operators exclude documents where the field is missing entirely.
+- **Mobile (Expo Go) OAuth redirect:** `makeRedirectUri()` always returns `exp://...` which Google rejects. Fix: explicitly pass the reversed iOS client ID scheme (`com.googleusercontent.apps.xxx:/oauthredirect`) as `redirectUri`. `ASWebAuthenticationSession` intercepts it natively without needing it in Info.plist.
+- **Expo monorepo Hermes error ("private properties not supported"):** caused by root-level `babel-preset-expo@56` using `hermes-v1`. Fix: pin `babel-preset-expo@~54.0.11` as a devDependency in `apps/mobile/`.
+- **React version conflict in monorepo:** web app's `react@19.2` at root conflicts with `react-native-renderer@19.1`. `extraNodeModules` is only a fallback. Fix: use `config.resolver.resolveRequest` in `metro.config.js` to intercept all `react` imports and force them to the local version.
+- **`initializeAuth` already-initialized on fast refresh:** wrap in try/catch and fall back to `getAuth(app)`.
+- **`EXPO_PUBLIC_*` env vars** are baked at bundle time — always restart Metro with `--clear` after changing `.env.local`.
