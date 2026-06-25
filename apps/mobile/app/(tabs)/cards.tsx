@@ -12,6 +12,7 @@ import {
 import type { Flashcard } from '../../src/services/firestore';
 import { t } from '@amgi/core';
 import { useTheme } from '../../src/context/ThemeContext';
+import { useFloatingTabBarHeight } from '../../src/components/FloatingTabBar';
 import type { Palette } from '../../src/theme';
 
 type SortKey = 'newest' | 'oldest' | 'az';
@@ -19,7 +20,8 @@ type FilterKey = 'active' | 'archived' | 'all';
 
 export default function CardsScreen() {
   const { C } = useTheme();
-  const s = useMemo(() => makeStyles(C), [C]);
+  const tabBarHeight = useFloatingTabBarHeight();
+  const s = useMemo(() => makeStyles(C, tabBarHeight), [C, tabBarHeight]);
   const { user, nativeLanguage } = useUser();
   const [allCards, setAllCards] = useState<Flashcard[]>([]);
   const [loading, setLoading] = useState(false);
@@ -270,7 +272,7 @@ export default function CardsScreen() {
   );
 }
 
-function makeStyles(C: Palette) {
+function makeStyles(C: Palette, tabBarHeight: number) {
   return StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
   header: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 4 },
@@ -306,7 +308,7 @@ function makeStyles(C: Palette) {
   emptyState: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 },
   emptyText: { color: C.muted, fontSize: 15, textAlign: 'center' },
 
-  list: { paddingHorizontal: 16, paddingBottom: 40, gap: 10 },
+  list: { paddingHorizontal: 16, paddingBottom: tabBarHeight, gap: 10 },
   cardRow: {
     backgroundColor: C.surface, borderRadius: 14, padding: 14,
     borderWidth: 1, borderColor: C.border,

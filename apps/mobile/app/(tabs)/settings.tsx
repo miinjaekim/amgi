@@ -6,25 +6,27 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useUser } from '../../src/context/UserContext';
 import { useTheme } from '../../src/context/ThemeContext';
+import { useFloatingTabBarHeight } from '../../src/components/FloatingTabBar';
 import { SUPPORTED_LANGUAGES } from '@amgi/core';
 import { THEMES } from '../../src/theme';
 import type { Palette } from '../../src/theme';
 
 export default function SettingsScreen() {
   const { C, theme, setTheme } = useTheme();
-  const s = useMemo(() => makeStyles(C), [C]);
+  const tabBarHeight = useFloatingTabBarHeight();
+  const s = useMemo(() => makeStyles(C, tabBarHeight), [C, tabBarHeight]);
   const { user, authLoading, nativeLanguage, setNativeLanguage, handleSignIn, handleSignOut } = useUser();
 
   if (authLoading) {
     return (
-      <SafeAreaView style={s.center}>
+      <SafeAreaView style={s.center} edges={['top']}>
         <ActivityIndicator color={C.highlight} />
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={s.safe}>
+    <SafeAreaView style={s.safe} edges={['top']}>
       <ScrollView contentContainerStyle={s.scroll}>
         <Text style={s.heading}>Settings</Text>
 
@@ -113,11 +115,11 @@ export default function SettingsScreen() {
   );
 }
 
-function makeStyles(C: Palette) {
+function makeStyles(C: Palette, tabBarHeight: number) {
   return StyleSheet.create({
   safe: { flex: 1, backgroundColor: C.bg },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: C.bg },
-  scroll: { padding: 20, paddingBottom: 40 },
+  scroll: { padding: 20, paddingBottom: tabBarHeight },
   heading: { fontSize: 28, fontWeight: '700', color: C.text, marginBottom: 28 },
 
   sectionLabel: {

@@ -12,13 +12,15 @@ import type { Flashcard } from '../../src/services/firestore';
 import SaveFlashcardModal from '../../src/components/SaveFlashcardModal';
 import { t } from '@amgi/core';
 import { useTheme } from '../../src/context/ThemeContext';
+import { useFloatingTabBarHeight } from '../../src/components/FloatingTabBar';
 import type { Palette } from '../../src/theme';
 
 const EXAMPLES = ['배', 'longing', '눈치', 'awkward', '사랑'];
 
 export default function LearnScreen() {
   const { C } = useTheme();
-  const s = useMemo(() => makeStyles(C), [C]);
+  const tabBarHeight = useFloatingTabBarHeight();
+  const s = useMemo(() => makeStyles(C, tabBarHeight), [C, tabBarHeight]);
   const { user, nativeLanguage, authLoading, handleSignIn } = useUser();
 
   const [term, setTerm] = useState('');
@@ -334,12 +336,12 @@ export default function LearnScreen() {
   );
 }
 
-function makeStyles(C: Palette) {
+function makeStyles(C: Palette, tabBarHeight: number) {
   return StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
   flex: { flex: 1 },
   center: { flex: 1, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center' },
-  scroll: { padding: 16, paddingBottom: 40, flexGrow: 1 },
+  scroll: { padding: 16, paddingBottom: tabBarHeight, flexGrow: 1 },
   scrollCentered: { justifyContent: 'center' },
 
   searchRow: { flexDirection: 'row', gap: 8, marginBottom: 16 },

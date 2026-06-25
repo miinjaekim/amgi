@@ -9,6 +9,7 @@ import { fetchUserFlashcards, updateFlashcardReview } from '../../src/services/f
 import type { Flashcard, ReviewTracking } from '../../src/services/firestore';
 import { getNextReviewData, t } from '@amgi/core';
 import { useTheme } from '../../src/context/ThemeContext';
+import { useFloatingTabBarHeight } from '../../src/components/FloatingTabBar';
 import type { Palette } from '../../src/theme';
 
 type Direction = 'frontToBack' | 'backToFront';
@@ -37,7 +38,8 @@ function buildQueue(cards: Flashcard[]): ReviewItem[] {
 
 export default function ReviewScreen() {
   const { C } = useTheme();
-  const s = useMemo(() => makeStyles(C), [C]);
+  const tabBarHeight = useFloatingTabBarHeight();
+  const s = useMemo(() => makeStyles(C, tabBarHeight), [C, tabBarHeight]);
   const { user, nativeLanguage } = useUser();
   const [queue, setQueue] = useState<ReviewItem[]>([]);
   const [index, setIndex] = useState(0);
@@ -202,7 +204,7 @@ export default function ReviewScreen() {
   );
 }
 
-function makeStyles(C: Palette) {
+function makeStyles(C: Palette, tabBarHeight: number) {
   return StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
   center: { flex: 1, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center', padding: 32 },
@@ -230,7 +232,7 @@ function makeStyles(C: Palette) {
   showBtnText: { fontSize: 16, color: C.text, fontWeight: '600' },
 
   ratingRow: {
-    flexDirection: 'row', gap: 8, paddingHorizontal: 16, paddingBottom: 24,
+    flexDirection: 'row', gap: 8, paddingHorizontal: 16, paddingBottom: tabBarHeight,
   },
   ratingBtn: {
     flex: 1, borderWidth: 2, borderRadius: 12,
