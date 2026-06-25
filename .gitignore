@@ -27,6 +27,7 @@
 
 # expo
 **/.expo/
+apps/mobile/dist/
 
 # debug
 npm-debug.log*
