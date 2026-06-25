@@ -1,11 +1,14 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   View, Text, TouchableOpacity, ActivityIndicator,
-  StyleSheet, Animated,
+  StyleSheet, Animated, TextInput, Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useUser } from '../../src/context/UserContext';
-import { fetchUserFlashcards, updateFlashcardReview } from '../../src/services/firestore';
+import {
+  fetchUserFlashcards, updateFlashcardReview,
+  archiveFlashcard, updateFlashcardFields,
+} from '../../src/services/firestore';
 import type { Flashcard, ReviewTracking } from '../../src/services/firestore';
 import { getNextReviewData, t } from '@amgi/core';
 import { useTheme } from '../../src/context/ThemeContext';
@@ -45,9 +48,16 @@ export default function ReviewScreen() {
   const [index, setIndex] = useState(0);
   const [loading, setLoading] = useState(false);
   const [revealed, setRevealed] = useState(false);
+  const [showDetails, setShowDetails] = useState(false);
   const [done, setDone] = useState(false);
   const [nextDate, setNextDate] = useState<Date | null>(null);
   const revealAnim = useRef(new Animated.Value(0)).current;
+
+  // Card options (⋯ menu)
+  const [showOptions, setShowOptions] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [editDraft, setEditDraft] = useState<{ korean: string; english: string } | null>(null);
+  const [submitting, setSubmitting] = useState<Rating | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -69,14 +79,25 @@ export default function ReviewScreen() {
       .finally(() => setLoading(false));
   }, [user]);
 
+  const resetCardState = () => {
+    setRevealed(false);
+    setShowDetails(false);
+    setShowOptions(false);
+    setEditing(false);
+    setEditDraft(null);
+    revealAnim.setValue(0);
+  };
+
   const handleReveal = () => {
     setRevealed(true);
     Animated.spring(revealAnim, { toValue: 1, useNativeDriver: true, friction: 8 }).start();
   };
 
   const handleRate = async (rating: Rating) => {
+    if (submitting) return;
     const item = queue[index];
     if (!item) return;
+    setSubmitting(rating);
     const { card, direction } = item;
     const tracking: ReviewTracking = card[direction] ?? {
       nextReview: new Date(), interval: 0, ease: 2.5, repetitions: 0,
@@ -86,15 +107,54 @@ export default function ReviewScreen() {
     try {
       await updateFlashcardReview(card.id!, direction, next, card[otherDir]);
     } catch {
-      // fire-and-forget; don't block the review session
+      // fire-and-forget
     }
-    revealAnim.setValue(0);
-    setRevealed(false);
+    setSubmitting(null);
+    resetCardState();
     if (index + 1 >= queue.length) {
       setDone(true);
     } else {
       setIndex(i => i + 1);
     }
+  };
+
+  const handleEditSave = async () => {
+    const item = queue[index];
+    if (!item?.card.id || !editDraft) return;
+    try {
+      await updateFlashcardFields(item.card.id, editDraft);
+      setQueue(prev => prev.map((qi, i) =>
+        i === index ? { ...qi, card: { ...qi.card, ...editDraft } } : qi
+      ));
+      setEditing(false);
+      setEditDraft(null);
+      setShowOptions(false);
+    } catch {
+      Alert.alert('Error', 'Failed to save changes.');
+    }
+  };
+
+  const handleArchive = () => {
+    const item = queue[index];
+    if (!item?.card.id) return;
+    Alert.alert('Archive card?', 'This card will be removed from your active deck.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Archive', style: 'destructive',
+        onPress: async () => {
+          try {
+            await archiveFlashcard(item.card.id!);
+            const newQueue = queue.filter((_, i) => i !== index);
+            setQueue(newQueue);
+            resetCardState();
+            if (newQueue.length === 0) setDone(true);
+            else if (index >= newQueue.length) setIndex(newQueue.length - 1);
+          } catch {
+            Alert.alert('Error', 'Failed to archive card.');
+          }
+        },
+      },
+    ]);
   };
 
   if (!user) {
@@ -156,7 +216,7 @@ export default function ReviewScreen() {
   ];
 
   return (
-    <SafeAreaView style={s.root} edges={['top', 'bottom']}>
+    <SafeAreaView style={s.root} edges={['top']}>
       {/* Progress */}
       <View style={s.progressBar}>
         <View style={[s.progressFill, { width: `${(index / queue.length) * 100}%` }]} />
@@ -170,35 +230,115 @@ export default function ReviewScreen() {
 
       {/* Card */}
       <View style={s.cardWrap}>
-        <Text style={s.prompt}>{prompt}</Text>
-        <Text style={s.frontText}>{frontText}</Text>
+        {/* Card header: term + options button */}
+        <View style={s.cardHeader}>
+          <Text style={s.prompt}>{prompt}</Text>
+          <TouchableOpacity
+            style={s.optionsBtn}
+            onPress={() => {
+              if (editing) {
+                setEditing(false);
+                setEditDraft(null);
+              }
+              setShowOptions(v => !v);
+            }}
+          >
+            <Text style={s.optionsBtnText}>···</Text>
+          </TouchableOpacity>
+        </View>
 
-        {revealed ? (
-          <Animated.View style={[s.revealWrap, revealStyle]}>
-            <View style={s.divider} />
-            <Text style={s.backText}>{backText}</Text>
-            {card.definition ? <Text style={s.definitionText}>{card.definition}</Text> : null}
-          </Animated.View>
+        {/* Options menu */}
+        {showOptions && !editing && (
+          <View style={s.optionsMenu}>
+            <TouchableOpacity
+              style={s.optionsMenuItem}
+              onPress={() => {
+                setEditDraft({ korean: card.korean || card.term, english: card.english || card.translation || '' });
+                setEditing(true);
+                setShowOptions(false);
+              }}
+            >
+              <Text style={s.optionsMenuText}>Edit</Text>
+            </TouchableOpacity>
+            <View style={s.optionsMenuDivider} />
+            <TouchableOpacity style={s.optionsMenuItem} onPress={handleArchive}>
+              <Text style={[s.optionsMenuText, { color: C.error }]}>Archive</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Edit form */}
+        {editing && editDraft ? (
+          <View style={s.editForm}>
+            <Text style={s.editLabel}>Korean</Text>
+            <TextInput
+              style={s.editInput}
+              value={editDraft.korean}
+              onChangeText={v => setEditDraft(d => d ? { ...d, korean: v } : d)}
+              autoFocus
+            />
+            <Text style={s.editLabel}>English</Text>
+            <TextInput
+              style={s.editInput}
+              value={editDraft.english}
+              onChangeText={v => setEditDraft(d => d ? { ...d, english: v } : d)}
+            />
+            <View style={s.editActions}>
+              <TouchableOpacity style={s.editSaveBtn} onPress={handleEditSave}>
+                <Text style={s.editSaveBtnText}>Save</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={s.editCancelBtn} onPress={() => { setEditing(false); setEditDraft(null); }}>
+                <Text style={s.editCancelBtnText}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        ) : (
+          <>
+            <Text style={s.frontText}>{frontText}</Text>
+
+            {revealed && (
+              <Animated.View style={[s.revealWrap, revealStyle]}>
+                <View style={s.divider} />
+                <Text style={s.backText}>{backText}</Text>
+                {card.definition && !showDetails && (
+                  <TouchableOpacity style={s.detailsBtn} onPress={() => setShowDetails(true)}>
+                    <Text style={s.detailsBtnText}>Show definition</Text>
+                  </TouchableOpacity>
+                )}
+                {card.definition && showDetails && (
+                  <Text style={s.definitionText}>{card.definition}</Text>
+                )}
+              </Animated.View>
+            )}
+          </>
+        )}
+      </View>
+
+      {/* Bottom action row — same position for both show-answer and ratings */}
+      {!editing && (
+        revealed ? (
+          <View style={s.ratingRow}>
+            {RATINGS.map(r => (
+              <TouchableOpacity
+                key={r.key}
+                style={[s.ratingBtn, { borderColor: r.color }]}
+                onPress={() => handleRate(r.key)}
+                disabled={!!submitting}
+              >
+                <Text style={[s.ratingBtnText, { color: r.color, opacity: submitting && submitting !== r.key ? 0.4 : submitting === r.key ? 0 : 1 }]}>
+                  {r.label}
+                </Text>
+                {submitting === r.key && (
+                  <ActivityIndicator size="small" color={r.color} style={StyleSheet.absoluteFill} />
+                )}
+              </TouchableOpacity>
+            ))}
+          </View>
         ) : (
           <TouchableOpacity style={s.showBtn} onPress={handleReveal}>
             <Text style={s.showBtnText}>{t(nativeLanguage, 'showAnswer')}</Text>
           </TouchableOpacity>
-        )}
-      </View>
-
-      {/* Rating buttons */}
-      {revealed && (
-        <View style={s.ratingRow}>
-          {RATINGS.map(r => (
-            <TouchableOpacity
-              key={r.key}
-              style={[s.ratingBtn, { borderColor: r.color }]}
-              onPress={() => handleRate(r.key)}
-            >
-              <Text style={[s.ratingBtnText, { color: r.color }]}>{r.label}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+        )
       )}
     </SafeAreaView>
   );
@@ -206,7 +346,7 @@ export default function ReviewScreen() {
 
 function makeStyles(C: Palette, tabBarHeight: number) {
   return StyleSheet.create({
-  root: { flex: 1, backgroundColor: C.bg },
+  root: { flex: 1, backgroundColor: C.bg, paddingBottom: tabBarHeight },
   center: { flex: 1, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center', padding: 32 },
 
   progressBar: { height: 3, backgroundColor: C.border, marginTop: 8 },
@@ -217,22 +357,53 @@ function makeStyles(C: Palette, tabBarHeight: number) {
   cardWrap: {
     flex: 1, margin: 16, backgroundColor: C.surface,
     borderRadius: 20, borderWidth: 1, borderColor: C.border,
-    padding: 28, justifyContent: 'center',
+    padding: 28,
   },
-  prompt: { fontSize: 13, color: C.muted, marginBottom: 16 },
+  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 },
+  prompt: { fontSize: 13, color: C.muted, flex: 1 },
+  optionsBtn: { paddingHorizontal: 8, paddingVertical: 2, marginLeft: 8 },
+  optionsBtnText: { fontSize: 20, color: C.muted, letterSpacing: 2 },
+
+  optionsMenu: {
+    backgroundColor: C.surface, borderRadius: 12, borderWidth: 1, borderColor: C.border,
+    marginBottom: 16, overflow: 'hidden',
+  },
+  optionsMenuItem: { paddingVertical: 12, paddingHorizontal: 16 },
+  optionsMenuText: { fontSize: 15, color: C.text, fontWeight: '500' },
+  optionsMenuDivider: { height: 1, backgroundColor: C.border },
+
+  editForm: { gap: 8, marginTop: 4 },
+  editLabel: { fontSize: 12, color: C.muted, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
+  editInput: {
+    borderWidth: 1, borderColor: C.border, borderRadius: 10,
+    paddingHorizontal: 12, paddingVertical: 10, fontSize: 16, color: C.text,
+    backgroundColor: C.bg,
+  },
+  editActions: { flexDirection: 'row', gap: 8, marginTop: 4 },
+  editSaveBtn: { flex: 1, backgroundColor: C.highlight, borderRadius: 10, paddingVertical: 10, alignItems: 'center' },
+  editSaveBtnText: { color: C.bg, fontWeight: '700', fontSize: 15 },
+  editCancelBtn: { flex: 1, backgroundColor: C.border, borderRadius: 10, paddingVertical: 10, alignItems: 'center' },
+  editCancelBtnText: { color: C.text, fontWeight: '600', fontSize: 15 },
+
   frontText: { fontSize: 32, fontWeight: '700', color: C.text, lineHeight: 40 },
   divider: { height: 1, backgroundColor: C.border, marginVertical: 20 },
   backText: { fontSize: 22, fontWeight: '600', color: C.highlight, lineHeight: 30 },
-  definitionText: { fontSize: 14, color: C.text, opacity: 0.7, marginTop: 12, lineHeight: 20 },
+  detailsBtn: {
+    marginTop: 14, borderWidth: 1, borderColor: C.border,
+    borderRadius: 8, paddingVertical: 8, paddingHorizontal: 14, alignSelf: 'flex-start',
+  },
+  detailsBtnText: { fontSize: 13, color: C.muted, fontWeight: '500' },
+  definitionText: { fontSize: 14, color: C.text, opacity: 0.7, marginTop: 14, lineHeight: 20 },
   revealWrap: {},
   showBtn: {
-    marginTop: 24, borderWidth: 1, borderColor: C.border, borderRadius: 12,
+    marginHorizontal: 16, paddingBottom: 8,
+    borderWidth: 1, borderColor: C.border, borderRadius: 12,
     paddingVertical: 14, alignItems: 'center',
   },
   showBtnText: { fontSize: 16, color: C.text, fontWeight: '600' },
 
   ratingRow: {
-    flexDirection: 'row', gap: 8, paddingHorizontal: 16, paddingBottom: tabBarHeight,
+    flexDirection: 'row', gap: 8, paddingHorizontal: 16, paddingBottom: 8,
   },
   ratingBtn: {
     flex: 1, borderWidth: 2, borderRadius: 12,
