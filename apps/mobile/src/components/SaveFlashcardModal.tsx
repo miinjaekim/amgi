@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   Modal, View, Text, TextInput, TouchableOpacity,
   StyleSheet, KeyboardAvoidingView, Platform, ActivityIndicator,
 } from 'react-native';
 import { t } from '@amgi/core';
-import { C } from '../theme';
+import { useTheme } from '../context/ThemeContext';
+import type { Palette } from '../theme';
 import type { Flashcard } from '../services/firestore';
 
 interface Props {
@@ -17,6 +18,8 @@ interface Props {
 }
 
 export default function SaveFlashcardModal({ draft, nativeLanguage, saving, onChange, onSave, onClose }: Props) {
+  const { C } = useTheme();
+  const s = useMemo(() => makeStyles(C), [C]);
   return (
     <Modal visible transparent animationType="fade" onRequestClose={onClose}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={s.flex}>
@@ -59,7 +62,8 @@ export default function SaveFlashcardModal({ draft, nativeLanguage, saving, onCh
   );
 }
 
-const s = StyleSheet.create({
+function makeStyles(C: Palette) {
+  return StyleSheet.create({
   flex: { flex: 1 },
   backdrop: {
     flex: 1, backgroundColor: 'rgba(0,0,0,0.55)',
@@ -87,4 +91,5 @@ const s = StyleSheet.create({
     paddingVertical: 12, alignItems: 'center',
   },
   cancelBtnText: { color: C.text, fontWeight: '600', fontSize: 15 },
-});
+  });
+}
