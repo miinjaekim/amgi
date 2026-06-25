@@ -144,7 +144,7 @@ export default function LearnScreen() {
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={s.flex}>
         <ScrollView
           style={s.flex}
-          contentContainerStyle={s.scroll}
+          contentContainerStyle={[s.scroll, isEmpty && s.scrollCentered]}
           keyboardShouldPersistTaps="handled"
         >
           {/* Search */}
@@ -339,7 +339,8 @@ function makeStyles(C: Palette) {
   root: { flex: 1, backgroundColor: C.bg },
   flex: { flex: 1 },
   center: { flex: 1, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center' },
-  scroll: { padding: 16, paddingBottom: 40 },
+  scroll: { padding: 16, paddingBottom: 40, flexGrow: 1 },
+  scrollCentered: { justifyContent: 'center' },
 
   searchRow: { flexDirection: 'row', gap: 8, marginBottom: 16 },
   searchInput: {
