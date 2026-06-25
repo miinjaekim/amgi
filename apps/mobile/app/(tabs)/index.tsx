@@ -1,7 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, ActivityIndicator,
-  ScrollView, StyleSheet, KeyboardAvoidingView, Platform,
+  ScrollView, StyleSheet, KeyboardAvoidingView, Platform, Keyboard, Pressable,
+  Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useUser } from '../../src/context/UserContext';
@@ -21,6 +22,7 @@ export default function LearnScreen() {
   const { C } = useTheme();
   const tabBarHeight = useFloatingTabBarHeight();
   const s = useMemo(() => makeStyles(C, tabBarHeight), [C, tabBarHeight]);
+  const searchRestingBottom = Dimensions.get('window').height * 0.40;
   const { user, nativeLanguage, authLoading, handleSignIn } = useUser();
 
   const [term, setTerm] = useState('');
@@ -38,6 +40,7 @@ export default function LearnScreen() {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [showContextInput, setShowContextInput] = useState(false);
   const [contextInput, setContextInput] = useState('');
+
 
   const reset = () => {
     setCore(null); setAmbiguity(null); setDepth(null); setExamples(null);
@@ -141,15 +144,70 @@ export default function LearnScreen() {
 
   const isEmpty = !loading && !core && !ambiguity && !error && !saveSuccess;
 
+  const saveModal = showSaveModal && flashcardDraft && (
+    <SaveFlashcardModal
+      draft={flashcardDraft}
+      nativeLanguage={nativeLanguage}
+      saving={saving}
+      onChange={(field, value) => setFlashcardDraft(prev => ({ ...prev, [field]: value }))}
+      onSave={handleSave}
+      onClose={() => { setShowSaveModal(false); setFlashcardDraft(null); }}
+    />
+  );
+
+  // ── Empty state: tagline fills screen, search + chips pinned to bottom ──
+  if (isEmpty) {
+    return (
+      <SafeAreaView style={s.root} edges={['top']}>
+        <Pressable style={s.hero} onPress={Keyboard.dismiss}>
+          <Text style={s.tagline}>{t(nativeLanguage, 'tagline')}</Text>
+          <Text style={s.taglineSub}>{t(nativeLanguage, 'taglineSubtitle')}</Text>
+        </Pressable>
+
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          keyboardVerticalOffset={-(searchRestingBottom - 8)}
+        >
+        <View style={[s.bottomBar, { paddingBottom: searchRestingBottom }]}>
+            <View style={s.exampleRow}>
+              <Text style={s.exampleLabel}>{t(nativeLanguage, 'exampleTermsLabel')}</Text>
+              {EXAMPLES.map(ex => (
+                <TouchableOpacity key={ex} style={s.chip} onPress={() => { setTerm(ex); resolveExplanation(ex); }}>
+                  <Text style={s.chipText}>{ex}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <View style={s.searchRow}>
+              <TextInput
+                style={s.searchInput}
+                value={term}
+                onChangeText={setTerm}
+                placeholder={t(nativeLanguage, 'inputPlaceholder')}
+                placeholderTextColor={C.muted}
+                returnKeyType="search"
+                onSubmitEditing={handleSubmit}
+              />
+              <TouchableOpacity style={s.searchBtn} onPress={handleSubmit}>
+                <Text style={s.searchBtnText}>{t(nativeLanguage, 'learnButton')}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+        {saveModal}
+      </SafeAreaView>
+    );
+  }
+
+  // ── Results state: search at top, results scroll below ──
   return (
     <SafeAreaView style={s.root} edges={['top']}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={s.flex}>
         <ScrollView
           style={s.flex}
-          contentContainerStyle={[s.scroll, isEmpty && s.scrollCentered]}
+          contentContainerStyle={s.scroll}
           keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
         >
-          {/* Search */}
           <View style={s.searchRow}>
             <TextInput
               style={s.searchInput}
@@ -168,37 +226,18 @@ export default function LearnScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* Empty state */}
-          {isEmpty && (
-            <View style={s.emptyState}>
-              <Text style={s.tagline}>{t(nativeLanguage, 'tagline')}</Text>
-              <Text style={s.taglineSub}>{t(nativeLanguage, 'taglineSubtitle')}</Text>
-              <View style={s.exampleRow}>
-                <Text style={s.exampleLabel}>{t(nativeLanguage, 'exampleTermsLabel')}</Text>
-                {EXAMPLES.map(ex => (
-                  <TouchableOpacity key={ex} style={s.chip} onPress={() => { setTerm(ex); resolveExplanation(ex); }}>
-                    <Text style={s.chipText}>{ex}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-          )}
-
-          {/* Save success */}
           {saveSuccess && (
             <View style={s.successBanner}>
               <Text style={s.successText}>{t(nativeLanguage, 'flashcardSaved')}</Text>
             </View>
           )}
 
-          {/* Error */}
           {error && (
             <View style={s.errorBanner}>
               <Text style={s.errorText}>{error}</Text>
             </View>
           )}
 
-          {/* Disambiguation */}
           {ambiguity && (
             <View style={s.card}>
               <Text style={s.cardTerm}>{ambiguity.term}</Text>
@@ -212,10 +251,8 @@ export default function LearnScreen() {
             </View>
           )}
 
-          {/* Explanation card */}
           {core && (
             <View style={s.card}>
-              {/* Header */}
               <View style={s.cardHeaderRow}>
                 <Text style={s.cardTerm}>{core.term}</Text>
                 {core.formality && core.formality !== 'N/A' && (
@@ -225,11 +262,9 @@ export default function LearnScreen() {
                 )}
               </View>
 
-              {/* Translation */}
               <Text style={s.sectionLabel}>{t(nativeLanguage, 'sectionTranslation')}</Text>
               <Text style={s.translationText}>{translation || t(nativeLanguage, 'noTranslation')}</Text>
 
-              {/* Definition */}
               {!depth ? (
                 <TouchableOpacity style={s.loadBtn} onPress={handleLoadDepth} disabled={loadingDepth}>
                   {loadingDepth
@@ -259,7 +294,6 @@ export default function LearnScreen() {
                 </View>
               )}
 
-              {/* Examples */}
               {!examples ? (
                 <TouchableOpacity style={s.loadBtn} onPress={handleLoadExamples} disabled={loadingExamples}>
                   {loadingExamples
@@ -278,7 +312,6 @@ export default function LearnScreen() {
                 </View>
               )}
 
-              {/* Save */}
               <View style={s.divider} />
               <TouchableOpacity
                 style={[s.saveBtn, !user && s.saveBtnDisabled]}
@@ -289,7 +322,6 @@ export default function LearnScreen() {
                 </Text>
               </TouchableOpacity>
 
-              {/* Not what you meant */}
               <View style={s.contextSection}>
                 {!showContextInput ? (
                   <TouchableOpacity onPress={() => setShowContextInput(true)}>
@@ -321,17 +353,7 @@ export default function LearnScreen() {
           )}
         </ScrollView>
       </KeyboardAvoidingView>
-
-      {showSaveModal && flashcardDraft && (
-        <SaveFlashcardModal
-          draft={flashcardDraft}
-          nativeLanguage={nativeLanguage}
-          saving={saving}
-          onChange={(field, value) => setFlashcardDraft(prev => ({ ...prev, [field]: value }))}
-          onSave={handleSave}
-          onClose={() => { setShowSaveModal(false); setFlashcardDraft(null); }}
-        />
-      )}
+      {saveModal}
     </SafeAreaView>
   );
 }
@@ -342,7 +364,10 @@ function makeStyles(C: Palette, tabBarHeight: number) {
   flex: { flex: 1 },
   center: { flex: 1, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center' },
   scroll: { padding: 16, paddingBottom: tabBarHeight, flexGrow: 1 },
-  scrollCentered: { justifyContent: 'center' },
+
+  // Empty state layout
+  hero: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32, minHeight: 80 },
+  bottomBar: { paddingHorizontal: 16, paddingBottom: tabBarHeight },
 
   searchRow: { flexDirection: 'row', gap: 8, marginBottom: 16 },
   searchInput: {
@@ -357,10 +382,9 @@ function makeStyles(C: Palette, tabBarHeight: number) {
   searchBtnDisabled: { opacity: 0.6 },
   searchBtnText: { color: C.bg, fontWeight: '700', fontSize: 15 },
 
-  emptyState: { alignItems: 'center', marginTop: 40 },
-  tagline: { fontSize: 18, fontWeight: '700', color: C.text, marginBottom: 8, textAlign: 'center' },
-  taglineSub: { fontSize: 14, color: C.muted, textAlign: 'center', marginBottom: 24, lineHeight: 20 },
-  exampleRow: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 8 },
+  tagline: { fontSize: 22, fontWeight: '700', color: C.text, marginBottom: 8, textAlign: 'center' },
+  taglineSub: { fontSize: 14, color: C.muted, textAlign: 'center', lineHeight: 20 },
+  exampleRow: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 8, marginBottom: 12 },
   exampleLabel: { fontSize: 13, color: C.muted, alignSelf: 'center' },
   chip: { borderWidth: 1, borderColor: C.border, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6 },
   chipText: { fontSize: 14, color: C.text },
