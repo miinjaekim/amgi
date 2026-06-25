@@ -101,6 +101,19 @@ Key gotchas solved:
 
 ---
 
+## Future Features
+
+### Personalised Explanation Preferences
+Users set preferences for how they want explanations delivered — e.g. formality level, depth (brief vs. detailed), emphasis (etymology, cultural context, example-heavy), and tone. Preferences are stored in `users/{uid}` in Firestore alongside `nativeLanguage`. Over time, the Gemini prompt includes a preferences block so explanations gradually feel tailored to each user.
+
+Rough shape:
+- **Storage:** extend `UserPreferences` in `packages/core/src/types.ts` with an optional `explanationStyle` object
+- **UI:** Settings screen with a few toggles/pickers (depth, formality, focus areas)
+- **Prompt:** inject preferences into the system prompt in `/api/explain` and `/api/explain/depth`
+- **Iteration:** start with 2–3 simple knobs, expand based on what users actually adjust
+
+---
+
 ## Open Design Questions
 - Should the mobile app support offline flashcard review (queue cached locally, sync on reconnect)?
 - Should theme (Forest/Slate/Paper) carry over exactly, or design a mobile-native dark/light theme?

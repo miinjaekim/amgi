@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, ActivityIndicator,
   ScrollView, StyleSheet, KeyboardAvoidingView, Platform,
@@ -11,12 +11,15 @@ import { saveFlashcardToFirestore } from '../../src/services/firestore';
 import type { Flashcard } from '../../src/services/firestore';
 import SaveFlashcardModal from '../../src/components/SaveFlashcardModal';
 import { t } from '@amgi/core';
-import { C } from '../../src/theme';
+import { useTheme } from '../../src/context/ThemeContext';
+import type { Palette } from '../../src/theme';
 
 const EXAMPLES = ['배', 'longing', '눈치', 'awkward', '사랑'];
 
 export default function LearnScreen() {
-  const { user, nativeLanguage, authLoading, handleSignIn, handleSignOut } = useUser();
+  const { C } = useTheme();
+  const s = useMemo(() => makeStyles(C), [C]);
+  const { user, nativeLanguage, authLoading, handleSignIn } = useUser();
 
   const [term, setTerm] = useState('');
   const [core, setCore] = useState<TermCore | null>(null);
@@ -138,19 +141,6 @@ export default function LearnScreen() {
 
   return (
     <SafeAreaView style={s.root} edges={['top']}>
-      {/* Auth bar */}
-      <View style={s.authBar}>
-        {user ? (
-          <TouchableOpacity onPress={handleSignOut}>
-            <Text style={s.authBarText}>{user.email} · {t(nativeLanguage, 'signOut')}</Text>
-          </TouchableOpacity>
-        ) : (
-          <TouchableOpacity onPress={handleSignIn}>
-            <Text style={s.authBarText}>{t(nativeLanguage, 'signIn')} →</Text>
-          </TouchableOpacity>
-        )}
-      </View>
-
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={s.flex}>
         <ScrollView
           style={s.flex}
@@ -344,14 +334,12 @@ export default function LearnScreen() {
   );
 }
 
-const s = StyleSheet.create({
+function makeStyles(C: Palette) {
+  return StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
   flex: { flex: 1 },
   center: { flex: 1, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center' },
   scroll: { padding: 16, paddingBottom: 40 },
-
-  authBar: { paddingHorizontal: 16, paddingVertical: 8, alignItems: 'flex-end' },
-  authBarText: { fontSize: 12, color: C.muted },
 
   searchRow: { flexDirection: 'row', gap: 8, marginBottom: 16 },
   searchInput: {
@@ -420,4 +408,5 @@ const s = StyleSheet.create({
   meaningBtn: { borderWidth: 1, borderColor: C.border, borderRadius: 10, padding: 12, marginBottom: 8 },
   meaningLabel: { fontSize: 15, fontWeight: '600', color: C.highlight },
   meaningHint: { fontSize: 13, color: C.text, opacity: 0.7, marginTop: 2 },
-});
+  });
+}

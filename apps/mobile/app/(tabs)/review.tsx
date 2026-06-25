@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   View, Text, TouchableOpacity, ActivityIndicator,
   StyleSheet, Animated,
@@ -8,7 +8,8 @@ import { useUser } from '../../src/context/UserContext';
 import { fetchUserFlashcards, updateFlashcardReview } from '../../src/services/firestore';
 import type { Flashcard, ReviewTracking } from '../../src/services/firestore';
 import { getNextReviewData, t } from '@amgi/core';
-import { C } from '../../src/theme';
+import { useTheme } from '../../src/context/ThemeContext';
+import type { Palette } from '../../src/theme';
 
 type Direction = 'frontToBack' | 'backToFront';
 type Rating = 'again' | 'hard' | 'good' | 'easy';
@@ -35,6 +36,8 @@ function buildQueue(cards: Flashcard[]): ReviewItem[] {
 }
 
 export default function ReviewScreen() {
+  const { C } = useTheme();
+  const s = useMemo(() => makeStyles(C), [C]);
   const { user, nativeLanguage } = useUser();
   const [queue, setQueue] = useState<ReviewItem[]>([]);
   const [index, setIndex] = useState(0);
@@ -199,7 +202,8 @@ export default function ReviewScreen() {
   );
 }
 
-const s = StyleSheet.create({
+function makeStyles(C: Palette) {
+  return StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
   center: { flex: 1, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center', padding: 32 },
 
@@ -238,4 +242,5 @@ const s = StyleSheet.create({
   doneTitle: { fontSize: 24, fontWeight: '700', color: C.highlight, marginBottom: 12, textAlign: 'center' },
   doneBody: { fontSize: 15, color: C.text, textAlign: 'center', lineHeight: 22, marginBottom: 16 },
   nextDate: { fontSize: 13, color: C.muted, textAlign: 'center' },
-});
+  });
+}

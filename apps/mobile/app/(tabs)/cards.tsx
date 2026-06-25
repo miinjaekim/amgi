@@ -11,12 +11,15 @@ import {
 } from '../../src/services/firestore';
 import type { Flashcard } from '../../src/services/firestore';
 import { t } from '@amgi/core';
-import { C } from '../../src/theme';
+import { useTheme } from '../../src/context/ThemeContext';
+import type { Palette } from '../../src/theme';
 
 type SortKey = 'newest' | 'oldest' | 'az';
 type FilterKey = 'active' | 'archived' | 'all';
 
 export default function CardsScreen() {
+  const { C } = useTheme();
+  const s = useMemo(() => makeStyles(C), [C]);
   const { user, nativeLanguage } = useUser();
   const [allCards, setAllCards] = useState<Flashcard[]>([]);
   const [loading, setLoading] = useState(false);
@@ -267,7 +270,8 @@ export default function CardsScreen() {
   );
 }
 
-const s = StyleSheet.create({
+function makeStyles(C: Palette) {
+  return StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
   header: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 4 },
   title: { fontSize: 24, fontWeight: '700', color: C.highlight },
@@ -330,4 +334,5 @@ const s = StyleSheet.create({
   editSaveBtnText: { color: C.bg, fontWeight: '700', fontSize: 14 },
   editCancelBtn: { flex: 1, backgroundColor: C.border, borderRadius: 8, paddingVertical: 8, alignItems: 'center' },
   editCancelBtnText: { color: C.text, fontWeight: '600', fontSize: 14 },
-});
+  });
+}
