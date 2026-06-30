@@ -137,7 +137,8 @@ Language learners bounce between two tools — an LLM for nuanced explanations a
 ---
 
 ## 5. Lessons Learned
-- Always use Git to manage progress — new branch for every feature, commit changes as work completes. This keeps the project organized and ensures there's always a working version to return to if something breaks.
+- Always use Git to manage progress — new branch for every feature, commit changes as work completes.
+- To push an OTA update to the mobile app via EAS, run from `apps/mobile`: `npx eas-cli update --branch main --message "..."` (no global install needed). This keeps the project organized and ensures there's always a working version to return to if something breaks.
 - Always proxy third-party API keys through a server-side route — never use `NEXT_PUBLIC_` for secret keys
 - Firestore security rules must be updated manually in the Firebase console — they are not part of the codebase. Remember to add rules for any new collection.
 - Run `npm audit` if vulnerabilities appear in the terminal
