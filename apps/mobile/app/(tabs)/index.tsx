@@ -23,7 +23,7 @@ export default function LearnScreen() {
   const tabBarHeight = useFloatingTabBarHeight();
   const s = useMemo(() => makeStyles(C, tabBarHeight), [C, tabBarHeight]);
   const searchRestingBottom = Dimensions.get('window').height * 0.40;
-  const { user, nativeLanguage, authLoading, handleSignIn } = useUser();
+  const { user, nativeLanguage, authLoading, handleSignIn, streak, reviewedToday } = useUser();
 
   const [term, setTerm] = useState('');
   const [core, setCore] = useState<TermCore | null>(null);
@@ -155,10 +155,24 @@ export default function LearnScreen() {
     />
   );
 
+  const streakBadge = user && streak > 0 ? (
+    <View style={s.streakBadge}>
+      <Text style={s.streakFlame}>🔥</Text>
+      <Text style={s.streakText}>
+        {nativeLanguage === 'Korean' ? `${streak}일` : `${streak} ${streak === 1 ? 'day' : 'days'}`}
+      </Text>
+      <Text style={s.streakSep}>·</Text>
+      <Text style={s.streakMuted}>
+        {nativeLanguage === 'Korean' ? `오늘 ${reviewedToday}개` : `${reviewedToday} ${reviewedToday === 1 ? 'card' : 'cards'} today`}
+      </Text>
+    </View>
+  ) : null;
+
   // ── Empty state: tagline fills screen, search + chips pinned to bottom ──
   if (isEmpty) {
     return (
       <SafeAreaView style={s.root} edges={['top']}>
+        {streakBadge}
         <Pressable style={s.hero} onPress={Keyboard.dismiss}>
           <Text style={s.tagline}>{t(nativeLanguage, 'tagline')}</Text>
           <Text style={s.taglineSub}>{t(nativeLanguage, 'taglineSubtitle')}</Text>
@@ -201,6 +215,7 @@ export default function LearnScreen() {
   // ── Results state: search at top, results scroll below ──
   return (
     <SafeAreaView style={s.root} edges={['top']}>
+      {streakBadge}
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={s.flex}>
         <ScrollView
           style={s.flex}
@@ -364,6 +379,12 @@ function makeStyles(C: Palette, tabBarHeight: number) {
   flex: { flex: 1 },
   center: { flex: 1, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center' },
   scroll: { padding: 16, paddingBottom: tabBarHeight, flexGrow: 1 },
+
+  streakBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 16, paddingTop: 8, paddingBottom: 4 },
+  streakFlame: { fontSize: 14 },
+  streakText: { fontSize: 13, fontWeight: '700', color: C.text },
+  streakSep: { fontSize: 13, color: C.muted },
+  streakMuted: { fontSize: 13, color: C.muted },
 
   // Empty state layout
   hero: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32, minHeight: 80 },
