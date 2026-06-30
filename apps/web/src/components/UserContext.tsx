@@ -6,11 +6,18 @@ import { getUserPreferences, saveUserPreferences } from '@/services/userPreferen
 
 const LANG_CACHE_KEY = 'amgi_native_language';
 
+function getTodayString(): string {
+  return new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD in local timezone
+}
+
 interface UserContextType {
   user: User | null;
   authLoading: boolean;
   nativeLanguage: string | null | undefined;
+  streak: number;
+  reviewedToday: number;
   setNativeLanguage: (lang: string) => Promise<void>;
+  recordReview: () => void;
   handleSignIn: () => Promise<void>;
   handleSignOut: () => Promise<void>;
 }
@@ -21,6 +28,10 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [nativeLanguage, setNativeLanguageState] = useState<string | null | undefined>(undefined);
+  const [streak, setStreak] = useState(0);
+  const [longestStreak, setLongestStreak] = useState(0);
+  const [lastReviewDate, setLastReviewDate] = useState<string | null>(null);
+  const [reviewedToday, setReviewedToday] = useState(0);
 
   useEffect(() => {
     const cached = localStorage.getItem(LANG_CACHE_KEY);
@@ -39,6 +50,13 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
         } else {
           localStorage.removeItem(LANG_CACHE_KEY);
         }
+
+        const today = getTodayString();
+        setStreak(prefs?.streak ?? 0);
+        setLongestStreak(prefs?.longestStreak ?? 0);
+        setLastReviewDate(prefs?.lastReviewDate ?? null);
+        // Reset reviewedToday if the stored date isn't today
+        setReviewedToday(prefs?.lastReviewDate === today ? (prefs?.reviewedToday ?? 0) : 0);
       } else {
         const cached = localStorage.getItem(LANG_CACHE_KEY);
         if (cached) {
@@ -47,6 +65,10 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
           setNativeLanguageState('Korean');
           localStorage.setItem(LANG_CACHE_KEY, 'Korean');
         }
+        setStreak(0);
+        setLongestStreak(0);
+        setLastReviewDate(null);
+        setReviewedToday(0);
       }
       setAuthLoading(false);
     });
@@ -61,6 +83,36 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const recordReview = () => {
+    if (!user) return;
+    const today = getTodayString();
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toLocaleDateString('en-CA');
+
+    let newStreak = streak;
+    let newLongest = longestStreak;
+    const newReviewedToday = reviewedToday + 1;
+
+    if (lastReviewDate !== today) {
+      newStreak = lastReviewDate === yesterdayStr ? streak + 1 : 1;
+      newLongest = Math.max(longestStreak, newStreak);
+      setStreak(newStreak);
+      setLongestStreak(newLongest);
+      setLastReviewDate(today);
+    }
+
+    setReviewedToday(newReviewedToday);
+
+    // Fire-and-forget — don't block the review flow
+    saveUserPreferences(user.uid, {
+      streak: newStreak,
+      longestStreak: newLongest,
+      lastReviewDate: today,
+      reviewedToday: newReviewedToday,
+    }).catch(() => {});
+  };
+
   const handleSignIn = async () => {
     await signInWithPopup(auth, googleProvider);
   };
@@ -70,7 +122,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <UserContext.Provider value={{ user, authLoading, nativeLanguage, setNativeLanguage, handleSignIn, handleSignOut }}>
+    <UserContext.Provider value={{ user, authLoading, nativeLanguage, streak, reviewedToday, setNativeLanguage, recordReview, handleSignIn, handleSignOut }}>
       {children}
     </UserContext.Provider>
   );

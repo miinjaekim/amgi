@@ -43,7 +43,7 @@ export default function ReviewScreen() {
   const { C } = useTheme();
   const tabBarHeight = useFloatingTabBarHeight();
   const s = useMemo(() => makeStyles(C, tabBarHeight), [C, tabBarHeight]);
-  const { user, nativeLanguage } = useUser();
+  const { user, nativeLanguage, recordReview } = useUser();
   const [queue, setQueue] = useState<ReviewItem[]>([]);
   const [index, setIndex] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -97,6 +97,7 @@ export default function ReviewScreen() {
     if (submitting) return;
     const item = queue[index];
     if (!item) return;
+    recordReview();
     setSubmitting(rating);
     const { card, direction } = item;
     const tracking: ReviewTracking = card[direction] ?? {

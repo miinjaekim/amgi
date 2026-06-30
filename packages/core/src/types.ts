@@ -65,6 +65,10 @@ export interface Flashcard extends TermExplanation {
 // User types
 export interface UserPreferences {
   nativeLanguage: string;
+  streak?: number;
+  longestStreak?: number;
+  lastReviewDate?: string; // 'YYYY-MM-DD' in local timezone
+  reviewedToday?: number;
 }
 
 export const SUPPORTED_LANGUAGES = [

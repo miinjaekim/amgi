@@ -11,6 +11,10 @@ WebBrowser.maybeCompleteAuthSession();
 
 const LANG_CACHE_KEY = 'amgi_native_language';
 
+function getTodayString(): string {
+  return new Date().toLocaleDateString('en-CA');
+}
+
 // In Expo Go, makeRedirectUri always returns exp://... which Google rejects.
 // Passing redirectUri explicitly bypasses that override.
 // ASWebAuthenticationSession intercepts custom schemes without Info.plist registration.
@@ -24,7 +28,10 @@ interface UserContextType {
   user: User | null;
   authLoading: boolean;
   nativeLanguage: string | null | undefined;
+  streak: number;
+  reviewedToday: number;
   setNativeLanguage: (lang: string) => Promise<void>;
+  recordReview: () => void;
   handleSignIn: () => Promise<void>;
   handleSignOut: () => Promise<void>;
 }
@@ -35,6 +42,10 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [nativeLanguage, setNativeLanguageState] = useState<string | null | undefined>(undefined);
+  const [streak, setStreak] = useState(0);
+  const [longestStreak, setLongestStreak] = useState(0);
+  const [lastReviewDate, setLastReviewDate] = useState<string | null>(null);
+  const [reviewedToday, setReviewedToday] = useState(0);
 
   const [, response, promptAsync] = Google.useAuthRequest({
     webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
@@ -66,10 +77,19 @@ export function UserProvider({ children }: { children: ReactNode }) {
         } else {
           await AsyncStorage.removeItem(LANG_CACHE_KEY);
         }
+        const today = getTodayString();
+        setStreak(prefs?.streak ?? 0);
+        setLongestStreak(prefs?.longestStreak ?? 0);
+        setLastReviewDate(prefs?.lastReviewDate ?? null);
+        setReviewedToday(prefs?.lastReviewDate === today ? (prefs?.reviewedToday ?? 0) : 0);
       } else {
         const cached = await AsyncStorage.getItem(LANG_CACHE_KEY);
         setNativeLanguageState(cached ?? 'Korean');
         if (!cached) await AsyncStorage.setItem(LANG_CACHE_KEY, 'Korean');
+        setStreak(0);
+        setLongestStreak(0);
+        setLastReviewDate(null);
+        setReviewedToday(0);
       }
       setAuthLoading(false);
     });
@@ -82,6 +102,35 @@ export function UserProvider({ children }: { children: ReactNode }) {
     if (user) await saveUserPreferences(user.uid, { nativeLanguage: lang });
   };
 
+  const recordReview = () => {
+    if (!user) return;
+    const today = getTodayString();
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toLocaleDateString('en-CA');
+
+    let newStreak = streak;
+    let newLongest = longestStreak;
+    const newReviewedToday = reviewedToday + 1;
+
+    if (lastReviewDate !== today) {
+      newStreak = lastReviewDate === yesterdayStr ? streak + 1 : 1;
+      newLongest = Math.max(longestStreak, newStreak);
+      setStreak(newStreak);
+      setLongestStreak(newLongest);
+      setLastReviewDate(today);
+    }
+
+    setReviewedToday(newReviewedToday);
+
+    saveUserPreferences(user.uid, {
+      streak: newStreak,
+      longestStreak: newLongest,
+      lastReviewDate: today,
+      reviewedToday: newReviewedToday,
+    }).catch(() => {});
+  };
+
   const handleSignIn = async () => {
     await promptAsync();
   };
@@ -91,7 +140,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <UserContext.Provider value={{ user, authLoading, nativeLanguage, setNativeLanguage, handleSignIn, handleSignOut }}>
+    <UserContext.Provider value={{ user, authLoading, nativeLanguage, streak, reviewedToday, setNativeLanguage, recordReview, handleSignIn, handleSignOut }}>
       {children}
     </UserContext.Provider>
   );

@@ -101,7 +101,7 @@ function formatRelativeDate(date: Date, lang: string | null | undefined, now: Da
 }
 
 export default function ReviewPage() {
-  const { user, nativeLanguage } = useUser();
+  const { user, nativeLanguage, recordReview } = useUser();
   const [userFlashcards, setUserFlashcards] = useState<Flashcard[]>([]);
   const [flashcardsLoading, setFlashcardsLoading] = useState(false);
   const [migrationComplete, setMigrationComplete] = useState(false);
@@ -207,6 +207,8 @@ export default function ReviewPage() {
         (card.backToFront || { interval: card.interval, ease: card.ease, repetitions: card.repetitions }),
       response
     );
+
+    recordReview();
 
     try {
       const update: Record<string, any> = {};
