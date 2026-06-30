@@ -85,10 +85,10 @@ Language learners bounce between two tools — an LLM for nuanced explanations a
 ### Up Next (Priority Order)
 
 **P1 — Ship blocker**
-- [ ] **Fix GitHub deployment errors** — CI/CD pipeline has unresolved build or deploy failures. Investigate error logs and ensure main branch deploys cleanly to Vercel. Nothing else reaches real users until this is clean.
+- [x] **Fix GitHub deployment errors** — Added `packageManager` to root `package.json` (Turbo workspace resolution), `vercel.json` pointing `outputDirectory` to `apps/web/.next`, and Firebase env vars copied to Vercel Preview environment.
 
 **P2 — Core retention loop**
-- [ ] **Streaks and progress visibility** — streak count and cards reviewed today, shown in the header or a dashboard. Core to daily habit formation and a stated success criterion; nothing built yet.
+- [x] **Streaks and progress visibility** — Streak count and cards reviewed today shown in web header and mobile Learn screen. Recorded per card review via `recordReview()` in both web and mobile `UserContext`; persisted to `users/{uid}` in Firestore. Singular/plural-aware labels ("1 day · 1 card today").
 - [ ] **Speed up search/review** — LLM response latency is noticeable on the Learn screen; Firestore reads on review load can be slow. Investigate: streaming the Gemini response token-by-token so the UI starts rendering immediately, and caching/prefetching flashcards so the review queue is ready before the user navigates there.
 
 **P3 — Beginner onramp + explanation quality**
