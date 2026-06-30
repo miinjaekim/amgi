@@ -72,9 +72,7 @@ Language learners bounce between two tools — an LLM for nuanced explanations a
 - **User readiness** — onboarding example chips, auth-wall only on save, error messages on all API failures, guest language/theme persistence via localStorage, review loop clarity (SRS subtitle, distinct empty states, review complete screen)
 - **Card accuracy** — fixed `korean`/`english` fields on every card, Unicode `termLanguage` detection, edit/save field sync, consistent display order with inline toggle
 
-### Up Next
-
-**1. Card management** — highest priority
+### Completed — Card Management
 - [x] **Card detail view** — tapping a saved card opens a modal showing its full stored explanation (definition, hanja, cultural context, examples). Cards saved without depth show a prompt to load details before saving next time.
 - [x] **Manage cards during review** — edit, archive, or delete a card from the review screen without leaving the session.
 - [x] **Dedicated cards page (`/cards`)** — search, filter (active/archived/all), sort (newest/oldest/A→Z), card order toggle (KO/EN swap icon).
@@ -84,24 +82,29 @@ Language learners bounce between two tools — an LLM for nuanced explanations a
 - [x] **Save flashcard modal** — save/edit form now appears as a modal overlay instead of an inline section below the explanation.
 - [x] **Animated loading states** — replaced static '...' / 'Loading...' text with a spinning indicator across all async buttons.
 
-**2. Performance**
+### Up Next (Priority Order)
+
+**P1 — Ship blocker**
+- [ ] **Fix GitHub deployment errors** — CI/CD pipeline has unresolved build or deploy failures. Investigate error logs and ensure main branch deploys cleanly to Vercel. Nothing else reaches real users until this is clean.
+
+**P2 — Core retention loop**
+- [ ] **Streaks and progress visibility** — streak count and cards reviewed today, shown in the header or a dashboard. Core to daily habit formation and a stated success criterion; nothing built yet.
 - [ ] **Speed up search/review** — LLM response latency is noticeable on the Learn screen; Firestore reads on review load can be slow. Investigate: streaming the Gemini response token-by-token so the UI starts rendering immediately, and caching/prefetching flashcards so the review queue is ready before the user navigates there.
 
-**3. Deployment**
-- [ ] **Fix GitHub deployment errors** — CI/CD pipeline has unresolved build or deploy failures. Investigate error logs and ensure main branch deploys cleanly to Vercel.
+**P3 — Beginner onramp + explanation quality**
+- [ ] **Bulk vocab import** — paste or upload a newline-separated or CSV list of words and generate explanations for all of them in batch. Especially useful for beginners working through textbook vocabulary lists or word-of-the-day collections. Key open questions: how to handle rate limits and partial failures for large batches (show per-word progress + retry failed items)? Should imports queue in the background or block the UI? Tie this to the existing `/cards` page or give it a dedicated import flow. See `docs/feature-csv-import.md` for prior thinking.
+- [ ] **Export** — CSV/Anki export for data ownership and portability. Stated success criterion; builds trust with users who worry about lock-in.
+- [ ] **Explanation verbosity control** — a simple user setting (brief / standard / detailed) that controls how long Gemini's explanations are. Brief mode returns just the translation and formality; detailed mode returns everything. Addresses the problem of overwhelming walls of text for common words while still allowing depth when the user wants it. Store the preference in `users/{uid}` and pass it as a single prompt parameter. This is the basic slice of personalised preferences — more granular knobs (etymology emphasis, cultural context, example-heavy) can follow later once the setting infrastructure exists.
+- [ ] **Adaptive explanation depth** — beginner vs. advanced setting that adjusts how much detail Gemini returns by default, independent of per-word verbosity. Pairs naturally with bulk import for the beginner use case.
 
-**4. Engagement**
-- [ ] **Streaks and progress visibility** — streak count and cards reviewed today, shown in the header or a dashboard. Core to daily habit formation; nothing built yet.
+**P4 — Expansion**
+- [ ] **Offline flashcard review** — cache the due review queue locally (AsyncStorage or SQLite on mobile, localStorage/IndexedDB on web), sync on reconnect. High real-world impact: many users are in low-wifi environments (subway, campus dead zones) and can't rely on a live Firestore connection just to flip cards.
+- [ ] **Multi-language study** — allow users to study languages other than Korean. First concrete candidate: Swedish (Swedish words, explanations in English). This is a real request from a Swedish language major who wants the same lookup → explanation → flashcard loop Amgi already provides for Korean. The core challenge is that the current data model hardcodes `korean` and `english` fields on every card; supporting a new language pair means either adding per-pair fields (messy) or replacing them with generic `target` / `native` fields keyed by a `languagePair` string (e.g. `"sv-en"`). Gemini prompts and the API routes (`/api/explain`, `/api/explain/depth`, `/api/explain/examples`) are all Korean-specific today and would need to become language-agnostic. Additional open questions: do users study one language at a time (simpler — store `studyLanguage` in `users/{uid}`) or hold mixed-language decks simultaneously (harder — every card needs its own `languagePair`)? Should the language picker live in onboarding, in Settings, or on the Learn screen? What languages does Gemini handle well enough to ship? Start with a single additional language (Swedish) to validate the architecture before opening the picker to everything.
+- [ ] **Personalised explanation preferences (advanced)** — after verbosity control ships, extend with finer-grained knobs: emphasis on etymology, cultural context, or example-heavy output. Store in `users/{uid}`; include as a preferences block in the Gemini prompt.
 
-**5. Infrastructure**
-- [ ] **Export** — CSV/Anki export for data ownership and portability.
-- [ ] **Shared term cache** — Firestore `terms` collection keyed by normalized term + language. Check before calling LLM; write on miss. Could evolve into a community dictionary.
-- [ ] **Adaptive explanation depth** — beginner vs. advanced setting that adjusts how much detail Gemini returns.
-
-**4. Future / speculative**
-- [ ] **Personalised explanation preferences** — users set preferences for depth, formality, emphasis (etymology, cultural context, example-heavy) stored in `users/{uid}`. Gemini prompt includes a preferences block so explanations feel tailored over time. Start with 2–3 simple knobs in Settings, expand based on what users actually adjust.
-- [ ] **Offline flashcard review** — cache the due queue locally (AsyncStorage or SQLite), sync on reconnect. Useful for subway/no-signal situations.
+**Future / speculative**
 - [ ] **Push notifications** — daily review reminders. Open question: Day 1 feature or post-launch?
+- [ ] **Shared term cache** — Firestore `terms` collection keyed by normalized term + language. Check before calling LLM; write on miss. Reduces cost and latency; could evolve into a community dictionary. Defer until traffic makes the cost worth the complexity.
 - [ ] **Offline mode via on-device model** — Gemma via WebGPU or Ollama for desktop. Open questions: model quality, WebGPU browser support, bundle size. Desktop companion app may be more viable short-term.
 - [ ] **Hanja-focus mode** — emphasize Chinese character breakdown for 한자 learners. Defer until there's clear demand.
 
