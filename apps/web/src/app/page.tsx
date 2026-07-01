@@ -27,15 +27,16 @@ function animateText(
   let revealed = 0;
   const tick = () => {
     const total = accumulatedRef.current.length;
+    if (streamDoneRef.current) {
+      if (revealed < total) onUpdate(accumulatedRef.current);
+      onDone();
+      return;
+    }
     if (revealed < total) {
       revealed = Math.min(revealed + 6, total);
       onUpdate(accumulatedRef.current.slice(0, revealed));
     }
-    if (!streamDoneRef.current || revealed < accumulatedRef.current.length) {
-      requestAnimationFrame(tick);
-    } else {
-      onDone();
-    }
+    requestAnimationFrame(tick);
   };
   requestAnimationFrame(tick);
 }
