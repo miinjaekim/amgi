@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
   }
 
   const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash', generationConfig: { temperature: 0.1 } });
 
   const prompt = `Provide deeper explanation for the term "${term}" (${termLanguage}).
 Write all explanations in ${nativeLanguage}.

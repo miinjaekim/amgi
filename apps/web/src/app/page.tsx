@@ -58,15 +58,17 @@ function parseStreamedDepth(text: string): TermDepth {
 }
 
 function parseStreamedExamples(text: string): ExamplePair[] {
-  const results: ExamplePair[] = [];
-  const blocks = text.split('EXAMPLE:').slice(1);
-  for (const block of blocks) {
-    const lines = block.split('\n').map(l => l.trim()).filter(Boolean);
-    if (lines.length >= 2) {
-      results.push({ korean: lines[0], english: lines[1] });
-    }
-  }
-  return results;
+  return text
+    .split('\n')
+    .map(l => l.trim())
+    .filter(Boolean)
+    .flatMap(line => {
+      try {
+        const parsed = JSON.parse(line);
+        if (parsed.korean && parsed.english) return [parsed as ExamplePair];
+      } catch {}
+      return [];
+    });
 }
 
 export default function Home() {
@@ -348,12 +350,17 @@ export default function Home() {
             )}
           </div>
 
-          {/* Translation — always shown */}
+          {/* Translation + brief definition — always shown */}
           <div className="mb-6">
             <h3 className="font-semibold text-[var(--color-text)] mb-1">{t(nativeLanguage, 'sectionTranslation')}</h3>
             <p className="text-[var(--color-text)] opacity-90 text-lg">
               {translation || t(nativeLanguage, 'noTranslation')}
             </p>
+            {core.briefDefinition && (
+              <p className="mt-2 text-sm" style={{ color: 'var(--color-muted)' }}>
+                {core.briefDefinition}
+              </p>
+            )}
           </div>
 
           {/* Depth section — user-triggered */}

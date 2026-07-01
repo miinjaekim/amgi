@@ -44,3 +44,15 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# turbo cache
+.turbo/
+**/.turbo/
+
+# local data / docs / assets not tracked in git
+apps/web/data/
+docs/
+apps/web/src/components/AmgiLogo*.png
+apps/web/src/components/AmgiLogo*.svg
+"apps/web/src/components/AmgiLogo 1 (1).png"
+"apps/web/src/components/AmgiLogo 1.png"
