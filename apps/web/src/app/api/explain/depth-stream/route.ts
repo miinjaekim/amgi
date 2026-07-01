@@ -14,14 +14,14 @@ export async function POST(req: NextRequest) {
   }
 
   const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash', generationConfig: { temperature: 0.1 } });
 
   const prompt = `The user already has a one-sentence definition of "${term}" (${termLanguage}). Go deeper — but stay concise. Every sentence should earn its place.
 Write all explanations in ${nativeLanguage}.
 
-- Definition: 2-3 sentences max. Add what the one-liner misses: connotation, nuance, how it differs from near-synonyms. No padding.
+- Definition: 2-3 sentences max. Add what the one-liner misses: connotation, nuance, how it differs from near-synonyms. Use **bold** for the single most important word or phrase — the nuance a learner must not miss. No padding.
 - Hanja: if the term is Korean and has meaningful hanja roots, provide the breakdown (e.g. "葛藤: 갈 (kudzu vine) + 등 (wisteria vine) → entanglement, conflict"). Otherwise write "none".
-- Notes: 1-2 sentences on what a learner actually needs to know — a cultural nuance, register trap, or common mistake. Skip it ("none") if there's nothing genuinely useful to add.
+- Notes: what a learner actually needs to know — a cultural nuance, register trap, or common mistake. If there are multiple distinct points, use a short bullet list. Bold the single most critical point. Skip ("none") if there's nothing genuinely useful to add.
 
 Respond in exactly this format with no extra text:
 

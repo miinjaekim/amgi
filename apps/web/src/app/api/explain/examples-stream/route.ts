@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
   }
 
   const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash', generationConfig: { temperature: 0.7 } });
 
   const prompt = `Give 3 natural example sentences using the ${termLanguage} word "${term}".
 For each example, always write the Korean sentence on the first line and the ${nativeLanguage} translation on the second line.

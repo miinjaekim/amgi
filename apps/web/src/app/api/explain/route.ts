@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
   const termLanguage = detectTermLanguage(term);
 
   const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash', generationConfig: { temperature: 0.1 } });
 
   let prompt: string;
 
@@ -35,6 +35,7 @@ export async function POST(req: NextRequest) {
 IMPORTANT: The "korean" and "english" fields must ALWAYS be in their respective languages:
 - "korean" must always be the Korean word or phrase written in Korean script (한국어)
 - "english" must always be the English word or phrase written in English
+- Both fields should use the single best translation. Only use 2-3 words if one word is genuinely insufficient. Never list synonyms with semicolons or slashes.
 
 For "formality", if the term is Korean, classify it as one of: Casual, Standard, Formal, Honorific, Slang. If the term is English, use "N/A".
 
@@ -86,6 +87,7 @@ If NOT ambiguous, respond with only this JSON:
 IMPORTANT for the non-ambiguous case:
 - "korean" must always be written in Korean script (한국어)
 - "english" must always be written in English
+- Both "korean" and "english" should be the single best translation. Only use 2-3 words if truly necessary. Never list synonyms with semicolons or slashes.
 - For "formality", if the term is Korean use one of: Casual, Standard, Formal, Honorific, Slang. If English, use "N/A".
 - "briefDefinition" must be a single sentence defining the core meaning. No examples, no cultural context.`;
   }
