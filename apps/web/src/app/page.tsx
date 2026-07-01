@@ -3,8 +3,6 @@
 import { useState } from 'react';
 import {
   getTermExplanation,
-  getTermDepth,
-  getTermExamples,
   TermCore,
   TermDepth,
   TermAmbiguous,
@@ -18,6 +16,59 @@ import SaveFlashcardModal from '@/components/SaveFlashcardModal';
 import Spinner from '@/components/Spinner';
 import React from 'react';
 
+// Reveals `accumulated` text at ~360 chars/sec (6 chars × 60fps) via rAF,
+// calling onUpdate on each frame and onDone when fully revealed.
+function animateText(
+  accumulatedRef: { current: string },
+  streamDoneRef: { current: boolean },
+  onUpdate: (slice: string) => void,
+  onDone: () => void,
+) {
+  let revealed = 0;
+  const tick = () => {
+    const total = accumulatedRef.current.length;
+    if (streamDoneRef.current) {
+      if (revealed < total) onUpdate(accumulatedRef.current);
+      onDone();
+      return;
+    }
+    if (revealed < total) {
+      revealed = Math.min(revealed + 6, total);
+      onUpdate(accumulatedRef.current.slice(0, revealed));
+    }
+    requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+}
+
+function parseStreamedDepth(text: string): TermDepth {
+  const section = (marker: string, nextMarker?: string) => {
+    const start = text.indexOf(`${marker}\n`);
+    if (start === -1) return undefined;
+    const contentStart = start + marker.length + 1;
+    const end = nextMarker ? text.indexOf(`${nextMarker}\n`, contentStart) : text.length;
+    const content = text.slice(contentStart, end === -1 ? text.length : end).trim();
+    return content && content.toLowerCase() !== 'none' ? content : undefined;
+  };
+  return {
+    definition: section('DEFINITION:', 'HANJA:'),
+    hanja: section('HANJA:', 'NOTES:'),
+    notes: section('NOTES:'),
+  };
+}
+
+function parseStreamedExamples(text: string): ExamplePair[] {
+  const results: ExamplePair[] = [];
+  const blocks = text.split('EXAMPLE:').slice(1);
+  for (const block of blocks) {
+    const lines = block.split('\n').map(l => l.trim()).filter(Boolean);
+    if (lines.length >= 2) {
+      results.push({ korean: lines[0], english: lines[1] });
+    }
+  }
+  return results;
+}
+
 export default function Home() {
   const { user, nativeLanguage, handleSignIn } = useUser();
   const [term, setTerm] = useState('');
@@ -27,7 +78,9 @@ export default function Home() {
   const [examples, setExamples] = useState<ExamplePair[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [loadingDepth, setLoadingDepth] = useState(false);
+  const [streamingDepth, setStreamingDepth] = useState(false);
   const [loadingExamples, setLoadingExamples] = useState(false);
+  const [streamingExamples, setStreamingExamples] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showFlashcardForm, setShowFlashcardForm] = useState(false);
   const [flashcardDraft, setFlashcardDraft] = useState<Partial<Flashcard> | null>(null);
@@ -43,6 +96,7 @@ export default function Home() {
     setAmbiguity(null);
     setDepth(null);
     setExamples(null);
+    setStreamingExamples(false);
     setShowFlashcardForm(false);
     setSaveSuccess(false);
     setShowContextInput(false);
@@ -82,28 +136,102 @@ export default function Home() {
   const handleLoadDepth = async () => {
     if (!core) return;
     setLoadingDepth(true);
+    setStreamingDepth(false);
+    setDepth(null);
+
+    const accRef = { current: '' };
+    const doneRef = { current: false };
+    let canceled = false;
+
     try {
-      const result = await getTermDepth(core.term, core.termLanguage, nativeLanguage ?? 'English');
-      setDepth(result);
+      const res = await fetch('/api/explain/depth-stream', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ term: core.term, termLanguage: core.termLanguage, nativeLanguage }),
+      });
+      if (!res.ok || !res.body) throw new Error('Stream failed');
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let firstChunk = true;
+
+      animateText(
+        accRef,
+        doneRef,
+        (slice) => { if (!canceled) setDepth(parseStreamedDepth(slice)); },
+        () => { if (!canceled) setStreamingDepth(false); },
+      );
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        accRef.current += decoder.decode(value, { stream: true });
+        if (firstChunk) {
+          firstChunk = false;
+          setLoadingDepth(false);
+          setStreamingDepth(true);
+        }
+      }
+      doneRef.current = true;
     } catch (err) {
+      canceled = true;
       setError(t(nativeLanguage, 'errorLoadDepth'));
       console.error(err);
-    } finally {
       setLoadingDepth(false);
+      setStreamingDepth(false);
     }
   };
 
   const handleLoadExamples = async () => {
     if (!core) return;
     setLoadingExamples(true);
+    setStreamingExamples(false);
+    setExamples(null);
+
+    const accRef = { current: '' };
+    const doneRef = { current: false };
+    let canceled = false;
+
     try {
-      const result = await getTermExamples(core.term, core.termLanguage, nativeLanguage ?? 'English');
-      setExamples(result);
+      const res = await fetch('/api/explain/examples-stream', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ term: core.term, termLanguage: core.termLanguage, nativeLanguage }),
+      });
+      if (!res.ok || !res.body) throw new Error('Stream failed');
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let firstChunk = true;
+
+      animateText(
+        accRef,
+        doneRef,
+        (slice) => {
+          if (canceled) return;
+          const parsed = parseStreamedExamples(slice);
+          if (parsed.length > 0) setExamples(parsed);
+        },
+        () => { if (!canceled) setStreamingExamples(false); },
+      );
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        accRef.current += decoder.decode(value, { stream: true });
+        if (firstChunk) {
+          firstChunk = false;
+          setLoadingExamples(false);
+          setStreamingExamples(true);
+        }
+      }
+      doneRef.current = true;
     } catch (err) {
+      canceled = true;
       setError(t(nativeLanguage, 'errorLoadExamples'));
       console.error(err);
-    } finally {
       setLoadingExamples(false);
+      setStreamingExamples(false);
     }
   };
 
@@ -229,56 +357,65 @@ export default function Home() {
           </div>
 
           {/* Depth section — user-triggered */}
-          {!depth ? (
+          {!depth && !loadingDepth ? (
             <button
               className="mb-4 px-4 py-2 rounded-lg border border-[var(--color-muted)] text-[var(--color-text)] hover:bg-[var(--color-muted)]/30 transition-colors disabled:opacity-50 text-sm"
               onClick={handleLoadDepth}
               disabled={loadingDepth}
             >
-              {loadingDepth ? <Spinner /> : t(nativeLanguage, 'loadDefinition')}
+              {t(nativeLanguage, 'loadDefinition')}
             </button>
-          ) : (
+          ) : loadingDepth ? (
+            <div className="mb-4"><Spinner /></div>
+          ) : depth ? (
             <div className="mb-6 space-y-4">
               {depth.definition && (
                 <div>
                   <h3 className="font-semibold text-[var(--color-text)] mb-1">{t(nativeLanguage, 'sectionDefinition')}</h3>
                   <Markdown className="text-[var(--color-text)] opacity-80">{depth.definition}</Markdown>
+                  {streamingDepth && !depth.hanja && !depth.notes && <span className="animate-pulse text-[var(--color-muted)]">▎</span>}
                 </div>
               )}
               {depth.hanja && (
                 <div>
                   <h3 className="font-semibold text-[var(--color-text)] mb-1">{t(nativeLanguage, 'sectionHanja')}</h3>
                   <Markdown className="text-[var(--color-text)] opacity-80">{depth.hanja}</Markdown>
+                  {streamingDepth && !depth.notes && <span className="animate-pulse text-[var(--color-muted)]">▎</span>}
                 </div>
               )}
               {depth.notes && (
                 <div>
                   <h3 className="font-semibold text-[var(--color-text)] mb-1">{t(nativeLanguage, 'sectionContext')}</h3>
                   <Markdown className="text-[var(--color-text)] opacity-80">{depth.notes}</Markdown>
+                  {streamingDepth && <span className="animate-pulse text-[var(--color-muted)]">▎</span>}
                 </div>
               )}
             </div>
-          )}
+          ) : null}
 
           {/* Examples section — user-triggered */}
-          {!examples ? (
+          {!examples && !loadingExamples && !streamingExamples ? (
             <button
               className="mb-6 px-4 py-2 rounded-lg border border-[var(--color-muted)] text-[var(--color-text)] hover:bg-[var(--color-muted)]/30 transition-colors disabled:opacity-50 text-sm"
               onClick={handleLoadExamples}
-              disabled={loadingExamples}
             >
-              {loadingExamples ? <Spinner /> : t(nativeLanguage, 'loadExamples')}
+              {t(nativeLanguage, 'loadExamples')}
             </button>
+          ) : loadingExamples ? (
+            <div className="mb-6"><Spinner /></div>
           ) : (
             <div className="mb-6">
               <h3 className="font-semibold text-[var(--color-text)] mb-2">{t(nativeLanguage, 'sectionExamples')}</h3>
               <ul className="space-y-3">
-                {examples.map((ex, i) => (
+                {(examples ?? []).map((ex, i) => (
                   <li key={i} className="text-[var(--color-text)] opacity-80">
                     {ex.korean && <div>{ex.korean}</div>}
                     {ex.english && <div className="text-[var(--color-highlight)] text-sm mt-0.5">{ex.english}</div>}
                   </li>
                 ))}
+                {streamingExamples && (
+                  <li><span className="animate-pulse text-[var(--color-muted)]">▎</span></li>
+                )}
               </ul>
             </div>
           )}
