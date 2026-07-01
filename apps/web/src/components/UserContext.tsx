@@ -62,8 +62,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
         if (cached) {
           setNativeLanguageState(cached);
         } else {
-          setNativeLanguageState('Korean');
-          localStorage.setItem(LANG_CACHE_KEY, 'Korean');
+          setNativeLanguageState(null);
         }
         setStreak(0);
         setLongestStreak(0);

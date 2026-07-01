@@ -2,7 +2,6 @@
 import React from 'react';
 import { SUPPORTED_LANGUAGES } from '@/services/userPreferences';
 import { useUser } from '@/components/UserContext';
-import { t } from '@/lib/i18n';
 
 export default function LanguageSetupModal() {
   const { setNativeLanguage } = useUser();
@@ -13,10 +12,11 @@ export default function LanguageSetupModal() {
         className="w-full max-w-sm mx-4 p-8 rounded-2xl shadow-2xl border border-[var(--color-muted)]"
         style={{ background: 'var(--color-surface)' }}
       >
-        <h2 className="text-2xl font-bold mb-2 text-[var(--color-highlight)]">{t(null, 'welcomeTitle')}</h2>
-        <p className="text-[var(--color-text)] opacity-80 mb-8 text-sm">
-          {t(null, 'welcomeSubtitle')}
+        <p className="text-xs text-[var(--color-text)] opacity-40 mb-6 tracking-wide uppercase">
+          Welcome to Amgi · 암기에 오신 것을 환영합니다
         </p>
+        <h2 className="text-2xl font-bold mb-1 text-[var(--color-text)]">What is your native language?</h2>
+        <h2 className="text-lg font-semibold mb-8 text-[var(--color-text)] opacity-60">모국어가 무엇인가요?</h2>
         <div className="flex flex-col gap-3">
           {SUPPORTED_LANGUAGES.map((lang) => (
             <button

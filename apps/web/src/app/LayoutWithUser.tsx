@@ -6,11 +6,11 @@ import BottomNav from '@/components/BottomNav';
 import LanguageSetupModal from '@/components/LanguageSetupModal';
 
 export default function LayoutWithUser({ children }: { children: React.ReactNode }) {
-  const { user, nativeLanguage } = useUser();
+  const { authLoading, nativeLanguage } = useUser();
   return (
     <>
       <Header />
-      {user && nativeLanguage === null && <LanguageSetupModal />}
+      {!authLoading && nativeLanguage === null && <LanguageSetupModal />}
       <main className="container mx-auto px-4 py-6 sm:py-8 pb-24 sm:pb-8">
         {children}
       </main>
