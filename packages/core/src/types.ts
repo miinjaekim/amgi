@@ -11,6 +11,7 @@ export interface TermCore {
   english: string;
   translation?: string;
   formality?: string;
+  briefDefinition?: string;
 }
 
 export interface TermDepth {

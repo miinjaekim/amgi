@@ -348,12 +348,17 @@ export default function Home() {
             )}
           </div>
 
-          {/* Translation — always shown */}
+          {/* Translation + brief definition — always shown */}
           <div className="mb-6">
             <h3 className="font-semibold text-[var(--color-text)] mb-1">{t(nativeLanguage, 'sectionTranslation')}</h3>
             <p className="text-[var(--color-text)] opacity-90 text-lg">
               {translation || t(nativeLanguage, 'noTranslation')}
             </p>
+            {core.briefDefinition && (
+              <p className="mt-2 text-sm" style={{ color: 'var(--color-muted)' }}>
+                {core.briefDefinition}
+              </p>
+            )}
           </div>
 
           {/* Depth section — user-triggered */}

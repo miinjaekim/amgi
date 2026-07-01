@@ -38,13 +38,16 @@ IMPORTANT: The "korean" and "english" fields must ALWAYS be in their respective 
 
 For "formality", if the term is Korean, classify it as one of: Casual, Standard, Formal, Honorific, Slang. If the term is English, use "N/A".
 
+For "briefDefinition", write a single clear sentence defining the term in ${nativeLanguage}. No examples, no cultural context — just the core meaning.
+
 Respond with only this JSON:
 {
   "term": "${term}",
   "termLanguage": "${termLanguage}",
   "korean": "Korean word/phrase in 한국어",
   "english": "English word/phrase",
-  "formality": "formality level"
+  "formality": "formality level",
+  "briefDefinition": "one-sentence definition"
 }`;
   } else {
     // No context — check for ambiguity first
@@ -76,13 +79,15 @@ If NOT ambiguous, respond with only this JSON:
   "termLanguage": "${termLanguage}",
   "korean": "Korean word/phrase in 한국어",
   "english": "English word/phrase",
-  "formality": "Casual | Standard | Formal | Honorific | Slang | N/A"
+  "formality": "Casual | Standard | Formal | Honorific | Slang | N/A",
+  "briefDefinition": "one-sentence definition in ${nativeLanguage}"
 }
 
 IMPORTANT for the non-ambiguous case:
 - "korean" must always be written in Korean script (한국어)
 - "english" must always be written in English
-- For "formality", if the term is Korean use one of: Casual, Standard, Formal, Honorific, Slang. If English, use "N/A".`;
+- For "formality", if the term is Korean use one of: Casual, Standard, Formal, Honorific, Slang. If English, use "N/A".
+- "briefDefinition" must be a single sentence defining the core meaning. No examples, no cultural context.`;
   }
 
   const result = await model.generateContent(prompt);
