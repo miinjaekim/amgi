@@ -14,25 +14,15 @@ export async function POST(req: NextRequest) {
   }
 
   const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash', generationConfig: { temperature: 0.7 } });
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash', generationConfig: { temperature: 0.4 } });
 
   const prompt = `Give 3 natural example sentences using the ${termLanguage} word "${term}".
-For each example, always write the Korean sentence on the first line and the ${nativeLanguage} translation on the second line.
-Write translations in ${nativeLanguage}.
+Write all translations in ${nativeLanguage}.
 
-Respond in exactly this format with no extra text:
-
-EXAMPLE:
-<Korean sentence>
-<${nativeLanguage} translation>
-
-EXAMPLE:
-<Korean sentence>
-<${nativeLanguage} translation>
-
-EXAMPLE:
-<Korean sentence>
-<${nativeLanguage} translation>`;
+Respond with exactly 3 lines, one JSON object per line, no extra text:
+{"korean":"<Korean sentence>","english":"<${nativeLanguage} translation>"}
+{"korean":"<Korean sentence>","english":"<${nativeLanguage} translation>"}
+{"korean":"<Korean sentence>","english":"<${nativeLanguage} translation>"}`;
 
   const result = await model.generateContentStream(prompt);
 
