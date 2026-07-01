@@ -59,7 +59,7 @@ function parseStreamedDepth(text: string): TermDepth {
 
 function parseStreamedExamples(text: string): ExamplePair[] {
   const results: ExamplePair[] = [];
-  const blocks = text.split(/^EXAMPLE:\n/m).slice(1);
+  const blocks = text.split('EXAMPLE:').slice(1);
   for (const block of blocks) {
     const lines = block.split('\n').map(l => l.trim()).filter(Boolean);
     if (lines.length >= 2) {
