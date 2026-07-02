@@ -50,6 +50,7 @@ export default function CardsPage() {
   const [cardOrder, setCardOrder] = useState<'korean-first' | 'english-first'>('korean-first');
   const [showImport, setShowImport] = useState(false);
   const [importSuccess, setImportSuccess] = useState<string | null>(null);
+  const [showExportMenu, setShowExportMenu] = useState(false);
 
   useEffect(() => {
     if (!user) { setAllCards([]); return; }
@@ -196,6 +197,52 @@ export default function CardsPage() {
     { key: 'all', label: t(nativeLanguage, 'cardsFilterAll'), count: allCards.length },
   ];
 
+  const downloadFile = (content: string, filename: string, mime: string) => {
+    const blob = new Blob([content], { type: mime });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const exportCSV = () => {
+    const rows = [['Korean', 'English', 'Formality', 'Definition', 'Hanja', 'Notes', 'Examples', 'Saved', 'Status']];
+    for (const c of allCards) {
+      const examples = c.examples?.map(e => `${e.korean} / ${e.english}`).join(' | ') ?? '';
+      const saved = c.createdAt instanceof Date ? c.createdAt.toISOString().slice(0, 10) : '';
+      rows.push([
+        c.korean || c.term || '',
+        c.english || c.translation || '',
+        c.formality || '',
+        c.definition || '',
+        c.hanja || '',
+        c.notes || '',
+        examples,
+        saved,
+        c.archived ? 'archived' : 'active',
+      ]);
+    }
+    const csv = rows.map(r => r.map(v => `"${v.replace(/"/g, '""')}"`).join(',')).join('\n');
+    downloadFile(csv, 'amgi-cards.csv', 'text/csv');
+    setShowExportMenu(false);
+  };
+
+  const exportAnki = () => {
+    const lines = ['#separator:Tab', '#html:false', '#notetype:Basic', '#deck:Amgi'];
+    for (const c of allCards) {
+      if (c.archived) continue;
+      const front = c.korean || c.term || '';
+      const backParts = [c.english || c.translation || ''];
+      if (c.briefDefinition) backParts.push(c.briefDefinition);
+      else if (c.definition) backParts.push(c.definition);
+      lines.push(`${front}\t${backParts.join(' — ')}`);
+    }
+    downloadFile(lines.join('\n'), 'amgi-cards.txt', 'text/plain');
+    setShowExportMenu(false);
+  };
+
   const handleImportSaved = async (count: number) => {
     setShowImport(false);
     if (user) {
@@ -210,12 +257,45 @@ export default function CardsPage() {
       <div className="flex items-start justify-between mt-8 mb-2">
         <h1 className="text-2xl font-bold text-[var(--color-highlight)]">{t(nativeLanguage, 'cardsPageTitle')}</h1>
         {user && (
-          <button
-            onClick={() => setShowImport(true)}
-            className="text-xs px-3 py-1.5 rounded-lg border border-[var(--color-muted)] text-[var(--color-muted)] hover:text-[var(--color-text)] hover:border-[var(--color-text)] transition-colors"
-          >
-            Import
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowImport(true)}
+              className="text-xs px-3 py-1.5 rounded-lg border border-[var(--color-muted)] text-[var(--color-muted)] hover:text-[var(--color-text)] hover:border-[var(--color-text)] transition-colors"
+            >
+              Import
+            </button>
+            <div className="relative">
+              <button
+                onClick={() => setShowExportMenu(v => !v)}
+                disabled={allCards.length === 0}
+                className="text-xs px-3 py-1.5 rounded-lg border border-[var(--color-muted)] text-[var(--color-muted)] hover:text-[var(--color-text)] hover:border-[var(--color-text)] transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              >
+                Export
+              </button>
+              {showExportMenu && (
+                <>
+                  <div className="fixed inset-0 z-10" onClick={() => setShowExportMenu(false)} />
+                  <div
+                    className="absolute right-0 top-8 z-20 w-36 rounded-lg border border-[var(--color-muted)] shadow-lg overflow-hidden"
+                    style={{ background: 'var(--color-surface)' }}
+                  >
+                    <button
+                      onClick={exportCSV}
+                      className="w-full text-left px-4 py-2.5 text-xs text-[var(--color-text)] hover:bg-[var(--color-muted)] hover:text-[var(--color-bg)] transition-colors"
+                    >
+                      CSV (all cards)
+                    </button>
+                    <button
+                      onClick={exportAnki}
+                      className="w-full text-left px-4 py-2.5 text-xs text-[var(--color-text)] hover:bg-[var(--color-muted)] hover:text-[var(--color-bg)] transition-colors"
+                    >
+                      Anki (.txt)
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
         )}
       </div>
       <p className="text-sm mb-6 text-[var(--color-muted)]">{t(nativeLanguage, 'cardsPageDescription')}</p>
