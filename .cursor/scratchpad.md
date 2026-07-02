@@ -96,7 +96,7 @@ Language learners bounce between two tools — an LLM for nuanced explanations a
 - [x] **Export** — CSV (all fields, all cards) and Anki tab-separated .txt (active cards only, Korean front / English + definition back). Client-side download, no API needed. Export button with dropdown on the Cards page.
 - [x] **First-time visitor language modal** — `LanguageSetupModal` now shows for all visitors (not just signed-in users) when no native language is set. Removed the guest auto-default to 'Korean'; modal appears until user makes an explicit choice, then saves to localStorage (and Firestore on sign-in).
 - [x] **Explanation verbosity control** — replaced with a two-tier UX: fast call now returns a `briefDefinition` (1-sentence core meaning) shown subtly below the translation automatically. "Dig deeper" button loads a concise but nuanced follow-up (2-3 sentence definition + hanja if applicable + 1-2 sentence notes) with bold formatting on the key insight. Translation constrained to single best word — no semicolon/slash synonym lists. Temperature 0.1 on fast call and depth for consistency; 0.4 on examples for variety. Examples stream switched from fragile text markers to NDJSON for reliable parsing.
-- [ ] **Adaptive explanation depth** — beginner vs. advanced setting that adjusts how much detail Gemini returns by default, independent of per-word verbosity. Pairs naturally with bulk import for the beginner use case.
+
 
 **P4 — Expansion**
 - [ ] **Offline flashcard review** — cache the due review queue locally (AsyncStorage or SQLite on mobile, localStorage/IndexedDB on web), sync on reconnect. High real-world impact: many users are in low-wifi environments (subway, campus dead zones) and can't rely on a live Firestore connection just to flip cards.
