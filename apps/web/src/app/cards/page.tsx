@@ -13,6 +13,7 @@ import { db } from '@/config/firebase';
 import { doc, updateDoc } from 'firebase/firestore';
 import { t } from '@/lib/i18n';
 import CardDetailModal from '@/components/CardDetailModal';
+import ImportModal from '@/components/ImportModal';
 
 type SortKey = 'newest' | 'oldest' | 'az';
 type FilterKey = 'active' | 'archived' | 'all';
@@ -47,6 +48,8 @@ export default function CardsPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkWorking, setBulkWorking] = useState(false);
   const [cardOrder, setCardOrder] = useState<'korean-first' | 'english-first'>('korean-first');
+  const [showImport, setShowImport] = useState(false);
+  const [importSuccess, setImportSuccess] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) { setAllCards([]); return; }
@@ -193,10 +196,35 @@ export default function CardsPage() {
     { key: 'all', label: t(nativeLanguage, 'cardsFilterAll'), count: allCards.length },
   ];
 
+  const handleImportSaved = async (count: number) => {
+    setShowImport(false);
+    if (user) {
+      fetchAllUserFlashcards(user.uid).then(setAllCards).catch(() => {});
+    }
+    setImportSuccess(`${count} card${count !== 1 ? 's' : ''} saved.`);
+    setTimeout(() => setImportSuccess(null), 4000);
+  };
+
   return (
     <div className="max-w-2xl mx-auto font-mono text-base pb-36" style={{ color: 'var(--color-text)' }}>
-      <h1 className="text-2xl font-bold mb-2 mt-8 text-[var(--color-highlight)]">{t(nativeLanguage, 'cardsPageTitle')}</h1>
+      <div className="flex items-start justify-between mt-8 mb-2">
+        <h1 className="text-2xl font-bold text-[var(--color-highlight)]">{t(nativeLanguage, 'cardsPageTitle')}</h1>
+        {user && (
+          <button
+            onClick={() => setShowImport(true)}
+            className="text-xs px-3 py-1.5 rounded-lg border border-[var(--color-muted)] text-[var(--color-muted)] hover:text-[var(--color-text)] hover:border-[var(--color-text)] transition-colors"
+          >
+            Import
+          </button>
+        )}
+      </div>
       <p className="text-sm mb-6 text-[var(--color-muted)]">{t(nativeLanguage, 'cardsPageDescription')}</p>
+      {importSuccess && (
+        <div className="mb-4 p-3 rounded-lg text-sm font-semibold" style={{ background: 'var(--color-muted)', color: 'var(--color-bg)' }}>
+          {importSuccess}
+        </div>
+      )}
+      {showImport && <ImportModal onClose={() => setShowImport(false)} onSaved={handleImportSaved} />}
 
       {!user ? (
         <div className="p-6 rounded-xl bg-[var(--color-surface)] border border-[var(--color-muted)] text-center">
