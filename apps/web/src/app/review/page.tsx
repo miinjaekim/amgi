@@ -8,6 +8,7 @@ import { getNextReviewData } from '@/services/sm2';
 import { ExamplePair } from '@/services/gemini';
 import { t } from '@/lib/i18n';
 import Markdown from '@/components/Markdown';
+import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 
 // Direction for review
 export type ReviewDirection = 'frontToBack' | 'backToFront';
@@ -118,6 +119,7 @@ export default function ReviewPage() {
   const [manageEditDraft, setManageEditDraft] = useState<{ korean: string; english: string } | null>(null);
   const [manageStatus, setManageStatus] = useState<string | null>(null);
 
+  const isOnline = useOnlineStatus();
   const isDevelopment = process.env.NODE_ENV === 'development';
   const [nextReviewDate, setNextReviewDate] = useState<Date | null>(null);
   const [clientNow, setClientNow] = useState<Date | null>(null);
@@ -210,30 +212,17 @@ export default function ReviewPage() {
 
     recordReview();
 
-    try {
-      const update: Record<string, any> = {};
-      update[`${direction}.interval`] = interval;
-      update[`${direction}.ease`] = ease;
-      update[`${direction}.repetitions`] = repetitions;
+    const update: Record<string, any> = {};
+    update[`${direction}.interval`] = interval;
+    update[`${direction}.ease`] = ease;
+    update[`${direction}.repetitions`] = repetitions;
+    update[`${direction}.nextReview`] = response === 'again' ? new Date() : nextReview;
+    update.nextReview = response === 'again' ? new Date() : nextReview;
 
-      if (response === 'again') {
-        update[`${direction}.nextReview`] = new Date();
-        update.nextReview = new Date();
-        console.log('Again response:', update);
-      } else {
-        update[`${direction}.nextReview`] = nextReview;
-        update.nextReview = nextReview;
-        console.log(`${response} response:`, {
-          interval,
-          nextReview: nextReview.toISOString(),
-          daysFromNow: interval
-        });
-      }
-
-      await updateDoc(doc(db, 'cards', card.id), update);
-    } catch (err) {
+    // Fire-and-forget: Firestore queues writes offline and syncs when reconnected.
+    updateDoc(doc(db, 'cards', card.id), update).catch(err => {
       console.error('Failed to update card scheduling:', err);
-    }
+    });
 
     if (currentReviewIdx + 1 < activeQueue.length) {
       setCurrentReviewIdx(currentReviewIdx + 1);
@@ -342,6 +331,11 @@ export default function ReviewPage() {
 
   return (
     <div className="max-w-2xl mx-auto font-mono text-base" style={{ color: 'var(--color-text)' }}>
+      {!isOnline && (
+        <div className="mb-4 mt-4 px-4 py-2.5 rounded-lg text-xs border border-[var(--color-muted)] text-[var(--color-muted)]">
+          Offline — showing cached cards. Progress will sync when reconnected.
+        </div>
+      )}
       <h1 className="text-2xl font-bold mb-2 mt-8 text-[var(--color-highlight)]">{t(nativeLanguage, 'reviewPageTitle')}</h1>
       <p className="text-sm mb-6 text-[var(--color-muted)]">{t(nativeLanguage, 'reviewPageDescription')}</p>
       <div className="p-6 rounded-xl bg-[var(--color-surface)] border border-[var(--color-muted)] shadow-lg">
@@ -371,7 +365,7 @@ export default function ReviewPage() {
                 <button
                   className="mt-4 px-3 py-1 bg-[var(--color-muted)] text-[var(--color-text)] rounded hover:bg-[var(--color-muted-dark)] text-sm"
                   onClick={handleForceSynchronize}
-                  disabled={isSyncing}
+                  disabled={isSyncing || !isOnline}
                 >
                   {isSyncing ? t(nativeLanguage, 'synchronizing') : t(nativeLanguage, 'forceSyncCards')}
                 </button>
@@ -702,7 +696,7 @@ export default function ReviewPage() {
                 <button
                   className="px-3 py-1 bg-[var(--color-muted)] text-[var(--color-text)] rounded hover:bg-[var(--color-muted-dark)] text-sm"
                   onClick={handleForceSynchronize}
-                  disabled={isSyncing}
+                  disabled={isSyncing || !isOnline}
                 >
                   {isSyncing ? t(nativeLanguage, 'synchronizing') : t(nativeLanguage, 'forceSyncCards')}
                 </button>
