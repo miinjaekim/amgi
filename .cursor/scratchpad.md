@@ -1,10 +1,10 @@
-# Amgi AI Project Scratchpad
+# Amgi Project Scratchpad
 
 ## 1. Vision
 
 **Core aspiration:** Feel like "chatting with a brilliant native speaker who instantly turns each explanation into the perfect flashcard, then reminds you just before you forget."
 
-Language learners bounce between two tools — an LLM for nuanced explanations and a flashcard app for spaced repetition. That context-switch kills flow and hurts retention. Amgi AI is ONE place to ask, understand, and remember.
+Language learners bounce between two tools — an LLM for nuanced explanations and a flashcard app for spaced repetition. That context-switch kills flow and hurts retention. Amgi is ONE place to ask, understand, and remember.
 
 **Design principles**
 - **Stay in flow** — UI never drags attention away from the word
