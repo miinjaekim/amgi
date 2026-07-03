@@ -1,158 +1,195 @@
 # Amgi AI Project Scratchpad
 
-## 1. Vision & Goals
+## 1. Vision
 
-**Core Aspiration:**
-Feel like "chatting with a brilliant native speaker who instantly turns each explanation into the perfect flash-card, then reminds you just before you forget."
+**Core aspiration:** Feel like "chatting with a brilliant native speaker who instantly turns each explanation into the perfect flashcard, then reminds you just before you forget."
 
-### Why It Exists
 Language learners bounce between two tools — an LLM for nuanced explanations and a flashcard app for spaced repetition. That context-switch kills flow and hurts retention. Amgi AI is ONE place to ask, understand, and remember.
 
-### Success Criteria
-- Users can capture new words and explanations in a single, uninterrupted flow
-- Users can review saved words with spaced repetition
-- Progress is visible at a glance (streaks, review counts)
-- Users feel motivated to return daily
-- Users can easily export their data
-- Clear, honest privacy and data ownership
-
-### Design Principles
+**Design principles**
 - **Stay in flow** — UI never drags attention away from the word
 - **Depth on demand** — enough detail by default; drill deeper only when curious
 - **Progress is visible** — streaks and review counts are always one glance away
 - **Start narrow, expand later** — Korean↔English first, architecture must welcome more languages
 - **Own your learning** — honest data policies, no dark patterns, easy export
 
-### Long-term Vision
-- Multi-media prompts (image → card, audio → card)
-- Social layer: share decks, community explanation presets, friendly challenges
-- AI-driven pronunciation feedback
-- Cross-language "bridge" explanations
+**Long-term vision:** multi-media prompts (image/audio → card), social layer (shared decks, challenges), AI pronunciation feedback, cross-language bridge explanations.
 
 ---
 
-## 2. Tech Stack & Data Model
+## 2. Tech Stack
 
-### Stack
-- **Frontend:** React with Next.js 16 (App Router)
+**Web**
+- **Frontend:** React / Next.js 16 (App Router)
 - **Database:** Firebase Firestore
-- **AI:** Google Gemini 2.5 Flash, proxied through a Next.js API route (key never exposed to browser)
+- **AI:** Google Gemini 2.5 Flash, proxied through Next.js API routes (key never exposed to browser)
 - **Auth:** Firebase Authentication (Google sign-in)
 - **Deployment:** Vercel
 
-### Current Data Model
-
-**Flashcard** (`cards` collection):
-- `term`, `formality` (optional), `definition` (optional), `hanja` (optional), `examples` (optional), `notes` (optional)
-- `termLanguage`: 'Korean' | 'English' — language of the input term
-- `korean`: fixed Korean side of the card
-- `english`: fixed English side of the card
-- `uid`, `createdAt`, `archived` (boolean, optional — false = active, true = archived)
-- `frontToBack`: { nextReview, interval, ease, repetitions } — Korean → English direction
-- `backToFront`: { nextReview, interval, ease, repetitions } — English → Korean direction
-- `translation` (optional, legacy): kept as read-only fallback for old cards missing `korean`/`english`
-
-**API shape (term explanation):**
-- Fast call (`/api/explain`): `term, termLanguage, korean, english, formality`
-- Depth call (`/api/explain/depth`, user-triggered): `definition, hanja?, notes?`
-- Examples call (`/api/explain/examples`, user-triggered): `{ examples: ExamplePair[] }`
-
-**User preferences** (`users` collection):
-- `nativeLanguage`: string ("English" | "Korean")
+**Mobile**
+- **Framework:** Expo SDK 54 / React Native 0.81 with Expo Router (file-based navigation)
+- **Auth:** Firebase Authentication via `expo-auth-session` + `expo-web-browser` (Google OAuth)
+- **Storage:** Firebase Firestore + `@react-native-async-storage/async-storage`
+- **Updates:** EAS (Expo Application Services) OTA updates via `expo-updates`
+- **Shared code:** `@amgi/core` workspace package (types, SM-2 logic, Gemini client)
 
 ---
 
-## 3. Project Status
+## 3. Data Model
 
-### Completed
-- **Core loop** — term lookup → Gemini explanation (translation, formality, definition, hanja, examples) → save as flashcard → bidirectional SM-2 spaced repetition review with direction filter and shuffled queue
-- **Infrastructure** — Firebase Auth (Google sign-in), Firestore persistence + security rules, Gemini API proxied server-side, Next.js 16.2.7
-- **Explanation quality** — adaptive fast call (translation/formality) + user-triggered depth and examples calls; term disambiguation with multiple-meaning selection and context regeneration; markdown rendering with Korean CJK delimiter fix
-- **Design system** — AmgiLogo, Forest/Slate/Paper theme system, mono font, localized UI (English + Korean via `i18n.ts`), mobile bottom nav + compacted header, "Amgi · 암기" title
-- **User readiness** — onboarding example chips, auth-wall only on save, error messages on all API failures, guest language/theme persistence via localStorage, review loop clarity (SRS subtitle, distinct empty states, review complete screen)
-- **Card accuracy** — fixed `korean`/`english` fields on every card, Unicode `termLanguage` detection, edit/save field sync, consistent display order with inline toggle
+### Flashcard type architecture
 
-### Completed — Card Management
-- [x] **Card detail view** — tapping a saved card opens a modal showing its full stored explanation (definition, hanja, cultural context, examples). Cards saved without depth show a prompt to load details before saving next time.
-- [x] **Manage cards during review** — edit, archive, or delete a card from the review screen without leaving the session.
-- [x] **Dedicated cards page (`/cards`)** — search, filter (active/archived/all), sort (newest/oldest/A→Z), card order toggle (KO/EN swap icon).
-- [x] **Archive instead of delete** — soft-delete cards you're pausing. Archived cards skip the review queue but remain accessible and restorable.
-- [x] **Bulk actions** — select multiple cards to archive or delete from the cards page.
-- [x] **Learn page cleanup** — removed card list from learn page; cards managed exclusively on `/cards`.
-- [x] **Save flashcard modal** — save/edit form now appears as a modal overlay instead of an inline section below the explanation.
-- [x] **Animated loading states** — replaced static '...' / 'Loading...' text with a spinning indicator across all async buttons.
+Cards use a **discriminated union** — a minimal shared base type plus language-specific subtypes. Each language (or topic) gets exactly the fields that make sense for it, nothing more.
 
-### Up Next (Priority Order)
+```ts
+// Only the structural skeleton — identity, ownership, and SRS data
+interface BaseFlashcard {
+  id?: string;
+  uid: string;
+  createdAt: Date;
+  archived?: boolean;
+  frontToBack?: ReviewTracking;
+  backToFront?: ReviewTracking;
+}
 
-**P1 — Ship blocker**
-- [x] **Fix GitHub deployment errors** — Added `packageManager` to root `package.json` (Turbo workspace resolution), `vercel.json` pointing `outputDirectory` to `apps/web/.next`, and Firebase env vars copied to Vercel Preview environment.
+// All content is language-specific
+interface KoreanFlashcard extends BaseFlashcard {
+  studyLanguage: 'Korean';
+  term: string;
+  termLanguage: 'Korean' | 'English';
+  korean: string;
+  english: string;
+  formality?: string;   // Casual | Standard | Formal | Honorific | Slang
+  hanja?: string;
+  briefDefinition?: string;
+  definition?: string;
+  notes?: string;
+  examples?: { korean: string; english: string }[];
+  translation?: string; // legacy only — old cards pre-dating korean/english fields
+}
 
-**P2 — Core retention loop**
-- [x] **Streaks and progress visibility** — Streak count and cards reviewed today shown in web header and mobile Learn screen. Recorded per card review via `recordReview()` in both web and mobile `UserContext`; persisted to `users/{uid}` in Firestore. Singular/plural-aware labels ("1 day · 1 card today").
-- [x] **Speed up search/review (streaming + cache)** — Depth and examples calls on the Learn screen now stream via `generateContentStream`. A typewriter animation (6 chars/frame, ~360 chars/sec) reveals content progressively while the model is mid-response, then flushes instantly when the stream ends so total load time is unchanged. Mobile continues using the non-streaming JSON endpoints. Firestore persistent local cache (IndexedDB) enabled on web — repeat visits serve card data instantly with background sync, works across multiple tabs.
+interface SwedishFlashcard extends BaseFlashcard {
+  studyLanguage: 'Swedish';
+  term: string;
+  termLanguage: 'Swedish' | 'English';
+  swedish: string;
+  english: string;
+  briefDefinition?: string;
+  examples?: { swedish: string; english: string }[];
+  // no formality, no hanja
+}
 
-**P3 — Beginner onramp + explanation quality**
-- [x] **Bulk vocab import** — paste or upload a newline-separated or CSV list of words and generate explanations for all of them in batch. Especially useful for beginners working through textbook vocabulary lists or word-of-the-day collections. Key open questions: how to handle rate limits and partial failures for large batches (show per-word progress + retry failed items)? Should imports queue in the background or block the UI? Tie this to the existing `/cards` page or give it a dedicated import flow. See `docs/feature-csv-import.md` for prior thinking.
-- [x] **Export** — CSV (all fields, all cards) and Anki tab-separated .txt (active cards only, Korean front / English + definition back). Client-side download, no API needed. Export button with dropdown on the Cards page.
-- [x] **First-time visitor language modal** — `LanguageSetupModal` now shows for all visitors (not just signed-in users) when no native language is set. Removed the guest auto-default to 'Korean'; modal appears until user makes an explicit choice, then saves to localStorage (and Firestore on sign-in).
-- [x] **Explanation verbosity control** — replaced with a two-tier UX: fast call now returns a `briefDefinition` (1-sentence core meaning) shown subtly below the translation automatically. "Dig deeper" button loads a concise but nuanced follow-up (2-3 sentence definition + hanja if applicable + 1-2 sentence notes) with bold formatting on the key insight. Translation constrained to single best word — no semicolon/slash synonym lists. Temperature 0.1 on fast call and depth for consistency; 0.4 on examples for variety. Examples stream switched from fragile text markers to NDJSON for reliable parsing.
+type AnyFlashcard = KoreanFlashcard | SwedishFlashcard;
+```
 
+**Why `studyLanguage` is stored on the Firestore document** (not just inferred from the collection name): the collection name controls routing — which documents get queried. `studyLanguage` on the document makes each document self-describing, enables a single shared mapper function, and protects against future migrations where collection context might not be available. It's a small redundancy with meaningful practical benefits. The mapper handles the Korean legacy case (old cards without the field) by defaulting:
 
-**P4 — Expansion**
-- [x] **Offline flashcard review** — Firestore `persistentLocalCache` (IndexedDB) already serves cached cards and queues writes when offline. Added `useOnlineStatus` hook + offline banner on the review page ("showing cached cards, progress syncs on reconnect"). Force-sync button disabled when offline.
-- [ ] **Multi-language study** — allow users to study languages other than Korean. First concrete candidate: Swedish (Swedish words, explanations in English). This is a real request from a Swedish language major who wants the same lookup → explanation → flashcard loop Amgi already provides for Korean. The core challenge is that the current data model hardcodes `korean` and `english` fields on every card; supporting a new language pair means either adding per-pair fields (messy) or replacing them with generic `target` / `native` fields keyed by a `languagePair` string (e.g. `"sv-en"`). Gemini prompts and the API routes (`/api/explain`, `/api/explain/depth`, `/api/explain/examples`) are all Korean-specific today and would need to become language-agnostic. Additional open questions: do users study one language at a time (simpler — store `studyLanguage` in `users/{uid}`) or hold mixed-language decks simultaneously (harder — every card needs its own `languagePair`)? Should the language picker live in onboarding, in Settings, or on the Learn screen? What languages does Gemini handle well enough to ship? Start with a single additional language (Swedish) to validate the architecture before opening the picker to everything.
-- [ ] **Personalised explanation preferences (advanced)** — after verbosity control ships, extend with finer-grained knobs: emphasis on etymology, cultural context, or example-heavy output. Store in `users/{uid}`; include as a preferences block in the Gemini prompt.
+```ts
+function mapDocToFlashcard(doc): AnyFlashcard {
+  const data = doc.data();
+  if (data.studyLanguage === 'Swedish') return { ...data, id: doc.id } as SwedishFlashcard;
+  return { ...data, studyLanguage: 'Korean', id: doc.id } as KoreanFlashcard;
+}
+```
 
-**Future / speculative**
-- [ ] **Word of the day** — a daily featured term surfaced on the Learn screen (and optionally via push notification) to give users a reason to open the app even on days they have no cards due. Key open questions: curated list vs. Gemini-generated? Personalized to the user's level/history or the same for everyone? Should clicking it auto-run the full explain flow so the user can save it as a card? If personalized, needs user history signal (e.g. cards already saved, recent search terms). A shared curated list is the simplest start and pairs naturally with the shared term cache.
-- [ ] **Goal-based vocabulary lists** — ask users why they're learning (travel, K-dramas, academic reading, work, etc.) and generate a prioritized starter deck of the most high-leverage words for that goal. Especially valuable for beginners who don't know where to start and want to maximize retention per word learned. Could be a one-time onboarding step or a "Build my starter deck" prompt on the Learn empty state. Generated list feeds directly into the bulk import flow — user reviews the suggested words and saves the ones they want. Open questions: how many words per list (50? 100?)? How do we handle words the user already saved? Should lists be static (Gemini generates once, we curate) or dynamic (regenerated per user)?
-- [ ] **Push notifications** — daily review reminders. Open question: Day 1 feature or post-launch?
-- [ ] **Shared term cache** — Firestore `terms` collection keyed by normalized term + language. Check before calling LLM; write on miss. Reduces cost and latency; could evolve into a community dictionary. Defer until traffic makes the cost worth the complexity.
-- [ ] **Offline mode via on-device model** — Gemma via WebGPU or Ollama for desktop. Open questions: model quality, WebGPU browser support, bundle size. Desktop companion app may be more viable short-term.
-- [ ] **Hanja-focus mode** — emphasize Chinese character breakdown for 한자 learners. Defer until there's clear demand.
+**`termLanguage` detection differs by script.** Korean supports bidirectional lookup (user can type Korean or English) and detection is trivial — Hangul is visually distinct, so a Unicode regex identifies it instantly. Swedish also supports bidirectional lookup (type Swedish or English), but Swedish uses the Latin alphabet, indistinguishable from English by character set alone. For Latin-script languages, `termLanguage` is set by Gemini in the model response rather than detected client-side. This approach generalizes to any future Latin-script language and removes the fragile local detection entirely.
 
-### On Hold — Conversation Practice
-- [ ] **Live conversation transcription + feedback** — record a real conversation; Amgi transcribes and gives per-participant feedback. Key open questions:
-  - **Input model:** single device + diarization vs. two separate devices?
-  - **Transcription:** Web Speech API (free, limited) vs. Deepgram/AssemblyAI (accurate, paid)?
-  - **Feedback granularity:** real-time mid-sentence or end-of-conversation summary? Real-time is much more complex.
-  - **MVP:** end-of-conversation feedback on a recorded audio file is the right starting point before attempting live streaming.
+**Exhaustiveness checking** via TypeScript `never` ensures every card type is handled — if `JapaneseFlashcard` is added to the union and a switch/if-chain doesn't cover it, the compiler errors before it can silently fail at runtime.
+
+**Future extensibility:** the same pattern works beyond languages. A `MedicalFlashcard` could carry `bodySystem` or `drugClass`; a `LegalFlashcard` could carry `jurisdiction` and `caseReference`. Further out: letting users configure which fields appear on their cards for a given deck (e.g. toggling off formality, adding a custom grammar note field). The type-per-domain architecture makes this tractable.
+
+### Firestore collections
+
+- `cards` — Korean deck (existing, untouched)
+- `cards_swedish` — Swedish deck
+- Future languages follow the same `cards_{language}` pattern
+
+`getCardsCollection(studyLanguage)` routes to the correct collection. Firestore security rules must be added manually per collection (no wildcard support). Composite index on `archived + createdAt` required per collection — Firebase provides a direct creation link on the first query error.
+
+### User preferences (`users` collection)
+- `nativeLanguage`: string — the user's native language (e.g. "English")
+- `studyLanguage`: string — which deck is currently active (e.g. "Korean", "Swedish")
+- `streak`, `longestStreak`, `lastReviewDate`, `reviewedToday` — SRS progress
+
+### API shape (term explanation)
+- Fast call (`/api/explain`): returns `term, termLanguage, korean/swedish, english, formality, briefDefinition`
+- Depth call (`/api/explain/depth`, user-triggered): returns `definition, hanja?, notes?`
+- Examples call (`/api/explain/examples`, user-triggered): returns `{ examples: ExamplePair[] }`
+- Stream variants exist for depth and examples (`/depth-stream`, `/examples-stream`)
 
 ---
 
-## 4. UI/UX Guidelines
+## 4. Project Status
 
-### Design System
-- **Background:** #173F35
-- **Muted/secondary:** #418E7B
-- **Text:** #E9E0D2
-- **Highlight:** #EAA09C
-- **Font:** Source Code Pro (mono)
-- **Style:** Minimal, focused — inspired by Monkeytype
+### Shipped
+- **Core loop** — term lookup → Gemini explanation → save as flashcard → bidirectional SM-2 spaced repetition review (direction filter, shuffled queue)
+- **Infrastructure** — Firebase Auth, Firestore + security rules, Gemini proxied server-side, Next.js 16.2.7, Vercel deployment
+- **Explanation quality** — fast call (translation + briefDefinition) + user-triggered depth and examples; term disambiguation with multiple-meaning selection; markdown rendering; NDJSON streaming for examples
+- **Design system** — Forest/Slate/Paper theme, Source Code Pro mono font, localized UI (English + Korean via `i18n.ts`), mobile bottom nav, compacted header
+- **Cards page** — search, filter (active/archived/all), sort (newest/oldest/A→Z), card order toggle, card detail modal, edit/archive/delete, bulk actions, CSV + Anki export, bulk import
+- **Review loop** — manage cards mid-session (edit/archive/delete), offline banner + cached review, force-sync button
+- **Streaks** — streak count + cards reviewed today in header; persisted to Firestore
+- **Streaming + cache** — depth and examples stream with typewriter animation; Firestore IndexedDB persistent cache for instant repeat visits
+- **First-time modal** — `LanguageSetupModal` shows for all visitors until native language is set; saves to localStorage + Firestore on sign-in
 
-### Open Design Questions
-- How are streaks and XP visually represented? (in header? dedicated progress page?)
-- What does the onboarding flow look like — tooltip hints or a guided first search?
-- What export formats are supported (CSV, Anki, JSON)?
-- Should saved cards sync instantly or batch-sync to Firestore?
+### In Progress
+
+**Swedish support** — Branch: `feat/swedish` (not yet created — `feat/multi-language` is being scrapped)
+
+Approach:
+- One language at a time. Swedish is next; no other languages until Swedish is solid.
+- Separate Firestore collection (`cards_swedish`). Korean collection untouched.
+- Discriminated union type: `SwedishFlashcard` with `swedish` + `english` fields (no formality, no hanja).
+- `studyLanguage` lives in UserContext + `users/{uid}` prefs — tells the app which collection to read/write.
+- API routes use `studyLanguage` from the request body to generate language-appropriate Gemini prompts. Key fix: Swedish terms must not be shoved through a Korean-English prompt. The fast call needs to generate a proper Swedish→English explanation when `studyLanguage === 'Swedish'`.
+- `studyLanguage` is NOT stored on card documents — the collection name encodes it. It's injected at fetch time as a TypeScript discriminant.
+
+What still needs to be decided / built:
+- [ ] Two-step language setup modal (native language → study language) — or single modal with both choices?
+- [ ] Study language switcher in the header settings dropdown
+- [ ] `getCardsCollection` helper in `firestore.ts`
+- [ ] Language-specific fetch/save/archive/delete functions (pass `studyLanguage` to pick the right collection)
+- [ ] Discriminated union types in `packages/core/src/types.ts`
+- [ ] API routes updated for Swedish prompts
+- [ ] Firestore security rule for `cards_swedish` (manual, Firebase console)
+- [ ] Composite index for `cards_swedish` (auto-prompted on first query)
+
+### Backlog
+
+- [ ] **Personalised explanation preferences** — emphasis knobs (etymology, cultural context, example-heavy). Store in `users/{uid}`; include in Gemini prompt.
+- [ ] **Word of the day** — daily featured term on Learn screen. Curated list vs. Gemini-generated? Pairs naturally with shared term cache.
+- [ ] **Goal-based vocab lists** — ask why user is learning, generate a starter deck. Feeds into bulk import.
+- [ ] **Push notifications** — daily review reminders. Post-launch.
+- [ ] **Shared term cache** — `terms` collection keyed by normalized term + language. Reduces cost; defer until traffic justifies it.
+- [ ] **Conversation practice** — on hold. Transcription + per-participant feedback. MVP is end-of-conversation feedback on a recorded file.
+
+---
+
+## 5. UI/UX
+
+**Design system**
+- Background: `#173F35` · Muted: `#418E7B` · Text: `#E9E0D2` · Highlight: `#EAA09C`
+- Font: Source Code Pro (mono)
+- Style: minimal, focused — inspired by Monkeytype
+
+**Open design questions**
 - Theme (Forest/Slate/Paper) on mobile: keep as-is or design a simpler native dark/light toggle?
+- What does the onboarding flow look like beyond the language modal — tooltip hints or a guided first search?
 
 ---
 
-## 5. Lessons Learned
-- Always use Git to manage progress — new branch for every feature, commit changes as work completes.
-- To push an OTA update to the mobile app via EAS, run from `apps/mobile`: `npx eas-cli update --branch main --message "..."` (no global install needed). This keeps the project organized and ensures there's always a working version to return to if something breaks.
-- Always proxy third-party API keys through a server-side route — never use `NEXT_PUBLIC_` for secret keys
-- Firestore security rules must be updated manually in the Firebase console — they are not part of the codebase. Remember to add rules for any new collection.
-- Run `npm audit` if vulnerabilities appear in the terminal
-- Always ask before using `git --force`
-- Work on features in a separate branch, not directly on `main`
-- In Next.js App Router, reading `localStorage` in a `useState` initializer causes a hydration mismatch (server has no `window`). Always read it in a `useEffect` instead.
-- `nativeLanguage` uses `undefined` (not yet loaded) vs `null` (loaded, not set) vs `string` (set) — this distinction drives the language modal and avoids false positives.
-- Firestore requires a composite index for any query that filters on multiple fields or filters + sorts. The error message includes a direct link to create it in the console. For new features with compound queries, create and commit the index in `firestore.indexes.json` before deploying.
-- When adding a new boolean field to existing Firestore documents, backfill old records — Firestore's `!=` and `==` operators exclude documents where the field is missing entirely.
-- **Mobile (Expo Go) OAuth redirect:** `makeRedirectUri()` always returns `exp://...` which Google rejects. Fix: explicitly pass the reversed iOS client ID scheme (`com.googleusercontent.apps.xxx:/oauthredirect`) as `redirectUri`. `ASWebAuthenticationSession` intercepts it natively without needing it in Info.plist.
-- **Expo monorepo Hermes error ("private properties not supported"):** caused by root-level `babel-preset-expo@56` using `hermes-v1`. Fix: pin `babel-preset-expo@~54.0.11` as a devDependency in `apps/mobile/`.
-- **React version conflict in monorepo:** web app's `react@19.2` at root conflicts with `react-native-renderer@19.1`. `extraNodeModules` is only a fallback. Fix: use `config.resolver.resolveRequest` in `metro.config.js` to intercept all `react` imports and force them to the local version.
+## 6. Lessons Learned
+
+- Always use Git — new branch per feature, commit as work completes.
+- Always proxy third-party API keys server-side — never `NEXT_PUBLIC_` for secrets.
+- Firestore security rules are manual (Firebase console) — not in the codebase. Add rules for every new collection.
+- Firestore composite indexes: required for multi-field filter+sort queries. Firebase gives a direct creation link on the first error.
+- When adding a new boolean field to existing Firestore documents, backfill old records — `!=` and `==` exclude documents where the field is missing entirely.
+- `nativeLanguage` uses `undefined` (not yet loaded) vs `null` (loaded, not set) vs `string` (set) — this distinction drives the language modal.
+- In Next.js App Router, reading `localStorage` in a `useState` initializer causes a hydration mismatch. Always read it in a `useEffect`.
+- To push an OTA update to the mobile app: run `npx eas-cli update --branch main --message "..."` from `apps/mobile`.
+- **Mobile OAuth redirect:** `makeRedirectUri()` always returns `exp://...` which Google rejects. Fix: explicitly pass the reversed iOS client ID scheme as `redirectUri`.
+- **Expo monorepo Hermes error:** caused by root-level `babel-preset-expo@56`. Fix: pin `babel-preset-expo@~54.0.11` in `apps/mobile/`.
+- **React version conflict in monorepo:** use `config.resolver.resolveRequest` in `metro.config.js` to force all `react` imports to the local version.
 - **`initializeAuth` already-initialized on fast refresh:** wrap in try/catch and fall back to `getAuth(app)`.
-- **`EXPO_PUBLIC_*` env vars** are baked at bundle time — always restart Metro with `--clear` after changing `.env.local`.
+- **`EXPO_PUBLIC_*` env vars** are baked at bundle time — restart Metro with `--clear` after changing `.env.local`.
