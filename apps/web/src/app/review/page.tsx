@@ -495,6 +495,14 @@ export default function ReviewPage() {
                             <div className="text-lg mb-3 text-[var(--color-text)] font-semibold">{currentReview.card.english || currentReview.card.translation}</div>
                           )}
 
+                          {currentReview.card.gender && (
+                            <div className="mb-3">
+                              <span className="px-2 py-0.5 text-xs rounded-full border border-[var(--color-muted)] text-[var(--color-muted)]">
+                                {currentReview.card.gender}
+                              </span>
+                            </div>
+                          )}
+
                           <button
                             onClick={handleToggleDetails}
                             className="text-sm px-3 py-1 bg-[var(--color-muted-dark)] text-[var(--color-text)] rounded hover:bg-[var(--color-muted)] mb-4"
@@ -504,18 +512,11 @@ export default function ReviewPage() {
 
                           {showDetails && (
                             <div className="mt-3 pt-3 border-t border-[var(--color-muted)]">
-                              {(currentReview.card.formality && currentReview.card.formality !== 'N/A' || currentReview.card.gender) && (
-                                <div className="flex gap-2 flex-wrap mb-3">
-                                  {currentReview.card.formality && currentReview.card.formality !== 'N/A' && (
-                                    <span className="px-2 py-0.5 text-xs rounded-full border border-[var(--color-muted)] text-[var(--color-muted)]">
-                                      {currentReview.card.formality}
-                                    </span>
-                                  )}
-                                  {currentReview.card.gender && (
-                                    <span className="px-2 py-0.5 text-xs rounded-full border border-[var(--color-muted)] text-[var(--color-muted)]">
-                                      {currentReview.card.gender}
-                                    </span>
-                                  )}
+                              {currentReview.card.formality && currentReview.card.formality !== 'N/A' && (
+                                <div className="mb-3">
+                                  <span className="px-2 py-0.5 text-xs rounded-full border border-[var(--color-muted)] text-[var(--color-muted)]">
+                                    {currentReview.card.formality}
+                                  </span>
                                 </div>
                               )}
                               {currentReview.card.definition && (
@@ -573,6 +574,14 @@ export default function ReviewPage() {
                         <>
                           <div className="font-semibold text-2xl mb-3 text-[var(--color-highlight)] mt-4">{getStudySide(currentReview.card)}</div>
 
+                          {currentReview.card.gender && (
+                            <div className="mb-3">
+                              <span className="px-2 py-0.5 text-xs rounded-full border border-[var(--color-muted)] text-[var(--color-muted)]">
+                                {currentReview.card.gender}
+                              </span>
+                            </div>
+                          )}
+
                           <button
                             onClick={handleToggleDetails}
                             className="text-sm px-3 py-1 bg-[var(--color-muted-dark)] text-[var(--color-text)] rounded hover:bg-[var(--color-muted)] mb-4"
@@ -582,18 +591,11 @@ export default function ReviewPage() {
 
                           {showDetails && (
                             <div className="mt-3 pt-3 border-t border-[var(--color-muted)]">
-                              {(currentReview.card.formality && currentReview.card.formality !== 'N/A' || currentReview.card.gender) && (
-                                <div className="flex gap-2 flex-wrap mb-3">
-                                  {currentReview.card.formality && currentReview.card.formality !== 'N/A' && (
-                                    <span className="px-2 py-0.5 text-xs rounded-full border border-[var(--color-muted)] text-[var(--color-muted)]">
-                                      {currentReview.card.formality}
-                                    </span>
-                                  )}
-                                  {currentReview.card.gender && (
-                                    <span className="px-2 py-0.5 text-xs rounded-full border border-[var(--color-muted)] text-[var(--color-muted)]">
-                                      {currentReview.card.gender}
-                                    </span>
-                                  )}
+                              {currentReview.card.formality && currentReview.card.formality !== 'N/A' && (
+                                <div className="mb-3">
+                                  <span className="px-2 py-0.5 text-xs rounded-full border border-[var(--color-muted)] text-[var(--color-muted)]">
+                                    {currentReview.card.formality}
+                                  </span>
                                 </div>
                               )}
                               {currentReview.card.definition && (
