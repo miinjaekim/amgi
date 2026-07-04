@@ -2,7 +2,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import { NextRequest } from 'next/server';
 
 export async function POST(req: NextRequest) {
-  const { term, termLanguage, nativeLanguage = 'English' } = await req.json();
+  const { term, termLanguage, nativeLanguage = 'English', studyLanguage = 'Korean' } = await req.json();
 
   if (!term || typeof term !== 'string') {
     return new Response(JSON.stringify({ error: 'term is required' }), { status: 400 });
@@ -16,7 +16,27 @@ export async function POST(req: NextRequest) {
   const genAI = new GoogleGenerativeAI(apiKey);
   const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash', generationConfig: { temperature: 0.1 } });
 
-  const prompt = `The user already has a one-sentence definition of "${term}" (${termLanguage}). Go deeper — but stay concise. Every sentence should earn its place.
+  let prompt: string;
+
+  if (studyLanguage === 'Swedish') {
+    prompt = `The user already has a one-sentence definition of "${term}" (${termLanguage}). Go deeper — but stay concise. Every sentence should earn its place.
+Write all explanations in ${nativeLanguage}.
+
+- Definition: 2-3 sentences max. Add what the one-liner misses: connotation, nuance, how it differs from near-synonyms. Use **bold** for the single most important word or phrase — the nuance a learner must not miss. No padding.
+- Notes: what a learner actually needs to know — a usage nuance, register, etymology, or common mistake. If there are multiple distinct points, use a short bullet list. Bold the single most critical point. Skip ("none") if there's nothing genuinely useful to add.
+
+Respond in exactly this format with no extra text:
+
+DEFINITION:
+<definition here>
+
+HANJA:
+none
+
+NOTES:
+<notes or "none">`;
+  } else {
+    prompt = `The user already has a one-sentence definition of "${term}" (${termLanguage}). Go deeper — but stay concise. Every sentence should earn its place.
 Write all explanations in ${nativeLanguage}.
 
 - Definition: 2-3 sentences max. Add what the one-liner misses: connotation, nuance, how it differs from near-synonyms. Use **bold** for the single most important word or phrase — the nuance a learner must not miss. No padding.
@@ -33,6 +53,7 @@ HANJA:
 
 NOTES:
 <notes or "none">`;
+  }
 
   const result = await model.generateContentStream(prompt);
 

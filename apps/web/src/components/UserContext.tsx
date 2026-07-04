@@ -3,20 +3,24 @@ import React, { createContext, useContext, useEffect, useState, ReactNode } from
 import { auth, googleProvider } from '@/config/firebase';
 import { signInWithPopup, signOut, onAuthStateChanged, User } from 'firebase/auth';
 import { getUserPreferences, saveUserPreferences } from '@/services/userPreferences';
+import type { StudyLanguage } from '@amgi/core';
 
 const LANG_CACHE_KEY = 'amgi_native_language';
+const STUDY_LANG_CACHE_KEY = 'amgi_study_language';
 
 function getTodayString(): string {
-  return new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD in local timezone
+  return new Date().toLocaleDateString('en-CA');
 }
 
 interface UserContextType {
   user: User | null;
   authLoading: boolean;
   nativeLanguage: string | null | undefined;
+  studyLanguage: StudyLanguage;
   streak: number;
   reviewedToday: number;
   setNativeLanguage: (lang: string) => Promise<void>;
+  setStudyLanguage: (lang: StudyLanguage) => Promise<void>;
   recordReview: () => void;
   handleSignIn: () => Promise<void>;
   handleSignOut: () => Promise<void>;
@@ -28,6 +32,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [nativeLanguage, setNativeLanguageState] = useState<string | null | undefined>(undefined);
+  const [studyLanguage, setStudyLanguageState] = useState<StudyLanguage>('Korean');
   const [streak, setStreak] = useState(0);
   const [longestStreak, setLongestStreak] = useState(0);
   const [lastReviewDate, setLastReviewDate] = useState<string | null>(null);
@@ -36,6 +41,8 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     const cached = localStorage.getItem(LANG_CACHE_KEY);
     if (cached) setNativeLanguageState(cached);
+    const cachedStudy = localStorage.getItem(STUDY_LANG_CACHE_KEY) as StudyLanguage | null;
+    if (cachedStudy === 'Korean' || cachedStudy === 'Swedish') setStudyLanguageState(cachedStudy);
   }, []);
 
   useEffect(() => {
@@ -51,11 +58,15 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
           localStorage.removeItem(LANG_CACHE_KEY);
         }
 
+        if (prefs?.studyLanguage) {
+          setStudyLanguageState(prefs.studyLanguage);
+          localStorage.setItem(STUDY_LANG_CACHE_KEY, prefs.studyLanguage);
+        }
+
         const today = getTodayString();
         setStreak(prefs?.streak ?? 0);
         setLongestStreak(prefs?.longestStreak ?? 0);
         setLastReviewDate(prefs?.lastReviewDate ?? null);
-        // Reset reviewedToday if the stored date isn't today
         setReviewedToday(prefs?.lastReviewDate === today ? (prefs?.reviewedToday ?? 0) : 0);
       } else {
         const cached = localStorage.getItem(LANG_CACHE_KEY);
@@ -63,6 +74,10 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
           setNativeLanguageState(cached);
         } else {
           setNativeLanguageState(null);
+        }
+        const cachedStudy = localStorage.getItem(STUDY_LANG_CACHE_KEY) as StudyLanguage | null;
+        if (cachedStudy === 'Korean' || cachedStudy === 'Swedish') {
+          setStudyLanguageState(cachedStudy);
         }
         setStreak(0);
         setLongestStreak(0);
@@ -79,6 +94,14 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     localStorage.setItem(LANG_CACHE_KEY, lang);
     if (user) {
       await saveUserPreferences(user.uid, { nativeLanguage: lang });
+    }
+  };
+
+  const setStudyLanguage = async (lang: StudyLanguage) => {
+    setStudyLanguageState(lang);
+    localStorage.setItem(STUDY_LANG_CACHE_KEY, lang);
+    if (user) {
+      await saveUserPreferences(user.uid, { studyLanguage: lang });
     }
   };
 
@@ -103,7 +126,6 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
 
     setReviewedToday(newReviewedToday);
 
-    // Fire-and-forget — don't block the review flow
     saveUserPreferences(user.uid, {
       streak: newStreak,
       longestStreak: newLongest,
@@ -121,7 +143,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <UserContext.Provider value={{ user, authLoading, nativeLanguage, streak, reviewedToday, setNativeLanguage, recordReview, handleSignIn, handleSignOut }}>
+    <UserContext.Provider value={{ user, authLoading, nativeLanguage, studyLanguage, streak, reviewedToday, setNativeLanguage, setStudyLanguage, recordReview, handleSignIn, handleSignOut }}>
       {children}
     </UserContext.Provider>
   );

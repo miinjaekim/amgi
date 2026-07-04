@@ -4,22 +4,29 @@ import { useEffect } from 'react';
 import { Flashcard } from '@/services/firestore';
 import { t } from '@/lib/i18n';
 import Spinner from '@/components/Spinner';
+import type { StudyLanguage } from '@amgi/core';
 
 interface Props {
   draft: Partial<Flashcard>;
   nativeLanguage: string | null | undefined;
+  studyLanguage: StudyLanguage;
   saving: boolean;
-  onChange: (field: 'korean' | 'english', value: string) => void;
+  onChange: (field: 'korean' | 'english' | 'swedish', value: string) => void;
   onSave: () => void;
   onClose: () => void;
 }
 
-export default function SaveFlashcardModal({ draft, nativeLanguage, saving, onChange, onSave, onClose }: Props) {
+export default function SaveFlashcardModal({ draft, nativeLanguage, studyLanguage, saving, onChange, onSave, onClose }: Props) {
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
   }, [onClose]);
+
+  const isSwedish = studyLanguage === 'Swedish';
+  const studyLangLabel = isSwedish ? 'Swedish' : t(nativeLanguage, 'labelKorean');
+  const studyLangValue = isSwedish ? (draft.swedish || '') : (draft.korean || '');
+  const studyLangField = isSwedish ? 'swedish' : 'korean';
 
   return (
     <div
@@ -53,12 +60,12 @@ export default function SaveFlashcardModal({ draft, nativeLanguage, saving, onCh
         <div className="p-6 space-y-4">
           <div>
             <label className="block text-xs font-semibold uppercase tracking-widest mb-2" style={{ color: 'var(--color-muted)' }}>
-              {t(nativeLanguage, 'labelKorean')}
+              {studyLangLabel}
             </label>
             <input
               type="text"
-              value={draft.korean || ''}
-              onChange={e => onChange('korean', e.target.value)}
+              value={studyLangValue}
+              onChange={e => onChange(studyLangField as 'korean' | 'swedish', e.target.value)}
               className="w-full p-2 rounded-lg border text-[var(--color-text)]"
               style={{ background: 'var(--color-bg)', borderColor: 'var(--color-muted)' }}
               autoFocus

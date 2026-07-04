@@ -6,7 +6,7 @@ function stripMarkdownCodeBlock(text: string): string {
 }
 
 export async function POST(req: NextRequest) {
-  const { term, termLanguage, nativeLanguage = 'English' } = await req.json();
+  const { term, termLanguage, nativeLanguage = 'English', studyLanguage = 'Korean' } = await req.json();
 
   if (!term || typeof term !== 'string') {
     return NextResponse.json({ error: 'term is required' }, { status: 400 });
@@ -20,7 +20,24 @@ export async function POST(req: NextRequest) {
   const genAI = new GoogleGenerativeAI(apiKey);
   const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash', generationConfig: { temperature: 0.1 } });
 
-  const prompt = `Provide deeper explanation for the term "${term}" (${termLanguage}).
+  let prompt: string;
+
+  if (studyLanguage === 'Swedish') {
+    prompt = `Provide deeper explanation for the Swedish/English term "${term}" (${termLanguage}).
+Write all explanations in ${nativeLanguage}.
+
+Include only what is genuinely useful for a language learner:
+- "definition": a clear, detailed definition in ${nativeLanguage}
+- "notes": any important usage nuance, register details, etymology, or common mistakes — only if truly relevant. Otherwise omit or leave as empty string.
+
+Respond with only this JSON:
+{
+  "definition": "definition in ${nativeLanguage}",
+  "hanja": "",
+  "notes": "usage/etymology notes or empty string"
+}`;
+  } else {
+    prompt = `Provide deeper explanation for the term "${term}" (${termLanguage}).
 Write all explanations in ${nativeLanguage}.
 
 Include only what is genuinely useful for a language learner:
@@ -34,6 +51,7 @@ Respond with only this JSON:
   "hanja": "hanja breakdown or empty string",
   "notes": "cultural/usage notes or empty string"
 }`;
+  }
 
   const result = await model.generateContent(prompt);
   const text = result.response.text();

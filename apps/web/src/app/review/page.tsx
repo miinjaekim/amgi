@@ -76,8 +76,8 @@ function shuffle<T>(arr: T[]): T[] {
   return a;
 }
 
-function isExamplePairArray(arr: unknown[]): arr is { korean: string; english: string }[] {
-  return arr.length === 0 || (typeof arr[0] === 'object' && arr[0] !== null && 'korean' in arr[0]);
+function isExamplePairArray(arr: unknown[]): arr is ExamplePair[] {
+  return arr.length === 0 || (typeof arr[0] === 'object' && arr[0] !== null && ('korean' in arr[0] || 'swedish' in arr[0]));
 }
 
 function getEarliestNextReview(cards: Flashcard[]): Date | null {
@@ -102,7 +102,8 @@ function formatRelativeDate(date: Date, lang: string | null | undefined, now: Da
 }
 
 export default function ReviewPage() {
-  const { user, nativeLanguage, recordReview } = useUser();
+  const { user, nativeLanguage, studyLanguage, recordReview } = useUser();
+  const isSwedish = studyLanguage === 'Swedish';
   const [userFlashcards, setUserFlashcards] = useState<Flashcard[]>([]);
   const [flashcardsLoading, setFlashcardsLoading] = useState(false);
   const [migrationComplete, setMigrationComplete] = useState(false);
@@ -116,7 +117,7 @@ export default function ReviewPage() {
   const [showDetails, setShowDetails] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [showManage, setShowManage] = useState(false);
-  const [manageEditDraft, setManageEditDraft] = useState<{ korean: string; english: string } | null>(null);
+  const [manageEditDraft, setManageEditDraft] = useState<{ studySide: string; english: string } | null>(null);
   const [manageStatus, setManageStatus] = useState<string | null>(null);
 
   const isOnline = useOnlineStatus();
@@ -150,7 +151,7 @@ export default function ReviewPage() {
         setMigrationComplete(true);
       }
 
-      const cards = await fetchUserFlashcards(user.uid);
+      const cards = await fetchUserFlashcards(user.uid, studyLanguage);
       setUserFlashcards(cards);
 
       const queue: ReviewQueueItem[] = [];
@@ -219,8 +220,9 @@ export default function ReviewPage() {
     update[`${direction}.nextReview`] = response === 'again' ? new Date() : nextReview;
     update.nextReview = response === 'again' ? new Date() : nextReview;
 
+    const collectionName = isSwedish ? 'cards_swedish' : 'cards';
     // Fire-and-forget: Firestore queues writes offline and syncs when reconnected.
-    updateDoc(doc(db, 'cards', card.id), update).catch(err => {
+    updateDoc(doc(db, collectionName, card.id), update).catch(err => {
       console.error('Failed to update card scheduling:', err);
     });
 
@@ -248,8 +250,11 @@ export default function ReviewPage() {
     loadCards();
   };
 
+  const getStudySide = (card: Flashcard) =>
+    isSwedish ? (card.swedish ?? card.term ?? '') : (card.korean ?? card.term ?? '');
+
   const handleOpenManage = (card: Flashcard) => {
-    setManageEditDraft({ korean: card.korean || card.term, english: card.english || card.translation || '' });
+    setManageEditDraft({ studySide: getStudySide(card), english: card.english || card.translation || '' });
     setManageStatus(null);
     setShowManage(true);
   };
@@ -258,14 +263,16 @@ export default function ReviewPage() {
     if (!manageEditDraft) return;
     const { card } = activeQueue[currentReviewIdx];
     if (!card.id) return;
+    const collectionName = isSwedish ? 'cards_swedish' : 'cards';
+    const studyField = isSwedish ? { swedish: manageEditDraft.studySide } : { korean: manageEditDraft.studySide };
     try {
-      await updateDoc(doc(db, 'cards', card.id), {
-        korean: manageEditDraft.korean,
+      await updateDoc(doc(db, collectionName, card.id), {
+        ...studyField,
         english: manageEditDraft.english,
       });
       setActiveQueue(prev => prev.map((item, i) =>
         i === currentReviewIdx
-          ? { ...item, card: { ...item.card, korean: manageEditDraft.korean, english: manageEditDraft.english } }
+          ? { ...item, card: { ...item.card, ...studyField, english: manageEditDraft.english } }
           : item
       ));
       setManageStatus(t(nativeLanguage, 'reviewCardSaved'));
@@ -280,7 +287,7 @@ export default function ReviewPage() {
     if (!card.id) return;
     if (!window.confirm(t(nativeLanguage, 'confirmArchive'))) return;
     try {
-      await archiveFlashcard(card.id);
+      await archiveFlashcard(card.id, studyLanguage);
       setManageStatus(t(nativeLanguage, 'reviewCardArchived'));
       setShowManage(false);
       advanceAfterManage();
@@ -294,7 +301,7 @@ export default function ReviewPage() {
     if (!card.id) return;
     if (!window.confirm(t(nativeLanguage, 'confirmDelete'))) return;
     try {
-      await deleteFlashcard(card.id);
+      await deleteFlashcard(card.id, studyLanguage);
       setManageStatus(t(nativeLanguage, 'reviewCardDeleted'));
       setShowManage(false);
       advanceAfterManage();
@@ -405,8 +412,8 @@ export default function ReviewPage() {
                     {reviewCardProgressLabel}
                     <span className="ml-2 px-2 py-1 text-sm bg-[var(--color-muted)] rounded-md">
                       {currentReview.direction === 'frontToBack'
-                        ? t(nativeLanguage, 'directionKoreanToEnglish')
-                        : t(nativeLanguage, 'directionEnglishToKorean')}
+                        ? t(nativeLanguage, isSwedish ? 'directionSwedishToEnglish' : 'directionKoreanToEnglish')
+                        : t(nativeLanguage, isSwedish ? 'directionEnglishToSwedish' : 'directionEnglishToKorean')}
                     </span>
                   </h2>
                   <button
@@ -421,11 +428,13 @@ export default function ReviewPage() {
                 {showManage && manageEditDraft && (
                   <div className="mb-4 p-4 rounded-xl border border-[var(--color-muted)] bg-[var(--color-surface)] space-y-3">
                     <div>
-                      <label className="block text-xs font-semibold text-[var(--color-muted)] mb-1">{t(nativeLanguage, 'reviewEditKorean')}</label>
+                      <label className="block text-xs font-semibold text-[var(--color-muted)] mb-1">
+                        {isSwedish ? 'Swedish' : t(nativeLanguage, 'reviewEditKorean')}
+                      </label>
                       <input
                         type="text"
-                        value={manageEditDraft.korean}
-                        onChange={e => setManageEditDraft(d => d ? { ...d, korean: e.target.value } : d)}
+                        value={manageEditDraft.studySide}
+                        onChange={e => setManageEditDraft(d => d ? { ...d, studySide: e.target.value } : d)}
                         className="w-full p-2 rounded-lg bg-[var(--color-bg)] border border-[var(--color-muted)] text-[var(--color-text)] text-sm"
                       />
                     </div>
@@ -478,7 +487,7 @@ export default function ReviewPage() {
                 <div className="mb-4 p-6 rounded-xl bg-[var(--color-bg)] border border-[var(--color-muted)] shadow-lg">
                   {currentReview.direction === 'frontToBack' ? (
                     <>
-                      <div className="font-semibold text-2xl mb-2 text-[var(--color-highlight)]">{currentReview.card.korean || currentReview.card.term}</div>
+                      <div className="font-semibold text-2xl mb-2 text-[var(--color-highlight)]">{getStudySide(currentReview.card)}</div>
 
                       {showAnswer ? (
                         <>
@@ -516,13 +525,11 @@ export default function ReviewPage() {
                                     {(() => {
                                       const rawExamples = currentReview.card.examples as unknown[];
                                       if (Array.isArray(rawExamples) && rawExamples.length > 0 && typeof rawExamples[0] === 'string') {
-                                        return (rawExamples as string[]).map((ex, i) => (
-                                          <li key={i}>{ex}</li>
-                                        ));
+                                        return (rawExamples as string[]).map((ex, i) => <li key={i}>{ex}</li>);
                                       } else if (Array.isArray(rawExamples) && isExamplePairArray(rawExamples)) {
                                         return (rawExamples as ExamplePair[]).map((ex, i) => (
                                           <li key={i}>
-                                            <div>{ex.korean}</div>
+                                            <div>{ex.korean ?? ex.swedish}</div>
                                             <div className="text-[var(--color-highlight)] text-sm">{ex.english}</div>
                                           </li>
                                         ));
@@ -545,7 +552,7 @@ export default function ReviewPage() {
                         </>
                       ) : (
                         <div className="text-[var(--color-muted)] text-lg mt-4 italic">
-                          {t(nativeLanguage, 'promptKoreanToEnglish')}
+                          {t(nativeLanguage, isSwedish ? 'promptSwedishToEnglish' : 'promptKoreanToEnglish')}
                         </div>
                       )}
                     </>
@@ -557,7 +564,7 @@ export default function ReviewPage() {
 
                       {showAnswer ? (
                         <>
-                          <div className="font-semibold text-2xl mb-3 text-[var(--color-highlight)] mt-4">{currentReview.card.korean || currentReview.card.term}</div>
+                          <div className="font-semibold text-2xl mb-3 text-[var(--color-highlight)] mt-4">{getStudySide(currentReview.card)}</div>
 
                           <button
                             onClick={handleToggleDetails}
@@ -589,13 +596,11 @@ export default function ReviewPage() {
                                     {(() => {
                                       const rawExamples = currentReview.card.examples as unknown[];
                                       if (Array.isArray(rawExamples) && rawExamples.length > 0 && typeof rawExamples[0] === 'string') {
-                                        return (rawExamples as string[]).map((ex, i) => (
-                                          <li key={i}>{ex}</li>
-                                        ));
+                                        return (rawExamples as string[]).map((ex, i) => <li key={i}>{ex}</li>);
                                       } else if (Array.isArray(rawExamples) && isExamplePairArray(rawExamples)) {
                                         return (rawExamples as ExamplePair[]).map((ex, i) => (
                                           <li key={i}>
-                                            <div>{ex.korean}</div>
+                                            <div>{ex.korean ?? ex.swedish}</div>
                                             <div className="text-[var(--color-highlight)] text-sm">{ex.english}</div>
                                           </li>
                                         ));
@@ -618,7 +623,7 @@ export default function ReviewPage() {
                         </>
                       ) : (
                         <div className="text-[var(--color-muted)] text-lg mt-4 italic">
-                          {t(nativeLanguage, 'promptEnglishToKorean')}
+                          {t(nativeLanguage, isSwedish ? 'promptEnglishToSwedish' : 'promptEnglishToKorean')}
                         </div>
                       )}
                     </>
@@ -679,8 +684,8 @@ export default function ReviewPage() {
                     {dir === 'both'
                       ? t(nativeLanguage, 'directionBoth')
                       : dir === 'frontToBack'
-                        ? t(nativeLanguage, 'directionKoreanToEnglish')
-                        : t(nativeLanguage, 'directionEnglishToKorean')}
+                        ? t(nativeLanguage, isSwedish ? 'directionSwedishToEnglish' : 'directionKoreanToEnglish')
+                        : t(nativeLanguage, isSwedish ? 'directionEnglishToSwedish' : 'directionEnglishToKorean')}
                   </button>
                 ))}
               </div>

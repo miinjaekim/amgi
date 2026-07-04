@@ -3,11 +3,11 @@ import React, { useRef, useState, useEffect } from 'react';
 import AmgiLogo from './AmgiLogo';
 import { useUser } from '@/components/UserContext';
 import { useTheme } from '@/components/ThemeContext';
-import { SUPPORTED_LANGUAGES } from '@/services/userPreferences';
+import { SUPPORTED_NATIVE_LANGUAGES, SUPPORTED_STUDY_LANGUAGES } from '@/services/userPreferences';
 import { t } from '@/lib/i18n';
 
 const Header: React.FC = () => {
-  const { user, authLoading, nativeLanguage, streak, reviewedToday, setNativeLanguage, handleSignIn, handleSignOut } = useUser();
+  const { user, authLoading, nativeLanguage, studyLanguage, streak, reviewedToday, setNativeLanguage, setStudyLanguage, handleSignIn, handleSignOut } = useUser();
   const { theme, setTheme, themes } = useTheme();
 
   const navItems = [
@@ -120,16 +120,39 @@ const Header: React.FC = () => {
 
             {open && (
               <div
-                className="absolute right-0 mt-2 w-56 rounded-xl shadow-xl border border-[var(--color-muted)] z-50 overflow-hidden"
+                className="absolute right-0 mt-2 w-64 rounded-xl shadow-xl border border-[var(--color-muted)] z-50 overflow-hidden"
                 style={{ background: 'var(--color-surface)' }}
               >
-                {/* Language selector */}
+                {/* Study language selector */}
+                <div className="px-4 py-3 border-b border-[var(--color-muted)]/50">
+                  <p className="text-xs font-mono uppercase tracking-widest mb-2" style={{ color: 'var(--color-muted)' }}>
+                    {t(nativeLanguage, 'settingsStudyLanguage')}
+                  </p>
+                  <div className="flex gap-2">
+                    {SUPPORTED_STUDY_LANGUAGES.map((lang) => (
+                      <button
+                        key={lang.code}
+                        onClick={() => { setStudyLanguage(lang.code); setOpen(false); }}
+                        className="flex-1 py-2.5 rounded-lg text-sm font-mono border transition-colors"
+                        style={
+                          studyLanguage === lang.code
+                            ? { background: 'var(--color-highlight)', color: 'var(--color-bg)', borderColor: 'var(--color-highlight)' }
+                            : { background: 'transparent', color: 'var(--color-text)', borderColor: 'var(--color-muted)' }
+                        }
+                      >
+                        {lang.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Native language selector */}
                 <div className="px-4 py-3 border-b border-[var(--color-muted)]/50">
                   <p className="text-xs font-mono uppercase tracking-widest" style={{ color: 'var(--color-muted)' }}>
                     {t(nativeLanguage, 'settingsLanguage')}
                   </p>
                   <div className="flex gap-2 mt-2">
-                    {SUPPORTED_LANGUAGES.map((lang) => (
+                    {SUPPORTED_NATIVE_LANGUAGES.map((lang) => (
                       <button
                         key={lang.code}
                         onClick={() => { setNativeLanguage(lang.code); setOpen(false); }}

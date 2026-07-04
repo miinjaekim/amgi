@@ -34,14 +34,14 @@ function highlight(text: string, query: string): React.ReactElement {
 }
 
 export default function CardsPage() {
-  const { user, nativeLanguage } = useUser();
+  const { user, nativeLanguage, studyLanguage } = useUser();
   const [allCards, setAllCards] = useState<Flashcard[]>([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
   const [sortKey, setSortKey] = useState<SortKey>('newest');
   const [filterKey, setFilterKey] = useState<FilterKey>('active');
   const [editingCardId, setEditingCardId] = useState<string | null>(null);
-  const [editDraft, setEditDraft] = useState<{ korean: string; english: string } | null>(null);
+  const [editDraft, setEditDraft] = useState<{ studySide: string; english: string } | null>(null);
   const [detailCard, setDetailCard] = useState<Flashcard | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [selectMode, setSelectMode] = useState(false);
@@ -52,14 +52,19 @@ export default function CardsPage() {
   const [importSuccess, setImportSuccess] = useState<string | null>(null);
   const [showExportMenu, setShowExportMenu] = useState(false);
 
+  const isSwedish = studyLanguage === 'Swedish';
+
+  const getStudySide = (card: Flashcard) =>
+    isSwedish ? (card.swedish ?? card.term ?? '') : (card.korean ?? card.term ?? '');
+
   useEffect(() => {
     if (!user) { setAllCards([]); return; }
     setLoading(true);
-    fetchAllUserFlashcards(user.uid)
+    fetchAllUserFlashcards(user.uid, studyLanguage)
       .then(setAllCards)
       .catch(() => setAllCards([]))
       .finally(() => setLoading(false));
-  }, [user]);
+  }, [user, studyLanguage]);
 
   const visibleCards = useMemo(() => {
     let cards = allCards;
@@ -68,13 +73,16 @@ export default function CardsPage() {
     if (search.trim()) {
       const q = search.trim().toLowerCase();
       cards = cards.filter(c =>
-        (c.korean || c.term || '').toLowerCase().includes(q) ||
+        (c.korean ?? c.swedish ?? c.term ?? '').toLowerCase().includes(q) ||
         (c.english || c.translation || '').toLowerCase().includes(q)
       );
     }
     if (sortKey === 'newest') cards = [...cards].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
     else if (sortKey === 'oldest') cards = [...cards].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
-    else if (sortKey === 'az') cards = [...cards].sort((a, b) => (a.korean || a.term || '').localeCompare(b.korean || b.term || ''));
+    else if (sortKey === 'az') cards = [...cards].sort((a, b) =>
+      (isSwedish ? (a.swedish ?? a.term ?? '') : (a.korean ?? a.term ?? '')).localeCompare(
+        isSwedish ? (b.swedish ?? b.term ?? '') : (b.korean ?? b.term ?? '')
+      ));
     return cards;
   }, [allCards, filterKey, search, sortKey]);
 
@@ -106,7 +114,7 @@ export default function CardsPage() {
     if (!window.confirm(t(nativeLanguage, 'bulkConfirmArchive'))) return;
     setBulkWorking(true);
     try {
-      await Promise.all([...selectedIds].map(id => archiveFlashcard(id)));
+      await Promise.all([...selectedIds].map(id => archiveFlashcard(id, studyLanguage)));
       setAllCards(prev => prev.map(c => selectedIds.has(c.id!) ? { ...c, archived: true } : c));
       exitSelectMode();
     } catch {
@@ -121,7 +129,7 @@ export default function CardsPage() {
     if (!window.confirm(t(nativeLanguage, 'bulkConfirmDelete'))) return;
     setBulkWorking(true);
     try {
-      await Promise.all([...selectedIds].map(id => deleteFlashcard(id)));
+      await Promise.all([...selectedIds].map(id => deleteFlashcard(id, studyLanguage)));
       setAllCards(prev => prev.filter(c => !selectedIds.has(c.id!)));
       exitSelectMode();
     } catch {
@@ -133,16 +141,18 @@ export default function CardsPage() {
 
   const handleEditStart = (card: Flashcard) => {
     setEditingCardId(card.id || null);
-    setEditDraft({ korean: card.korean || card.term, english: card.english || card.translation || '' });
+    setEditDraft({ studySide: getStudySide(card), english: card.english || card.translation || '' });
     setError(null);
   };
 
   const handleEditSave = async (card: Flashcard) => {
     if (!card.id || !editDraft) return;
+    const collectionName = isSwedish ? 'cards_swedish' : 'cards';
+    const studyField = isSwedish ? { swedish: editDraft.studySide } : { korean: editDraft.studySide };
     try {
-      await updateDoc(doc(db, 'cards', card.id), { korean: editDraft.korean, english: editDraft.english });
+      await updateDoc(doc(db, collectionName, card.id), { ...studyField, english: editDraft.english });
       setAllCards(prev => prev.map(c =>
-        c.id === card.id ? { ...c, korean: editDraft.korean, english: editDraft.english } : c
+        c.id === card.id ? { ...c, ...studyField, english: editDraft.english } : c
       ));
       setEditingCardId(null);
       setEditDraft(null);
@@ -154,7 +164,7 @@ export default function CardsPage() {
   const handleArchive = async (card: Flashcard) => {
     if (!card.id) return;
     try {
-      await archiveFlashcard(card.id);
+      await archiveFlashcard(card.id, studyLanguage);
       setAllCards(prev => prev.map(c => c.id === card.id ? { ...c, archived: true } : c));
     } catch {
       setError(t(nativeLanguage, 'errorArchiveFlashcard'));
@@ -164,7 +174,7 @@ export default function CardsPage() {
   const handleRestore = async (card: Flashcard) => {
     if (!card.id) return;
     try {
-      await restoreFlashcard(card.id);
+      await restoreFlashcard(card.id, studyLanguage);
       setAllCards(prev => prev.map(c => c.id === card.id ? { ...c, archived: false } : c));
     } catch {
       setError(t(nativeLanguage, 'errorRestoreFlashcard'));
@@ -175,7 +185,7 @@ export default function CardsPage() {
     if (!card.id) return;
     if (!window.confirm(t(nativeLanguage, 'confirmDelete'))) return;
     try {
-      await deleteFlashcard(card.id);
+      await deleteFlashcard(card.id, studyLanguage);
       setAllCards(prev => prev.filter(c => c.id !== card.id));
     } catch {
       setError(t(nativeLanguage, 'errorDeleteFlashcard'));
@@ -208,12 +218,14 @@ export default function CardsPage() {
   };
 
   const exportCSV = () => {
-    const rows = [['Korean', 'English', 'Formality', 'Definition', 'Hanja', 'Notes', 'Examples', 'Saved', 'Status']];
+    const studyLangHeader = isSwedish ? 'Swedish' : 'Korean';
+    const rows = [[studyLangHeader, 'English', 'Formality', 'Definition', 'Hanja', 'Notes', 'Examples', 'Saved', 'Status']];
     for (const c of allCards) {
-      const examples = c.examples?.map(e => `${e.korean} / ${e.english}`).join(' | ') ?? '';
+      const studySide = getStudySide(c);
+      const examples = c.examples?.map(e => `${e.korean ?? e.swedish ?? ''} / ${e.english}`).join(' | ') ?? '';
       const saved = c.createdAt instanceof Date ? c.createdAt.toISOString().slice(0, 10) : '';
       rows.push([
-        c.korean || c.term || '',
+        studySide,
         c.english || c.translation || '',
         c.formality || '',
         c.definition || '',
@@ -233,7 +245,7 @@ export default function CardsPage() {
     const lines = ['#separator:Tab', '#html:false', '#notetype:Basic', '#deck:Amgi'];
     for (const c of allCards) {
       if (c.archived) continue;
-      const front = c.korean || c.term || '';
+      const front = getStudySide(c);
       const backParts = [c.english || c.translation || ''];
       if (c.briefDefinition) backParts.push(c.briefDefinition);
       else if (c.definition) backParts.push(c.definition);
@@ -246,7 +258,7 @@ export default function CardsPage() {
   const handleImportSaved = async (count: number) => {
     setShowImport(false);
     if (user) {
-      fetchAllUserFlashcards(user.uid).then(setAllCards).catch(() => {});
+      fetchAllUserFlashcards(user.uid, studyLanguage).then(setAllCards).catch(() => {});
     }
     setImportSuccess(`${count} card${count !== 1 ? 's' : ''} saved.`);
     setTimeout(() => setImportSuccess(null), 4000);
@@ -455,8 +467,8 @@ export default function CardsPage() {
                         <div className="space-y-2">
                           <input
                             type="text"
-                            value={editDraft.korean}
-                            onChange={e => setEditDraft(d => d ? { ...d, korean: e.target.value } : d)}
+                            value={editDraft.studySide}
+                            onChange={e => setEditDraft(d => d ? { ...d, studySide: e.target.value } : d)}
                             className="w-full p-2 rounded-lg bg-[var(--color-bg)] border border-[var(--color-muted)] text-[var(--color-text)]"
                           />
                           <input
@@ -488,10 +500,10 @@ export default function CardsPage() {
                             onClick={() => selectMode && card.id ? toggleSelect(card.id) : setDetailCard(card)}
                           >
                             <div className="font-semibold text-lg text-[var(--color-text)]">
-                              {highlight(cardOrder === 'korean-first' ? (card.korean || card.term) : (card.english || card.translation || ''), search)}
+                              {highlight(cardOrder === 'korean-first' ? getStudySide(card) : (card.english || card.translation || ''), search)}
                             </div>
                             <div className="text-[var(--color-highlight)] text-base">
-                              {highlight(cardOrder === 'korean-first' ? (card.english || card.translation || '') : (card.korean || card.term), search)}
+                              {highlight(cardOrder === 'korean-first' ? (card.english || card.translation || '') : getStudySide(card), search)}
                             </div>
                           </button>
                           <div className="text-xs text-[var(--color-muted)]">

@@ -134,25 +134,18 @@ function mapDocToFlashcard(doc): AnyFlashcard {
 
 ### In Progress
 
-**Swedish support** — Branch: `feat/swedish` (not yet created — `feat/multi-language` is being scrapped)
+**Swedish support** — Branch: `feat/swedish` ✅ shipped
 
-Approach:
-- One language at a time. Swedish is next; no other languages until Swedish is solid.
-- Separate Firestore collection (`cards_swedish`). Korean collection untouched.
-- Discriminated union type: `SwedishFlashcard` with `swedish` + `english` fields (no formality, no hanja).
-- `studyLanguage` lives in UserContext + `users/{uid}` prefs — tells the app which collection to read/write.
-- API routes use `studyLanguage` from the request body to generate language-appropriate Gemini prompts. Key fix: Swedish terms must not be shoved through a Korean-English prompt. The fast call needs to generate a proper Swedish→English explanation when `studyLanguage === 'Swedish'`.
-- `studyLanguage` is NOT stored on card documents — the collection name encodes it. It's injected at fetch time as a TypeScript discriminant.
-
-What still needs to be decided / built:
-- [ ] Two-step language setup modal (native language → study language) — or single modal with both choices?
-- [ ] Study language switcher in the header settings dropdown
-- [ ] `getCardsCollection` helper in `firestore.ts`
-- [ ] Language-specific fetch/save/archive/delete functions (pass `studyLanguage` to pick the right collection)
-- [ ] Discriminated union types in `packages/core/src/types.ts`
-- [ ] API routes updated for Swedish prompts
-- [ ] Firestore security rule for `cards_swedish` (manual, Firebase console)
-- [ ] Composite index for `cards_swedish` (auto-prompted on first query)
+- `studyLanguage` stored on card documents (self-describing)
+- Two-step language setup modal (native language → study language)
+- Study language switcher in the header settings dropdown
+- `getCardsCollection` helper routes Korean → `cards`, Swedish → `cards_swedish`
+- All CRUD functions accept `studyLanguage`; cards carry `swedish` field instead of `korean`
+- All API routes accept `studyLanguage` and generate Swedish-appropriate Gemini prompts
+- `studyLanguage` in `UserContext` + `UserPreferences`, persisted to Firestore + localStorage
+- Learn, Cards, Review pages all pass `studyLanguage` and render Swedish cards correctly
+- Firestore security rule for `cards_swedish` ✅ added (Firebase console)
+- Composite index for `cards_swedish` on `archived + createdAt` — will be auto-prompted on first filtered query
 
 ### Backlog
 

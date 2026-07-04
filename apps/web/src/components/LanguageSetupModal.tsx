@@ -1,10 +1,24 @@
 'use client';
-import React from 'react';
-import { SUPPORTED_LANGUAGES } from '@/services/userPreferences';
+import React, { useState } from 'react';
+import { SUPPORTED_NATIVE_LANGUAGES, SUPPORTED_STUDY_LANGUAGES } from '@/services/userPreferences';
 import { useUser } from '@/components/UserContext';
+import type { StudyLanguage } from '@amgi/core';
 
 export default function LanguageSetupModal() {
-  const { setNativeLanguage } = useUser();
+  const { setNativeLanguage, setStudyLanguage } = useUser();
+  const [step, setStep] = useState<'native' | 'study'>('native');
+  const [pendingNative, setPendingNative] = useState<string | null>(null);
+
+  const handleNativeSelect = (lang: string) => {
+    setPendingNative(lang);
+    setStep('study');
+  };
+
+  const handleStudySelect = async (lang: StudyLanguage) => {
+    if (!pendingNative) return;
+    await setNativeLanguage(pendingNative);
+    await setStudyLanguage(lang);
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
@@ -15,20 +29,49 @@ export default function LanguageSetupModal() {
         <p className="text-xs text-[var(--color-text)] opacity-40 mb-6 tracking-wide uppercase">
           Welcome to Amgi · 암기에 오신 것을 환영합니다
         </p>
-        <h2 className="text-2xl font-bold mb-1 text-[var(--color-text)]">What is your native language?</h2>
-        <h2 className="text-lg font-semibold mb-8 text-[var(--color-text)] opacity-60">모국어가 무엇인가요?</h2>
-        <div className="flex flex-col gap-3">
-          {SUPPORTED_LANGUAGES.map((lang) => (
+
+        {step === 'native' ? (
+          <>
+            <h2 className="text-2xl font-bold mb-1 text-[var(--color-text)]">What is your native language?</h2>
+            <h2 className="text-lg font-semibold mb-8 text-[var(--color-text)] opacity-60">모국어가 무엇인가요?</h2>
+            <div className="flex flex-col gap-3">
+              {SUPPORTED_NATIVE_LANGUAGES.map((lang) => (
+                <button
+                  key={lang.code}
+                  onClick={() => handleNativeSelect(lang.code)}
+                  className="w-full py-3 rounded-lg font-semibold text-base border border-[var(--color-muted)] text-[var(--color-text)] hover:bg-[var(--color-muted)] hover:text-[var(--color-bg)] transition-colors"
+                  style={{ background: 'var(--color-bg)' }}
+                >
+                  {lang.label}
+                </button>
+              ))}
+            </div>
+          </>
+        ) : (
+          <>
+            <h2 className="text-2xl font-bold mb-1 text-[var(--color-text)]">What are you learning?</h2>
+            <h2 className="text-lg font-semibold mb-8 text-[var(--color-text)] opacity-60">Choose your study language</h2>
+            <div className="flex flex-col gap-3">
+              {SUPPORTED_STUDY_LANGUAGES.map((lang) => (
+                <button
+                  key={lang.code}
+                  onClick={() => handleStudySelect(lang.code)}
+                  className="w-full py-3 rounded-lg font-semibold text-base border border-[var(--color-muted)] text-[var(--color-text)] hover:bg-[var(--color-muted)] hover:text-[var(--color-bg)] transition-colors"
+                  style={{ background: 'var(--color-bg)' }}
+                >
+                  <span>{lang.label}</span>
+                  <span className="ml-2 opacity-60 font-normal">{lang.labelNative}</span>
+                </button>
+              ))}
+            </div>
             <button
-              key={lang.code}
-              onClick={() => setNativeLanguage(lang.code)}
-              className="w-full py-3 rounded-lg font-semibold text-base border border-[var(--color-muted)] text-[var(--color-text)] hover:bg-[var(--color-muted)] hover:text-[var(--color-bg)] transition-colors"
-              style={{ background: 'var(--color-bg)' }}
+              onClick={() => setStep('native')}
+              className="mt-4 text-sm text-[var(--color-muted)] hover:text-[var(--color-text)] transition-colors"
             >
-              {lang.label}
+              ← Back
             </button>
-          ))}
-        </div>
+          </>
+        )}
       </div>
     </div>
   );

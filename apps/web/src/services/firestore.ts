@@ -1,43 +1,42 @@
 import { db } from '@/config/firebase';
 import { collection, addDoc, Timestamp, query, where, orderBy, getDocs, doc, updateDoc, deleteDoc } from 'firebase/firestore';
-import type { Flashcard, ReviewTracking } from '@amgi/core';
+import type { Flashcard, ReviewTracking, StudyLanguage } from '@amgi/core';
 
-export type { Flashcard, ReviewTracking } from '@amgi/core';
+export type { Flashcard, ReviewTracking, StudyLanguage } from '@amgi/core';
 
-function detectTermLanguage(term: string): 'Korean' | 'English' {
-  return /[가-힣ᄀ-ᇿ㄰-㆏]/.test(term) ? 'Korean' : 'English';
+function getCardsCollection(studyLanguage?: StudyLanguage) {
+  return studyLanguage === 'Swedish' ? 'cards_swedish' : 'cards';
 }
 
-export async function saveFlashcardToFirestore(flashcard: Omit<Flashcard, 'createdAt' | 'id'>) {
-  // Initialize default review tracking data for both directions
+export async function saveFlashcardToFirestore(
+  flashcard: Omit<Flashcard, 'createdAt' | 'id'>,
+  studyLanguage?: StudyLanguage
+) {
   const defaultTracking: ReviewTracking = {
-    nextReview: new Date(),  // Due immediately for first review
+    nextReview: new Date(),
     interval: 0,
     ease: 2.5,
     repetitions: 0
   };
 
-  // Ensure both direction trackers are set
   const frontToBack = flashcard.frontToBack || defaultTracking;
   const backToFront = flashcard.backToFront || defaultTracking;
 
-  // For backward compatibility, set legacy fields based on the earliest nextReview
   const fbDate = frontToBack.nextReview instanceof Date ?
     frontToBack.nextReview : new Date(frontToBack.nextReview);
   const bfDate = backToFront.nextReview instanceof Date ?
     backToFront.nextReview : new Date(backToFront.nextReview);
-
-  // Use the earliest date for the legacy nextReview field
   const legacyNextReview = fbDate < bfDate ? fbDate : bfDate;
 
-  const docRef = await addDoc(collection(db, 'cards'), {
+  const collectionName = getCardsCollection(studyLanguage);
+
+  const docRef = await addDoc(collection(db, collectionName), {
     ...flashcard,
+    studyLanguage: studyLanguage ?? 'Korean',
     createdAt: Timestamp.now(),
     archived: false,
-    // Add bidirectional tracking
     frontToBack,
     backToFront,
-    // Also set legacy fields for backwards compatibility
     nextReview: flashcard.nextReview || legacyNextReview,
     interval: flashcard.interval || frontToBack.interval,
     ease: flashcard.ease || frontToBack.ease,
@@ -46,7 +45,7 @@ export async function saveFlashcardToFirestore(flashcard: Omit<Flashcard, 'creat
   return docRef.id;
 }
 
-function mapDocToFlashcard(docSnapshot: any): Flashcard {
+function mapDocToFlashcard(docSnapshot: any, studyLanguage?: StudyLanguage): Flashcard {
   const data = docSnapshot.data();
   const processTimestamp = (timestamp: any) => timestamp?.toDate?.() || timestamp;
 
@@ -63,6 +62,7 @@ function mapDocToFlashcard(docSnapshot: any): Flashcard {
   return {
     id: docSnapshot.id,
     ...(data as Omit<Flashcard, 'createdAt' | 'id'>),
+    studyLanguage: data.studyLanguage ?? studyLanguage ?? 'Korean',
     createdAt: processTimestamp(data.createdAt) || new Date(),
     nextReview: processTimestamp(data.nextReview),
     frontToBack: processFrontToBack,
@@ -70,103 +70,76 @@ function mapDocToFlashcard(docSnapshot: any): Flashcard {
   };
 }
 
-export async function fetchUserFlashcards(uid: string): Promise<Flashcard[]> {
+export async function fetchUserFlashcards(uid: string, studyLanguage?: StudyLanguage): Promise<Flashcard[]> {
+  const collectionName = getCardsCollection(studyLanguage);
   try {
     const q = query(
-      collection(db, 'cards'),
+      collection(db, collectionName),
       where('uid', '==', uid),
       where('archived', '!=', true),
       orderBy('archived'),
       orderBy('createdAt', 'desc')
     );
     const snapshot = await getDocs(q);
-    return snapshot.docs.map(mapDocToFlashcard);
+    return snapshot.docs.map(d => mapDocToFlashcard(d, studyLanguage));
   } catch (error) {
     console.error('[Firestore] Error in fetchUserFlashcards:', error);
     throw error;
   }
 }
 
-export async function fetchAllUserFlashcards(uid: string): Promise<Flashcard[]> {
+export async function fetchAllUserFlashcards(uid: string, studyLanguage?: StudyLanguage): Promise<Flashcard[]> {
+  const collectionName = getCardsCollection(studyLanguage);
   try {
     const q = query(
-      collection(db, 'cards'),
+      collection(db, collectionName),
       where('uid', '==', uid),
       orderBy('createdAt', 'desc')
     );
     const snapshot = await getDocs(q);
-    return snapshot.docs.map(docSnapshot => {
-      const data = docSnapshot.data();
-      const processTimestamp = (ts: any) => ts?.toDate?.() || ts;
-      return {
-        id: docSnapshot.id,
-        ...(data as Omit<Flashcard, 'createdAt' | 'id'>),
-        createdAt: processTimestamp(data.createdAt) || new Date(),
-        nextReview: processTimestamp(data.nextReview),
-        frontToBack: data.frontToBack ? { ...data.frontToBack, nextReview: processTimestamp(data.frontToBack.nextReview) } : undefined,
-        backToFront: data.backToFront ? { ...data.backToFront, nextReview: processTimestamp(data.backToFront.nextReview) } : undefined,
-      };
-    });
+    return snapshot.docs.map(d => mapDocToFlashcard(d, studyLanguage));
   } catch (error) {
     console.error('[Firestore] Error in fetchAllUserFlashcards:', error);
     throw error;
   }
 }
 
-export async function fetchArchivedFlashcards(uid: string): Promise<Flashcard[]> {
+export async function fetchArchivedFlashcards(uid: string, studyLanguage?: StudyLanguage): Promise<Flashcard[]> {
+  const collectionName = getCardsCollection(studyLanguage);
   try {
     const q = query(
-      collection(db, 'cards'),
+      collection(db, collectionName),
       where('uid', '==', uid),
       where('archived', '==', true),
       orderBy('createdAt', 'desc')
     );
     const snapshot = await getDocs(q);
-    return snapshot.docs.map(mapDocToFlashcard);
+    return snapshot.docs.map(d => mapDocToFlashcard(d, studyLanguage));
   } catch (error) {
     console.error('[Firestore] Error in fetchArchivedFlashcards:', error);
     throw error;
   }
 }
 
-export async function archiveFlashcard(cardId: string): Promise<void> {
-  await updateDoc(doc(db, 'cards', cardId), { archived: true });
+export async function archiveFlashcard(cardId: string, studyLanguage?: StudyLanguage): Promise<void> {
+  const collectionName = getCardsCollection(studyLanguage);
+  await updateDoc(doc(db, collectionName, cardId), { archived: true });
 }
 
-export async function restoreFlashcard(cardId: string): Promise<void> {
-  await updateDoc(doc(db, 'cards', cardId), { archived: false });
+export async function restoreFlashcard(cardId: string, studyLanguage?: StudyLanguage): Promise<void> {
+  const collectionName = getCardsCollection(studyLanguage);
+  await updateDoc(doc(db, collectionName, cardId), { archived: false });
 }
 
-export async function deleteFlashcard(cardId: string): Promise<void> {
-  await deleteDoc(doc(db, 'cards', cardId));
+export async function deleteFlashcard(cardId: string, studyLanguage?: StudyLanguage): Promise<void> {
+  const collectionName = getCardsCollection(studyLanguage);
+  await deleteDoc(doc(db, collectionName, cardId));
 }
 
-// Debug: Fetch all cards without filters
-export async function testFetchAllCards(): Promise<any[]> {
-  try {
-    console.log('[Firestore] Fetching ALL cards (no filters)');
-    const snapshot = await getDocs(collection(db, 'cards'));
-    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-  } catch (error) {
-    console.error('[Firestore] Error in testFetchAllCards:', error);
-    throw error;
-  }
-}
-
-/**
- * Migrates existing cards to the new bidirectional tracking schema
- * @param uid The user ID to migrate cards for
- * @returns The number of cards migrated
- */
 export async function migrateExistingCards(uid: string): Promise<number> {
   try {
-    console.log('[Firestore] Starting migration for uid:', uid);
-    const q = query(
-      collection(db, 'cards'),
-      where('uid', '==', uid)
-    );
+    const q = query(collection(db, 'cards'), where('uid', '==', uid));
     const snapshot = await getDocs(q);
-    console.log(`[Firestore] Found ${snapshot.docs.length} cards to potentially migrate`);
 
     let migratedCount = 0;
     let updatedCount = 0;
@@ -177,16 +150,14 @@ export async function migrateExistingCards(uid: string): Promise<number> {
       const update: Record<string, any> = {};
       let needsUpdate = false;
 
-      // Case 0: Cards without fixed korean/english sides
       if (!data.korean || !data.english) {
-        const lang = detectTermLanguage(data.term || '');
-        update.termLanguage = lang;
-        update.korean = lang === 'Korean' ? data.term : (data.translation || '');
-        update.english = lang === 'English' ? data.term : (data.translation || '');
+        const isKorean = /[가-힣ᄀ-ᇿ㄰-㆏]/.test(data.term || '');
+        update.termLanguage = isKorean ? 'Korean' : 'English';
+        update.korean = isKorean ? data.term : (data.translation || '');
+        update.english = isKorean ? (data.translation || '') : data.term;
         needsUpdate = true;
       }
 
-      // Case 1: Cards without direction tracking need full migration
       if (!data.frontToBack || !data.backToFront) {
         const tracking: ReviewTracking = {
           nextReview: data.nextReview || new Date(),
@@ -195,20 +166,11 @@ export async function migrateExistingCards(uid: string): Promise<number> {
           repetitions: data.repetitions || 0
         };
 
-        if (!data.frontToBack) {
-          update.frontToBack = tracking;
-          needsUpdate = true;
-        }
-
-        if (!data.backToFront) {
-          update.backToFront = tracking;
-          needsUpdate = true;
-        }
-
+        if (!data.frontToBack) { update.frontToBack = tracking; needsUpdate = true; }
+        if (!data.backToFront) { update.backToFront = tracking; needsUpdate = true; }
         migratedCount++;
       }
 
-      // Case 2: Ensure root nextReview matches the earliest of frontToBack and backToFront
       if (data.frontToBack && data.backToFront) {
         const fbDate = data.frontToBack.nextReview?.toDate?.() || new Date(data.frontToBack.nextReview);
         const bfDate = data.backToFront.nextReview?.toDate?.() || new Date(data.backToFront.nextReview);
@@ -224,13 +186,9 @@ export async function migrateExistingCards(uid: string): Promise<number> {
         }
       }
 
-      if (needsUpdate) {
-        await updateDoc(docRef, update);
-        console.log(`[Firestore] Updated card: ${docSnapshot.id}`, update);
-      }
+      if (needsUpdate) await updateDoc(docRef, update);
     }
 
-    console.log(`[Firestore] Migration complete. Migrated ${migratedCount} cards, updated ${updatedCount} existing cards.`);
     return migratedCount + updatedCount;
   } catch (error) {
     console.error('[Firestore] Error in migrateExistingCards:', error);
