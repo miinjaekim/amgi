@@ -74,7 +74,10 @@ interface SwedishFlashcard extends BaseFlashcard {
   termLanguage: 'Swedish' | 'English';
   swedish: string;
   english: string;
+  gender?: string;   // 'en' | 'ett' | null — only for nouns
   briefDefinition?: string;
+  definition?: string;
+  notes?: string;
   examples?: { swedish: string; english: string }[];
   // no formality, no hanja
 }
@@ -112,10 +115,11 @@ function mapDocToFlashcard(doc): AnyFlashcard {
 - `streak`, `longestStreak`, `lastReviewDate`, `reviewedToday` — SRS progress
 
 ### API shape (term explanation)
-- Fast call (`/api/explain`): returns `term, termLanguage, korean/swedish, english, formality, briefDefinition`
-- Depth call (`/api/explain/depth`, user-triggered): returns `definition, hanja?, notes?`
+- Fast call (`/api/explain`): returns `term, termLanguage, korean/swedish, english, formality (Korean), gender (Swedish), briefDefinition`
+- Depth call (`/api/explain/depth`, user-triggered): returns `definition, hanja? (Korean only), notes?`
 - Examples call (`/api/explain/examples`, user-triggered): returns `{ examples: ExamplePair[] }`
 - Stream variants exist for depth and examples (`/depth-stream`, `/examples-stream`)
+- Swedish depth prompt omits the `HANJA:` section entirely; parser handles both formats via `text.includes('HANJA:\n')`
 
 ---
 
@@ -146,6 +150,14 @@ function mapDocToFlashcard(doc): AnyFlashcard {
 - Learn, Cards, Review pages all pass `studyLanguage` and render Swedish cards correctly
 - Firestore security rule for `cards_swedish` ✅ added (Firebase console)
 - Composite index for `cards_swedish` on `archived + createdAt` — will be auto-prompted on first filtered query
+
+**Swedish gender + save fix** — Branch: `feat/swedish-gender`
+
+- `gender?: string` added to `TermCore` (and `SwedishFlashcard`) — `'en'` | `'ett'` | `null` for nouns, absent for other word types
+- Swedish `/api/explain` prompts updated to return `gender` field
+- Gender badge rendered on Learn page and `CardDetailModal` alongside formality
+- **Save fix:** `saveFlashcardToFirestore` now strips `undefined` values before `addDoc` — Firebase v9 throws on explicit `undefined` field values
+- **Depth parser fix:** `parseStreamedDepth` only includes keys with real values (no `hanja: undefined`); Swedish depth prompt no longer includes `HANJA: none` placeholder
 
 ### Backlog
 
@@ -185,4 +197,5 @@ function mapDocToFlashcard(doc): AnyFlashcard {
 - **Expo monorepo Hermes error:** caused by root-level `babel-preset-expo@56`. Fix: pin `babel-preset-expo@~54.0.11` in `apps/mobile/`.
 - **React version conflict in monorepo:** use `config.resolver.resolveRequest` in `metro.config.js` to force all `react` imports to the local version.
 - **`initializeAuth` already-initialized on fast refresh:** wrap in try/catch and fall back to `getAuth(app)`.
+- **Firebase v9 rejects `undefined` field values:** `addDoc`/`setDoc` throw "Unsupported field value: undefined" if any key has an explicit `undefined` value (e.g. from spreading an object literal). Strip with `Object.fromEntries(Object.entries(data).filter(([,v]) => v !== undefined))` before writing. Also avoid object literals that always declare all keys — only include keys with real values.
 - **`EXPO_PUBLIC_*` env vars** are baked at bundle time — restart Metro with `--clear` after changing `.env.local`.

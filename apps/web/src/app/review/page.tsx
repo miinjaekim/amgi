@@ -495,6 +495,14 @@ export default function ReviewPage() {
                             <div className="text-lg mb-3 text-[var(--color-text)] font-semibold">{currentReview.card.english || currentReview.card.translation}</div>
                           )}
 
+                          {currentReview.card.gender && (
+                            <div className="mb-3">
+                              <span className="px-2 py-0.5 text-xs rounded-full border border-[var(--color-muted)] text-[var(--color-muted)]">
+                                {currentReview.card.gender}
+                              </span>
+                            </div>
+                          )}
+
                           <button
                             onClick={handleToggleDetails}
                             className="text-sm px-3 py-1 bg-[var(--color-muted-dark)] text-[var(--color-text)] rounded hover:bg-[var(--color-muted)] mb-4"
@@ -565,6 +573,14 @@ export default function ReviewPage() {
                       {showAnswer ? (
                         <>
                           <div className="font-semibold text-2xl mb-3 text-[var(--color-highlight)] mt-4">{getStudySide(currentReview.card)}</div>
+
+                          {currentReview.card.gender && (
+                            <div className="mb-3">
+                              <span className="px-2 py-0.5 text-xs rounded-full border border-[var(--color-muted)] text-[var(--color-muted)]">
+                                {currentReview.card.gender}
+                              </span>
+                            </div>
+                          )}
 
                           <button
                             onClick={handleToggleDetails}

@@ -30,9 +30,6 @@ Respond in exactly this format with no extra text:
 DEFINITION:
 <definition here>
 
-HANJA:
-none
-
 NOTES:
 <notes or "none">`;
   } else {
