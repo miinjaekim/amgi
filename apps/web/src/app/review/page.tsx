@@ -504,11 +504,18 @@ export default function ReviewPage() {
 
                           {showDetails && (
                             <div className="mt-3 pt-3 border-t border-[var(--color-muted)]">
-                              {currentReview.card.formality && currentReview.card.formality !== 'N/A' && (
-                                <div className="mb-3">
-                                  <span className="px-2 py-0.5 text-xs rounded-full border border-[var(--color-muted)] text-[var(--color-muted)]">
-                                    {currentReview.card.formality}
-                                  </span>
+                              {(currentReview.card.formality && currentReview.card.formality !== 'N/A' || currentReview.card.gender) && (
+                                <div className="flex gap-2 flex-wrap mb-3">
+                                  {currentReview.card.formality && currentReview.card.formality !== 'N/A' && (
+                                    <span className="px-2 py-0.5 text-xs rounded-full border border-[var(--color-muted)] text-[var(--color-muted)]">
+                                      {currentReview.card.formality}
+                                    </span>
+                                  )}
+                                  {currentReview.card.gender && (
+                                    <span className="px-2 py-0.5 text-xs rounded-full border border-[var(--color-muted)] text-[var(--color-muted)]">
+                                      {currentReview.card.gender}
+                                    </span>
+                                  )}
                                 </div>
                               )}
                               {currentReview.card.definition && (
@@ -575,11 +582,18 @@ export default function ReviewPage() {
 
                           {showDetails && (
                             <div className="mt-3 pt-3 border-t border-[var(--color-muted)]">
-                              {currentReview.card.formality && currentReview.card.formality !== 'N/A' && (
-                                <div className="mb-3">
-                                  <span className="px-2 py-0.5 text-xs rounded-full border border-[var(--color-muted)] text-[var(--color-muted)]">
-                                    {currentReview.card.formality}
-                                  </span>
+                              {(currentReview.card.formality && currentReview.card.formality !== 'N/A' || currentReview.card.gender) && (
+                                <div className="flex gap-2 flex-wrap mb-3">
+                                  {currentReview.card.formality && currentReview.card.formality !== 'N/A' && (
+                                    <span className="px-2 py-0.5 text-xs rounded-full border border-[var(--color-muted)] text-[var(--color-muted)]">
+                                      {currentReview.card.formality}
+                                    </span>
+                                  )}
+                                  {currentReview.card.gender && (
+                                    <span className="px-2 py-0.5 text-xs rounded-full border border-[var(--color-muted)] text-[var(--color-muted)]">
+                                      {currentReview.card.gender}
+                                    </span>
+                                  )}
                                 </div>
                               )}
                               {currentReview.card.definition && (
