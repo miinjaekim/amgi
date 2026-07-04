@@ -1,15 +1,16 @@
-import type { ExamplePair, ExplainResult, TermDepth } from './types';
+import type { ExamplePair, ExplainResult, TermDepth, StudyLanguage } from './types';
 
 export async function getTermExplanation(
   term: string,
   nativeLanguage = 'English',
   context?: string,
-  baseUrl = ''
+  baseUrl = '',
+  studyLanguage: StudyLanguage = 'Korean'
 ): Promise<ExplainResult> {
   const res = await fetch(`${baseUrl}/api/explain`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ term, nativeLanguage, context }),
+    body: JSON.stringify({ term, nativeLanguage, context, studyLanguage }),
   });
 
   if (!res.ok) throw new Error('Failed to get term explanation');
@@ -18,14 +19,15 @@ export async function getTermExplanation(
 
 export async function getTermDepth(
   term: string,
-  termLanguage: 'Korean' | 'English',
+  termLanguage: string,
   nativeLanguage = 'English',
-  baseUrl = ''
+  baseUrl = '',
+  studyLanguage: StudyLanguage = 'Korean'
 ): Promise<TermDepth> {
   const res = await fetch(`${baseUrl}/api/explain/depth`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ term, termLanguage, nativeLanguage }),
+    body: JSON.stringify({ term, termLanguage, nativeLanguage, studyLanguage }),
   });
 
   if (!res.ok) throw new Error('Failed to get term depth');
@@ -34,14 +36,15 @@ export async function getTermDepth(
 
 export async function getTermExamples(
   term: string,
-  termLanguage: 'Korean' | 'English',
+  termLanguage: string,
   nativeLanguage = 'English',
-  baseUrl = ''
+  baseUrl = '',
+  studyLanguage: StudyLanguage = 'Korean'
 ): Promise<ExamplePair[]> {
   const res = await fetch(`${baseUrl}/api/explain/examples`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ term, termLanguage, nativeLanguage }),
+    body: JSON.stringify({ term, termLanguage, nativeLanguage, studyLanguage }),
   });
 
   if (!res.ok) throw new Error('Failed to get term examples');

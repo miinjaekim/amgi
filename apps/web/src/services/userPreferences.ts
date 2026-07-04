@@ -3,7 +3,7 @@ import { doc, getDoc, setDoc } from 'firebase/firestore';
 import type { UserPreferences } from '@amgi/core';
 
 export type { UserPreferences } from '@amgi/core';
-export { SUPPORTED_LANGUAGES } from '@amgi/core';
+export { SUPPORTED_LANGUAGES, SUPPORTED_NATIVE_LANGUAGES, SUPPORTED_STUDY_LANGUAGES } from '@amgi/core';
 
 export async function getUserPreferences(uid: string): Promise<UserPreferences | null> {
   const snap = await getDoc(doc(db, 'users', uid));

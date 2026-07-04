@@ -16,8 +16,11 @@ import SaveFlashcardModal from '@/components/SaveFlashcardModal';
 import Spinner from '@/components/Spinner';
 import React from 'react';
 
-// Reveals `accumulated` text at ~360 chars/sec (6 chars × 60fps) via rAF,
-// calling onUpdate on each frame and onDone when fully revealed.
+const EXAMPLE_TERMS: Record<string, string[]> = {
+  Korean: ['배', 'longing', '눈치', 'awkward', '사랑'],
+  Swedish: ['lagom', 'fika', 'mysig', 'serendipity', 'lagstiftning'],
+};
+
 function animateText(
   accumulatedRef: { current: string },
   streamDoneRef: { current: boolean },
@@ -65,14 +68,14 @@ function parseStreamedExamples(text: string): ExamplePair[] {
     .flatMap(line => {
       try {
         const parsed = JSON.parse(line);
-        if (parsed.korean && parsed.english) return [parsed as ExamplePair];
+        if ((parsed.korean || parsed.swedish) && parsed.english) return [parsed as ExamplePair];
       } catch {}
       return [];
     });
 }
 
 export default function Home() {
-  const { user, nativeLanguage, handleSignIn } = useUser();
+  const { user, nativeLanguage, studyLanguage, handleSignIn } = useUser();
   const [term, setTerm] = useState('');
   const [core, setCore] = useState<TermCore | null>(null);
   const [ambiguity, setAmbiguity] = useState<TermAmbiguous | null>(null);
@@ -104,7 +107,7 @@ export default function Home() {
     setShowContextInput(false);
     setContextInput('');
     try {
-      const result = await getTermExplanation(termValue, nativeLanguage ?? 'English', context);
+      const result = await getTermExplanation(termValue, nativeLanguage ?? 'English', context, '', studyLanguage);
       if ('ambiguous' in result && result.ambiguous) {
         setAmbiguity(result);
       } else {
@@ -149,7 +152,7 @@ export default function Home() {
       const res = await fetch('/api/explain/depth-stream', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ term: core.term, termLanguage: core.termLanguage, nativeLanguage }),
+        body: JSON.stringify({ term: core.term, termLanguage: core.termLanguage, nativeLanguage, studyLanguage }),
       });
       if (!res.ok || !res.body) throw new Error('Stream failed');
 
@@ -198,7 +201,7 @@ export default function Home() {
       const res = await fetch('/api/explain/examples-stream', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ term: core.term, termLanguage: core.termLanguage, nativeLanguage }),
+        body: JSON.stringify({ term: core.term, termLanguage: core.termLanguage, nativeLanguage, studyLanguage }),
       });
       if (!res.ok || !res.body) throw new Error('Stream failed');
 
@@ -242,7 +245,10 @@ export default function Home() {
       setSaving(true);
       setError(null);
       try {
-        await saveFlashcardToFirestore({ ...(flashcardDraft as Omit<Flashcard, 'createdAt' | 'id'>), uid: user.uid });
+        await saveFlashcardToFirestore(
+          { ...(flashcardDraft as Omit<Flashcard, 'createdAt' | 'id'>), uid: user.uid },
+          studyLanguage
+        );
         setCore(null);
         setDepth(null);
         setExamples(null);
@@ -261,9 +267,16 @@ export default function Home() {
     }
   };
 
+  const isSwedish = studyLanguage === 'Swedish';
+
   const translation = core
-    ? (core.termLanguage === 'Korean' ? core.english : core.korean) || core.translation
+    ? isSwedish
+      ? (core.termLanguage === 'Swedish' ? core.english : core.swedish)
+      : (core.termLanguage === 'Korean' ? core.english : core.korean) || core.translation
     : null;
+
+  const studyLangLabel = isSwedish ? 'Swedish' : 'Korean';
+  const exampleTerms = EXAMPLE_TERMS[studyLanguage] ?? EXAMPLE_TERMS.Korean;
 
   return (
     <div className="max-w-2xl mx-auto font-mono text-base" style={{ color: 'var(--color-text)' }}>
@@ -289,14 +302,14 @@ export default function Home() {
         </div>
       </form>
 
-      {/* Empty state — shown before any search */}
+      {/* Empty state */}
       {!loading && !core && !ambiguity && !error && (
         <div className="mt-12 text-center">
           <p className="text-[var(--color-text)] text-lg font-semibold mb-2">{t(nativeLanguage, 'tagline')}</p>
           <p className="text-[var(--color-text)] opacity-60 text-sm mb-8 max-w-md mx-auto">{t(nativeLanguage, 'taglineSubtitle')}</p>
           <div className="flex flex-wrap gap-2 justify-center">
             <span className="text-[var(--color-muted)] text-sm mr-1">{t(nativeLanguage, 'exampleTermsLabel')}</span>
-            {['배', 'longing', '눈치', 'awkward', '사랑'].map((example) => (
+            {exampleTerms.map((example) => (
               <button
                 key={example}
                 onClick={() => { setTerm(example); resolveExplanation(example); }}
@@ -350,7 +363,7 @@ export default function Home() {
             )}
           </div>
 
-          {/* Translation + brief definition — always shown */}
+          {/* Translation + brief definition */}
           <div className="mb-6">
             <h3 className="font-semibold text-[var(--color-text)] mb-1">{t(nativeLanguage, 'sectionTranslation')}</h3>
             <p className="text-[var(--color-text)] opacity-90 text-lg">
@@ -363,7 +376,7 @@ export default function Home() {
             )}
           </div>
 
-          {/* Depth section — user-triggered */}
+          {/* Depth section */}
           {!depth && !loadingDepth ? (
             <button
               className="mb-4 px-4 py-2 rounded-lg border border-[var(--color-muted)] text-[var(--color-text)] hover:bg-[var(--color-muted)]/30 transition-colors disabled:opacity-50 text-sm"
@@ -400,7 +413,7 @@ export default function Home() {
             </div>
           ) : null}
 
-          {/* Examples section — user-triggered */}
+          {/* Examples section */}
           {!examples && !loadingExamples && !streamingExamples ? (
             <button
               className="mb-6 px-4 py-2 rounded-lg border border-[var(--color-muted)] text-[var(--color-text)] hover:bg-[var(--color-muted)]/30 transition-colors disabled:opacity-50 text-sm"
@@ -416,7 +429,7 @@ export default function Home() {
               <ul className="space-y-3">
                 {(examples ?? []).map((ex, i) => (
                   <li key={i} className="text-[var(--color-text)] opacity-80">
-                    {ex.korean && <div>{ex.korean}</div>}
+                    {(ex.korean || ex.swedish) && <div>{ex.korean ?? ex.swedish}</div>}
                     {ex.english && <div className="text-[var(--color-highlight)] text-sm mt-0.5">{ex.english}</div>}
                   </li>
                 ))}
@@ -431,14 +444,26 @@ export default function Home() {
           <button
             className="px-4 py-2 rounded-lg bg-[var(--color-muted)] text-[var(--color-text)] font-bold hover:bg-[var(--color-highlight)] hover:text-[var(--color-bg)] focus:outline-none focus:ring-2 focus:ring-[var(--color-highlight)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             onClick={() => {
-              const koreanSide = core.termLanguage === 'Korean' ? core.term : (core.korean || '');
-              const englishSide = core.termLanguage === 'English' ? core.term : (core.english || '');
+              let studySide: string;
+              let englishSide: string;
+
+              if (isSwedish) {
+                studySide = core.termLanguage === 'Swedish' ? core.term : (core.swedish || '');
+                englishSide = core.termLanguage === 'English' ? core.term : (core.english || '');
+              } else {
+                studySide = core.termLanguage === 'Korean' ? core.term : (core.korean || '');
+                englishSide = core.termLanguage === 'English' ? core.term : (core.english || '');
+              }
+
               setFlashcardDraft({
                 ...core,
                 ...(depth || {}),
                 examples: examples || [],
-                korean: koreanSide,
-                english: englishSide,
+                studyLanguage,
+                ...(isSwedish
+                  ? { swedish: studySide, english: englishSide }
+                  : { korean: studySide, english: englishSide }
+                ),
               });
               setShowFlashcardForm(true);
               setSaveSuccess(false);
@@ -500,6 +525,7 @@ export default function Home() {
         <SaveFlashcardModal
           draft={flashcardDraft}
           nativeLanguage={nativeLanguage}
+          studyLanguage={studyLanguage}
           saving={saving}
           onChange={(field, value) => setFlashcardDraft(prev => ({ ...prev, [field]: value }))}
           onSave={handleSaveFlashcard}

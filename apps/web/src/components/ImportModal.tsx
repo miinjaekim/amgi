@@ -21,7 +21,7 @@ export default function ImportModal({
   onClose: () => void;
   onSaved: (count: number) => void;
 }) {
-  const { user, nativeLanguage } = useUser();
+  const { user, nativeLanguage, studyLanguage } = useUser();
   const [input, setInput] = useState('');
   const [items, setItems] = useState<ImportItem[]>([]);
   const [step, setStep] = useState<'input' | 'processing' | 'done'>('input');
@@ -45,7 +45,7 @@ export default function ImportModal({
         const res = await fetch('/api/explain', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ term: words[i], nativeLanguage: nativeLanguage ?? 'English' }),
+          body: JSON.stringify({ term: words[i], nativeLanguage: nativeLanguage ?? 'English', studyLanguage }),
         });
         const data = await res.json();
         if (data.ambiguous) {
@@ -84,7 +84,7 @@ export default function ImportModal({
           uid: user.uid,
           frontToBack: defaultTracking,
           backToFront: defaultTracking,
-        } as Omit<Flashcard, 'createdAt' | 'id'>);
+        } as Omit<Flashcard, 'createdAt' | 'id'>, studyLanguage);
         saved++;
       } catch {}
     }
