@@ -30,7 +30,7 @@ export async function saveFlashcardToFirestore(
 
   const collectionName = getCardsCollection(studyLanguage);
 
-  const docRef = await addDoc(collection(db, collectionName), {
+  const rawData = {
     ...flashcard,
     studyLanguage: studyLanguage ?? 'Korean',
     createdAt: Timestamp.now(),
@@ -41,7 +41,14 @@ export async function saveFlashcardToFirestore(
     interval: flashcard.interval || frontToBack.interval,
     ease: flashcard.ease || frontToBack.ease,
     repetitions: flashcard.repetitions || frontToBack.repetitions,
-  });
+  };
+
+  // Firebase v9 throws on explicit `undefined` field values.
+  const docData = Object.fromEntries(
+    Object.entries(rawData).filter(([, v]) => v !== undefined)
+  );
+
+  const docRef = await addDoc(collection(db, collectionName), docData);
   return docRef.id;
 }
 

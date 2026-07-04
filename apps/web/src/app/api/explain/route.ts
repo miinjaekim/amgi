@@ -37,6 +37,7 @@ IMPORTANT:
 - "swedish" must always be the Swedish word or phrase written in Swedish
 - "english" must always be the English word or phrase written in English
 - Both fields should use the single best translation. Only use 2-3 words if one word is genuinely insufficient. Never list synonyms with semicolons or slashes.
+- "gender": if the Swedish term is a noun, set to "en" or "ett". Otherwise set to null.
 - "briefDefinition": a single clear sentence defining the term in ${nativeLanguage}.
 
 Respond with only this JSON:
@@ -45,6 +46,7 @@ Respond with only this JSON:
   "termLanguage": "Swedish or English",
   "swedish": "Swedish word/phrase",
   "english": "English word/phrase",
+  "gender": "en" | "ett" | null,
   "briefDefinition": "one-sentence definition"
 }`;
     } else {
@@ -76,6 +78,7 @@ If NOT ambiguous, respond with only this JSON:
   "termLanguage": "Swedish or English",
   "swedish": "Swedish word/phrase",
   "english": "English word/phrase",
+  "gender": "en" | "ett" | null,
   "briefDefinition": "one-sentence definition in ${nativeLanguage}"
 }
 
@@ -83,6 +86,7 @@ IMPORTANT for the non-ambiguous case:
 - "swedish" must always be written in Swedish
 - "english" must always be written in English
 - Both should be the single best translation. Never list synonyms with semicolons or slashes.
+- "gender": if the Swedish term is a noun, set to "en" or "ett". Otherwise set to null.
 - "briefDefinition" must be a single sentence defining the core meaning. No examples, no cultural context.`;
     }
   } else {

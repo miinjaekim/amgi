@@ -53,11 +53,15 @@ function parseStreamedDepth(text: string): TermDepth {
     const content = text.slice(contentStart, end === -1 ? text.length : end).trim();
     return content && content.toLowerCase() !== 'none' ? content : undefined;
   };
-  return {
-    definition: section('DEFINITION:', 'HANJA:'),
-    hanja: section('HANJA:', 'NOTES:'),
-    notes: section('NOTES:'),
-  };
+  const result: TermDepth = {};
+  const hasHanja = text.includes('HANJA:\n');
+  const def = section('DEFINITION:', hasHanja ? 'HANJA:' : 'NOTES:');
+  const hanja = hasHanja ? section('HANJA:', 'NOTES:') : undefined;
+  const notes = section('NOTES:');
+  if (def !== undefined) result.definition = def;
+  if (hanja !== undefined) result.hanja = hanja;
+  if (notes !== undefined) result.notes = notes;
+  return result;
 }
 
 function parseStreamedExamples(text: string): ExamplePair[] {
@@ -359,6 +363,11 @@ export default function Home() {
             {core.formality && core.formality !== 'N/A' && (
               <span className="px-2 py-0.5 text-xs rounded-full border border-[var(--color-muted)] text-[var(--color-muted)]">
                 {core.formality}
+              </span>
+            )}
+            {core.gender && (
+              <span className="px-2 py-0.5 text-xs rounded-full border border-[var(--color-muted)] text-[var(--color-muted)]">
+                {core.gender}
               </span>
             )}
           </div>

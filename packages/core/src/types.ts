@@ -15,6 +15,7 @@ export interface TermCore {
   english: string;
   translation?: string;
   formality?: string;
+  gender?: string; // Swedish grammatical gender: 'en' or 'ett'
   briefDefinition?: string;
 }
 

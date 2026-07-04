@@ -45,6 +45,11 @@ export default function CardDetailModal({ card, nativeLanguage, onClose }: Props
                   {card.formality}
                 </span>
               )}
+              {card.gender && (
+                <span className="px-2 py-0.5 text-xs rounded-full border" style={{ borderColor: 'var(--color-muted)', color: 'var(--color-muted)' }}>
+                  {card.gender}
+                </span>
+              )}
             </div>
             <p className="text-base mt-1" style={{ color: 'var(--color-text)' }}>{card.english || card.translation}</p>
           </div>
