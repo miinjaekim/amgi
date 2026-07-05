@@ -1,5 +1,6 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { NextRequest, NextResponse } from 'next/server';
+import { getStudyLanguageConfig } from '@amgi/core';
 
 function stripMarkdownCodeBlock(text: string): string {
   return text.replace(/```[a-zA-Z]*\n?|```/g, '').trim();
@@ -20,39 +21,22 @@ export async function POST(req: NextRequest) {
   const genAI = new GoogleGenerativeAI(apiKey);
   const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash', generationConfig: { temperature: 0.4 } });
 
-  let prompt: string;
+  const config = getStudyLanguageConfig(studyLanguage);
+  const isStudyLang = termLanguage === config.code;
 
-  if (studyLanguage === 'Swedish') {
-    const isSwedish = termLanguage === 'Swedish';
-    prompt = `Provide 2–3 natural example sentences using the term "${term}" (${termLanguage}).
+  const prompt = `Provide 2–3 natural example sentences using the term "${term}" (${termLanguage}).
 
 Each example must have:
-- "swedish": ${isSwedish ? 'a natural Swedish sentence using the term' : 'the Swedish translation of the example sentence'}
-- "english": ${isSwedish ? `a ${nativeLanguage} translation of the Swedish sentence` : 'the original English sentence using the term'}
+- "${config.studyField}": ${isStudyLang ? `a natural ${config.code} sentence using the term` : `the ${config.code} translation of the example sentence`}
+- "${config.backField}": ${isStudyLang ? `a ${nativeLanguage} translation of the ${config.code} sentence` : `the original ${config.backLanguage} sentence using the term`}
 
 Respond with only this JSON:
 {
   "examples": [
-    { "swedish": "...", "english": "..." },
-    { "swedish": "...", "english": "..." }
+    { "${config.studyField}": "...", "${config.backField}": "..." },
+    { "${config.studyField}": "...", "${config.backField}": "..." }
   ]
 }`;
-  } else {
-    const isKorean = termLanguage === 'Korean';
-    prompt = `Provide 2–3 natural example sentences using the term "${term}" (${termLanguage}).
-
-Each example must have:
-- "korean": ${isKorean ? 'a natural Korean sentence using the term' : 'the Korean translation of the example sentence'}
-- "english": ${isKorean ? `a ${nativeLanguage} translation of the Korean sentence` : 'the original English sentence using the term'}
-
-Respond with only this JSON:
-{
-  "examples": [
-    { "korean": "...", "english": "..." },
-    { "korean": "...", "english": "..." }
-  ]
-}`;
-  }
 
   const result = await model.generateContent(prompt);
   const text = result.response.text();

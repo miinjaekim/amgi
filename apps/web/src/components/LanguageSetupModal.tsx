@@ -52,7 +52,7 @@ export default function LanguageSetupModal() {
             <h2 className="text-2xl font-bold mb-1 text-[var(--color-text)]">What are you learning?</h2>
             <h2 className="text-lg font-semibold mb-8 text-[var(--color-text)] opacity-60">Choose your study language</h2>
             <div className="flex flex-col gap-3">
-              {SUPPORTED_STUDY_LANGUAGES.map((lang) => (
+              {SUPPORTED_STUDY_LANGUAGES.filter((lang) => lang.code !== pendingNative).map((lang) => (
                 <button
                   key={lang.code}
                   onClick={() => handleStudySelect(lang.code)}

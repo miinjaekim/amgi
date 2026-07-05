@@ -91,6 +91,69 @@ IMPORTANT for the non-ambiguous case:
 - "gender": if the Swedish term is a noun, set to "en" or "ett". Otherwise set to null.
 - "briefDefinition" must be a single sentence defining the core meaning. No examples, no cultural context.`;
     }
+  } else if (studyLanguage === 'English') {
+    // English study — for native-Korean learners. The card back is Korean,
+    // so Hangul detection distinguishes the two sides client-free.
+    const termLanguage = detectKorean(term) ? 'Korean' : 'English';
+
+    if (context) {
+      prompt = `Provide a concise translation for the term "${term}" with this context: "${context}". The user is a native ${nativeLanguage} speaker learning English.
+
+IMPORTANT: The "english" and "korean" fields must ALWAYS be in their respective languages:
+- "english" must always be the English word or phrase written in English
+- "korean" must always be the Korean word or phrase written in Korean script (한국어)
+- Both fields should use the single best translation. Only use 2-3 words if one word is genuinely insufficient. Never list synonyms with semicolons or slashes.
+
+For "briefDefinition", write a single clear sentence defining the term in ${nativeLanguage}. No examples, no cultural context — just the core meaning.
+
+Respond with only this JSON:
+{
+  "term": "${term}",
+  "termLanguage": "${termLanguage}",
+  "english": "English word/phrase",
+  "korean": "Korean word/phrase in 한국어",
+  "briefDefinition": "one-sentence definition"
+}`;
+    } else {
+      prompt = `You are a language learning assistant helping a native ${nativeLanguage} speaker learn English.
+
+Given the term "${term}", determine whether it has multiple significantly different meanings that would confuse a language learner.
+
+A term is ambiguous when it has 2 or more distinct common meanings that lead to meaningfully different translations or usage contexts (e.g., English "bat" can mean the animal or sports equipment).
+
+A term is NOT ambiguous when:
+- It has one clear primary meaning
+- Secondary meanings are rare or archaic
+- The meanings are closely related variants of the same concept
+
+If AMBIGUOUS, respond with only this JSON:
+{
+  "ambiguous": true,
+  "term": "${term}",
+  "termLanguage": "${termLanguage}",
+  "meanings": [
+    { "label": "short label (3-6 words max)", "hint": "one sentence clarifying this meaning" },
+    { "label": "...", "hint": "..." }
+  ]
+}
+
+Every "label" and "hint" must be written in ${nativeLanguage} — the user may not understand any other language.
+
+If NOT ambiguous, respond with only this JSON:
+{
+  "term": "${term}",
+  "termLanguage": "${termLanguage}",
+  "english": "English word/phrase",
+  "korean": "Korean word/phrase in 한국어",
+  "briefDefinition": "one-sentence definition in ${nativeLanguage}"
+}
+
+IMPORTANT for the non-ambiguous case:
+- "english" must always be written in English
+- "korean" must always be written in Korean script (한국어)
+- Both should be the single best translation. Only use 2-3 words if truly necessary. Never list synonyms with semicolons or slashes.
+- "briefDefinition" must be a single sentence defining the core meaning. No examples, no cultural context.`;
+    }
   } else {
     // Korean (default)
     const termLanguage = detectKorean(term) ? 'Korean' : 'English';

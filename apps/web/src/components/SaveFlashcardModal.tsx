@@ -4,14 +4,15 @@ import { useEffect } from 'react';
 import { Flashcard } from '@/services/firestore';
 import { t } from '@/lib/i18n';
 import Spinner from '@/components/Spinner';
-import type { StudyLanguage } from '@amgi/core';
+import { getStudyLanguageConfig } from '@amgi/core';
+import type { CardSideField, StudyLanguage } from '@amgi/core';
 
 interface Props {
   draft: Partial<Flashcard>;
   nativeLanguage: string | null | undefined;
   studyLanguage: StudyLanguage;
   saving: boolean;
-  onChange: (field: 'korean' | 'english' | 'swedish', value: string) => void;
+  onChange: (field: CardSideField, value: string) => void;
   onSave: () => void;
   onClose: () => void;
 }
@@ -23,10 +24,9 @@ export default function SaveFlashcardModal({ draft, nativeLanguage, studyLanguag
     return () => document.removeEventListener('keydown', handler);
   }, [onClose]);
 
-  const isSwedish = studyLanguage === 'Swedish';
-  const studyLangLabel = isSwedish ? 'Swedish' : t(nativeLanguage, 'labelKorean');
-  const studyLangValue = isSwedish ? (draft.swedish || '') : (draft.korean || '');
-  const studyLangField = isSwedish ? 'swedish' : 'korean';
+  const langConfig = getStudyLanguageConfig(studyLanguage);
+  const studyLangLabel = t(nativeLanguage, langConfig.studyLabelKey);
+  const studyLangValue = draft[langConfig.studyField] || '';
 
   return (
     <div
@@ -65,7 +65,7 @@ export default function SaveFlashcardModal({ draft, nativeLanguage, studyLanguag
             <input
               type="text"
               value={studyLangValue}
-              onChange={e => onChange(studyLangField as 'korean' | 'swedish', e.target.value)}
+              onChange={e => onChange(langConfig.studyField, e.target.value)}
               className="w-full p-2 rounded-lg border text-[var(--color-text)]"
               style={{ background: 'var(--color-bg)', borderColor: 'var(--color-muted)' }}
               autoFocus
@@ -73,12 +73,12 @@ export default function SaveFlashcardModal({ draft, nativeLanguage, studyLanguag
           </div>
           <div>
             <label className="block text-xs font-semibold uppercase tracking-widest mb-2" style={{ color: 'var(--color-muted)' }}>
-              {t(nativeLanguage, 'labelEnglish')}
+              {t(nativeLanguage, langConfig.backLabelKey)}
             </label>
             <input
               type="text"
-              value={draft.english || ''}
-              onChange={e => onChange('english', e.target.value)}
+              value={draft[langConfig.backField] || ''}
+              onChange={e => onChange(langConfig.backField, e.target.value)}
               className="w-full p-2 rounded-lg border text-[var(--color-text)]"
               style={{ background: 'var(--color-bg)', borderColor: 'var(--color-muted)' }}
             />

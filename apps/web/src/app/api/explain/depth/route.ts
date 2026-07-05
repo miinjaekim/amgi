@@ -22,8 +22,8 @@ export async function POST(req: NextRequest) {
 
   let prompt: string;
 
-  if (studyLanguage === 'Swedish') {
-    prompt = `Provide deeper explanation for the Swedish/English term "${term}" (${termLanguage}).
+  if (studyLanguage !== 'Korean') {
+    prompt = `Provide deeper explanation for the term "${term}" (${termLanguage}), for a learner of ${studyLanguage}.
 Write all explanations in ${nativeLanguage}.
 
 Include only what is genuinely useful for a language learner:

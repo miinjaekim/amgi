@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
 
   let prompt: string;
 
-  if (studyLanguage === 'Swedish') {
+  if (studyLanguage !== 'Korean') {
     prompt = `The user already has a one-sentence definition of "${term}" (${termLanguage}). Go deeper — but stay concise. Every sentence should earn its place.
 Write all explanations in ${nativeLanguage}.
 

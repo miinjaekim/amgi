@@ -28,7 +28,14 @@ export async function GET(req: NextRequest) {
   const extraField =
     studyLanguage === 'Swedish'
       ? '"gender": "en" | "ett" | null'
-      : '"formality": "Casual | Standard | Formal | Honorific | Slang"';
+      : studyLanguage === 'Korean'
+        ? '"formality": "Casual | Standard | Formal | Honorific | Slang"'
+        : null;
+
+  const translationLine =
+    studyLanguage === 'English'
+      ? '"korean": "the best Korean translation", "english": "the word itself"'
+      : '"english": "the best English translation"';
 
   const prompt = `You are picking the "word of the day" (${date}) for learners of ${studyLanguage}.
 
@@ -37,9 +44,8 @@ Pick ONE ${studyLanguage} word or short expression that is genuinely interesting
 Respond with only this JSON:
 {
   "term": "the ${studyLanguage} word, written in ${studyLanguage}",
-  "english": "the best English translation",
-  "briefDefinition": "one sentence in ${nativeLanguage} explaining the meaning",
-  ${extraField}
+  ${translationLine},
+  "briefDefinition": "one sentence in ${nativeLanguage} explaining the meaning"${extraField ? `,\n  ${extraField}` : ''}
 }`;
 
   const result = await model.generateContent(prompt);

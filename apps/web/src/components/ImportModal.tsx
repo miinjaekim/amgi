@@ -4,6 +4,7 @@ import React, { useState, useRef } from 'react';
 import { useUser } from '@/components/UserContext';
 import { saveFlashcardToFirestore, Flashcard } from '@/services/firestore';
 import { TermCore } from '@/services/gemini';
+import { getStudyLanguageConfig } from '@amgi/core';
 import Spinner from '@/components/Spinner';
 
 type ImportStatus = 'pending' | 'loading' | 'success' | 'ambiguous' | 'error';
@@ -22,6 +23,7 @@ export default function ImportModal({
   onSaved: (count: number) => void;
 }) {
   const { user, nativeLanguage, studyLanguage } = useUser();
+  const langConfig = getStudyLanguageConfig(studyLanguage);
   const [input, setInput] = useState('');
   const [items, setItems] = useState<ImportItem[]>([]);
   const [step, setStep] = useState<'input' | 'processing' | 'done'>('input');
@@ -147,7 +149,7 @@ export default function ImportModal({
                   value={goal}
                   onChange={e => setGoal(e.target.value)}
                   onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); generateFromGoal(); } }}
-                  placeholder={`e.g. "ordering food on a trip to ${studyLanguage === 'Korean' ? 'Seoul' : 'Stockholm'}"`}
+                  placeholder={`e.g. "ordering food on a trip to ${{ Korean: 'Seoul', Swedish: 'Stockholm', English: 'New York' }[studyLanguage] ?? 'Seoul'}"`}
                   disabled={generating}
                   className="flex-1 p-2 text-sm rounded-lg bg-[var(--color-bg)] border border-[var(--color-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--color-highlight)] text-[var(--color-text)] placeholder-[var(--color-muted)]"
                 />
@@ -222,7 +224,7 @@ export default function ImportModal({
                         {item.status === 'ambiguous' && <span className="text-xs text-[var(--color-muted)]">ambiguous — skipped</span>}
                         {item.status === 'success' && item.data && (
                           <span className="text-xs text-[var(--color-muted)]">
-                            {item.data.korean} · {item.data.english}
+                            {item.data[langConfig.studyField]} · {item.data[langConfig.backField]}
                             {item.data.formality && item.data.formality !== 'N/A' && ` · ${item.data.formality}`}
                           </span>
                         )}
