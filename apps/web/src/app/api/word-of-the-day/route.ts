@@ -28,9 +28,11 @@ export async function GET(req: NextRequest) {
   const extraField =
     studyLanguage === 'Swedish'
       ? '"gender": "en" | "ett" | null'
-      : studyLanguage === 'Korean'
-        ? '"formality": "Casual | Standard | Formal | Honorific | Slang"'
-        : null;
+      : studyLanguage === 'French'
+        ? '"gender": "le" | "la" | null'
+        : studyLanguage === 'Korean'
+          ? '"formality": "Casual | Standard | Formal | Honorific | Slang"'
+          : null;
 
   const translationLine =
     studyLanguage === 'English'

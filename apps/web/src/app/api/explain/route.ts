@@ -91,6 +91,71 @@ IMPORTANT for the non-ambiguous case:
 - "gender": if the Swedish term is a noun, set to "en" or "ett". Otherwise set to null.
 - "briefDefinition" must be a single sentence defining the core meaning. No examples, no cultural context.`;
     }
+  } else if (studyLanguage === 'French') {
+    // French: termLanguage is set by Gemini (Latin script — can't detect client-side)
+    if (context) {
+      prompt = `Provide a concise translation for the French/English term "${term}" with this context: "${context}".
+
+Determine whether "${term}" is French or English and set "termLanguage" accordingly.
+
+IMPORTANT:
+- "french" must always be the French word or phrase written in French
+- "english" must always be the English word or phrase written in English
+- Both fields should use the single best translation. Only use 2-3 words if one word is genuinely insufficient. Never list synonyms with semicolons or slashes.
+- "gender": if the French term is a noun, set to "le" or "la". Otherwise set to null.
+- "briefDefinition": a single clear sentence defining the term in ${nativeLanguage}.
+
+Respond with only this JSON:
+{
+  "term": "${term}",
+  "termLanguage": "French or English",
+  "french": "French word/phrase",
+  "english": "English word/phrase",
+  "gender": "le" | "la" | null,
+  "briefDefinition": "one-sentence definition"
+}`;
+    } else {
+      prompt = `You are a language learning assistant for French-English learners.
+
+Given the term "${term}", determine whether it is French or English, then check if it has multiple significantly different meanings.
+
+A term is ambiguous when it has 2 or more distinct common meanings that would confuse a language learner.
+
+A term is NOT ambiguous when:
+- It has one clear primary meaning
+- Secondary meanings are rare or archaic
+- The meanings are closely related variants of the same concept
+
+If AMBIGUOUS, respond with only this JSON:
+{
+  "ambiguous": true,
+  "term": "${term}",
+  "termLanguage": "French or English",
+  "meanings": [
+    { "label": "short label (3-6 words max)", "hint": "one sentence clarifying this meaning" },
+    { "label": "...", "hint": "..." }
+  ]
+}
+
+Every "label" and "hint" must be written in ${nativeLanguage} — the user may not understand any other language.
+
+If NOT ambiguous, respond with only this JSON:
+{
+  "term": "${term}",
+  "termLanguage": "French or English",
+  "french": "French word/phrase",
+  "english": "English word/phrase",
+  "gender": "le" | "la" | null,
+  "briefDefinition": "one-sentence definition in ${nativeLanguage}"
+}
+
+IMPORTANT for the non-ambiguous case:
+- "french" must always be written in French
+- "english" must always be written in English
+- Both should be the single best translation. Never list synonyms with semicolons or slashes.
+- "gender": if the French term is a noun, set to "le" or "la". Otherwise set to null.
+- "briefDefinition" must be a single sentence defining the core meaning. No examples, no cultural context.`;
+    }
   } else if (studyLanguage === 'English') {
     // English study — for native-Korean learners. The card back is Korean,
     // so Hangul detection distinguishes the two sides client-free.

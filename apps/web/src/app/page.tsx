@@ -23,6 +23,7 @@ const EXAMPLE_TERMS: Record<string, string[]> = {
   Korean: ['배', 'longing', '눈치', 'awkward', '사랑'],
   Swedish: ['lagom', 'fika', 'mysig', 'serendipity', 'lagstiftning'],
   English: ['serendipity', '아쉽다', 'procrastinate', '답답하다', 'nuance'],
+  French: ['dépaysement', 'flâner', 'retrouvailles', 'longing', 'terroir'],
 };
 
 function animateText(

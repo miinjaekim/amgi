@@ -149,7 +149,7 @@ export default function ImportModal({
                   value={goal}
                   onChange={e => setGoal(e.target.value)}
                   onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); generateFromGoal(); } }}
-                  placeholder={`e.g. "ordering food on a trip to ${{ Korean: 'Seoul', Swedish: 'Stockholm', English: 'New York' }[studyLanguage] ?? 'Seoul'}"`}
+                  placeholder={`e.g. "ordering food on a trip to ${{ Korean: 'Seoul', Swedish: 'Stockholm', English: 'New York', French: 'Paris' }[studyLanguage] ?? 'Seoul'}"`}
                   disabled={generating}
                   className="flex-1 p-2 text-sm rounded-lg bg-[var(--color-bg)] border border-[var(--color-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--color-highlight)] text-[var(--color-text)] placeholder-[var(--color-muted)]"
                 />

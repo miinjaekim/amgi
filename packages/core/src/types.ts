@@ -1,19 +1,23 @@
-export type StudyLanguage = 'Korean' | 'Swedish' | 'English';
+export type StudyLanguage = 'Korean' | 'Swedish' | 'English' | 'French';
 
 // i18n keys used for review directions/prompts — must exist in i18n.ts
 export type DirectionLabelKey =
   | 'directionKoreanToEnglish'
   | 'directionEnglishToKorean'
   | 'directionSwedishToEnglish'
-  | 'directionEnglishToSwedish';
+  | 'directionEnglishToSwedish'
+  | 'directionFrenchToEnglish'
+  | 'directionEnglishToFrench';
 export type DirectionPromptKey =
   | 'promptKoreanToEnglish'
   | 'promptEnglishToKorean'
   | 'promptSwedishToEnglish'
-  | 'promptEnglishToSwedish';
-export type FieldLabelKey = 'labelKorean' | 'labelEnglish' | 'labelSwedish';
+  | 'promptEnglishToSwedish'
+  | 'promptFrenchToEnglish'
+  | 'promptEnglishToFrench';
+export type FieldLabelKey = 'labelKorean' | 'labelEnglish' | 'labelSwedish' | 'labelFrench';
 
-export type CardSideField = 'korean' | 'swedish' | 'english';
+export type CardSideField = 'korean' | 'swedish' | 'english' | 'french';
 
 /**
  * Per-study-language configuration. Adding a language means adding an entry
@@ -73,6 +77,21 @@ export const STUDY_LANGUAGE_CONFIGS: Record<StudyLanguage, StudyLanguageConfig> 
     promptFrontToBackKey: 'promptSwedishToEnglish',
     promptBackToFrontKey: 'promptEnglishToSwedish',
   },
+  French: {
+    code: 'French',
+    label: 'French',
+    labelNative: 'Français',
+    collection: 'cards_french',
+    studyField: 'french',
+    backField: 'english',
+    backLanguage: 'English',
+    studyLabelKey: 'labelFrench',
+    backLabelKey: 'labelEnglish',
+    directionFrontToBackKey: 'directionFrenchToEnglish',
+    directionBackToFrontKey: 'directionEnglishToFrench',
+    promptFrontToBackKey: 'promptFrenchToEnglish',
+    promptBackToFrontKey: 'promptEnglishToFrench',
+  },
   // English study pairs with Korean — the only non-English native language
   // supported today. A native-Korean learner's card back is Korean.
   English: {
@@ -96,22 +115,24 @@ export function getStudyLanguageConfig(studyLanguage?: StudyLanguage | string): 
   return STUDY_LANGUAGE_CONFIGS[studyLanguage as StudyLanguage] ?? STUDY_LANGUAGE_CONFIGS.Korean;
 }
 
-// Example pairs — korean/swedish are the study-language sides
+// Example pairs — one side per language, see StudyLanguageConfig field names
 export interface ExamplePair {
   korean?: string;
   swedish?: string;
+  french?: string;
   english: string;
 }
 
 export interface TermCore {
   term: string;
-  termLanguage: 'Korean' | 'English' | 'Swedish';
+  termLanguage: 'Korean' | 'English' | 'Swedish' | 'French';
   korean?: string;
   swedish?: string;
+  french?: string;
   english: string;
   translation?: string;
   formality?: string;
-  gender?: string; // Swedish grammatical gender: 'en' or 'ett'
+  gender?: string; // grammatical gender: Swedish 'en'/'ett', French 'le'/'la'
   briefDefinition?: string;
 }
 
@@ -165,18 +186,21 @@ export interface Flashcard extends TermExplanation {
   repetitions?: number;
 }
 
+/** A card-shaped object carrying language side fields. */
+export type CardSides = Partial<Record<CardSideField, string>> & {
+  studyLanguage?: StudyLanguage;
+  term?: string;
+  translation?: string;
+};
+
 /** Returns the study-language side of a card. */
-export function getStudyLangSide(
-  card: Pick<Flashcard, 'studyLanguage' | 'korean' | 'swedish' | 'english' | 'term'>
-): string {
+export function getStudyLangSide(card: CardSides): string {
   const config = getStudyLanguageConfig(card.studyLanguage);
-  return card[config.studyField] || card.term;
+  return card[config.studyField] || card.term || '';
 }
 
 /** Returns the translation side of a card. */
-export function getBackSide(
-  card: Pick<Flashcard, 'studyLanguage' | 'korean' | 'swedish' | 'english' | 'translation'>
-): string {
+export function getBackSide(card: CardSides): string {
   const config = getStudyLanguageConfig(card.studyLanguage);
   return card[config.backField] || card.translation || '';
 }
@@ -204,7 +228,7 @@ export function getExampleSides(
  * they already understand.
  */
 export function getDepthTarget(
-  core: Pick<TermCore, 'term' | 'termLanguage' | 'korean' | 'swedish' | 'english'>,
+  core: Pick<TermCore, 'term' | 'termLanguage' | 'korean' | 'swedish' | 'french' | 'english'>,
   studyLanguage: StudyLanguage = 'Korean'
 ): { term: string; termLanguage: string } {
   if (core.termLanguage !== studyLanguage) {
