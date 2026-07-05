@@ -72,6 +72,8 @@ If AMBIGUOUS, respond with only this JSON:
   ]
 }
 
+Every "label" and "hint" must be written in ${nativeLanguage} — the user may not understand any other language.
+
 If NOT ambiguous, respond with only this JSON:
 {
   "term": "${term}",
@@ -136,6 +138,8 @@ If AMBIGUOUS, respond with only this JSON:
     { "label": "...", "hint": "..." }
   ]
 }
+
+Every "label" and "hint" must be written in ${nativeLanguage} — the user may not understand any other language.
 
 If NOT ambiguous, respond with only this JSON:
 {
