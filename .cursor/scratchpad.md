@@ -135,29 +135,17 @@ function mapDocToFlashcard(doc): AnyFlashcard {
 - **Streaks** — streak count + cards reviewed today in header; persisted to Firestore
 - **Streaming + cache** — depth and examples stream with typewriter animation; Firestore IndexedDB persistent cache for instant repeat visits
 - **First-time modal** — `LanguageSetupModal` shows for all visitors until native language is set; saves to localStorage + Firestore on sign-in
+- **Swedish support** (`feat/swedish`, merged) — `studyLanguage` stored on card documents; two-step language setup modal (native → study language); study language switcher in header settings; `getCardsCollection` routes Korean → `cards`, Swedish → `cards_swedish`; all CRUD + API routes accept `studyLanguage` and generate Swedish-appropriate Gemini prompts; Firestore security rule for `cards_swedish` added
+- **Swedish noun gender + save fix** (`feat/swedish-gender`, merged 2026-07-04) — `gender?: string` (`'en'` | `'ett'` | absent) added to `TermCore`/`SwedishFlashcard`; gender badge on Learn page, `CardDetailModal`, and review reveal; `saveFlashcardToFirestore` strips `undefined` values before `addDoc` (Firebase v9 throws on explicit `undefined`); `parseStreamedDepth` only includes keys with real values
 
 ### In Progress
 
-**Swedish support** — Branch: `feat/swedish` ✅ shipped
+Nothing currently — `main` is clean, last shipped work was Swedish gender support above.
 
-- `studyLanguage` stored on card documents (self-describing)
-- Two-step language setup modal (native language → study language)
-- Study language switcher in the header settings dropdown
-- `getCardsCollection` helper routes Korean → `cards`, Swedish → `cards_swedish`
-- All CRUD functions accept `studyLanguage`; cards carry `swedish` field instead of `korean`
-- All API routes accept `studyLanguage` and generate Swedish-appropriate Gemini prompts
-- `studyLanguage` in `UserContext` + `UserPreferences`, persisted to Firestore + localStorage
-- Learn, Cards, Review pages all pass `studyLanguage` and render Swedish cards correctly
-- Firestore security rule for `cards_swedish` ✅ added (Firebase console)
-- Composite index for `cards_swedish` on `archived + createdAt` — will be auto-prompted on first filtered query
+### Known Issues
 
-**Swedish gender + save fix** — Branch: `feat/swedish-gender`
-
-- `gender?: string` added to `TermCore` (and `SwedishFlashcard`) — `'en'` | `'ett'` | `null` for nouns, absent for other word types
-- Swedish `/api/explain` prompts updated to return `gender` field
-- Gender badge rendered on Learn page and `CardDetailModal` alongside formality
-- **Save fix:** `saveFlashcardToFirestore` now strips `undefined` values before `addDoc` — Firebase v9 throws on explicit `undefined` field values
-- **Depth parser fix:** `parseStreamedDepth` only includes keys with real values (no `hanja: undefined`); Swedish depth prompt no longer includes `HANJA: none` placeholder
+- [ ] **Ambiguous term options always shown in English** — when a term has multiple meanings, the disambiguation list shows each meaning's definition in English regardless of the user's native language. A beginner who doesn't know enough English can't tell the options apart. Definitions should localize to `nativeLanguage`.
+- [ ] **"Dig deeper" targets the wrong word when term language = native language** — e.g. native-English speaker studying Korean enters the term in English; depth explanation elaborates on the English word (already understood) instead of deepening the Korean translation. Same issue in reverse (native Korean studying English, enters the term in Korean). Root cause: depth logic doesn't distinguish `termLanguage` from `studyLanguage`/`nativeLanguage`.
 
 ### Backlog
 
@@ -167,6 +155,10 @@ function mapDocToFlashcard(doc): AnyFlashcard {
 - [ ] **Push notifications** — daily review reminders. Post-launch.
 - [ ] **Shared term cache** — `terms` collection keyed by normalized term + language. Reduces cost; defer until traffic justifies it.
 - [ ] **Conversation practice** — on hold. Transcription + per-participant feedback. MVP is end-of-conversation feedback on a recorded file.
+- [ ] **English as a study language** — currently only Korean and Swedish. Needed to fix the "dig deeper" issue above symmetrically (native Korean speaker learning English) — learning Korean-with-English-native and learning English-with-Korean-native are distinct card types/prompts, not mirror images.
+- [ ] **French support** — new `cards_french` collection + French-specific card type and Gemini prompts, following the `feat/swedish` pattern (gendered nouns, formality equivalents TBD).
+- [ ] **Japanese support** — new `cards_japanese` collection + Japanese-specific card type and Gemini prompts, following the `feat/swedish` pattern (kanji/furigana, politeness levels TBD).
+- [ ] **Hanja prompt: add Korean 훈음 (hun-eum) reading per character** — hanja breakdown currently shows each character with just an English gloss (e.g. "葛藤: 갈 (kudzu vine) + 등 (wisteria vine) → entanglement, conflict"). Add the traditional Korean hun-eum ("meaning + sound") reading per character too, e.g. 水 → "물 수", so a learner who already knows the English meaning also learns how the character is named in Korean. Affects both `/api/explain/depth` and `/api/explain/depth-stream` hanja prompts.
 
 ---
 
