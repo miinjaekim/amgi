@@ -80,6 +80,24 @@ export function getExampleStudyLangText(ex: ExamplePair): string {
   return ex.korean ?? ex.swedish ?? '';
 }
 
+/**
+ * Returns the term that depth/examples calls should elaborate on.
+ * Digging deeper must always target the study-language word: if the user
+ * typed the term in their native language (termLanguage !== studyLanguage),
+ * the interesting word is the study-language translation, not the term
+ * they already understand.
+ */
+export function getDepthTarget(
+  core: Pick<TermCore, 'term' | 'termLanguage' | 'korean' | 'swedish'>,
+  studyLanguage: StudyLanguage = 'Korean'
+): { term: string; termLanguage: string } {
+  if (core.termLanguage !== studyLanguage) {
+    const studySide = studyLanguage === 'Swedish' ? core.swedish : core.korean;
+    if (studySide) return { term: studySide, termLanguage: studyLanguage };
+  }
+  return { term: core.term, termLanguage: core.termLanguage };
+}
+
 // User types
 export interface UserPreferences {
   nativeLanguage: string;

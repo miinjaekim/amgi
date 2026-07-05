@@ -1,4 +1,4 @@
-export { getTermExplanation, getTermDepth, getTermExamples } from '@amgi/core';
+export { getTermExplanation, getTermDepth, getTermExamples, getDepthTarget } from '@amgi/core';
 export type {
   ExamplePair,
   ExplainResult,

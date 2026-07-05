@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import {
   getTermExplanation,
+  getDepthTarget,
   TermCore,
   TermDepth,
   TermAmbiguous,
@@ -152,11 +153,13 @@ export default function Home() {
     const doneRef = { current: false };
     let canceled = false;
 
+    const depthTarget = getDepthTarget(core, studyLanguage);
+
     try {
       const res = await fetch('/api/explain/depth-stream', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ term: core.term, termLanguage: core.termLanguage, nativeLanguage, studyLanguage }),
+        body: JSON.stringify({ ...depthTarget, nativeLanguage, studyLanguage }),
       });
       if (!res.ok || !res.body) throw new Error('Stream failed');
 
@@ -201,11 +204,13 @@ export default function Home() {
     const doneRef = { current: false };
     let canceled = false;
 
+    const examplesTarget = getDepthTarget(core, studyLanguage);
+
     try {
       const res = await fetch('/api/explain/examples-stream', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ term: core.term, termLanguage: core.termLanguage, nativeLanguage, studyLanguage }),
+        body: JSON.stringify({ ...examplesTarget, nativeLanguage, studyLanguage }),
       });
       if (!res.ok || !res.body) throw new Error('Stream failed');
 

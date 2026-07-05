@@ -11,8 +11,8 @@ const BASE_URL = (process.env.EXPO_PUBLIC_API_BASE_URL ?? '').replace(/\/$/, '')
 export const getTermExplanation = (term: string, nativeLanguage?: string, context?: string) =>
   _explain(term, nativeLanguage, context, BASE_URL);
 
-export const getTermDepth = (term: string, termLanguage: 'Korean' | 'English', nativeLanguage?: string) =>
+export const getTermDepth = (term: string, termLanguage: string, nativeLanguage?: string) =>
   _depth(term, termLanguage, nativeLanguage, BASE_URL);
 
-export const getTermExamples = (term: string, termLanguage: 'Korean' | 'English', nativeLanguage?: string) =>
+export const getTermExamples = (term: string, termLanguage: string, nativeLanguage?: string) =>
   _examples(term, termLanguage, nativeLanguage, BASE_URL);
