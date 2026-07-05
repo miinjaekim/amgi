@@ -30,9 +30,11 @@ export async function GET(req: NextRequest) {
       ? '"gender": "en" | "ett" | null'
       : studyLanguage === 'French'
         ? '"gender": "le" | "la" | null'
-        : studyLanguage === 'Korean'
-          ? '"formality": "Casual | Standard | Formal | Honorific | Slang"'
-          : null;
+        : studyLanguage === 'Japanese'
+          ? '"furigana": "reading in hiragana if the word contains kanji" | null'
+          : studyLanguage === 'Korean'
+            ? '"formality": "Casual | Standard | Formal | Honorific | Slang"'
+            : null;
 
   const translationLine =
     studyLanguage === 'English'

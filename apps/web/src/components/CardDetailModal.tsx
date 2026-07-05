@@ -51,6 +51,11 @@ export default function CardDetailModal({ card, nativeLanguage, onClose }: Props
                   {card.gender}
                 </span>
               )}
+              {card.furigana && (
+                <span className="px-2 py-0.5 text-xs rounded-full border" style={{ borderColor: 'var(--color-muted)', color: 'var(--color-muted)' }}>
+                  {card.furigana}
+                </span>
+              )}
             </div>
             <p className="text-base mt-1" style={{ color: 'var(--color-text)' }}>{getBackSide(card)}</p>
           </div>

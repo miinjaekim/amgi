@@ -24,6 +24,7 @@ const EXAMPLE_TERMS: Record<string, string[]> = {
   Swedish: ['lagom', 'fika', 'mysig', 'serendipity', 'lagstiftning'],
   English: ['serendipity', '아쉽다', 'procrastinate', '답답하다', 'nuance'],
   French: ['dépaysement', 'flâner', 'retrouvailles', 'longing', 'terroir'],
+  Japanese: ['木漏れ日', '積ん読', 'nostalgia', 'awkward', '侘寂'],
 };
 
 function animateText(
@@ -407,6 +408,11 @@ export default function Home() {
             {core.gender && (
               <span className="px-2 py-0.5 text-xs rounded-full border border-[var(--color-muted)] text-[var(--color-muted)]">
                 {core.gender}
+              </span>
+            )}
+            {core.furigana && (
+              <span className="px-2 py-0.5 text-xs rounded-full border border-[var(--color-muted)] text-[var(--color-muted)]">
+                {core.furigana}
               </span>
             )}
           </div>

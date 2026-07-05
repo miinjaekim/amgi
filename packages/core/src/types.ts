@@ -1,4 +1,4 @@
-export type StudyLanguage = 'Korean' | 'Swedish' | 'English' | 'French';
+export type StudyLanguage = 'Korean' | 'Swedish' | 'English' | 'French' | 'Japanese';
 
 // i18n keys used for review directions/prompts — must exist in i18n.ts
 export type DirectionLabelKey =
@@ -7,17 +7,21 @@ export type DirectionLabelKey =
   | 'directionSwedishToEnglish'
   | 'directionEnglishToSwedish'
   | 'directionFrenchToEnglish'
-  | 'directionEnglishToFrench';
+  | 'directionEnglishToFrench'
+  | 'directionJapaneseToEnglish'
+  | 'directionEnglishToJapanese';
 export type DirectionPromptKey =
   | 'promptKoreanToEnglish'
   | 'promptEnglishToKorean'
   | 'promptSwedishToEnglish'
   | 'promptEnglishToSwedish'
   | 'promptFrenchToEnglish'
-  | 'promptEnglishToFrench';
-export type FieldLabelKey = 'labelKorean' | 'labelEnglish' | 'labelSwedish' | 'labelFrench';
+  | 'promptEnglishToFrench'
+  | 'promptJapaneseToEnglish'
+  | 'promptEnglishToJapanese';
+export type FieldLabelKey = 'labelKorean' | 'labelEnglish' | 'labelSwedish' | 'labelFrench' | 'labelJapanese';
 
-export type CardSideField = 'korean' | 'swedish' | 'english' | 'french';
+export type CardSideField = 'korean' | 'swedish' | 'english' | 'french' | 'japanese';
 
 /**
  * Per-study-language configuration. Adding a language means adding an entry
@@ -92,6 +96,21 @@ export const STUDY_LANGUAGE_CONFIGS: Record<StudyLanguage, StudyLanguageConfig> 
     promptFrontToBackKey: 'promptFrenchToEnglish',
     promptBackToFrontKey: 'promptEnglishToFrench',
   },
+  Japanese: {
+    code: 'Japanese',
+    label: 'Japanese',
+    labelNative: '日本語',
+    collection: 'cards_japanese',
+    studyField: 'japanese',
+    backField: 'english',
+    backLanguage: 'English',
+    studyLabelKey: 'labelJapanese',
+    backLabelKey: 'labelEnglish',
+    directionFrontToBackKey: 'directionJapaneseToEnglish',
+    directionBackToFrontKey: 'directionEnglishToJapanese',
+    promptFrontToBackKey: 'promptJapaneseToEnglish',
+    promptBackToFrontKey: 'promptEnglishToJapanese',
+  },
   // English study pairs with Korean — the only non-English native language
   // supported today. A native-Korean learner's card back is Korean.
   English: {
@@ -120,19 +139,22 @@ export interface ExamplePair {
   korean?: string;
   swedish?: string;
   french?: string;
+  japanese?: string;
   english: string;
 }
 
 export interface TermCore {
   term: string;
-  termLanguage: 'Korean' | 'English' | 'Swedish' | 'French';
+  termLanguage: 'Korean' | 'English' | 'Swedish' | 'French' | 'Japanese';
   korean?: string;
   swedish?: string;
   french?: string;
+  japanese?: string;
   english: string;
   translation?: string;
   formality?: string;
   gender?: string; // grammatical gender: Swedish 'en'/'ett', French 'le'/'la'
+  furigana?: string; // Japanese kana reading, present when the term contains kanji
   briefDefinition?: string;
 }
 
@@ -228,7 +250,7 @@ export function getExampleSides(
  * they already understand.
  */
 export function getDepthTarget(
-  core: Pick<TermCore, 'term' | 'termLanguage' | 'korean' | 'swedish' | 'french' | 'english'>,
+  core: Pick<TermCore, 'term' | 'termLanguage' | 'korean' | 'swedish' | 'french' | 'japanese' | 'english'>,
   studyLanguage: StudyLanguage = 'Korean'
 ): { term: string; termLanguage: string } {
   if (core.termLanguage !== studyLanguage) {
@@ -245,7 +267,8 @@ export interface WordOfTheDay {
   korean?: string; // translation side for English study
   briefDefinition?: string;
   formality?: string; // Korean
-  gender?: string; // Swedish
+  gender?: string; // Swedish/French
+  furigana?: string; // Japanese
 }
 
 // User types

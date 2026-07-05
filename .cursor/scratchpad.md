@@ -105,7 +105,12 @@ function mapDocToFlashcard(doc): AnyFlashcard {
 
 - `cards` — Korean deck (existing, untouched)
 - `cards_swedish` — Swedish deck
+- `cards_english` — English deck (native-Korean learners; english study side, korean back)
+- `cards_french` — French deck
+- `cards_japanese` — Japanese deck
 - Future languages follow the same `cards_{language}` pattern
+
+**`STUDY_LANGUAGE_CONFIGS` registry** (`packages/core/src/types.ts`): per-language config — collection name, study/back field names, back language, and i18n keys for side labels, review-direction chips, and question prompts. UI and services look everything up through `getStudyLanguageConfig()`; adding a language = one registry entry + an `/api/explain` prompt branch + i18n keys (depth/examples routes are already generic).
 
 `getCardsCollection(studyLanguage)` routes to the correct collection. Firestore security rules must be added manually per collection (no wildcard support). Composite index on `archived + createdAt` required per collection — Firebase provides a direct creation link on the first query error.
 
@@ -140,21 +145,33 @@ function mapDocToFlashcard(doc): AnyFlashcard {
 
 ### In Progress
 
-Nothing currently — `main` is clean, last shipped work was Swedish gender support above.
+Stacked branch chain awaiting review/merge (each branch is based on the previous one — merge in order):
+
+1. `fix/localized-disambiguation` — disambiguation labels/hints now written in `nativeLanguage`
+2. `fix/dig-deeper-target` — new `getDepthTarget()` in `@amgi/core`; depth/examples always elaborate the study-language word (web + mobile)
+3. `feat/hanja-huneum` — hanja prompts include the 훈음 reading per character (e.g. 水 → "물 수")
+4. `feat/word-of-the-day` — Gemini-generated daily term on the Learn empty state; `GET /api/word-of-the-day` cached at the CDN (`s-maxage=86400`) so all users share one call per language per day
+5. `feat/goal-vocab-lists` — Import modal asks why you're learning; `POST /api/vocab-list` generates a ~15-word starter list that feeds the existing bulk import flow
+6. `feat/english-study-language` — English study for native-Korean learners (`cards_english`, english study side / korean back); introduces the `STUDY_LANGUAGE_CONFIGS` registry in `@amgi/core` (collection, study/back fields, i18n keys) that replaced the scattered `isSwedish` conditionals
+7. `feat/french` — `cards_french`, le/la gender, French prompts
+8. `feat/japanese` — `cards_japanese`, furigana field + badge, kana/kanji script detection, Japanese prompts (politeness levels still TBD)
+
+**Manual Firebase steps before the new languages go live:** add security rules for `cards_english`, `cards_french`, `cards_japanese` and their `archived + createdAt` composite indexes (Firebase links them on first query error).
 
 ### Known Issues
 
-- [ ] **Ambiguous term options always shown in English** — when a term has multiple meanings, the disambiguation list shows each meaning's definition in English regardless of the user's native language. A beginner who doesn't know enough English can't tell the options apart. Definitions should localize to `nativeLanguage`.
-- [ ] **"Dig deeper" targets the wrong word when term language = native language** — e.g. native-English speaker studying Korean enters the term in English; depth explanation elaborates on the English word (already understood) instead of deepening the Korean translation. Same issue in reverse (native Korean studying English, enters the term in Korean). Root cause: depth logic doesn't distinguish `termLanguage` from `studyLanguage`/`nativeLanguage`.
+None currently tracked — both previous issues (English-only disambiguation options; "dig deeper" targeting the already-understood word) are fixed on the branch chain above.
 
 ### Backlog
 
-- [ ] **Word of the day** — daily featured term on Learn screen. Curated list vs. Gemini-generated? Pairs naturally with shared term cache.
-- [ ] **Goal-based vocab lists** — ask why user is learning, generate a starter deck. Feeds into bulk import.
-- [ ] **English as a study language** — currently only Korean and Swedish. Needed to fix the "dig deeper" issue above symmetrically (native Korean speaker learning English) — learning Korean-with-English-native and learning English-with-Korean-native are distinct card types/prompts, not mirror images.
-- [ ] **French support** — new `cards_french` collection + French-specific card type and Gemini prompts, following the `feat/swedish` pattern (gendered nouns, formality equivalents TBD).
-- [ ] **Japanese support** — new `cards_japanese` collection + Japanese-specific card type and Gemini prompts, following the `feat/swedish` pattern (kanji/furigana, politeness levels TBD).
-- [ ] **Hanja prompt: add Korean 훈음 (hun-eum) reading per character** — hanja breakdown currently shows each character with just an English gloss (e.g. "葛藤: 갈 (kudzu vine) + 등 (wisteria vine) → entanglement, conflict"). Add the traditional Korean hun-eum ("meaning + sound") reading per character too, e.g. 水 → "물 수", so a learner who already knows the English meaning also learns how the character is named in Korean. Affects both `/api/explain/depth` and `/api/explain/depth-stream` hanja prompts.
+- [x] **Word of the day** — shipped on `feat/word-of-the-day` (Gemini-generated, CDN-cached daily per language)
+- [x] **Goal-based vocab lists** — shipped on `feat/goal-vocab-lists`
+- [x] **English as a study language** — shipped on `feat/english-study-language`
+- [x] **French support** — shipped on `feat/french` (formality/register equivalents still TBD)
+- [x] **Japanese support** — shipped on `feat/japanese` (kanji/furigana done; politeness levels still TBD)
+- [x] **Hanja prompt: add Korean 훈음 (hun-eum) reading per character** — shipped on `feat/hanja-huneum`
+- [ ] **Japanese kanji breakdown section** — depth for Japanese currently uses the generic (no-hanja) prompt; a per-character kanji section like Korean's hanja breakdown would need a new stream marker + parser support.
+- [ ] **Mobile parity** — mobile app is still Korean-only: no study-language switcher, word of the day, or goal-based lists.
 
 ### Needs Clarification
 

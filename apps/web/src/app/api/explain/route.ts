@@ -9,6 +9,11 @@ function detectKorean(term: string): boolean {
   return /[가-힣ᄀ-ᇿ㄰-㆏]/.test(term);
 }
 
+function detectJapanese(term: string): boolean {
+  // Hiragana, katakana, or CJK ideographs (kanji)
+  return /[぀-ヿ一-鿿]/.test(term);
+}
+
 export async function POST(req: NextRequest) {
   const { term, nativeLanguage = 'English', context, studyLanguage = 'Korean' } = await req.json();
 
@@ -154,6 +159,72 @@ IMPORTANT for the non-ambiguous case:
 - "english" must always be written in English
 - Both should be the single best translation. Never list synonyms with semicolons or slashes.
 - "gender": if the French term is a noun, set to "le" or "la". Otherwise set to null.
+- "briefDefinition" must be a single sentence defining the core meaning. No examples, no cultural context.`;
+    }
+  } else if (studyLanguage === 'Japanese') {
+    // Japanese: kana/kanji are script-detectable
+    const termLanguage = detectJapanese(term) ? 'Japanese' : 'English';
+
+    if (context) {
+      prompt = `Provide a concise translation for the term "${term}" with this context: "${context}".
+
+IMPORTANT: The "japanese" and "english" fields must ALWAYS be in their respective languages:
+- "japanese" must always be the Japanese word or phrase written the way it is naturally written (kanji where usual)
+- "english" must always be the English word or phrase written in English
+- Both fields should use the single best translation. Only use 2-3 words if one word is genuinely insufficient. Never list synonyms with semicolons or slashes.
+- "furigana": if "japanese" contains kanji, give its full reading in hiragana. Otherwise set to null.
+
+For "briefDefinition", write a single clear sentence defining the term in ${nativeLanguage}. No examples, no cultural context — just the core meaning.
+
+Respond with only this JSON:
+{
+  "term": "${term}",
+  "termLanguage": "${termLanguage}",
+  "japanese": "Japanese word/phrase",
+  "english": "English word/phrase",
+  "furigana": "reading in hiragana" | null,
+  "briefDefinition": "one-sentence definition"
+}`;
+    } else {
+      prompt = `You are a language learning assistant for Japanese-English learners.
+
+Given the term "${term}", determine whether it has multiple significantly different meanings that would confuse a language learner.
+
+A term is ambiguous when it has 2 or more distinct common meanings that lead to meaningfully different translations or usage contexts (e.g., Japanese はし can mean bridge or chopsticks).
+
+A term is NOT ambiguous when:
+- It has one clear primary meaning
+- Secondary meanings are rare or archaic
+- The meanings are closely related variants of the same concept
+
+If AMBIGUOUS, respond with only this JSON:
+{
+  "ambiguous": true,
+  "term": "${term}",
+  "termLanguage": "${termLanguage}",
+  "meanings": [
+    { "label": "short label (3-6 words max)", "hint": "one sentence clarifying this meaning" },
+    { "label": "...", "hint": "..." }
+  ]
+}
+
+Every "label" and "hint" must be written in ${nativeLanguage} — the user may not understand any other language.
+
+If NOT ambiguous, respond with only this JSON:
+{
+  "term": "${term}",
+  "termLanguage": "${termLanguage}",
+  "japanese": "Japanese word/phrase",
+  "english": "English word/phrase",
+  "furigana": "reading in hiragana" | null,
+  "briefDefinition": "one-sentence definition in ${nativeLanguage}"
+}
+
+IMPORTANT for the non-ambiguous case:
+- "japanese" must always be written the way it is naturally written in Japanese (kanji where usual)
+- "english" must always be written in English
+- Both should be the single best translation. Only use 2-3 words if truly necessary. Never list synonyms with semicolons or slashes.
+- "furigana": if "japanese" contains kanji, give its full reading in hiragana. Otherwise null.
 - "briefDefinition" must be a single sentence defining the core meaning. No examples, no cultural context.`;
     }
   } else if (studyLanguage === 'English') {

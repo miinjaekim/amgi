@@ -496,11 +496,18 @@ export default function ReviewPage() {
                             <div className="text-lg mb-3 text-[var(--color-text)] font-semibold">{getBackSide(currentReview.card)}</div>
                           )}
 
-                          {currentReview.card.gender && (
-                            <div className="mb-3">
-                              <span className="px-2 py-0.5 text-xs rounded-full border border-[var(--color-muted)] text-[var(--color-muted)]">
-                                {currentReview.card.gender}
-                              </span>
+                          {(currentReview.card.gender || currentReview.card.furigana) && (
+                            <div className="mb-3 flex gap-2 flex-wrap">
+                              {currentReview.card.gender && (
+                                <span className="px-2 py-0.5 text-xs rounded-full border border-[var(--color-muted)] text-[var(--color-muted)]">
+                                  {currentReview.card.gender}
+                                </span>
+                              )}
+                              {currentReview.card.furigana && (
+                                <span className="px-2 py-0.5 text-xs rounded-full border border-[var(--color-muted)] text-[var(--color-muted)]">
+                                  {currentReview.card.furigana}
+                                </span>
+                              )}
                             </div>
                           )}
 
@@ -578,11 +585,18 @@ export default function ReviewPage() {
                         <>
                           <div className="font-semibold text-2xl mb-3 text-[var(--color-highlight)] mt-4">{getStudySide(currentReview.card)}</div>
 
-                          {currentReview.card.gender && (
-                            <div className="mb-3">
-                              <span className="px-2 py-0.5 text-xs rounded-full border border-[var(--color-muted)] text-[var(--color-muted)]">
-                                {currentReview.card.gender}
-                              </span>
+                          {(currentReview.card.gender || currentReview.card.furigana) && (
+                            <div className="mb-3 flex gap-2 flex-wrap">
+                              {currentReview.card.gender && (
+                                <span className="px-2 py-0.5 text-xs rounded-full border border-[var(--color-muted)] text-[var(--color-muted)]">
+                                  {currentReview.card.gender}
+                                </span>
+                              )}
+                              {currentReview.card.furigana && (
+                                <span className="px-2 py-0.5 text-xs rounded-full border border-[var(--color-muted)] text-[var(--color-muted)]">
+                                  {currentReview.card.furigana}
+                                </span>
+                              )}
                             </div>
                           )}
 
