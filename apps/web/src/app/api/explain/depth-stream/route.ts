@@ -37,7 +37,7 @@ NOTES:
 Write all explanations in ${nativeLanguage}.
 
 - Definition: 2-3 sentences max. Add what the one-liner misses: connotation, nuance, how it differs from near-synonyms. Use **bold** for the single most important word or phrase — the nuance a learner must not miss. No padding.
-- Hanja: if the term is Korean and has meaningful hanja roots, provide the breakdown (e.g. "葛藤: 갈 (kudzu vine) + 등 (wisteria vine) → entanglement, conflict"). Otherwise write "none".
+- Hanja: if the term is Korean and has meaningful hanja roots, provide the breakdown. For each character include its traditional Korean hun-eum (훈음) reading — the native-Korean meaning plus the sound, e.g. 水 is "물 수" — alongside the English gloss (e.g. "葛藤: 葛 갈 (칡 갈 — kudzu vine) + 藤 등 (등나무 등 — wisteria vine) → entanglement, conflict"). Otherwise write "none".
 - Notes: what a learner actually needs to know — a cultural nuance, register trap, or common mistake. If there are multiple distinct points, use a short bullet list. Bold the single most critical point. Skip ("none") if there's nothing genuinely useful to add.
 
 Respond in exactly this format with no extra text:
