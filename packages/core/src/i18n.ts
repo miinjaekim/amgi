@@ -80,6 +80,7 @@ const translations = {
     tagline: 'Look up any word or phrase.',
     taglineSubtitle: 'Get an instant AI-powered explanation, then save it as a flashcard to review with spaced repetition.',
     exampleTermsLabel: 'Try:',
+    wordOfTheDay: 'Word of the day',
     // Depth / examples errors
     errorLoadDepth: 'Failed to load definition. Please try again.',
     errorLoadExamples: 'Failed to load examples. Please try again.',
@@ -200,6 +201,7 @@ const translations = {
     tagline: '단어나 표현을 검색해보세요.',
     taglineSubtitle: 'AI로 즉각적인 설명을 받고, 플래시카드로 저장해 간격 반복 학습을 시작하세요.',
     exampleTermsLabel: '예시:',
+    wordOfTheDay: '오늘의 단어',
     // Depth / examples errors
     errorLoadDepth: '정의를 불러오지 못했습니다. 다시 시도해주세요.',
     errorLoadExamples: '예문을 불러오지 못했습니다. 다시 시도해주세요.',

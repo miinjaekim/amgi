@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   getTermExplanation,
   getDepthTarget,
@@ -11,6 +11,7 @@ import {
 } from '@/services/gemini';
 import Markdown from '@/components/Markdown';
 import { saveFlashcardToFirestore, Flashcard } from '@/services/firestore';
+import type { WordOfTheDay } from '@amgi/core';
 import { useUser } from '@/components/UserContext';
 import { t } from '@/lib/i18n';
 import SaveFlashcardModal from '@/components/SaveFlashcardModal';
@@ -98,6 +99,20 @@ export default function Home() {
   const [saving, setSaving] = useState(false);
   const [showContextInput, setShowContextInput] = useState(false);
   const [contextInput, setContextInput] = useState('');
+  const [wordOfTheDay, setWordOfTheDay] = useState<WordOfTheDay | null>(null);
+
+  useEffect(() => {
+    if (nativeLanguage === undefined) return; // preferences still loading
+    let cancelled = false;
+    setWordOfTheDay(null);
+    const date = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD, local timezone
+    const params = new URLSearchParams({ date, studyLanguage, nativeLanguage: nativeLanguage ?? 'English' });
+    fetch(`/api/word-of-the-day?${params}`)
+      .then(res => (res.ok ? res.json() : null))
+      .then(data => { if (!cancelled && data?.term) setWordOfTheDay(data); })
+      .catch(() => {}); // non-essential — hide on failure
+    return () => { cancelled = true; };
+  }, [studyLanguage, nativeLanguage]);
 
   const resolveExplanation = async (termValue: string, context?: string) => {
     setLoading(true);
@@ -316,6 +331,23 @@ export default function Home() {
         <div className="mt-12 text-center">
           <p className="text-[var(--color-text)] text-lg font-semibold mb-2">{t(nativeLanguage, 'tagline')}</p>
           <p className="text-[var(--color-text)] opacity-60 text-sm mb-8 max-w-md mx-auto">{t(nativeLanguage, 'taglineSubtitle')}</p>
+          {wordOfTheDay && (
+            <button
+              onClick={() => { setTerm(wordOfTheDay.term); resolveExplanation(wordOfTheDay.term); }}
+              className="block w-full max-w-md mx-auto mb-8 p-4 rounded-xl bg-[var(--color-surface)] border border-[var(--color-muted)] text-left hover:border-[var(--color-highlight)] transition-colors"
+            >
+              <div className="text-xs uppercase tracking-wider text-[var(--color-muted)] mb-1">
+                {t(nativeLanguage, 'wordOfTheDay')}
+              </div>
+              <div className="flex items-baseline gap-3 flex-wrap">
+                <span className="text-xl font-bold text-[var(--color-highlight)]">{wordOfTheDay.term}</span>
+                <span className="text-[var(--color-text)] opacity-80">{wordOfTheDay.english}</span>
+              </div>
+              {wordOfTheDay.briefDefinition && (
+                <p className="mt-1 text-sm text-[var(--color-text)] opacity-60">{wordOfTheDay.briefDefinition}</p>
+              )}
+            </button>
+          )}
           <div className="flex flex-wrap gap-2 justify-center">
             <span className="text-[var(--color-muted)] text-sm mr-1">{t(nativeLanguage, 'exampleTermsLabel')}</span>
             {exampleTerms.map((example) => (

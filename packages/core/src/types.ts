@@ -98,6 +98,15 @@ export function getDepthTarget(
   return { term: core.term, termLanguage: core.termLanguage };
 }
 
+// Word of the day — daily featured term on the Learn screen
+export interface WordOfTheDay {
+  term: string; // study-language word
+  english: string;
+  briefDefinition?: string;
+  formality?: string; // Korean
+  gender?: string; // Swedish
+}
+
 // User types
 export interface UserPreferences {
   nativeLanguage: string;
