@@ -149,16 +149,21 @@ Nothing currently — `main` is clean, last shipped work was Swedish gender supp
 
 ### Backlog
 
-- [ ] **Personalised explanation preferences** — emphasis knobs (etymology, cultural context, example-heavy). Store in `users/{uid}`; include in Gemini prompt.
 - [ ] **Word of the day** — daily featured term on Learn screen. Curated list vs. Gemini-generated? Pairs naturally with shared term cache.
 - [ ] **Goal-based vocab lists** — ask why user is learning, generate a starter deck. Feeds into bulk import.
-- [ ] **Push notifications** — daily review reminders. Post-launch.
-- [ ] **Shared term cache** — `terms` collection keyed by normalized term + language. Reduces cost; defer until traffic justifies it.
-- [ ] **Conversation practice** — on hold. Transcription + per-participant feedback. MVP is end-of-conversation feedback on a recorded file.
 - [ ] **English as a study language** — currently only Korean and Swedish. Needed to fix the "dig deeper" issue above symmetrically (native Korean speaker learning English) — learning Korean-with-English-native and learning English-with-Korean-native are distinct card types/prompts, not mirror images.
 - [ ] **French support** — new `cards_french` collection + French-specific card type and Gemini prompts, following the `feat/swedish` pattern (gendered nouns, formality equivalents TBD).
 - [ ] **Japanese support** — new `cards_japanese` collection + Japanese-specific card type and Gemini prompts, following the `feat/swedish` pattern (kanji/furigana, politeness levels TBD).
 - [ ] **Hanja prompt: add Korean 훈음 (hun-eum) reading per character** — hanja breakdown currently shows each character with just an English gloss (e.g. "葛藤: 갈 (kudzu vine) + 등 (wisteria vine) → entanglement, conflict"). Add the traditional Korean hun-eum ("meaning + sound") reading per character too, e.g. 水 → "물 수", so a learner who already knows the English meaning also learns how the character is named in Korean. Affects both `/api/explain/depth` and `/api/explain/depth-stream` hanja prompts.
+
+### Needs Clarification
+
+Ideas worth keeping but not yet scoped — needs more brainstorming/clarification before moving to Backlog.
+
+- [ ] **Personalised explanation preferences** — emphasis knobs (etymology, cultural context, example-heavy). Store in `users/{uid}`; include in Gemini prompt.
+- [ ] **Push notifications** — daily review reminders. Post-launch.
+- [ ] **Shared term cache** — `terms` collection keyed by normalized term + language. Reduces cost; defer until traffic justifies it.
+- [ ] **Conversation practice** — on hold. Transcription + per-participant feedback. MVP is end-of-conversation feedback on a recorded file.
 
 ---
 
