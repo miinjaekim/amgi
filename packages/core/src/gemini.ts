@@ -1,4 +1,26 @@
 import type { ExamplePair, ExplainResult, TermDepth, StudyLanguage } from './types';
+import { getExampleSides } from './types';
+
+/**
+ * Parses NDJSON example lines from /api/explain/examples-stream.
+ * Accepts a pair only when both the study-language side and the back side
+ * (per STUDY_LANGUAGE_CONFIGS) are present — tolerant of partial lines
+ * while the stream is still arriving.
+ */
+export function parseStreamedExamples(text: string, studyLanguage: StudyLanguage = 'Korean'): ExamplePair[] {
+  return text
+    .split('\n')
+    .map(l => l.trim())
+    .filter(Boolean)
+    .flatMap(line => {
+      try {
+        const parsed = JSON.parse(line);
+        const sides = getExampleSides(parsed, studyLanguage);
+        if (sides.study && sides.back) return [parsed as ExamplePair];
+      } catch {}
+      return [];
+    });
+}
 
 export async function getTermExplanation(
   term: string,
