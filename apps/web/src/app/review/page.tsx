@@ -128,14 +128,17 @@ export default function ReviewPage() {
 
   useEffect(() => { setClientNow(new Date()); }, []);
 
+  // Reload (and exit any in-progress session) when the user or study language
+  // changes — loadCards itself only runs the legacy migration once.
   useEffect(() => {
-    if (user && !migrationComplete) {
-      loadCards();
-    } else if (!user) {
+    if (user) {
+      handleExitReview();
+    } else {
       setUserFlashcards([]);
       setDueCards([]);
     }
-  }, [user, migrationComplete]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, studyLanguage]);
 
   useEffect(() => {
     setNextReviewDate(dueCards.length === 0 ? getEarliestNextReview(userFlashcards) : null);
