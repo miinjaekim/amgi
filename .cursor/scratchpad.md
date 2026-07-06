@@ -142,34 +142,21 @@ function mapDocToFlashcard(doc): AnyFlashcard {
 - **First-time modal** — `LanguageSetupModal` shows for all visitors until native language is set; saves to localStorage + Firestore on sign-in
 - **Swedish support** (`feat/swedish`, merged) — `studyLanguage` stored on card documents; two-step language setup modal (native → study language); study language switcher in header settings; `getCardsCollection` routes Korean → `cards`, Swedish → `cards_swedish`; all CRUD + API routes accept `studyLanguage` and generate Swedish-appropriate Gemini prompts; Firestore security rule for `cards_swedish` added
 - **Swedish noun gender + save fix** (`feat/swedish-gender`, merged 2026-07-04) — `gender?: string` (`'en'` | `'ett'` | absent) added to `TermCore`/`SwedishFlashcard`; gender badge on Learn page, `CardDetailModal`, and review reveal; `saveFlashcardToFirestore` strips `undefined` values before `addDoc` (Firebase v9 throws on explicit `undefined`); `parseStreamedDepth` only includes keys with real values
+- **Known-issue fixes + backlog batch** (PR #31, merged 2026-07-06) — stacked 10-commit chain: localized disambiguation options; "dig deeper" targets the study-language word (`getDepthTarget()`); hanja 훈음 readings; word of the day (CDN-cached `GET /api/word-of-the-day`); goal-based vocab lists (`POST /api/vocab-list` feeding bulk import); English (native-Korean learners), French, and Japanese study languages via the new `STUDY_LANGUAGE_CONFIGS` registry in `@amgi/core`; themed study-language dropdown in header settings. **Manual Firebase steps still pending:** security rules for `cards_english`, `cards_french`, `cards_japanese` + their `archived + createdAt` composite indexes.
 
 ### In Progress
 
-Stacked branch chain awaiting review/merge (each branch is based on the previous one — merge in order):
-
-1. `fix/localized-disambiguation` — disambiguation labels/hints now written in `nativeLanguage`
-2. `fix/dig-deeper-target` — new `getDepthTarget()` in `@amgi/core`; depth/examples always elaborate the study-language word (web + mobile)
-3. `feat/hanja-huneum` — hanja prompts include the 훈음 reading per character (e.g. 水 → "물 수")
-4. `feat/word-of-the-day` — Gemini-generated daily term on the Learn empty state; `GET /api/word-of-the-day` cached at the CDN (`s-maxage=86400`) so all users share one call per language per day
-5. `feat/goal-vocab-lists` — Import modal asks why you're learning; `POST /api/vocab-list` generates a ~15-word starter list that feeds the existing bulk import flow
-6. `feat/english-study-language` — English study for native-Korean learners (`cards_english`, english study side / korean back); introduces the `STUDY_LANGUAGE_CONFIGS` registry in `@amgi/core` (collection, study/back fields, i18n keys) that replaced the scattered `isSwedish` conditionals
-7. `feat/french` — `cards_french`, le/la gender, French prompts
-8. `feat/japanese` — `cards_japanese`, furigana field + badge, kana/kanji script detection, Japanese prompts (politeness levels still TBD)
-
-**Manual Firebase steps before the new languages go live:** add security rules for `cards_english`, `cards_french`, `cards_japanese` and their `archived + createdAt` composite indexes (Firebase links them on first query error).
+Nothing currently — PR #31 merged, `main` is clean.
 
 ### Known Issues
 
-None currently tracked — both previous issues (English-only disambiguation options; "dig deeper" targeting the already-understood word) are fixed on the branch chain above.
+- [ ] **Load Examples broken for French and Japanese** (possibly others). Likely root cause: `parseStreamedExamples` in `apps/web/src/app/page.tsx` only accepts lines where `(parsed.korean || parsed.swedish) && parsed.english` — French pairs are `{french, english}` and Japanese are `{japanese, english}`, so every line is filtered out. English study passes only because its pairs contain `korean`. Fix: accept any pair whose study-side field (per `STUDY_LANGUAGE_CONFIGS`) is present, e.g. via `getExampleSides`. Audit `isExamplePairArray` in review page / `CardDetailModal` for the same assumption while at it.
 
 ### Backlog
 
-- [x] **Word of the day** — shipped on `feat/word-of-the-day` (Gemini-generated, CDN-cached daily per language)
-- [x] **Goal-based vocab lists** — shipped on `feat/goal-vocab-lists`
-- [x] **English as a study language** — shipped on `feat/english-study-language`
-- [x] **French support** — shipped on `feat/french` (formality/register equivalents still TBD)
-- [x] **Japanese support** — shipped on `feat/japanese` (kanji/furigana done; politeness levels still TBD)
-- [x] **Hanja prompt: add Korean 훈음 (hun-eum) reading per character** — shipped on `feat/hanja-huneum`
+- [ ] **Goal-based vocab lists: handle ambiguity + rethink placement** — two problems: (1) terms that resolve as ambiguous are currently just skipped ("ambiguous — skipped"); need a flow to pick a meaning (reuse the disambiguation picker) or auto-pick the goal-relevant meaning by passing the goal as context to `/api/explain`. (2) Generation shouldn't live inside the Import button — reusing the import pipeline is right, but the entry point deserves its own home (e.g. Learn empty state, onboarding after language setup, or a dedicated "Starter deck" surface). Decide placement before building.
+- [ ] **Side navigation bar** — move the top nav to a left sidebar like Claude/Instagram/ChatGPT web apps. Rework `Header`/`BottomNav` layout; decide what happens on mobile web (keep bottom nav?) and where streak/settings live in the new layout.
+- [ ] **Privacy & data transparency** — reassure users about how their data is used/protected. Candidate work: privacy policy page (what's stored: cards, prefs, streaks in Firestore; terms sent to Gemini for explanation only), audit Firestore security rules per collection, data export already exists (CSV/Anki) — add account/data deletion, and a short "your data" blurb in settings or onboarding. Ties into the "Own your learning" design principle.
 - [ ] **Japanese kanji breakdown section** — depth for Japanese currently uses the generic (no-hanja) prompt; a per-character kanji section like Korean's hanja breakdown would need a new stream marker + parser support.
 - [ ] **Mobile parity** — mobile app is still Korean-only: no study-language switcher, word of the day, or goal-based lists.
 
@@ -177,6 +164,7 @@ None currently tracked — both previous issues (English-only disambiguation opt
 
 Ideas worth keeping but not yet scoped — needs more brainstorming/clarification before moving to Backlog.
 
+- [ ] **Rename the app** — "Amgi" (암기, rote memorization) may not be the right name anymore, especially as the app grows beyond Korean into a multi-language learning tool. Needs brainstorming: criteria (pronounceable across languages, domain availability, not memorization-negative connotation), and a migration checklist if renamed (domain, app metadata, logo, Firebase project naming stays internal).
 - [ ] **Personalised explanation preferences** — emphasis knobs (etymology, cultural context, example-heavy). Store in `users/{uid}`; include in Gemini prompt.
 - [ ] **Push notifications** — daily review reminders. Post-launch.
 - [ ] **Shared term cache** — `terms` collection keyed by normalized term + language. Reduces cost; defer until traffic justifies it.
