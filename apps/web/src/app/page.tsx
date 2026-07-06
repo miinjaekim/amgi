@@ -11,7 +11,7 @@ import {
 } from '@/services/gemini';
 import Markdown from '@/components/Markdown';
 import { saveFlashcardToFirestore, Flashcard } from '@/services/firestore';
-import { getExampleSides, getStudyLanguageConfig } from '@amgi/core';
+import { getExampleSides, getStudyLanguageConfig, parseStreamedExamples } from '@amgi/core';
 import type { WordOfTheDay } from '@amgi/core';
 import { useUser } from '@/components/UserContext';
 import { t } from '@/lib/i18n';
@@ -70,19 +70,6 @@ function parseStreamedDepth(text: string): TermDepth {
   return result;
 }
 
-function parseStreamedExamples(text: string): ExamplePair[] {
-  return text
-    .split('\n')
-    .map(l => l.trim())
-    .filter(Boolean)
-    .flatMap(line => {
-      try {
-        const parsed = JSON.parse(line);
-        if ((parsed.korean || parsed.swedish) && parsed.english) return [parsed as ExamplePair];
-      } catch {}
-      return [];
-    });
-}
 
 export default function Home() {
   const { user, nativeLanguage, studyLanguage, handleSignIn } = useUser();
@@ -242,7 +229,7 @@ export default function Home() {
         doneRef,
         (slice) => {
           if (canceled) return;
-          const parsed = parseStreamedExamples(slice);
+          const parsed = parseStreamedExamples(slice, studyLanguage);
           if (parsed.length > 0) setExamples(parsed);
         },
         () => { if (!canceled) setStreamingExamples(false); },

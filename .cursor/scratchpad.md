@@ -150,7 +150,7 @@ Nothing currently — PR #31 merged, `main` is clean.
 
 ### Known Issues
 
-- [ ] **Load Examples broken for French and Japanese** (possibly others). Likely root cause: `parseStreamedExamples` in `apps/web/src/app/page.tsx` only accepts lines where `(parsed.korean || parsed.swedish) && parsed.english` — French pairs are `{french, english}` and Japanese are `{japanese, english}`, so every line is filtered out. English study passes only because its pairs contain `korean`. Fix: accept any pair whose study-side field (per `STUDY_LANGUAGE_CONFIGS`) is present, e.g. via `getExampleSides`. Audit `isExamplePairArray` in review page / `CardDetailModal` for the same assumption while at it.
+- [ ] **Word of the day changes on every page reload** — the CDN `s-maxage=86400` cache only exists on deployed Vercel (nothing caches in local dev, and even prod caching is per-region and evictable), so each reload can hit Gemini fresh at temperature 1.0 and pick a new word. Needs planning before building; candidate approaches: (a) client-side: persist the first pick in `localStorage` keyed by `date + studyLanguage` — cheap, but per-device, not shared; (b) shared: first client to generate writes a `wordOfTheDay/{date}_{language}` doc to Firestore, later clients read it — consistent for all users, needs a security rule + benign write race; (c) deterministic: temperature 0 with the date as seed in the prompt — no storage, but no guarantee Gemini varies day to day or stays stable within a day. Leaning (b) with (a) as a quick layer, decide when we pick it up.
 
 ### Backlog
 
