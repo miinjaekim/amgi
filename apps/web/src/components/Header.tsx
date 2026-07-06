@@ -5,6 +5,7 @@ import { useUser } from '@/components/UserContext';
 import { useTheme } from '@/components/ThemeContext';
 import { SUPPORTED_NATIVE_LANGUAGES, SUPPORTED_STUDY_LANGUAGES } from '@/services/userPreferences';
 import { t } from '@/lib/i18n';
+import type { StudyLanguage } from '@amgi/core';
 
 const Header: React.FC = () => {
   const { user, authLoading, nativeLanguage, studyLanguage, streak, reviewedToday, setNativeLanguage, setStudyLanguage, handleSignIn, handleSignOut } = useUser();
@@ -128,22 +129,18 @@ const Header: React.FC = () => {
                   <p className="text-xs font-mono uppercase tracking-widest mb-2" style={{ color: 'var(--color-muted)' }}>
                     {t(nativeLanguage, 'settingsStudyLanguage')}
                   </p>
-                  <div className="flex gap-2">
+                  <select
+                    value={studyLanguage}
+                    onChange={(e) => { setStudyLanguage(e.target.value as StudyLanguage); setOpen(false); }}
+                    className="w-full py-2.5 px-3 rounded-lg text-sm font-mono border transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-[var(--color-highlight)]"
+                    style={{ background: 'var(--color-bg)', color: 'var(--color-text)', borderColor: 'var(--color-muted)' }}
+                  >
                     {SUPPORTED_STUDY_LANGUAGES.map((lang) => (
-                      <button
-                        key={lang.code}
-                        onClick={() => { setStudyLanguage(lang.code); setOpen(false); }}
-                        className="flex-1 py-2.5 rounded-lg text-sm font-mono border transition-colors"
-                        style={
-                          studyLanguage === lang.code
-                            ? { background: 'var(--color-highlight)', color: 'var(--color-bg)', borderColor: 'var(--color-highlight)' }
-                            : { background: 'transparent', color: 'var(--color-text)', borderColor: 'var(--color-muted)' }
-                        }
-                      >
-                        {lang.label}
-                      </button>
+                      <option key={lang.code} value={lang.code}>
+                        {lang.label}{lang.labelNative !== lang.label ? ` · ${lang.labelNative}` : ''}
+                      </option>
                     ))}
-                  </div>
+                  </select>
                 </div>
 
                 {/* Native language selector */}
