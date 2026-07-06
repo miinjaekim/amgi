@@ -7,6 +7,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useUser } from '../../src/context/UserContext';
 import { getTermExplanation, getTermDepth, getTermExamples } from '../../src/services/gemini';
+import { getDepthTarget } from '@amgi/core';
 import type { TermCore, TermDepth, TermAmbiguous, ExamplePair } from '../../src/services/gemini';
 import { saveFlashcardToFirestore } from '../../src/services/firestore';
 import type { Flashcard } from '../../src/services/firestore';
@@ -79,7 +80,8 @@ export default function LearnScreen() {
     if (!core) return;
     setLoadingDepth(true);
     try {
-      setDepth(await getTermDepth(core.term, core.termLanguage, nativeLanguage ?? 'English'));
+      const target = getDepthTarget(core);
+      setDepth(await getTermDepth(target.term, target.termLanguage, nativeLanguage ?? 'English'));
     } catch {
       setError(t(nativeLanguage, 'errorLoadDepth'));
     } finally {
@@ -91,7 +93,8 @@ export default function LearnScreen() {
     if (!core) return;
     setLoadingExamples(true);
     try {
-      setExamples(await getTermExamples(core.term, core.termLanguage, nativeLanguage ?? 'English'));
+      const target = getDepthTarget(core);
+      setExamples(await getTermExamples(target.term, target.termLanguage, nativeLanguage ?? 'English'));
     } catch {
       setError(t(nativeLanguage, 'errorLoadExamples'));
     } finally {

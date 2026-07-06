@@ -1,7 +1,8 @@
 'use client';
 import React, { useEffect, useState } from 'react';
 import { useUser } from '@/components/UserContext';
-import { fetchUserFlashcards, Flashcard, ReviewTracking, migrateExistingCards, archiveFlashcard, deleteFlashcard } from '@/services/firestore';
+import { fetchUserFlashcards, getCardsCollection, Flashcard, ReviewTracking, migrateExistingCards, archiveFlashcard, deleteFlashcard } from '@/services/firestore';
+import { getBackSide, getExampleSides, getStudyLanguageConfig } from '@amgi/core';
 import { db } from '@/config/firebase';
 import { doc, updateDoc } from 'firebase/firestore';
 import { getNextReviewData } from '@/services/sm2';
@@ -77,7 +78,7 @@ function shuffle<T>(arr: T[]): T[] {
 }
 
 function isExamplePairArray(arr: unknown[]): arr is ExamplePair[] {
-  return arr.length === 0 || (typeof arr[0] === 'object' && arr[0] !== null && ('korean' in arr[0] || 'swedish' in arr[0]));
+  return arr.length === 0 || (typeof arr[0] === 'object' && arr[0] !== null && ('korean' in arr[0] || 'swedish' in arr[0] || 'english' in arr[0]));
 }
 
 function getEarliestNextReview(cards: Flashcard[]): Date | null {
@@ -103,7 +104,7 @@ function formatRelativeDate(date: Date, lang: string | null | undefined, now: Da
 
 export default function ReviewPage() {
   const { user, nativeLanguage, studyLanguage, recordReview } = useUser();
-  const isSwedish = studyLanguage === 'Swedish';
+  const langConfig = getStudyLanguageConfig(studyLanguage);
   const [userFlashcards, setUserFlashcards] = useState<Flashcard[]>([]);
   const [flashcardsLoading, setFlashcardsLoading] = useState(false);
   const [migrationComplete, setMigrationComplete] = useState(false);
@@ -117,7 +118,7 @@ export default function ReviewPage() {
   const [showDetails, setShowDetails] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [showManage, setShowManage] = useState(false);
-  const [manageEditDraft, setManageEditDraft] = useState<{ studySide: string; english: string } | null>(null);
+  const [manageEditDraft, setManageEditDraft] = useState<{ studySide: string; backSide: string } | null>(null);
   const [manageStatus, setManageStatus] = useState<string | null>(null);
 
   const isOnline = useOnlineStatus();
@@ -220,7 +221,7 @@ export default function ReviewPage() {
     update[`${direction}.nextReview`] = response === 'again' ? new Date() : nextReview;
     update.nextReview = response === 'again' ? new Date() : nextReview;
 
-    const collectionName = isSwedish ? 'cards_swedish' : 'cards';
+    const collectionName = getCardsCollection(studyLanguage);
     // Fire-and-forget: Firestore queues writes offline and syncs when reconnected.
     updateDoc(doc(db, collectionName, card.id), update).catch(err => {
       console.error('Failed to update card scheduling:', err);
@@ -251,10 +252,10 @@ export default function ReviewPage() {
   };
 
   const getStudySide = (card: Flashcard) =>
-    isSwedish ? (card.swedish ?? card.term ?? '') : (card.korean ?? card.term ?? '');
+    card[langConfig.studyField] ?? card.term ?? '';
 
   const handleOpenManage = (card: Flashcard) => {
-    setManageEditDraft({ studySide: getStudySide(card), english: card.english || card.translation || '' });
+    setManageEditDraft({ studySide: getStudySide(card), backSide: getBackSide(card) });
     setManageStatus(null);
     setShowManage(true);
   };
@@ -263,16 +264,16 @@ export default function ReviewPage() {
     if (!manageEditDraft) return;
     const { card } = activeQueue[currentReviewIdx];
     if (!card.id) return;
-    const collectionName = isSwedish ? 'cards_swedish' : 'cards';
-    const studyField = isSwedish ? { swedish: manageEditDraft.studySide } : { korean: manageEditDraft.studySide };
+    const collectionName = getCardsCollection(studyLanguage);
+    const update = {
+      [langConfig.studyField]: manageEditDraft.studySide,
+      [langConfig.backField]: manageEditDraft.backSide,
+    };
     try {
-      await updateDoc(doc(db, collectionName, card.id), {
-        ...studyField,
-        english: manageEditDraft.english,
-      });
+      await updateDoc(doc(db, collectionName, card.id), update);
       setActiveQueue(prev => prev.map((item, i) =>
         i === currentReviewIdx
-          ? { ...item, card: { ...item.card, ...studyField, english: manageEditDraft.english } }
+          ? { ...item, card: { ...item.card, ...update } }
           : item
       ));
       setManageStatus(t(nativeLanguage, 'reviewCardSaved'));
@@ -412,8 +413,8 @@ export default function ReviewPage() {
                     {reviewCardProgressLabel}
                     <span className="ml-2 px-2 py-1 text-sm bg-[var(--color-muted)] rounded-md">
                       {currentReview.direction === 'frontToBack'
-                        ? t(nativeLanguage, isSwedish ? 'directionSwedishToEnglish' : 'directionKoreanToEnglish')
-                        : t(nativeLanguage, isSwedish ? 'directionEnglishToSwedish' : 'directionEnglishToKorean')}
+                        ? t(nativeLanguage, langConfig.directionFrontToBackKey)
+                        : t(nativeLanguage, langConfig.directionBackToFrontKey)}
                     </span>
                   </h2>
                   <button
@@ -429,7 +430,7 @@ export default function ReviewPage() {
                   <div className="mb-4 p-4 rounded-xl border border-[var(--color-muted)] bg-[var(--color-surface)] space-y-3">
                     <div>
                       <label className="block text-xs font-semibold text-[var(--color-muted)] mb-1">
-                        {isSwedish ? 'Swedish' : t(nativeLanguage, 'reviewEditKorean')}
+                        {t(nativeLanguage, langConfig.studyLabelKey)}
                       </label>
                       <input
                         type="text"
@@ -439,11 +440,11 @@ export default function ReviewPage() {
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-[var(--color-muted)] mb-1">{t(nativeLanguage, 'reviewEditEnglish')}</label>
+                      <label className="block text-xs font-semibold text-[var(--color-muted)] mb-1">{t(nativeLanguage, langConfig.backLabelKey)}</label>
                       <input
                         type="text"
-                        value={manageEditDraft.english}
-                        onChange={e => setManageEditDraft(d => d ? { ...d, english: e.target.value } : d)}
+                        value={manageEditDraft.backSide}
+                        onChange={e => setManageEditDraft(d => d ? { ...d, backSide: e.target.value } : d)}
                         className="w-full p-2 rounded-lg bg-[var(--color-bg)] border border-[var(--color-muted)] text-[var(--color-text)] text-sm"
                       />
                     </div>
@@ -491,15 +492,22 @@ export default function ReviewPage() {
 
                       {showAnswer ? (
                         <>
-                          {(currentReview.card.english || currentReview.card.translation) && (
-                            <div className="text-lg mb-3 text-[var(--color-text)] font-semibold">{currentReview.card.english || currentReview.card.translation}</div>
+                          {getBackSide(currentReview.card) && (
+                            <div className="text-lg mb-3 text-[var(--color-text)] font-semibold">{getBackSide(currentReview.card)}</div>
                           )}
 
-                          {currentReview.card.gender && (
-                            <div className="mb-3">
-                              <span className="px-2 py-0.5 text-xs rounded-full border border-[var(--color-muted)] text-[var(--color-muted)]">
-                                {currentReview.card.gender}
-                              </span>
+                          {(currentReview.card.gender || currentReview.card.furigana) && (
+                            <div className="mb-3 flex gap-2 flex-wrap">
+                              {currentReview.card.gender && (
+                                <span className="px-2 py-0.5 text-xs rounded-full border border-[var(--color-muted)] text-[var(--color-muted)]">
+                                  {currentReview.card.gender}
+                                </span>
+                              )}
+                              {currentReview.card.furigana && (
+                                <span className="px-2 py-0.5 text-xs rounded-full border border-[var(--color-muted)] text-[var(--color-muted)]">
+                                  {currentReview.card.furigana}
+                                </span>
+                              )}
                             </div>
                           )}
 
@@ -535,12 +543,15 @@ export default function ReviewPage() {
                                       if (Array.isArray(rawExamples) && rawExamples.length > 0 && typeof rawExamples[0] === 'string') {
                                         return (rawExamples as string[]).map((ex, i) => <li key={i}>{ex}</li>);
                                       } else if (Array.isArray(rawExamples) && isExamplePairArray(rawExamples)) {
-                                        return (rawExamples as ExamplePair[]).map((ex, i) => (
-                                          <li key={i}>
-                                            <div>{ex.korean ?? ex.swedish}</div>
-                                            <div className="text-[var(--color-highlight)] text-sm">{ex.english}</div>
-                                          </li>
-                                        ));
+                                        return (rawExamples as ExamplePair[]).map((ex, i) => {
+                                          const sides = getExampleSides(ex, studyLanguage);
+                                          return (
+                                            <li key={i}>
+                                              <div>{sides.study}</div>
+                                              <div className="text-[var(--color-highlight)] text-sm">{sides.back}</div>
+                                            </li>
+                                          );
+                                        });
                                       } else {
                                         return null;
                                       }
@@ -560,25 +571,32 @@ export default function ReviewPage() {
                         </>
                       ) : (
                         <div className="text-[var(--color-muted)] text-lg mt-4 italic">
-                          {t(nativeLanguage, isSwedish ? 'promptSwedishToEnglish' : 'promptKoreanToEnglish')}
+                          {t(nativeLanguage, langConfig.promptFrontToBackKey)}
                         </div>
                       )}
                     </>
                   ) : (
                     <>
-                      {(currentReview.card.english || currentReview.card.translation) && (
-                        <div className="text-lg mb-2 text-[var(--color-text)]">{currentReview.card.english || currentReview.card.translation}</div>
+                      {getBackSide(currentReview.card) && (
+                        <div className="text-lg mb-2 text-[var(--color-text)]">{getBackSide(currentReview.card)}</div>
                       )}
 
                       {showAnswer ? (
                         <>
                           <div className="font-semibold text-2xl mb-3 text-[var(--color-highlight)] mt-4">{getStudySide(currentReview.card)}</div>
 
-                          {currentReview.card.gender && (
-                            <div className="mb-3">
-                              <span className="px-2 py-0.5 text-xs rounded-full border border-[var(--color-muted)] text-[var(--color-muted)]">
-                                {currentReview.card.gender}
-                              </span>
+                          {(currentReview.card.gender || currentReview.card.furigana) && (
+                            <div className="mb-3 flex gap-2 flex-wrap">
+                              {currentReview.card.gender && (
+                                <span className="px-2 py-0.5 text-xs rounded-full border border-[var(--color-muted)] text-[var(--color-muted)]">
+                                  {currentReview.card.gender}
+                                </span>
+                              )}
+                              {currentReview.card.furigana && (
+                                <span className="px-2 py-0.5 text-xs rounded-full border border-[var(--color-muted)] text-[var(--color-muted)]">
+                                  {currentReview.card.furigana}
+                                </span>
+                              )}
                             </div>
                           )}
 
@@ -614,12 +632,15 @@ export default function ReviewPage() {
                                       if (Array.isArray(rawExamples) && rawExamples.length > 0 && typeof rawExamples[0] === 'string') {
                                         return (rawExamples as string[]).map((ex, i) => <li key={i}>{ex}</li>);
                                       } else if (Array.isArray(rawExamples) && isExamplePairArray(rawExamples)) {
-                                        return (rawExamples as ExamplePair[]).map((ex, i) => (
-                                          <li key={i}>
-                                            <div>{ex.korean ?? ex.swedish}</div>
-                                            <div className="text-[var(--color-highlight)] text-sm">{ex.english}</div>
-                                          </li>
-                                        ));
+                                        return (rawExamples as ExamplePair[]).map((ex, i) => {
+                                          const sides = getExampleSides(ex, studyLanguage);
+                                          return (
+                                            <li key={i}>
+                                              <div>{sides.study}</div>
+                                              <div className="text-[var(--color-highlight)] text-sm">{sides.back}</div>
+                                            </li>
+                                          );
+                                        });
                                       } else {
                                         return null;
                                       }
@@ -639,7 +660,7 @@ export default function ReviewPage() {
                         </>
                       ) : (
                         <div className="text-[var(--color-muted)] text-lg mt-4 italic">
-                          {t(nativeLanguage, isSwedish ? 'promptEnglishToSwedish' : 'promptEnglishToKorean')}
+                          {t(nativeLanguage, langConfig.promptBackToFrontKey)}
                         </div>
                       )}
                     </>
@@ -700,8 +721,8 @@ export default function ReviewPage() {
                     {dir === 'both'
                       ? t(nativeLanguage, 'directionBoth')
                       : dir === 'frontToBack'
-                        ? t(nativeLanguage, isSwedish ? 'directionSwedishToEnglish' : 'directionKoreanToEnglish')
-                        : t(nativeLanguage, isSwedish ? 'directionEnglishToSwedish' : 'directionEnglishToKorean')}
+                        ? t(nativeLanguage, langConfig.directionFrontToBackKey)
+                        : t(nativeLanguage, langConfig.directionBackToFrontKey)}
                   </button>
                 ))}
               </div>

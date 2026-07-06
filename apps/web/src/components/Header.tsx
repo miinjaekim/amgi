@@ -16,6 +16,7 @@ const Header: React.FC = () => {
     { label: t(nativeLanguage, 'navCards'), href: '/cards' },
   ];
   const [open, setOpen] = useState(false);
+  const [langListOpen, setLangListOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -81,7 +82,7 @@ const Header: React.FC = () => {
           )}
           <div className="relative" ref={dropdownRef}>
             <button
-              onClick={() => setOpen((v) => !v)}
+              onClick={() => { setOpen((v) => !v); setLangListOpen(false); }}
               className={`flex items-center gap-2 transition-colors ${
                 user
                   ? 'rounded-lg px-3 py-1.5 border hover:bg-[var(--color-muted)]/20'
@@ -128,22 +129,52 @@ const Header: React.FC = () => {
                   <p className="text-xs font-mono uppercase tracking-widest mb-2" style={{ color: 'var(--color-muted)' }}>
                     {t(nativeLanguage, 'settingsStudyLanguage')}
                   </p>
-                  <div className="flex gap-2">
-                    {SUPPORTED_STUDY_LANGUAGES.map((lang) => (
-                      <button
-                        key={lang.code}
-                        onClick={() => { setStudyLanguage(lang.code); setOpen(false); }}
-                        className="flex-1 py-2.5 rounded-lg text-sm font-mono border transition-colors"
-                        style={
-                          studyLanguage === lang.code
-                            ? { background: 'var(--color-highlight)', color: 'var(--color-bg)', borderColor: 'var(--color-highlight)' }
-                            : { background: 'transparent', color: 'var(--color-text)', borderColor: 'var(--color-muted)' }
-                        }
-                      >
-                        {lang.label}
-                      </button>
-                    ))}
-                  </div>
+                  <button
+                    onClick={() => setLangListOpen((v) => !v)}
+                    className="w-full flex items-center justify-between py-2.5 px-3 rounded-lg text-sm font-mono border transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--color-highlight)]"
+                    style={{ background: 'var(--color-bg)', color: 'var(--color-text)', borderColor: 'var(--color-muted)' }}
+                  >
+                    <span>
+                      {(() => {
+                        const current = SUPPORTED_STUDY_LANGUAGES.find((l) => l.code === studyLanguage);
+                        return current ? `${current.label}${current.labelNative !== current.label ? ` · ${current.labelNative}` : ''}` : studyLanguage;
+                      })()}
+                    </span>
+                    <svg
+                      className={`w-4 h-4 transition-transform ${langListOpen ? 'rotate-180' : ''}`}
+                      style={{ color: 'var(--color-muted)' }}
+                      fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                  {langListOpen && (
+                    <div
+                      className="mt-2 rounded-lg border overflow-hidden"
+                      style={{ background: 'var(--color-bg)', borderColor: 'var(--color-muted)' }}
+                    >
+                      {SUPPORTED_STUDY_LANGUAGES.map((lang) => (
+                        <button
+                          key={lang.code}
+                          onClick={() => { setStudyLanguage(lang.code); setLangListOpen(false); setOpen(false); }}
+                          className="w-full flex items-center justify-between text-left px-3 py-2.5 text-sm font-mono transition-colors hover:bg-[var(--color-muted)]/30"
+                          style={studyLanguage === lang.code ? { color: 'var(--color-highlight)', fontWeight: 700 } : { color: 'var(--color-text)' }}
+                        >
+                          <span>
+                            {lang.label}
+                            {lang.labelNative !== lang.label && (
+                              <span className="ml-2 font-normal opacity-60">{lang.labelNative}</span>
+                            )}
+                          </span>
+                          {studyLanguage === lang.code && (
+                            <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                            </svg>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 {/* Native language selector */}

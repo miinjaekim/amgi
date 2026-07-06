@@ -2,11 +2,12 @@
 import { useEffect } from 'react';
 import { Flashcard } from '@/services/firestore';
 import { ExamplePair } from '@/services/gemini';
+import { getBackSide, getExampleSides, getStudyLangSide } from '@amgi/core';
 import Markdown from '@/components/Markdown';
 import { t } from '@/lib/i18n';
 
 function isExamplePairArray(arr: unknown[]): arr is ExamplePair[] {
-  return arr.length === 0 || (typeof arr[0] === 'object' && arr[0] !== null && ('korean' in arr[0] || 'swedish' in arr[0]));
+  return arr.length === 0 || (typeof arr[0] === 'object' && arr[0] !== null && ('korean' in arr[0] || 'swedish' in arr[0] || 'english' in arr[0]));
 }
 
 interface Props {
@@ -39,7 +40,7 @@ export default function CardDetailModal({ card, nativeLanguage, onClose }: Props
         <div className="flex items-start justify-between p-6 pb-4 border-b" style={{ borderColor: 'var(--color-muted)' }}>
           <div>
             <div className="flex items-center gap-3 flex-wrap">
-              <h2 className="text-2xl font-bold" style={{ color: 'var(--color-highlight)' }}>{card.korean ?? card.swedish ?? card.term}</h2>
+              <h2 className="text-2xl font-bold" style={{ color: 'var(--color-highlight)' }}>{getStudyLangSide(card)}</h2>
               {card.formality && card.formality !== 'N/A' && (
                 <span className="px-2 py-0.5 text-xs rounded-full border" style={{ borderColor: 'var(--color-muted)', color: 'var(--color-muted)' }}>
                   {card.formality}
@@ -50,8 +51,13 @@ export default function CardDetailModal({ card, nativeLanguage, onClose }: Props
                   {card.gender}
                 </span>
               )}
+              {card.furigana && (
+                <span className="px-2 py-0.5 text-xs rounded-full border" style={{ borderColor: 'var(--color-muted)', color: 'var(--color-muted)' }}>
+                  {card.furigana}
+                </span>
+              )}
             </div>
-            <p className="text-base mt-1" style={{ color: 'var(--color-text)' }}>{card.english || card.translation}</p>
+            <p className="text-base mt-1" style={{ color: 'var(--color-text)' }}>{getBackSide(card)}</p>
           </div>
           <button
             onClick={onClose}
@@ -113,12 +119,15 @@ export default function CardDetailModal({ card, nativeLanguage, onClose }: Props
                           <li key={i} className="text-sm" style={{ color: 'var(--color-text)' }}>{ex}</li>
                         ));
                       } else if (Array.isArray(raw) && isExamplePairArray(raw)) {
-                        return (raw as ExamplePair[]).map((ex, i) => (
-                          <li key={i}>
-                            <div className="text-sm" style={{ color: 'var(--color-text)' }}>{ex.korean ?? ex.swedish}</div>
-                            <div className="text-sm mt-0.5" style={{ color: 'var(--color-highlight)' }}>{ex.english}</div>
-                          </li>
-                        ));
+                        return (raw as ExamplePair[]).map((ex, i) => {
+                          const sides = getExampleSides(ex, card.studyLanguage);
+                          return (
+                            <li key={i}>
+                              <div className="text-sm" style={{ color: 'var(--color-text)' }}>{sides.study}</div>
+                              <div className="text-sm mt-0.5" style={{ color: 'var(--color-highlight)' }}>{sides.back}</div>
+                            </li>
+                          );
+                        });
                       }
                       return null;
                     })()}

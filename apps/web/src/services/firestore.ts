@@ -1,11 +1,12 @@
 import { db } from '@/config/firebase';
 import { collection, addDoc, Timestamp, query, where, orderBy, getDocs, doc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { getStudyLanguageConfig } from '@amgi/core';
 import type { Flashcard, ReviewTracking, StudyLanguage } from '@amgi/core';
 
 export type { Flashcard, ReviewTracking, StudyLanguage } from '@amgi/core';
 
-function getCardsCollection(studyLanguage?: StudyLanguage) {
-  return studyLanguage === 'Swedish' ? 'cards_swedish' : 'cards';
+export function getCardsCollection(studyLanguage?: StudyLanguage) {
+  return getStudyLanguageConfig(studyLanguage).collection;
 }
 
 export async function saveFlashcardToFirestore(

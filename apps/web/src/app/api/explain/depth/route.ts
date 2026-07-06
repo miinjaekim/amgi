@@ -22,8 +22,8 @@ export async function POST(req: NextRequest) {
 
   let prompt: string;
 
-  if (studyLanguage === 'Swedish') {
-    prompt = `Provide deeper explanation for the Swedish/English term "${term}" (${termLanguage}).
+  if (studyLanguage !== 'Korean') {
+    prompt = `Provide deeper explanation for the term "${term}" (${termLanguage}), for a learner of ${studyLanguage}.
 Write all explanations in ${nativeLanguage}.
 
 Include only what is genuinely useful for a language learner:
@@ -42,7 +42,7 @@ Write all explanations in ${nativeLanguage}.
 
 Include only what is genuinely useful for a language learner:
 - "definition": a clear, detailed definition in ${nativeLanguage}
-- "hanja": if the term is Korean and has meaningful hanja roots, provide the breakdown (e.g. "葛藤: 갈 (kudzu vine) + 등 (wisteria vine) → entanglement, conflict"). Otherwise omit or leave as empty string.
+- "hanja": if the term is Korean and has meaningful hanja roots, provide the breakdown. For each character include its traditional Korean hun-eum (훈음) reading — the native-Korean meaning plus the sound, e.g. 水 is "물 수" — alongside the English gloss (e.g. "葛藤: 葛 갈 (칡 갈 — kudzu vine) + 藤 등 (등나무 등 — wisteria vine) → entanglement, conflict"). Otherwise omit or leave as empty string.
 - "notes": any important cultural context, usage nuance, register details, or common mistakes — only if truly relevant. Otherwise omit or leave as empty string.
 
 Respond with only this JSON:

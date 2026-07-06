@@ -4,6 +4,7 @@ import React, { useState, useRef } from 'react';
 import { useUser } from '@/components/UserContext';
 import { saveFlashcardToFirestore, Flashcard } from '@/services/firestore';
 import { TermCore } from '@/services/gemini';
+import { getStudyLanguageConfig } from '@amgi/core';
 import Spinner from '@/components/Spinner';
 
 type ImportStatus = 'pending' | 'loading' | 'success' | 'ambiguous' | 'error';
@@ -22,14 +23,39 @@ export default function ImportModal({
   onSaved: (count: number) => void;
 }) {
   const { user, nativeLanguage, studyLanguage } = useUser();
+  const langConfig = getStudyLanguageConfig(studyLanguage);
   const [input, setInput] = useState('');
   const [items, setItems] = useState<ImportItem[]>([]);
   const [step, setStep] = useState<'input' | 'processing' | 'done'>('input');
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [saving, setSaving] = useState(false);
+  const [goal, setGoal] = useState('');
+  const [generating, setGenerating] = useState(false);
+  const [generateError, setGenerateError] = useState(false);
   const abortRef = useRef(false);
 
   const words = input.split('\n').map(w => w.trim()).filter(Boolean);
+
+  const generateFromGoal = async () => {
+    if (!goal.trim() || generating) return;
+    setGenerating(true);
+    setGenerateError(false);
+    try {
+      const res = await fetch('/api/vocab-list', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ goal: goal.trim(), studyLanguage }),
+      });
+      if (!res.ok) throw new Error('generate failed');
+      const data = await res.json();
+      if (!Array.isArray(data.words) || data.words.length === 0) throw new Error('empty list');
+      setInput(data.words.join('\n'));
+    } catch {
+      setGenerateError(true);
+    } finally {
+      setGenerating(false);
+    }
+  };
 
   const startImport = async () => {
     if (words.length === 0) return;
@@ -114,7 +140,34 @@ export default function ImportModal({
         <div className="flex-1 overflow-y-auto px-6 pb-6">
           {step === 'input' && (
             <>
-              <p className="text-sm text-[var(--color-muted)] mb-3">Paste words below, one per line.</p>
+              <p className="text-sm text-[var(--color-muted)] mb-2">
+                Tell us why you&apos;re learning and we&apos;ll suggest a starter list.
+              </p>
+              <div className="flex gap-2 mb-1">
+                <input
+                  type="text"
+                  value={goal}
+                  onChange={e => setGoal(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); generateFromGoal(); } }}
+                  placeholder={`e.g. "ordering food on a trip to ${{ Korean: 'Seoul', Swedish: 'Stockholm', English: 'New York', French: 'Paris', Japanese: 'Tokyo' }[studyLanguage] ?? 'Seoul'}"`}
+                  disabled={generating}
+                  className="flex-1 p-2 text-sm rounded-lg bg-[var(--color-bg)] border border-[var(--color-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--color-highlight)] text-[var(--color-text)] placeholder-[var(--color-muted)]"
+                />
+                <button
+                  onClick={generateFromGoal}
+                  disabled={!goal.trim() || generating}
+                  className="px-3 py-2 rounded-lg font-semibold text-sm transition-colors disabled:opacity-40 flex items-center gap-2"
+                  style={{ background: 'var(--color-muted)', color: 'var(--color-text)' }}
+                >
+                  {generating ? <Spinner className="w-4 h-4" /> : 'Generate'}
+                </button>
+              </div>
+              {generateError && (
+                <p className="text-xs mb-2" style={{ color: 'var(--color-highlight)' }}>
+                  Failed to generate a list. Please try again.
+                </p>
+              )}
+              <p className="text-sm text-[var(--color-muted)] mb-3 mt-3">Or paste words below, one per line.</p>
               <textarea
                 value={input}
                 onChange={e => setInput(e.target.value)}
@@ -171,7 +224,7 @@ export default function ImportModal({
                         {item.status === 'ambiguous' && <span className="text-xs text-[var(--color-muted)]">ambiguous — skipped</span>}
                         {item.status === 'success' && item.data && (
                           <span className="text-xs text-[var(--color-muted)]">
-                            {item.data.korean} · {item.data.english}
+                            {item.data[langConfig.studyField]} · {item.data[langConfig.backField]}
                             {item.data.formality && item.data.formality !== 'N/A' && ` · ${item.data.formality}`}
                           </span>
                         )}

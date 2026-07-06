@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   getTermExplanation,
+  getDepthTarget,
   TermCore,
   TermDepth,
   TermAmbiguous,
@@ -10,6 +11,8 @@ import {
 } from '@/services/gemini';
 import Markdown from '@/components/Markdown';
 import { saveFlashcardToFirestore, Flashcard } from '@/services/firestore';
+import { getExampleSides, getStudyLanguageConfig } from '@amgi/core';
+import type { WordOfTheDay } from '@amgi/core';
 import { useUser } from '@/components/UserContext';
 import { t } from '@/lib/i18n';
 import SaveFlashcardModal from '@/components/SaveFlashcardModal';
@@ -19,6 +22,9 @@ import React from 'react';
 const EXAMPLE_TERMS: Record<string, string[]> = {
   Korean: ['배', 'longing', '눈치', 'awkward', '사랑'],
   Swedish: ['lagom', 'fika', 'mysig', 'serendipity', 'lagstiftning'],
+  English: ['serendipity', '아쉽다', 'procrastinate', '답답하다', 'nuance'],
+  French: ['dépaysement', 'flâner', 'retrouvailles', 'longing', 'terroir'],
+  Japanese: ['木漏れ日', '積ん読', 'nostalgia', 'awkward', '侘寂'],
 };
 
 function animateText(
@@ -97,6 +103,20 @@ export default function Home() {
   const [saving, setSaving] = useState(false);
   const [showContextInput, setShowContextInput] = useState(false);
   const [contextInput, setContextInput] = useState('');
+  const [wordOfTheDay, setWordOfTheDay] = useState<WordOfTheDay | null>(null);
+
+  useEffect(() => {
+    if (nativeLanguage === undefined) return; // preferences still loading
+    let cancelled = false;
+    setWordOfTheDay(null);
+    const date = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD, local timezone
+    const params = new URLSearchParams({ date, studyLanguage, nativeLanguage: nativeLanguage ?? 'English' });
+    fetch(`/api/word-of-the-day?${params}`)
+      .then(res => (res.ok ? res.json() : null))
+      .then(data => { if (!cancelled && data?.term) setWordOfTheDay(data); })
+      .catch(() => {}); // non-essential — hide on failure
+    return () => { cancelled = true; };
+  }, [studyLanguage, nativeLanguage]);
 
   const resolveExplanation = async (termValue: string, context?: string) => {
     setLoading(true);
@@ -152,11 +172,13 @@ export default function Home() {
     const doneRef = { current: false };
     let canceled = false;
 
+    const depthTarget = getDepthTarget(core, studyLanguage);
+
     try {
       const res = await fetch('/api/explain/depth-stream', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ term: core.term, termLanguage: core.termLanguage, nativeLanguage, studyLanguage }),
+        body: JSON.stringify({ ...depthTarget, nativeLanguage, studyLanguage }),
       });
       if (!res.ok || !res.body) throw new Error('Stream failed');
 
@@ -201,11 +223,13 @@ export default function Home() {
     const doneRef = { current: false };
     let canceled = false;
 
+    const examplesTarget = getDepthTarget(core, studyLanguage);
+
     try {
       const res = await fetch('/api/explain/examples-stream', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ term: core.term, termLanguage: core.termLanguage, nativeLanguage, studyLanguage }),
+        body: JSON.stringify({ ...examplesTarget, nativeLanguage, studyLanguage }),
       });
       if (!res.ok || !res.body) throw new Error('Stream failed');
 
@@ -271,15 +295,12 @@ export default function Home() {
     }
   };
 
-  const isSwedish = studyLanguage === 'Swedish';
+  const langConfig = getStudyLanguageConfig(studyLanguage);
 
   const translation = core
-    ? isSwedish
-      ? (core.termLanguage === 'Swedish' ? core.english : core.swedish)
-      : (core.termLanguage === 'Korean' ? core.english : core.korean) || core.translation
+    ? (core.termLanguage === studyLanguage ? core[langConfig.backField] : core[langConfig.studyField]) || core.translation
     : null;
 
-  const studyLangLabel = isSwedish ? 'Swedish' : 'Korean';
   const exampleTerms = EXAMPLE_TERMS[studyLanguage] ?? EXAMPLE_TERMS.Korean;
 
   return (
@@ -311,6 +332,25 @@ export default function Home() {
         <div className="mt-12 text-center">
           <p className="text-[var(--color-text)] text-lg font-semibold mb-2">{t(nativeLanguage, 'tagline')}</p>
           <p className="text-[var(--color-text)] opacity-60 text-sm mb-8 max-w-md mx-auto">{t(nativeLanguage, 'taglineSubtitle')}</p>
+          {wordOfTheDay && (
+            <button
+              onClick={() => { setTerm(wordOfTheDay.term); resolveExplanation(wordOfTheDay.term); }}
+              className="block w-full max-w-md mx-auto mb-8 p-4 rounded-xl bg-[var(--color-surface)] border border-[var(--color-muted)] text-left hover:border-[var(--color-highlight)] transition-colors"
+            >
+              <div className="text-xs uppercase tracking-wider text-[var(--color-muted)] mb-1">
+                {t(nativeLanguage, 'wordOfTheDay')}
+              </div>
+              <div className="flex items-baseline gap-3 flex-wrap">
+                <span className="text-xl font-bold text-[var(--color-highlight)]">{wordOfTheDay.term}</span>
+                <span className="text-[var(--color-text)] opacity-80">
+                  {studyLanguage === 'English' ? wordOfTheDay.korean : wordOfTheDay.english}
+                </span>
+              </div>
+              {wordOfTheDay.briefDefinition && (
+                <p className="mt-1 text-sm text-[var(--color-text)] opacity-60">{wordOfTheDay.briefDefinition}</p>
+              )}
+            </button>
+          )}
           <div className="flex flex-wrap gap-2 justify-center">
             <span className="text-[var(--color-muted)] text-sm mr-1">{t(nativeLanguage, 'exampleTermsLabel')}</span>
             {exampleTerms.map((example) => (
@@ -368,6 +408,11 @@ export default function Home() {
             {core.gender && (
               <span className="px-2 py-0.5 text-xs rounded-full border border-[var(--color-muted)] text-[var(--color-muted)]">
                 {core.gender}
+              </span>
+            )}
+            {core.furigana && (
+              <span className="px-2 py-0.5 text-xs rounded-full border border-[var(--color-muted)] text-[var(--color-muted)]">
+                {core.furigana}
               </span>
             )}
           </div>
@@ -436,12 +481,15 @@ export default function Home() {
             <div className="mb-6">
               <h3 className="font-semibold text-[var(--color-text)] mb-2">{t(nativeLanguage, 'sectionExamples')}</h3>
               <ul className="space-y-3">
-                {(examples ?? []).map((ex, i) => (
-                  <li key={i} className="text-[var(--color-text)] opacity-80">
-                    {(ex.korean || ex.swedish) && <div>{ex.korean ?? ex.swedish}</div>}
-                    {ex.english && <div className="text-[var(--color-highlight)] text-sm mt-0.5">{ex.english}</div>}
-                  </li>
-                ))}
+                {(examples ?? []).map((ex, i) => {
+                  const sides = getExampleSides(ex, studyLanguage);
+                  return (
+                    <li key={i} className="text-[var(--color-text)] opacity-80">
+                      {sides.study && <div>{sides.study}</div>}
+                      {sides.back && <div className="text-[var(--color-highlight)] text-sm mt-0.5">{sides.back}</div>}
+                    </li>
+                  );
+                })}
                 {streamingExamples && (
                   <li><span className="animate-pulse text-[var(--color-muted)]">▎</span></li>
                 )}
@@ -453,26 +501,16 @@ export default function Home() {
           <button
             className="px-4 py-2 rounded-lg bg-[var(--color-muted)] text-[var(--color-text)] font-bold hover:bg-[var(--color-highlight)] hover:text-[var(--color-bg)] focus:outline-none focus:ring-2 focus:ring-[var(--color-highlight)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             onClick={() => {
-              let studySide: string;
-              let englishSide: string;
-
-              if (isSwedish) {
-                studySide = core.termLanguage === 'Swedish' ? core.term : (core.swedish || '');
-                englishSide = core.termLanguage === 'English' ? core.term : (core.english || '');
-              } else {
-                studySide = core.termLanguage === 'Korean' ? core.term : (core.korean || '');
-                englishSide = core.termLanguage === 'English' ? core.term : (core.english || '');
-              }
+              const studySide = core.termLanguage === studyLanguage ? core.term : (core[langConfig.studyField] || '');
+              const backSide = core.termLanguage === langConfig.backLanguage ? core.term : (core[langConfig.backField] || '');
 
               setFlashcardDraft({
                 ...core,
                 ...(depth || {}),
                 examples: examples || [],
                 studyLanguage,
-                ...(isSwedish
-                  ? { swedish: studySide, english: englishSide }
-                  : { korean: studySide, english: englishSide }
-                ),
+                [langConfig.studyField]: studySide,
+                [langConfig.backField]: backSide,
               });
               setShowFlashcardForm(true);
               setSaveSuccess(false);
