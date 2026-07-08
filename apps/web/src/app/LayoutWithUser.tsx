@@ -21,7 +21,7 @@ export default function LayoutWithUser({ children }: { children: React.ReactNode
   // fixed bars (e.g. cards bulk actions) stay in sync when collapsed.
   useEffect(() => {
     // Collapsed width fits the full-size logo (57.6px wide at size 30), which
-    // must never shrink; the icon column below centers under its big triangle.
+    // must never shrink; every row's icon centers in a logo-width column.
     document.documentElement.style.setProperty('--sidenav-w', navCollapsed ? '5.5rem' : '14rem');
   }, [navCollapsed]);
 
