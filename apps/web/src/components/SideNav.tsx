@@ -130,13 +130,13 @@ export default function SideNav({ collapsed, onToggle }: Props) {
           </button>
         )}
 
-        <div className="relative space-y-1" ref={popoverRef}>
+        <div className="space-y-1" ref={popoverRef}>
           {/* Study language indicator — opens the language list only */}
           <button
             onClick={() => { setLangOpen((v) => !v); setSettingsOpen(false); }}
             title={studyLangTitle}
-            className="w-full flex items-center gap-3 pl-2 pr-3 py-2 rounded-lg font-mono text-xs transition-colors hover:bg-[var(--color-muted)]/20"
-            style={{ color: 'var(--color-muted)' }}
+            className="w-full flex items-center gap-3 pl-2 pr-3 py-2 rounded-lg font-mono text-sm transition-colors hover:bg-[var(--color-muted)]/20"
+            style={{ color: 'var(--color-text)' }}
           >
             <span className="w-[3.6rem] flex justify-center flex-shrink-0">
               <span
@@ -147,9 +147,7 @@ export default function SideNav({ collapsed, onToggle }: Props) {
               </span>
             </span>
             {!collapsed && (
-              <span className="truncate whitespace-nowrap">
-                {t(nativeLanguage, 'settingsStudyLanguage')} · <span style={{ color: 'var(--color-text)' }}>{studyLang?.label ?? studyLanguage}</span>
-              </span>
+              <span className="truncate whitespace-nowrap">{studyLang?.label ?? studyLanguage}</span>
             )}
           </button>
 
@@ -204,7 +202,7 @@ export default function SideNav({ collapsed, onToggle }: Props) {
 
           {langOpen && (
             <div
-              className="absolute left-full bottom-0 ml-2 w-64 rounded-xl shadow-xl border border-[var(--color-muted)] z-50 overflow-hidden"
+              className="fixed bottom-4 left-[calc(var(--sidenav-w,14rem)+0.5rem)] w-64 rounded-xl shadow-xl border border-[var(--color-muted)] z-50 overflow-hidden"
               style={{ background: 'var(--color-surface)' }}
             >
               <p className="px-4 pt-3 pb-1 text-xs font-mono uppercase tracking-widest" style={{ color: 'var(--color-muted)' }}>
@@ -216,7 +214,7 @@ export default function SideNav({ collapsed, onToggle }: Props) {
 
           {settingsOpen && (
             <div
-              className="absolute left-full bottom-0 ml-2 w-64 rounded-xl shadow-xl border border-[var(--color-muted)] z-50 overflow-hidden"
+              className="fixed bottom-4 left-[calc(var(--sidenav-w,14rem)+0.5rem)] w-64 rounded-xl shadow-xl border border-[var(--color-muted)] z-50 overflow-hidden"
               style={{ background: 'var(--color-surface)' }}
             >
               <SettingsMenu onClose={() => setSettingsOpen(false)} />
