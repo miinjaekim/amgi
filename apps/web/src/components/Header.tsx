@@ -3,11 +3,12 @@ import React, { useRef, useState, useEffect } from 'react';
 import AmgiLogo from './AmgiLogo';
 import SettingsMenu from './SettingsMenu';
 import { useUser } from '@/components/UserContext';
+import { SUPPORTED_STUDY_LANGUAGES } from '@/services/userPreferences';
 import { t } from '@/lib/i18n';
 
 /** Mobile-only top bar — desktop navigation lives in SideNav. */
 const Header: React.FC = () => {
-  const { user, authLoading, nativeLanguage, streak, reviewedToday, handleSignIn } = useUser();
+  const { user, authLoading, nativeLanguage, studyLanguage, streak, reviewedToday, handleSignIn } = useUser();
 
   const [open, setOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -33,6 +34,13 @@ const Header: React.FC = () => {
       </a>
 
       <div className="flex items-center gap-3">
+        <span
+          className="px-2 py-0.5 text-xs rounded-full border font-mono"
+          style={{ borderColor: 'var(--color-muted)', color: 'var(--color-muted)' }}
+          title={t(nativeLanguage, 'settingsStudyLanguage')}
+        >
+          {SUPPORTED_STUDY_LANGUAGES.find((l) => l.code === studyLanguage)?.label ?? studyLanguage}
+        </span>
         {user && streak > 0 && (
           <div
             className="flex items-center gap-1.5 font-mono text-sm"

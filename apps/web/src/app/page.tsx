@@ -292,6 +292,15 @@ export default function Home() {
 
   return (
     <div className="max-w-2xl mx-auto font-mono text-base" style={{ color: 'var(--color-text)' }}>
+      {/* Tagline above the search bar (empty state) — pushes the input toward
+          the vertical center; stays during loading to avoid a layout jump */}
+      {!core && !ambiguity && !error && (
+        <div className="mt-16 sm:mt-28 text-center">
+          <p className="text-[var(--color-text)] text-lg font-semibold mb-2">{t(nativeLanguage, 'tagline')}</p>
+          <p className="text-[var(--color-text)] opacity-60 text-sm max-w-md mx-auto">{t(nativeLanguage, 'taglineSubtitle')}</p>
+        </div>
+      )}
+
       {/* Input Area */}
       <form onSubmit={handleSubmit} className="space-y-4 mt-8">
         <div className="flex gap-2">
@@ -314,11 +323,9 @@ export default function Home() {
         </div>
       </form>
 
-      {/* Empty state */}
+      {/* Empty state — word of the day + example terms below the search bar */}
       {!loading && !core && !ambiguity && !error && (
-        <div className="mt-12 text-center">
-          <p className="text-[var(--color-text)] text-lg font-semibold mb-2">{t(nativeLanguage, 'tagline')}</p>
-          <p className="text-[var(--color-text)] opacity-60 text-sm mb-8 max-w-md mx-auto">{t(nativeLanguage, 'taglineSubtitle')}</p>
+        <div className="mt-10 text-center">
           {wordOfTheDay && (
             <button
               onClick={() => { setTerm(wordOfTheDay.term); resolveExplanation(wordOfTheDay.term); }}
