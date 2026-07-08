@@ -20,7 +20,8 @@ export default function LayoutWithUser({ children }: { children: React.ReactNode
   // Sidebar width is a root CSS variable so the sidebar, main content, and any
   // fixed bars (e.g. cards bulk actions) stay in sync when collapsed.
   useEffect(() => {
-    document.documentElement.style.setProperty('--sidenav-w', navCollapsed ? '4rem' : '14rem');
+    // Collapsed width fits the toggle + logo row (the widest fixed content).
+    document.documentElement.style.setProperty('--sidenav-w', navCollapsed ? '5.5rem' : '14rem');
   }, [navCollapsed]);
 
   const toggleNav = () => {

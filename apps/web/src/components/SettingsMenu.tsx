@@ -5,10 +5,40 @@ import { useTheme } from '@/components/ThemeContext';
 import { SUPPORTED_NATIVE_LANGUAGES, SUPPORTED_STUDY_LANGUAGES } from '@/services/userPreferences';
 import { t } from '@/lib/i18n';
 
+/** The study-language option list — used inside SettingsMenu and standalone
+ *  in the sidebar's language popover. */
+export function StudyLanguageList({ onSelect }: { onSelect?: () => void }) {
+  const { studyLanguage, setStudyLanguage } = useUser();
+  return (
+    <>
+      {SUPPORTED_STUDY_LANGUAGES.map((lang) => (
+        <button
+          key={lang.code}
+          onClick={() => { setStudyLanguage(lang.code); onSelect?.(); }}
+          className="w-full flex items-center justify-between text-left px-3 py-2.5 text-sm font-mono transition-colors hover:bg-[var(--color-muted)]/30"
+          style={studyLanguage === lang.code ? { color: 'var(--color-highlight)', fontWeight: 700 } : { color: 'var(--color-text)' }}
+        >
+          <span>
+            {lang.label}
+            {lang.labelNative !== lang.label && (
+              <span className="ml-2 font-normal opacity-60">{lang.labelNative}</span>
+            )}
+          </span>
+          {studyLanguage === lang.code && (
+            <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+          )}
+        </button>
+      ))}
+    </>
+  );
+}
+
 /** Shared settings panel body — rendered inside the header dropdown (mobile)
  *  and the sidebar popover (desktop). The container provides positioning. */
 export default function SettingsMenu({ onClose }: { onClose: () => void }) {
-  const { user, nativeLanguage, studyLanguage, setNativeLanguage, setStudyLanguage, handleSignOut } = useUser();
+  const { user, nativeLanguage, studyLanguage, setNativeLanguage, handleSignOut } = useUser();
   const { theme, setTheme, themes } = useTheme();
   const [langListOpen, setLangListOpen] = useState(false);
 
@@ -43,26 +73,7 @@ export default function SettingsMenu({ onClose }: { onClose: () => void }) {
             className="mt-2 rounded-lg border overflow-hidden"
             style={{ background: 'var(--color-bg)', borderColor: 'var(--color-muted)' }}
           >
-            {SUPPORTED_STUDY_LANGUAGES.map((lang) => (
-              <button
-                key={lang.code}
-                onClick={() => { setStudyLanguage(lang.code); setLangListOpen(false); onClose(); }}
-                className="w-full flex items-center justify-between text-left px-3 py-2.5 text-sm font-mono transition-colors hover:bg-[var(--color-muted)]/30"
-                style={studyLanguage === lang.code ? { color: 'var(--color-highlight)', fontWeight: 700 } : { color: 'var(--color-text)' }}
-              >
-                <span>
-                  {lang.label}
-                  {lang.labelNative !== lang.label && (
-                    <span className="ml-2 font-normal opacity-60">{lang.labelNative}</span>
-                  )}
-                </span>
-                {studyLanguage === lang.code && (
-                  <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                  </svg>
-                )}
-              </button>
-            ))}
+            <StudyLanguageList onSelect={() => { setLangListOpen(false); onClose(); }} />
           </div>
         )}
       </div>
