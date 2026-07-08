@@ -1,22 +1,16 @@
 'use client';
 import React, { useRef, useState, useEffect } from 'react';
 import AmgiLogo from './AmgiLogo';
+import SettingsMenu from './SettingsMenu';
 import { useUser } from '@/components/UserContext';
-import { useTheme } from '@/components/ThemeContext';
-import { SUPPORTED_NATIVE_LANGUAGES, SUPPORTED_STUDY_LANGUAGES } from '@/services/userPreferences';
+import { SUPPORTED_STUDY_LANGUAGES } from '@/services/userPreferences';
 import { t } from '@/lib/i18n';
 
+/** Mobile-only top bar — desktop navigation lives in SideNav. */
 const Header: React.FC = () => {
-  const { user, authLoading, nativeLanguage, studyLanguage, streak, reviewedToday, setNativeLanguage, setStudyLanguage, handleSignIn, handleSignOut } = useUser();
-  const { theme, setTheme, themes } = useTheme();
+  const { user, authLoading, nativeLanguage, studyLanguage, streak, reviewedToday, handleSignIn } = useUser();
 
-  const navItems = [
-    { label: t(nativeLanguage, 'navLearn'), href: '/' },
-    { label: t(nativeLanguage, 'navReview'), href: '/review' },
-    { label: t(nativeLanguage, 'navCards'), href: '/cards' },
-  ];
   const [open, setOpen] = useState(false);
-  const [langListOpen, setLangListOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -32,26 +26,21 @@ const Header: React.FC = () => {
 
   return (
     <header
-      className="w-full flex items-center justify-between px-4 py-2 shadow-md"
+      className="sm:hidden w-full flex items-center justify-between px-4 py-2 shadow-md"
       style={{ background: 'var(--color-bg)' }}
     >
-      <div className="flex items-center gap-3 sm:gap-6">
+      <a href="/" className="flex items-center">
         <AmgiLogo color="var(--color-highlight)" stroke="var(--color-text)" size={30} />
-        <nav className="hidden sm:flex items-center gap-4 sm:gap-6">
-          {navItems.map((item) => (
-            <a
-              key={item.label}
-              href={item.href}
-              className="text-sm sm:text-base font-mono hover:underline"
-              style={{ color: 'var(--color-text)' }}
-            >
-              {item.label}
-            </a>
-          ))}
-        </nav>
-      </div>
+      </a>
 
       <div className="flex items-center gap-3">
+        <span
+          className="px-2 py-0.5 text-xs rounded-full border font-mono"
+          style={{ borderColor: 'var(--color-muted)', color: 'var(--color-muted)' }}
+          title={t(nativeLanguage, 'settingsStudyLanguage')}
+        >
+          {SUPPORTED_STUDY_LANGUAGES.find((l) => l.code === studyLanguage)?.label ?? studyLanguage}
+        </span>
         {user && streak > 0 && (
           <div
             className="flex items-center gap-1.5 font-mono text-sm"
@@ -63,9 +52,6 @@ const Header: React.FC = () => {
             </svg>
             <span className="font-semibold">
               {nativeLanguage === 'Korean' ? `${streak}일` : `${streak} ${streak === 1 ? 'day' : 'days'}`}
-            </span>
-            <span className="hidden sm:inline" style={{ color: 'var(--color-muted)' }}>
-              · {nativeLanguage === 'Korean' ? `오늘 ${reviewedToday}개` : `${reviewedToday} ${reviewedToday === 1 ? 'card' : 'cards'} today`}
             </span>
           </div>
         )}
@@ -82,7 +68,7 @@ const Header: React.FC = () => {
           )}
           <div className="relative" ref={dropdownRef}>
             <button
-              onClick={() => { setOpen((v) => !v); setLangListOpen(false); }}
+              onClick={() => setOpen((v) => !v)}
               className={`flex items-center gap-2 transition-colors ${
                 user
                   ? 'rounded-lg px-3 py-1.5 border hover:bg-[var(--color-muted)]/20'
@@ -102,7 +88,6 @@ const Header: React.FC = () => {
                       {user.displayName?.[0]?.toUpperCase() ?? '?'}
                     </div>
                   )}
-                  <span className="hidden sm:inline font-medium font-mono text-sm">{user.displayName}</span>
                 </>
               ) : (
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -124,114 +109,7 @@ const Header: React.FC = () => {
                 className="absolute right-0 mt-2 w-64 rounded-xl shadow-xl border border-[var(--color-muted)] z-50 overflow-hidden"
                 style={{ background: 'var(--color-surface)' }}
               >
-                {/* Study language selector */}
-                <div className="px-4 py-3 border-b border-[var(--color-muted)]/50">
-                  <p className="text-xs font-mono uppercase tracking-widest mb-2" style={{ color: 'var(--color-muted)' }}>
-                    {t(nativeLanguage, 'settingsStudyLanguage')}
-                  </p>
-                  <button
-                    onClick={() => setLangListOpen((v) => !v)}
-                    className="w-full flex items-center justify-between py-2.5 px-3 rounded-lg text-sm font-mono border transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--color-highlight)]"
-                    style={{ background: 'var(--color-bg)', color: 'var(--color-text)', borderColor: 'var(--color-muted)' }}
-                  >
-                    <span>
-                      {(() => {
-                        const current = SUPPORTED_STUDY_LANGUAGES.find((l) => l.code === studyLanguage);
-                        return current ? `${current.label}${current.labelNative !== current.label ? ` · ${current.labelNative}` : ''}` : studyLanguage;
-                      })()}
-                    </span>
-                    <svg
-                      className={`w-4 h-4 transition-transform ${langListOpen ? 'rotate-180' : ''}`}
-                      style={{ color: 'var(--color-muted)' }}
-                      fill="none" stroke="currentColor" viewBox="0 0 24 24"
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                    </svg>
-                  </button>
-                  {langListOpen && (
-                    <div
-                      className="mt-2 rounded-lg border overflow-hidden"
-                      style={{ background: 'var(--color-bg)', borderColor: 'var(--color-muted)' }}
-                    >
-                      {SUPPORTED_STUDY_LANGUAGES.map((lang) => (
-                        <button
-                          key={lang.code}
-                          onClick={() => { setStudyLanguage(lang.code); setLangListOpen(false); setOpen(false); }}
-                          className="w-full flex items-center justify-between text-left px-3 py-2.5 text-sm font-mono transition-colors hover:bg-[var(--color-muted)]/30"
-                          style={studyLanguage === lang.code ? { color: 'var(--color-highlight)', fontWeight: 700 } : { color: 'var(--color-text)' }}
-                        >
-                          <span>
-                            {lang.label}
-                            {lang.labelNative !== lang.label && (
-                              <span className="ml-2 font-normal opacity-60">{lang.labelNative}</span>
-                            )}
-                          </span>
-                          {studyLanguage === lang.code && (
-                            <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                            </svg>
-                          )}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* Native language selector */}
-                <div className="px-4 py-3 border-b border-[var(--color-muted)]/50">
-                  <p className="text-xs font-mono uppercase tracking-widest" style={{ color: 'var(--color-muted)' }}>
-                    {t(nativeLanguage, 'settingsLanguage')}
-                  </p>
-                  <div className="flex gap-2 mt-2">
-                    {SUPPORTED_NATIVE_LANGUAGES.map((lang) => (
-                      <button
-                        key={lang.code}
-                        onClick={() => { setNativeLanguage(lang.code); setOpen(false); }}
-                        className="flex-1 py-2.5 rounded-lg text-sm font-mono border transition-colors"
-                        style={
-                          nativeLanguage === lang.code
-                            ? { background: 'var(--color-highlight)', color: 'var(--color-bg)', borderColor: 'var(--color-highlight)' }
-                            : { background: 'transparent', color: 'var(--color-text)', borderColor: 'var(--color-muted)' }
-                        }
-                      >
-                        {lang.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Theme selector */}
-                <div className="px-4 py-3 border-b border-[var(--color-muted)]/50">
-                  <p className="text-xs font-mono uppercase tracking-widest" style={{ color: 'var(--color-muted)' }}>
-                    {t(nativeLanguage, 'settingsTheme')}
-                  </p>
-                  <div className="flex gap-2 mt-2">
-                    {themes.map((th) => (
-                      <button
-                        key={th.value}
-                        onClick={() => setTheme(th.value)}
-                        className="flex-1 py-2.5 rounded-lg text-sm font-mono border transition-colors"
-                        style={
-                          theme === th.value
-                            ? { background: 'var(--color-highlight)', color: 'var(--color-bg)', borderColor: 'var(--color-highlight)' }
-                            : { background: 'transparent', color: 'var(--color-text)', borderColor: 'var(--color-muted)' }
-                        }
-                      >
-                        {th.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {user && (
-                  <button
-                    onClick={() => { handleSignOut(); setOpen(false); }}
-                    className="w-full text-left px-4 py-3 text-sm font-mono hover:bg-[var(--color-muted)]/30 transition-colors"
-                    style={{ color: 'var(--color-text)' }}
-                  >
-                    {t(nativeLanguage, 'signOut')}
-                  </button>
-                )}
+                <SettingsMenu onClose={() => setOpen(false)} />
               </div>
             )}
           </div>
