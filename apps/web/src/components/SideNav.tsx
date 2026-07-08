@@ -47,7 +47,9 @@ export default function SideNav({ collapsed, onToggle }: Props) {
           the same left alignment as the nav icons in either state */}
       <div className="px-2 pt-5 pb-2 space-y-1">
         <a href="/" className="flex items-center gap-3 px-3">
-          <AmgiLogo color="var(--color-highlight)" stroke="var(--color-text)" size={30} />
+          <span className="flex-shrink-0">
+            <AmgiLogo color="var(--color-highlight)" stroke="var(--color-text)" size={30} />
+          </span>
           {!collapsed && (
             <span className="font-mono font-bold text-lg whitespace-nowrap" style={{ color: 'var(--color-text)' }}>
               Amgi
@@ -57,7 +59,7 @@ export default function SideNav({ collapsed, onToggle }: Props) {
         <button
           onClick={onToggle}
           title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-[var(--color-muted)]/20 transition-colors"
+          className="w-full flex items-center gap-3 pl-8 pr-3 py-2 rounded-lg hover:bg-[var(--color-muted)]/20 transition-colors"
           style={{ color: 'var(--color-muted)' }}
         >
           <span className="w-7 flex justify-center flex-shrink-0">
@@ -75,7 +77,7 @@ export default function SideNav({ collapsed, onToggle }: Props) {
             key={item.href}
             href={item.href}
             title={collapsed ? item.label : undefined}
-            className="flex items-center gap-3 px-3 py-2.5 rounded-lg font-mono text-sm transition-colors hover:bg-[var(--color-muted)]/20"
+            className="flex items-center gap-3 pl-8 pr-3 py-2.5 rounded-lg font-mono text-sm transition-colors hover:bg-[var(--color-muted)]/20"
             style={
               item.active
                 ? { background: 'var(--color-surface)', color: 'var(--color-highlight)', fontWeight: 700 }
@@ -92,7 +94,7 @@ export default function SideNav({ collapsed, onToggle }: Props) {
       <div className="pb-4 space-y-1 px-2">
         {user && streak > 0 && (
           <div
-            className="flex items-center gap-2 px-3 py-2 font-mono text-sm"
+            className="flex items-center gap-2 pl-8 pr-3 py-2 font-mono text-sm"
             style={{ color: 'var(--color-text)' }}
             title={nativeLanguage === 'Korean' ? `${streak}일 연속 · 오늘 ${reviewedToday}개` : `${streak}-day streak · ${reviewedToday} reviewed today`}
           >
@@ -115,7 +117,7 @@ export default function SideNav({ collapsed, onToggle }: Props) {
           <button
             onClick={handleSignIn}
             title={collapsed ? t(nativeLanguage, 'signIn') : undefined}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-mono font-semibold text-sm transition-colors"
+            className="w-full flex items-center gap-3 pl-8 pr-3 py-2.5 rounded-lg font-mono font-semibold text-sm transition-colors"
             style={{ background: 'var(--color-highlight)', color: 'var(--color-bg)' }}
           >
             <svg className="w-7 h-7 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
@@ -130,7 +132,7 @@ export default function SideNav({ collapsed, onToggle }: Props) {
           <button
             onClick={() => { setLangOpen((v) => !v); setSettingsOpen(false); }}
             title={studyLangTitle}
-            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg font-mono text-xs transition-colors hover:bg-[var(--color-muted)]/20"
+            className="w-full flex items-center gap-3 pl-8 pr-3 py-2 rounded-lg font-mono text-xs transition-colors hover:bg-[var(--color-muted)]/20"
             style={{ color: 'var(--color-muted)' }}
           >
             <span
@@ -150,7 +152,7 @@ export default function SideNav({ collapsed, onToggle }: Props) {
           <button
             onClick={() => { setSettingsOpen((v) => !v); setLangOpen(false); }}
             title={collapsed ? (user?.displayName ?? undefined) : undefined}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-mono text-sm transition-colors hover:bg-[var(--color-muted)]/20"
+            className="w-full flex items-center gap-3 pl-8 pr-3 py-2.5 rounded-lg font-mono text-sm transition-colors hover:bg-[var(--color-muted)]/20"
             style={{ color: 'var(--color-text)' }}
           >
             {user ? (
