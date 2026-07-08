@@ -566,7 +566,7 @@ export default function CardsPage() {
       {/* Bulk action bar */}
       {selectMode && (
         <div
-          className="fixed bottom-16 sm:bottom-0 left-0 right-0 z-40 border-t"
+          className="fixed bottom-16 sm:bottom-0 left-0 sm:left-56 right-0 z-40 border-t"
           style={{ background: 'var(--color-bg)', borderColor: 'var(--color-muted)' }}
         >
           <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between gap-3">

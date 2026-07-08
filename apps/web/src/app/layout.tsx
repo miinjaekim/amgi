@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Source_Code_Pro } from "next/font/google";
 import "./globals.css";
-import Header from "@/components/Header";
 import { UserProvider } from "@/components/UserContext";
 import { ThemeProvider } from "@/components/ThemeContext";
 import LayoutWithUser from "./LayoutWithUser";

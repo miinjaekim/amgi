@@ -2,6 +2,7 @@
 import React from 'react';
 import { useUser } from '@/components/UserContext';
 import Header from '@/components/Header';
+import SideNav from '@/components/SideNav';
 import BottomNav from '@/components/BottomNav';
 import LanguageSetupModal from '@/components/LanguageSetupModal';
 
@@ -10,8 +11,9 @@ export default function LayoutWithUser({ children }: { children: React.ReactNode
   return (
     <>
       <Header />
+      <SideNav />
       {!authLoading && nativeLanguage === null && <LanguageSetupModal />}
-      <main className="container mx-auto px-4 py-6 sm:py-8 pb-24 sm:pb-8">
+      <main className="sm:ml-56 container mx-auto px-4 py-6 sm:py-8 pb-24 sm:pb-8">
         {children}
       </main>
       <BottomNav />
