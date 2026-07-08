@@ -130,7 +130,12 @@ export default function SideNav({ collapsed, onToggle }: Props) {
           </button>
         )}
 
-        <div className="space-y-1" ref={popoverRef}>
+        {/* Popovers live outside the space-y container: Tailwind v4's space-y
+            puts margin-bottom on every :not(:last-child), so a popover
+            mounting as the new last child would give the user button a margin
+            and nudge the whole cluster upward. */}
+        <div ref={popoverRef}>
+          <div className="space-y-1">
           {/* Study language indicator — opens the language list only */}
           <button
             onClick={() => { setLangOpen((v) => !v); setSettingsOpen(false); }}
@@ -147,7 +152,12 @@ export default function SideNav({ collapsed, onToggle }: Props) {
               </span>
             </span>
             {!collapsed && (
-              <span className="truncate whitespace-nowrap">{studyLang?.label ?? studyLanguage}</span>
+              <span className="truncate whitespace-nowrap">
+                {studyLang?.label ?? studyLanguage}
+                {studyLang && studyLang.labelNative !== studyLang.label && (
+                  <span className="ml-2 opacity-60">{studyLang.labelNative}</span>
+                )}
+              </span>
             )}
           </button>
 
@@ -199,6 +209,7 @@ export default function SideNav({ collapsed, onToggle }: Props) {
               </svg>
             )}
           </button>
+          </div>
 
           {langOpen && (
             <div
