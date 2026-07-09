@@ -106,12 +106,12 @@ export default function SettingsMenu({ onClose }: { onClose: () => void }) {
         <p className="text-xs font-mono uppercase tracking-widest" style={{ color: 'var(--color-muted)' }}>
           {t(nativeLanguage, 'settingsTheme')}
         </p>
-        <div className="flex gap-2 mt-2">
+        <div className="grid grid-cols-2 gap-2 mt-2">
           {themes.map((th) => (
             <button
               key={th.value}
               onClick={() => setTheme(th.value)}
-              className="flex-1 py-2.5 rounded-lg text-sm font-mono border transition-colors"
+              className="py-2.5 rounded-lg text-sm font-mono border transition-colors"
               style={
                 theme === th.value
                   ? { background: 'var(--color-highlight)', color: 'var(--color-bg)', borderColor: 'var(--color-highlight)' }

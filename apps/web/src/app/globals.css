@@ -11,14 +11,14 @@
     --color-highlight: #EAA09C;
   }
 
-  /* Slate — dark mode */
+  /* Sonokai — dark mode (id stays "slate" for stored prefs + system mapping) */
   html.theme-slate {
-    --color-bg: #111318;
-    --color-surface: #1C1F2B;
-    --color-muted: #383D5C;
-    --color-muted-dark: #252838;
-    --color-text: #E2E6F3;
-    --color-highlight: #818CF8;
+    --color-bg: #2C2E34;
+    --color-surface: #363944;
+    --color-muted: #595F6F;
+    --color-muted-dark: #414550;
+    --color-text: #E2E2E3;
+    --color-highlight: #9ED072;
   }
 
   /* Paper — light mode */
@@ -44,4 +44,21 @@
   code, pre {
     font-family: inherit;
   }
+}
+
+/* Sidebar collapse state — driven by a class on <html> applied before first
+   paint by the inline script in layout.tsx, so the collapsed width and hidden
+   labels never flash on a fresh page load (or hard navigation via <a href>).
+   Kept unlayered so `display: none` wins over Tailwind utility classes. */
+:root {
+  --sidenav-w: 14rem;
+}
+html.sidenav-collapsed {
+  --sidenav-w: 5.5rem;
+}
+html.sidenav-collapsed .sidenav-label {
+  display: none;
+}
+html.sidenav-collapsed .sidenav-collapse-icon {
+  transform: rotate(180deg);
 }

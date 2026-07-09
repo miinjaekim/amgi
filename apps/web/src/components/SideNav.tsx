@@ -52,11 +52,9 @@ export default function SideNav({ collapsed, onToggle }: Props) {
           <span className="flex-shrink-0">
             <AmgiLogo color="var(--color-highlight)" stroke="var(--color-text)" size={30} />
           </span>
-          {!collapsed && (
-            <span className="font-mono font-bold text-lg whitespace-nowrap" style={{ color: 'var(--color-text)' }}>
-              Amgi
-            </span>
-          )}
+          <span className="sidenav-label font-mono font-bold text-lg whitespace-nowrap" style={{ color: 'var(--color-text)' }}>
+            Amgi
+          </span>
         </a>
         <button
           onClick={onToggle}
@@ -65,7 +63,7 @@ export default function SideNav({ collapsed, onToggle }: Props) {
           style={{ color: 'var(--color-muted)' }}
         >
           <span className="w-[3.6rem] flex justify-center flex-shrink-0">
-            <svg className={`w-5 h-5 transition-transform ${collapsed ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+            <svg className="sidenav-collapse-icon w-5 h-5 transition-transform" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
             </svg>
           </span>
@@ -87,7 +85,7 @@ export default function SideNav({ collapsed, onToggle }: Props) {
             }
           >
             <span className="w-[3.6rem] flex justify-center flex-shrink-0">{item.icon(item.active, 'w-7 h-7')}</span>
-            {!collapsed && <span className="whitespace-nowrap">{item.label}</span>}
+            <span className="sidenav-label whitespace-nowrap">{item.label}</span>
           </a>
         ))}
       </nav>
@@ -106,11 +104,9 @@ export default function SideNav({ collapsed, onToggle }: Props) {
               </svg>
               <span className="font-semibold">{streak}</span>
             </span>
-            {!collapsed && (
-              <span className="whitespace-nowrap" style={{ color: 'var(--color-muted)' }}>
-                {nativeLanguage === 'Korean' ? `일 · 오늘 ${reviewedToday}개` : `${streak === 1 ? 'day' : 'days'} · ${reviewedToday} today`}
-              </span>
-            )}
+            <span className="sidenav-label whitespace-nowrap" style={{ color: 'var(--color-muted)' }}>
+              {nativeLanguage === 'Korean' ? `일 · 오늘 ${reviewedToday}개` : `${streak === 1 ? 'day' : 'days'} · ${reviewedToday} today`}
+            </span>
           </div>
         )}
 
@@ -126,7 +122,7 @@ export default function SideNav({ collapsed, onToggle }: Props) {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-7.5A2.25 2.25 0 003.75 5.25v13.5A2.25 2.25 0 006 21h7.5a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" />
               </svg>
             </span>
-            {!collapsed && <span className="whitespace-nowrap">{t(nativeLanguage, 'signIn')}</span>}
+            <span className="sidenav-label whitespace-nowrap">{t(nativeLanguage, 'signIn')}</span>
           </button>
         )}
 
@@ -151,14 +147,12 @@ export default function SideNav({ collapsed, onToggle }: Props) {
                 {(studyLang?.code ?? studyLanguage).slice(0, 2).toUpperCase()}
               </span>
             </span>
-            {!collapsed && (
-              <span className="truncate whitespace-nowrap">
-                {studyLang?.label ?? studyLanguage}
-                {studyLang && studyLang.labelNative !== studyLang.label && (
-                  <span className="ml-2 opacity-60">{studyLang.labelNative}</span>
-                )}
-              </span>
-            )}
+            <span className="sidenav-label truncate whitespace-nowrap">
+              {studyLang?.label ?? studyLanguage}
+              {studyLang && studyLang.labelNative !== studyLang.label && (
+                <span className="ml-2 opacity-60">{studyLang.labelNative}</span>
+              )}
+            </span>
           </button>
 
           {/* User / settings */}
@@ -182,7 +176,7 @@ export default function SideNav({ collapsed, onToggle }: Props) {
                     </span>
                   )}
                 </span>
-                {!collapsed && <span className="truncate flex-1 text-left whitespace-nowrap">{user.displayName}</span>}
+                <span className="sidenav-label truncate flex-1 text-left whitespace-nowrap">{user.displayName}</span>
               </>
             ) : (
               <>
@@ -192,22 +186,18 @@ export default function SideNav({ collapsed, onToggle }: Props) {
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
                 </span>
-                {!collapsed && (
-                  <span className="flex-1 text-left whitespace-nowrap" style={{ color: 'var(--color-muted)' }}>
-                    {t(nativeLanguage, 'settingsLanguage')}
-                  </span>
-                )}
+                <span className="sidenav-label flex-1 text-left whitespace-nowrap" style={{ color: 'var(--color-muted)' }}>
+                  {t(nativeLanguage, 'settingsLanguage')}
+                </span>
               </>
             )}
-            {!collapsed && (
-              <svg
-                className={`w-4 h-4 flex-shrink-0 transition-transform ${settingsOpen ? 'rotate-180' : ''}`}
-                style={{ color: 'var(--color-muted)' }}
-                fill="none" stroke="currentColor" viewBox="0 0 24 24"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-              </svg>
-            )}
+            <svg
+              className={`sidenav-label w-4 h-4 flex-shrink-0 transition-transform ${settingsOpen ? 'rotate-180' : ''}`}
+              style={{ color: 'var(--color-muted)' }}
+              fill="none" stroke="currentColor" viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+            </svg>
           </button>
           </div>
 

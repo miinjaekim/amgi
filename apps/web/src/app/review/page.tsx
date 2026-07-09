@@ -488,7 +488,7 @@ export default function ReviewPage() {
                   </div>
                 )}
 
-                <div className="mb-4 p-6 rounded-xl bg-[var(--color-bg)] border border-[var(--color-muted)] shadow-lg">
+                <div className="mb-4 p-6 rounded-xl bg-[var(--color-bg)] border border-[var(--color-muted)] shadow-lg min-h-[14rem]">
                   {currentReview.direction === 'frontToBack' ? (
                     <>
                       <div className="font-semibold text-2xl mb-2 text-[var(--color-highlight)]">{getStudySide(currentReview.card)}</div>
