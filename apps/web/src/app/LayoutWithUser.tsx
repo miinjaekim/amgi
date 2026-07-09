@@ -12,24 +12,19 @@ export default function LayoutWithUser({ children }: { children: React.ReactNode
   const { authLoading, nativeLanguage } = useUser();
   const [navCollapsed, setNavCollapsed] = useState(false);
 
-  // Read after mount — localStorage in a useState initializer causes a hydration mismatch.
+  // The visual collapsed state (sidebar width + hidden labels) is driven by the
+  // `sidenav-collapsed` class on <html>, applied before first paint by the
+  // inline script in layout.tsx — so nothing flashes on a fresh load or hard
+  // navigation. This React state only mirrors that class to drive tooltips.
   useEffect(() => {
-    setNavCollapsed(localStorage.getItem(COLLAPSED_KEY) === '1');
+    setNavCollapsed(document.documentElement.classList.contains(COLLAPSED_KEY));
   }, []);
 
-  // Sidebar width is a root CSS variable so the sidebar, main content, and any
-  // fixed bars (e.g. cards bulk actions) stay in sync when collapsed.
-  useEffect(() => {
-    // Collapsed width fits the full-size logo (57.6px wide at size 30), which
-    // must never shrink; every row's icon centers in a logo-width column.
-    document.documentElement.style.setProperty('--sidenav-w', navCollapsed ? '5.5rem' : '14rem');
-  }, [navCollapsed]);
-
   const toggleNav = () => {
-    setNavCollapsed(v => {
-      localStorage.setItem(COLLAPSED_KEY, v ? '0' : '1');
-      return !v;
-    });
+    const next = !document.documentElement.classList.contains(COLLAPSED_KEY);
+    document.documentElement.classList.toggle(COLLAPSED_KEY, next);
+    localStorage.setItem(COLLAPSED_KEY, next ? '1' : '0');
+    setNavCollapsed(next);
   };
 
   return (
