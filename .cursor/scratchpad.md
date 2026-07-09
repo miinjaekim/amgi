@@ -134,7 +134,7 @@ function mapDocToFlashcard(doc): AnyFlashcard {
 - **Core loop** — term lookup → Gemini explanation → save as flashcard → bidirectional SM-2 spaced repetition review (direction filter, shuffled queue)
 - **Infrastructure** — Firebase Auth, Firestore + security rules, Gemini proxied server-side, Next.js 16.2.7, Vercel deployment
 - **Explanation quality** — fast call (translation + briefDefinition) + user-triggered depth and examples; term disambiguation with multiple-meaning selection; markdown rendering; NDJSON streaming for examples
-- **Design system** — Forest/Slate/Paper theme, Source Code Pro mono font, localized UI (English + Korean via `i18n.ts`), mobile bottom nav, compacted header
+- **Design system** — Forest/Sonokai/Paper + System (follows OS) themes, Source Code Pro mono font, localized UI (English + Korean via `i18n.ts`), desktop side nav + mobile top header/bottom nav
 - **Cards page** — search, filter (active/archived/all), sort (newest/oldest/A→Z), card order toggle, card detail modal, edit/archive/delete, bulk actions, CSV + Anki export, bulk import
 - **Review loop** — manage cards mid-session (edit/archive/delete), offline banner + cached review, force-sync button
 - **Streaks** — streak count + cards reviewed today in header; persisted to Firestore
@@ -142,11 +142,15 @@ function mapDocToFlashcard(doc): AnyFlashcard {
 - **First-time modal** — `LanguageSetupModal` shows for all visitors until native language is set; saves to localStorage + Firestore on sign-in
 - **Swedish support** (`feat/swedish`, merged) — `studyLanguage` stored on card documents; two-step language setup modal (native → study language); study language switcher in header settings; `getCardsCollection` routes Korean → `cards`, Swedish → `cards_swedish`; all CRUD + API routes accept `studyLanguage` and generate Swedish-appropriate Gemini prompts; Firestore security rule for `cards_swedish` added
 - **Swedish noun gender + save fix** (`feat/swedish-gender`, merged 2026-07-04) — `gender?: string` (`'en'` | `'ett'` | absent) added to `TermCore`/`SwedishFlashcard`; gender badge on Learn page, `CardDetailModal`, and review reveal; `saveFlashcardToFirestore` strips `undefined` values before `addDoc` (Firebase v9 throws on explicit `undefined`); `parseStreamedDepth` only includes keys with real values
-- **Known-issue fixes + backlog batch** (PR #31, merged 2026-07-06) — stacked 10-commit chain: localized disambiguation options; "dig deeper" targets the study-language word (`getDepthTarget()`); hanja 훈음 readings; word of the day (CDN-cached `GET /api/word-of-the-day`); goal-based vocab lists (`POST /api/vocab-list` feeding bulk import); English (native-Korean learners), French, and Japanese study languages via the new `STUDY_LANGUAGE_CONFIGS` registry in `@amgi/core`; themed study-language dropdown in header settings. **Manual Firebase steps still pending:** security rules for `cards_english`, `cards_french`, `cards_japanese` + their `archived + createdAt` composite indexes.
+- **Known-issue fixes + backlog batch** (PR #31, merged 2026-07-06) — stacked 10-commit chain: localized disambiguation options; "dig deeper" targets the study-language word (`getDepthTarget()`); hanja 훈음 readings; word of the day (CDN-cached `GET /api/word-of-the-day`); goal-based vocab lists (`POST /api/vocab-list` feeding bulk import); English (native-Korean learners), French, and Japanese study languages via the new `STUDY_LANGUAGE_CONFIGS` registry in `@amgi/core`; themed study-language dropdown in header settings. Firebase security rules + `archived + createdAt` composite indexes for `cards_english`, `cards_french`, `cards_japanese` were added manually (2026-07-08).
+- **Examples fix for French/Japanese** (PR #32, merged 2026-07-08) — `parseStreamedExamples` moved to `@amgi/core` and made config-driven (was gated on korean/swedish keys, so it silently dropped French/Japanese example pairs); covered by tests across all five languages.
+- **Review language-switch fix** (merged 2026-07-08) — the review page load effect now depends on `studyLanguage`, so switching study language no longer keeps showing the previous language's cards.
+- **Desktop side navigation** (`feat/side-nav`, merged 2026-07-08) — fixed left sidebar (`SideNav`) with logo, nav, streak, study-language chip, and user/settings popover; collapsible to an icon rail (persisted); settings extracted to a shared `SettingsMenu`. Mobile unchanged (top header + bottom nav); nav icons shared via `nav-items.tsx`.
+- **Theme rework + review/nav polish** (`feat/theme-rework`, merged 2026-07-09) — a pre-paint inline script in `layout.tsx` applies the theme + sidebar-collapse state before first paint, eliminating both the Forest flash and the sidebar expand-flash on load/hard navigation; new **System** theme option (follows OS light/dark, live via `matchMedia`); **Sonokai** dark palette replaces the old indigo Slate (keeps the `slate` id for stored prefs + system mapping); review action buttons no longer jump — the card body reserves `min-h-[14rem]` so "Show answer" and the rating grid share one top anchor.
 
 ### In Progress
 
-Nothing currently — PR #31 merged, `main` is clean.
+Nothing currently — `main` is clean at the `feat/theme-rework` merge.
 
 ### Known Issues
 
@@ -154,16 +158,22 @@ None currently tracked. (Word-of-the-day reload variance was reviewed and accept
 
 ### Backlog
 
-- [ ] **Goal-based vocab lists: handle ambiguity + rethink placement** — two problems: (1) terms that resolve as ambiguous are currently just skipped ("ambiguous — skipped"); need a flow to pick a meaning (reuse the disambiguation picker) or auto-pick the goal-relevant meaning by passing the goal as context to `/api/explain`. (2) Generation shouldn't live inside the Import button — reusing the import pipeline is right, but the entry point deserves its own home (e.g. Learn empty state, onboarding after language setup, or a dedicated "Starter deck" surface). Decide placement before building.
-- [x] **Review page: fixed button positions** — shipped on `feat/theme-rework` (2026-07-09). Reserved a `min-h-[14rem]` on the review card body so revealing the answer no longer grows the card and pushes the action buttons down; "Show answer" and the rating grid now share the same top anchor.
-- [x] **Theme rework** — shipped on `feat/theme-rework` (2026-07-09). (1) Forest flash fixed with a blocking inline script in `layout.tsx` that applies the `theme-*` class to `<html>` before first paint (`suppressHydrationWarning` on `<html>`); `ThemeContext` now starts from the same `forest` default so hydration matches. (2) New **System** option follows `prefers-color-scheme` (dark→slate, light→paper) and tracks OS changes live via `matchMedia`. (3) Refined the Slate dark palette (deeper neutral bg, clearer surface elevation, on-brand coral highlight). Theme picker is now a 2-col grid to fit four options.
-- [ ] **Pronunciation audio** — let users hear how a word/phrase is pronounced. Needs research: TTS generation vs. another approach, cost/quality tradeoffs per language.
-- [ ] **Explore training a language-learning model** — research spike: what's already out there, whether fine-tuning/training is viable or even the right approach vs. prompting, and what a practical first step would look like.
-- [ ] **Japanese basics: kana onboarding** — a way for complete beginners to learn hiragana/katakana before jumping into vocab (e.g. a dedicated kana study/reference mode).
-- [x] **Side navigation bar** — shipped on `feat/side-nav` (2026-07-08). Desktop (`sm+`): fixed left sidebar (`SideNav`, w-56) with logo, nav, streak, and user/settings popover opening rightward; settings panel extracted to shared `SettingsMenu`. Mobile: unchanged — top `Header` (now mobile-only) + `BottomNav`; nav icons shared via `nav-items.tsx`.
-- [ ] **Privacy & data transparency** — reassure users about how their data is used/protected. Candidate work: privacy policy page (what's stored: cards, prefs, streaks in Firestore; terms sent to Gemini for explanation only), audit Firestore security rules per collection, data export already exists (CSV/Anki) — add account/data deletion, and a short "your data" blurb in settings or onboarding. Ties into the "Own your learning" design principle.
-- [ ] **Japanese kanji breakdown section** — depth for Japanese currently uses the generic (no-hanja) prompt; a per-character kanji section like Korean's hanja breakdown would need a new stream marker + parser support.
-- [ ] **Mobile parity** — mobile app is still Korean-only: no study-language switcher, word of the day, or goal-based lists.
+Ordered by priority; the **Next up** tier is what we're building now.
+
+**Next up**
+- [ ] **Pronunciation audio** — let users hear how a word/phrase is pronounced. Research first: TTS generation (Google Cloud TTS / Gemini audio) vs. a pronunciation dictionary or API; cost + quality per language (Korean and Japanese especially); and where the play button lives (Learn card, review reveal, card detail). Cache generated audio to avoid regeneration cost. Foundation for the kana audio below.
+- [ ] **Japanese basics: kana onboarding** — complete beginners need a way to learn hiragana/katakana before diving into vocab. Likely a dedicated kana study/reference mode (chart + drill), separate from the SM-2 vocab deck (or a pre-seeded starter deck). Scope: which kana set, romaji + audio (leans on pronunciation audio), stroke order out of scope for v1.
+
+**High**
+- [ ] **Goal-based vocab lists: handle ambiguity + rethink placement** — (1) ambiguous terms are currently skipped ("ambiguous — skipped"); add a flow to pick a meaning (reuse the disambiguation picker) or auto-pick by passing the goal as context to `/api/explain`. (2) Move generation out of the Import button into its own home (Learn empty state, post-setup onboarding, or a dedicated "Starter deck" surface). Decide placement before building.
+- [ ] **Japanese kanji breakdown section** — Japanese depth currently uses the generic (no-hanja) prompt; add a per-character kanji section like Korean's hanja breakdown (needs a new stream marker + parser support). Pairs naturally with the Japanese focus above.
+
+**Medium**
+- [ ] **Privacy & data transparency** — privacy policy page (what's stored: cards, prefs, streaks in Firestore; terms sent to Gemini for explanation only), account/data deletion (export already exists via CSV/Anki), and a short "your data" blurb in settings or onboarding. Ties into the "Own your learning" principle; do before any wider launch.
+- [ ] **Mobile parity** — the Expo app is still Korean-only: no study-language switcher, word of the day, or goal-based lists. Bring it in line with web.
+
+**Research / exploratory**
+- [ ] **Explore training a language-learning model** — research spike: what already exists, whether fine-tuning/training is viable or even preferable to prompting, and what a practical first step would look like. Learning-oriented, not product-critical.
 
 ### Needs Clarification
 
@@ -185,7 +195,7 @@ Ideas worth keeping but not yet scoped — needs more brainstorming/clarificatio
 - Style: minimal, focused — inspired by Monkeytype
 
 **Open design questions**
-- Theme (Forest/Slate/Paper) on mobile: keep as-is or design a simpler native dark/light toggle?
+- Theme (Forest/Sonokai/Paper/System) on mobile: keep as-is or design a simpler native dark/light toggle?
 - What does the onboarding flow look like beyond the language modal — tooltip hints or a guided first search?
 
 ---
