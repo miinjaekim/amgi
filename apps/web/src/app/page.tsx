@@ -16,6 +16,7 @@ import type { WordOfTheDay } from '@amgi/core';
 import { useUser } from '@/components/UserContext';
 import { t } from '@/lib/i18n';
 import SaveFlashcardModal from '@/components/SaveFlashcardModal';
+import PronounceButton from '@/components/PronounceButton';
 import Spinner from '@/components/Spinner';
 import React from 'react';
 
@@ -394,6 +395,9 @@ export default function Home() {
         <div className="mt-10 p-6 rounded-xl bg-[var(--color-surface)] shadow-lg border border-[var(--color-muted)]">
           <div className="flex items-center gap-3 mb-4 flex-wrap">
             <h2 className="text-2xl font-bold text-[var(--color-highlight)]">{core.term}</h2>
+            {core.termLanguage === studyLanguage && (
+              <PronounceButton text={core.term} studyLanguage={studyLanguage} />
+            )}
             {core.formality && core.formality !== 'N/A' && (
               <span className="px-2 py-0.5 text-xs rounded-full border border-[var(--color-muted)] text-[var(--color-muted)]">
                 {core.formality}
@@ -414,9 +418,14 @@ export default function Home() {
           {/* Translation + brief definition */}
           <div className="mb-6">
             <h3 className="font-semibold text-[var(--color-text)] mb-1">{t(nativeLanguage, 'sectionTranslation')}</h3>
-            <p className="text-[var(--color-text)] opacity-90 text-lg">
-              {translation || t(nativeLanguage, 'noTranslation')}
-            </p>
+            <div className="flex items-center gap-2">
+              <p className="text-[var(--color-text)] opacity-90 text-lg">
+                {translation || t(nativeLanguage, 'noTranslation')}
+              </p>
+              {core.termLanguage !== studyLanguage && translation && (
+                <PronounceButton text={translation} studyLanguage={studyLanguage} />
+              )}
+            </div>
             {core.briefDefinition && (
               <p className="mt-2 text-sm" style={{ color: 'var(--color-muted)' }}>
                 {core.briefDefinition}

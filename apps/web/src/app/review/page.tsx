@@ -10,6 +10,7 @@ import { ExamplePair } from '@/services/gemini';
 import { t } from '@/lib/i18n';
 import Markdown from '@/components/Markdown';
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
+import PronounceButton from '@/components/PronounceButton';
 
 // Direction for review
 export type ReviewDirection = 'frontToBack' | 'backToFront';
@@ -491,7 +492,10 @@ export default function ReviewPage() {
                 <div className="mb-4 p-6 rounded-xl bg-[var(--color-bg)] border border-[var(--color-muted)] shadow-lg min-h-[14rem]">
                   {currentReview.direction === 'frontToBack' ? (
                     <>
-                      <div className="font-semibold text-2xl mb-2 text-[var(--color-highlight)]">{getStudySide(currentReview.card)}</div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="font-semibold text-2xl text-[var(--color-highlight)]">{getStudySide(currentReview.card)}</div>
+                        <PronounceButton text={getStudySide(currentReview.card)} studyLanguage={studyLanguage} />
+                      </div>
 
                       {showAnswer ? (
                         <>
@@ -586,7 +590,10 @@ export default function ReviewPage() {
 
                       {showAnswer ? (
                         <>
-                          <div className="font-semibold text-2xl mb-3 text-[var(--color-highlight)] mt-4">{getStudySide(currentReview.card)}</div>
+                          <div className="flex items-center gap-2 mb-3 mt-4">
+                            <div className="font-semibold text-2xl text-[var(--color-highlight)]">{getStudySide(currentReview.card)}</div>
+                            <PronounceButton text={getStudySide(currentReview.card)} studyLanguage={studyLanguage} />
+                          </div>
 
                           {(currentReview.card.gender || currentReview.card.furigana) && (
                             <div className="mb-3 flex gap-2 flex-wrap">

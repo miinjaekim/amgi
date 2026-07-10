@@ -6,6 +6,7 @@ import { t } from '@/lib/i18n';
 import Spinner from '@/components/Spinner';
 import { getStudyLanguageConfig } from '@amgi/core';
 import type { CardSideField, StudyLanguage } from '@amgi/core';
+import PronounceButton from '@/components/PronounceButton';
 
 interface Props {
   draft: Partial<Flashcard>;
@@ -59,9 +60,12 @@ export default function SaveFlashcardModal({ draft, nativeLanguage, studyLanguag
         {/* Body */}
         <div className="p-6 space-y-4">
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-widest mb-2" style={{ color: 'var(--color-muted)' }}>
-              {studyLangLabel}
-            </label>
+            <div className="flex items-center gap-2 mb-2">
+              <label className="block text-xs font-semibold uppercase tracking-widest" style={{ color: 'var(--color-muted)' }}>
+                {studyLangLabel}
+              </label>
+              <PronounceButton text={studyLangValue} studyLanguage={studyLanguage} />
+            </div>
             <input
               type="text"
               value={studyLangValue}

@@ -5,6 +5,7 @@ import { ExamplePair } from '@/services/gemini';
 import { getBackSide, getExampleSides, getStudyLangSide } from '@amgi/core';
 import Markdown from '@/components/Markdown';
 import { t } from '@/lib/i18n';
+import PronounceButton from '@/components/PronounceButton';
 
 function isExamplePairArray(arr: unknown[]): arr is ExamplePair[] {
   return arr.length === 0 || (typeof arr[0] === 'object' && arr[0] !== null && ('korean' in arr[0] || 'swedish' in arr[0] || 'english' in arr[0]));
@@ -41,6 +42,7 @@ export default function CardDetailModal({ card, nativeLanguage, onClose }: Props
           <div>
             <div className="flex items-center gap-3 flex-wrap">
               <h2 className="text-2xl font-bold" style={{ color: 'var(--color-highlight)' }}>{getStudyLangSide(card)}</h2>
+              <PronounceButton text={getStudyLangSide(card)} studyLanguage={card.studyLanguage ?? 'Korean'} />
               {card.formality && card.formality !== 'N/A' && (
                 <span className="px-2 py-0.5 text-xs rounded-full border" style={{ borderColor: 'var(--color-muted)', color: 'var(--color-muted)' }}>
                   {card.formality}
