@@ -48,6 +48,9 @@ export interface StudyLanguageConfig {
   directionBackToFrontKey: DirectionLabelKey;
   promptFrontToBackKey: DirectionPromptKey;
   promptBackToFrontKey: DirectionPromptKey;
+  /** Google Cloud TTS language code + Chirp 3: HD voice name for pronunciation audio, if supported */
+  ttsLanguageCode?: string;
+  ttsVoiceName?: string;
 }
 
 export const STUDY_LANGUAGE_CONFIGS: Record<StudyLanguage, StudyLanguageConfig> = {
@@ -65,6 +68,8 @@ export const STUDY_LANGUAGE_CONFIGS: Record<StudyLanguage, StudyLanguageConfig> 
     directionBackToFrontKey: 'directionEnglishToKorean',
     promptFrontToBackKey: 'promptKoreanToEnglish',
     promptBackToFrontKey: 'promptEnglishToKorean',
+    ttsLanguageCode: 'ko-KR',
+    ttsVoiceName: 'ko-KR-Chirp3-HD-Charon',
   },
   Swedish: {
     code: 'Swedish',

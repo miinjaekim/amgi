@@ -55,6 +55,10 @@ docs/
 
 # pronunciation audio test output (throwaway)
 /audio-test/
+
+# Firebase service account keys — never commit, live credential
+*firebase-adminsdk*.json
+serviceAccountKey*.json
 apps/web/src/components/AmgiLogo*.png
 apps/web/src/components/AmgiLogo*.svg
 "apps/web/src/components/AmgiLogo 1 (1).png"
