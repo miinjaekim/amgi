@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createHash } from 'crypto';
 import { getStudyLanguageConfig } from '@amgi/core';
-import { bucket } from '@/lib/firebaseAdmin';
+import { getBucket } from '@/lib/firebaseAdmin';
 
 // Slightly slower than natural speaking speed — easier for learners to hear
 // individual sounds than TTS's default conversational pace.
@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
   const publicUrl = `https://storage.googleapis.com/${bucketName}/${path}`;
 
   try {
-    const file = bucket.file(path);
+    const file = getBucket().file(path);
     const [exists] = await file.exists();
     if (exists) {
       return NextResponse.json({ url: publicUrl });

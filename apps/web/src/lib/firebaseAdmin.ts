@@ -16,4 +16,9 @@ function getAdminApp(): App {
   });
 }
 
-export const bucket = getStorage(getAdminApp()).bucket();
+// Lazy — only touches env vars/credentials when a request actually needs
+// Storage, not at module import time (which runs during Next.js's build-time
+// page-data collection, before that's a safe assumption).
+export function getBucket() {
+  return getStorage(getAdminApp()).bucket();
+}
