@@ -147,10 +147,11 @@ function mapDocToFlashcard(doc): AnyFlashcard {
 - **Review language-switch fix** (merged 2026-07-08) — the review page load effect now depends on `studyLanguage`, so switching study language no longer keeps showing the previous language's cards.
 - **Desktop side navigation** (`feat/side-nav`, merged 2026-07-08) — fixed left sidebar (`SideNav`) with logo, nav, streak, study-language chip, and user/settings popover; collapsible to an icon rail (persisted); settings extracted to a shared `SettingsMenu`. Mobile unchanged (top header + bottom nav); nav icons shared via `nav-items.tsx`.
 - **Theme rework + review/nav polish** (`feat/theme-rework`, merged 2026-07-09) — a pre-paint inline script in `layout.tsx` applies the theme + sidebar-collapse state before first paint, eliminating both the Forest flash and the sidebar expand-flash on load/hard navigation; new **System** theme option (follows OS light/dark, live via `matchMedia`); **Sonokai** dark palette replaces the old indigo Slate (keeps the `slate` id for stored prefs + system mapping); review action buttons no longer jump — the card body reserves `min-h-[14rem]` so "Show answer" and the rating grid share one top anchor.
+- **Pronunciation audio** (`feat/pronunciation-audio`, merged 2026-07-11) — Korean-only for now. Google Cloud TTS, Chirp 3: HD voice (`ko-KR-Chirp3-HD-Charon`), slowed to `speakingRate: 0.85` for learner clarity. Lazy-generated on first play, cached in Firebase Storage keyed by text+language+voice+rate (`getBucket()` in `apps/web/src/lib/firebaseAdmin.ts`, initialized lazily — an eager top-level `export const bucket = ...` crashed Vercel's build-time page-data collection before env vars were available) via `POST /api/pronounce`, shared fetch fn `getPronunciationUrl` in `@amgi/core`. Play button (`PronounceButton.tsx`) next to the study-language term in: the search explanation card, save modal, review (both reveal states), and card detail. Mobile deferred — no `expo-audio` dependency yet. Other languages return a clean "not available" error until a voice is picked and added to `STUDY_LANGUAGE_CONFIGS`.
 
 ### In Progress
 
-Nothing currently — `main` is clean at the `feat/theme-rework` merge.
+Nothing currently — `main` is clean at the `feat/pronunciation-audio` merge.
 
 ### Known Issues
 
@@ -161,16 +162,7 @@ None currently tracked. (Word-of-the-day reload variance was reviewed and accept
 Ordered by priority; the **Next up** tier is what we're building now.
 
 **Next up**
-- [ ] **Pronunciation audio** — let users hear a card's term pronounced. Spec'd 2026-07-10 after comparing Google Cloud TTS (Neural2 + Chirp 3: HD), Gemini native audio, and on-device (`say`/`expo-speech`): Chirp 3: HD sounded best and was 100% reliable in testing, vs. Gemini native audio which repeatedly failed (`finishReason: OTHER`) on short isolated Korean words and needed retries. Going with **Google Cloud TTS, Chirp 3: HD**.
-  - **Generation**: lazy — generate on first play, not at card-creation time. Naturally covers existing cards too, no backfill needed for now (revisit later if we want audio ready instantly).
-  - **Scope**: term field only, for whichever side `STUDY_LANGUAGE_CONFIGS` marks as the study-language field (not the native/back side). Example sentences are a later addition.
-  - **Voice**: one fixed, standard male Chirp 3: HD voice per language — not user-selectable, so a word sounds the same every time it's replayed.
-  - **Caching**: Firebase Storage, keyed by normalized term + language + voice (not per-card, not per-user) — same principle as the Shared term cache idea below, so identical words across cards/users share one generated file.
-  - **Backend**: new Next.js API route proxying Cloud TTS (mirrors the `/api/explain` pattern) — key never reaches the client. Mobile calls the same route via `EXPO_PUBLIC_API_BASE_URL`, consistent with existing architecture.
-  - **Failure handling**: v1 just shows a failure state/message on the play button — no retry or fallback voice.
-  - **UI placement**: Learn card, review reveal, and card detail — all three from the start.
-  - Foundation for the kana audio below.
-- [ ] **Japanese basics: kana onboarding** — complete beginners need a way to learn hiragana/katakana before diving into vocab. Likely a dedicated kana study/reference mode (chart + drill), separate from the SM-2 vocab deck (or a pre-seeded starter deck). Scope: which kana set, romaji + audio (leans on pronunciation audio), stroke order out of scope for v1.
+- [ ] **Japanese basics: kana onboarding** — complete beginners need a way to learn hiragana/katakana before diving into vocab. Likely a dedicated kana study/reference mode (chart + drill), separate from the SM-2 vocab deck (or a pre-seeded starter deck). Scope: which kana set, romaji + audio (now unblocked — pronunciation audio shipped, though Japanese still needs a Chirp 3: HD voice picked and added to `STUDY_LANGUAGE_CONFIGS`), stroke order out of scope for v1.
 
 **High**
 - [ ] **Goal-based vocab lists: handle ambiguity + rethink placement** — (1) ambiguous terms are currently skipped ("ambiguous — skipped"); add a flow to pick a meaning (reuse the disambiguation picker) or auto-pick by passing the goal as context to `/api/explain`. (2) Move generation out of the Import button into its own home (Learn empty state, post-setup onboarding, or a dedicated "Starter deck" surface). Decide placement before building.
