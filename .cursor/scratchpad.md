@@ -161,7 +161,15 @@ None currently tracked. (Word-of-the-day reload variance was reviewed and accept
 Ordered by priority; the **Next up** tier is what we're building now.
 
 **Next up**
-- [ ] **Pronunciation audio** — let users hear how a word/phrase is pronounced. Research first: TTS generation (Google Cloud TTS / Gemini audio) vs. a pronunciation dictionary or API; cost + quality per language (Korean and Japanese especially); and where the play button lives (Learn card, review reveal, card detail). Cache generated audio to avoid regeneration cost. Foundation for the kana audio below.
+- [ ] **Pronunciation audio** — let users hear a card's term pronounced. Spec'd 2026-07-10 after comparing Google Cloud TTS (Neural2 + Chirp 3: HD), Gemini native audio, and on-device (`say`/`expo-speech`): Chirp 3: HD sounded best and was 100% reliable in testing, vs. Gemini native audio which repeatedly failed (`finishReason: OTHER`) on short isolated Korean words and needed retries. Going with **Google Cloud TTS, Chirp 3: HD**.
+  - **Generation**: lazy — generate on first play, not at card-creation time. Naturally covers existing cards too, no backfill needed for now (revisit later if we want audio ready instantly).
+  - **Scope**: term field only, for whichever side `STUDY_LANGUAGE_CONFIGS` marks as the study-language field (not the native/back side). Example sentences are a later addition.
+  - **Voice**: one fixed, standard male Chirp 3: HD voice per language — not user-selectable, so a word sounds the same every time it's replayed.
+  - **Caching**: Firebase Storage, keyed by normalized term + language + voice (not per-card, not per-user) — same principle as the Shared term cache idea below, so identical words across cards/users share one generated file.
+  - **Backend**: new Next.js API route proxying Cloud TTS (mirrors the `/api/explain` pattern) — key never reaches the client. Mobile calls the same route via `EXPO_PUBLIC_API_BASE_URL`, consistent with existing architecture.
+  - **Failure handling**: v1 just shows a failure state/message on the play button — no retry or fallback voice.
+  - **UI placement**: Learn card, review reveal, and card detail — all three from the start.
+  - Foundation for the kana audio below.
 - [ ] **Japanese basics: kana onboarding** — complete beginners need a way to learn hiragana/katakana before diving into vocab. Likely a dedicated kana study/reference mode (chart + drill), separate from the SM-2 vocab deck (or a pre-seeded starter deck). Scope: which kana set, romaji + audio (leans on pronunciation audio), stroke order out of scope for v1.
 
 **High**

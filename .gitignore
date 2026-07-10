@@ -52,6 +52,9 @@ next-env.d.ts
 # local data / docs / assets not tracked in git
 apps/web/data/
 docs/
+
+# pronunciation audio test output (throwaway)
+/audio-test/
 apps/web/src/components/AmgiLogo*.png
 apps/web/src/components/AmgiLogo*.svg
 "apps/web/src/components/AmgiLogo 1 (1).png"
