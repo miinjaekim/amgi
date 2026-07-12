@@ -7,7 +7,7 @@ export type ThemePreference = 'forest' | 'slate' | 'paper' | 'system';
 export type ResolvedTheme = 'forest' | 'slate' | 'paper';
 
 const STORAGE_KEY = 'amgi-theme';
-const DEFAULT_THEME: ThemePreference = 'forest';
+const DEFAULT_THEME: ThemePreference = 'paper';
 const VALID: ThemePreference[] = ['forest', 'slate', 'paper', 'system'];
 
 // The 'slate' value keeps its id for stored prefs / the system dark mapping,

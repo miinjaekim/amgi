@@ -27,11 +27,11 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={`${sourceCodePro.className} min-h-screen font-mono`}>
         {/* Apply the theme palette and sidebar-collapsed state before first
-            paint to avoid a flash of the default (Forest, expanded) UI.
+            paint to avoid a flash of the default (Paper, expanded) UI.
             Mirrors ThemeContext and LayoutWithUser. */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var t=localStorage.getItem('amgi-theme');if(t!=='forest'&&t!=='slate'&&t!=='paper'&&t!=='system')t='forest';var r=t==='system'?(window.matchMedia('(prefers-color-scheme: dark)').matches?'slate':'paper'):t;document.documentElement.classList.add('theme-'+r);if(localStorage.getItem('sidenav-collapsed')==='1')document.documentElement.classList.add('sidenav-collapsed');}catch(e){document.documentElement.classList.add('theme-forest');}})();`,
+            __html: `(function(){try{var t=localStorage.getItem('amgi-theme');if(t!=='forest'&&t!=='slate'&&t!=='paper'&&t!=='system')t='paper';var r=t==='system'?(window.matchMedia('(prefers-color-scheme: dark)').matches?'slate':'paper'):t;document.documentElement.classList.add('theme-'+r);if(localStorage.getItem('sidenav-collapsed')==='1')document.documentElement.classList.add('sidenav-collapsed');}catch(e){document.documentElement.classList.add('theme-paper');}})();`,
           }}
         />
         <ThemeProvider>
