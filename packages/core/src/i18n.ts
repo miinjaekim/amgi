@@ -87,6 +87,9 @@ const translations = {
     // Language setup modal
     welcomeTitle: 'Welcome to Amgi',
     welcomeSubtitle: 'What is your native language? Explanations will be written in this language.',
+    setupStudyTitle: 'What are you learning?',
+    setupStudySubtitle: 'Choose your study language',
+    setupBack: '← Back',
     // Empty state / onboarding
     tagline: 'Look up any word or phrase.',
     taglineSubtitle: 'Get an instant AI-powered explanation, then save it as a flashcard to review with spaced repetition.',
@@ -219,6 +222,9 @@ const translations = {
     // Language setup modal
     welcomeTitle: 'Amgi에 오신 것을 환영합니다',
     welcomeSubtitle: '모국어가 무엇인가요? 설명은 이 언어로 작성됩니다.',
+    setupStudyTitle: '어떤 언어를 배우고 싶나요?',
+    setupStudySubtitle: '학습할 언어를 선택하세요',
+    setupBack: '← 뒤로',
     // Empty state / onboarding
     tagline: '단어나 표현을 검색해보세요.',
     taglineSubtitle: 'AI로 즉각적인 설명을 받고, 플래시카드로 저장해 간격 반복 학습을 시작하세요.',

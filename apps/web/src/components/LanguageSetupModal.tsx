@@ -2,6 +2,8 @@
 import React, { useState } from 'react';
 import { SUPPORTED_NATIVE_LANGUAGES, SUPPORTED_STUDY_LANGUAGES } from '@/services/userPreferences';
 import { useUser } from '@/components/UserContext';
+import { getStudyLanguageConfig } from '@amgi/core';
+import { t } from '@/lib/i18n';
 import type { StudyLanguage } from '@amgi/core';
 
 export default function LanguageSetupModal() {
@@ -49,26 +51,31 @@ export default function LanguageSetupModal() {
           </>
         ) : (
           <>
-            <h2 className="text-2xl font-bold mb-1 text-[var(--color-text)]">What are you learning?</h2>
-            <h2 className="text-lg font-semibold mb-8 text-[var(--color-text)] opacity-60">Choose your study language</h2>
+            <h2 className="text-2xl font-bold mb-1 text-[var(--color-text)]">{t(pendingNative, 'setupStudyTitle')}</h2>
+            <h2 className="text-lg font-semibold mb-8 text-[var(--color-text)] opacity-60">{t(pendingNative, 'setupStudySubtitle')}</h2>
             <div className="flex flex-col gap-3">
-              {SUPPORTED_STUDY_LANGUAGES.filter((lang) => lang.code !== pendingNative).map((lang) => (
-                <button
-                  key={lang.code}
-                  onClick={() => handleStudySelect(lang.code)}
-                  className="w-full py-3 rounded-lg font-semibold text-base border border-[var(--color-muted)] text-[var(--color-text)] hover:bg-[var(--color-muted)] hover:text-[var(--color-bg)] transition-colors"
-                  style={{ background: 'var(--color-bg)' }}
-                >
-                  <span>{lang.label}</span>
-                  <span className="ml-2 opacity-60 font-normal">{lang.labelNative}</span>
-                </button>
-              ))}
+              {SUPPORTED_STUDY_LANGUAGES.map((lang) => {
+                const localizedLabel = t(pendingNative, getStudyLanguageConfig(lang.code).studyLabelKey);
+                return (
+                  <button
+                    key={lang.code}
+                    onClick={() => handleStudySelect(lang.code)}
+                    className="w-full py-3 rounded-lg font-semibold text-base border border-[var(--color-muted)] text-[var(--color-text)] hover:bg-[var(--color-muted)] hover:text-[var(--color-bg)] transition-colors"
+                    style={{ background: 'var(--color-bg)' }}
+                  >
+                    <span>{localizedLabel}</span>
+                    {lang.labelNative !== localizedLabel && (
+                      <span className="ml-2 opacity-60 font-normal">{lang.labelNative}</span>
+                    )}
+                  </button>
+                );
+              })}
             </div>
             <button
               onClick={() => setStep('native')}
               className="mt-4 text-sm text-[var(--color-muted)] hover:text-[var(--color-text)] transition-colors"
             >
-              ← Back
+              {t(pendingNative, 'setupBack')}
             </button>
           </>
         )}
