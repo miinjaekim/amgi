@@ -87,6 +87,9 @@ const translations = {
     // Language setup modal
     welcomeTitle: 'Welcome to Amgi',
     welcomeSubtitle: 'What is your native language? Explanations will be written in this language.',
+    setupStudyTitle: 'What are you learning?',
+    setupStudySubtitle: 'Choose your study language',
+    setupBack: '← Back',
     // Empty state / onboarding
     tagline: 'Look up any word or phrase.',
     taglineSubtitle: 'Get an instant AI-powered explanation, then save it as a flashcard to review with spaced repetition.',
@@ -131,6 +134,33 @@ const translations = {
     bulkDeleteSelected: 'Delete selected',
     bulkConfirmDelete: 'Delete selected cards? This cannot be undone.',
     bulkConfirmArchive: 'Archive selected cards?',
+    // Import / export
+    cardsImport: 'Import',
+    cardsExport: 'Export',
+    cardsExportCSV: 'CSV (all cards)',
+    cardsExportAnki: 'Anki (.txt)',
+    importTitle: 'Import Words',
+    importPastePrompt: 'Paste words below, one per line.',
+    importWordCount: '{count} words',
+    importWordCountOne: '1 word',
+    importStart: 'Start Import',
+    importProcessing: 'Processing {done}/{total}...',
+    importDoneSummary: 'Done — {success} of {total} resolved. {selected} selected.',
+    importStatusFailed: 'failed',
+    importStatusAmbiguous: 'multiple meanings — skipped',
+    importSaving: 'Saving...',
+    importSaveCards: 'Save {count} cards',
+    importSaveCardsOne: 'Save 1 card',
+    importSavedToast: '{count} cards saved.',
+    importSavedToastOne: '1 card saved.',
+    // Learn page — word packs + generation
+    packsLink: 'Browse word packs',
+    packsSaved: '{added}/{total} saved',
+    packAddedBadge: 'saved',
+    packTapHint: 'Tap a word to look it up, then save it as a card.',
+    generateLink: 'Generate words for a goal',
+    generateComingSoon: 'Describe why you\'re learning and get a word list made for you — this feature is on its way.',
+    comingSoon: 'Coming soon',
   },
   Korean: {
     // Learn page
@@ -219,6 +249,9 @@ const translations = {
     // Language setup modal
     welcomeTitle: 'Amgi에 오신 것을 환영합니다',
     welcomeSubtitle: '모국어가 무엇인가요? 설명은 이 언어로 작성됩니다.',
+    setupStudyTitle: '어떤 언어를 배우고 싶나요?',
+    setupStudySubtitle: '학습할 언어를 선택하세요',
+    setupBack: '← 뒤로',
     // Empty state / onboarding
     tagline: '단어나 표현을 검색해보세요.',
     taglineSubtitle: 'AI로 즉각적인 설명을 받고, 플래시카드로 저장해 간격 반복 학습을 시작하세요.',
@@ -264,12 +297,49 @@ const translations = {
     bulkDeleteSelected: '선택 항목 삭제',
     bulkConfirmDelete: '선택한 카드를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.',
     bulkConfirmArchive: '선택한 카드를 보관하시겠습니까?',
+    // Import / export
+    cardsImport: '가져오기',
+    cardsExport: '내보내기',
+    cardsExportCSV: 'CSV (전체 카드)',
+    cardsExportAnki: 'Anki (.txt)',
+    importTitle: '단어 가져오기',
+    importPastePrompt: '단어를 한 줄에 하나씩 입력하세요.',
+    importWordCount: '단어 {count}개',
+    importWordCountOne: '단어 1개',
+    importStart: '가져오기 시작',
+    importProcessing: '처리 중 {done}/{total}...',
+    importDoneSummary: '완료 — {total}개 중 {success}개 확인됨, {selected}개 선택됨.',
+    importStatusFailed: '실패',
+    importStatusAmbiguous: '뜻이 여러 개예요 — 건너뜀',
+    importSaving: '저장 중...',
+    importSaveCards: '카드 {count}장 저장',
+    importSaveCardsOne: '카드 1장 저장',
+    importSavedToast: '카드 {count}장이 저장되었습니다.',
+    importSavedToastOne: '카드 1장이 저장되었습니다.',
+    // Learn page — word packs + generation
+    packsLink: '단어팩 둘러보기',
+    packsSaved: '{added}/{total} 저장됨',
+    packAddedBadge: '저장됨',
+    packTapHint: '단어를 누르면 검색되고, 카드로 저장할 수 있어요.',
+    generateLink: '목표에 맞는 단어 만들기',
+    generateComingSoon: '학습 목적을 알려주면 딱 맞는 단어 목록을 만들어주는 기능을 준비하고 있어요.',
+    comingSoon: '준비 중',
   },
 } as const;
 
-type TranslationKey = keyof typeof translations.English;
+export type TranslationKey = keyof typeof translations.English;
 
-export function t(lang: string | null | undefined, key: TranslationKey): string {
+export function t(
+  lang: string | null | undefined,
+  key: TranslationKey,
+  params?: Record<string, string | number>
+): string {
   const language = lang === 'Korean' ? 'Korean' : 'English';
-  return translations[language][key];
+  let text: string = translations[language][key];
+  if (params) {
+    for (const [name, value] of Object.entries(params)) {
+      text = text.split(`{${name}}`).join(String(value));
+    }
+  }
+  return text;
 }

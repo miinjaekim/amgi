@@ -5,6 +5,7 @@ import { useUser } from '@/components/UserContext';
 import { saveFlashcardToFirestore, Flashcard } from '@/services/firestore';
 import { TermCore } from '@/services/gemini';
 import { getStudyLanguageConfig } from '@amgi/core';
+import { t } from '@/lib/i18n';
 import Spinner from '@/components/Spinner';
 
 type ImportStatus = 'pending' | 'loading' | 'success' | 'ambiguous' | 'error';
@@ -29,33 +30,9 @@ export default function ImportModal({
   const [step, setStep] = useState<'input' | 'processing' | 'done'>('input');
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [saving, setSaving] = useState(false);
-  const [goal, setGoal] = useState('');
-  const [generating, setGenerating] = useState(false);
-  const [generateError, setGenerateError] = useState(false);
   const abortRef = useRef(false);
 
   const words = input.split('\n').map(w => w.trim()).filter(Boolean);
-
-  const generateFromGoal = async () => {
-    if (!goal.trim() || generating) return;
-    setGenerating(true);
-    setGenerateError(false);
-    try {
-      const res = await fetch('/api/vocab-list', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ goal: goal.trim(), studyLanguage }),
-      });
-      if (!res.ok) throw new Error('generate failed');
-      const data = await res.json();
-      if (!Array.isArray(data.words) || data.words.length === 0) throw new Error('empty list');
-      setInput(data.words.join('\n'));
-    } catch {
-      setGenerateError(true);
-    } finally {
-      setGenerating(false);
-    }
-  };
 
   const startImport = async () => {
     if (words.length === 0) return;
@@ -128,7 +105,7 @@ export default function ImportModal({
         style={{ background: 'var(--color-surface)', maxHeight: '80vh' }}
       >
         <div className="flex items-center justify-between p-6 pb-4 shrink-0">
-          <h2 className="text-xl font-bold text-[var(--color-highlight)]">Import Words</h2>
+          <h2 className="text-xl font-bold text-[var(--color-highlight)]">{t(nativeLanguage, 'importTitle')}</h2>
           <button
             onClick={() => { abortRef.current = true; onClose(); }}
             className="text-[var(--color-muted)] hover:text-[var(--color-text)] text-2xl leading-none"
@@ -140,34 +117,7 @@ export default function ImportModal({
         <div className="flex-1 overflow-y-auto px-6 pb-6">
           {step === 'input' && (
             <>
-              <p className="text-sm text-[var(--color-muted)] mb-2">
-                Tell us why you&apos;re learning and we&apos;ll suggest a starter list.
-              </p>
-              <div className="flex gap-2 mb-1">
-                <input
-                  type="text"
-                  value={goal}
-                  onChange={e => setGoal(e.target.value)}
-                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); generateFromGoal(); } }}
-                  placeholder={`e.g. "ordering food on a trip to ${{ Korean: 'Seoul', Swedish: 'Stockholm', English: 'New York', French: 'Paris', Japanese: 'Tokyo' }[studyLanguage] ?? 'Seoul'}"`}
-                  disabled={generating}
-                  className="flex-1 p-2 text-sm rounded-lg bg-[var(--color-bg)] border border-[var(--color-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--color-highlight)] text-[var(--color-text)] placeholder-[var(--color-muted)]"
-                />
-                <button
-                  onClick={generateFromGoal}
-                  disabled={!goal.trim() || generating}
-                  className="px-3 py-2 rounded-lg font-semibold text-sm transition-colors disabled:opacity-40 flex items-center gap-2"
-                  style={{ background: 'var(--color-muted)', color: 'var(--color-text)' }}
-                >
-                  {generating ? <Spinner className="w-4 h-4" /> : 'Generate'}
-                </button>
-              </div>
-              {generateError && (
-                <p className="text-xs mb-2" style={{ color: 'var(--color-highlight)' }}>
-                  Failed to generate a list. Please try again.
-                </p>
-              )}
-              <p className="text-sm text-[var(--color-muted)] mb-3 mt-3">Or paste words below, one per line.</p>
+              <p className="text-sm text-[var(--color-muted)] mb-3">{t(nativeLanguage, 'importPastePrompt')}</p>
               <textarea
                 value={input}
                 onChange={e => setInput(e.target.value)}
@@ -177,7 +127,7 @@ export default function ImportModal({
               />
               {words.length > 0 && (
                 <p className="text-xs text-[var(--color-muted)] mt-2">
-                  {words.length} word{words.length !== 1 ? 's' : ''}
+                  {t(nativeLanguage, words.length === 1 ? 'importWordCountOne' : 'importWordCount', { count: words.length })}
                 </p>
               )}
               <button
@@ -186,7 +136,7 @@ export default function ImportModal({
                 className="mt-4 w-full py-2.5 rounded-lg font-semibold text-sm transition-colors disabled:opacity-40"
                 style={{ background: 'var(--color-highlight)', color: 'var(--color-bg)' }}
               >
-                Start Import
+                {t(nativeLanguage, 'importStart')}
               </button>
             </>
           )}
@@ -195,8 +145,8 @@ export default function ImportModal({
             <>
               <p className="text-sm text-[var(--color-muted)] mb-4">
                 {step === 'processing'
-                  ? `Processing ${doneCount}/${items.length}...`
-                  : `Done — ${successCount} of ${items.length} resolved. ${selected.size} selected.`}
+                  ? t(nativeLanguage, 'importProcessing', { done: doneCount, total: items.length })
+                  : t(nativeLanguage, 'importDoneSummary', { success: successCount, total: items.length, selected: selected.size })}
               </p>
               <div className="flex flex-col gap-2">
                 {items.map((item, i) => (
@@ -220,8 +170,8 @@ export default function ImportModal({
                         <span className="font-semibold text-sm text-[var(--color-text)]">{item.word}</span>
                         {item.status === 'loading' && <Spinner className="w-3 h-3" />}
                         {item.status === 'pending' && <span className="text-xs text-[var(--color-muted)]">—</span>}
-                        {item.status === 'error' && <span className="text-xs opacity-60" style={{ color: 'var(--color-highlight)' }}>failed</span>}
-                        {item.status === 'ambiguous' && <span className="text-xs text-[var(--color-muted)]">ambiguous — skipped</span>}
+                        {item.status === 'error' && <span className="text-xs opacity-60" style={{ color: 'var(--color-highlight)' }}>{t(nativeLanguage, 'importStatusFailed')}</span>}
+                        {item.status === 'ambiguous' && <span className="text-xs text-[var(--color-muted)]">{t(nativeLanguage, 'importStatusAmbiguous')}</span>}
                         {item.status === 'success' && item.data && (
                           <span className="text-xs text-[var(--color-muted)]">
                             {item.data[langConfig.studyField]} · {item.data[langConfig.backField]}
@@ -246,7 +196,9 @@ export default function ImportModal({
                   className="mt-4 w-full py-2.5 rounded-lg font-semibold text-sm transition-colors disabled:opacity-40 flex items-center justify-center gap-2"
                   style={{ background: 'var(--color-highlight)', color: 'var(--color-bg)' }}
                 >
-                  {saving ? <><Spinner className="w-4 h-4" /> Saving...</> : `Save ${selected.size} card${selected.size !== 1 ? 's' : ''}`}
+                  {saving
+                    ? <><Spinner className="w-4 h-4" /> {t(nativeLanguage, 'importSaving')}</>
+                    : t(nativeLanguage, selected.size === 1 ? 'importSaveCardsOne' : 'importSaveCards', { count: selected.size })}
                 </button>
               )}
             </>

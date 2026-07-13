@@ -11,11 +11,12 @@ import {
 } from '@/services/gemini';
 import Markdown from '@/components/Markdown';
 import { saveFlashcardToFirestore, Flashcard } from '@/services/firestore';
-import { getExampleSides, getStudyLanguageConfig, parseStreamedExamples } from '@amgi/core';
+import { getExampleSides, getStudyLanguageConfig, getVocabPacks, parseStreamedExamples } from '@amgi/core';
 import type { WordOfTheDay } from '@amgi/core';
 import { useUser } from '@/components/UserContext';
 import { t } from '@/lib/i18n';
 import SaveFlashcardModal from '@/components/SaveFlashcardModal';
+import PacksModal from '@/components/PacksModal';
 import PronounceButton from '@/components/PronounceButton';
 import Spinner from '@/components/Spinner';
 import React from 'react';
@@ -92,6 +93,14 @@ export default function Home() {
   const [showContextInput, setShowContextInput] = useState(false);
   const [contextInput, setContextInput] = useState('');
   const [wordOfTheDay, setWordOfTheDay] = useState<WordOfTheDay | null>(null);
+  const [showPacks, setShowPacks] = useState(false);
+  const [showGenerate, setShowGenerate] = useState(false);
+
+  const handlePackWord = (word: string, context?: string) => {
+    setShowPacks(false);
+    setTerm(word);
+    resolveExplanation(word, context);
+  };
 
   useEffect(() => {
     if (nativeLanguage === undefined) return; // preferences still loading
@@ -358,6 +367,22 @@ export default function Home() {
               </button>
             ))}
           </div>
+          <div className="mt-6 flex items-center justify-center gap-5 flex-wrap">
+            {getVocabPacks(studyLanguage).length > 0 && (
+              <button
+                onClick={() => setShowPacks(true)}
+                className="text-sm text-[var(--color-muted)] hover:text-[var(--color-text)] transition-colors underline underline-offset-2"
+              >
+                {t(nativeLanguage, 'packsLink')}
+              </button>
+            )}
+            <button
+              onClick={() => setShowGenerate(true)}
+              className="text-sm text-[var(--color-muted)] hover:text-[var(--color-text)] transition-colors underline underline-offset-2"
+            >
+              {t(nativeLanguage, 'generateLink')}
+            </button>
+          </div>
         </div>
       )}
 
@@ -568,6 +593,33 @@ export default function Home() {
       {saveSuccess && (
         <div className="mt-4 p-4 rounded-lg bg-[var(--color-muted)] text-[var(--color-text)] font-semibold">
           {t(nativeLanguage, 'flashcardSaved')}
+        </div>
+      )}
+
+      {showPacks && <PacksModal onClose={() => setShowPacks(false)} onSelectWord={handlePackWord} />}
+
+      {/* Goal-based word generation — placeholder until the feature lands */}
+      {showGenerate && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={() => setShowGenerate(false)}>
+          <div
+            className="w-full max-w-sm mx-4 p-6 rounded-2xl shadow-2xl border border-[var(--color-muted)]"
+            style={{ background: 'var(--color-surface)' }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-2">
+              <h2 className="text-lg font-bold text-[var(--color-highlight)]">{t(nativeLanguage, 'generateLink')}</h2>
+              <button
+                onClick={() => setShowGenerate(false)}
+                className="text-[var(--color-muted)] hover:text-[var(--color-text)] text-2xl leading-none"
+              >
+                &times;
+              </button>
+            </div>
+            <span className="inline-block mb-3 px-2 py-0.5 text-xs rounded-full border border-[var(--color-muted)] text-[var(--color-muted)]">
+              {t(nativeLanguage, 'comingSoon')}
+            </span>
+            <p className="text-sm text-[var(--color-text)] opacity-80">{t(nativeLanguage, 'generateComingSoon')}</p>
+          </div>
         </div>
       )}
 

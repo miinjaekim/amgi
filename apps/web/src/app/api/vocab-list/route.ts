@@ -6,7 +6,7 @@ function stripMarkdownCodeBlock(text: string): string {
 }
 
 export async function POST(req: NextRequest) {
-  const { goal, studyLanguage = 'Korean', count = 15 } = await req.json();
+  const { goal, studyLanguage = 'Korean', count = 15, previousWords, feedback } = await req.json();
 
   if (!goal || typeof goal !== 'string') {
     return NextResponse.json({ error: 'goal is required' }, { status: 400 });
@@ -22,11 +22,26 @@ export async function POST(req: NextRequest) {
 
   const listSize = Math.min(Math.max(Number(count) || 15, 5), 30);
 
+  const hasRefinement =
+    typeof feedback === 'string' && feedback.trim() &&
+    Array.isArray(previousWords) && previousWords.length > 0;
+
+  const refinement = hasRefinement
+    ? `
+
+You previously suggested this list:
+${previousWords.filter((w: unknown) => typeof w === 'string').join(', ')}
+
+The learner gave this feedback on it: "${feedback.trim()}"
+
+Generate a new list that addresses the feedback. Keep previous words that still fit; replace the rest.`
+    : '';
+
   const prompt = `A learner of ${studyLanguage} described why they are learning:
 
 "${goal}"
 
-Build a starter vocabulary list of exactly ${listSize} ${studyLanguage} words or short expressions tailored to that goal. Prioritize words the learner will actually use for this goal, ordered from most to least essential. Single words or short set phrases only — no full sentences, no duplicates, no romanization.
+Build a starter vocabulary list of exactly ${listSize} ${studyLanguage} words or short expressions tailored to that goal. Prioritize words the learner will actually use for this goal, ordered from most to least essential. Single words or short set phrases only — no full sentences, no duplicates, no romanization.${refinement}
 
 Respond with only this JSON:
 { "words": ["word1", "word2", ...] }`;

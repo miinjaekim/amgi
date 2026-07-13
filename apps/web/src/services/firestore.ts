@@ -1,5 +1,5 @@
 import { db } from '@/config/firebase';
-import { collection, addDoc, Timestamp, query, where, orderBy, getDocs, doc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { collection, addDoc, Timestamp, query, where, orderBy, getDocs, getCountFromServer, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { getStudyLanguageConfig } from '@amgi/core';
 import type { Flashcard, ReviewTracking, StudyLanguage } from '@amgi/core';
 
@@ -94,6 +94,15 @@ export async function fetchUserFlashcards(uid: string, studyLanguage?: StudyLang
     console.error('[Firestore] Error in fetchUserFlashcards:', error);
     throw error;
   }
+}
+
+export async function countUserFlashcards(uid: string, studyLanguage?: StudyLanguage): Promise<number> {
+  const q = query(
+    collection(db, getCardsCollection(studyLanguage)),
+    where('uid', '==', uid)
+  );
+  const snapshot = await getCountFromServer(q);
+  return snapshot.data().count;
 }
 
 export async function fetchAllUserFlashcards(uid: string, studyLanguage?: StudyLanguage): Promise<Flashcard[]> {
