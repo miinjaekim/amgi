@@ -264,7 +264,7 @@ export default function CardsPage() {
     if (user) {
       fetchAllUserFlashcards(user.uid, studyLanguage).then(setAllCards).catch(() => {});
     }
-    setImportSuccess(`${count} card${count !== 1 ? 's' : ''} saved.`);
+    setImportSuccess(t(nativeLanguage, count === 1 ? 'importSavedToastOne' : 'importSavedToast', { count }));
     setTimeout(() => setImportSuccess(null), 4000);
   };
 
@@ -278,7 +278,7 @@ export default function CardsPage() {
               onClick={() => setShowImport(true)}
               className="text-xs px-3 py-1.5 rounded-lg border border-[var(--color-muted)] text-[var(--color-muted)] hover:text-[var(--color-text)] hover:border-[var(--color-text)] transition-colors"
             >
-              Import
+              {t(nativeLanguage, 'cardsImport')}
             </button>
             <div className="relative">
               <button
@@ -286,7 +286,7 @@ export default function CardsPage() {
                 disabled={allCards.length === 0}
                 className="text-xs px-3 py-1.5 rounded-lg border border-[var(--color-muted)] text-[var(--color-muted)] hover:text-[var(--color-text)] hover:border-[var(--color-text)] transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
               >
-                Export
+                {t(nativeLanguage, 'cardsExport')}
               </button>
               {showExportMenu && (
                 <>
@@ -299,13 +299,13 @@ export default function CardsPage() {
                       onClick={exportCSV}
                       className="w-full text-left px-4 py-2.5 text-xs text-[var(--color-text)] hover:bg-[var(--color-muted)] hover:text-[var(--color-bg)] transition-colors"
                     >
-                      CSV (all cards)
+                      {t(nativeLanguage, 'cardsExportCSV')}
                     </button>
                     <button
                       onClick={exportAnki}
                       className="w-full text-left px-4 py-2.5 text-xs text-[var(--color-text)] hover:bg-[var(--color-muted)] hover:text-[var(--color-bg)] transition-colors"
                     >
-                      Anki (.txt)
+                      {t(nativeLanguage, 'cardsExportAnki')}
                     </button>
                   </div>
                 </>

@@ -134,6 +134,29 @@ const translations = {
     bulkDeleteSelected: 'Delete selected',
     bulkConfirmDelete: 'Delete selected cards? This cannot be undone.',
     bulkConfirmArchive: 'Archive selected cards?',
+    // Import / export
+    cardsImport: 'Import',
+    cardsExport: 'Export',
+    cardsExportCSV: 'CSV (all cards)',
+    cardsExportAnki: 'Anki (.txt)',
+    importTitle: 'Import Words',
+    importGoalPrompt: 'Tell us why you\'re learning and we\'ll suggest a starter list.',
+    importGoalPlaceholder: 'e.g. "ordering food on a trip to {city}"',
+    importGenerate: 'Generate',
+    importGenerateError: 'Failed to generate a list. Please try again.',
+    importPastePrompt: 'Or paste words below, one per line.',
+    importWordCount: '{count} words',
+    importWordCountOne: '1 word',
+    importStart: 'Start Import',
+    importProcessing: 'Processing {done}/{total}...',
+    importDoneSummary: 'Done — {success} of {total} resolved. {selected} selected.',
+    importStatusFailed: 'failed',
+    importStatusAmbiguous: 'ambiguous — skipped',
+    importSaving: 'Saving...',
+    importSaveCards: 'Save {count} cards',
+    importSaveCardsOne: 'Save 1 card',
+    importSavedToast: '{count} cards saved.',
+    importSavedToastOne: '1 card saved.',
   },
   Korean: {
     // Learn page
@@ -270,12 +293,45 @@ const translations = {
     bulkDeleteSelected: '선택 항목 삭제',
     bulkConfirmDelete: '선택한 카드를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.',
     bulkConfirmArchive: '선택한 카드를 보관하시겠습니까?',
+    // Import / export
+    cardsImport: '가져오기',
+    cardsExport: '내보내기',
+    cardsExportCSV: 'CSV (전체 카드)',
+    cardsExportAnki: 'Anki (.txt)',
+    importTitle: '단어 가져오기',
+    importGoalPrompt: '학습 목적을 알려주시면 시작 단어 목록을 추천해드려요.',
+    importGoalPlaceholder: '예: "{city} 여행에서 음식 주문하기"',
+    importGenerate: '생성',
+    importGenerateError: '목록 생성에 실패했습니다. 다시 시도해주세요.',
+    importPastePrompt: '또는 아래에 단어를 한 줄에 하나씩 입력하세요.',
+    importWordCount: '단어 {count}개',
+    importWordCountOne: '단어 1개',
+    importStart: '가져오기 시작',
+    importProcessing: '처리 중 {done}/{total}...',
+    importDoneSummary: '완료 — {total}개 중 {success}개 확인됨, {selected}개 선택됨.',
+    importStatusFailed: '실패',
+    importStatusAmbiguous: '중의적 — 건너뜀',
+    importSaving: '저장 중...',
+    importSaveCards: '카드 {count}장 저장',
+    importSaveCardsOne: '카드 1장 저장',
+    importSavedToast: '카드 {count}장이 저장되었습니다.',
+    importSavedToastOne: '카드 1장이 저장되었습니다.',
   },
 } as const;
 
-type TranslationKey = keyof typeof translations.English;
+export type TranslationKey = keyof typeof translations.English;
 
-export function t(lang: string | null | undefined, key: TranslationKey): string {
+export function t(
+  lang: string | null | undefined,
+  key: TranslationKey,
+  params?: Record<string, string | number>
+): string {
   const language = lang === 'Korean' ? 'Korean' : 'English';
-  return translations[language][key];
+  let text: string = translations[language][key];
+  if (params) {
+    for (const [name, value] of Object.entries(params)) {
+      text = text.split(`{${name}}`).join(String(value));
+    }
+  }
+  return text;
 }
