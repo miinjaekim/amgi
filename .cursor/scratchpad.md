@@ -151,7 +151,10 @@ function mapDocToFlashcard(doc): AnyFlashcard {
 
 ### In Progress
 
-Nothing currently — `main` is clean at the `feat/pronunciation-audio` merge.
+- **`feat/korean-ux`** (5 commits, unmerged, on localhost for testing) — Korean-user UX improvements, ready for user testing before merge:
+  1. Language setup modal step 2 localized to the chosen native language (headings + language names via `studyLabelKey`); native language filtered out of study options (decided: natives don't study their own language).
+  2. Cards page import/export + ImportModal fully localized (EN+KO); `t()` extended with `{token}` interpolation.
+  3. Bulk-add reworked after the all-in-one v1 was judged overwhelming: ImportModal is paste-only; **TOEIC vocab pack v1** shipped — `packages/core/src/packs.ts` (133 words, context hints on polysemes), `PacksModal.tsx` word list with saved-marking + progress, tap-a-word → normal Learn search/save flow; goal-based generation is a coming-soon placeholder on Learn. Unused keepers: `countUserFlashcards`, `/api/vocab-list` `previousWords`+`feedback` support.
 
 ### Known Issues
 
@@ -162,6 +165,8 @@ None currently tracked. (Word-of-the-day reload variance was reviewed and accept
 Ordered by priority; the **Next up** tier is what we're building now.
 
 **Next up**
+- [ ] **Vocabulary packs — iterate beyond v1** — v1 shipped on `feat/korean-ux` (see In Progress): TOEIC Core Vocabulary pack (133 words), browsable list, tap-to-learn. Design principles (2026-07-13 discussion): the audience is NOT beginners — Koreans have years of school English; the app's value is words where a simple translation is insufficient. Packs are "unlocking new domains", usable at any stage — never "starter" anything; as big as they need to be; curated from real resources (Barron's 600, TOEIC word lists), NOT AI-generated, editorially controlled. Polysemes carry context hints passed to `/api/explain`. Word list source draft: `.cursor/toeic-pack-draft.md`. Next iterations: daily-draw UX ("show me N I haven't saved" / random chunk of ~20), surface section themes (verbs / familiar-words-new-meanings / adjectives / nouns) as filters, more packs (TOEFL academic; TOPIK/국립국어원-based Korean packs), pre-authored card content instead of per-word Gemini calls (ties into "shared term cache").
+- [ ] **Card generation (goal-based) implementation** — the Learn page has a coming-soon placeholder for it; build the real thing later as its own lean surface: goal input → generated list with checkboxes → single free-text refine field (`/api/vocab-list` already accepts `previousWords` + `feedback`; no too-basic/too-advanced chips) → save.
 - [ ] **Japanese basics: kana onboarding** — complete beginners need a way to learn hiragana/katakana before diving into vocab. Likely a dedicated kana study/reference mode (chart + drill), separate from the SM-2 vocab deck (or a pre-seeded starter deck). Scope: which kana set, romaji + audio (now unblocked — pronunciation audio shipped, though Japanese still needs a Chirp 3: HD voice picked and added to `STUDY_LANGUAGE_CONFIGS`), stroke order out of scope for v1.
 
 **High**
