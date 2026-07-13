@@ -10,13 +10,13 @@ import {
   ExamplePair,
 } from '@/services/gemini';
 import Markdown from '@/components/Markdown';
-import { saveFlashcardToFirestore, countUserFlashcards, Flashcard } from '@/services/firestore';
-import { getExampleSides, getStudyLanguageConfig, parseStreamedExamples } from '@amgi/core';
+import { saveFlashcardToFirestore, Flashcard } from '@/services/firestore';
+import { getExampleSides, getStudyLanguageConfig, getVocabPacks, parseStreamedExamples } from '@amgi/core';
 import type { WordOfTheDay } from '@amgi/core';
 import { useUser } from '@/components/UserContext';
 import { t } from '@/lib/i18n';
 import SaveFlashcardModal from '@/components/SaveFlashcardModal';
-import ImportModal from '@/components/ImportModal';
+import PacksModal from '@/components/PacksModal';
 import PronounceButton from '@/components/PronounceButton';
 import Spinner from '@/components/Spinner';
 import React from 'react';
@@ -93,25 +93,13 @@ export default function Home() {
   const [showContextInput, setShowContextInput] = useState(false);
   const [contextInput, setContextInput] = useState('');
   const [wordOfTheDay, setWordOfTheDay] = useState<WordOfTheDay | null>(null);
-  const [cardCount, setCardCount] = useState<number | null>(null);
-  const [showBulkAdd, setShowBulkAdd] = useState(false);
-  const [bulkSavedMsg, setBulkSavedMsg] = useState<string | null>(null);
+  const [showPacks, setShowPacks] = useState(false);
+  const [showGenerate, setShowGenerate] = useState(false);
 
-  useEffect(() => {
-    setCardCount(null);
-    if (!user) return;
-    let cancelled = false;
-    countUserFlashcards(user.uid, studyLanguage)
-      .then(count => { if (!cancelled) setCardCount(count); })
-      .catch(() => {}); // offline or rules error — just skip the starter card
-    return () => { cancelled = true; };
-  }, [user, studyLanguage]);
-
-  const handleBulkSaved = (count: number) => {
-    setShowBulkAdd(false);
-    setCardCount(prev => (prev !== null ? prev + count : prev));
-    setBulkSavedMsg(t(nativeLanguage, count === 1 ? 'importSavedToastOne' : 'importSavedToast', { count }));
-    setTimeout(() => setBulkSavedMsg(null), 4000);
+  const handlePackWord = (word: string, context?: string) => {
+    setShowPacks(false);
+    setTerm(word);
+    resolveExplanation(word, context);
   };
 
   useEffect(() => {
@@ -348,18 +336,6 @@ export default function Home() {
       {/* Empty state — word of the day + example terms below the search bar */}
       {!loading && !core && !ambiguity && !error && (
         <div className="mt-10 text-center">
-          {user && cardCount !== null && cardCount < 5 && (
-            <div className="w-full max-w-md mx-auto mb-8 p-5 rounded-xl bg-[var(--color-surface)] border border-[var(--color-highlight)]/50 text-left">
-              <p className="font-bold text-[var(--color-highlight)] mb-1">{t(nativeLanguage, 'starterCardTitle')}</p>
-              <p className="text-sm text-[var(--color-text)] opacity-70 mb-3">{t(nativeLanguage, 'starterCardBody')}</p>
-              <button
-                onClick={() => setShowBulkAdd(true)}
-                className="px-4 py-2 rounded-lg bg-[var(--color-highlight)] text-[var(--color-bg)] font-bold text-sm hover:bg-[var(--color-text)] transition-colors"
-              >
-                {t(nativeLanguage, 'starterCardButton')}
-              </button>
-            </div>
-          )}
           {wordOfTheDay && (
             <button
               onClick={() => { setTerm(wordOfTheDay.term); resolveExplanation(wordOfTheDay.term); }}
@@ -391,14 +367,22 @@ export default function Home() {
               </button>
             ))}
           </div>
-          {user && (
+          <div className="mt-6 flex items-center justify-center gap-5 flex-wrap">
+            {getVocabPacks(studyLanguage).length > 0 && (
+              <button
+                onClick={() => setShowPacks(true)}
+                className="text-sm text-[var(--color-muted)] hover:text-[var(--color-text)] transition-colors underline underline-offset-2"
+              >
+                {t(nativeLanguage, 'packsLink')}
+              </button>
+            )}
             <button
-              onClick={() => setShowBulkAdd(true)}
-              className="mt-6 text-sm text-[var(--color-muted)] hover:text-[var(--color-text)] transition-colors underline underline-offset-2"
+              onClick={() => setShowGenerate(true)}
+              className="text-sm text-[var(--color-muted)] hover:text-[var(--color-text)] transition-colors underline underline-offset-2"
             >
-              {t(nativeLanguage, 'bulkAddLink')}
+              {t(nativeLanguage, 'generateLink')}
             </button>
-          )}
+          </div>
         </div>
       )}
 
@@ -612,13 +596,32 @@ export default function Home() {
         </div>
       )}
 
-      {bulkSavedMsg && (
-        <div className="mt-4 p-4 rounded-lg bg-[var(--color-muted)] text-[var(--color-text)] font-semibold">
-          {bulkSavedMsg}
+      {showPacks && <PacksModal onClose={() => setShowPacks(false)} onSelectWord={handlePackWord} />}
+
+      {/* Goal-based word generation — placeholder until the feature lands */}
+      {showGenerate && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={() => setShowGenerate(false)}>
+          <div
+            className="w-full max-w-sm mx-4 p-6 rounded-2xl shadow-2xl border border-[var(--color-muted)]"
+            style={{ background: 'var(--color-surface)' }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-2">
+              <h2 className="text-lg font-bold text-[var(--color-highlight)]">{t(nativeLanguage, 'generateLink')}</h2>
+              <button
+                onClick={() => setShowGenerate(false)}
+                className="text-[var(--color-muted)] hover:text-[var(--color-text)] text-2xl leading-none"
+              >
+                &times;
+              </button>
+            </div>
+            <span className="inline-block mb-3 px-2 py-0.5 text-xs rounded-full border border-[var(--color-muted)] text-[var(--color-muted)]">
+              {t(nativeLanguage, 'comingSoon')}
+            </span>
+            <p className="text-sm text-[var(--color-text)] opacity-80">{t(nativeLanguage, 'generateComingSoon')}</p>
+          </div>
         </div>
       )}
-
-      {showBulkAdd && <ImportModal onClose={() => setShowBulkAdd(false)} onSaved={handleBulkSaved} />}
 
       {showFlashcardForm && flashcardDraft && (
         <SaveFlashcardModal
