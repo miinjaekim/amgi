@@ -157,6 +157,23 @@ const translations = {
     importSaveCardsOne: 'Save 1 card',
     importSavedToast: '{count} cards saved.',
     importSavedToastOne: '1 card saved.',
+    // Starter packs + list refinement
+    importStarterPacks: 'Start with a ready-made list:',
+    packGreetings: 'Greetings & essentials',
+    packTime: 'Time & days',
+    packFood: 'Food & dining',
+    packVerbs: 'Everyday verbs',
+    importRefinePrompt: 'Not quite right? Tell us how to adjust the list.',
+    importRefineTooBasic: 'Too basic',
+    importRefineTooAdvanced: 'Too advanced',
+    importRefineNotRelevant: 'Not relevant',
+    importRefinePlaceholder: 'e.g. "more everyday spoken phrases"',
+    importRefine: 'Refine',
+    // Learn page — bulk add
+    starterCardTitle: 'Start with essential words',
+    starterCardBody: 'Load a ready-made list of basic words, or generate one tailored to your goal.',
+    starterCardButton: 'Add starter words',
+    bulkAddLink: 'Add many words at once →',
   },
   Korean: {
     // Learn page
@@ -316,6 +333,23 @@ const translations = {
     importSaveCardsOne: '카드 1장 저장',
     importSavedToast: '카드 {count}장이 저장되었습니다.',
     importSavedToastOne: '카드 1장이 저장되었습니다.',
+    // Starter packs + list refinement
+    importStarterPacks: '준비된 목록으로 시작하세요:',
+    packGreetings: '인사와 필수 표현',
+    packTime: '시간과 날짜',
+    packFood: '음식과 식사',
+    packVerbs: '일상 동사',
+    importRefinePrompt: '마음에 들지 않나요? 목록을 어떻게 조정할지 알려주세요.',
+    importRefineTooBasic: '너무 쉬워요',
+    importRefineTooAdvanced: '너무 어려워요',
+    importRefineNotRelevant: '주제와 안 맞아요',
+    importRefinePlaceholder: '예: "일상 회화 표현 더 많이"',
+    importRefine: '조정',
+    // Learn page — bulk add
+    starterCardTitle: '필수 단어로 시작해보세요',
+    starterCardBody: '기초 단어 목록을 불러오거나 학습 목적에 맞는 목록을 만들어보세요.',
+    starterCardButton: '시작 단어 추가하기',
+    bulkAddLink: '여러 단어 한 번에 추가하기 →',
   },
 } as const;
 

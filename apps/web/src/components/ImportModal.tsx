@@ -4,7 +4,7 @@ import React, { useState, useRef } from 'react';
 import { useUser } from '@/components/UserContext';
 import { saveFlashcardToFirestore, Flashcard } from '@/services/firestore';
 import { TermCore } from '@/services/gemini';
-import { getStudyLanguageConfig } from '@amgi/core';
+import { getStudyLanguageConfig, STARTER_PACKS } from '@amgi/core';
 import { t } from '@/lib/i18n';
 import Spinner from '@/components/Spinner';
 
@@ -16,6 +16,14 @@ const PLACEHOLDER_CITIES: Record<string, { en: string; ko: string }> = {
   French: { en: 'Paris', ko: '파리' },
   Japanese: { en: 'Tokyo', ko: '도쿄' },
 };
+
+// Canonical feedback strings for the refine quick-chips — sent to the API in
+// English regardless of UI language so prompt behavior stays consistent
+const REFINE_CHIPS = [
+  { labelKey: 'importRefineTooBasic', feedback: 'These words are too basic — make the list more advanced.' },
+  { labelKey: 'importRefineTooAdvanced', feedback: 'These words are too advanced — make the list more beginner-friendly.' },
+  { labelKey: 'importRefineNotRelevant', feedback: 'Some words are not relevant to my goal — replace them with more relevant ones.' },
+] as const;
 
 type ImportStatus = 'pending' | 'loading' | 'success' | 'ambiguous' | 'error';
 
@@ -42,11 +50,13 @@ export default function ImportModal({
   const [goal, setGoal] = useState('');
   const [generating, setGenerating] = useState(false);
   const [generateError, setGenerateError] = useState(false);
+  const [generated, setGenerated] = useState(false);
+  const [refineInput, setRefineInput] = useState('');
   const abortRef = useRef(false);
 
   const words = input.split('\n').map(w => w.trim()).filter(Boolean);
 
-  const generateFromGoal = async () => {
+  const generateFromGoal = async (feedback?: string) => {
     if (!goal.trim() || generating) return;
     setGenerating(true);
     setGenerateError(false);
@@ -54,17 +64,29 @@ export default function ImportModal({
       const res = await fetch('/api/vocab-list', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ goal: goal.trim(), studyLanguage }),
+        body: JSON.stringify({
+          goal: goal.trim(),
+          studyLanguage,
+          // On refine, send the visible list (including user edits) as context
+          ...(feedback ? { feedback, previousWords: words } : {}),
+        }),
       });
       if (!res.ok) throw new Error('generate failed');
       const data = await res.json();
       if (!Array.isArray(data.words) || data.words.length === 0) throw new Error('empty list');
       setInput(data.words.join('\n'));
+      setGenerated(true);
+      setRefineInput('');
     } catch {
       setGenerateError(true);
     } finally {
       setGenerating(false);
     }
+  };
+
+  const loadStarterPack = (packWords: string[]) => {
+    setInput(packWords.join('\n'));
+    setGenerated(false); // refine needs a goal; packs are static lists
   };
 
   const startImport = async () => {
@@ -150,6 +172,19 @@ export default function ImportModal({
         <div className="flex-1 overflow-y-auto px-6 pb-6">
           {step === 'input' && (
             <>
+              <p className="text-sm text-[var(--color-muted)] mb-2">{t(nativeLanguage, 'importStarterPacks')}</p>
+              <div className="flex flex-wrap gap-2 mb-4">
+                {(STARTER_PACKS[studyLanguage] ?? []).map(pack => (
+                  <button
+                    key={pack.id}
+                    onClick={() => loadStarterPack(pack.words)}
+                    className="px-3 py-1.5 rounded-full border border-[var(--color-muted)] text-[var(--color-text)] text-xs hover:bg-[var(--color-muted)]/30 transition-colors"
+                  >
+                    {t(nativeLanguage, pack.nameKey)}
+                    <span className="ml-1.5 opacity-50">{pack.words.length}</span>
+                  </button>
+                ))}
+              </div>
               <p className="text-sm text-[var(--color-muted)] mb-2">
                 {t(nativeLanguage, 'importGoalPrompt')}
               </p>
@@ -158,7 +193,7 @@ export default function ImportModal({
                   type="text"
                   value={goal}
                   onChange={e => setGoal(e.target.value)}
-                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); generateFromGoal(); } }}
+                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); void generateFromGoal(); } }}
                   placeholder={t(nativeLanguage, 'importGoalPlaceholder', {
                     city: (PLACEHOLDER_CITIES[studyLanguage] ?? PLACEHOLDER_CITIES.Korean)[nativeLanguage === 'Korean' ? 'ko' : 'en'],
                   })}
@@ -166,7 +201,7 @@ export default function ImportModal({
                   className="flex-1 p-2 text-sm rounded-lg bg-[var(--color-bg)] border border-[var(--color-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--color-highlight)] text-[var(--color-text)] placeholder-[var(--color-muted)]"
                 />
                 <button
-                  onClick={generateFromGoal}
+                  onClick={() => generateFromGoal()}
                   disabled={!goal.trim() || generating}
                   className="px-3 py-2 rounded-lg font-semibold text-sm transition-colors disabled:opacity-40 flex items-center gap-2"
                   style={{ background: 'var(--color-muted)', color: 'var(--color-text)' }}
@@ -191,6 +226,42 @@ export default function ImportModal({
                 <p className="text-xs text-[var(--color-muted)] mt-2">
                   {t(nativeLanguage, words.length === 1 ? 'importWordCountOne' : 'importWordCount', { count: words.length })}
                 </p>
+              )}
+              {generated && words.length > 0 && (
+                <div className="mt-3 p-3 rounded-lg border border-[var(--color-muted)]/50">
+                  <p className="text-xs text-[var(--color-muted)] mb-2">{t(nativeLanguage, 'importRefinePrompt')}</p>
+                  <div className="flex flex-wrap gap-2 mb-2">
+                    {REFINE_CHIPS.map(chip => (
+                      <button
+                        key={chip.labelKey}
+                        onClick={() => generateFromGoal(chip.feedback)}
+                        disabled={generating}
+                        className="px-3 py-1 rounded-full border border-[var(--color-muted)] text-[var(--color-text)] text-xs hover:bg-[var(--color-muted)]/30 transition-colors disabled:opacity-40"
+                      >
+                        {t(nativeLanguage, chip.labelKey)}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={refineInput}
+                      onChange={e => setRefineInput(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter' && refineInput.trim()) { e.preventDefault(); void generateFromGoal(refineInput.trim()); } }}
+                      placeholder={t(nativeLanguage, 'importRefinePlaceholder')}
+                      disabled={generating}
+                      className="flex-1 p-2 text-sm rounded-lg bg-[var(--color-bg)] border border-[var(--color-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--color-highlight)] text-[var(--color-text)] placeholder-[var(--color-muted)]"
+                    />
+                    <button
+                      onClick={() => generateFromGoal(refineInput.trim())}
+                      disabled={!refineInput.trim() || generating}
+                      className="px-3 py-2 rounded-lg font-semibold text-sm transition-colors disabled:opacity-40 flex items-center gap-2"
+                      style={{ background: 'var(--color-muted)', color: 'var(--color-text)' }}
+                    >
+                      {generating ? <Spinner className="w-4 h-4" /> : t(nativeLanguage, 'importRefine')}
+                    </button>
+                  </div>
+                </div>
               )}
               <button
                 onClick={startImport}
