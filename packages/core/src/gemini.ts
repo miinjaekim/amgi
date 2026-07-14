@@ -44,12 +44,13 @@ export async function getTermDepth(
   termLanguage: string,
   nativeLanguage = 'English',
   baseUrl = '',
-  studyLanguage: StudyLanguage = 'Korean'
+  studyLanguage: StudyLanguage = 'Korean',
+  sense?: { translation?: string; briefDefinition?: string }
 ): Promise<TermDepth> {
   const res = await fetch(`${baseUrl}/api/explain/depth`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ term, termLanguage, nativeLanguage, studyLanguage }),
+    body: JSON.stringify({ term, termLanguage, nativeLanguage, studyLanguage, ...sense }),
   });
 
   if (!res.ok) throw new Error('Failed to get term depth');
@@ -61,12 +62,13 @@ export async function getTermExamples(
   termLanguage: string,
   nativeLanguage = 'English',
   baseUrl = '',
-  studyLanguage: StudyLanguage = 'Korean'
+  studyLanguage: StudyLanguage = 'Korean',
+  sense?: { translation?: string; briefDefinition?: string }
 ): Promise<ExamplePair[]> {
   const res = await fetch(`${baseUrl}/api/explain/examples`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ term, termLanguage, nativeLanguage, studyLanguage }),
+    body: JSON.stringify({ term, termLanguage, nativeLanguage, studyLanguage, ...sense }),
   });
 
   if (!res.ok) throw new Error('Failed to get term examples');

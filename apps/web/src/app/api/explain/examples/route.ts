@@ -7,7 +7,7 @@ function stripMarkdownCodeBlock(text: string): string {
 }
 
 export async function POST(req: NextRequest) {
-  const { term, termLanguage, nativeLanguage = 'English', studyLanguage = 'Korean' } = await req.json();
+  const { term, termLanguage, nativeLanguage = 'English', studyLanguage = 'Korean', translation, briefDefinition } = await req.json();
 
   if (!term || typeof term !== 'string') {
     return NextResponse.json({ error: 'term is required' }, { status: 400 });
@@ -24,8 +24,13 @@ export async function POST(req: NextRequest) {
   const config = getStudyLanguageConfig(studyLanguage);
   const isStudyLang = termLanguage === config.code;
 
-  const prompt = `Provide 2–3 natural example sentences using the term "${term}" (${termLanguage}).
+  const hasSense = (typeof translation === 'string' && translation.trim()) || (typeof briefDefinition === 'string' && briefDefinition.trim());
+  const senseNote = hasSense
+    ? `\nThe word may have multiple meanings. Use only this sense${translation ? ` — "${translation}"` : ''}${briefDefinition ? `: ${briefDefinition}` : ''}. Every sentence must use "${term}" in exactly this meaning.\n`
+    : '';
 
+  const prompt = `Provide 2–3 natural example sentences using the term "${term}" (${termLanguage}).
+${senseNote}
 Each example must have:
 - "${config.studyField}": ${isStudyLang ? `a natural ${config.code} sentence using the term` : `the ${config.code} translation of the example sentence`}
 - "${config.backField}": ${isStudyLang ? `a ${nativeLanguage} translation of the ${config.code} sentence` : `the original ${config.backLanguage} sentence using the term`}

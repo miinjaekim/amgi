@@ -255,14 +255,23 @@ export function getExampleSides(
  * they already understand.
  */
 export function getDepthTarget(
-  core: Pick<TermCore, 'term' | 'termLanguage' | 'korean' | 'swedish' | 'french' | 'japanese' | 'english'>,
+  core: Pick<TermCore, 'term' | 'termLanguage' | 'korean' | 'swedish' | 'french' | 'japanese' | 'english' | 'briefDefinition'>,
   studyLanguage: StudyLanguage = 'Korean'
-): { term: string; termLanguage: string } {
+): { term: string; termLanguage: string; translation?: string; briefDefinition?: string } {
+  const config = getStudyLanguageConfig(studyLanguage);
+  // Pass the already-resolved sense along: for polysemous terms (pack context
+  // hints, disambiguation picker, "not what you meant") depth/examples must
+  // elaborate on the meaning the user chose, not whichever sense Gemini
+  // reaches for first.
+  const sense = {
+    translation: core[config.backField] || (core.termLanguage !== studyLanguage ? core.term : undefined),
+    briefDefinition: core.briefDefinition,
+  };
   if (core.termLanguage !== studyLanguage) {
-    const studySide = core[getStudyLanguageConfig(studyLanguage).studyField];
-    if (studySide) return { term: studySide, termLanguage: studyLanguage };
+    const studySide = core[config.studyField];
+    if (studySide) return { term: studySide, termLanguage: studyLanguage, ...sense };
   }
-  return { term: core.term, termLanguage: core.termLanguage };
+  return { term: core.term, termLanguage: core.termLanguage, ...sense };
 }
 
 // Word of the day — daily featured term on the Learn screen

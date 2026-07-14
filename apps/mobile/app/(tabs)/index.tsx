@@ -81,7 +81,10 @@ export default function LearnScreen() {
     setLoadingDepth(true);
     try {
       const target = getDepthTarget(core);
-      setDepth(await getTermDepth(target.term, target.termLanguage, nativeLanguage ?? 'English'));
+      setDepth(await getTermDepth(target.term, target.termLanguage, nativeLanguage ?? 'English', {
+        translation: target.translation,
+        briefDefinition: target.briefDefinition,
+      }));
     } catch {
       setError(t(nativeLanguage, 'errorLoadDepth'));
     } finally {
@@ -94,7 +97,10 @@ export default function LearnScreen() {
     setLoadingExamples(true);
     try {
       const target = getDepthTarget(core);
-      setExamples(await getTermExamples(target.term, target.termLanguage, nativeLanguage ?? 'English'));
+      setExamples(await getTermExamples(target.term, target.termLanguage, nativeLanguage ?? 'English', {
+        translation: target.translation,
+        briefDefinition: target.briefDefinition,
+      }));
     } catch {
       setError(t(nativeLanguage, 'errorLoadExamples'));
     } finally {
