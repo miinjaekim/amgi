@@ -157,7 +157,7 @@ Nothing currently — `main` is clean at the `feat/korean-ux` merge (PR #34).
 
 ### Known Issues
 
-- **Examples don't respect the disambiguated sense** (noticed 2026-07-13, testing TOEIC pack polysemes) — when a term is resolved with a context hint (pack words like "address"/"fine", or the disambiguation picker / "not what you meant" flow), the examples (and likely depth) calls don't receive that context: `getDepthTarget()` sends only the term + languages to `/api/explain/examples-stream` and `/depth-stream`, so Gemini may generate sentences for the wrong meaning. Fix direction: thread the resolved sense (context string or the returned briefDefinition/translation) into the depth/examples prompts. (Word-of-the-day reload variance was reviewed and accepted 2026-07-08: the CDN `s-maxage=86400` cache keeps it stable on deployed Vercel, which is what matters; only local dev sees a new word per reload. Revisit only if prod behaves otherwise — candidate fixes were localStorage per device / shared Firestore doc / deterministic generation.)
+None currently tracked. (Examples/depth ignoring the disambiguated sense was fixed on `fix/examples-disambiguation`: `getDepthTarget()` now returns the resolved sense — back-side translation + briefDefinition — and all four depth/examples routes pin their prompts to it; web spreads it automatically, mobile passes it explicitly.) (Word-of-the-day reload variance was reviewed and accepted 2026-07-08: the CDN `s-maxage=86400` cache keeps it stable on deployed Vercel, which is what matters; only local dev sees a new word per reload. Revisit only if prod behaves otherwise — candidate fixes were localStorage per device / shared Firestore doc / deterministic generation.)
 
 ### Backlog
 
