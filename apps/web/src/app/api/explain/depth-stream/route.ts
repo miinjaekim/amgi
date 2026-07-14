@@ -2,7 +2,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import { NextRequest } from 'next/server';
 
 export async function POST(req: NextRequest) {
-  const { term, termLanguage, nativeLanguage = 'English', studyLanguage = 'Korean' } = await req.json();
+  const { term, termLanguage, nativeLanguage = 'English', studyLanguage = 'Korean', translation, briefDefinition } = await req.json();
 
   if (!term || typeof term !== 'string') {
     return new Response(JSON.stringify({ error: 'term is required' }), { status: 400 });
@@ -16,11 +16,16 @@ export async function POST(req: NextRequest) {
   const genAI = new GoogleGenerativeAI(apiKey);
   const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash', generationConfig: { temperature: 0.1 } });
 
+  const hasSense = (typeof translation === 'string' && translation.trim()) || (typeof briefDefinition === 'string' && briefDefinition.trim());
+  const senseNote = hasSense
+    ? `\nThe word may have multiple meanings. The user is studying only this sense${translation ? ` — "${translation}"` : ''}${briefDefinition ? `: ${briefDefinition}` : ''}. Everything you write must be about this meaning of "${term}".\n`
+    : '';
+
   let prompt: string;
 
   if (studyLanguage !== 'Korean') {
     prompt = `The user already has a one-sentence definition of "${term}" (${termLanguage}). Go deeper — but stay concise. Every sentence should earn its place.
-Write all explanations in ${nativeLanguage}.
+${senseNote}Write all explanations in ${nativeLanguage}.
 
 - Definition: 2-3 sentences max. Add what the one-liner misses: connotation, nuance, how it differs from near-synonyms. Use **bold** for the single most important word or phrase — the nuance a learner must not miss. No padding.
 - Notes: what a learner actually needs to know — a usage nuance, register, etymology, or common mistake. If there are multiple distinct points, use a short bullet list. Bold the single most critical point. Skip ("none") if there's nothing genuinely useful to add.
@@ -34,7 +39,7 @@ NOTES:
 <notes or "none">`;
   } else {
     prompt = `The user already has a one-sentence definition of "${term}" (${termLanguage}). Go deeper — but stay concise. Every sentence should earn its place.
-Write all explanations in ${nativeLanguage}.
+${senseNote}Write all explanations in ${nativeLanguage}.
 
 - Definition: 2-3 sentences max. Add what the one-liner misses: connotation, nuance, how it differs from near-synonyms. Use **bold** for the single most important word or phrase — the nuance a learner must not miss. No padding.
 - Hanja: if the term is Korean and has meaningful hanja roots, provide the breakdown. For each character include its traditional Korean hun-eum (훈음) reading — the native-Korean meaning plus the sound, e.g. 水 is "물 수" — alongside the English gloss (e.g. "葛藤: 葛 갈 (칡 갈 — kudzu vine) + 藤 등 (등나무 등 — wisteria vine) → entanglement, conflict"). Otherwise write "none".

@@ -3,7 +3,7 @@ import { NextRequest } from 'next/server';
 import { getStudyLanguageConfig } from '@amgi/core';
 
 export async function POST(req: NextRequest) {
-  const { term, termLanguage, nativeLanguage = 'English', studyLanguage = 'Korean' } = await req.json();
+  const { term, termLanguage, nativeLanguage = 'English', studyLanguage = 'Korean', translation, briefDefinition } = await req.json();
 
   if (!term || typeof term !== 'string') {
     return new Response(JSON.stringify({ error: 'term is required' }), { status: 400 });
@@ -20,8 +20,13 @@ export async function POST(req: NextRequest) {
   const config = getStudyLanguageConfig(studyLanguage);
   const line = `{"${config.studyField}":"<${config.code} sentence>","${config.backField}":"<${nativeLanguage} translation>"}`;
 
+  const hasSense = (typeof translation === 'string' && translation.trim()) || (typeof briefDefinition === 'string' && briefDefinition.trim());
+  const senseNote = hasSense
+    ? `\nThe word may have multiple meanings. Use only this sense${translation ? ` — "${translation}"` : ''}${briefDefinition ? `: ${briefDefinition}` : ''}. Every sentence must use "${term}" in exactly this meaning.\n`
+    : '';
+
   const prompt = `Give 3 natural example sentences using the ${termLanguage} word "${term}".
-Write all translations in ${nativeLanguage}.
+${senseNote}Write all translations in ${nativeLanguage}.
 
 Respond with exactly 3 lines, one JSON object per line, no extra text:
 ${line}

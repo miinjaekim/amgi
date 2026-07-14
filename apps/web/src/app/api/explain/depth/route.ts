@@ -6,7 +6,7 @@ function stripMarkdownCodeBlock(text: string): string {
 }
 
 export async function POST(req: NextRequest) {
-  const { term, termLanguage, nativeLanguage = 'English', studyLanguage = 'Korean' } = await req.json();
+  const { term, termLanguage, nativeLanguage = 'English', studyLanguage = 'Korean', translation, briefDefinition } = await req.json();
 
   if (!term || typeof term !== 'string') {
     return NextResponse.json({ error: 'term is required' }, { status: 400 });
@@ -20,11 +20,16 @@ export async function POST(req: NextRequest) {
   const genAI = new GoogleGenerativeAI(apiKey);
   const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash', generationConfig: { temperature: 0.1 } });
 
+  const hasSense = (typeof translation === 'string' && translation.trim()) || (typeof briefDefinition === 'string' && briefDefinition.trim());
+  const senseNote = hasSense
+    ? `\nThe word may have multiple meanings. The user is studying only this sense${translation ? ` — "${translation}"` : ''}${briefDefinition ? `: ${briefDefinition}` : ''}. Everything you write must be about this meaning of "${term}".\n`
+    : '';
+
   let prompt: string;
 
   if (studyLanguage !== 'Korean') {
     prompt = `Provide deeper explanation for the term "${term}" (${termLanguage}), for a learner of ${studyLanguage}.
-Write all explanations in ${nativeLanguage}.
+${senseNote}Write all explanations in ${nativeLanguage}.
 
 Include only what is genuinely useful for a language learner:
 - "definition": a clear, detailed definition in ${nativeLanguage}
@@ -38,7 +43,7 @@ Respond with only this JSON:
 }`;
   } else {
     prompt = `Provide deeper explanation for the term "${term}" (${termLanguage}).
-Write all explanations in ${nativeLanguage}.
+${senseNote}Write all explanations in ${nativeLanguage}.
 
 Include only what is genuinely useful for a language learner:
 - "definition": a clear, detailed definition in ${nativeLanguage}
