@@ -132,6 +132,8 @@ export const STUDY_LANGUAGE_CONFIGS: Record<StudyLanguage, StudyLanguageConfig> 
     directionBackToFrontKey: 'directionKoreanToEnglish',
     promptFrontToBackKey: 'promptEnglishToKorean',
     promptBackToFrontKey: 'promptKoreanToEnglish',
+    ttsLanguageCode: 'en-US',
+    ttsVoiceName: 'en-US-Chirp3-HD-Charon',
   },
 };
 
