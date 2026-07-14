@@ -151,13 +151,15 @@ function mapDocToFlashcard(doc): AnyFlashcard {
 
 - **Korean-user UX + TOEIC vocab pack** (PR #34, merged 2026-07-13) — (1) language setup modal step 2 localized to the chosen native language (headings + language names via `studyLabelKey`; native language stays excluded from study options — decided natives don't study their own language); (2) cards page import/export + ImportModal fully localized EN+KO, `t()` gained `{token}` interpolation, Korean strings favor natural phrasing over literal translation; (3) **TOEIC Core Vocabulary pack v1** — `packages/core/src/packs.ts` (133 curated words from Barron's 600/TOEIC lists, draft at `.cursor/toeic-pack-draft.md`), `PacksModal.tsx` browsable word chips with saved-marking + progress, tap-a-word → normal Learn search/save flow, polysemes carry context hints to `/api/explain`; ImportModal is paste-only; goal-based generation is a coming-soon placeholder (`/api/vocab-list` supports `previousWords`+`feedback` for later). Design principles recorded in the packs backlog item.
 
+- **Depth/examples sense fix** (PR #35, merged 2026-07-14) — depth and examples prompts are pinned to the disambiguated sense: `getDepthTarget()` returns the resolved sense (back-side translation + `briefDefinition`) and all four `/api/explain/depth*`+`/examples*` routes inject a "use only this sense" clause; web spreads it automatically, mobile wrappers/call sites pass it explicitly. Fixes pack context hints, the disambiguation picker, and "not what you meant" flows all at once.
+
 ### In Progress
 
-Nothing currently — `main` is clean at the `feat/korean-ux` merge (PR #34).
+Nothing currently — `main` is clean at the `fix/examples-disambiguation` merge (PR #35).
 
 ### Known Issues
 
-None currently tracked. (Examples/depth ignoring the disambiguated sense was fixed on `fix/examples-disambiguation`: `getDepthTarget()` now returns the resolved sense — back-side translation + briefDefinition — and all four depth/examples routes pin their prompts to it; web spreads it automatically, mobile passes it explicitly.) (Word-of-the-day reload variance was reviewed and accepted 2026-07-08: the CDN `s-maxage=86400` cache keeps it stable on deployed Vercel, which is what matters; only local dev sees a new word per reload. Revisit only if prod behaves otherwise — candidate fixes were localStorage per device / shared Firestore doc / deterministic generation.)
+None currently tracked. (Word-of-the-day reload variance was reviewed and accepted 2026-07-08: the CDN `s-maxage=86400` cache keeps it stable on deployed Vercel, which is what matters; only local dev sees a new word per reload. Revisit only if prod behaves otherwise — candidate fixes were localStorage per device / shared Firestore doc / deterministic generation.)
 
 ### Backlog
 
