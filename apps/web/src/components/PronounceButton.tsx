@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { getPronunciationUrl } from '@amgi/core';
+import { getPronunciationUrl, getStudyLanguageConfig } from '@amgi/core';
 import type { StudyLanguage } from '@amgi/core';
 
 interface Props {
@@ -32,6 +32,11 @@ export default function PronounceButton({ text, studyLanguage, className = '' }:
   }
 
   if (!text.trim()) return null;
+
+  // No voice configured for this language yet — don't render a button that
+  // can only fail on click.
+  const { ttsLanguageCode, ttsVoiceName } = getStudyLanguageConfig(studyLanguage);
+  if (!ttsLanguageCode || !ttsVoiceName) return null;
 
   return (
     <button
