@@ -125,7 +125,10 @@ export default function CardDetailModal({ card, nativeLanguage, onClose }: Props
                           const sides = getExampleSides(ex, card.studyLanguage);
                           return (
                             <li key={i}>
-                              <div className="text-sm" style={{ color: 'var(--color-text)' }}>{sides.study}</div>
+                              <div className="text-sm" style={{ color: 'var(--color-text)' }}>
+                                {sides.study}
+                                <PronounceButton text={sides.study} studyLanguage={card.studyLanguage ?? 'Korean'} size="sm" className="ml-1 align-middle" />
+                              </div>
                               <div className="text-sm mt-0.5" style={{ color: 'var(--color-highlight)' }}>{sides.back}</div>
                             </li>
                           );

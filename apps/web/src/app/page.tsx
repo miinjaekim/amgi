@@ -338,7 +338,14 @@ export default function Home() {
         <div className="mt-10 text-center">
           {wordOfTheDay && (
             <button
-              onClick={() => { setTerm(wordOfTheDay.term); resolveExplanation(wordOfTheDay.term); }}
+              // The card already shows one specific sense, so pin it as context —
+              // otherwise /api/explain may come back asking which meaning was meant.
+              onClick={() => {
+                setTerm(wordOfTheDay.term);
+                const senseHint = wordOfTheDay.briefDefinition
+                  || (studyLanguage === 'English' ? wordOfTheDay.korean : wordOfTheDay.english);
+                resolveExplanation(wordOfTheDay.term, senseHint || undefined);
+              }}
               className="block w-full max-w-md mx-auto mb-8 p-4 rounded-xl bg-[var(--color-surface)] border border-[var(--color-muted)] text-left hover:border-[var(--color-highlight)] transition-colors"
             >
               <div className="text-xs uppercase tracking-wider text-[var(--color-muted)] mb-1">
@@ -513,7 +520,12 @@ export default function Home() {
                   const sides = getExampleSides(ex, studyLanguage);
                   return (
                     <li key={i} className="text-[var(--color-text)] opacity-80">
-                      {sides.study && <div>{sides.study}</div>}
+                      {sides.study && (
+                        <div>
+                          {sides.study}
+                          <PronounceButton text={sides.study} studyLanguage={studyLanguage} size="sm" className="ml-1 align-middle" />
+                        </div>
+                      )}
                       {sides.back && <div className="text-[var(--color-highlight)] text-sm mt-0.5">{sides.back}</div>}
                     </li>
                   );
