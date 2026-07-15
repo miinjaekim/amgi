@@ -64,7 +64,13 @@ export async function GET(req: NextRequest) {
 
   const prompt = `You are picking the "word of the day" (${date}) for learners of ${studyLanguage}.
 
-Pick ONE ${studyLanguage} word or short expression that is genuinely interesting to an intermediate learner: culturally revealing, hard to translate directly, or highly useful in daily conversation. Avoid absolute-beginner vocabulary (greetings, numbers, colors) and obscure academic terms. Vary your choice — the date is provided so different days should yield different words.
+Pick ONE ${studyLanguage} word or short expression.
+
+Hard requirement — practical value: it must be a word an intermediate learner would encounter often in everyday conversation, media, or daily life, or need often when speaking. Avoid absolute-beginner vocabulary (greetings, numbers, colors) and obscure, archaic, or academic terms.
+
+Preference — date relevance: if ${date} falls on or near a holiday, observance, season, or notable annual event in places where ${studyLanguage} is spoken, prefer a common word naturally connected to it (a seasonal weather word, a holiday food, an activity typical of this time of year). The date-relevant word must still satisfy the hard requirement above — never drop to beginner vocabulary or reach for a rare word just to match the date. If nothing fits, pick any high-value word: culturally revealing, hard to translate directly, or highly useful in daily conversation.
+
+Vary your choice — different dates should yield different words.
 
 Respond with only this JSON:
 {
