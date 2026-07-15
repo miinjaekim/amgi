@@ -554,7 +554,10 @@ export default function ReviewPage() {
                                           const sides = getExampleSides(ex, studyLanguage);
                                           return (
                                             <li key={i}>
-                                              <div>{sides.study}</div>
+                                              <div>
+                                                {sides.study}
+                                                <PronounceButton text={sides.study} studyLanguage={studyLanguage} size="sm" className="ml-1 align-middle" />
+                                              </div>
                                               <div className="text-[var(--color-highlight)] text-sm">{sides.back}</div>
                                             </li>
                                           );
@@ -646,7 +649,10 @@ export default function ReviewPage() {
                                           const sides = getExampleSides(ex, studyLanguage);
                                           return (
                                             <li key={i}>
-                                              <div>{sides.study}</div>
+                                              <div>
+                                                {sides.study}
+                                                <PronounceButton text={sides.study} studyLanguage={studyLanguage} size="sm" className="ml-1 align-middle" />
+                                              </div>
                                               <div className="text-[var(--color-highlight)] text-sm">{sides.back}</div>
                                             </li>
                                           );

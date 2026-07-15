@@ -513,7 +513,12 @@ export default function Home() {
                   const sides = getExampleSides(ex, studyLanguage);
                   return (
                     <li key={i} className="text-[var(--color-text)] opacity-80">
-                      {sides.study && <div>{sides.study}</div>}
+                      {sides.study && (
+                        <div>
+                          {sides.study}
+                          <PronounceButton text={sides.study} studyLanguage={studyLanguage} size="sm" className="ml-1 align-middle" />
+                        </div>
+                      )}
                       {sides.back && <div className="text-[var(--color-highlight)] text-sm mt-0.5">{sides.back}</div>}
                     </li>
                   );
