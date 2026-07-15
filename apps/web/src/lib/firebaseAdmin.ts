@@ -1,5 +1,6 @@
 import { getApps, initializeApp, cert, App } from 'firebase-admin/app';
 import { getStorage } from 'firebase-admin/storage';
+import { getFirestore } from 'firebase-admin/firestore';
 
 function getAdminApp(): App {
   if (getApps().length > 0) return getApps()[0];
@@ -21,4 +22,8 @@ function getAdminApp(): App {
 // page-data collection, before that's a safe assumption).
 export function getBucket() {
   return getStorage(getAdminApp()).bucket();
+}
+
+export function getDb() {
+  return getFirestore(getAdminApp());
 }

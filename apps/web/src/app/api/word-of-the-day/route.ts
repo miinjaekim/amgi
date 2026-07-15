@@ -1,12 +1,19 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { NextRequest, NextResponse } from 'next/server';
+import { getDb } from '@/lib/firebaseAdmin';
 
 function stripMarkdownCodeBlock(text: string): string {
   return text.replace(/```[a-zA-Z]*\n?|```/g, '').trim();
 }
 
-// Cached per unique URL (date + language pair) at the CDN, so all users
-// share a single Gemini call per study language per day.
+// Firestore is the source of truth: the first request for a (date, language
+// pair) generates and stores the word, everyone else reads it back. The CDN
+// header below is only a fast-path — a cache miss re-reads Firestore and
+// serves the same word, so consistency doesn't depend on cache behavior.
+const CACHE_HEADERS = {
+  'Cache-Control': 'public, s-maxage=86400, stale-while-revalidate=3600',
+};
+
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const date = searchParams.get('date') ?? new Date().toISOString().slice(0, 10);
@@ -20,6 +27,20 @@ export async function GET(req: NextRequest) {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
     return NextResponse.json({ error: 'Gemini API not configured' }, { status: 500 });
+  }
+
+  const docId = `${date}_${studyLanguage}_${nativeLanguage}`.replace(/[^\w.-]/g, '_');
+  let docRef: FirebaseFirestore.DocumentReference | null = null;
+  try {
+    docRef = getDb().collection('wordOfTheDay').doc(docId);
+    const snap = await docRef.get();
+    if (snap.exists) {
+      return NextResponse.json(snap.data(), { headers: CACHE_HEADERS });
+    }
+  } catch {
+    // Firestore unavailable — fall through and serve a freshly generated
+    // word rather than failing the request; it just won't be shared.
+    docRef = null;
   }
 
   const genAI = new GoogleGenerativeAI(apiKey);
@@ -56,9 +77,22 @@ Respond with only this JSON:
   const text = result.response.text();
   const parsed = JSON.parse(stripMarkdownCodeBlock(text));
 
-  return NextResponse.json(parsed, {
-    headers: {
-      'Cache-Control': 'public, s-maxage=86400, stale-while-revalidate=3600',
-    },
-  });
+  if (docRef) {
+    try {
+      // create() fails if the doc appeared since our read — another request
+      // won the first-user race, so serve its word and discard ours.
+      await docRef.create(parsed);
+    } catch {
+      try {
+        const winner = await docRef.get();
+        if (winner.exists) {
+          return NextResponse.json(winner.data(), { headers: CACHE_HEADERS });
+        }
+      } catch {
+        // Fall through to serving the freshly generated word.
+      }
+    }
+  }
+
+  return NextResponse.json(parsed, { headers: CACHE_HEADERS });
 }
