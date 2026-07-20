@@ -10,12 +10,17 @@
       "android"
     ],
     "userInterfaceStyle": "automatic",
+    "icon": "./assets/icon.png",
     "plugins": [
       "expo-router",
       "expo-web-browser"
     ],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.tegi.amgi",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "updates": {
       "url": "https://u.expo.dev/bc217cdf-916f-409f-868a-5994ff9813bf",

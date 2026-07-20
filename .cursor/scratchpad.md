@@ -155,7 +155,7 @@ function mapDocToFlashcard(doc): AnyFlashcard {
 
 ### In Progress
 
-Nothing currently — `main` is clean at the `fix/examples-disambiguation` merge (PR #35).
+- **iOS TestFlight launch prep** (`prep/ios-testflight`, not yet merged) — getting Amgi mobile onto TestFlight via a friend's (Tegi's) borrowed Apple Developer account (disposable bundle ID `com.tegi.amgi`; real public launch later will be a fresh relaunch under the user's own account, not a migration — Apple's App Transfer doesn't cover TestFlight-only apps). Bundle ID, icon, and env vars set up; production build completed and submitted to App Store Connect. Tegi's account is enrolled as Individual, which blocks any non-account-holder from generating certs — worked around with an App Store Connect API Key. Went with **external** TestFlight testing (public link) over internal. New privacy policy page (`apps/web/src/app/privacy/page.tsx`) drafted from an actual audit of app data collection — needed for Beta App Review, not yet deployed. Remaining: deploy privacy page, fill in TestFlight Test Information, set up the external group + public link. Still open from earlier: GitHub → `eas update` automation.
 
 ### Known Issues
 
