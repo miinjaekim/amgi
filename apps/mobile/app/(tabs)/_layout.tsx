@@ -3,6 +3,8 @@ import FloatingTabBar from '../../src/components/FloatingTabBar';
 
 export default function TabLayout() {
   return (
+    // Titles are not rendered — FloatingTabBar is icon-only and supplies its own
+    // localized accessibility labels. These stay as stable internal names.
     <Tabs
       tabBar={props => <FloatingTabBar {...props} />}
       screenOptions={{ headerShown: false }}

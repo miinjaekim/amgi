@@ -4,7 +4,10 @@ import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
+import { t } from '@amgi/core';
+import type { TranslationKey } from '@amgi/core';
 import { useTheme } from '../context/ThemeContext';
+import { useUser } from '../context/UserContext';
 
 type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -15,6 +18,14 @@ const ICONS: Record<string, { on: IoniconsName; off: IoniconsName }> = {
   settings: { on: 'settings', off: 'settings-outline' },
 };
 
+// The bar is icon-only, so these surface only to screen readers.
+const LABEL_KEYS: Record<string, TranslationKey> = {
+  index:    'navLearn',
+  review:   'navReview',
+  cards:    'navCards',
+  settings: 'navSettings',
+};
+
 export function useFloatingTabBarHeight() {
   const insets = useSafeAreaInsets();
   return insets.bottom + 84; // safe area + 12 margin + 52 bar + 20 breathing room
@@ -23,6 +34,7 @@ export function useFloatingTabBarHeight() {
 export default function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
   const { C, theme } = useTheme();
+  const { nativeLanguage } = useUser();
   const tint = theme === 'paper' ? 'light' : 'dark';
 
   return (
@@ -49,6 +61,11 @@ export default function FloatingTabBar({ state, navigation }: BottomTabBarProps)
               style={s.tab}
               onPress={onPress}
               activeOpacity={0.7}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: focused }}
+              accessibilityLabel={
+                LABEL_KEYS[route.name] ? t(nativeLanguage, LABEL_KEYS[route.name]) : route.name
+              }
             >
               {focused && <View style={[s.activePill, { backgroundColor: C.highlight + '22' }]} />}
               <Ionicons

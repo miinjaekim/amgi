@@ -4,18 +4,35 @@ import {
   ScrollView, ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import * as WebBrowser from 'expo-web-browser';
 import { useUser } from '../../src/context/UserContext';
 import { useTheme } from '../../src/context/ThemeContext';
 import { useFloatingTabBarHeight } from '../../src/components/FloatingTabBar';
-import { SUPPORTED_LANGUAGES, SUPPORTED_STUDY_LANGUAGES } from '@amgi/core';
+import { SUPPORTED_LANGUAGES, SUPPORTED_STUDY_LANGUAGES, t } from '@amgi/core';
+import type { TranslationKey } from '@amgi/core';
 import { THEMES } from '../../src/theme';
-import type { Palette } from '../../src/theme';
+import type { Palette, Theme } from '../../src/theme';
+
+// The policy is hosted on the web app; Korean speakers get the Korean version.
+const PRIVACY_URL_BASE = 'https://amgi-iota.vercel.app/privacy';
+
+const THEME_LABEL_KEYS: Record<Theme, TranslationKey> = {
+  forest: 'themeForest',
+  slate: 'themeSlate',
+  paper: 'themePaper',
+};
 
 export default function SettingsScreen() {
   const { C, theme, setTheme } = useTheme();
   const tabBarHeight = useFloatingTabBarHeight();
   const s = useMemo(() => makeStyles(C, tabBarHeight), [C, tabBarHeight]);
   const { user, authLoading, nativeLanguage, studyLanguage, setNativeLanguage, setStudyLanguage, handleSignIn, handleSignOut } = useUser();
+
+  const openPrivacyPolicy = () => {
+    const url = nativeLanguage === 'Korean' ? `${PRIVACY_URL_BASE}/ko` : PRIVACY_URL_BASE;
+    WebBrowser.openBrowserAsync(url);
+  };
 
   if (authLoading) {
     return (
@@ -28,10 +45,10 @@ export default function SettingsScreen() {
   return (
     <SafeAreaView style={s.safe} edges={['top']}>
       <ScrollView contentContainerStyle={s.scroll}>
-        <Text style={s.heading}>Settings</Text>
+        <Text style={s.heading}>{t(nativeLanguage, 'settingsTitle')}</Text>
 
         {/* Account */}
-        <Text style={s.sectionLabel}>Account</Text>
+        <Text style={s.sectionLabel}>{t(nativeLanguage, 'settingsAccount')}</Text>
         <View style={s.card}>
           {user ? (
             <View style={s.accountRow}>
@@ -49,15 +66,15 @@ export default function SettingsScreen() {
               </View>
             </View>
           ) : (
-            <Text style={s.signedOutText}>Not signed in</Text>
+            <Text style={s.signedOutText}>{t(nativeLanguage, 'settingsNotSignedIn')}</Text>
           )}
         </View>
 
         {/* Native language */}
-        <Text style={s.sectionLabel}>Native Language</Text>
+        <Text style={s.sectionLabel}>{t(nativeLanguage, 'settingsNativeLanguage')}</Text>
         <View style={s.card}>
           <Text style={s.settingDescription}>
-            Explanations and app text will use this language.
+            {t(nativeLanguage, 'settingsNativeLanguageDesc')}
           </Text>
           <View style={s.langRow}>
             {SUPPORTED_LANGUAGES.map(({ code, label }) => {
@@ -78,10 +95,10 @@ export default function SettingsScreen() {
         </View>
 
         {/* Study language */}
-        <Text style={s.sectionLabel}>Learning</Text>
+        <Text style={s.sectionLabel}>{t(nativeLanguage, 'settingsStudyLanguage')}</Text>
         <View style={s.card}>
           <Text style={s.settingDescription}>
-            The language you're studying. Cards and reviews are grouped per language.
+            {t(nativeLanguage, 'settingsStudyLanguageDesc')}
           </Text>
           <View style={s.langRow}>
             {SUPPORTED_STUDY_LANGUAGES.map(({ code, label, labelNative }) => {
@@ -102,10 +119,10 @@ export default function SettingsScreen() {
         </View>
 
         {/* Theme */}
-        <Text style={s.sectionLabel}>Theme</Text>
+        <Text style={s.sectionLabel}>{t(nativeLanguage, 'settingsTheme')}</Text>
         <View style={s.card}>
           <View style={s.langRow}>
-            {THEMES.map(({ value, label }) => {
+            {THEMES.map(({ value }) => {
               const active = theme === value;
               return (
                 <TouchableOpacity
@@ -114,7 +131,7 @@ export default function SettingsScreen() {
                   onPress={() => setTheme(value)}
                 >
                   <Text style={[s.langChipText, active && s.langChipTextActive]}>
-                    {label}
+                    {t(nativeLanguage, THEME_LABEL_KEYS[value])}
                   </Text>
                 </TouchableOpacity>
               );
@@ -122,15 +139,24 @@ export default function SettingsScreen() {
           </View>
         </View>
 
+        {/* About */}
+        <Text style={s.sectionLabel}>{t(nativeLanguage, 'settingsAbout')}</Text>
+        <View style={s.card}>
+          <TouchableOpacity style={s.linkRow} onPress={openPrivacyPolicy}>
+            <Text style={s.linkRowText}>{t(nativeLanguage, 'settingsPrivacyPolicy')}</Text>
+            <Ionicons name="open-outline" size={18} color={C.muted} />
+          </TouchableOpacity>
+        </View>
+
         {/* Auth action */}
         <View style={s.authSection}>
           {user ? (
             <TouchableOpacity style={s.signOutBtn} onPress={handleSignOut}>
-              <Text style={s.signOutBtnText}>Sign out</Text>
+              <Text style={s.signOutBtnText}>{t(nativeLanguage, 'signOut')}</Text>
             </TouchableOpacity>
           ) : (
             <TouchableOpacity style={s.signInBtn} onPress={handleSignIn}>
-              <Text style={s.signInBtnText}>Sign in with Google</Text>
+              <Text style={s.signInBtnText}>{t(nativeLanguage, 'settingsSignInWithGoogle')}</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -175,6 +201,10 @@ function makeStyles(C: Palette, tabBarHeight: number) {
   langChipActive: { backgroundColor: C.highlight, borderColor: C.highlight },
   langChipText: { fontSize: 15, color: C.text, fontWeight: '500' },
   langChipTextActive: { color: C.bg, fontWeight: '700' },
+
+  // About
+  linkRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  linkRowText: { fontSize: 15, color: C.text, fontWeight: '500' },
 
   // Auth
   authSection: { marginTop: 8 },

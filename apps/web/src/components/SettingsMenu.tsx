@@ -124,6 +124,15 @@ export default function SettingsMenu({ onClose }: { onClose: () => void }) {
         </div>
       </div>
 
+      <a
+        href={nativeLanguage === 'Korean' ? '/privacy/ko' : '/privacy'}
+        onClick={onClose}
+        className="block px-4 py-3 text-sm font-mono hover:bg-[var(--color-muted)]/30 transition-colors"
+        style={{ color: 'var(--color-text)' }}
+      >
+        {t(nativeLanguage, 'settingsPrivacyPolicy')}
+      </a>
+
       {user && (
         <button
           onClick={() => { handleSignOut(); onClose(); }}
