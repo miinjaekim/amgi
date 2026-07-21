@@ -1,18 +1,20 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, ActivityIndicator,
   ScrollView, StyleSheet, KeyboardAvoidingView, Platform, Keyboard, Pressable,
-  Dimensions,
+  Dimensions, Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useUser } from '../../src/context/UserContext';
-import { getTermExplanation, getTermDepth, getTermExamples } from '../../src/services/gemini';
-import { getDepthTarget, getStudyLanguageConfig, getExampleSides } from '@amgi/core';
+import { getTermExplanation, getTermDepth, getTermExamples, getWordOfTheDay } from '../../src/services/gemini';
+import { getDepthTarget, getStudyLanguageConfig, getExampleSides, getVocabPacks } from '@amgi/core';
 import type { StudyLanguage } from '@amgi/core';
-import type { TermCore, TermDepth, TermAmbiguous, ExamplePair } from '../../src/services/gemini';
+import type { TermCore, TermDepth, TermAmbiguous, ExamplePair, WordOfTheDay } from '../../src/services/gemini';
 import { saveFlashcardToFirestore } from '../../src/services/firestore';
 import type { Flashcard } from '../../src/services/firestore';
 import SaveFlashcardModal from '../../src/components/SaveFlashcardModal';
+import PacksModal from '../../src/components/PacksModal';
+import PronounceButton from '../../src/components/PronounceButton';
 import { t } from '@amgi/core';
 import { useTheme } from '../../src/context/ThemeContext';
 import { useFloatingTabBarHeight } from '../../src/components/FloatingTabBar';
@@ -50,7 +52,27 @@ export default function LearnScreen() {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [showContextInput, setShowContextInput] = useState(false);
   const [contextInput, setContextInput] = useState('');
+  const [wordOfTheDay, setWordOfTheDay] = useState<WordOfTheDay | null>(null);
+  const [showPacks, setShowPacks] = useState(false);
+  const [showGenerate, setShowGenerate] = useState(false);
 
+  // Word of the day — refreshes when the language pair changes. Non-essential:
+  // any failure just hides the card (getWordOfTheDay returns null).
+  useEffect(() => {
+    if (nativeLanguage === undefined) return; // preferences still loading
+    let cancelled = false;
+    setWordOfTheDay(null);
+    const date = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD, local timezone
+    getWordOfTheDay(date, studyLanguage, nativeLanguage ?? 'English')
+      .then(data => { if (!cancelled) setWordOfTheDay(data); });
+    return () => { cancelled = true; };
+  }, [studyLanguage, nativeLanguage]);
+
+  const handlePackWord = (word: string, context?: string) => {
+    setShowPacks(false);
+    setTerm(word);
+    resolveExplanation(word, context);
+  };
 
   const reset = () => {
     setCore(null); setAmbiguity(null); setDepth(null); setExamples(null);
@@ -181,6 +203,34 @@ export default function LearnScreen() {
     />
   );
 
+  const packsModal = showPacks && (
+    <PacksModal
+      studyLanguage={studyLanguage}
+      onClose={() => setShowPacks(false)}
+      onSelectWord={handlePackWord}
+    />
+  );
+
+  // Goal-based word generation — placeholder until the feature lands.
+  const generateModal = showGenerate && (
+    <Modal visible transparent animationType="fade" onRequestClose={() => setShowGenerate(false)}>
+      <Pressable style={s.genBackdrop} onPress={() => setShowGenerate(false)}>
+        <Pressable style={s.genSheet} onPress={() => {}}>
+          <View style={s.genHeader}>
+            <Text style={s.genTitle}>{t(nativeLanguage, 'generateLink')}</Text>
+            <TouchableOpacity onPress={() => setShowGenerate(false)} hitSlop={12}>
+              <Text style={s.genClose}>×</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={s.genBadge}>
+            <Text style={s.genBadgeText}>{t(nativeLanguage, 'comingSoon')}</Text>
+          </View>
+          <Text style={s.genBody}>{t(nativeLanguage, 'generateComingSoon')}</Text>
+        </Pressable>
+      </Pressable>
+    </Modal>
+  );
+
   const streakBadge = user && streak > 0 ? (
     <View style={s.streakBadge}>
       <Text style={s.streakFlame}>🔥</Text>
@@ -209,6 +259,30 @@ export default function LearnScreen() {
           keyboardVerticalOffset={-(searchRestingBottom - 8)}
         >
         <View style={[s.bottomBar, { paddingBottom: searchRestingBottom }]}>
+            {wordOfTheDay && (
+              <TouchableOpacity
+                style={s.wotdCard}
+                onPress={() => {
+                  setTerm(wordOfTheDay.term);
+                  // The card shows one specific sense — pin it as context so
+                  // /api/explain doesn't come back asking which meaning we meant.
+                  const senseHint = wordOfTheDay.briefDefinition
+                    || (studyLanguage === 'English' ? wordOfTheDay.korean : wordOfTheDay.english);
+                  resolveExplanation(wordOfTheDay.term, senseHint || undefined);
+                }}
+              >
+                <Text style={s.wotdLabel}>{t(nativeLanguage, 'wordOfTheDay')}</Text>
+                <View style={s.wotdRow}>
+                  <Text style={s.wotdTerm}>{wordOfTheDay.term}</Text>
+                  <Text style={s.wotdTranslation}>
+                    {studyLanguage === 'English' ? wordOfTheDay.korean : wordOfTheDay.english}
+                  </Text>
+                </View>
+                {wordOfTheDay.briefDefinition && (
+                  <Text style={s.wotdDef}>{wordOfTheDay.briefDefinition}</Text>
+                )}
+              </TouchableOpacity>
+            )}
             <View style={s.exampleRow}>
               <Text style={s.exampleLabel}>{t(nativeLanguage, 'exampleTermsLabel')}</Text>
               {exampleTerms.map(ex => (
@@ -231,8 +305,20 @@ export default function LearnScreen() {
                 <Text style={s.searchBtnText}>{t(nativeLanguage, 'learnButton')}</Text>
               </TouchableOpacity>
             </View>
+            <View style={s.linksRow}>
+              {getVocabPacks(studyLanguage).length > 0 && (
+                <TouchableOpacity onPress={() => setShowPacks(true)}>
+                  <Text style={s.linkText}>{t(nativeLanguage, 'packsLink')}</Text>
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity onPress={() => setShowGenerate(true)}>
+                <Text style={s.linkText}>{t(nativeLanguage, 'generateLink')}</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </KeyboardAvoidingView>
+        {packsModal}
+        {generateModal}
         {saveModal}
       </SafeAreaView>
     );
@@ -296,6 +382,9 @@ export default function LearnScreen() {
             <View style={s.card}>
               <View style={s.cardHeaderRow}>
                 <Text style={s.cardTerm}>{core.term}</Text>
+                {core.termLanguage === studyLanguage && (
+                  <PronounceButton text={core.term} studyLanguage={studyLanguage} />
+                )}
                 {core.formality && core.formality !== 'N/A' && (
                   <View style={s.formalityBadge}>
                     <Text style={s.formalityText}>{core.formality}</Text>
@@ -314,7 +403,12 @@ export default function LearnScreen() {
               </View>
 
               <Text style={s.sectionLabel}>{t(nativeLanguage, 'sectionTranslation')}</Text>
-              <Text style={s.translationText}>{translation || t(nativeLanguage, 'noTranslation')}</Text>
+              <View style={s.translationRow}>
+                <Text style={s.translationText}>{translation || t(nativeLanguage, 'noTranslation')}</Text>
+                {core.termLanguage !== studyLanguage && translation && (
+                  <PronounceButton text={translation} studyLanguage={studyLanguage} />
+                )}
+              </View>
 
               {!depth ? (
                 <TouchableOpacity style={s.loadBtn} onPress={handleLoadDepth} disabled={loadingDepth}>
@@ -358,7 +452,12 @@ export default function LearnScreen() {
                     const sides = getExampleSides(ex, studyLanguage);
                     return (
                       <View key={i} style={s.exampleItem}>
-                        {sides.study ? <Text style={s.bodyText}>{sides.study}</Text> : null}
+                        {sides.study ? (
+                          <View style={s.exampleStudyRow}>
+                            <Text style={[s.bodyText, s.exampleStudyText]}>{sides.study}</Text>
+                            <PronounceButton text={sides.study} studyLanguage={studyLanguage} size="sm" />
+                          </View>
+                        ) : null}
                         {sides.back ? <Text style={s.exampleTranslation}>{sides.back}</Text> : null}
                       </View>
                     );
@@ -407,6 +506,8 @@ export default function LearnScreen() {
           )}
         </ScrollView>
       </KeyboardAvoidingView>
+      {packsModal}
+      {generateModal}
       {saveModal}
     </SafeAreaView>
   );
@@ -449,6 +550,31 @@ function makeStyles(C: Palette, tabBarHeight: number) {
   chip: { borderWidth: 1, borderColor: C.border, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6 },
   chipText: { fontSize: 14, color: C.text },
 
+  // Word of the day
+  wotdCard: {
+    backgroundColor: C.surface, borderRadius: 14, borderWidth: 1, borderColor: C.border,
+    padding: 14, marginBottom: 16,
+  },
+  wotdLabel: { fontSize: 11, color: C.muted, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 },
+  wotdRow: { flexDirection: 'row', alignItems: 'baseline', flexWrap: 'wrap', gap: 10 },
+  wotdTerm: { fontSize: 20, fontWeight: '700', color: C.highlight },
+  wotdTranslation: { fontSize: 15, color: C.text, opacity: 0.85 },
+  wotdDef: { fontSize: 13, color: C.muted, marginTop: 4 },
+
+  // Packs / generate links
+  linksRow: { flexDirection: 'row', justifyContent: 'center', flexWrap: 'wrap', gap: 20, marginTop: 4 },
+  linkText: { fontSize: 13, color: C.muted, textDecorationLine: 'underline' },
+
+  // Generate coming-soon modal
+  genBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', padding: 24 },
+  genSheet: { backgroundColor: C.surface, borderRadius: 20, borderWidth: 1, borderColor: C.border, padding: 24 },
+  genHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+  genTitle: { fontSize: 17, fontWeight: '700', color: C.highlight },
+  genClose: { fontSize: 26, color: C.muted, lineHeight: 28 },
+  genBadge: { alignSelf: 'flex-start', borderWidth: 1, borderColor: C.border, borderRadius: 12, paddingHorizontal: 8, paddingVertical: 2, marginBottom: 12 },
+  genBadgeText: { fontSize: 11, color: C.muted },
+  genBody: { fontSize: 14, color: C.text, opacity: 0.85, lineHeight: 20 },
+
   successBanner: { backgroundColor: C.border, borderRadius: 10, padding: 14, marginBottom: 12 },
   successText: { color: C.text, fontWeight: '600' },
   errorBanner: { backgroundColor: '#fde8e8', borderRadius: 10, padding: 14, marginBottom: 12 },
@@ -462,8 +588,11 @@ function makeStyles(C: Palette, tabBarHeight: number) {
   formalityText: { fontSize: 12, color: C.muted },
 
   sectionLabel: { fontSize: 12, fontWeight: '700', color: C.muted, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 4, marginTop: 12 },
+  translationRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
   translationText: { fontSize: 18, color: C.text, lineHeight: 26 },
   bodyText: { fontSize: 15, color: C.text, lineHeight: 22, opacity: 0.85 },
+  exampleStudyRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  exampleStudyText: { flexShrink: 1 },
   exampleTranslation: { fontSize: 14, color: C.highlight, marginTop: 2 },
 
   depthSection: { marginTop: 4 },
