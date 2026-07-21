@@ -6,10 +6,17 @@ import * as WebBrowser from 'expo-web-browser';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { auth } from '../config/firebase';
 import { getUserPreferences, saveUserPreferences } from '../services/userPreferences';
+import type { StudyLanguage } from '@amgi/core';
 
 WebBrowser.maybeCompleteAuthSession();
 
 const LANG_CACHE_KEY = 'amgi_native_language';
+const STUDY_LANG_CACHE_KEY = 'amgi_study_language';
+
+const STUDY_LANGUAGES: StudyLanguage[] = ['Korean', 'Swedish', 'English', 'French', 'Japanese'];
+function isStudyLanguage(value: unknown): value is StudyLanguage {
+  return typeof value === 'string' && (STUDY_LANGUAGES as string[]).includes(value);
+}
 
 function getTodayString(): string {
   return new Date().toLocaleDateString('en-CA');
@@ -28,9 +35,11 @@ interface UserContextType {
   user: User | null;
   authLoading: boolean;
   nativeLanguage: string | null | undefined;
+  studyLanguage: StudyLanguage;
   streak: number;
   reviewedToday: number;
   setNativeLanguage: (lang: string) => Promise<void>;
+  setStudyLanguage: (lang: StudyLanguage) => Promise<void>;
   recordReview: () => void;
   handleSignIn: () => Promise<void>;
   handleSignOut: () => Promise<void>;
@@ -42,6 +51,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [nativeLanguage, setNativeLanguageState] = useState<string | null | undefined>(undefined);
+  const [studyLanguage, setStudyLanguageState] = useState<StudyLanguage>('Korean');
   const [streak, setStreak] = useState(0);
   const [longestStreak, setLongestStreak] = useState(0);
   const [lastReviewDate, setLastReviewDate] = useState<string | null>(null);
@@ -77,6 +87,10 @@ export function UserProvider({ children }: { children: ReactNode }) {
         } else {
           await AsyncStorage.removeItem(LANG_CACHE_KEY);
         }
+        if (isStudyLanguage(prefs?.studyLanguage)) {
+          setStudyLanguageState(prefs.studyLanguage);
+          await AsyncStorage.setItem(STUDY_LANG_CACHE_KEY, prefs.studyLanguage);
+        }
         const today = getTodayString();
         setStreak(prefs?.streak ?? 0);
         setLongestStreak(prefs?.longestStreak ?? 0);
@@ -86,6 +100,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
         const cached = await AsyncStorage.getItem(LANG_CACHE_KEY);
         setNativeLanguageState(cached ?? 'Korean');
         if (!cached) await AsyncStorage.setItem(LANG_CACHE_KEY, 'Korean');
+        const cachedStudy = await AsyncStorage.getItem(STUDY_LANG_CACHE_KEY);
+        if (isStudyLanguage(cachedStudy)) setStudyLanguageState(cachedStudy);
         setStreak(0);
         setLongestStreak(0);
         setLastReviewDate(null);
@@ -100,6 +116,12 @@ export function UserProvider({ children }: { children: ReactNode }) {
     setNativeLanguageState(lang);
     await AsyncStorage.setItem(LANG_CACHE_KEY, lang);
     if (user) await saveUserPreferences(user.uid, { nativeLanguage: lang });
+  };
+
+  const setStudyLanguage = async (lang: StudyLanguage) => {
+    setStudyLanguageState(lang);
+    await AsyncStorage.setItem(STUDY_LANG_CACHE_KEY, lang);
+    if (user) await saveUserPreferences(user.uid, { studyLanguage: lang });
   };
 
   const recordReview = () => {
@@ -140,7 +162,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <UserContext.Provider value={{ user, authLoading, nativeLanguage, streak, reviewedToday, setNativeLanguage, recordReview, handleSignIn, handleSignOut }}>
+    <UserContext.Provider value={{ user, authLoading, nativeLanguage, studyLanguage, streak, reviewedToday, setNativeLanguage, setStudyLanguage, recordReview, handleSignIn, handleSignOut }}>
       {children}
     </UserContext.Provider>
   );

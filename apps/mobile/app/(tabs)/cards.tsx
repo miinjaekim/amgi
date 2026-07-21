@@ -10,7 +10,8 @@ import {
   deleteFlashcard, updateFlashcardFields,
 } from '../../src/services/firestore';
 import type { Flashcard } from '../../src/services/firestore';
-import { t } from '@amgi/core';
+import { t, getStudyLanguageConfig, getStudyLangSide, getBackSide } from '@amgi/core';
+import type { CardSideField } from '@amgi/core';
 import { useTheme } from '../../src/context/ThemeContext';
 import { useFloatingTabBarHeight } from '../../src/components/FloatingTabBar';
 import type { Palette } from '../../src/theme';
@@ -22,24 +23,25 @@ export default function CardsScreen() {
   const { C } = useTheme();
   const tabBarHeight = useFloatingTabBarHeight();
   const s = useMemo(() => makeStyles(C, tabBarHeight), [C, tabBarHeight]);
-  const { user, nativeLanguage } = useUser();
+  const { user, nativeLanguage, studyLanguage } = useUser();
+  const config = getStudyLanguageConfig(studyLanguage);
   const [allCards, setAllCards] = useState<Flashcard[]>([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
   const [sortKey, setSortKey] = useState<SortKey>('newest');
   const [filterKey, setFilterKey] = useState<FilterKey>('active');
   const [editingCardId, setEditingCardId] = useState<string | null>(null);
-  const [editDraft, setEditDraft] = useState<{ korean: string; english: string } | null>(null);
+  const [editDraft, setEditDraft] = useState<Partial<Record<CardSideField, string>> | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) { setAllCards([]); return; }
     setLoading(true);
-    fetchAllUserFlashcards(user.uid)
+    fetchAllUserFlashcards(user.uid, studyLanguage)
       .then(setAllCards)
       .catch(() => setError('Failed to load cards.'))
       .finally(() => setLoading(false));
-  }, [user]);
+  }, [user, studyLanguage]);
 
   const visibleCards = useMemo(() => {
     let cards = allCards;
@@ -48,13 +50,13 @@ export default function CardsScreen() {
     if (search.trim()) {
       const q = search.trim().toLowerCase();
       cards = cards.filter(c =>
-        (c.korean || c.term || '').toLowerCase().includes(q) ||
-        (c.english || c.translation || '').toLowerCase().includes(q)
+        getStudyLangSide(c).toLowerCase().includes(q) ||
+        getBackSide(c).toLowerCase().includes(q)
       );
     }
     if (sortKey === 'newest') return [...cards].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     if (sortKey === 'oldest') return [...cards].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
-    return [...cards].sort((a, b) => (a.korean || a.term || '').localeCompare(b.korean || b.term || ''));
+    return [...cards].sort((a, b) => getStudyLangSide(a).localeCompare(getStudyLangSide(b)));
   }, [allCards, filterKey, search, sortKey]);
 
   const activeCount = allCards.filter(c => !c.archived).length;
@@ -63,7 +65,7 @@ export default function CardsScreen() {
   const handleEditSave = async (card: Flashcard) => {
     if (!card.id || !editDraft) return;
     try {
-      await updateFlashcardFields(card.id, editDraft);
+      await updateFlashcardFields(card.id, editDraft, studyLanguage);
       setAllCards(prev => prev.map(c => c.id === card.id ? { ...c, ...editDraft } : c));
       setEditingCardId(null);
       setEditDraft(null);
@@ -79,7 +81,7 @@ export default function CardsScreen() {
         text: t(nativeLanguage, 'archive'), style: 'destructive',
         onPress: async () => {
           try {
-            await archiveFlashcard(card.id!);
+            await archiveFlashcard(card.id!, studyLanguage);
             setAllCards(prev => prev.map(c => c.id === card.id ? { ...c, archived: true } : c));
           } catch {
             setError(t(nativeLanguage, 'errorArchiveFlashcard'));
@@ -91,7 +93,7 @@ export default function CardsScreen() {
 
   const handleRestore = async (card: Flashcard) => {
     try {
-      await restoreFlashcard(card.id!);
+      await restoreFlashcard(card.id!, studyLanguage);
       setAllCards(prev => prev.map(c => c.id === card.id ? { ...c, archived: false } : c));
     } catch {
       setError(t(nativeLanguage, 'errorRestoreFlashcard'));
@@ -105,7 +107,7 @@ export default function CardsScreen() {
         text: t(nativeLanguage, 'delete'), style: 'destructive',
         onPress: async () => {
           try {
-            await deleteFlashcard(card.id!);
+            await deleteFlashcard(card.id!, studyLanguage);
             setAllCards(prev => prev.filter(c => c.id !== card.id));
           } catch {
             setError(t(nativeLanguage, 'errorDeleteFlashcard'));
@@ -135,14 +137,14 @@ export default function CardsScreen() {
           <View style={s.editForm}>
             <TextInput
               style={s.editInput}
-              value={editDraft.korean}
-              onChangeText={v => setEditDraft(d => d ? { ...d, korean: v } : d)}
+              value={editDraft[config.studyField] ?? ''}
+              onChangeText={v => setEditDraft(d => d ? { ...d, [config.studyField]: v } : d)}
               autoFocus
             />
             <TextInput
               style={s.editInput}
-              value={editDraft.english}
-              onChangeText={v => setEditDraft(d => d ? { ...d, english: v } : d)}
+              value={editDraft[config.backField] ?? ''}
+              onChangeText={v => setEditDraft(d => d ? { ...d, [config.backField]: v } : d)}
             />
             <View style={s.editActions}>
               <TouchableOpacity style={s.editSaveBtn} onPress={() => handleEditSave(card)}>
@@ -156,8 +158,8 @@ export default function CardsScreen() {
         ) : (
           <>
             <View style={s.cardContent}>
-              <Text style={s.cardKorean}>{card.korean || card.term}</Text>
-              <Text style={s.cardEnglish}>{card.english || card.translation || ''}</Text>
+              <Text style={s.cardKorean}>{getStudyLangSide(card)}</Text>
+              <Text style={s.cardEnglish}>{getBackSide(card)}</Text>
               <Text style={s.cardDate}>
                 {t(nativeLanguage, 'savedAt')} {new Date(card.createdAt).toLocaleDateString()}
                 {card.archived ? `  ·  ${t(nativeLanguage, 'cardsFilterArchived')}` : ''}
@@ -168,7 +170,7 @@ export default function CardsScreen() {
                 <>
                   <TouchableOpacity style={s.actionBtn} onPress={() => {
                     setEditingCardId(card.id!);
-                    setEditDraft({ korean: card.korean || card.term, english: card.english || card.translation || '' });
+                    setEditDraft({ [config.studyField]: getStudyLangSide(card), [config.backField]: getBackSide(card) });
                   }}>
                     <Text style={s.actionBtnText}>{t(nativeLanguage, 'edit')}</Text>
                   </TouchableOpacity>

@@ -7,7 +7,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useUser } from '../../src/context/UserContext';
 import { getTermExplanation, getTermDepth, getTermExamples } from '../../src/services/gemini';
-import { getDepthTarget } from '@amgi/core';
+import { getDepthTarget, getStudyLanguageConfig, getExampleSides } from '@amgi/core';
+import type { StudyLanguage } from '@amgi/core';
 import type { TermCore, TermDepth, TermAmbiguous, ExamplePair } from '../../src/services/gemini';
 import { saveFlashcardToFirestore } from '../../src/services/firestore';
 import type { Flashcard } from '../../src/services/firestore';
@@ -17,14 +18,22 @@ import { useTheme } from '../../src/context/ThemeContext';
 import { useFloatingTabBarHeight } from '../../src/components/FloatingTabBar';
 import type { Palette } from '../../src/theme';
 
-const EXAMPLES = ['배', 'longing', '눈치', 'awkward', '사랑'];
+const EXAMPLE_TERMS: Record<StudyLanguage, string[]> = {
+  Korean: ['배', 'longing', '눈치', 'awkward', '사랑'],
+  Swedish: ['lagom', 'fika', 'mysig', 'serendipity', 'lagstiftning'],
+  English: ['serendipity', '아쉽다', 'procrastinate', '답답하다', 'nuance'],
+  French: ['dépaysement', 'flâner', 'retrouvailles', 'longing', 'terroir'],
+  Japanese: ['木漏れ日', '積ん読', 'nostalgia', 'awkward', '侘寂'],
+};
 
 export default function LearnScreen() {
   const { C } = useTheme();
   const tabBarHeight = useFloatingTabBarHeight();
   const s = useMemo(() => makeStyles(C, tabBarHeight), [C, tabBarHeight]);
   const searchRestingBottom = Dimensions.get('window').height * 0.40;
-  const { user, nativeLanguage, authLoading, handleSignIn, streak, reviewedToday } = useUser();
+  const { user, nativeLanguage, studyLanguage, authLoading, handleSignIn, streak, reviewedToday } = useUser();
+  const langConfig = getStudyLanguageConfig(studyLanguage);
+  const exampleTerms = EXAMPLE_TERMS[studyLanguage] ?? EXAMPLE_TERMS.Korean;
 
   const [term, setTerm] = useState('');
   const [core, setCore] = useState<TermCore | null>(null);
@@ -53,7 +62,7 @@ export default function LearnScreen() {
     setLoading(true);
     reset();
     try {
-      const result = await getTermExplanation(termValue, nativeLanguage ?? 'English', context);
+      const result = await getTermExplanation(termValue, nativeLanguage ?? 'English', context, studyLanguage);
       if ('ambiguous' in result && result.ambiguous) {
         setAmbiguity(result as TermAmbiguous);
       } else {
@@ -80,11 +89,11 @@ export default function LearnScreen() {
     if (!core) return;
     setLoadingDepth(true);
     try {
-      const target = getDepthTarget(core);
+      const target = getDepthTarget(core, studyLanguage);
       setDepth(await getTermDepth(target.term, target.termLanguage, nativeLanguage ?? 'English', {
         translation: target.translation,
         briefDefinition: target.briefDefinition,
-      }));
+      }, studyLanguage));
     } catch {
       setError(t(nativeLanguage, 'errorLoadDepth'));
     } finally {
@@ -96,11 +105,11 @@ export default function LearnScreen() {
     if (!core) return;
     setLoadingExamples(true);
     try {
-      const target = getDepthTarget(core);
+      const target = getDepthTarget(core, studyLanguage);
       setExamples(await getTermExamples(target.term, target.termLanguage, nativeLanguage ?? 'English', {
         translation: target.translation,
         briefDefinition: target.briefDefinition,
-      }));
+      }, studyLanguage));
     } catch {
       setError(t(nativeLanguage, 'errorLoadExamples'));
     } finally {
@@ -110,9 +119,16 @@ export default function LearnScreen() {
 
   const handleOpenSave = () => {
     if (!core) return;
-    const korean = core.termLanguage === 'Korean' ? core.term : (core.korean ?? '');
-    const english = core.termLanguage === 'English' ? core.term : (core.english ?? '');
-    setFlashcardDraft({ ...core, ...(depth ?? {}), examples: examples ?? [], korean, english });
+    const studySide = core.termLanguage === studyLanguage ? core.term : (core[langConfig.studyField] ?? '');
+    const backSide = core.termLanguage === langConfig.backLanguage ? core.term : (core[langConfig.backField] ?? '');
+    setFlashcardDraft({
+      ...core,
+      ...(depth ?? {}),
+      examples: examples ?? [],
+      studyLanguage,
+      [langConfig.studyField]: studySide,
+      [langConfig.backField]: backSide,
+    });
     setShowSaveModal(true);
     setSaveSuccess(false);
   };
@@ -121,7 +137,7 @@ export default function LearnScreen() {
     if (!flashcardDraft || !user) return;
     setSaving(true);
     try {
-      await saveFlashcardToFirestore({ ...(flashcardDraft as Omit<Flashcard, 'createdAt' | 'id'>), uid: user.uid });
+      await saveFlashcardToFirestore({ ...(flashcardDraft as Omit<Flashcard, 'createdAt' | 'id'>), uid: user.uid }, studyLanguage);
       setShowSaveModal(false);
       setFlashcardDraft(null);
       setCore(null); setDepth(null); setExamples(null); setAmbiguity(null);
@@ -140,7 +156,7 @@ export default function LearnScreen() {
   };
 
   const translation = core
-    ? (core.termLanguage === 'Korean' ? core.english : core.korean) || core.translation
+    ? (core.termLanguage === studyLanguage ? core[langConfig.backField] : core[langConfig.studyField]) || core.translation
     : null;
 
   if (authLoading) {
@@ -157,6 +173,7 @@ export default function LearnScreen() {
     <SaveFlashcardModal
       draft={flashcardDraft}
       nativeLanguage={nativeLanguage}
+      studyLanguage={studyLanguage}
       saving={saving}
       onChange={(field, value) => setFlashcardDraft(prev => ({ ...prev, [field]: value }))}
       onSave={handleSave}
@@ -194,7 +211,7 @@ export default function LearnScreen() {
         <View style={[s.bottomBar, { paddingBottom: searchRestingBottom }]}>
             <View style={s.exampleRow}>
               <Text style={s.exampleLabel}>{t(nativeLanguage, 'exampleTermsLabel')}</Text>
-              {EXAMPLES.map(ex => (
+              {exampleTerms.map(ex => (
                 <TouchableOpacity key={ex} style={s.chip} onPress={() => { setTerm(ex); resolveExplanation(ex); }}>
                   <Text style={s.chipText}>{ex}</Text>
                 </TouchableOpacity>
@@ -284,6 +301,16 @@ export default function LearnScreen() {
                     <Text style={s.formalityText}>{core.formality}</Text>
                   </View>
                 )}
+                {core.gender && (
+                  <View style={s.formalityBadge}>
+                    <Text style={s.formalityText}>{core.gender}</Text>
+                  </View>
+                )}
+                {core.furigana && (
+                  <View style={s.formalityBadge}>
+                    <Text style={s.formalityText}>{core.furigana}</Text>
+                  </View>
+                )}
               </View>
 
               <Text style={s.sectionLabel}>{t(nativeLanguage, 'sectionTranslation')}</Text>
@@ -327,12 +354,15 @@ export default function LearnScreen() {
               ) : (
                 <View style={s.examplesSection}>
                   <Text style={s.sectionLabel}>{t(nativeLanguage, 'sectionExamples')}</Text>
-                  {examples.map((ex, i) => (
-                    <View key={i} style={s.exampleItem}>
-                      {ex.korean ? <Text style={s.bodyText}>{ex.korean}</Text> : null}
-                      {ex.english ? <Text style={s.exampleTranslation}>{ex.english}</Text> : null}
-                    </View>
-                  ))}
+                  {examples.map((ex, i) => {
+                    const sides = getExampleSides(ex, studyLanguage);
+                    return (
+                      <View key={i} style={s.exampleItem}>
+                        {sides.study ? <Text style={s.bodyText}>{sides.study}</Text> : null}
+                        {sides.back ? <Text style={s.exampleTranslation}>{sides.back}</Text> : null}
+                      </View>
+                    );
+                  })}
                 </View>
               )}
 
