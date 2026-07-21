@@ -96,8 +96,9 @@ const translations = {
     settingsAbout: 'About',
     settingsPrivacyPolicy: 'Privacy Policy',
     themeForest: 'Forest',
-    themeSlate: 'Slate',
+    themeSonokai: 'Sonokai',
     themePaper: 'Paper',
+    themeSystem: 'System',
     // Language setup modal
     welcomeTitle: 'Welcome to Amgi',
     welcomeSubtitle: 'What is your native language? Explanations will be written in this language.',
@@ -272,8 +273,9 @@ const translations = {
     settingsAbout: '정보',
     settingsPrivacyPolicy: '개인정보처리방침',
     themeForest: '숲',
-    themeSlate: '슬레이트',
+    themeSonokai: '소노카이',
     themePaper: '종이',
+    themeSystem: '시스템',
     // Language setup modal
     welcomeTitle: 'Amgi에 오신 것을 환영합니다',
     welcomeSubtitle: '모국어가 무엇인가요? 설명은 이 언어로 작성됩니다.',

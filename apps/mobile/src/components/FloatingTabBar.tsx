@@ -33,9 +33,9 @@ export function useFloatingTabBarHeight() {
 
 export default function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
-  const { C, theme } = useTheme();
+  const { C, resolvedTheme } = useTheme();
   const { nativeLanguage } = useUser();
-  const tint = theme === 'paper' ? 'light' : 'dark';
+  const tint = resolvedTheme === 'paper' ? 'light' : 'dark';
 
   return (
     <View style={[s.wrapper, { bottom: insets.bottom + 12 }]}>
