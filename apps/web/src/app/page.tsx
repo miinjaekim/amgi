@@ -11,7 +11,7 @@ import {
 } from '@/services/gemini';
 import Markdown from '@/components/Markdown';
 import { saveFlashcardToFirestore, Flashcard } from '@/services/firestore';
-import { getExampleSides, getStudyLanguageConfig, getVocabPacks, parseStreamedExamples } from '@amgi/core';
+import { getExampleSides, getStudyLanguageConfig, getVocabPacks, parseStreamedExamples, parseStreamedDepth } from '@amgi/core';
 import type { WordOfTheDay } from '@amgi/core';
 import { useUser } from '@/components/UserContext';
 import { t } from '@/lib/i18n';
@@ -51,27 +51,6 @@ function animateText(
   };
   requestAnimationFrame(tick);
 }
-
-function parseStreamedDepth(text: string): TermDepth {
-  const section = (marker: string, nextMarker?: string) => {
-    const start = text.indexOf(`${marker}\n`);
-    if (start === -1) return undefined;
-    const contentStart = start + marker.length + 1;
-    const end = nextMarker ? text.indexOf(`${nextMarker}\n`, contentStart) : text.length;
-    const content = text.slice(contentStart, end === -1 ? text.length : end).trim();
-    return content && content.toLowerCase() !== 'none' ? content : undefined;
-  };
-  const result: TermDepth = {};
-  const hasHanja = text.includes('HANJA:\n');
-  const def = section('DEFINITION:', hasHanja ? 'HANJA:' : 'NOTES:');
-  const hanja = hasHanja ? section('HANJA:', 'NOTES:') : undefined;
-  const notes = section('NOTES:');
-  if (def !== undefined) result.definition = def;
-  if (hanja !== undefined) result.hanja = hanja;
-  if (notes !== undefined) result.notes = notes;
-  return result;
-}
-
 
 export default function Home() {
   const { user, nativeLanguage, studyLanguage, handleSignIn } = useUser();

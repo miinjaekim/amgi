@@ -44,6 +44,31 @@ export function parseStreamedExamples(text: string, studyLanguage: StudyLanguage
     });
 }
 
+/**
+ * Parses the partial NDJSON-free text stream from /api/explain/depth-stream
+ * into a TermDepth. Tolerant of incomplete sections while the stream arrives:
+ * a section only appears once its marker line is present.
+ */
+export function parseStreamedDepth(text: string): TermDepth {
+  const section = (marker: string, nextMarker?: string) => {
+    const start = text.indexOf(`${marker}\n`);
+    if (start === -1) return undefined;
+    const contentStart = start + marker.length + 1;
+    const end = nextMarker ? text.indexOf(`${nextMarker}\n`, contentStart) : text.length;
+    const content = text.slice(contentStart, end === -1 ? text.length : end).trim();
+    return content && content.toLowerCase() !== 'none' ? content : undefined;
+  };
+  const result: TermDepth = {};
+  const hasHanja = text.includes('HANJA:\n');
+  const def = section('DEFINITION:', hasHanja ? 'HANJA:' : 'NOTES:');
+  const hanja = hasHanja ? section('HANJA:', 'NOTES:') : undefined;
+  const notes = section('NOTES:');
+  if (def !== undefined) result.definition = def;
+  if (hanja !== undefined) result.hanja = hanja;
+  if (notes !== undefined) result.notes = notes;
+  return result;
+}
+
 export async function getTermExplanation(
   term: string,
   nativeLanguage = 'English',

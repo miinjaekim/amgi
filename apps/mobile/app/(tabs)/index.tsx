@@ -6,8 +6,14 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useUser } from '../../src/context/UserContext';
-import { getTermExplanation, getTermDepth, getTermExamples, getWordOfTheDay } from '../../src/services/gemini';
-import { getDepthTarget, getStudyLanguageConfig, getExampleSides, getVocabPacks } from '@amgi/core';
+import {
+  getTermExplanation, getTermDepth, getTermExamples, getWordOfTheDay,
+  streamTermDepth, streamTermExamples,
+} from '../../src/services/gemini';
+import {
+  getDepthTarget, getStudyLanguageConfig, getExampleSides, getVocabPacks,
+  parseStreamedDepth, parseStreamedExamples,
+} from '@amgi/core';
 import type { StudyLanguage } from '@amgi/core';
 import type { TermCore, TermDepth, TermAmbiguous, ExamplePair, WordOfTheDay } from '../../src/services/gemini';
 import { saveFlashcardToFirestore } from '../../src/services/firestore';
@@ -15,10 +21,36 @@ import type { Flashcard } from '../../src/services/firestore';
 import SaveFlashcardModal from '../../src/components/SaveFlashcardModal';
 import PacksModal from '../../src/components/PacksModal';
 import PronounceButton from '../../src/components/PronounceButton';
+import Markdown from '../../src/components/Markdown';
 import { t } from '@amgi/core';
 import { useTheme } from '../../src/context/ThemeContext';
 import { useFloatingTabBarHeight } from '../../src/components/FloatingTabBar';
 import type { Palette } from '../../src/theme';
+
+// Reveals streamed text a few characters per frame for a typewriter effect,
+// then flushes whatever remains once the network stream is done.
+function animateText(
+  accRef: { current: string },
+  doneRef: { current: boolean },
+  onUpdate: (slice: string) => void,
+  onDone: () => void,
+) {
+  let revealed = 0;
+  const tick = () => {
+    const total = accRef.current.length;
+    if (doneRef.current) {
+      if (revealed < total) onUpdate(accRef.current);
+      onDone();
+      return;
+    }
+    if (revealed < total) {
+      revealed = Math.min(revealed + 6, total);
+      onUpdate(accRef.current.slice(0, revealed));
+    }
+    requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+}
 
 const EXAMPLE_TERMS: Record<StudyLanguage, string[]> = {
   Korean: ['배', 'longing', '눈치', 'awkward', '사랑'],
@@ -44,7 +76,9 @@ export default function LearnScreen() {
   const [examples, setExamples] = useState<ExamplePair[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [loadingDepth, setLoadingDepth] = useState(false);
+  const [streamingDepth, setStreamingDepth] = useState(false);
   const [loadingExamples, setLoadingExamples] = useState(false);
+  const [streamingExamples, setStreamingExamples] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [flashcardDraft, setFlashcardDraft] = useState<Partial<Flashcard> | null>(null);
@@ -78,6 +112,8 @@ export default function LearnScreen() {
     setCore(null); setAmbiguity(null); setDepth(null); setExamples(null);
     setError(null); setShowSaveModal(false); setFlashcardDraft(null);
     setSaveSuccess(false); setShowContextInput(false); setContextInput('');
+    setLoadingDepth(false); setStreamingDepth(false);
+    setLoadingExamples(false); setStreamingExamples(false);
   };
 
   const resolveExplanation = async (termValue: string, context?: string) => {
@@ -110,32 +146,81 @@ export default function LearnScreen() {
   const handleLoadDepth = async () => {
     if (!core) return;
     setLoadingDepth(true);
+    setStreamingDepth(false);
+    setDepth(null);
+    const target = getDepthTarget(core, studyLanguage);
+    const sense = { translation: target.translation, briefDefinition: target.briefDefinition };
     try {
-      const target = getDepthTarget(core, studyLanguage);
-      setDepth(await getTermDepth(target.term, target.termLanguage, nativeLanguage ?? 'English', {
-        translation: target.translation,
-        briefDefinition: target.briefDefinition,
-      }, studyLanguage));
+      const res = await streamTermDepth({ ...target, nativeLanguage, studyLanguage });
+      if (!res.ok || !res.body) throw new Error('Stream failed');
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      const accRef = { current: '' };
+      const doneRef = { current: false };
+      let firstChunk = true;
+      animateText(
+        accRef, doneRef,
+        slice => setDepth(parseStreamedDepth(slice)),
+        () => setStreamingDepth(false),
+      );
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        accRef.current += decoder.decode(value, { stream: true });
+        if (firstChunk) { firstChunk = false; setLoadingDepth(false); setStreamingDepth(true); }
+      }
+      doneRef.current = true;
     } catch {
-      setError(t(nativeLanguage, 'errorLoadDepth'));
-    } finally {
+      // Streaming can fail (offline, proxy buffering) — fall back to the
+      // non-streamed endpoint so digging deeper still works.
+      try {
+        setDepth(await getTermDepth(target.term, target.termLanguage, nativeLanguage ?? 'English', sense, studyLanguage));
+      } catch {
+        setError(t(nativeLanguage, 'errorLoadDepth'));
+      }
       setLoadingDepth(false);
+      setStreamingDepth(false);
     }
   };
 
   const handleLoadExamples = async () => {
     if (!core) return;
     setLoadingExamples(true);
+    setStreamingExamples(false);
+    setExamples(null);
+    const target = getDepthTarget(core, studyLanguage);
+    const sense = { translation: target.translation, briefDefinition: target.briefDefinition };
     try {
-      const target = getDepthTarget(core, studyLanguage);
-      setExamples(await getTermExamples(target.term, target.termLanguage, nativeLanguage ?? 'English', {
-        translation: target.translation,
-        briefDefinition: target.briefDefinition,
-      }, studyLanguage));
+      const res = await streamTermExamples({ ...target, nativeLanguage, studyLanguage });
+      if (!res.ok || !res.body) throw new Error('Stream failed');
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      const accRef = { current: '' };
+      const doneRef = { current: false };
+      let firstChunk = true;
+      animateText(
+        accRef, doneRef,
+        slice => {
+          const parsed = parseStreamedExamples(slice, studyLanguage);
+          if (parsed.length > 0) setExamples(parsed);
+        },
+        () => setStreamingExamples(false),
+      );
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        accRef.current += decoder.decode(value, { stream: true });
+        if (firstChunk) { firstChunk = false; setLoadingExamples(false); setStreamingExamples(true); }
+      }
+      doneRef.current = true;
     } catch {
-      setError(t(nativeLanguage, 'errorLoadExamples'));
-    } finally {
+      try {
+        setExamples(await getTermExamples(target.term, target.termLanguage, nativeLanguage ?? 'English', sense, studyLanguage));
+      } catch {
+        setError(t(nativeLanguage, 'errorLoadExamples'));
+      }
       setLoadingExamples(false);
+      setStreamingExamples(false);
     }
   };
 
@@ -421,25 +506,26 @@ export default function LearnScreen() {
                   {depth.definition && (
                     <>
                       <Text style={s.sectionLabel}>{t(nativeLanguage, 'sectionDefinition')}</Text>
-                      <Text style={s.bodyText}>{depth.definition}</Text>
+                      <Markdown>{depth.definition}</Markdown>
                     </>
                   )}
                   {depth.hanja && (
                     <>
                       <Text style={s.sectionLabel}>{t(nativeLanguage, 'sectionHanja')}</Text>
-                      <Text style={s.bodyText}>{depth.hanja}</Text>
+                      <Markdown>{depth.hanja}</Markdown>
                     </>
                   )}
                   {depth.notes && (
                     <>
                       <Text style={s.sectionLabel}>{t(nativeLanguage, 'sectionContext')}</Text>
-                      <Text style={s.bodyText}>{depth.notes}</Text>
+                      <Markdown>{depth.notes}</Markdown>
                     </>
                   )}
+                  {streamingDepth && <Text style={s.cursor}>▎</Text>}
                 </View>
               )}
 
-              {!examples ? (
+              {!examples && !streamingExamples ? (
                 <TouchableOpacity style={s.loadBtn} onPress={handleLoadExamples} disabled={loadingExamples}>
                   {loadingExamples
                     ? <ActivityIndicator color={C.text} size="small" />
@@ -448,7 +534,7 @@ export default function LearnScreen() {
               ) : (
                 <View style={s.examplesSection}>
                   <Text style={s.sectionLabel}>{t(nativeLanguage, 'sectionExamples')}</Text>
-                  {examples.map((ex, i) => {
+                  {(examples ?? []).map((ex, i) => {
                     const sides = getExampleSides(ex, studyLanguage);
                     return (
                       <View key={i} style={s.exampleItem}>
@@ -462,6 +548,7 @@ export default function LearnScreen() {
                       </View>
                     );
                   })}
+                  {streamingExamples && <Text style={s.cursor}>▎</Text>}
                 </View>
               )}
 
@@ -598,6 +685,7 @@ function makeStyles(C: Palette, tabBarHeight: number) {
   depthSection: { marginTop: 4 },
   examplesSection: { marginTop: 4 },
   exampleItem: { marginBottom: 10 },
+  cursor: { color: C.muted, fontSize: 15, marginTop: 4 },
 
   loadBtn: {
     borderWidth: 1, borderColor: C.border, borderRadius: 10,

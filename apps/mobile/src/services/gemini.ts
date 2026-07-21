@@ -1,3 +1,4 @@
+import { fetch as expoFetch } from 'expo/fetch';
 import {
   getTermExplanation as _explain,
   getTermDepth as _depth,
@@ -45,3 +46,18 @@ export const getPronunciationUrl = (
   text: string,
   studyLanguage: StudyLanguage = 'Korean',
 ) => _pronounce(text, studyLanguage, BASE_URL);
+
+// Streaming variants — expo/fetch exposes a WHATWG ReadableStream body so the
+// Learn screen can reveal depth/examples as they arrive, like web does.
+const openStream = (path: string, body: Record<string, unknown>) =>
+  expoFetch(`${BASE_URL}${path}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+
+export const streamTermDepth = (body: Record<string, unknown>) =>
+  openStream('/api/explain/depth-stream', body);
+
+export const streamTermExamples = (body: Record<string, unknown>) =>
+  openStream('/api/explain/examples-stream', body);

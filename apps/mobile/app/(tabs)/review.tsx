@@ -14,6 +14,7 @@ import { getNextReviewData, t, getStudyLanguageConfig, getStudyLangSide, getBack
 import type { CardSideField } from '@amgi/core';
 import { useTheme } from '../../src/context/ThemeContext';
 import { useFloatingTabBarHeight } from '../../src/components/FloatingTabBar';
+import Markdown from '../../src/components/Markdown';
 import type { Palette } from '../../src/theme';
 
 type Direction = 'frontToBack' | 'backToFront';
@@ -311,7 +312,9 @@ export default function ReviewScreen() {
                   </TouchableOpacity>
                 )}
                 {card.definition && showDetails && (
-                  <Text style={s.definitionText}>{card.definition}</Text>
+                  <View style={s.definitionWrap}>
+                    <Markdown style={s.definitionText}>{card.definition}</Markdown>
+                  </View>
                 )}
               </Animated.View>
             )}
@@ -398,7 +401,8 @@ function makeStyles(C: Palette, tabBarHeight: number) {
     borderRadius: 8, paddingVertical: 8, paddingHorizontal: 14, alignSelf: 'flex-start',
   },
   detailsBtnText: { fontSize: 13, color: C.muted, fontWeight: '500' },
-  definitionText: { fontSize: 14, color: C.text, opacity: 0.7, marginTop: 14, lineHeight: 20 },
+  definitionWrap: { marginTop: 14 },
+  definitionText: { fontSize: 14, color: C.text, opacity: 0.7, lineHeight: 20 },
   revealWrap: {},
   showBtn: {
     marginHorizontal: 16, paddingBottom: 8,

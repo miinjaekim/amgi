@@ -6,6 +6,7 @@ import { getStudyLangSide, getBackSide, getExampleSides, t } from '@amgi/core';
 import type { ExamplePair } from '@amgi/core';
 import { useTheme } from '../context/ThemeContext';
 import PronounceButton from './PronounceButton';
+import Markdown from './Markdown';
 import type { Flashcard } from '../services/firestore';
 import type { Palette } from '../theme';
 
@@ -55,19 +56,19 @@ export default function CardDetailModal({ card, nativeLanguage, onClose }: Props
                 {card.definition && (
                   <View style={s.section}>
                     <Text style={s.sectionLabel}>{t(nativeLanguage, 'sectionDefinition')}</Text>
-                    <Text style={s.sectionBody}>{card.definition}</Text>
+                    <Markdown>{card.definition}</Markdown>
                   </View>
                 )}
                 {card.hanja && (
                   <View style={s.section}>
                     <Text style={s.sectionLabel}>{t(nativeLanguage, 'sectionHanja')}</Text>
-                    <Text style={s.sectionBody}>{card.hanja}</Text>
+                    <Markdown>{card.hanja}</Markdown>
                   </View>
                 )}
                 {card.notes && (
                   <View style={s.section}>
                     <Text style={s.sectionLabel}>{t(nativeLanguage, 'sectionContext')}</Text>
-                    <Text style={s.sectionBody}>{card.notes}</Text>
+                    <Markdown>{card.notes}</Markdown>
                   </View>
                 )}
                 {card.examples && card.examples.length > 0 && (
@@ -123,7 +124,6 @@ function makeStyles(C: Palette) {
     muted: { fontSize: 14, color: C.muted },
     section: { marginBottom: 18 },
     sectionLabel: { fontSize: 11, fontWeight: '700', color: C.muted, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 },
-    sectionBody: { fontSize: 14, color: C.text, lineHeight: 21, opacity: 0.9 },
     exampleItem: { marginBottom: 12 },
     exampleStudyRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
     exampleStudy: { fontSize: 14, color: C.text, lineHeight: 21 },
