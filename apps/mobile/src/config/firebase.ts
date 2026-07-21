@@ -1,7 +1,13 @@
 import { initializeApp, getApps } from 'firebase/app';
-import { initializeAuth, getAuth, getReactNativePersistence } from 'firebase/auth';
+import { initializeAuth, getAuth, type Auth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+
+// getReactNativePersistence exists in Firebase's React Native bundle and Metro
+// resolves it fine at runtime, but the top-level `firebase/auth` package's published
+// types don't declare it (github.com/firebase/firebase-js-sdk/issues/8332).
+// @ts-expect-error — see comment above
+import { getReactNativePersistence } from 'firebase/auth';
 
 const firebaseConfig = {
   apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
@@ -16,7 +22,7 @@ const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0
 
 // initializeAuth throws if called on an already-initialized app (e.g. fast refresh).
 // Fall back to getAuth() which returns the existing instance.
-let auth;
+let auth: Auth;
 try {
   auth = initializeAuth(app, { persistence: getReactNativePersistence(AsyncStorage) });
 } catch {
