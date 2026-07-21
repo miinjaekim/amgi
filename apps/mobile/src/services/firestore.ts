@@ -3,19 +3,26 @@ import {
   getDocs, doc, updateDoc, deleteDoc,
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
-import type { Flashcard, ReviewTracking } from '@amgi/core';
+import { getStudyLanguageConfig } from '@amgi/core';
+import type { Flashcard, ReviewTracking, StudyLanguage, CardSideField } from '@amgi/core';
 
-export type { Flashcard, ReviewTracking } from '@amgi/core';
+export type { Flashcard, ReviewTracking, StudyLanguage } from '@amgi/core';
+
+/** Firestore collection holding a given study language's cards. */
+export function getCardsCollection(studyLanguage?: StudyLanguage): string {
+  return getStudyLanguageConfig(studyLanguage).collection;
+}
 
 function processTimestamp(ts: any): Date {
   return ts?.toDate?.() ?? (ts ? new Date(ts) : new Date());
 }
 
-function mapDoc(snap: any): Flashcard {
+function mapDoc(snap: any, studyLanguage?: StudyLanguage): Flashcard {
   const d = snap.data();
   return {
     id: snap.id,
     ...(d as Omit<Flashcard, 'createdAt' | 'id'>),
+    studyLanguage: d.studyLanguage ?? studyLanguage ?? 'Korean',
     createdAt: processTimestamp(d.createdAt),
     nextReview: processTimestamp(d.nextReview),
     frontToBack: d.frontToBack ? { ...d.frontToBack, nextReview: processTimestamp(d.frontToBack.nextReview) } : undefined,
@@ -30,13 +37,18 @@ const DEFAULT_TRACKING: ReviewTracking = {
   repetitions: 0,
 };
 
-export async function saveFlashcardToFirestore(flashcard: Omit<Flashcard, 'createdAt' | 'id'>): Promise<string> {
+export async function saveFlashcardToFirestore(
+  flashcard: Omit<Flashcard, 'createdAt' | 'id'>,
+  studyLanguage?: StudyLanguage,
+): Promise<string> {
   const frontToBack = flashcard.frontToBack ?? DEFAULT_TRACKING;
   const backToFront = flashcard.backToFront ?? DEFAULT_TRACKING;
   const fbDate = new Date(frontToBack.nextReview);
   const bfDate = new Date(backToFront.nextReview);
-  const ref = await addDoc(collection(db, 'cards'), {
+
+  const rawData = {
     ...flashcard,
+    studyLanguage: studyLanguage ?? 'Korean',
     createdAt: Timestamp.now(),
     archived: false,
     frontToBack,
@@ -45,45 +57,53 @@ export async function saveFlashcardToFirestore(flashcard: Omit<Flashcard, 'creat
     interval: frontToBack.interval,
     ease: frontToBack.ease,
     repetitions: frontToBack.repetitions,
-  });
+  };
+
+  // Firebase v9 throws on explicit `undefined` field values.
+  const docData = Object.fromEntries(
+    Object.entries(rawData).filter(([, v]) => v !== undefined)
+  );
+
+  const ref = await addDoc(collection(db, getCardsCollection(studyLanguage)), docData);
   return ref.id;
 }
 
-export async function fetchAllUserFlashcards(uid: string): Promise<Flashcard[]> {
-  const q = query(collection(db, 'cards'), where('uid', '==', uid), orderBy('createdAt', 'desc'));
+export async function fetchAllUserFlashcards(uid: string, studyLanguage?: StudyLanguage): Promise<Flashcard[]> {
+  const q = query(collection(db, getCardsCollection(studyLanguage)), where('uid', '==', uid), orderBy('createdAt', 'desc'));
   const snap = await getDocs(q);
-  return snap.docs.map(mapDoc);
+  return snap.docs.map(d => mapDoc(d, studyLanguage));
 }
 
-export async function fetchUserFlashcards(uid: string): Promise<Flashcard[]> {
+export async function fetchUserFlashcards(uid: string, studyLanguage?: StudyLanguage): Promise<Flashcard[]> {
   const q = query(
-    collection(db, 'cards'),
+    collection(db, getCardsCollection(studyLanguage)),
     where('uid', '==', uid),
     where('archived', '!=', true),
     orderBy('archived'),
     orderBy('createdAt', 'desc'),
   );
   const snap = await getDocs(q);
-  return snap.docs.map(mapDoc);
+  return snap.docs.map(d => mapDoc(d, studyLanguage));
 }
 
-export async function archiveFlashcard(cardId: string): Promise<void> {
-  await updateDoc(doc(db, 'cards', cardId), { archived: true });
+export async function archiveFlashcard(cardId: string, studyLanguage?: StudyLanguage): Promise<void> {
+  await updateDoc(doc(db, getCardsCollection(studyLanguage), cardId), { archived: true });
 }
 
-export async function restoreFlashcard(cardId: string): Promise<void> {
-  await updateDoc(doc(db, 'cards', cardId), { archived: false });
+export async function restoreFlashcard(cardId: string, studyLanguage?: StudyLanguage): Promise<void> {
+  await updateDoc(doc(db, getCardsCollection(studyLanguage), cardId), { archived: false });
 }
 
-export async function deleteFlashcard(cardId: string): Promise<void> {
-  await deleteDoc(doc(db, 'cards', cardId));
+export async function deleteFlashcard(cardId: string, studyLanguage?: StudyLanguage): Promise<void> {
+  await deleteDoc(doc(db, getCardsCollection(studyLanguage), cardId));
 }
 
 export async function updateFlashcardFields(
   cardId: string,
-  fields: Partial<Pick<Flashcard, 'korean' | 'english'>>,
+  fields: Partial<Record<CardSideField, string>>,
+  studyLanguage?: StudyLanguage,
 ): Promise<void> {
-  await updateDoc(doc(db, 'cards', cardId), fields);
+  await updateDoc(doc(db, getCardsCollection(studyLanguage), cardId), fields);
 }
 
 export async function updateFlashcardReview(
@@ -91,11 +111,12 @@ export async function updateFlashcardReview(
   direction: 'frontToBack' | 'backToFront',
   tracking: ReviewTracking,
   otherTracking?: ReviewTracking,
+  studyLanguage?: StudyLanguage,
 ): Promise<void> {
   const otherDate = otherTracking ? new Date(otherTracking.nextReview) : null;
   const thisDate = new Date(tracking.nextReview);
   const legacyNext = otherDate && otherDate < thisDate ? otherDate : thisDate;
-  await updateDoc(doc(db, 'cards', cardId), {
+  await updateDoc(doc(db, getCardsCollection(studyLanguage), cardId), {
     [direction]: tracking,
     nextReview: legacyNext,
     interval: tracking.interval,

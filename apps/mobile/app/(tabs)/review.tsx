@@ -10,9 +10,11 @@ import {
   archiveFlashcard, updateFlashcardFields,
 } from '../../src/services/firestore';
 import type { Flashcard, ReviewTracking } from '../../src/services/firestore';
-import { getNextReviewData, t } from '@amgi/core';
+import { getNextReviewData, t, getStudyLanguageConfig, getStudyLangSide, getBackSide } from '@amgi/core';
+import type { CardSideField } from '@amgi/core';
 import { useTheme } from '../../src/context/ThemeContext';
 import { useFloatingTabBarHeight } from '../../src/components/FloatingTabBar';
+import Markdown from '../../src/components/Markdown';
 import type { Palette } from '../../src/theme';
 
 type Direction = 'frontToBack' | 'backToFront';
@@ -43,7 +45,8 @@ export default function ReviewScreen() {
   const { C } = useTheme();
   const tabBarHeight = useFloatingTabBarHeight();
   const s = useMemo(() => makeStyles(C, tabBarHeight), [C, tabBarHeight]);
-  const { user, nativeLanguage, recordReview } = useUser();
+  const { user, nativeLanguage, studyLanguage, recordReview } = useUser();
+  const config = getStudyLanguageConfig(studyLanguage);
   const [queue, setQueue] = useState<ReviewItem[]>([]);
   const [index, setIndex] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -56,13 +59,13 @@ export default function ReviewScreen() {
   // Card options (⋯ menu)
   const [showOptions, setShowOptions] = useState(false);
   const [editing, setEditing] = useState(false);
-  const [editDraft, setEditDraft] = useState<{ korean: string; english: string } | null>(null);
+  const [editDraft, setEditDraft] = useState<Partial<Record<CardSideField, string>> | null>(null);
   const [submitting, setSubmitting] = useState<Rating | null>(null);
 
   useEffect(() => {
     if (!user) return;
     setLoading(true);
-    fetchUserFlashcards(user.uid)
+    fetchUserFlashcards(user.uid, studyLanguage)
       .then(cards => {
         const q = buildQueue(cards);
         setQueue(q);
@@ -77,7 +80,7 @@ export default function ReviewScreen() {
         }
       })
       .finally(() => setLoading(false));
-  }, [user]);
+  }, [user, studyLanguage]);
 
   const resetCardState = () => {
     setRevealed(false);
@@ -106,7 +109,7 @@ export default function ReviewScreen() {
     const next = getNextReviewData(tracking, rating);
     const otherDir = direction === 'frontToBack' ? 'backToFront' : 'frontToBack';
     try {
-      await updateFlashcardReview(card.id!, direction, next, card[otherDir]);
+      await updateFlashcardReview(card.id!, direction, next, card[otherDir], studyLanguage);
     } catch {
       // fire-and-forget
     }
@@ -123,7 +126,7 @@ export default function ReviewScreen() {
     const item = queue[index];
     if (!item?.card.id || !editDraft) return;
     try {
-      await updateFlashcardFields(item.card.id, editDraft);
+      await updateFlashcardFields(item.card.id, editDraft, studyLanguage);
       setQueue(prev => prev.map((qi, i) =>
         i === index ? { ...qi, card: { ...qi.card, ...editDraft } } : qi
       ));
@@ -144,7 +147,7 @@ export default function ReviewScreen() {
         text: 'Archive', style: 'destructive',
         onPress: async () => {
           try {
-            await archiveFlashcard(item.card.id!);
+            await archiveFlashcard(item.card.id!, studyLanguage);
             const newQueue = queue.filter((_, i) => i !== index);
             setQueue(newQueue);
             resetCardState();
@@ -198,11 +201,13 @@ export default function ReviewScreen() {
 
   const { card, direction } = queue[index];
   const isFront = direction === 'frontToBack';
-  const frontText = isFront ? (card.korean || card.term) : (card.english || card.translation || card.term);
-  const backText = isFront ? (card.english || card.translation || '') : (card.korean || card.term);
+  const studySide = getStudyLangSide(card);
+  const backSide = getBackSide(card);
+  const frontText = isFront ? studySide : backSide;
+  const backText = isFront ? backSide : studySide;
   const prompt = isFront
-    ? t(nativeLanguage, 'promptKoreanToEnglish')
-    : t(nativeLanguage, 'promptEnglishToKorean');
+    ? t(nativeLanguage, config.promptFrontToBackKey)
+    : t(nativeLanguage, config.promptBackToFrontKey);
 
   const revealStyle = {
     opacity: revealAnim,
@@ -226,7 +231,7 @@ export default function ReviewScreen() {
 
       {/* Direction label */}
       <Text style={s.directionLabel}>
-        {isFront ? t(nativeLanguage, 'directionKoreanToEnglish') : t(nativeLanguage, 'directionEnglishToKorean')}
+        {isFront ? t(nativeLanguage, config.directionFrontToBackKey) : t(nativeLanguage, config.directionBackToFrontKey)}
       </Text>
 
       {/* Card */}
@@ -254,7 +259,7 @@ export default function ReviewScreen() {
             <TouchableOpacity
               style={s.optionsMenuItem}
               onPress={() => {
-                setEditDraft({ korean: card.korean || card.term, english: card.english || card.translation || '' });
+                setEditDraft({ [config.studyField]: studySide, [config.backField]: backSide });
                 setEditing(true);
                 setShowOptions(false);
               }}
@@ -271,18 +276,18 @@ export default function ReviewScreen() {
         {/* Edit form */}
         {editing && editDraft ? (
           <View style={s.editForm}>
-            <Text style={s.editLabel}>Korean</Text>
+            <Text style={s.editLabel}>{t(nativeLanguage, config.studyLabelKey)}</Text>
             <TextInput
               style={s.editInput}
-              value={editDraft.korean}
-              onChangeText={v => setEditDraft(d => d ? { ...d, korean: v } : d)}
+              value={editDraft[config.studyField] ?? ''}
+              onChangeText={v => setEditDraft(d => d ? { ...d, [config.studyField]: v } : d)}
               autoFocus
             />
-            <Text style={s.editLabel}>English</Text>
+            <Text style={s.editLabel}>{t(nativeLanguage, config.backLabelKey)}</Text>
             <TextInput
               style={s.editInput}
-              value={editDraft.english}
-              onChangeText={v => setEditDraft(d => d ? { ...d, english: v } : d)}
+              value={editDraft[config.backField] ?? ''}
+              onChangeText={v => setEditDraft(d => d ? { ...d, [config.backField]: v } : d)}
             />
             <View style={s.editActions}>
               <TouchableOpacity style={s.editSaveBtn} onPress={handleEditSave}>
@@ -307,7 +312,9 @@ export default function ReviewScreen() {
                   </TouchableOpacity>
                 )}
                 {card.definition && showDetails && (
-                  <Text style={s.definitionText}>{card.definition}</Text>
+                  <View style={s.definitionWrap}>
+                    <Markdown style={s.definitionText}>{card.definition}</Markdown>
+                  </View>
                 )}
               </Animated.View>
             )}
@@ -394,7 +401,8 @@ function makeStyles(C: Palette, tabBarHeight: number) {
     borderRadius: 8, paddingVertical: 8, paddingHorizontal: 14, alignSelf: 'flex-start',
   },
   detailsBtnText: { fontSize: 13, color: C.muted, fontWeight: '500' },
-  definitionText: { fontSize: 14, color: C.text, opacity: 0.7, marginTop: 14, lineHeight: 20 },
+  definitionWrap: { marginTop: 14 },
+  definitionText: { fontSize: 14, color: C.text, opacity: 0.7, lineHeight: 20 },
   revealWrap: {},
   showBtn: {
     marginHorizontal: 16, paddingBottom: 8,

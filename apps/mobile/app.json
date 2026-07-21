@@ -13,7 +13,11 @@
     "icon": "./assets/icon.png",
     "plugins": [
       "expo-router",
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-audio",
+        { "microphonePermission": false, "recordAudioAndroid": false }
+      ]
     ],
     "ios": {
       "supportsTablet": true,
@@ -29,7 +33,7 @@
       "fallbackToCacheTimeout": 0
     },
     "runtimeVersion": {
-      "policy": "sdkVersion"
+      "policy": "appVersion"
     },
     "extra": {
       "router": {},

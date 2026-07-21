@@ -7,7 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useUser } from '../../src/context/UserContext';
 import { useTheme } from '../../src/context/ThemeContext';
 import { useFloatingTabBarHeight } from '../../src/components/FloatingTabBar';
-import { SUPPORTED_LANGUAGES } from '@amgi/core';
+import { SUPPORTED_LANGUAGES, SUPPORTED_STUDY_LANGUAGES } from '@amgi/core';
 import { THEMES } from '../../src/theme';
 import type { Palette } from '../../src/theme';
 
@@ -15,7 +15,7 @@ export default function SettingsScreen() {
   const { C, theme, setTheme } = useTheme();
   const tabBarHeight = useFloatingTabBarHeight();
   const s = useMemo(() => makeStyles(C, tabBarHeight), [C, tabBarHeight]);
-  const { user, authLoading, nativeLanguage, setNativeLanguage, handleSignIn, handleSignOut } = useUser();
+  const { user, authLoading, nativeLanguage, studyLanguage, setNativeLanguage, setStudyLanguage, handleSignIn, handleSignOut } = useUser();
 
   if (authLoading) {
     return (
@@ -70,6 +70,30 @@ export default function SettingsScreen() {
                 >
                   <Text style={[s.langChipText, active && s.langChipTextActive]}>
                     {label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+
+        {/* Study language */}
+        <Text style={s.sectionLabel}>Learning</Text>
+        <View style={s.card}>
+          <Text style={s.settingDescription}>
+            The language you're studying. Cards and reviews are grouped per language.
+          </Text>
+          <View style={s.langRow}>
+            {SUPPORTED_STUDY_LANGUAGES.map(({ code, label, labelNative }) => {
+              const active = studyLanguage === code;
+              return (
+                <TouchableOpacity
+                  key={code}
+                  style={[s.langChip, active && s.langChipActive]}
+                  onPress={() => setStudyLanguage(code)}
+                >
+                  <Text style={[s.langChipText, active && s.langChipTextActive]}>
+                    {label !== labelNative ? `${label} · ${labelNative}` : label}
                   </Text>
                 </TouchableOpacity>
               );

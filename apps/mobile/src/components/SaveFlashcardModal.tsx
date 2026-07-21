@@ -3,7 +3,8 @@ import {
   Modal, View, Text, TextInput, TouchableOpacity,
   StyleSheet, KeyboardAvoidingView, Platform, ActivityIndicator,
 } from 'react-native';
-import { t } from '@amgi/core';
+import { t, getStudyLanguageConfig } from '@amgi/core';
+import type { StudyLanguage, CardSideField } from '@amgi/core';
 import { useTheme } from '../context/ThemeContext';
 import type { Palette } from '../theme';
 import type { Flashcard } from '../services/firestore';
@@ -11,15 +12,17 @@ import type { Flashcard } from '../services/firestore';
 interface Props {
   draft: Partial<Flashcard>;
   nativeLanguage: string | null | undefined;
+  studyLanguage: StudyLanguage;
   saving: boolean;
-  onChange: (field: 'korean' | 'english', value: string) => void;
+  onChange: (field: CardSideField, value: string) => void;
   onSave: () => void;
   onClose: () => void;
 }
 
-export default function SaveFlashcardModal({ draft, nativeLanguage, saving, onChange, onSave, onClose }: Props) {
+export default function SaveFlashcardModal({ draft, nativeLanguage, studyLanguage, saving, onChange, onSave, onClose }: Props) {
   const { C } = useTheme();
   const s = useMemo(() => makeStyles(C), [C]);
+  const config = getStudyLanguageConfig(studyLanguage);
   return (
     <Modal visible transparent animationType="fade" onRequestClose={onClose}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={s.flex}>
@@ -27,20 +30,20 @@ export default function SaveFlashcardModal({ draft, nativeLanguage, saving, onCh
           <TouchableOpacity activeOpacity={1} style={s.sheet} onPress={() => {}}>
             <Text style={s.title}>{t(nativeLanguage, 'reviewEditFlashcard')}</Text>
 
-            <Text style={s.label}>{t(nativeLanguage, 'labelKorean')}</Text>
+            <Text style={s.label}>{t(nativeLanguage, config.studyLabelKey)}</Text>
             <TextInput
               style={s.input}
-              value={draft.korean ?? ''}
-              onChangeText={v => onChange('korean', v)}
+              value={draft[config.studyField] ?? ''}
+              onChangeText={v => onChange(config.studyField, v)}
               autoFocus
               returnKeyType="next"
             />
 
-            <Text style={s.label}>{t(nativeLanguage, 'labelEnglish')}</Text>
+            <Text style={s.label}>{t(nativeLanguage, config.backLabelKey)}</Text>
             <TextInput
               style={s.input}
-              value={draft.english ?? ''}
-              onChangeText={v => onChange('english', v)}
+              value={draft[config.backField] ?? ''}
+              onChangeText={v => onChange(config.backField, v)}
               returnKeyType="done"
               onSubmitEditing={onSave}
             />
