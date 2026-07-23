@@ -6,14 +6,41 @@ ships, move it to the Shipped list in [status.md](status.md).
 Source of truth for priority is the user's Google Tasks list; this file is the
 scoped version of it. Last synced 2026-07-23.
 
+Mobile items are tagged **[OTA]** (ships over the air the moment it lands) or
+**[build]** (needs a new binary + App Store review). See the OTA vs. rebuild
+rules in [tech-stack.md](tech-stack.md). Don't batch **[OTA]** work — batching
+only pays for **[build]** work.
+
+---
+
+## Queued for the next build
+
+The only reason to cut a new binary. Everything else ships continuously, so
+this list should stay short and be worth a review cycle when it's cut.
+
+- [ ] **Push notifications** — needs `expo-notifications` (native module) and an
+      `app.json` plugin entry. Currently the *only* backlog item that hard-
+      requires a build. See the Medium tier for scope.
+- [ ] **App rename**, if it happens — changes `app.json` `name`/bundle id.
+      Cheaper before public launch, so it may want to ride this same build.
+
+**Pre-flight checklist when cutting the build:**
+- [ ] `build.production.channel` is still `"default"` in `eas.json`
+- [ ] Confirm the version bump is intentional — it starts a new runtime lineage
+- [ ] Push to `main` after the bump so CI republishes against the new runtime
+- [ ] TestFlight Test Information / beta copy still accurate
+      (`docs/testflight-beta-info-ko.md`)
+
 ---
 
 ## Next up
 
 The three starred items. All three surface during live demos, which is what
-makes them urgent.
+makes them urgent. **None of them needs a build** — the two WOTD items are
+mostly server-side (a Vercel deploy reaches mobile with no mobile release at
+all) and the language-switch fix is JS.
 
-- [ ] **Switching native language should switch study language too**
+- [ ] **Switching native language should switch study language too** **[OTA]**
       When demoing to a native Korean speaker, switching native language
       English → Korean currently leaves study language on Korean, so the app is
       set to teach a Korean speaker Korean. It takes a second manual switch to
@@ -29,7 +56,7 @@ makes them urgent.
       prompt?) and whether this is silent or surfaced as a notice. Applies to
       both web `SettingsMenu` and mobile settings.
 
-- [ ] **Word of the day repeats across days**
+- [ ] **Word of the day repeats across days** **[OTA — server-side]**
       Each date generates independently — `/api/word-of-the-day` writes one
       Firestore doc per `date_studyLanguage_nativeLanguage` and never reads any
       other date. The prompt says "Vary your choice — different dates should
@@ -40,7 +67,7 @@ makes them urgent.
       date, so the read is cheap) and/or keep a per-language "already used" set.
       Decide N and what happens once the pool is exhausted for a language.
 
-- [ ] **Word of the day saving discrepancy**
+- [ ] **Word of the day saving discrepancy** **[OTA — server-side]**
       Tapping the WOTD card runs `resolveExplanation()`, a *fresh* `/api/explain`
       call. The stored WOTD doc and the explain response are two independent
       Gemini generations, so the card you save can show a different translation
@@ -57,7 +84,7 @@ makes them urgent.
 
 Both are root-caused and reproducible; both hit during demos.
 
-- [ ] **Learn page: tagline overlaps the streak badge when the WOTD tile loads**
+- [ ] **Learn page: tagline overlaps the streak badge when the WOTD tile loads** **[OTA]**
       `apps/mobile/app/(tabs)/index.tsx`. In the empty state the hero is
       `flex: 1` with `minHeight: 80` (style at ~line 617), and the bottom bar
       sizes to its content. When the WOTD tile loads in asynchronously, the
@@ -70,7 +97,7 @@ Both are root-caused and reproducible; both hit during demos.
       reserve the WOTD tile's height before it loads so the layout doesn't jump.
       Reserving space also removes the visible reflow.
 
-- [ ] **Learn page gets stuck showing only the search bar after saving a card**
+- [ ] **Learn page gets stuck showing only the search bar after saving a card** **[OTA]**
       Same file. `isEmpty` is defined as
       `!loading && !core && !ambiguity && !error && !saveSuccess` (~line 277).
       After a save, `saveSuccess` is `true`, so the empty state is skipped —
@@ -101,7 +128,7 @@ Both are root-caused and reproducible; both hit during demos.
 
 ## Medium
 
-- [ ] **Offline Amgi — phase it**
+- [ ] **Offline Amgi — phase it** **[OTA for phases 1–2]**
       Today only the review page has an offline banner + cached review, and it's
       web-side. Explicitly *not* gated on offline AI:
       1. **Offline review on mobile** — cards are already in Firestore's local
@@ -113,10 +140,10 @@ Both are root-caused and reproducible; both hit during demos.
       3. **Offline definitions/translations** — the genuinely hard one (on-device
          model or pre-cached content). Long-term; don't let it block 1 and 2.
 
-- [ ] **Grid view for cards** — an alternative to the current list on the Cards
+- [ ] **Grid view for cards** **[OTA]** — an alternative to the current list on the Cards
       page. Denser scanning of a large deck.
 
-- [ ] **Traditional Mandarin as a study language** — a registry entry in
+- [ ] **Traditional Mandarin as a study language** **[OTA]** — a registry entry in
       `STUDY_LANGUAGE_CONFIGS` + an `/api/explain` prompt branch + i18n keys +
       the two manual Firestore steps (rules, composite index). Traditional
       characters specifically, so decide up front how it relates to a possible
@@ -125,17 +152,17 @@ Both are root-caused and reproducible; both hit during demos.
       Also worth a per-character breakdown section like Korean's hanja, which
       shares work with the Japanese kanji item below.
 
-- [ ] **Japanese kanji breakdown section** — Japanese depth currently uses the
+- [ ] **Japanese kanji breakdown section** **[OTA]** — Japanese depth currently uses the
       generic (no-hanja) prompt; add a per-character kanji section like Korean's
       hanja breakdown. Needs a new stream marker + parser support.
 
-- [ ] **Japanese basics: kana onboarding** — complete beginners need
+- [ ] **Japanese basics: kana onboarding** **[OTA]** — complete beginners need
       hiragana/katakana before vocab. Likely a dedicated kana study/reference
       mode (chart + drill), separate from the SM-2 deck. Audio is unblocked, but
       Japanese still needs a Chirp 3: HD voice added to
       `STUDY_LANGUAGE_CONFIGS`. Stroke order out of scope for v1.
 
-- [ ] **Vocabulary packs — iterate beyond v1**
+- [ ] **Vocabulary packs — iterate beyond v1** **[OTA]**
       v1 shipped in PR #34 (TOEIC Core Vocabulary, 133 words) and is on mobile.
       *Design principles (2026-07-13):* the audience is NOT beginners — Koreans
       have years of school English; the value is words where a simple
@@ -155,21 +182,30 @@ Both are root-caused and reproducible; both hit during demos.
       and a short "your data" blurb in settings or onboarding. Do before any
       wider launch.
 
-- [ ] **Pronunciation audio beyond Korean** — pick a Chirp 3: HD voice per
+- [ ] **Pronunciation audio beyond Korean** **[OTA]** — `expo-audio` is already installed, so this is voices + config only. — pick a Chirp 3: HD voice per
       language and add it to `STUDY_LANGUAGE_CONFIGS`. Everything else is
       already generic; other languages return a clean "not available" today.
 
-- [ ] **Push notifications — WOTD and streaks** — daily review reminders, the
+- [ ] **Push notifications — WOTD and streaks** **[build]** — daily review reminders, the
       word of the day, and streak-at-risk nudges. Depends on the WOTD items
       above being fixed first: notifying people about a repeated word would make
       the repeat problem far more visible. Needs `expo-notifications`, a
       scheduling story, and per-type opt-in. Respect "no dark patterns" —
       streak nudges are the easiest place to violate it.
 
-- [ ] **Mobile theme parity** — web has Forest/Sonokai/Paper/System; mobile has
-      Forest/Slate/Paper. ⚠️ There's already an unmerged branch for this:
-      `feat/mobile-theme-parity` (`f1e97c1`, "Match mobile theme options to
-      web") — review and land or close it before restarting the work.
+- [ ] **Mobile theme parity** **[OTA]** — web has Forest/Sonokai/Paper/System;
+      mobile has Forest/Slate/Paper.
+      ⚠️ There's already an unmerged branch: `feat/mobile-theme-parity`
+      (`f1e97c1`, "Match mobile theme options to web"). Two things about it:
+      - It's pure JS (`settings.tsx`, `ThemeContext.tsx`, `theme.ts`,
+        `FloatingTabBar.tsx`, `i18n.ts`) — **no rebuild needed**, it can ship
+        OTA whenever it lands.
+      - 🚨 It predates PR #43 and its `eas.json` diff *removes*
+        `"channel": "default"` from the production profile — the exact line #43
+        added. Merging as-is would unbind the next production build from the
+        update channel, so that build would ship and then never receive an OTA
+        update. **Rebase onto current `main` and re-check `eas.json` before
+        merging.**
 
 ## Bigger bets — need design before they're buildable
 

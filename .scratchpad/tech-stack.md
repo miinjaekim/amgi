@@ -54,3 +54,38 @@ iOS bundle ID is `com.tegi.amgi` (borrowed developer account — see
 
 Manual OTA push, if needed: `npx eas-cli update --branch main --message "..."`
 from `apps/mobile`.
+
+## Shipping to mobile: OTA vs. native rebuild
+
+The expensive path is a native build — it means an App Store Connect
+submission and a review wait, so those get **batched**. OTA updates are free
+and immediate, so they should **not** be batched; holding a JS-only fix for the
+next binary delays it for no reason.
+
+**Ships over the air** (JS/TS only — anything under `app/`, `src/`, or
+`packages/core`):
+- UI layout, screens, components, styles, themes
+- i18n strings
+- Business logic, service calls, state
+- Anything server-side. API route changes deploy with Vercel and reach the
+  mobile app immediately — no mobile release involved at all.
+
+**Requires a new build + review:**
+- Adding or removing a native dependency (`expo-notifications`, a new
+  `expo-*` module with native code)
+- `app.json` changes: `plugins`, `ios`/`android` config, permissions, icon,
+  bundle identifier, `version`
+- Anything changing `runtimeVersion` — with `policy: "appVersion"`, bumping
+  `version` starts a new runtime lineage
+
+⚠️ **Two things to get right when you do cut a build:**
+1. Verify `build.production.channel` is still `"default"` in `eas.json`. An
+   older branch merged in can silently drop it (see PR #43) and the build will
+   ship unable to receive any update.
+2. Bumping `version` changes the runtime version, so updates published against
+   the old version won't reach the new build. CI republishes on the next push
+   to `main` — just don't assume an already-published update carried over.
+
+Practical consequence: keep a running list of what's blocked on a build
+(see the "Queued for the next build" section in [backlog.md](backlog.md)) and
+ship everything else continuously as it lands.
