@@ -55,43 +55,44 @@ iOS bundle ID is `com.tegi.amgi` (borrowed developer account — see
 Manual OTA push, if needed: `npx eas-cli update --branch main --message "..."`
 from `apps/mobile`.
 
-## Shipping to mobile: OTA vs. native rebuild
+## Shipping to mobile: Expo Go for dev, builds for release
 
-⚠️ **As of 2026-07-23 OTA delivery is unproven** — an update published
-successfully by CI never reached the TestFlight build. Until that's debugged
-(see the High/infrastructure item in [backlog.md](backlog.md)), the split below
-describes the intended model, not observed behavior. Assume mobile changes reach
-users only via a new build.
+**Decided 2026-07-23: we do not use OTA updates.** Delivery to the TestFlight
+build failed repeatedly and every debugging attempt dead-ended, so the model is
+now simply: iterate in Expo Go, cut a build when a batch is worth releasing.
+Don't reopen OTA unless there's a specific reason to.
 
-The expensive path is a native build — it means an App Store Connect
-submission and a review wait, so those get **batched**. OTA updates are free
-and immediate, so they should **not** be batched; holding a JS-only fix for the
-next binary delays it for no reason.
+### Development loop — Expo Go
 
-**Ships over the air** (JS/TS only — anything under `app/`, `src/`, or
-`packages/core`):
-- UI layout, screens, components, styles, themes
-- i18n strings
-- Business logic, service calls, state
-- Anything server-side. API route changes deploy with Vercel and reach the
-  mobile app immediately — no mobile release involved at all.
+```
+cd apps/mobile && npx expo start   # scan the QR with the phone
+```
 
-**Requires a new build + review:**
-- Adding or removing a native dependency (`expo-notifications`, a new
-  `expo-*` module with native code)
-- `app.json` changes: `plugins`, `ios`/`android` config, permissions, icon,
-  bundle identifier, `version`
-- Anything changing `runtimeVersion` — with `policy: "appVersion"`, bumping
-  `version` starts a new runtime lineage
+Every JS/TS change reloads instantly. This covers essentially all feature work:
+screens, layout, styles, themes, i18n, business logic, state. Server-side
+changes need nothing mobile at all — API routes deploy with Vercel and the app
+picks them up on the next call.
 
-⚠️ **Two things to get right when you do cut a build:**
-1. Verify `build.production.channel` is still `"default"` in `eas.json`. An
-   older branch merged in can silently drop it (see PR #43) and the build will
-   ship unable to receive any update.
-2. Bumping `version` changes the runtime version, so updates published against
-   the old version won't reach the new build. CI republishes on the next push
-   to `main` — just don't assume an already-published update carried over.
+Google sign-in **works in Expo Go**, despite the custom
+`com.googleusercontent.apps.…:/oauthredirect` scheme — see [lessons.md](lessons.md)
+for why, and don't re-derive it.
 
-Practical consequence: keep a running list of what's blocked on a build
-(see the "Queued for the next build" section in [backlog.md](backlog.md)) and
-ship everything else continuously as it lands.
+Known limits:
+- `expo-updates` code paths don't execute in Expo Go.
+- Expo Go runs the SDK's own bundled native module versions, so behavior can
+  differ subtly from a production build. Fine for layout/state; verify anything
+  native-adjacent (audio, file system, sharing) on a real build before release.
+
+### Release — production build
+
+Batch work and cut a build when the batch justifies an App Store review cycle.
+See the "Queued for the next build" section in [backlog.md](backlog.md).
+
+Build-time-only concerns (nothing else needs a build to *reach* users, because
+nothing ships between builds):
+- Native dependencies, `app.json` `plugins`/permissions/icon/bundle id
+- `version` bumps
+
+⚠️ `runtimeVersion.policy` is `appVersion` and `build.production.channel` is
+`"default"`. Both only matter for OTA, which we don't use — leave them alone
+rather than "cleaning them up", so the option stays open.

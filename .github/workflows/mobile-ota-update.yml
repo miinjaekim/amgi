@@ -1,11 +1,22 @@
 name: Mobile OTA Update
 
+# OTA delivery was abandoned on 2026-07-23 — updates published here never
+# reached the TestFlight build and debugging dead-ended. Mobile now ships via
+# Expo Go for development and production builds for release, so publishing on
+# every push to main just burned CI time and EAS update quota on updates
+# nobody received.
+#
+# Kept as manual-only rather than deleted, so the pipeline is still here if OTA
+# is ever revisited. To re-enable automatic publishing, restore the push
+# trigger below.
+#
+#  push:
+#    branches: [main]
+#    paths:
+#      - 'apps/mobile/**'
+#      - 'packages/core/**'
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'apps/mobile/**'
-      - 'packages/core/**'
+  workflow_dispatch:
 
 jobs:
   update:

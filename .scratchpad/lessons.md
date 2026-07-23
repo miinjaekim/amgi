@@ -54,7 +54,29 @@ Gotchas already paid for. Grouped so you can skim the relevant section.
 - **`EXPO_PUBLIC_*` env vars are baked at bundle time** — restart Metro with
   `--clear` after changing `.env.local`.
 
+## Expo Go dev loop
+
+- **`npx expo start` from `apps/mobile`, scan the QR — this is the dev loop.**
+  Confirmed working 2026-07-23.
+- **Google sign-in works in Expo Go**, even though the redirect is the custom
+  scheme `com.googleusercontent.apps.…:/oauthredirect`, which Expo Go does not
+  register. It works because `expo-web-browser` uses iOS's
+  `ASWebAuthenticationSession`, which captures a redirect matching the callback
+  scheme *inside the session* — the scheme never has to be in an Info.plist.
+  This is what the explicit `redirectUri` in `UserContext.tsx` is for; the code
+  comment there says "In Expo Go" for exactly this reason.
+  ⚠️ Don't re-derive this as "custom schemes can't work in Expo Go" — that
+  reasoning is wrong and has cost time twice.
+- Expo Go runs the SDK's own bundled native modules, so behavior can differ
+  subtly from a production build. Fine for layout and state; verify audio, file
+  system, and sharing on a real build before release.
+- `expo-updates` code paths don't execute in Expo Go.
+
 ## EAS builds & OTA updates
+
+**We don't use OTA** (decided 2026-07-23) — delivery to the TestFlight build
+failed and every debugging attempt dead-ended. Ship via builds instead. The
+notes below are kept only in case OTA is ever revisited.
 
 - **OTA only reaches builds it matches.** `runtimeVersion.policy: "appVersion"`
   means an update is delivered only to builds with the same app version — bump
