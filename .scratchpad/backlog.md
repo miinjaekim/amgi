@@ -6,31 +6,15 @@ ships, move it to the Shipped list in [status.md](status.md).
 Source of truth for priority is the user's Google Tasks list; this file is the
 scoped version of it. Last synced 2026-07-23.
 
-Mobile items are tagged **[OTA]** (ships over the air the moment it lands) or
-**[build]** (needs a new binary + App Store review). See the OTA vs. rebuild
-rules in [tech-stack.md](tech-stack.md). Don't batch **[OTA]** work — batching
-only pays for **[build]** work.
+**Mobile shipping model (decided 2026-07-23): no OTA.** Iterate in Expo Go
+(`npx expo start`), cut a production build when a batch is worth a release.
+Everything mobile therefore reaches users via a build — so batch freely, and
+verify on the phone in Expo Go as you go. Details in
+[tech-stack.md](tech-stack.md).
 
 ---
 
-## ⚠️ OTA delivery is unverified — the `[OTA]` tags are aspirational
-
-**Known facts, 2026-07-23:**
-- A production build was cut after the four mobile parity phases and is the one
-  currently in TestFlight. It therefore contains the parity work natively.
-- Theme parity (PR #44, merged 2026-07-22) was deliberately held back from that
-  build to serve as a live OTA test.
-- CI published the update successfully (Mobile OTA Update run `29892869152`,
-  success, 2026-07-22 05:07 UTC).
-- **The update did not appear on the device.** Theme parity is currently the
-  only merged work not visible in the app.
-
-**Not yet diagnosed.** Needs its own branch — see the backlog item below. Until
-it's resolved, treat OTA as non-functional and assume mobile changes ship only
-via a new build. The `[OTA]` tags below describe what *should* ship over the
-air once the pipeline is proven, not what currently reaches users.
-
-### Queued for the next build
+## Queued for the next build
 
 - [ ] **Mobile theme parity** (PR #44) — already merged, just not on the device.
 - [ ] **Push notifications** — needs `expo-notifications` (native module) and an
@@ -38,10 +22,14 @@ air once the pipeline is proven, not what currently reaches users.
 - [ ] **App rename**, if it happens — changes `app.json` `name`/bundle id.
       Cheaper before public launch, so it may want to ride this same build.
 
+Since nothing ships between builds, this list is just "everything merged since
+the last release" — the entries below are the ones with extra prerequisites.
+
 **Pre-flight checklist when cutting the build:**
-- [ ] `build.production.channel` is still `"default"` in `eas.json`
-- [ ] Confirm the version bump is intentional — it starts a new runtime lineage
-- [ ] Push to `main` after the bump so CI republishes against the new runtime
+- [ ] Smoke-test the batch in Expo Go first (`npx expo start`)
+- [ ] Verify anything native-adjacent on the build itself, not just Expo Go —
+      audio, file system, sharing
+- [ ] Bump `version` in `app.json`
 - [ ] TestFlight Test Information / beta copy still accurate
       (`docs/testflight-beta-info-ko.md`)
 
@@ -50,11 +38,11 @@ air once the pipeline is proven, not what currently reaches users.
 ## Next up
 
 The three starred items. All three surface during live demos, which is what
-makes them urgent. **None of them needs a build** — the two WOTD items are
-mostly server-side (a Vercel deploy reaches mobile with no mobile release at
-all) and the language-switch fix is JS.
+makes them urgent. The two WOTD items are mostly server-side, so they reach the
+app via a Vercel deploy with no mobile release involved; the language-switch fix
+is client-side and rides the next build.
 
-- [ ] **Switching native language should switch study language too** **[OTA]**
+- [ ] **Switching native language should switch study language too**
       When demoing to a native Korean speaker, switching native language
       English → Korean currently leaves study language on Korean, so the app is
       set to teach a Korean speaker Korean. It takes a second manual switch to
@@ -70,7 +58,7 @@ all) and the language-switch fix is JS.
       prompt?) and whether this is silent or surfaced as a notice. Applies to
       both web `SettingsMenu` and mobile settings.
 
-- [ ] **Word of the day repeats across days** **[OTA — server-side]**
+- [ ] **Word of the day repeats across days**
       Each date generates independently — `/api/word-of-the-day` writes one
       Firestore doc per `date_studyLanguage_nativeLanguage` and never reads any
       other date. The prompt says "Vary your choice — different dates should
@@ -81,7 +69,7 @@ all) and the language-switch fix is JS.
       date, so the read is cheap) and/or keep a per-language "already used" set.
       Decide N and what happens once the pool is exhausted for a language.
 
-- [ ] **Word of the day saving discrepancy** **[OTA — server-side]**
+- [ ] **Word of the day saving discrepancy**
       Tapping the WOTD card runs `resolveExplanation()`, a *fresh* `/api/explain`
       call. The stored WOTD doc and the explain response are two independent
       Gemini generations, so the card you save can show a different translation
@@ -94,38 +82,11 @@ all) and the language-switch fix is JS.
       WOTD doc at generation time so the tap is a read. The second also cuts a
       Gemini call per tap and lines up with the "shared term cache" idea.
 
-## High — infrastructure
-
-- [ ] **Debug why the OTA update never reached the device** — own branch,
-      `fix/ota-delivery` or similar. This gates the whole "ship continuously"
-      model; until it works, every mobile fix waits on an App Store review.
-      Facts are in the section above. Candidate causes, untested and ordered by
-      suspicion:
-      1. **The build predates PR #43.** #43 added `"channel": "default"` to the
-         production profile, and a build cut without it isn't bound to any
-         channel, so updates published to `--channel default` can't find it.
-         Critically, #43 only affects *future* builds — merging it did nothing
-         for the binary already in TestFlight. If the build was cut before
-         2026-07-21 20:42 UTC, this is almost certainly the answer, and the fix
-         is simply another build.
-      2. **Runtime version mismatch.** `4d217f3` moved the policy from
-         `sdkVersion` to `appVersion`. If the build was cut before that, its
-         runtime is `exposdk:54.0.0` while updates publish as `1.0.1`, and they
-         won't match.
-      3. **Update applied but not observed.** With
-         `checkAutomatically: "ON_LOAD"` and `fallbackToCacheTimeout: 0`, the
-         update downloads in the background and applies on the *next* launch —
-         so one relaunch shows nothing and two are needed. Cheapest to rule out;
-         check this first.
-      *How to diagnose:* `eas build:list --platform ios` shows each build's
-      `channel` and `runtimeVersion`; `eas update:list` shows what was published
-      and against which runtime. Comparing those two answers 1 and 2 outright.
-
 ## High — confirmed mobile defects
 
 Both are root-caused and reproducible; both hit during demos.
 
-- [ ] **Learn page: tagline overlaps the streak badge when the WOTD tile loads** **[OTA]**
+- [ ] **Learn page: tagline overlaps the streak badge when the WOTD tile loads**
       `apps/mobile/app/(tabs)/index.tsx`. In the empty state the hero is
       `flex: 1` with `minHeight: 80` (style at ~line 617), and the bottom bar
       sizes to its content. When the WOTD tile loads in asynchronously, the
@@ -138,7 +99,7 @@ Both are root-caused and reproducible; both hit during demos.
       reserve the WOTD tile's height before it loads so the layout doesn't jump.
       Reserving space also removes the visible reflow.
 
-- [ ] **Learn page gets stuck showing only the search bar after saving a card** **[OTA]**
+- [ ] **Learn page gets stuck showing only the search bar after saving a card**
       Same file. `isEmpty` is defined as
       `!loading && !core && !ambiguity && !error && !saveSuccess` (~line 277).
       After a save, `saveSuccess` is `true`, so the empty state is skipped —
@@ -169,7 +130,7 @@ Both are root-caused and reproducible; both hit during demos.
 
 ## Medium
 
-- [ ] **Offline Amgi — phase it** **[OTA for phases 1–2]**
+- [ ] **Offline Amgi — phase it**
       Today only the review page has an offline banner + cached review, and it's
       web-side. Explicitly *not* gated on offline AI:
       1. **Offline review on mobile** — cards are already in Firestore's local
@@ -181,10 +142,10 @@ Both are root-caused and reproducible; both hit during demos.
       3. **Offline definitions/translations** — the genuinely hard one (on-device
          model or pre-cached content). Long-term; don't let it block 1 and 2.
 
-- [ ] **Grid view for cards** **[OTA]** — an alternative to the current list on the Cards
+- [ ] **Grid view for cards** — an alternative to the current list on the Cards
       page. Denser scanning of a large deck.
 
-- [ ] **Traditional Mandarin as a study language** **[OTA]** — a registry entry in
+- [ ] **Traditional Mandarin as a study language** — a registry entry in
       `STUDY_LANGUAGE_CONFIGS` + an `/api/explain` prompt branch + i18n keys +
       the two manual Firestore steps (rules, composite index). Traditional
       characters specifically, so decide up front how it relates to a possible
@@ -193,17 +154,17 @@ Both are root-caused and reproducible; both hit during demos.
       Also worth a per-character breakdown section like Korean's hanja, which
       shares work with the Japanese kanji item below.
 
-- [ ] **Japanese kanji breakdown section** **[OTA]** — Japanese depth currently uses the
+- [ ] **Japanese kanji breakdown section** — Japanese depth currently uses the
       generic (no-hanja) prompt; add a per-character kanji section like Korean's
       hanja breakdown. Needs a new stream marker + parser support.
 
-- [ ] **Japanese basics: kana onboarding** **[OTA]** — complete beginners need
+- [ ] **Japanese basics: kana onboarding** — complete beginners need
       hiragana/katakana before vocab. Likely a dedicated kana study/reference
       mode (chart + drill), separate from the SM-2 deck. Audio is unblocked, but
       Japanese still needs a Chirp 3: HD voice added to
       `STUDY_LANGUAGE_CONFIGS`. Stroke order out of scope for v1.
 
-- [ ] **Vocabulary packs — iterate beyond v1** **[OTA]**
+- [ ] **Vocabulary packs — iterate beyond v1**
       v1 shipped in PR #34 (TOEIC Core Vocabulary, 133 words) and is on mobile.
       *Design principles (2026-07-13):* the audience is NOT beginners — Koreans
       have years of school English; the value is words where a simple
@@ -223,20 +184,19 @@ Both are root-caused and reproducible; both hit during demos.
       and a short "your data" blurb in settings or onboarding. Do before any
       wider launch.
 
-- [ ] **Pronunciation audio beyond Korean** **[OTA]** — `expo-audio` is already installed, so this is voices + config only. — pick a Chirp 3: HD voice per
+- [ ] **Pronunciation audio beyond Korean** — `expo-audio` is already installed, so this is voices + config only. — pick a Chirp 3: HD voice per
       language and add it to `STUDY_LANGUAGE_CONFIGS`. Everything else is
       already generic; other languages return a clean "not available" today.
 
-- [ ] **Push notifications — WOTD and streaks** **[build]** — daily review reminders, the
+- [ ] **Push notifications — WOTD and streaks** — daily review reminders, the
       word of the day, and streak-at-risk nudges. Depends on the WOTD items
       above being fixed first: notifying people about a repeated word would make
       the repeat problem far more visible. Needs `expo-notifications`, a
       scheduling story, and per-type opt-in. Respect "no dark patterns" —
       streak nudges are the easiest place to violate it.
 
-_(Mobile theme parity shipped in PR #44 — see [status.md](status.md). It's
-merged but not yet visible on the device; that's the OTA issue above, not a
-gap in the work.)_
+_(Mobile theme parity shipped in PR #44 — see [status.md](status.md). Merged
+and verifiable in Expo Go; it reaches users with the next build.)_
 
 ## Bigger bets — need design before they're buildable
 

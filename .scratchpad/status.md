@@ -140,10 +140,13 @@ Root-caused and queued in [backlog.md](backlog.md) — see there for scope.
 - **Mobile Learn: stuck on the search bar after saving** — `isEmpty` includes
   `!saveSuccess`, so a successful save suppresses the empty state that hosts
   WOTD, example chips, and the packs button. *(High)*
-- **OTA updates don't reach the device** — CI published PR #44 successfully
-  (run `29892869152`) but the theme change never appeared. Undiagnosed; gates
-  the whole continuous-shipping model, so every mobile fix currently waits on
-  an App Store review. Needs its own branch. *(High — infrastructure)*
+Parked, not fixed:
+- **OTA updates never reached the device** — CI published PR #44 successfully
+  (run `29892869152`) but the theme change never appeared. Repeated debugging
+  attempts dead-ended, so **OTA was abandoned on 2026-07-23** rather than
+  diagnosed. The shipping model is now Expo Go for development and production
+  builds for release; see [tech-stack.md](tech-stack.md). Not a blocker under
+  that model — reopen only if there's a specific reason to want OTA back.
 
 Resolved:
 - **Word-of-the-day reload variance** — was previously logged as "reviewed and
