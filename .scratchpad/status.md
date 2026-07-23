@@ -1,6 +1,6 @@
 # Project Status
 
-_Reconciled against `main` @ `a85270d` on 2026-07-23._
+_Reconciled against `main` @ `f90e7d1` on 2026-07-23._
 
 ## Shipped
 
@@ -100,7 +100,13 @@ _Reconciled against `main` @ `a85270d` on 2026-07-23._
   localized mobile settings screen and tab accessibility labels, Korean beta
   listing copy in `docs/testflight-beta-info-ko.md`
 - **EAS update channel fix** (PR #43, 2026-07-21) — production builds bound to
-  the `default` channel so CI-published updates actually reach installed builds
+  the `default` channel so CI-published updates actually reach installed builds.
+  ⚠️ Only affects builds cut *after* it — it can't retrofit a binary already in
+  TestFlight.
+- **Mobile theme parity** (PR #44, 2026-07-22) — mobile theme options matched to
+  web; `THEMES` now carries its own `labelKey` instead of a separate lookup map.
+  Merged but **not yet visible on the device** — it was held back from the last
+  build as a deliberate OTA test, and the update didn't arrive. See Known Issues.
 
 ## In Progress
 
@@ -134,6 +140,10 @@ Root-caused and queued in [backlog.md](backlog.md) — see there for scope.
 - **Mobile Learn: stuck on the search bar after saving** — `isEmpty` includes
   `!saveSuccess`, so a successful save suppresses the empty state that hosts
   WOTD, example chips, and the packs button. *(High)*
+- **OTA updates don't reach the device** — CI published PR #44 successfully
+  (run `29892869152`) but the theme change never appeared. Undiagnosed; gates
+  the whole continuous-shipping model, so every mobile fix currently waits on
+  an App Store review. Needs its own branch. *(High — infrastructure)*
 
 Resolved:
 - **Word-of-the-day reload variance** — was previously logged as "reviewed and

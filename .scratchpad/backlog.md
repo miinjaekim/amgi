@@ -13,14 +13,28 @@ only pays for **[build]** work.
 
 ---
 
-## Queued for the next build
+## ⚠️ OTA delivery is unverified — the `[OTA]` tags are aspirational
 
-The only reason to cut a new binary. Everything else ships continuously, so
-this list should stay short and be worth a review cycle when it's cut.
+**Known facts, 2026-07-23:**
+- A production build was cut after the four mobile parity phases and is the one
+  currently in TestFlight. It therefore contains the parity work natively.
+- Theme parity (PR #44, merged 2026-07-22) was deliberately held back from that
+  build to serve as a live OTA test.
+- CI published the update successfully (Mobile OTA Update run `29892869152`,
+  success, 2026-07-22 05:07 UTC).
+- **The update did not appear on the device.** Theme parity is currently the
+  only merged work not visible in the app.
 
+**Not yet diagnosed.** Needs its own branch — see the backlog item below. Until
+it's resolved, treat OTA as non-functional and assume mobile changes ship only
+via a new build. The `[OTA]` tags below describe what *should* ship over the
+air once the pipeline is proven, not what currently reaches users.
+
+### Queued for the next build
+
+- [ ] **Mobile theme parity** (PR #44) — already merged, just not on the device.
 - [ ] **Push notifications** — needs `expo-notifications` (native module) and an
-      `app.json` plugin entry. Currently the *only* backlog item that hard-
-      requires a build. See the Medium tier for scope.
+      `app.json` plugin entry. See the Medium tier for scope.
 - [ ] **App rename**, if it happens — changes `app.json` `name`/bundle id.
       Cheaper before public launch, so it may want to ride this same build.
 
@@ -79,6 +93,33 @@ all) and the language-switch fix is JS.
       fields instead of regenerating, or persist the full explanation on the
       WOTD doc at generation time so the tap is a read. The second also cuts a
       Gemini call per tap and lines up with the "shared term cache" idea.
+
+## High — infrastructure
+
+- [ ] **Debug why the OTA update never reached the device** — own branch,
+      `fix/ota-delivery` or similar. This gates the whole "ship continuously"
+      model; until it works, every mobile fix waits on an App Store review.
+      Facts are in the section above. Candidate causes, untested and ordered by
+      suspicion:
+      1. **The build predates PR #43.** #43 added `"channel": "default"` to the
+         production profile, and a build cut without it isn't bound to any
+         channel, so updates published to `--channel default` can't find it.
+         Critically, #43 only affects *future* builds — merging it did nothing
+         for the binary already in TestFlight. If the build was cut before
+         2026-07-21 20:42 UTC, this is almost certainly the answer, and the fix
+         is simply another build.
+      2. **Runtime version mismatch.** `4d217f3` moved the policy from
+         `sdkVersion` to `appVersion`. If the build was cut before that, its
+         runtime is `exposdk:54.0.0` while updates publish as `1.0.1`, and they
+         won't match.
+      3. **Update applied but not observed.** With
+         `checkAutomatically: "ON_LOAD"` and `fallbackToCacheTimeout: 0`, the
+         update downloads in the background and applies on the *next* launch —
+         so one relaunch shows nothing and two are needed. Cheapest to rule out;
+         check this first.
+      *How to diagnose:* `eas build:list --platform ios` shows each build's
+      `channel` and `runtimeVersion`; `eas update:list` shows what was published
+      and against which runtime. Comparing those two answers 1 and 2 outright.
 
 ## High — confirmed mobile defects
 
@@ -193,19 +234,9 @@ Both are root-caused and reproducible; both hit during demos.
       scheduling story, and per-type opt-in. Respect "no dark patterns" —
       streak nudges are the easiest place to violate it.
 
-- [ ] **Mobile theme parity** **[OTA]** — web has Forest/Sonokai/Paper/System;
-      mobile has Forest/Slate/Paper.
-      ⚠️ There's already an unmerged branch: `feat/mobile-theme-parity`
-      (`f1e97c1`, "Match mobile theme options to web"). Two things about it:
-      - It's pure JS (`settings.tsx`, `ThemeContext.tsx`, `theme.ts`,
-        `FloatingTabBar.tsx`, `i18n.ts`) — **no rebuild needed**, it can ship
-        OTA whenever it lands.
-      - 🚨 It predates PR #43 and its `eas.json` diff *removes*
-        `"channel": "default"` from the production profile — the exact line #43
-        added. Merging as-is would unbind the next production build from the
-        update channel, so that build would ship and then never receive an OTA
-        update. **Rebase onto current `main` and re-check `eas.json` before
-        merging.**
+_(Mobile theme parity shipped in PR #44 — see [status.md](status.md). It's
+merged but not yet visible on the device; that's the OTA issue above, not a
+gap in the work.)_
 
 ## Bigger bets — need design before they're buildable
 

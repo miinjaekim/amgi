@@ -57,6 +57,12 @@ from `apps/mobile`.
 
 ## Shipping to mobile: OTA vs. native rebuild
 
+⚠️ **As of 2026-07-23 OTA delivery is unproven** — an update published
+successfully by CI never reached the TestFlight build. Until that's debugged
+(see the High/infrastructure item in [backlog.md](backlog.md)), the split below
+describes the intended model, not observed behavior. Assume mobile changes reach
+users only via a new build.
+
 The expensive path is a native build — it means an App Store Connect
 submission and a review wait, so those get **batched**. OTA updates are free
 and immediate, so they should **not** be batched; holding a JS-only fix for the

@@ -24,4 +24,4 @@ list in `status.md` with the PR number and merge date. Durable gotchas go to
 `lessons.md`, not into the shipped bullet. Backlog priority mirrors the user's
 Google Tasks list — `backlog.md` is the scoped version of it.
 
-_Last reviewed against the codebase: 2026-07-23 (`main` @ `a85270d`)._
+_Last reviewed against the codebase: 2026-07-23 (`main` @ `f90e7d1`)._
