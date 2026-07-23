@@ -23,7 +23,7 @@
 # misc
 .DS_Store
 *.pem
-.cursor/scratchpad copy.md
+.scratchpad/*copy*.md
 
 # expo
 **/.expo/
@@ -52,6 +52,9 @@ next-env.d.ts
 # local data / docs / assets not tracked in git
 apps/web/data/
 docs/
+# ...except curated pack source drafts, which tracked code references
+!docs/packs/
+!docs/packs/**
 
 # pronunciation audio test output (throwaway)
 /audio-test/
