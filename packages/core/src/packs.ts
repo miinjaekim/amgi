@@ -10,7 +10,7 @@ import type { StudyLanguage } from './types';
  * intended (business/test) sense instead of the everyday school meaning.
  *
  * Sources: Barron's 600 Essential Words for the TOEIC,
- * pass-the-toeic-test.com word list. Draft review: .cursor/toeic-pack-draft.md
+ * pass-the-toeic-test.com word list. Draft review: docs/packs/toeic-pack-draft.md
  */
 export interface PackWord {
   word: string;
