@@ -135,5 +135,11 @@ are already generic.
   disambiguation picker actually stick.
 - `POST /api/vocab-list` — goal-based word lists; accepts `previousWords` +
   `feedback` for refinement
-- `GET /api/word-of-the-day` — CDN-cached (`s-maxage=86400`)
+- `GET /api/word-of-the-day` — Firestore-backed. One doc per
+  `date_studyLanguage_nativeLanguage` in the `wordOfTheDay` collection; the
+  first request for a pair generates and `create()`s it (which also resolves
+  the concurrent-first-request race), everyone else reads it back. The
+  `s-maxage=86400` CDN header is only a fast path — a cache miss re-reads
+  Firestore and serves the same word. Note it never reads *other* dates, which
+  is why words repeat across days (see backlog).
 - `POST /api/pronounce` — returns a cached-or-generated audio URL

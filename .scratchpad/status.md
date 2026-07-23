@@ -69,6 +69,13 @@ _Reconciled against `main` @ `a85270d` on 2026-07-23._
 - **Depth/examples sense fix** (PR #35, 2026-07-14) — depth and examples prompts
   pinned to the disambiguated sense across all four routes. Fixes pack context
   hints, the disambiguation picker, and "not what you meant" in one go.
+- **Word of the day fixes** (PR #37, `fix/wotd-disambiguation`) — four commits:
+  pronunciation buttons on example sentences; WOTD sense pinned when opening its
+  explanation (`briefDefinition` passed as a context hint); **WOTD persisted in
+  Firestore** — one doc per `date_studyLanguage_nativeLanguage` in the
+  `wordOfTheDay` collection, with `create()` resolving the first-request race,
+  so the CDN header is now only a fast path and consistency no longer depends on
+  cache behavior; prompt steered toward practical, date-relevant picks.
 
 ### iOS launch & mobile parity
 - **iOS TestFlight prep** (PR #38, 2026-07-19) — bundle ID `com.tegi.amgi`,
@@ -111,11 +118,25 @@ _Reconciled against `main` @ `a85270d` on 2026-07-23._
 
 ## Known Issues
 
-None currently tracked.
+Root-caused and queued in [backlog.md](backlog.md) — see there for scope.
 
-Reviewed and accepted:
-- **Word-of-the-day reload variance** (2026-07-08) — the CDN `s-maxage=86400`
-  cache keeps it stable on deployed Vercel, which is what matters; only local
-  dev sees a new word per reload. Revisit only if prod behaves otherwise —
-  candidate fixes were localStorage per device, a shared Firestore doc, or
-  deterministic generation.
+- **WOTD repeats across days** — each date generates with no knowledge of prior
+  picks, so common words recur. *(Next up)*
+- **WOTD saving discrepancy** — tapping the card makes a fresh `/api/explain`
+  call, so the saved card's wording can drift from the panel that was tapped.
+  The *sense* is already pinned (PR #37); this is wording, not meaning. *(Next up)*
+- **Native language switch strands the study language** — switching native
+  language to Korean leaves study language on Korean, i.e. teaching a Korean
+  speaker Korean. Hit during live demos. *(Next up)*
+- **Mobile Learn: tagline overlaps the streak badge** when the WOTD tile loads
+  in — hero is `flex: 1` with a `minHeight: 80` floor, so squeezed content
+  overflows a centered box upward. *(High)*
+- **Mobile Learn: stuck on the search bar after saving** — `isEmpty` includes
+  `!saveSuccess`, so a successful save suppresses the empty state that hosts
+  WOTD, example chips, and the packs button. *(High)*
+
+Resolved:
+- **Word-of-the-day reload variance** — was previously logged as "reviewed and
+  accepted" on the reasoning that the CDN `s-maxage=86400` cache kept it stable
+  in prod. Actually **fixed** in PR #37 (`d0e07ac`): Firestore is now the source
+  of truth, so the word is stable regardless of cache behavior or environment.
