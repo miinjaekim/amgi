@@ -10,18 +10,11 @@ import { useUser } from '../../src/context/UserContext';
 import { useTheme } from '../../src/context/ThemeContext';
 import { useFloatingTabBarHeight } from '../../src/components/FloatingTabBar';
 import { SUPPORTED_LANGUAGES, SUPPORTED_STUDY_LANGUAGES, t } from '@amgi/core';
-import type { TranslationKey } from '@amgi/core';
 import { THEMES } from '../../src/theme';
-import type { Palette, Theme } from '../../src/theme';
+import type { Palette } from '../../src/theme';
 
 // The policy is hosted on the web app; Korean speakers get the Korean version.
 const PRIVACY_URL_BASE = 'https://amgi-iota.vercel.app/privacy';
-
-const THEME_LABEL_KEYS: Record<Theme, TranslationKey> = {
-  forest: 'themeForest',
-  slate: 'themeSlate',
-  paper: 'themePaper',
-};
 
 export default function SettingsScreen() {
   const { C, theme, setTheme } = useTheme();
@@ -122,7 +115,7 @@ export default function SettingsScreen() {
         <Text style={s.sectionLabel}>{t(nativeLanguage, 'settingsTheme')}</Text>
         <View style={s.card}>
           <View style={s.langRow}>
-            {THEMES.map(({ value }) => {
+            {THEMES.map(({ value, labelKey }) => {
               const active = theme === value;
               return (
                 <TouchableOpacity
@@ -131,7 +124,7 @@ export default function SettingsScreen() {
                   onPress={() => setTheme(value)}
                 >
                   <Text style={[s.langChipText, active && s.langChipTextActive]}>
-                    {t(nativeLanguage, THEME_LABEL_KEYS[value])}
+                    {t(nativeLanguage, labelKey)}
                   </Text>
                 </TouchableOpacity>
               );
