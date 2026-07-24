@@ -92,7 +92,16 @@ formality, adding a custom grammar note field).
 - `cards_english` — English deck (native-Korean learners; english study side, korean back)
 - `cards_french` — French deck
 - `cards_japanese` — Japanese deck
+- `cards_chinese_traditional` — Traditional Chinese (Mandarin) deck
 - Future languages follow the same `cards_{language}` pattern
+
+**Traditional vs Simplified Chinese are separate study languages**, not one
+language with a script preference. The alternative — one `Chinese` deck rendered
+in either script — would need a conversion pass at every render site and leaves
+the stored text script-ambiguous. Keeping them apart costs nothing (the registry
+already supports it) and matches the reality that Taiwan and Mainland usage
+differs in vocabulary, not just glyphs. A Simplified deck would be its own
+registry entry with its own `cards_chinese_simplified` collection.
 
 `getCardsCollection(studyLanguage)` routes to the correct collection.
 
@@ -112,6 +121,18 @@ through `getStudyLanguageConfig()`.
 i18n keys + the two manual Firestore steps above. The depth and examples routes
 are already generic.
 
+**Prompts must use `config.label`, not the registry code.** Codes are
+identifiers: interpolating `${studyLanguage}` produced "a learner of
+TraditionalChinese" in the depth, vocab-list, and word-of-the-day prompts, which
+also said nothing about which script to write in. Those three now interpolate
+`getStudyLanguageConfig(x).label`; the Chinese entries add an explicit
+Traditional-not-Simplified line on top.
+
+**Pronunciation readings** (Japanese `furigana`, Traditional Chinese `pinyin`)
+are separate `TermCore` fields but one badge slot — `getReading(card)` in
+`@amgi/core` resolves whichever the card carries, so the six Learn/review/detail
+render sites across web and mobile don't grow a conditional per language.
+
 ## User preferences (`users` collection)
 
 - `nativeLanguage`: string — the user's native language (e.g. "English")
@@ -121,7 +142,8 @@ are already generic.
 ## API shape (term explanation)
 
 - **Fast call** (`/api/explain`) — `term, termLanguage, korean/swedish, english,
-  formality (Korean), gender (Swedish), briefDefinition`
+  formality (Korean), gender (Swedish), furigana (Japanese), pinyin
+  (Traditional Chinese), briefDefinition`
 - **Depth** (`/api/explain/depth`, user-triggered) — `definition, hanja? (Korean
   only), notes?`
 - **Examples** (`/api/explain/examples`, user-triggered) — `{ examples: ExamplePair[] }`

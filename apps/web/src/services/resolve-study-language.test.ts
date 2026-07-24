@@ -42,9 +42,10 @@ describe('resolveNativeLanguage', () => {
   });
 
   it('falls back to another native when the previous study language is not one', () => {
-    // Swedish/French/Japanese are study-only, so they cannot become the native
-    // language — the only remaining native is the one that is not being studied.
-    for (const previous of ['Swedish', 'French', 'Japanese'] as const) {
+    // Swedish/French/Japanese/Traditional Chinese are study-only, so they
+    // cannot become the native language — the only remaining native is the
+    // one that is not being studied.
+    for (const previous of ['Swedish', 'French', 'Japanese', 'TraditionalChinese'] as const) {
       expect(resolveNativeLanguage('English', 'English', previous)).toBe('Korean');
     }
   });

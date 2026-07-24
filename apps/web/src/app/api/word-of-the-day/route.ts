@@ -1,7 +1,7 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/firebaseAdmin';
-import { isStudyLanguage, wordOfTheDayCore, type WordOfTheDay } from '@amgi/core';
+import { getStudyLanguageConfig, isStudyLanguage, wordOfTheDayCore, type WordOfTheDay } from '@amgi/core';
 
 function stripMarkdownCodeBlock(text: string): string {
   return text.replace(/```[a-zA-Z]*\n?|```/g, '').trim();
@@ -122,14 +122,24 @@ export async function GET(req: NextRequest) {
         ? '"gender": "le" | "la" | null'
         : studyLanguage === 'Japanese'
           ? '"furigana": "reading in hiragana if the word contains kanji" | null'
-          : studyLanguage === 'Korean'
-            ? '"formality": "Casual | Standard | Formal | Honorific | Slang"'
-            : null;
+          : studyLanguage === 'TraditionalChinese'
+            ? '"pinyin": "tone-marked Hanyu Pinyin reading of the word"'
+            : studyLanguage === 'Korean'
+              ? '"formality": "Casual | Standard | Formal | Honorific | Slang"'
+              : null;
 
   const translationLine =
     studyLanguage === 'English'
       ? '"korean": "the best Korean translation", "english": "the word itself"'
       : '"english": "the best English translation"';
+
+  // The registry code is an identifier, not prose — "TraditionalChinese" reads
+  // badly in a prompt and says nothing about which script to write in.
+  const languageName = getStudyLanguageConfig(studyLanguage).label;
+  const scriptNote =
+    studyLanguage === 'TraditionalChinese'
+      ? ' Write it in Traditional characters (繁體字) as used in Taiwan, never Simplified (简体字).'
+      : '';
 
   // Each date used to generate in isolation, so the model had no history to
   // vary against and common words recurred. Feed it what it already picked.
@@ -138,9 +148,9 @@ export async function GET(req: NextRequest) {
     ? `\nAlready used — do NOT pick any of these, or any minor variant of them:\n${used.join(', ')}\n`
     : '';
 
-  const buildPrompt = (insist: boolean) => `You are picking the "word of the day" for learners of ${studyLanguage}.
+  const buildPrompt = (insist: boolean) => `You are picking the "word of the day" for learners of ${languageName}.
 
-Pick ONE ${studyLanguage} word or short expression.
+Pick ONE ${languageName} word or short expression.${scriptNote}
 
 Hard requirement — the word must be genuinely useful. An intermediate learner should meet it often in everyday conversation, media, or daily life, or need it often when speaking. If a word is interesting but a learner would rarely encounter or use it, do not pick it. Avoid absolute-beginner vocabulary (greetings, numbers, colors) and equally avoid obscure, archaic, literary, or academic terms.
 
@@ -154,7 +164,7 @@ Do not pick a word because of the time of year. Seasons, weather, and holidays a
 ${exclusionBlock}${insist ? '\nYour previous answer was on the already-used list. Pick a genuinely different word this time.\n' : ''}
 Respond with only this JSON:
 {
-  "term": "the ${studyLanguage} word, written in ${studyLanguage}",
+  "term": "the ${languageName} word, written in ${languageName}",
   ${translationLine},
   "briefDefinition": "one sentence in ${nativeLanguage} explaining the meaning"${extraField ? `,\n  ${extraField}` : ''}
 }`;

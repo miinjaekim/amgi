@@ -11,7 +11,7 @@ import {
   streamTermDepth, streamTermExamples,
 } from '../../src/services/gemini';
 import {
-  getDepthTarget, getStudyLanguageConfig, getExampleSides, getVocabPacks,
+  getDepthTarget, getReading, getStudyLanguageConfig, getExampleSides, getVocabPacks,
   parseStreamedDepth, parseStreamedExamples, wordOfTheDayCore,
 } from '@amgi/core';
 import type { StudyLanguage } from '@amgi/core';
@@ -58,6 +58,7 @@ const EXAMPLE_TERMS: Record<StudyLanguage, string[]> = {
   English: ['serendipity', '아쉽다', 'procrastinate', '답답하다', 'nuance'],
   French: ['dépaysement', 'flâner', 'retrouvailles', 'longing', 'terroir'],
   Japanese: ['木漏れ日', '積ん読', 'nostalgia', 'awkward', '侘寂'],
+  TraditionalChinese: ['緣分', '撒嬌', 'nostalgia', 'awkward', '將就'],
 };
 
 export default function LearnScreen() {
@@ -509,9 +510,9 @@ export default function LearnScreen() {
                     <Text style={s.formalityText}>{core.gender}</Text>
                   </View>
                 )}
-                {core.furigana && (
+                {getReading(core) && (
                   <View style={s.formalityBadge}>
-                    <Text style={s.formalityText}>{core.furigana}</Text>
+                    <Text style={s.formalityText}>{getReading(core)}</Text>
                   </View>
                 )}
               </View>

@@ -14,6 +14,12 @@ function detectJapanese(term: string): boolean {
   return /[぀-ヿ一-鿿]/.test(term);
 }
 
+function detectChinese(term: string): boolean {
+  // Han ideographs: CJK Unified Ideographs, Extension A, and the
+  // compatibility block. No kana range — a Chinese deck never sees them.
+  return /[㐀-䶿一-鿿豈-﫿]/.test(term);
+}
+
 export async function POST(req: NextRequest) {
   const { term, nativeLanguage = 'English', context, studyLanguage = 'Korean' } = await req.json();
 
@@ -225,6 +231,72 @@ IMPORTANT for the non-ambiguous case:
 - "english" must always be written in English
 - Both should be the single best translation. Only use 2-3 words if truly necessary. Never list synonyms with semicolons or slashes.
 - "furigana": if "japanese" contains kanji, give its full reading in hiragana. Otherwise null.
+- "briefDefinition" must be a single sentence defining the core meaning. No examples, no cultural context.`;
+    }
+  } else if (studyLanguage === 'TraditionalChinese') {
+    // Traditional Chinese: Han characters are script-detectable
+    const termLanguage = detectChinese(term) ? 'TraditionalChinese' : 'English';
+
+    if (context) {
+      prompt = `Provide a concise translation for the term "${term}" with this context: "${context}".
+
+IMPORTANT: The "traditionalChinese" and "english" fields must ALWAYS be in their respective languages:
+- "traditionalChinese" must always be the Mandarin word or phrase written in Traditional characters (繁體字) as used in Taiwan. Never return Simplified characters (简体字) — convert them if the input used them.
+- "english" must always be the English word or phrase written in English
+- Both fields should use the single best translation. Only use 2-3 words if one word is genuinely insufficient. Never list synonyms with semicolons or slashes.
+- "pinyin": the full Hanyu Pinyin reading of "traditionalChinese", with tone marks (e.g. "dōngxi"), spaced by word.
+
+For "briefDefinition", write a single clear sentence defining the term in ${nativeLanguage}. No examples, no cultural context — just the core meaning.
+
+Respond with only this JSON:
+{
+  "term": "${term}",
+  "termLanguage": "${termLanguage}",
+  "traditionalChinese": "Mandarin word/phrase in 繁體字",
+  "english": "English word/phrase",
+  "pinyin": "tone-marked pinyin",
+  "briefDefinition": "one-sentence definition"
+}`;
+    } else {
+      prompt = `You are a language learning assistant for Mandarin-English learners studying Traditional characters.
+
+Given the term "${term}", determine whether it has multiple significantly different meanings that would confuse a language learner.
+
+A term is ambiguous when it has 2 or more distinct common meanings that lead to meaningfully different translations or usage contexts (e.g., 東西 can mean "thing" or "east and west", each with its own pronunciation).
+
+A term is NOT ambiguous when:
+- It has one clear primary meaning
+- Secondary meanings are rare or archaic
+- The meanings are closely related variants of the same concept
+
+If AMBIGUOUS, respond with only this JSON:
+{
+  "ambiguous": true,
+  "term": "${term}",
+  "termLanguage": "${termLanguage}",
+  "meanings": [
+    { "label": "short label (3-6 words max)", "hint": "one sentence clarifying this meaning" },
+    { "label": "...", "hint": "..." }
+  ]
+}
+
+Every "label" and "hint" must be written in ${nativeLanguage} — the user may not understand any other language.
+
+If NOT ambiguous, respond with only this JSON:
+{
+  "term": "${term}",
+  "termLanguage": "${termLanguage}",
+  "traditionalChinese": "Mandarin word/phrase in 繁體字",
+  "english": "English word/phrase",
+  "pinyin": "tone-marked pinyin",
+  "briefDefinition": "one-sentence definition in ${nativeLanguage}"
+}
+
+IMPORTANT for the non-ambiguous case:
+- "traditionalChinese" must always be written in Traditional characters (繁體字) as used in Taiwan. Never return Simplified characters (简体字) — convert them if the input used them.
+- "english" must always be written in English
+- Both should be the single best translation. Only use 2-3 words if truly necessary. Never list synonyms with semicolons or slashes.
+- "pinyin": the full Hanyu Pinyin reading of "traditionalChinese", with tone marks (e.g. "dōngxi"), spaced by word.
 - "briefDefinition" must be a single sentence defining the core meaning. No examples, no cultural context.`;
     }
   } else if (studyLanguage === 'English') {

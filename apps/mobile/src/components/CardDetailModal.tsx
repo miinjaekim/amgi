@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import {
   Modal, View, Text, TouchableOpacity, ScrollView, StyleSheet,
 } from 'react-native';
-import { getStudyLangSide, getBackSide, getExampleSides, t } from '@amgi/core';
+import { getStudyLangSide, getBackSide, getExampleSides, getReading, t } from '@amgi/core';
 import type { ExamplePair } from '@amgi/core';
 import { useTheme } from '../context/ThemeContext';
 import PronounceButton from './PronounceButton';
@@ -26,7 +26,7 @@ export default function CardDetailModal({ card, nativeLanguage, onClose }: Props
   const studyLanguage = card.studyLanguage ?? 'Korean';
   const studySide = getStudyLangSide(card);
   const hasDetails = card.definition || card.hanja || card.notes || (card.examples && card.examples.length > 0);
-  const badges = [card.formality && card.formality !== 'N/A' ? card.formality : null, card.gender, card.furigana].filter(Boolean) as string[];
+  const badges = [card.formality && card.formality !== 'N/A' ? card.formality : null, card.gender, getReading(card)].filter(Boolean) as string[];
 
   return (
     <Modal visible transparent animationType="fade" onRequestClose={onClose}>

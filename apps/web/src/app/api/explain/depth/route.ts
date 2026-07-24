@@ -1,5 +1,6 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { NextRequest, NextResponse } from 'next/server';
+import { getStudyLanguageConfig } from '@amgi/core';
 
 function stripMarkdownCodeBlock(text: string): string {
   return text.replace(/```[a-zA-Z]*\n?|```/g, '').trim();
@@ -25,10 +26,15 @@ export async function POST(req: NextRequest) {
     ? `\nThe word may have multiple meanings. The user is studying only this sense${translation ? ` — "${translation}"` : ''}${briefDefinition ? `: ${briefDefinition}` : ''}. Everything you write must be about this meaning of "${term}".\n`
     : '';
 
+  // Registry codes are identifiers, not prose — "TraditionalChinese" reads
+  // badly inside a prompt sentence.
+  const studyName = getStudyLanguageConfig(studyLanguage).label;
+  const termName = getStudyLanguageConfig(termLanguage).label;
+
   let prompt: string;
 
   if (studyLanguage !== 'Korean') {
-    prompt = `Provide deeper explanation for the term "${term}" (${termLanguage}), for a learner of ${studyLanguage}.
+    prompt = `Provide deeper explanation for the term "${term}" (${termName}), for a learner of ${studyName}.
 ${senseNote}Write all explanations in ${nativeLanguage}.
 
 Include only what is genuinely useful for a language learner:

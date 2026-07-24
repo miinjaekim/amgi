@@ -11,7 +11,7 @@ import {
 } from '@/services/gemini';
 import Markdown from '@/components/Markdown';
 import { saveFlashcardToFirestore, Flashcard } from '@/services/firestore';
-import { getExampleSides, getStudyLanguageConfig, getVocabPacks, parseStreamedExamples, parseStreamedDepth, wordOfTheDayCore } from '@amgi/core';
+import { getExampleSides, getReading, getStudyLanguageConfig, getVocabPacks, parseStreamedExamples, parseStreamedDepth, wordOfTheDayCore } from '@amgi/core';
 import type { WordOfTheDay } from '@amgi/core';
 import { useUser } from '@/components/UserContext';
 import { t } from '@/lib/i18n';
@@ -27,6 +27,7 @@ const EXAMPLE_TERMS: Record<string, string[]> = {
   English: ['serendipity', '아쉽다', 'procrastinate', '답답하다', 'nuance'],
   French: ['dépaysement', 'flâner', 'retrouvailles', 'longing', 'terroir'],
   Japanese: ['木漏れ日', '積ん読', 'nostalgia', 'awkward', '侘寂'],
+  TraditionalChinese: ['緣分', '撒嬌', 'nostalgia', 'awkward', '將就'],
 };
 
 function animateText(
@@ -454,9 +455,9 @@ export default function Home() {
                 {core.gender}
               </span>
             )}
-            {core.furigana && (
+            {getReading(core) && (
               <span className="px-2 py-0.5 text-xs rounded-full border border-[var(--color-muted)] text-[var(--color-muted)]">
-                {core.furigana}
+                {getReading(core)}
               </span>
             )}
           </div>
