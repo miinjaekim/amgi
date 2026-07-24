@@ -285,6 +285,40 @@ export interface WordOfTheDay {
   formality?: string; // Korean
   gender?: string; // Swedish/French
   furigana?: string; // Japanese
+  /**
+   * The explanation to show when the card is tapped, generated and stored
+   * alongside the word so the tap is a read rather than a second, independently
+   * worded Gemini call. Absent on documents written before this was added —
+   * use `wordOfTheDayCore()`, which reconstructs it from the fields above.
+   */
+  core?: TermCore;
+}
+
+/**
+ * The `TermCore` a word of the day represents, so tapping the card can show an
+ * explanation without regenerating one. Prefers the stored `core`; falls back
+ * to assembling the fields the word of the day always carries.
+ */
+export function wordOfTheDayCore(wotd: WordOfTheDay, studyLanguage: StudyLanguage): TermCore {
+  if (wotd.core) return wotd.core;
+  const config = getStudyLanguageConfig(studyLanguage);
+  const core: Record<string, unknown> = {
+    term: wotd.term,
+    termLanguage: studyLanguage,
+    english: config.studyField === 'english' ? wotd.term : wotd.english,
+    [config.studyField]: wotd.term,
+    [config.backField]: config.backField === 'korean' ? wotd.korean : wotd.english,
+    briefDefinition: wotd.briefDefinition,
+    formality: wotd.formality,
+    gender: wotd.gender,
+    furigana: wotd.furigana,
+  };
+  // A field the model left out must be dropped, not carried as undefined:
+  // this object is written to Firestore, which rejects undefined values.
+  for (const key of Object.keys(core)) {
+    if (core[key] === undefined) delete core[key];
+  }
+  return core as unknown as TermCore;
 }
 
 // User types
@@ -307,3 +341,31 @@ export const SUPPORTED_STUDY_LANGUAGES: { code: StudyLanguage; label: string; la
 
 // Backward compat alias used by existing UI code
 export const SUPPORTED_LANGUAGES = SUPPORTED_NATIVE_LANGUAGES;
+
+export function isStudyLanguage(value: unknown): value is StudyLanguage {
+  return typeof value === 'string' && value in STUDY_LANGUAGE_CONFIGS;
+}
+
+/**
+ * Study language to use after the native language changes.
+ *
+ * Natives don't study their own language — the setup modal enforces this by
+ * excluding the native language from the study options, but changing native
+ * language later in settings could strand you on a deck that teaches you your
+ * own language. On a collision we move to the language the user just stopped
+ * being native in (English ↔ Korean, the demo case), never to a language they
+ * weren't already using.
+ */
+export function resolveStudyLanguage(
+  nextNativeLanguage: string,
+  currentStudyLanguage: StudyLanguage,
+  previousNativeLanguage: string | null | undefined
+): StudyLanguage {
+  if (currentStudyLanguage !== nextNativeLanguage) return currentStudyLanguage;
+  if (isStudyLanguage(previousNativeLanguage) && previousNativeLanguage !== nextNativeLanguage) {
+    return previousNativeLanguage;
+  }
+  // No usable previous native (first run, or it isn't a study language) — any
+  // supported study language other than the new native will do.
+  return SUPPORTED_STUDY_LANGUAGES.find((l) => l.code !== nextNativeLanguage)!.code;
+}

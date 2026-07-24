@@ -3,7 +3,7 @@ import React, { createContext, useContext, useEffect, useState, ReactNode } from
 import { auth, googleProvider } from '@/config/firebase';
 import { signInWithPopup, signOut, onAuthStateChanged, User } from 'firebase/auth';
 import { getUserPreferences, saveUserPreferences } from '@/services/userPreferences';
-import type { StudyLanguage } from '@amgi/core';
+import { isStudyLanguage, resolveStudyLanguage, type StudyLanguage } from '@amgi/core';
 
 const LANG_CACHE_KEY = 'amgi_native_language';
 const STUDY_LANG_CACHE_KEY = 'amgi_study_language';
@@ -41,8 +41,8 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     const cached = localStorage.getItem(LANG_CACHE_KEY);
     if (cached) setNativeLanguageState(cached);
-    const cachedStudy = localStorage.getItem(STUDY_LANG_CACHE_KEY) as StudyLanguage | null;
-    if (cachedStudy === 'Korean' || cachedStudy === 'Swedish') setStudyLanguageState(cachedStudy);
+    const cachedStudy = localStorage.getItem(STUDY_LANG_CACHE_KEY);
+    if (isStudyLanguage(cachedStudy)) setStudyLanguageState(cachedStudy);
   }, []);
 
   useEffect(() => {
@@ -75,8 +75,8 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
         } else {
           setNativeLanguageState(null);
         }
-        const cachedStudy = localStorage.getItem(STUDY_LANG_CACHE_KEY) as StudyLanguage | null;
-        if (cachedStudy === 'Korean' || cachedStudy === 'Swedish') {
+        const cachedStudy = localStorage.getItem(STUDY_LANG_CACHE_KEY);
+        if (isStudyLanguage(cachedStudy)) {
           setStudyLanguageState(cachedStudy);
         }
         setStreak(0);
@@ -92,8 +92,21 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   const setNativeLanguage = async (lang: string) => {
     setNativeLanguageState(lang);
     localStorage.setItem(LANG_CACHE_KEY, lang);
+
+    // Switching native language can leave the study language set to the user's
+    // own language; move it off silently rather than making them fix it.
+    const nextStudy = resolveStudyLanguage(lang, studyLanguage, nativeLanguage);
+    const studyChanged = nextStudy !== studyLanguage;
+    if (studyChanged) {
+      setStudyLanguageState(nextStudy);
+      localStorage.setItem(STUDY_LANG_CACHE_KEY, nextStudy);
+    }
+
     if (user) {
-      await saveUserPreferences(user.uid, { nativeLanguage: lang });
+      await saveUserPreferences(user.uid, {
+        nativeLanguage: lang,
+        ...(studyChanged ? { studyLanguage: nextStudy } : {}),
+      });
     }
   };
 

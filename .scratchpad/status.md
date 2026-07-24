@@ -108,6 +108,21 @@ _Reconciled against `main` @ `f90e7d1` on 2026-07-23._
   Merged but **not yet visible on the device** — it was held back from the last
   build as a deliberate OTA test, and the update didn't arrive. See Known Issues.
 
+### Demo-blocking fixes
+- **Native/study language collision + WOTD repeats + WOTD save drift**
+  (PR #47, 2026-07-24) — the three "Next up" items in one batch.
+  `resolveStudyLanguage()` in `@amgi/core` moves the study language to the
+  previous native language when changing native language would leave you
+  studying your own; silent, applied in both `UserContext`s. `/api/word-of-the-day`
+  now reads the last 60 days of picks for the language pair **by document ID**
+  (no composite index, so no manual Firestore step) and feeds them to the prompt
+  as an exclusion list, retrying once on a collision. The card's explanation is
+  generated and stored *with* the word, so tapping it is a read — halving the
+  Gemini calls per word and ending the wording drift between the card and the
+  saved flashcard; `wordOfTheDayCore()` reconstructs it for older documents.
+  Also fixed a stale study-language cache guard that restored only Korean and
+  Swedish, dropping French/Japanese/English learners back to the Korean deck.
+
 ## In Progress
 
 - **iOS TestFlight external testing** — the code and infrastructure side is
@@ -126,14 +141,6 @@ _Reconciled against `main` @ `f90e7d1` on 2026-07-23._
 
 Root-caused and queued in [backlog.md](backlog.md) — see there for scope.
 
-- **WOTD repeats across days** — each date generates with no knowledge of prior
-  picks, so common words recur. *(Next up)*
-- **WOTD saving discrepancy** — tapping the card makes a fresh `/api/explain`
-  call, so the saved card's wording can drift from the panel that was tapped.
-  The *sense* is already pinned (PR #37); this is wording, not meaning. *(Next up)*
-- **Native language switch strands the study language** — switching native
-  language to Korean leaves study language on Korean, i.e. teaching a Korean
-  speaker Korean. Hit during live demos. *(Next up)*
 - **Mobile Learn: tagline overlaps the streak badge** when the WOTD tile loads
   in — hero is `flex: 1` with a `minHeight: 80` floor, so squeezed content
   overflows a centered box upward. *(High)*

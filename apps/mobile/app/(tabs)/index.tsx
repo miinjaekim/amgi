@@ -12,7 +12,7 @@ import {
 } from '../../src/services/gemini';
 import {
   getDepthTarget, getStudyLanguageConfig, getExampleSides, getVocabPacks,
-  parseStreamedDepth, parseStreamedExamples,
+  parseStreamedDepth, parseStreamedExamples, wordOfTheDayCore,
 } from '@amgi/core';
 import type { StudyLanguage } from '@amgi/core';
 import type { TermCore, TermDepth, TermAmbiguous, ExamplePair, WordOfTheDay } from '../../src/services/gemini';
@@ -131,6 +131,17 @@ export default function LearnScreen() {
     } finally {
       setLoading(false);
     }
+  };
+
+  /**
+   * Opens the word of the day using the explanation stored with it, rather
+   * than generating a second one. The card and the panel are then the same
+   * text, so what gets saved is what was tapped.
+   */
+  const showWordOfTheDay = (wotd: WordOfTheDay) => {
+    reset();
+    setTerm(wotd.term);
+    setCore(wordOfTheDayCore(wotd, studyLanguage));
   };
 
   const handleSubmit = () => {
@@ -347,14 +358,7 @@ export default function LearnScreen() {
             {wordOfTheDay && (
               <TouchableOpacity
                 style={s.wotdCard}
-                onPress={() => {
-                  setTerm(wordOfTheDay.term);
-                  // The card shows one specific sense — pin it as context so
-                  // /api/explain doesn't come back asking which meaning we meant.
-                  const senseHint = wordOfTheDay.briefDefinition
-                    || (studyLanguage === 'English' ? wordOfTheDay.korean : wordOfTheDay.english);
-                  resolveExplanation(wordOfTheDay.term, senseHint || undefined);
-                }}
+                onPress={() => showWordOfTheDay(wordOfTheDay)}
               >
                 <Text style={s.wotdLabel}>{t(nativeLanguage, 'wordOfTheDay')}</Text>
                 <View style={s.wotdRow}>

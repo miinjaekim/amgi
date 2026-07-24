@@ -11,7 +11,7 @@ import {
 } from '@/services/gemini';
 import Markdown from '@/components/Markdown';
 import { saveFlashcardToFirestore, Flashcard } from '@/services/firestore';
-import { getExampleSides, getStudyLanguageConfig, getVocabPacks, parseStreamedExamples, parseStreamedDepth } from '@amgi/core';
+import { getExampleSides, getStudyLanguageConfig, getVocabPacks, parseStreamedExamples, parseStreamedDepth, wordOfTheDayCore } from '@amgi/core';
 import type { WordOfTheDay } from '@amgi/core';
 import { useUser } from '@/components/UserContext';
 import { t } from '@/lib/i18n';
@@ -119,6 +119,25 @@ export default function Home() {
     } finally {
       setLoading(false);
     }
+  };
+
+  /**
+   * Opens the word of the day using the explanation stored with it, rather
+   * than generating a second one. The card and the panel are then the same
+   * text, so what gets saved is what was tapped.
+   */
+  const showWordOfTheDay = (wotd: WordOfTheDay) => {
+    setTerm(wotd.term);
+    setError(null);
+    setAmbiguity(null);
+    setDepth(null);
+    setExamples(null);
+    setStreamingExamples(false);
+    setShowFlashcardForm(false);
+    setSaveSuccess(false);
+    setShowContextInput(false);
+    setContextInput('');
+    setCore(wordOfTheDayCore(wotd, studyLanguage));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -317,14 +336,7 @@ export default function Home() {
         <div className="mt-10 text-center">
           {wordOfTheDay && (
             <button
-              // The card already shows one specific sense, so pin it as context —
-              // otherwise /api/explain may come back asking which meaning was meant.
-              onClick={() => {
-                setTerm(wordOfTheDay.term);
-                const senseHint = wordOfTheDay.briefDefinition
-                  || (studyLanguage === 'English' ? wordOfTheDay.korean : wordOfTheDay.english);
-                resolveExplanation(wordOfTheDay.term, senseHint || undefined);
-              }}
+              onClick={() => showWordOfTheDay(wordOfTheDay)}
               className="block w-full max-w-md mx-auto mb-8 p-4 rounded-xl bg-[var(--color-surface)] border border-[var(--color-muted)] text-left hover:border-[var(--color-highlight)] transition-colors"
             >
               <div className="text-xs uppercase tracking-wider text-[var(--color-muted)] mb-1">
