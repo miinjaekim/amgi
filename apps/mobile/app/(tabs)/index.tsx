@@ -14,7 +14,7 @@ import {
   getCharacterBreakdown, getDepthTarget, getReading, getStudyLanguageConfig, getExampleSides,
   getVocabPacks, parseStreamedDepth, parseStreamedExamples, wordOfTheDayCore,
 } from '@amgi/core';
-import type { StudyLanguage } from '@amgi/core';
+import type { PackCard, StudyLanguage } from '@amgi/core';
 import type { TermCore, TermDepth, TermAmbiguous, ExamplePair, WordOfTheDay } from '../../src/services/gemini';
 import { saveFlashcardToFirestore } from '../../src/services/firestore';
 import type { Flashcard } from '../../src/services/firestore';
@@ -111,6 +111,33 @@ export default function LearnScreen() {
     setShowPacks(false);
     setTerm(word);
     resolveExplanation(word, context);
+  };
+
+  // A pre-authored pack card is already complete, so it goes straight to
+  // Firestore — there is nothing for /api/explain to add about あ, and asking
+  // would cost a model call per character to get prose nobody wants on the card.
+  const handlePackCard = async (card: PackCard) => {
+    if (!user) {
+      setError(t(nativeLanguage, 'signInToSave'));
+      throw new Error('not signed in');
+    }
+    const draft: Record<string, unknown> = {
+      uid: user.uid,
+      term: card.study,
+      termLanguage: studyLanguage,
+      [langConfig.studyField]: card.study,
+      [langConfig.backField]: card.back,
+    };
+    // `english` is required on every card; on a deck whose back isn't English
+    // neither side above has filled it in.
+    if (draft.english === undefined) draft.english = card.study;
+    try {
+      await saveFlashcardToFirestore(draft as Omit<Flashcard, 'createdAt' | 'id'>, studyLanguage);
+      setError(null);
+    } catch (err) {
+      setError(t(nativeLanguage, 'errorSaveFlashcard'));
+      throw err;
+    }
   };
 
   const reset = () => {
@@ -316,6 +343,7 @@ export default function LearnScreen() {
       studyLanguage={studyLanguage}
       onClose={() => setShowPacks(false)}
       onSelectWord={handlePackWord}
+      onSaveCard={handlePackCard}
     />
   );
 

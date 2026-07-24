@@ -1,31 +1,67 @@
 import type { StudyLanguage } from './types';
+import { HIRAGANA_PACK, KATAKANA_PACK } from './kana';
 
 /**
- * Curated vocabulary packs — large topic pools users draw from over time,
- * not one-shot beginner lists. Words target learners who have the basics:
- * terms where a one-word translation is insufficient and a native-style
- * explanation adds real value.
+ * Curated packs — pools a user draws from over time. Two kinds, because two
+ * kinds of content need two different things from the app:
  *
- * `context` disambiguates polysemous words so /api/explain resolves the
- * intended (business/test) sense instead of the everyday school meaning.
+ * - `lookup` packs are word lists. Tapping a word runs the normal Learn flow,
+ *   because the value is in the explanation Gemini writes for it. Words target
+ *   learners who have the basics: terms where a one-word translation is
+ *   insufficient. `context` disambiguates polysemous words so /api/explain
+ *   resolves the intended (business/test) sense, not the everyday one.
  *
- * Sources: Barron's 600 Essential Words for the TOEIC,
- * pass-the-toeic-test.com word list. Draft review: docs/packs/toeic-pack-draft.md
+ * - `cards` packs are pre-authored. Tapping saves the card as written, with no
+ *   model call, because the content is closed and known — there is nothing for
+ *   a model to add about あ that isn't already on the card, and asking would
+ *   only produce prose and a chance of being wrong.
  */
 export interface PackWord {
   word: string;
   context?: string;
 }
 
-export interface VocabPack {
+/** A complete card, needing no lookup: front text and the back it answers to. */
+export interface PackCard {
+  study: string;
+  back: string;
+}
+
+interface PackBase {
   id: string;
   /** Display text keyed by native language */
   name: { English: string; Korean: string };
   description: { English: string; Korean: string };
+}
+
+export interface LookupPack extends PackBase {
+  kind: 'lookup';
   words: PackWord[];
 }
 
-const TOEIC_PACK: VocabPack = {
+export interface CardPack extends PackBase {
+  kind: 'cards';
+  cards: PackCard[];
+  /** Show a pronunciation button per entry — worth it when the card *is* a sound. */
+  pronounceable?: boolean;
+}
+
+export type VocabPack = LookupPack | CardPack;
+
+/**
+ * The study-language text of every entry in a pack, whichever kind it is —
+ * what the saved-marking and progress count are keyed on.
+ */
+export function getPackTerms(pack: VocabPack): string[] {
+  return pack.kind === 'lookup' ? pack.words.map(w => w.word) : pack.cards.map(c => c.study);
+}
+
+/**
+ * Sources: Barron's 600 Essential Words for the TOEIC,
+ * pass-the-toeic-test.com word list. Draft review: docs/packs/toeic-pack-draft.md
+ */
+const TOEIC_PACK: LookupPack = {
+  kind: 'lookup',
   id: 'toeic-core',
   name: { English: 'TOEIC Core Vocabulary', Korean: 'TOEIC 빈출 어휘' },
   description: {
@@ -175,6 +211,7 @@ const TOEIC_PACK: VocabPack = {
 
 export const VOCAB_PACKS: Partial<Record<StudyLanguage, VocabPack[]>> = {
   English: [TOEIC_PACK],
+  Japanese: [HIRAGANA_PACK, KATAKANA_PACK],
 };
 
 export function getVocabPacks(studyLanguage: StudyLanguage): VocabPack[] {

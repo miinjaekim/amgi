@@ -12,7 +12,7 @@ import {
 import Markdown from '@/components/Markdown';
 import { saveFlashcardToFirestore, Flashcard } from '@/services/firestore';
 import { getCharacterBreakdown, getExampleSides, getReading, getStudyLanguageConfig, getVocabPacks, parseStreamedExamples, parseStreamedDepth, wordOfTheDayCore } from '@amgi/core';
-import type { WordOfTheDay } from '@amgi/core';
+import type { PackCard, WordOfTheDay } from '@amgi/core';
 import { useUser } from '@/components/UserContext';
 import { t } from '@/lib/i18n';
 import SaveFlashcardModal from '@/components/SaveFlashcardModal';
@@ -81,6 +81,34 @@ export default function Home() {
     setShowPacks(false);
     setTerm(word);
     resolveExplanation(word, context);
+  };
+
+  // A pre-authored pack card is already complete, so it goes straight to
+  // Firestore — there is nothing for /api/explain to add about あ, and asking
+  // would cost a model call per character to get prose nobody wants on the card.
+  const handlePackCard = async (card: PackCard) => {
+    if (!user) {
+      setError(t(nativeLanguage, 'signInToSave'));
+      throw new Error('not signed in');
+    }
+    const config = getStudyLanguageConfig(studyLanguage);
+    const draft: Record<string, unknown> = {
+      uid: user.uid,
+      term: card.study,
+      termLanguage: studyLanguage,
+      [config.studyField]: card.study,
+      [config.backField]: card.back,
+    };
+    // `english` is required on every card; on a deck whose back isn't English
+    // neither side above has filled it in.
+    if (draft.english === undefined) draft.english = card.study;
+    try {
+      await saveFlashcardToFirestore(draft as Omit<Flashcard, 'createdAt' | 'id'>, studyLanguage);
+      setError(null);
+    } catch (err) {
+      setError(t(nativeLanguage, 'errorSaveFlashcard'));
+      throw err;
+    }
   };
 
   useEffect(() => {
@@ -625,7 +653,13 @@ export default function Home() {
         </div>
       )}
 
-      {showPacks && <PacksModal onClose={() => setShowPacks(false)} onSelectWord={handlePackWord} />}
+      {showPacks && (
+        <PacksModal
+          onClose={() => setShowPacks(false)}
+          onSelectWord={handlePackWord}
+          onSaveCard={handlePackCard}
+        />
+      )}
 
       {/* Goal-based word generation — placeholder until the feature lands */}
       {showGenerate && (
