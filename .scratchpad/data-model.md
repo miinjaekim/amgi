@@ -128,6 +128,13 @@ also said nothing about which script to write in. Those three now interpolate
 `getStudyLanguageConfig(x).label`; the Chinese entries add an explicit
 Traditional-not-Simplified line on top.
 
+Measured, not assumed: the pre-fix prompts were re-run against Gemini and
+returned Traditional characters anyway (vocab-list 3/3, word of the day 4/4
+across separate dates) — it reads "TraditionalChinese" and infers correctly. So
+this is readability and robustness, not a bug that was shipping. Don't cite it
+as a defect; do keep using `label`, because the next code that isn't an English
+word won't necessarily be as guessable.
+
 **Pronunciation readings** (Japanese `furigana`, Traditional Chinese `pinyin`)
 are separate `TermCore` fields but one badge slot — `getReading(card)` in
 `@amgi/core` resolves whichever the card carries, so the six Learn/review/detail
