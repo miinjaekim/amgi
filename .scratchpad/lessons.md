@@ -98,3 +98,23 @@ notes below are kept only in case OTA is ever revisited.
 - Apple's **App Transfer doesn't cover TestFlight-only apps** — an app that has
   never shipped to the App Store can't be moved between accounts. Launching
   under a borrowed account means a fresh relaunch later, not a migration.
+
+## Google Cloud TTS
+
+- **Chirp 3: HD returns silence for single-character text.** It's a generative
+  model, and on a lone character it intermittently emits a ~0.3s near-silent
+  clip instead of speech — measured 11/70 kana and 9/21 Korean syllables, with
+  a *different* set failing on each run, so it can't be worked around by
+  blacklisting characters. Two-character text was clean (0/15). The Neural2
+  voices were clean 0/91 on the same inputs, so `ttsShortVoiceName` routes
+  single characters to one. Affects any deck with one-character cards — this
+  was already broken for Korean (물, 해, 아) before the kana packs surfaced it.
+- **Never cache a generation you haven't sanity-checked.** `/api/pronounce`
+  keys cached audio by content hash with no expiry, so one bad response is
+  permanent — that's what made a silent あ survive to be played rather than
+  just being a flaky first tap. The route now rejects implausibly small audio
+  and retries once instead of storing it. Anything cached forever needs a
+  validity check at write time, not read time.
+- The voice name is part of the cache path, which is what let the fix land
+  without a purge: changing the voice for short text moved those clips to a
+  new path and orphaned the poisoned ones.

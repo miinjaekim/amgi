@@ -95,6 +95,22 @@ export interface StudyLanguageConfig {
    */
   ttsLanguageCode?: string;
   ttsVoiceName?: string;
+  /**
+   * Voice for single-character text, where one is needed.
+   *
+   * Chirp 3: HD is generative, and on a lone character it intermittently
+   * returns silence instead of audio — measured at 11/70 kana and 9/21 Korean
+   * syllables, with a different set failing on each run. Two-character text was
+   * clean (0/15), so the problem is specifically an utterance too short for the
+   * model to commit to. The Neural2 voices returned silence 0/91 times on the
+   * same inputs, so a single character is routed to one.
+   *
+   * Only set where single-character terms are a normal card: a lone kana or
+   * hanja is the whole point of a kana pack and common in Korean, whereas a
+   * one-letter French or Swedish term is not really a thing. Adding one for
+   * those is a line here if that changes.
+   */
+  ttsShortVoiceName?: string;
 }
 
 export const STUDY_LANGUAGE_CONFIGS: Record<StudyLanguage, StudyLanguageConfig> = {
@@ -115,6 +131,7 @@ export const STUDY_LANGUAGE_CONFIGS: Record<StudyLanguage, StudyLanguageConfig> 
     characterSectionKey: 'sectionHanja',
     ttsLanguageCode: 'ko-KR',
     ttsVoiceName: 'ko-KR-Chirp3-HD-Charon',
+    ttsShortVoiceName: 'ko-KR-Neural2-C',
   },
   Swedish: {
     code: 'Swedish',
@@ -167,6 +184,7 @@ export const STUDY_LANGUAGE_CONFIGS: Record<StudyLanguage, StudyLanguageConfig> 
     characterSectionKey: 'sectionKanji',
     ttsLanguageCode: 'ja-JP',
     ttsVoiceName: 'ja-JP-Chirp3-HD-Charon',
+    ttsShortVoiceName: 'ja-JP-Neural2-C',
   },
   TraditionalChinese: {
     code: 'TraditionalChinese',
