@@ -346,6 +346,10 @@ export function isStudyLanguage(value: unknown): value is StudyLanguage {
   return typeof value === 'string' && value in STUDY_LANGUAGE_CONFIGS;
 }
 
+export function isNativeLanguage(value: unknown): boolean {
+  return SUPPORTED_NATIVE_LANGUAGES.some((l) => l.code === value);
+}
+
 /**
  * Study language to use after the native language changes.
  *
@@ -361,6 +365,10 @@ export function resolveStudyLanguage(
   currentStudyLanguage: StudyLanguage,
   previousNativeLanguage: string | null | undefined
 ): StudyLanguage {
+  // No previous native means first-time setup, which the setup modal owns —
+  // it already excludes the native language from the study options, and
+  // stepping in here would only fight the choice being made.
+  if (previousNativeLanguage == null) return currentStudyLanguage;
   if (currentStudyLanguage !== nextNativeLanguage) return currentStudyLanguage;
   if (isStudyLanguage(previousNativeLanguage) && previousNativeLanguage !== nextNativeLanguage) {
     return previousNativeLanguage;
@@ -368,4 +376,31 @@ export function resolveStudyLanguage(
   // No usable previous native (first run, or it isn't a study language) — any
   // supported study language other than the new native will do.
   return SUPPORTED_STUDY_LANGUAGES.find((l) => l.code !== nextNativeLanguage)!.code;
+}
+
+/**
+ * Native language to use after the study language changes — the mirror of
+ * `resolveStudyLanguage`.
+ *
+ * Picking your own language to study is the same contradiction seen from the
+ * other side: a native English speaker who switches to studying English is
+ * really telling us they aren't a native English speaker. We move the native
+ * language to the one they were just studying, when that is a language we
+ * support natively; otherwise to any native language that isn't the new study
+ * language. Note this changes the UI language too, which is a larger effect
+ * than the mirror case has.
+ */
+export function resolveNativeLanguage(
+  nextStudyLanguage: StudyLanguage,
+  currentNativeLanguage: string | null | undefined,
+  previousStudyLanguage: StudyLanguage
+): string | null | undefined {
+  if (currentNativeLanguage !== nextStudyLanguage) return currentNativeLanguage;
+  if (isNativeLanguage(previousStudyLanguage) && previousStudyLanguage !== nextStudyLanguage) {
+    return previousStudyLanguage;
+  }
+  // Previously studying something we don't support as a native language
+  // (Swedish, French, Japanese) — fall back to any native that isn't the
+  // language they just chose to study.
+  return SUPPORTED_NATIVE_LANGUAGES.find((l) => l.code !== nextStudyLanguage)!.code;
 }

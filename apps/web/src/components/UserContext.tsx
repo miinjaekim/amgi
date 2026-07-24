@@ -3,7 +3,7 @@ import React, { createContext, useContext, useEffect, useState, ReactNode } from
 import { auth, googleProvider } from '@/config/firebase';
 import { signInWithPopup, signOut, onAuthStateChanged, User } from 'firebase/auth';
 import { getUserPreferences, saveUserPreferences } from '@/services/userPreferences';
-import { isStudyLanguage, resolveStudyLanguage, type StudyLanguage } from '@amgi/core';
+import { isStudyLanguage, resolveNativeLanguage, resolveStudyLanguage, type StudyLanguage } from '@amgi/core';
 
 const LANG_CACHE_KEY = 'amgi_native_language';
 const STUDY_LANG_CACHE_KEY = 'amgi_study_language';
@@ -113,8 +113,21 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   const setStudyLanguage = async (lang: StudyLanguage) => {
     setStudyLanguageState(lang);
     localStorage.setItem(STUDY_LANG_CACHE_KEY, lang);
+
+    // Choosing to study your own language says the native language is wrong;
+    // move it to the language just being studied. This also switches the UI.
+    const nextNative = resolveNativeLanguage(lang, nativeLanguage, studyLanguage);
+    const nativeChanged = !!nextNative && nextNative !== nativeLanguage;
+    if (nativeChanged) {
+      setNativeLanguageState(nextNative);
+      localStorage.setItem(LANG_CACHE_KEY, nextNative);
+    }
+
     if (user) {
-      await saveUserPreferences(user.uid, { studyLanguage: lang });
+      await saveUserPreferences(user.uid, {
+        studyLanguage: lang,
+        ...(nativeChanged ? { nativeLanguage: nextNative } : {}),
+      });
     }
   };
 
