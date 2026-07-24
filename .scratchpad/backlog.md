@@ -55,7 +55,9 @@ Both are root-caused and reproducible; both hit during demos.
       nothing hides it.
       *Scope:* the fix is layout, not content — let the hero shrink properly or
       reserve the WOTD tile's height before it loads so the layout doesn't jump.
-      Reserving space also removes the visible reflow.
+      Reserving space also removes the visible reflow. Shares a fix with the
+      WOTD loading-state item below — a skeleton at the tile's real height
+      reserves the space and shows the load at the same time.
 
 - [ ] **Learn page gets stuck showing only the search bar after saving a card**
       Same file. `isEmpty` is defined as
@@ -119,6 +121,22 @@ regressions are easy to miss.
       existing `mobile-typecheck.yml` gate implies lint would be next.
 
 ## Medium
+
+- [ ] **Show that the word of the day is loading**
+      Both platforms render the tile as `wordOfTheDay && (...)`, so until the
+      fetch resolves there is simply nothing there — no indication anything is
+      coming. It pops in, shifting the layout under it.
+      Two reasons this matters more now than it did: the cache header was
+      shortened to `s-maxage=300` with `max-age=0` (so the day's word can be
+      corrected same-day), which means browsers revalidate on every load
+      instead of serving it instantly from cache; and a skeleton at the tile's
+      real height also fixes the mobile tagline-overlap defect above, which is
+      caused by exactly this late reflow.
+      *Scope:* a skeleton placeholder sized to the real tile, not a spinner —
+      it has to reserve height to be worth doing. `apps/web/src/app/page.tsx`
+      (~line 318) and `apps/mobile/app/(tabs)/index.tsx` (~line 347). Decide
+      what happens on failure: `getWordOfTheDay` returns null on any error and
+      the tile stays hidden, so the skeleton must not linger forever.
 
 - [ ] **Offline Amgi — phase it**
       Today only the review page has an offline banner + cached review, and it's
