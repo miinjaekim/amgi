@@ -49,8 +49,9 @@ _Reconciled against `main` @ `6e9f3e9` on 2026-07-24, plus the 1.0.2 release cut
   `getReading()` helper. `/api/explain` detects Han script server-side and the
   prompt converts Simplified input to Traditional. Simplified is deliberately
   left as a possible future registry entry, not a script toggle — see
-  `data-model.md`. ⚠️ Security rules + the `archived + createdAt` composite index
-  for `cards_chinese_traditional` still need adding in the Firebase console.
+  `data-model.md`. Security rules + the `archived + createdAt` composite index
+  for `cards_chinese_traditional` were added in the Firebase console and
+  confirmed by saving Chinese cards (2026-07-24).
 
 ### Design & polish
 - **Design system** — Forest/Sonokai/Paper/System themes, Source Code Pro,
