@@ -53,8 +53,8 @@ _Reconciled against `main` @ `6e9f3e9` on 2026-07-24, plus the 1.0.2 release cut
   for `cards_chinese_traditional` were added in the Firebase console and
   confirmed by saving Chinese cards (2026-07-24).
 
-- **Japanese & Chinese depth** (`feat/ja-zh-depth`, 2026-07-24) — the three
-  "Now" items in one branch:
+- **Japanese & Chinese depth** (PR #49, 2026-07-25) — the three "Now" items in
+  one branch, plus a pronunciation bug they uncovered:
   - *Pronunciation for four more languages* — `ja-JP-Chirp3-HD-Charon`,
     `fr-FR-Chirp3-HD-Charon`, `sv-SE-Chirp3-HD-Charon`, and
     **`cmn-TW-Wavenet-A`** for Traditional Chinese. `cmn-TW` has no Chirp 3: HD
@@ -78,6 +78,14 @@ _Reconciled against `main` @ `6e9f3e9` on 2026-07-24, plus the 1.0.2 release cut
     katakana are generated from one table in `packages/core/src/kana.ts`.
     Deliberately widens the audience — see the amendment in
     [vision.md](vision.md).
+  - *Single-character TTS returned silence* — found while testing the packs and
+    **already broken for Korean**: Chirp 3: HD intermittently emits a near-silent
+    clip for a lone character (11/70 kana, 9/21 Korean syllables, a different
+    set each run; two-character text was clean). Cached audio never expires, so
+    one bad generation was served forever. `ttsShortVoiceName` now routes single
+    characters to a Neural2 voice and the route refuses to cache implausibly
+    small audio. No purge needed — the voice name is in the cache path. See
+    [lessons.md](lessons.md).
 
 ### Design & polish
 - **Design system** — Forest/Sonokai/Paper/System themes, Source Code Pro,

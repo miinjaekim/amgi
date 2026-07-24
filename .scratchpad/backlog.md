@@ -17,9 +17,10 @@ production build when a batch is worth a release. See [tech-stack.md](tech-stack
 
 _Last build: **1.0.2 / build 4**, 2026-07-24. Nothing merged since._
 
-- [ ] **Japanese & Chinese depth batch** (`feat/ja-zh-depth`) — pronunciation
-      for four more languages, the kanji/hanzi breakdown, and the kana packs.
-      No new native module; all three are invisible until a build ships.
+- [ ] **Japanese & Chinese depth batch** (PR #49) — pronunciation for four more
+      languages, the kanji/hanzi breakdown, the kana packs, and the
+      single-character TTS fix. No new native module; all of it is invisible on
+      the phone until a build ships.
 - [ ] **Push notifications** — needs `expo-notifications` + an `app.json` plugin.
 - [ ] **App rename**, if it happens — changes `app.json` `name`/bundle id.
 
@@ -31,8 +32,8 @@ files, sharing) on the build itself → bump `version` in `app.json` → check
 
 ## Now — Japanese & Chinese depth
 
-✅ **All three shipped on `feat/ja-zh-depth` (2026-07-24)** — see the Shipped
-list in [status.md](status.md). What's left is a judgement call and a follow-up:
+✅ **All three shipped in PR #49 (2026-07-25)** — see the Shipped list in
+[status.md](status.md). What's left is a judgement call and a follow-up:
 
 - [ ] **Listen to `cmn-TW-Wavenet-A`** before the next build. Samples are in
       `audio-test/lang-voices/` (gitignored), paired against
@@ -41,6 +42,11 @@ list in [status.md](status.md). What's left is a judgement call and a follow-up:
 - [ ] **Kana drill mode**, only if the packs get used. Working through 71 tiles
       and reviewing them is the whole loop today, which may be enough. Stroke
       order remains out of scope.
+- [ ] **Decide whether a single kana should sound like the rest of the deck.**
+      Single characters now use a Neural2 voice while everything else uses
+      Chirp 3: HD, so the speaker changes between a kana tile and a sentence.
+      Correctness beat consistency; moving Japanese and Korean wholesale to
+      Neural2 would make it uniform at some cost in quality on longer text.
 
 ---
 
