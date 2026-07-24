@@ -351,15 +351,14 @@ export default function LearnScreen() {
     </View>
   ) : null;
 
-  // ── Empty state: tagline fills screen, search + chips pinned to bottom ──
+  // ── Empty state: search + chips resting in the lower part of the screen ──
   if (isEmpty) {
     return (
       <SafeAreaView style={s.root} edges={['top']}>
         {streakBadge}
-        <Pressable style={s.hero} onPress={Keyboard.dismiss}>
-          <Text style={s.tagline}>{t(nativeLanguage, 'tagline')}</Text>
-          <Text style={s.taglineSub}>{t(nativeLanguage, 'taglineSubtitle')}</Text>
-        </Pressable>
+        {/* Empty above the fold by design — the tagline was cut to give the
+            screen room to breathe. Still tappable to dismiss the keyboard. */}
+        <Pressable style={s.topSpacer} onPress={Keyboard.dismiss} />
 
         <KeyboardAvoidingView
           style={s.kav}
@@ -373,9 +372,8 @@ export default function LearnScreen() {
               </View>
             )}
             {wotdLoading && (
-              // Sized from the real tile's rows so the layout doesn't jump when
-              // the word of the day arrives — the reflow used to squeeze the
-              // hero and spill the tagline over the streak badge.
+              // Sized from the real tile's rows so the bar doesn't shift when
+              // the word of the day arrives.
               <View style={[s.wotdCard, s.wotdSkeleton]}>
                 <Text style={s.wotdLabel}>{t(nativeLanguage, 'wordOfTheDay')}</Text>
                 <View style={s.wotdRow}>
@@ -436,7 +434,7 @@ export default function LearnScreen() {
             </View>
           </View>
           {/* Rests the search bar ~40% up the screen. Shrinkable, so on a short
-              screen this gives its space back instead of squeezing the hero. */}
+              screen it gives space back instead of pushing content off. */}
           <View style={[s.restingSpacer, { height: searchRestingBottom }]} />
         </KeyboardAvoidingView>
         {packsModal}
@@ -644,13 +642,9 @@ function makeStyles(C: Palette, tabBarHeight: number) {
   streakSep: { fontSize: 13, color: C.muted },
   streakMuted: { fontSize: 13, color: C.muted },
 
-  // Empty state layout. The hero grows into whatever space is left over but
-  // never shrinks below its own text — squeezing it made the tagline overflow
-  // its centred box in both directions, over the streak badge above it.
-  hero: {
-    flexGrow: 1, flexShrink: 0, flexBasis: 'auto',
-    alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32,
-  },
+  // Empty state layout. Absorbs the space above the bottom bar; shrinks to
+  // nothing rather than pushing the bar off screen.
+  topSpacer: { flexGrow: 1, flexShrink: 1, flexBasis: 0 },
   kav: { flexShrink: 1 },
   bottomBar: { paddingHorizontal: 16 },
   // Never shrinks past the floating tab bar, so the links row stays tappable.
@@ -669,8 +663,6 @@ function makeStyles(C: Palette, tabBarHeight: number) {
   searchBtnDisabled: { opacity: 0.6 },
   searchBtnText: { color: C.bg, fontWeight: '700', fontSize: 15 },
 
-  tagline: { fontSize: 22, fontWeight: '700', color: C.text, marginBottom: 8, textAlign: 'center' },
-  taglineSub: { fontSize: 14, color: C.muted, textAlign: 'center', lineHeight: 20 },
   exampleRow: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 8, marginBottom: 12 },
   exampleLabel: { fontSize: 13, color: C.muted, alignSelf: 'center' },
   chip: { borderWidth: 1, borderColor: C.border, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6 },

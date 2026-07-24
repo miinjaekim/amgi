@@ -72,6 +72,7 @@ export default function Home() {
   const [showContextInput, setShowContextInput] = useState(false);
   const [contextInput, setContextInput] = useState('');
   const [wordOfTheDay, setWordOfTheDay] = useState<WordOfTheDay | null>(null);
+  const [wotdLoading, setWotdLoading] = useState(true);
   const [showPacks, setShowPacks] = useState(false);
   const [showGenerate, setShowGenerate] = useState(false);
 
@@ -85,12 +86,16 @@ export default function Home() {
     if (nativeLanguage === undefined) return; // preferences still loading
     let cancelled = false;
     setWordOfTheDay(null);
+    setWotdLoading(true);
     const date = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD, local timezone
     const params = new URLSearchParams({ date, studyLanguage, nativeLanguage: nativeLanguage ?? 'English' });
     fetch(`/api/word-of-the-day?${params}`)
       .then(res => (res.ok ? res.json() : null))
       .then(data => { if (!cancelled && data?.term) setWordOfTheDay(data); })
-      .catch(() => {}); // non-essential — hide on failure
+      .catch(() => {}) // non-essential — hide on failure
+      // Settles on every path, so the skeleton resolves to the tile or to
+      // nothing rather than lingering.
+      .finally(() => { if (!cancelled) setWotdLoading(false); });
     return () => { cancelled = true; };
   }, [studyLanguage, nativeLanguage]);
 
@@ -334,6 +339,24 @@ export default function Home() {
       {/* Empty state — word of the day + example terms below the search bar */}
       {!loading && !core && !ambiguity && !error && (
         <div className="mt-10 text-center">
+          {/* Placeholder at the tile's real height, so the chips below don't
+              jump when the word of the day arrives. Matches the tile's rows:
+              label, term + translation, definition. */}
+          {wotdLoading && (
+            <div
+              aria-hidden
+              className="block w-full max-w-md mx-auto mb-8 p-4 rounded-xl bg-[var(--color-surface)] border border-[var(--color-muted)] text-left animate-pulse"
+            >
+              <div className="text-xs uppercase tracking-wider text-[var(--color-muted)] mb-1">
+                {t(nativeLanguage, 'wordOfTheDay')}
+              </div>
+              <div className="flex items-baseline gap-3 flex-wrap">
+                <div className="h-7 w-24 rounded bg-[var(--color-muted)] opacity-40" />
+                <div className="h-6 w-32 rounded bg-[var(--color-muted)] opacity-40" />
+              </div>
+              <div className="mt-1 h-5 w-2/3 rounded bg-[var(--color-muted)] opacity-40" />
+            </div>
+          )}
           {wordOfTheDay && (
             <button
               onClick={() => showWordOfTheDay(wordOfTheDay)}

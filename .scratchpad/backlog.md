@@ -37,40 +37,9 @@ the last release" — the entries below are the ones with extra prerequisites.
 
 ## Next up
 
-_The three starred demo-blocking items are done — see the Shipped list in
-[status.md](status.md). The two mobile defects below are what's next._
-
-## High — confirmed mobile defects
-
-Both are root-caused and reproducible; both hit during demos.
-
-- [ ] **Learn page: tagline overlaps the streak badge when the WOTD tile loads**
-      `apps/mobile/app/(tabs)/index.tsx`. In the empty state the hero is
-      `flex: 1` with `minHeight: 80` (style at ~line 617), and the bottom bar
-      sizes to its content. When the WOTD tile loads in asynchronously, the
-      bottom bar grows, the hero is squeezed to its 80px floor, and the
-      tagline + subtitle (which need more than 80px) overflow a
-      `justifyContent: 'center'` box — so they spill *upward* over the streak
-      badge as well as downward. React Native doesn't clip by default, so
-      nothing hides it.
-      *Scope:* the fix is layout, not content — let the hero shrink properly or
-      reserve the WOTD tile's height before it loads so the layout doesn't jump.
-      Reserving space also removes the visible reflow. Shares a fix with the
-      WOTD loading-state item below — a skeleton at the tile's real height
-      reserves the space and shows the load at the same time.
-
-- [ ] **Learn page gets stuck showing only the search bar after saving a card**
-      Same file. `isEmpty` is defined as
-      `!loading && !core && !ambiguity && !error && !saveSuccess` (~line 277).
-      After a save, `saveSuccess` is `true`, so the empty state is skipped —
-      but the empty state is what hosts the word of the day, example chips, and
-      the packs/generate buttons. You land in the results branch with nothing
-      but a search field and a success banner, and `saveSuccess` only clears on
-      the next lookup. So after saving there's no way back to packs or WOTD
-      without running another search first.
-      *Scope:* the success banner shouldn't suppress the empty state. Either
-      render the banner *within* the empty state, or auto-clear `saveSuccess`
-      on a timer, so saving returns you to a usable Learn screen.
+_The three starred demo-blocking items and both confirmed mobile defects are
+done — see the Shipped list in [status.md](status.md). The feature work below
+is what's next._
 
 ## High — feature work
 
@@ -121,22 +90,6 @@ regressions are easy to miss.
       existing `mobile-typecheck.yml` gate implies lint would be next.
 
 ## Medium
-
-- [ ] **Show that the word of the day is loading**
-      Both platforms render the tile as `wordOfTheDay && (...)`, so until the
-      fetch resolves there is simply nothing there — no indication anything is
-      coming. It pops in, shifting the layout under it.
-      Two reasons this matters more now than it did: the cache header was
-      shortened to `s-maxage=300` with `max-age=0` (so the day's word can be
-      corrected same-day), which means browsers revalidate on every load
-      instead of serving it instantly from cache; and a skeleton at the tile's
-      real height also fixes the mobile tagline-overlap defect above, which is
-      caused by exactly this late reflow.
-      *Scope:* a skeleton placeholder sized to the real tile, not a spinner —
-      it has to reserve height to be worth doing. `apps/web/src/app/page.tsx`
-      (~line 318) and `apps/mobile/app/(tabs)/index.tsx` (~line 347). Decide
-      what happens on failure: `getWordOfTheDay` returns null on any error and
-      the tile stays hidden, so the skeleton must not linger forever.
 
 - [ ] **Offline Amgi — phase it**
       Today only the review page has an offline banner + cached review, and it's
@@ -197,9 +150,9 @@ regressions are easy to miss.
       already generic; other languages return a clean "not available" today.
 
 - [ ] **Push notifications — WOTD and streaks** — daily review reminders, the
-      word of the day, and streak-at-risk nudges. Depends on the WOTD items
-      above being fixed first: notifying people about a repeated word would make
-      the repeat problem far more visible. Needs `expo-notifications`, a
+      word of the day, and streak-at-risk nudges. Its prerequisite is met — the
+      WOTD repeat problem was fixed in PR #47, so notifications can't push a
+      word you already saw. Needs `expo-notifications`, a
       scheduling story, and per-type opt-in. Respect "no dark patterns" —
       streak nudges are the easiest place to violate it.
 
