@@ -37,50 +37,8 @@ the last release" — the entries below are the ones with extra prerequisites.
 
 ## Next up
 
-The three starred items. All three surface during live demos, which is what
-makes them urgent. The two WOTD items are mostly server-side, so they reach the
-app via a Vercel deploy with no mobile release involved; the language-switch fix
-is client-side and rides the next build.
-
-- [ ] **Switching native language should switch study language too**
-      When demoing to a native Korean speaker, switching native language
-      English → Korean currently leaves study language on Korean, so the app is
-      set to teach a Korean speaker Korean. It takes a second manual switch to
-      become usable, in front of the person being shown.
-      This follows directly from an already-recorded product decision: natives
-      don't study their own language (which is why the native language is
-      excluded from the study-language options in the setup modal). The setup
-      modal enforces it; changing native language later in settings does not.
-      *Scope:* when native language changes and the current study language now
-      equals it, move study language to a sensible default. English↔Korean is
-      the demo case and should be the pairing. Decide the rule for other
-      combinations (fall back to a default? reuse the previous study language?
-      prompt?) and whether this is silent or surfaced as a notice. Applies to
-      both web `SettingsMenu` and mobile settings.
-
-- [ ] **Word of the day repeats across days**
-      Each date generates independently — `/api/word-of-the-day` writes one
-      Firestore doc per `date_studyLanguage_nativeLanguage` and never reads any
-      other date. The prompt says "Vary your choice — different dates should
-      yield different words", but the model has no history to vary *against*,
-      so common words recur.
-      *Scope:* feed recent picks into the prompt as an exclusion list (query the
-      last N days from the `wordOfTheDay` collection, which is already keyed by
-      date, so the read is cheap) and/or keep a per-language "already used" set.
-      Decide N and what happens once the pool is exhausted for a language.
-
-- [ ] **Word of the day saving discrepancy**
-      Tapping the WOTD card runs `resolveExplanation()`, a *fresh* `/api/explain`
-      call. The stored WOTD doc and the explain response are two independent
-      Gemini generations, so the card you save can show a different translation
-      or definition than the panel you tapped.
-      Note PR #37 already pins the *sense* (`briefDefinition` is passed as a
-      context hint), so this is no longer a wrong-meaning bug — it's the
-      wording drifting between what was displayed and what got saved.
-      *Scope:* decide who wins. Either seed the explanation from the stored WOTD
-      fields instead of regenerating, or persist the full explanation on the
-      WOTD doc at generation time so the tap is a read. The second also cuts a
-      Gemini call per tap and lines up with the "shared term cache" idea.
+_The three starred demo-blocking items are done — see the Shipped list in
+[status.md](status.md). The two mobile defects below are what's next._
 
 ## High — confirmed mobile defects
 
@@ -127,6 +85,38 @@ Both are root-caused and reproducible; both hit during demos.
       refine field → save. `/api/vocab-list` already accepts `previousWords` +
       `feedback`; deliberately no too-basic/too-advanced chips. Fold in the
       ambiguity/placement decisions above before building.
+
+## Housekeeping — broken tooling that hides signal
+
+Not user-facing, but every `npm test` / `turbo lint` run currently reports
+failures that have nothing to do with the change being tested, so real
+regressions are easy to miss.
+
+- [ ] **Two stale review tests fail on a clean checkout**
+      Both predate the monorepo restructure (their only commit is `dcc87b2`)
+      and neither reflects a product bug — current behavior is correct.
+      1. `review.test.ts:92` does `require('../review/page')` to reach `isDue`.
+         That fails twice over: `isDue` is declared but never exported
+         (`apps/web/src/app/review/page.tsx:19`), and `require()` can't resolve
+         the `.tsx` component module under vitest anyway.
+         *Scope:* `isDue` is duplicated across web (`page.tsx:19`, returns
+         `{ due, directions }`) and mobile (`app/(tabs)/review.tsx:24`, returns
+         `Direction[]`) with different signatures. Lift one version into
+         `@amgi/core` beside `sm2.ts`, point both platforms at it, and have the
+         test import it normally. Fixes the test by removing the duplication
+         that made it unfixable.
+      2. `review-response.test.ts:150` asserts `updateDoc` is called *without*
+         `frontToBack.nextReview`, then asserts on line 151 that it has exactly
+         that property. The two lines contradict each other; the code writes
+         the field and should. Delete the stale line 150.
+
+- [ ] **`npm run lint` is broken repo-wide**
+      `apps/web/package.json` still runs `next lint`, removed in Next 16 — it
+      now parses `lint` as a directory and exits 1, so `turbo lint` fails
+      before it lints anything. Migrate to running `eslint` directly
+      (`next lint` → `eslint .`) and confirm the flat-config setup Next 16
+      expects. Worth doing before adding any lint gate to CI, since the
+      existing `mobile-typecheck.yml` gate implies lint would be next.
 
 ## Medium
 
