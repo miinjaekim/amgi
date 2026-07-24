@@ -64,7 +64,7 @@ export default function SaveFlashcardModal({ draft, nativeLanguage, studyLanguag
               <label className="block text-xs font-semibold uppercase tracking-widest" style={{ color: 'var(--color-muted)' }}>
                 {studyLangLabel}
               </label>
-              <PronounceButton text={studyLangValue} studyLanguage={studyLanguage} />
+              <PronounceButton text={studyLangValue} furigana={draft.furigana} studyLanguage={studyLanguage} />
             </div>
             <input
               type="text"

@@ -59,12 +59,15 @@ export function parseStreamedDepth(text: string): TermDepth {
     return content && content.toLowerCase() !== 'none' ? content : undefined;
   };
   const result: TermDepth = {};
-  const hasHanja = text.includes('HANJA:\n');
-  const def = section('DEFINITION:', hasHanja ? 'HANJA:' : 'NOTES:');
-  const hanja = hasHanja ? section('HANJA:', 'NOTES:') : undefined;
+  // Marker presence, not language: the depth prompt only emits CHARACTERS: for
+  // Han-script languages, so the parser needs no per-language branch. Safe to
+  // have renamed from HANJA: — the stream is ephemeral, nothing stores it.
+  const hasCharacters = text.includes('CHARACTERS:\n');
+  const def = section('DEFINITION:', hasCharacters ? 'CHARACTERS:' : 'NOTES:');
+  const characters = hasCharacters ? section('CHARACTERS:', 'NOTES:') : undefined;
   const notes = section('NOTES:');
   if (def !== undefined) result.definition = def;
-  if (hanja !== undefined) result.hanja = hanja;
+  if (characters !== undefined) result.characterBreakdown = characters;
   if (notes !== undefined) result.notes = notes;
   return result;
 }

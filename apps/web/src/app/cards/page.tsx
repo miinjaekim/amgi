@@ -10,7 +10,7 @@ import {
   getCardsCollection,
   Flashcard,
 } from '@/services/firestore';
-import { getBackSide, getExampleSides, getStudyLanguageConfig } from '@amgi/core';
+import { getBackSide, getCharacterBreakdown, getExampleSides, getStudyLanguageConfig } from '@amgi/core';
 import { db } from '@/config/firebase';
 import { doc, updateDoc } from 'firebase/firestore';
 import { t } from '@/lib/i18n';
@@ -220,7 +220,7 @@ export default function CardsPage() {
   };
 
   const exportCSV = () => {
-    const rows = [[langConfig.label, langConfig.backLanguage, 'Formality', 'Definition', 'Hanja', 'Notes', 'Examples', 'Saved', 'Status']];
+    const rows = [[langConfig.label, langConfig.backLanguage, 'Formality', 'Definition', 'Characters', 'Notes', 'Examples', 'Saved', 'Status']];
     for (const c of allCards) {
       const studySide = getStudySide(c);
       const examples = c.examples?.map(e => {
@@ -233,7 +233,7 @@ export default function CardsPage() {
         getBackSide(c),
         c.formality || '',
         c.definition || '',
-        c.hanja || '',
+        getCharacterBreakdown(c) || '',
         c.notes || '',
         examples,
         saved,

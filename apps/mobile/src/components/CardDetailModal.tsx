@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import {
   Modal, View, Text, TouchableOpacity, ScrollView, StyleSheet,
 } from 'react-native';
-import { getStudyLangSide, getBackSide, getExampleSides, getReading, t } from '@amgi/core';
+import { getStudyLangSide, getBackSide, getCharacterBreakdown, getExampleSides, getReading, getStudyLanguageConfig, t } from '@amgi/core';
 import type { ExamplePair } from '@amgi/core';
 import { useTheme } from '../context/ThemeContext';
 import PronounceButton from './PronounceButton';
@@ -25,7 +25,9 @@ export default function CardDetailModal({ card, nativeLanguage, onClose }: Props
   const s = useMemo(() => makeStyles(C), [C]);
   const studyLanguage = card.studyLanguage ?? 'Korean';
   const studySide = getStudyLangSide(card);
-  const hasDetails = card.definition || card.hanja || card.notes || (card.examples && card.examples.length > 0);
+  const characterBreakdown = getCharacterBreakdown(card);
+  const characterSectionKey = getStudyLanguageConfig(studyLanguage).characterSectionKey ?? 'sectionHanja';
+  const hasDetails = card.definition || characterBreakdown || card.notes || (card.examples && card.examples.length > 0);
   const badges = [card.formality && card.formality !== 'N/A' ? card.formality : null, card.gender, getReading(card)].filter(Boolean) as string[];
 
   return (
@@ -36,7 +38,7 @@ export default function CardDetailModal({ card, nativeLanguage, onClose }: Props
             <View style={s.headerMain}>
               <View style={s.titleRow}>
                 <Text style={s.term}>{studySide}</Text>
-                <PronounceButton text={studySide} studyLanguage={studyLanguage} />
+                <PronounceButton text={studySide} furigana={card.furigana} studyLanguage={studyLanguage} />
                 {badges.map((b, i) => (
                   <View key={i} style={s.badge}><Text style={s.badgeText}>{b}</Text></View>
                 ))}
@@ -59,10 +61,10 @@ export default function CardDetailModal({ card, nativeLanguage, onClose }: Props
                     <Markdown>{card.definition}</Markdown>
                   </View>
                 )}
-                {card.hanja && (
+                {characterBreakdown && (
                   <View style={s.section}>
-                    <Text style={s.sectionLabel}>{t(nativeLanguage, 'sectionHanja')}</Text>
-                    <Markdown>{card.hanja}</Markdown>
+                    <Text style={s.sectionLabel}>{t(nativeLanguage, characterSectionKey)}</Text>
+                    <Markdown>{characterBreakdown}</Markdown>
                   </View>
                 )}
                 {card.notes && (

@@ -53,6 +53,32 @@ _Reconciled against `main` @ `6e9f3e9` on 2026-07-24, plus the 1.0.2 release cut
   for `cards_chinese_traditional` were added in the Firebase console and
   confirmed by saving Chinese cards (2026-07-24).
 
+- **Japanese & Chinese depth** (`feat/ja-zh-depth`, 2026-07-24) — the three
+  "Now" items in one branch:
+  - *Pronunciation for four more languages* — `ja-JP-Chirp3-HD-Charon`,
+    `fr-FR-Chirp3-HD-Charon`, `sv-SE-Chirp3-HD-Charon`, and
+    **`cmn-TW-Wavenet-A`** for Traditional Chinese. `cmn-TW` has no Chirp 3: HD
+    voice at all, so that one traded voice quality for a Taiwanese rather than
+    Mainland accent. ⚠️ Not yet listened to — samples in
+    `audio-test/lang-voices/`. Japanese also speaks `furigana` when the card
+    has one, via `getSpokenText()`; it takes furigana and not `getReading()`
+    because pinyin is Latin text a Mandarin voice would spell out.
+  - *Character breakdown* — the depth prompt's Han-script section is now
+    per-language (Korean 훈음, Japanese on'yomi/kun'yomi, Mandarin pinyin),
+    written once in `apps/web/src/lib/characterBreakdown.ts` because `/depth`
+    and `/depth-stream` ask for it in two envelopes. `TermDepth.hanja` →
+    `characterBreakdown`, read through `getCharacterBreakdown()`, which falls
+    back to `hanja` so **no migration was needed**. Which languages get a
+    section is `characterSectionKey` on the registry. Verified against Gemini:
+    図書館/電腦 break down, ありがとう returns "none", Swedish/French omit it,
+    갈등 unchanged.
+  - *Kana packs* — `VocabPack` is now a discriminated union. A `cards` pack is
+    pre-authored and saves straight to Firestore with no model call, and the
+    modal stays open so 71 tiles are tappable in one sitting. Hiragana and
+    katakana are generated from one table in `packages/core/src/kana.ts`.
+    Deliberately widens the audience — see the amendment in
+    [vision.md](vision.md).
+
 ### Design & polish
 - **Design system** — Forest/Sonokai/Paper/System themes, Source Code Pro,
   localized UI (EN + KO)

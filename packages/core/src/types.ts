@@ -35,6 +35,12 @@ export type DirectionPromptKey =
   | 'promptEnglishToJapanese'
   | 'promptTraditionalChineseToEnglish'
   | 'promptEnglishToTraditionalChinese';
+/**
+ * i18n keys for the character-breakdown section heading. Every Han-script
+ * language gets its own key because English names the script differently per
+ * language (hanja / kanji / hanzi), even where Korean does not.
+ */
+export type CharacterSectionKey = 'sectionHanja' | 'sectionKanji' | 'sectionHanzi';
 export type FieldLabelKey =
   | 'labelKorean'
   | 'labelEnglish'
@@ -76,9 +82,35 @@ export interface StudyLanguageConfig {
   directionBackToFrontKey: DirectionLabelKey;
   promptFrontToBackKey: DirectionPromptKey;
   promptBackToFrontKey: DirectionPromptKey;
-  /** Google Cloud TTS language code + Chirp 3: HD voice name for pronunciation audio, if supported */
+  /**
+   * Section heading for the per-character breakdown, on languages written with
+   * Han characters. Absent means the language has no characters to break down,
+   * and the depth prompt leaves the section out entirely.
+   */
+  characterSectionKey?: CharacterSectionKey;
+  /**
+   * Google Cloud TTS language code + voice name for pronunciation audio, if
+   * supported. Chirp 3: HD wherever the locale has one — `cmn-TW` doesn't, so
+   * Traditional Chinese takes a WaveNet voice rather than a Mainland accent.
+   */
   ttsLanguageCode?: string;
   ttsVoiceName?: string;
+  /**
+   * Voice for single-character text, where one is needed.
+   *
+   * Chirp 3: HD is generative, and on a lone character it intermittently
+   * returns silence instead of audio — measured at 11/70 kana and 9/21 Korean
+   * syllables, with a different set failing on each run. Two-character text was
+   * clean (0/15), so the problem is specifically an utterance too short for the
+   * model to commit to. The Neural2 voices returned silence 0/91 times on the
+   * same inputs, so a single character is routed to one.
+   *
+   * Only set where single-character terms are a normal card: a lone kana or
+   * hanja is the whole point of a kana pack and common in Korean, whereas a
+   * one-letter French or Swedish term is not really a thing. Adding one for
+   * those is a line here if that changes.
+   */
+  ttsShortVoiceName?: string;
 }
 
 export const STUDY_LANGUAGE_CONFIGS: Record<StudyLanguage, StudyLanguageConfig> = {
@@ -96,8 +128,10 @@ export const STUDY_LANGUAGE_CONFIGS: Record<StudyLanguage, StudyLanguageConfig> 
     directionBackToFrontKey: 'directionEnglishToKorean',
     promptFrontToBackKey: 'promptKoreanToEnglish',
     promptBackToFrontKey: 'promptEnglishToKorean',
+    characterSectionKey: 'sectionHanja',
     ttsLanguageCode: 'ko-KR',
     ttsVoiceName: 'ko-KR-Chirp3-HD-Charon',
+    ttsShortVoiceName: 'ko-KR-Neural2-C',
   },
   Swedish: {
     code: 'Swedish',
@@ -113,6 +147,8 @@ export const STUDY_LANGUAGE_CONFIGS: Record<StudyLanguage, StudyLanguageConfig> 
     directionBackToFrontKey: 'directionEnglishToSwedish',
     promptFrontToBackKey: 'promptSwedishToEnglish',
     promptBackToFrontKey: 'promptEnglishToSwedish',
+    ttsLanguageCode: 'sv-SE',
+    ttsVoiceName: 'sv-SE-Chirp3-HD-Charon',
   },
   French: {
     code: 'French',
@@ -128,6 +164,8 @@ export const STUDY_LANGUAGE_CONFIGS: Record<StudyLanguage, StudyLanguageConfig> 
     directionBackToFrontKey: 'directionEnglishToFrench',
     promptFrontToBackKey: 'promptFrenchToEnglish',
     promptBackToFrontKey: 'promptEnglishToFrench',
+    ttsLanguageCode: 'fr-FR',
+    ttsVoiceName: 'fr-FR-Chirp3-HD-Charon',
   },
   Japanese: {
     code: 'Japanese',
@@ -143,6 +181,10 @@ export const STUDY_LANGUAGE_CONFIGS: Record<StudyLanguage, StudyLanguageConfig> 
     directionBackToFrontKey: 'directionEnglishToJapanese',
     promptFrontToBackKey: 'promptJapaneseToEnglish',
     promptBackToFrontKey: 'promptEnglishToJapanese',
+    characterSectionKey: 'sectionKanji',
+    ttsLanguageCode: 'ja-JP',
+    ttsVoiceName: 'ja-JP-Chirp3-HD-Charon',
+    ttsShortVoiceName: 'ja-JP-Neural2-C',
   },
   TraditionalChinese: {
     code: 'TraditionalChinese',
@@ -158,6 +200,14 @@ export const STUDY_LANGUAGE_CONFIGS: Record<StudyLanguage, StudyLanguageConfig> 
     directionBackToFrontKey: 'directionEnglishToTraditionalChinese',
     promptFrontToBackKey: 'promptTraditionalChineseToEnglish',
     promptBackToFrontKey: 'promptEnglishToTraditionalChinese',
+    characterSectionKey: 'sectionHanzi',
+    // `cmn-TW` has no Chirp 3: HD voice, so this is WaveNet against
+    // `cmn-CN-Chirp3-HD-Charon`: a Taiwanese accent in an older voice, or a
+    // better voice with a Mainland one. Accent fidelity is the point of audio
+    // on a Traditional deck, so the accent wins. Both read Traditional input
+    // fine — the script was never the constraint.
+    ttsLanguageCode: 'cmn-TW',
+    ttsVoiceName: 'cmn-TW-Wavenet-A',
   },
   // English study pairs with Korean — the only non-English native language
   // supported today. A native-Korean learner's card back is Korean.
@@ -213,8 +263,26 @@ export interface TermCore {
 
 export interface TermDepth {
   definition?: string;
+  /**
+   * Per-character breakdown for a Han-script term — what each character means
+   * and how it reads inside this word. Not `hanja`: Korean, Japanese and
+   * Chinese all want this section, and only one of them calls it hanja.
+   */
+  characterBreakdown?: string;
+  /**
+   * @deprecated Korean cards saved before the field was generalized. Never
+   * write it; read it through `getCharacterBreakdown()`, which is why those
+   * cards need no migration.
+   */
   hanja?: string;
   notes?: string;
+}
+
+/** The character breakdown to render, from either the current or legacy field. */
+export function getCharacterBreakdown(
+  depth: Pick<TermDepth, 'characterBreakdown' | 'hanja'>
+): string | undefined {
+  return depth.characterBreakdown || depth.hanja || undefined;
 }
 
 export interface TermExplanation extends TermCore, TermDepth {

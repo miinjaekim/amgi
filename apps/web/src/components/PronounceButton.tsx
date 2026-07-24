@@ -1,11 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { getPronunciationUrl, getStudyLanguageConfig } from '@amgi/core';
+import { getPronunciationUrl, getSpokenText, getStudyLanguageConfig } from '@amgi/core';
 import type { StudyLanguage } from '@amgi/core';
 
 interface Props {
   text: string;
+  /** Japanese kana reading, when the term has one — spoken instead of `text` */
+  furigana?: string;
   studyLanguage: StudyLanguage;
   className?: string;
   size?: 'sm' | 'md';
@@ -13,7 +15,7 @@ interface Props {
 
 type Status = 'idle' | 'loading' | 'playing' | 'error';
 
-export default function PronounceButton({ text, studyLanguage, className = '', size = 'md' }: Props) {
+export default function PronounceButton({ text, furigana, studyLanguage, className = '', size = 'md' }: Props) {
   const [status, setStatus] = useState<Status>('idle');
 
   const disabled = !text.trim() || status === 'loading' || status === 'playing';
@@ -21,7 +23,7 @@ export default function PronounceButton({ text, studyLanguage, className = '', s
   async function handleClick() {
     setStatus('loading');
     try {
-      const url = await getPronunciationUrl(text, studyLanguage);
+      const url = await getPronunciationUrl(getSpokenText(text, furigana), studyLanguage);
       const audio = new Audio(url);
       audio.onended = () => setStatus('idle');
       audio.onerror = () => setStatus('error');

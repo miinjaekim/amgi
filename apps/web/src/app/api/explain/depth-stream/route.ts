@@ -1,5 +1,7 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { NextRequest } from 'next/server';
+import { getStudyLanguageConfig } from '@amgi/core';
+import { characterBreakdownInstruction } from '@/lib/characterBreakdown';
 
 export async function POST(req: NextRequest) {
   const { term, termLanguage, nativeLanguage = 'English', studyLanguage = 'Korean', translation, briefDefinition } = await req.json();
@@ -21,41 +23,27 @@ export async function POST(req: NextRequest) {
     ? `\nThe word may have multiple meanings. The user is studying only this sense${translation ? ` — "${translation}"` : ''}${briefDefinition ? `: ${briefDefinition}` : ''}. Everything you write must be about this meaning of "${term}".\n`
     : '';
 
-  let prompt: string;
+  // Registry codes are identifiers, not prose — "TraditionalChinese" reads
+  // badly inside a prompt sentence.
+  const termName = getStudyLanguageConfig(termLanguage).label;
 
-  if (studyLanguage !== 'Korean') {
-    prompt = `The user already has a one-sentence definition of "${term}" (${termLanguage}). Go deeper — but stay concise. Every sentence should earn its place.
+  // Only Han-script languages get the section, and `parseStreamedDepth` keys
+  // off the marker being present, so leaving it out needs nothing else.
+  const characters = characterBreakdownInstruction(studyLanguage);
+
+  const prompt = `The user already has a one-sentence definition of "${term}" (${termName}). Go deeper — but stay concise. Every sentence should earn its place.
 ${senseNote}Write all explanations in ${nativeLanguage}.
 
 - Definition: 2-3 sentences max. Add what the one-liner misses: connotation, nuance, how it differs from near-synonyms. Use **bold** for the single most important word or phrase — the nuance a learner must not miss. No padding.
-- Notes: what a learner actually needs to know — a usage nuance, register, etymology, or common mistake. If there are multiple distinct points, use a short bullet list. Bold the single most critical point. Skip ("none") if there's nothing genuinely useful to add.
+${characters ? `- Characters: ${characters} Otherwise write "none".\n` : ''}- Notes: what a learner actually needs to know — a cultural or usage nuance, register trap, etymology, or common mistake. If there are multiple distinct points, use a short bullet list. Bold the single most critical point. Skip ("none") if there's nothing genuinely useful to add.
 
 Respond in exactly this format with no extra text:
 
 DEFINITION:
 <definition here>
-
+${characters ? '\nCHARACTERS:\n<character breakdown or "none">\n' : ''}
 NOTES:
 <notes or "none">`;
-  } else {
-    prompt = `The user already has a one-sentence definition of "${term}" (${termLanguage}). Go deeper — but stay concise. Every sentence should earn its place.
-${senseNote}Write all explanations in ${nativeLanguage}.
-
-- Definition: 2-3 sentences max. Add what the one-liner misses: connotation, nuance, how it differs from near-synonyms. Use **bold** for the single most important word or phrase — the nuance a learner must not miss. No padding.
-- Hanja: if the term is Korean and has meaningful hanja roots, provide the breakdown. For each character include its traditional Korean hun-eum (훈음) reading — the native-Korean meaning plus the sound, e.g. 水 is "물 수" — alongside the English gloss (e.g. "葛藤: 葛 갈 (칡 갈 — kudzu vine) + 藤 등 (등나무 등 — wisteria vine) → entanglement, conflict"). Otherwise write "none".
-- Notes: what a learner actually needs to know — a cultural nuance, register trap, or common mistake. If there are multiple distinct points, use a short bullet list. Bold the single most critical point. Skip ("none") if there's nothing genuinely useful to add.
-
-Respond in exactly this format with no extra text:
-
-DEFINITION:
-<definition here>
-
-HANJA:
-<hanja breakdown or "none">
-
-NOTES:
-<notes or "none">`;
-  }
 
   const result = await model.generateContentStream(prompt);
 

@@ -494,7 +494,7 @@ export default function ReviewPage() {
                     <>
                       <div className="flex items-center gap-2 mb-2">
                         <div className="font-semibold text-2xl text-[var(--color-highlight)]">{getStudySide(currentReview.card)}</div>
-                        <PronounceButton text={getStudySide(currentReview.card)} studyLanguage={studyLanguage} />
+                        <PronounceButton text={getStudySide(currentReview.card)} furigana={currentReview.card.furigana} studyLanguage={studyLanguage} />
                       </div>
 
                       {showAnswer ? (
@@ -595,7 +595,7 @@ export default function ReviewPage() {
                         <>
                           <div className="flex items-center gap-2 mb-3 mt-4">
                             <div className="font-semibold text-2xl text-[var(--color-highlight)]">{getStudySide(currentReview.card)}</div>
-                            <PronounceButton text={getStudySide(currentReview.card)} studyLanguage={studyLanguage} />
+                            <PronounceButton text={getStudySide(currentReview.card)} furigana={currentReview.card.furigana} studyLanguage={studyLanguage} />
                           </div>
 
                           {(currentReview.card.gender || getReading(currentReview.card)) && (

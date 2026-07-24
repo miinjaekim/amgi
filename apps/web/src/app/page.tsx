@@ -11,8 +11,8 @@ import {
 } from '@/services/gemini';
 import Markdown from '@/components/Markdown';
 import { saveFlashcardToFirestore, Flashcard } from '@/services/firestore';
-import { getExampleSides, getReading, getStudyLanguageConfig, getVocabPacks, parseStreamedExamples, parseStreamedDepth, wordOfTheDayCore } from '@amgi/core';
-import type { WordOfTheDay } from '@amgi/core';
+import { getCharacterBreakdown, getExampleSides, getReading, getStudyLanguageConfig, getVocabPacks, parseStreamedExamples, parseStreamedDepth, wordOfTheDayCore } from '@amgi/core';
+import type { PackCard, WordOfTheDay } from '@amgi/core';
 import { useUser } from '@/components/UserContext';
 import { t } from '@/lib/i18n';
 import SaveFlashcardModal from '@/components/SaveFlashcardModal';
@@ -81,6 +81,34 @@ export default function Home() {
     setShowPacks(false);
     setTerm(word);
     resolveExplanation(word, context);
+  };
+
+  // A pre-authored pack card is already complete, so it goes straight to
+  // Firestore — there is nothing for /api/explain to add about あ, and asking
+  // would cost a model call per character to get prose nobody wants on the card.
+  const handlePackCard = async (card: PackCard) => {
+    if (!user) {
+      setError(t(nativeLanguage, 'signInToSave'));
+      throw new Error('not signed in');
+    }
+    const config = getStudyLanguageConfig(studyLanguage);
+    const draft: Record<string, unknown> = {
+      uid: user.uid,
+      term: card.study,
+      termLanguage: studyLanguage,
+      [config.studyField]: card.study,
+      [config.backField]: card.back,
+    };
+    // `english` is required on every card; on a deck whose back isn't English
+    // neither side above has filled it in.
+    if (draft.english === undefined) draft.english = card.study;
+    try {
+      await saveFlashcardToFirestore(draft as Omit<Flashcard, 'createdAt' | 'id'>, studyLanguage);
+      setError(null);
+    } catch (err) {
+      setError(t(nativeLanguage, 'errorSaveFlashcard'));
+      throw err;
+    }
   };
 
   useEffect(() => {
@@ -443,7 +471,7 @@ export default function Home() {
           <div className="flex items-center gap-3 mb-4 flex-wrap">
             <h2 className="text-2xl font-bold text-[var(--color-highlight)]">{core.term}</h2>
             {core.termLanguage === studyLanguage && (
-              <PronounceButton text={core.term} studyLanguage={studyLanguage} />
+              <PronounceButton text={core.term} furigana={core.furigana} studyLanguage={studyLanguage} />
             )}
             {core.formality && core.formality !== 'N/A' && (
               <span className="px-2 py-0.5 text-xs rounded-full border border-[var(--color-muted)] text-[var(--color-muted)]">
@@ -470,7 +498,7 @@ export default function Home() {
                 {translation || t(nativeLanguage, 'noTranslation')}
               </p>
               {core.termLanguage !== studyLanguage && translation && (
-                <PronounceButton text={translation} studyLanguage={studyLanguage} />
+                <PronounceButton text={translation} furigana={core.furigana} studyLanguage={studyLanguage} />
               )}
             </div>
             {core.briefDefinition && (
@@ -497,13 +525,15 @@ export default function Home() {
                 <div>
                   <h3 className="font-semibold text-[var(--color-text)] mb-1">{t(nativeLanguage, 'sectionDefinition')}</h3>
                   <Markdown className="text-[var(--color-text)] opacity-80">{depth.definition}</Markdown>
-                  {streamingDepth && !depth.hanja && !depth.notes && <span className="animate-pulse text-[var(--color-muted)]">▎</span>}
+                  {streamingDepth && !getCharacterBreakdown(depth) && !depth.notes && <span className="animate-pulse text-[var(--color-muted)]">▎</span>}
                 </div>
               )}
-              {depth.hanja && (
+              {getCharacterBreakdown(depth) && (
                 <div>
-                  <h3 className="font-semibold text-[var(--color-text)] mb-1">{t(nativeLanguage, 'sectionHanja')}</h3>
-                  <Markdown className="text-[var(--color-text)] opacity-80">{depth.hanja}</Markdown>
+                  <h3 className="font-semibold text-[var(--color-text)] mb-1">
+                    {t(nativeLanguage, langConfig.characterSectionKey ?? 'sectionHanja')}
+                  </h3>
+                  <Markdown className="text-[var(--color-text)] opacity-80">{getCharacterBreakdown(depth)!}</Markdown>
                   {streamingDepth && !depth.notes && <span className="animate-pulse text-[var(--color-muted)]">▎</span>}
                 </div>
               )}
@@ -623,7 +653,13 @@ export default function Home() {
         </div>
       )}
 
-      {showPacks && <PacksModal onClose={() => setShowPacks(false)} onSelectWord={handlePackWord} />}
+      {showPacks && (
+        <PacksModal
+          onClose={() => setShowPacks(false)}
+          onSelectWord={handlePackWord}
+          onSaveCard={handlePackCard}
+        />
+      )}
 
       {/* Goal-based word generation — placeholder until the feature lands */}
       {showGenerate && (

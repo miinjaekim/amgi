@@ -30,6 +30,15 @@ register, and familiar words carrying an unfamiliar second meaning.
 This shapes packs: they are **domains being unlocked**, never "starter" decks.
 Curated from real sources, editorially controlled, not AI-generated.
 
+**Amended 2026-07-24 — scripts are the exception.** The kana packs are
+explicitly for beginners, which the rule above would have forbidden. The line
+that actually holds: Amgi doesn't teach you vocabulary you should already have,
+but a *writing system* is a prerequisite, not vocabulary — an adult who reads
+Chinese fluently still can't read かな, and no amount of nuance helps until they
+can. Expect the same call for hangul and 注音 if those decks ever want it.
+Everything else about packs is unchanged: still curated, still not
+AI-generated, still never a "starter vocabulary" deck.
+
 ## Long-term vision
 
 Multi-media prompts (image/audio → card), social layer (shared decks,

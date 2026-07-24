@@ -2,26 +2,30 @@ import React, { useEffect, useMemo, useState } from 'react';
 import {
   Modal, View, Text, TouchableOpacity, ScrollView, StyleSheet,
 } from 'react-native';
-import { getVocabPacks, getPackText, getStudyLanguageConfig, t } from '@amgi/core';
-import type { StudyLanguage } from '@amgi/core';
+import { getVocabPacks, getPackText, getPackTerms, getStudyLanguageConfig, t } from '@amgi/core';
+import type { PackCard, StudyLanguage } from '@amgi/core';
 import { useUser } from '../context/UserContext';
 import { useTheme } from '../context/ThemeContext';
 import { fetchAllUserFlashcards } from '../services/firestore';
+import PronounceButton from './PronounceButton';
 import type { Palette } from '../theme';
 
 interface Props {
   studyLanguage: StudyLanguage;
   onClose: () => void;
   onSelectWord: (word: string, context?: string) => void;
+  /** Saves a pre-authored card. Must reject on failure so it isn't marked saved. */
+  onSaveCard: (card: PackCard) => Promise<void>;
 }
 
-export default function PacksModal({ studyLanguage, onClose, onSelectWord }: Props) {
+export default function PacksModal({ studyLanguage, onClose, onSelectWord, onSaveCard }: Props) {
   const { C } = useTheme();
   const s = useMemo(() => makeStyles(C), [C]);
   const { user, nativeLanguage } = useUser();
   const langConfig = getStudyLanguageConfig(studyLanguage);
   const packs = getVocabPacks(studyLanguage);
   const [savedTerms, setSavedTerms] = useState<Set<string> | null>(null);
+  const [savingTerm, setSavingTerm] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) { setSavedTerms(null); return; }
@@ -41,6 +45,21 @@ export default function PacksModal({ studyLanguage, onClose, onSelectWord }: Pro
     return () => { cancelled = true; };
   }, [user, studyLanguage, langConfig.studyField]);
 
+  // A pre-authored card saves in place and the modal stays open: a kana pack is
+  // 71 taps, and closing after each one would make working through it painful.
+  const handleSaveCard = async (card: PackCard) => {
+    if (savingTerm || savedTerms?.has(card.study.toLowerCase())) return;
+    setSavingTerm(card.study);
+    try {
+      await onSaveCard(card);
+      setSavedTerms(prev => new Set(prev ?? []).add(card.study.toLowerCase()));
+    } catch {
+      // The Learn screen owns the error banner; leave the tile unmarked.
+    } finally {
+      setSavingTerm(null);
+    }
+  };
+
   return (
     <Modal visible transparent animationType="fade" onRequestClose={onClose}>
       <View style={s.backdrop}>
@@ -54,8 +73,9 @@ export default function PacksModal({ studyLanguage, onClose, onSelectWord }: Pro
 
           <ScrollView contentContainerStyle={s.scroll}>
             {packs.map(pack => {
+              const terms = getPackTerms(pack);
               const savedCount = savedTerms
-                ? pack.words.filter(w => savedTerms.has(w.word.toLowerCase())).length
+                ? terms.filter(term => savedTerms.has(term.toLowerCase())).length
                 : null;
               return (
                 <View key={pack.id} style={s.pack}>
@@ -63,28 +83,58 @@ export default function PacksModal({ studyLanguage, onClose, onSelectWord }: Pro
                     <Text style={s.packName}>{getPackText(pack.name, nativeLanguage)}</Text>
                     {savedCount !== null && (
                       <Text style={s.packSaved}>
-                        {t(nativeLanguage, 'packsSaved', { added: savedCount, total: pack.words.length })}
+                        {t(nativeLanguage, 'packsSaved', { added: savedCount, total: terms.length })}
                       </Text>
                     )}
                   </View>
                   <Text style={s.packDesc}>{getPackText(pack.description, nativeLanguage)}</Text>
-                  <Text style={s.packHint}>{t(nativeLanguage, 'packTapHint')}</Text>
-                  <View style={s.wordWrap}>
-                    {pack.words.map(({ word, context }) => {
-                      const saved = savedTerms?.has(word.toLowerCase()) ?? false;
-                      return (
-                        <TouchableOpacity
-                          key={word}
-                          style={[s.wordChip, saved && s.wordChipSaved]}
-                          onPress={() => onSelectWord(word, context)}
-                        >
-                          <Text style={[s.wordChipText, saved && s.wordChipTextSaved]}>
-                            {word}{saved ? '  ✓' : ''}
-                          </Text>
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </View>
+                  <Text style={s.packHint}>
+                    {t(nativeLanguage, pack.kind === 'cards' ? 'packTapHintCards' : 'packTapHint')}
+                  </Text>
+
+                  {pack.kind === 'lookup' ? (
+                    <View style={s.wordWrap}>
+                      {pack.words.map(({ word, context }) => {
+                        const saved = savedTerms?.has(word.toLowerCase()) ?? false;
+                        return (
+                          <TouchableOpacity
+                            key={word}
+                            style={[s.wordChip, saved && s.wordChipSaved]}
+                            onPress={() => onSelectWord(word, context)}
+                          >
+                            <Text style={[s.wordChipText, saved && s.wordChipTextSaved]}>
+                              {word}{saved ? '  ✓' : ''}
+                            </Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                  ) : (
+                    <View style={s.cardWrap}>
+                      {pack.cards.map(card => {
+                        const saved = savedTerms?.has(card.study.toLowerCase()) ?? false;
+                        return (
+                          <View
+                            key={card.study}
+                            style={[s.cardTile, saved && s.wordChipSaved, savingTerm === card.study && s.cardTileSaving]}
+                          >
+                            <TouchableOpacity
+                              onPress={() => handleSaveCard(card)}
+                              disabled={saved}
+                              style={s.cardTapArea}
+                              accessibilityLabel={`Save ${card.study} (${card.back}) as a card`}
+                            >
+                              <Text style={s.cardStudy}>{card.study}</Text>
+                              <Text style={s.cardBack}>{card.back}{saved ? ' ✓' : ''}</Text>
+                            </TouchableOpacity>
+                            {pack.pronounceable && (
+                              <PronounceButton text={card.study} studyLanguage={studyLanguage} size="sm" />
+                            )}
+                          </View>
+                        );
+                      })}
+                    </View>
+                  )}
                 </View>
               );
             })}
@@ -117,5 +167,14 @@ function makeStyles(C: Palette) {
     wordChipSaved: { opacity: 0.45 },
     wordChipText: { fontSize: 14, color: C.text },
     wordChipTextSaved: { color: C.muted },
+    cardWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+    cardTile: {
+      width: 62, alignItems: 'center', paddingVertical: 4,
+      borderWidth: 1, borderColor: C.border, borderRadius: 10,
+    },
+    cardTileSaving: { opacity: 0.6 },
+    cardTapArea: { alignItems: 'center', alignSelf: 'stretch' },
+    cardStudy: { fontSize: 20, color: C.text },
+    cardBack: { fontSize: 10, color: C.muted },
   });
 }
