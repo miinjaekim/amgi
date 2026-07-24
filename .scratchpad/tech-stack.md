@@ -93,6 +93,24 @@ nothing ships between builds):
 - Native dependencies, `app.json` `plugins`/permissions/icon/bundle id
 - `version` bumps
 
+The command, from `apps/mobile` (verified 2026-07-24 cutting 1.0.2):
+
+```
+npx eas-cli build --platform ios --profile production --auto-submit --non-interactive
+```
+
+`--non-interactive` works because the App Store Connect API Key and iOS
+credentials already live on the EAS servers; it skips Apple-side validation of
+the distribution cert but builds and submits fine. Notes on the output:
+- It warns that the app "uses Expo Go for development" — expected under our
+  model, not a problem. Silence it with `EAS_BUILD_NO_EXPO_GO_WARNING=true`.
+- `appVersionSource: remote` means EAS owns the build number; bump only
+  `version` in `app.json` and let `autoIncrement` handle the rest. Check the
+  current one with `eas-cli build:version:get --platform ios`.
+- Env vars come from the **production environment on EAS**, not `.env.local`.
+- Submission ends at "uploaded to App Store Connect" — Apple processing takes
+  another 5–10 min and TestFlight distribution is separate console work.
+
 ⚠️ `runtimeVersion.policy` is `appVersion` and `build.production.channel` is
 `"default"`. Both only matter for OTA, which we don't use — leave them alone
 rather than "cleaning them up", so the option stays open.

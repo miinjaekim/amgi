@@ -16,11 +16,13 @@ verify on the phone in Expo Go as you go. Details in
 
 ## Queued for the next build
 
-- [ ] **Mobile theme parity** (PR #44) — already merged, just not on the device.
+_Last build cut: **1.0.2 / build 4**, 2026-07-24 — see [status.md](status.md).
+Nothing merged since._
+
 - [ ] **Push notifications** — needs `expo-notifications` (native module) and an
       `app.json` plugin entry. See the Medium tier for scope.
 - [ ] **App rename**, if it happens — changes `app.json` `name`/bundle id.
-      Cheaper before public launch, so it may want to ride this same build.
+      Cheaper before public launch, so it may want to ride a build.
 
 Since nothing ships between builds, this list is just "everything merged since
 the last release" — the entries below are the ones with extra prerequisites.
