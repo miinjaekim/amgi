@@ -11,7 +11,7 @@ import {
 } from '@/services/gemini';
 import Markdown from '@/components/Markdown';
 import { saveFlashcardToFirestore, Flashcard } from '@/services/firestore';
-import { getExampleSides, getReading, getStudyLanguageConfig, getVocabPacks, parseStreamedExamples, parseStreamedDepth, wordOfTheDayCore } from '@amgi/core';
+import { getCharacterBreakdown, getExampleSides, getReading, getStudyLanguageConfig, getVocabPacks, parseStreamedExamples, parseStreamedDepth, wordOfTheDayCore } from '@amgi/core';
 import type { WordOfTheDay } from '@amgi/core';
 import { useUser } from '@/components/UserContext';
 import { t } from '@/lib/i18n';
@@ -497,13 +497,15 @@ export default function Home() {
                 <div>
                   <h3 className="font-semibold text-[var(--color-text)] mb-1">{t(nativeLanguage, 'sectionDefinition')}</h3>
                   <Markdown className="text-[var(--color-text)] opacity-80">{depth.definition}</Markdown>
-                  {streamingDepth && !depth.hanja && !depth.notes && <span className="animate-pulse text-[var(--color-muted)]">▎</span>}
+                  {streamingDepth && !getCharacterBreakdown(depth) && !depth.notes && <span className="animate-pulse text-[var(--color-muted)]">▎</span>}
                 </div>
               )}
-              {depth.hanja && (
+              {getCharacterBreakdown(depth) && (
                 <div>
-                  <h3 className="font-semibold text-[var(--color-text)] mb-1">{t(nativeLanguage, 'sectionHanja')}</h3>
-                  <Markdown className="text-[var(--color-text)] opacity-80">{depth.hanja}</Markdown>
+                  <h3 className="font-semibold text-[var(--color-text)] mb-1">
+                    {t(nativeLanguage, langConfig.characterSectionKey ?? 'sectionHanja')}
+                  </h3>
+                  <Markdown className="text-[var(--color-text)] opacity-80">{getCharacterBreakdown(depth)!}</Markdown>
                   {streamingDepth && !depth.notes && <span className="animate-pulse text-[var(--color-muted)]">▎</span>}
                 </div>
               )}

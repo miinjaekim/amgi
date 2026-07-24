@@ -35,6 +35,12 @@ export type DirectionPromptKey =
   | 'promptEnglishToJapanese'
   | 'promptTraditionalChineseToEnglish'
   | 'promptEnglishToTraditionalChinese';
+/**
+ * i18n keys for the character-breakdown section heading. Every Han-script
+ * language gets its own key because English names the script differently per
+ * language (hanja / kanji / hanzi), even where Korean does not.
+ */
+export type CharacterSectionKey = 'sectionHanja' | 'sectionKanji' | 'sectionHanzi';
 export type FieldLabelKey =
   | 'labelKorean'
   | 'labelEnglish'
@@ -77,6 +83,12 @@ export interface StudyLanguageConfig {
   promptFrontToBackKey: DirectionPromptKey;
   promptBackToFrontKey: DirectionPromptKey;
   /**
+   * Section heading for the per-character breakdown, on languages written with
+   * Han characters. Absent means the language has no characters to break down,
+   * and the depth prompt leaves the section out entirely.
+   */
+  characterSectionKey?: CharacterSectionKey;
+  /**
    * Google Cloud TTS language code + voice name for pronunciation audio, if
    * supported. Chirp 3: HD wherever the locale has one — `cmn-TW` doesn't, so
    * Traditional Chinese takes a WaveNet voice rather than a Mainland accent.
@@ -100,6 +112,7 @@ export const STUDY_LANGUAGE_CONFIGS: Record<StudyLanguage, StudyLanguageConfig> 
     directionBackToFrontKey: 'directionEnglishToKorean',
     promptFrontToBackKey: 'promptKoreanToEnglish',
     promptBackToFrontKey: 'promptEnglishToKorean',
+    characterSectionKey: 'sectionHanja',
     ttsLanguageCode: 'ko-KR',
     ttsVoiceName: 'ko-KR-Chirp3-HD-Charon',
   },
@@ -151,6 +164,7 @@ export const STUDY_LANGUAGE_CONFIGS: Record<StudyLanguage, StudyLanguageConfig> 
     directionBackToFrontKey: 'directionEnglishToJapanese',
     promptFrontToBackKey: 'promptJapaneseToEnglish',
     promptBackToFrontKey: 'promptEnglishToJapanese',
+    characterSectionKey: 'sectionKanji',
     ttsLanguageCode: 'ja-JP',
     ttsVoiceName: 'ja-JP-Chirp3-HD-Charon',
   },
@@ -168,6 +182,7 @@ export const STUDY_LANGUAGE_CONFIGS: Record<StudyLanguage, StudyLanguageConfig> 
     directionBackToFrontKey: 'directionEnglishToTraditionalChinese',
     promptFrontToBackKey: 'promptTraditionalChineseToEnglish',
     promptBackToFrontKey: 'promptEnglishToTraditionalChinese',
+    characterSectionKey: 'sectionHanzi',
     // `cmn-TW` has no Chirp 3: HD voice, so this is WaveNet against
     // `cmn-CN-Chirp3-HD-Charon`: a Taiwanese accent in an older voice, or a
     // better voice with a Mainland one. Accent fidelity is the point of audio
@@ -230,8 +245,26 @@ export interface TermCore {
 
 export interface TermDepth {
   definition?: string;
+  /**
+   * Per-character breakdown for a Han-script term — what each character means
+   * and how it reads inside this word. Not `hanja`: Korean, Japanese and
+   * Chinese all want this section, and only one of them calls it hanja.
+   */
+  characterBreakdown?: string;
+  /**
+   * @deprecated Korean cards saved before the field was generalized. Never
+   * write it; read it through `getCharacterBreakdown()`, which is why those
+   * cards need no migration.
+   */
   hanja?: string;
   notes?: string;
+}
+
+/** The character breakdown to render, from either the current or legacy field. */
+export function getCharacterBreakdown(
+  depth: Pick<TermDepth, 'characterBreakdown' | 'hanja'>
+): string | undefined {
+  return depth.characterBreakdown || depth.hanja || undefined;
 }
 
 export interface TermExplanation extends TermCore, TermDepth {

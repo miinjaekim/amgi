@@ -2,7 +2,7 @@
 import { useEffect } from 'react';
 import { Flashcard } from '@/services/firestore';
 import { ExamplePair } from '@/services/gemini';
-import { getBackSide, getExampleSides, getReading, getStudyLangSide } from '@amgi/core';
+import { getBackSide, getCharacterBreakdown, getExampleSides, getReading, getStudyLangSide, getStudyLanguageConfig } from '@amgi/core';
 import Markdown from '@/components/Markdown';
 import { t } from '@/lib/i18n';
 import PronounceButton from '@/components/PronounceButton';
@@ -24,7 +24,9 @@ export default function CardDetailModal({ card, nativeLanguage, onClose }: Props
     return () => document.removeEventListener('keydown', handler);
   }, [onClose]);
 
-  const hasDetails = card.definition || card.hanja || card.notes || (card.examples && card.examples.length > 0);
+  const characterBreakdown = getCharacterBreakdown(card);
+  const characterSectionKey = getStudyLanguageConfig(card.studyLanguage).characterSectionKey ?? 'sectionHanja';
+  const hasDetails = card.definition || characterBreakdown || card.notes || (card.examples && card.examples.length > 0);
 
   return (
     <div
@@ -90,12 +92,12 @@ export default function CardDetailModal({ card, nativeLanguage, onClose }: Props
                 </div>
               )}
 
-              {card.hanja && (
+              {characterBreakdown && (
                 <div>
                   <h3 className="text-xs font-semibold uppercase tracking-widest mb-2" style={{ color: 'var(--color-muted)' }}>
-                    {t(nativeLanguage, 'sectionHanja')}
+                    {t(nativeLanguage, characterSectionKey)}
                   </h3>
-                  <Markdown className="text-sm text-[var(--color-text)]">{card.hanja}</Markdown>
+                  <Markdown className="text-sm text-[var(--color-text)]">{characterBreakdown}</Markdown>
                 </div>
               )}
 

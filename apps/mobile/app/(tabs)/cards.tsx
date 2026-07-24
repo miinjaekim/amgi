@@ -12,7 +12,7 @@ import {
   deleteFlashcard, updateFlashcardFields,
 } from '../../src/services/firestore';
 import type { Flashcard } from '../../src/services/firestore';
-import { t, getStudyLanguageConfig, getStudyLangSide, getBackSide, getExampleSides } from '@amgi/core';
+import { t, getCharacterBreakdown, getStudyLanguageConfig, getStudyLangSide, getBackSide, getExampleSides } from '@amgi/core';
 import type { CardSideField } from '@amgi/core';
 import { useTheme } from '../../src/context/ThemeContext';
 import { useFloatingTabBarHeight } from '../../src/components/FloatingTabBar';
@@ -140,7 +140,7 @@ export default function CardsScreen() {
   };
 
   const exportCSV = () => {
-    const rows = [[config.label, config.backLanguage, 'Formality', 'Definition', 'Hanja', 'Notes', 'Examples', 'Saved', 'Status']];
+    const rows = [[config.label, config.backLanguage, 'Formality', 'Definition', 'Characters', 'Notes', 'Examples', 'Saved', 'Status']];
     for (const c of allCards) {
       const examples = c.examples?.map(e => {
         const sides = getExampleSides(e, studyLanguage);
@@ -149,7 +149,7 @@ export default function CardsScreen() {
       const saved = c.createdAt instanceof Date ? c.createdAt.toISOString().slice(0, 10) : '';
       rows.push([
         getStudyLangSide(c), getBackSide(c), c.formality || '', c.definition || '',
-        c.hanja || '', c.notes || '', examples, saved, c.archived ? 'archived' : 'active',
+        getCharacterBreakdown(c) || '', c.notes || '', examples, saved, c.archived ? 'archived' : 'active',
       ]);
     }
     const csv = rows.map(r => r.map(v => `"${v.replace(/"/g, '""')}"`).join(',')).join('\n');

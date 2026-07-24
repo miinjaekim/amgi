@@ -12,6 +12,8 @@ const translations = {
     sectionDefinition: 'Definition',
     sectionContext: 'Cultural/Social Context',
     sectionHanja: 'Hanja Breakdown',
+    sectionKanji: 'Kanji Breakdown',
+    sectionHanzi: 'Character Breakdown',
     sectionExamples: 'Example Usage',
     loadDefinition: 'Dig deeper',
     loadExamples: 'Load Examples',
@@ -194,7 +196,11 @@ const translations = {
     noTranslation: '번역이 없습니다.',
     sectionDefinition: '정의',
     sectionContext: '문화/사회적 맥락',
+    // All three scripts are 한자 to a Korean speaker — the distinction the
+    // English labels draw doesn't exist here, so they deliberately collapse.
     sectionHanja: '한자 분석',
+    sectionKanji: '한자 분석',
+    sectionHanzi: '한자 분석',
     sectionExamples: '예문',
     loadDefinition: '더 알아보기',
     loadExamples: '예문 불러오기',

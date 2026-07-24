@@ -11,8 +11,8 @@ import {
   streamTermDepth, streamTermExamples,
 } from '../../src/services/gemini';
 import {
-  getDepthTarget, getReading, getStudyLanguageConfig, getExampleSides, getVocabPacks,
-  parseStreamedDepth, parseStreamedExamples, wordOfTheDayCore,
+  getCharacterBreakdown, getDepthTarget, getReading, getStudyLanguageConfig, getExampleSides,
+  getVocabPacks, parseStreamedDepth, parseStreamedExamples, wordOfTheDayCore,
 } from '@amgi/core';
 import type { StudyLanguage } from '@amgi/core';
 import type { TermCore, TermDepth, TermAmbiguous, ExamplePair, WordOfTheDay } from '../../src/services/gemini';
@@ -539,10 +539,12 @@ export default function LearnScreen() {
                       <Markdown>{depth.definition}</Markdown>
                     </>
                   )}
-                  {depth.hanja && (
+                  {getCharacterBreakdown(depth) && (
                     <>
-                      <Text style={s.sectionLabel}>{t(nativeLanguage, 'sectionHanja')}</Text>
-                      <Markdown>{depth.hanja}</Markdown>
+                      <Text style={s.sectionLabel}>
+                        {t(nativeLanguage, langConfig.characterSectionKey ?? 'sectionHanja')}
+                      </Text>
+                      <Markdown>{getCharacterBreakdown(depth)!}</Markdown>
                     </>
                   )}
                   {depth.notes && (
