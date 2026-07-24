@@ -1,6 +1,6 @@
 # Project Status
 
-_Reconciled against `main` @ `f90e7d1` on 2026-07-23._
+_Reconciled against `main` @ `6e9f3e9` on 2026-07-24, plus the 1.0.2 release cut._
 
 ## Shipped
 
@@ -105,8 +105,8 @@ _Reconciled against `main` @ `f90e7d1` on 2026-07-23._
   TestFlight.
 - **Mobile theme parity** (PR #44, 2026-07-22) — mobile theme options matched to
   web; `THEMES` now carries its own `labelKey` instead of a separate lookup map.
-  Merged but **not yet visible on the device** — it was held back from the last
-  build as a deliberate OTA test, and the update didn't arrive. See Known Issues.
+  Held back from the previous build as a deliberate OTA test, which never
+  arrived; **reaches the device in 1.0.2** (below).
 
 ### Demo-blocking fixes
 - **Native/study language collision + WOTD repeats + WOTD save drift**
@@ -137,6 +137,31 @@ _Reconciled against `main` @ `f90e7d1` on 2026-07-23._
   show a skeleton at the WOTD tile's real height while it loads, which removes
   the reflow that caused the overlap in the first place.
 
+## Builds
+
+Under the no-OTA model every mobile change reaches users through one of these,
+so this is the record of what actually landed on the phone and when.
+
+| Version | Build | Date | Cut from |
+|---|---|---|---|
+| 1.0.2 | 4 | 2026-07-24 | `0288136` — version bump on `release/mobile-1.0.2` |
+| 1.0.1 | 3 | 2026-07-21 | `a85270d` — merge of PR #43 (EAS channel fix) |
+| 1.0.1 | 2 | 2026-07-21 | `4d217f3` — runtimeVersion pin, pre-channel-fix |
+| 1.0.0 | 1 | 2026-07-17/18 | `db8a6ea` — merge of PR #37; two builds off the same commit |
+
+Build 3 is the binary that was in TestFlight before this release, so **1.0.2 is
+the first build carrying anything merged after 2026-07-21** — mobile theme
+parity (PR #44), the Learn empty state + WOTD loading skeleton fixes, and the
+language-collision / WOTD batch (PR #47).
+
+**1.0.2** — EAS build `39eb6ad6`, submitted to App Store Connect and accepted
+for processing. ⚠️ What's *not* knowable from the repo: whether Apple finished
+processing, and whether the build was actually distributed to testers. Confirm
+in the console before assuming testers have it.
+
+Not yet verified on the build itself (the checklist item that can only be done
+on a real binary, not Expo Go): pronunciation audio, CSV/Anki export, sharing.
+
 ## In Progress
 
 - **iOS TestFlight external testing** — the code and infrastructure side is
@@ -155,9 +180,8 @@ _Reconciled against `main` @ `f90e7d1` on 2026-07-23._
 
 Root-caused and queued in [backlog.md](backlog.md) — see there for scope.
 
-_(The two mobile Learn defects that sat here are fixed on
-`fix/mobile-learn-empty-state` — see the Shipped list. They reach the phone
-with the next build, not before.)_
+_(The two mobile Learn defects that sat here are fixed and shipped in
+1.0.2 — see Builds.)_
 
 Parked, not fixed:
 - **OTA updates never reached the device** — CI published PR #44 successfully
