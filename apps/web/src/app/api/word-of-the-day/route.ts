@@ -10,6 +10,31 @@ function stripMarkdownCodeBlock(text: string): string {
 /** How far back to look when keeping the daily word from repeating. */
 const EXCLUSION_DAYS = 60;
 
+/**
+ * Asking the model to "vary the domain" doesn't work — it settles on whichever
+ * domain is listed first (early runs came back almost entirely feelings, with
+ * no concrete nouns at all). Assigning one per day makes the spread a property
+ * of the rotation instead of the model's discipline.
+ */
+const WORD_DOMAINS = [
+  'feelings and social dynamics',
+  'work, study, and getting things done',
+  'food, cooking, and eating',
+  'home, errands, and daily routine',
+  'describing people and personalities',
+  'talking, explaining, and disagreeing',
+  'movement, travel, and places',
+  'time, plans, and change',
+  'money, shopping, and value',
+  'the body, health, and energy',
+];
+
+function domainFor(date: string): string {
+  const days = Math.floor(Date.parse(`${date}T00:00:00Z`) / 86_400_000);
+  const index = ((days % WORD_DOMAINS.length) + WORD_DOMAINS.length) % WORD_DOMAINS.length;
+  return WORD_DOMAINS[index];
+}
+
 function docIdFor(date: string, studyLanguage: string, nativeLanguage: string): string {
   return `${date}_${studyLanguage}_${nativeLanguage}`.replace(/[^\w.-]/g, '_');
 }
@@ -47,8 +72,15 @@ async function recentTerms(
 // pair) generates and stores the word, everyone else reads it back. The CDN
 // header below is only a fast-path — a cache miss re-reads Firestore and
 // serves the same word, so consistency doesn't depend on cache behavior.
+//
+// It was a 24h shared cache, which meant the day's word could not be corrected
+// once served: deleting the Firestore document changed nothing until the CDN
+// entry expired. Since the document already prevents the repeat Gemini call,
+// a long TTL was only saving one cheap document read, so it is now short
+// enough to fix a bad word the same day. `max-age=0` keeps browsers
+// revalidating so a reload reflects the change too.
 const CACHE_HEADERS = {
-  'Cache-Control': 'public, s-maxage=86400, stale-while-revalidate=3600',
+  'Cache-Control': 'public, max-age=0, must-revalidate, s-maxage=300, stale-while-revalidate=60',
 };
 
 export async function GET(req: NextRequest) {
@@ -106,13 +138,19 @@ export async function GET(req: NextRequest) {
     ? `\nAlready used — do NOT pick any of these, or any minor variant of them:\n${used.join(', ')}\n`
     : '';
 
-  const buildPrompt = (insist: boolean) => `You are picking the "word of the day" (${date}) for learners of ${studyLanguage}.
+  const buildPrompt = (insist: boolean) => `You are picking the "word of the day" for learners of ${studyLanguage}.
 
 Pick ONE ${studyLanguage} word or short expression.
 
-Hard requirement — practical value: it must be a word an intermediate learner would encounter often in everyday conversation, media, or daily life, or need often when speaking. Avoid absolute-beginner vocabulary (greetings, numbers, colors) and obscure, archaic, or academic terms.
+Hard requirement — the word must be genuinely useful. An intermediate learner should meet it often in everyday conversation, media, or daily life, or need it often when speaking. If a word is interesting but a learner would rarely encounter or use it, do not pick it. Avoid absolute-beginner vocabulary (greetings, numbers, colors) and equally avoid obscure, archaic, literary, or academic terms.
 
-Preference — date relevance: if ${date} falls on or near a holiday, observance, season, or notable annual event in places where ${studyLanguage} is spoken, prefer a common word naturally connected to it (a seasonal weather word, a holiday food, an activity typical of this time of year). The date-relevant word must still satisfy the hard requirement above — never drop to beginner vocabulary or reach for a rare word just to match the date. If nothing fits, pick any high-value word: culturally revealing, hard to translate directly, or highly useful in daily conversation.
+Among words that clear that bar, prefer ones a learner gains most from being taught: where a one-word translation is insufficient, or that carry a nuance or usage rule they would otherwise get subtly wrong. This is a tiebreaker between useful words — never a reason to pick a rare or untranslatable word over a common one.
+
+Today's domain is: ${domainFor(date)}. Pick a word that belongs to it. If that domain genuinely has no useful word left that isn't already excluded below, pick the most useful word you can from anywhere — usefulness outranks the domain.
+
+Also vary the part of speech from the recent picks below, rather than returning another word of the same kind.
+
+Do not pick a word because of the time of year. Seasons, weather, and holidays are not reasons to prefer a word.
 ${exclusionBlock}${insist ? '\nYour previous answer was on the already-used list. Pick a genuinely different word this time.\n' : ''}
 Respond with only this JSON:
 {
