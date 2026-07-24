@@ -1,5 +1,6 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { NextRequest, NextResponse } from 'next/server';
+import { getStudyLanguageConfig } from '@amgi/core';
 
 function stripMarkdownCodeBlock(text: string): string {
   return text.replace(/```[a-zA-Z]*\n?|```/g, '').trim();
@@ -37,11 +38,19 @@ The learner gave this feedback on it: "${feedback.trim()}"
 Generate a new list that addresses the feedback. Keep previous words that still fit; replace the rest.`
     : '';
 
-  const prompt = `A learner of ${studyLanguage} described why they are learning:
+  // Registry codes are identifiers, not prose — "TraditionalChinese" reads
+  // badly in a prompt and says nothing about which script to write in.
+  const languageName = getStudyLanguageConfig(studyLanguage).label;
+  const scriptNote =
+    studyLanguage === 'TraditionalChinese'
+      ? ' Write every word in Traditional characters (繁體字) as used in Taiwan, never Simplified (简体字).'
+      : '';
+
+  const prompt = `A learner of ${languageName} described why they are learning:
 
 "${goal}"
 
-Build a starter vocabulary list of exactly ${listSize} ${studyLanguage} words or short expressions tailored to that goal. Prioritize words the learner will actually use for this goal, ordered from most to least essential. Single words or short set phrases only — no full sentences, no duplicates, no romanization.${refinement}
+Build a starter vocabulary list of exactly ${listSize} ${languageName} words or short expressions tailored to that goal.${scriptNote} Prioritize words the learner will actually use for this goal, ordered from most to least essential. Single words or short set phrases only — no full sentences, no duplicates, no romanization.${refinement}
 
 Respond with only this JSON:
 { "words": ["word1", "word2", ...] }`;

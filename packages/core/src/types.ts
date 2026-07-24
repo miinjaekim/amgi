@@ -1,4 +1,16 @@
-export type StudyLanguage = 'Korean' | 'Swedish' | 'English' | 'French' | 'Japanese';
+/**
+ * Traditional and Simplified Chinese are separate study languages rather than
+ * one language with a script preference: the decks stay independent, so
+ * neither constrains the other, and regional vocabulary differences go beyond
+ * the glyphs. A Simplified deck would be its own registry entry.
+ */
+export type StudyLanguage =
+  | 'Korean'
+  | 'Swedish'
+  | 'English'
+  | 'French'
+  | 'Japanese'
+  | 'TraditionalChinese';
 
 // i18n keys used for review directions/prompts — must exist in i18n.ts
 export type DirectionLabelKey =
@@ -9,7 +21,9 @@ export type DirectionLabelKey =
   | 'directionFrenchToEnglish'
   | 'directionEnglishToFrench'
   | 'directionJapaneseToEnglish'
-  | 'directionEnglishToJapanese';
+  | 'directionEnglishToJapanese'
+  | 'directionTraditionalChineseToEnglish'
+  | 'directionEnglishToTraditionalChinese';
 export type DirectionPromptKey =
   | 'promptKoreanToEnglish'
   | 'promptEnglishToKorean'
@@ -18,10 +32,24 @@ export type DirectionPromptKey =
   | 'promptFrenchToEnglish'
   | 'promptEnglishToFrench'
   | 'promptJapaneseToEnglish'
-  | 'promptEnglishToJapanese';
-export type FieldLabelKey = 'labelKorean' | 'labelEnglish' | 'labelSwedish' | 'labelFrench' | 'labelJapanese';
+  | 'promptEnglishToJapanese'
+  | 'promptTraditionalChineseToEnglish'
+  | 'promptEnglishToTraditionalChinese';
+export type FieldLabelKey =
+  | 'labelKorean'
+  | 'labelEnglish'
+  | 'labelSwedish'
+  | 'labelFrench'
+  | 'labelJapanese'
+  | 'labelTraditionalChinese';
 
-export type CardSideField = 'korean' | 'swedish' | 'english' | 'french' | 'japanese';
+export type CardSideField =
+  | 'korean'
+  | 'swedish'
+  | 'english'
+  | 'french'
+  | 'japanese'
+  | 'traditionalChinese';
 
 /**
  * Per-study-language configuration. Adding a language means adding an entry
@@ -116,6 +144,21 @@ export const STUDY_LANGUAGE_CONFIGS: Record<StudyLanguage, StudyLanguageConfig> 
     promptFrontToBackKey: 'promptJapaneseToEnglish',
     promptBackToFrontKey: 'promptEnglishToJapanese',
   },
+  TraditionalChinese: {
+    code: 'TraditionalChinese',
+    label: 'Chinese (Traditional)',
+    labelNative: '繁體中文',
+    collection: 'cards_chinese_traditional',
+    studyField: 'traditionalChinese',
+    backField: 'english',
+    backLanguage: 'English',
+    studyLabelKey: 'labelTraditionalChinese',
+    backLabelKey: 'labelEnglish',
+    directionFrontToBackKey: 'directionTraditionalChineseToEnglish',
+    directionBackToFrontKey: 'directionEnglishToTraditionalChinese',
+    promptFrontToBackKey: 'promptTraditionalChineseToEnglish',
+    promptBackToFrontKey: 'promptEnglishToTraditionalChinese',
+  },
   // English study pairs with Korean — the only non-English native language
   // supported today. A native-Korean learner's card back is Korean.
   English: {
@@ -147,21 +190,24 @@ export interface ExamplePair {
   swedish?: string;
   french?: string;
   japanese?: string;
+  traditionalChinese?: string;
   english: string;
 }
 
 export interface TermCore {
   term: string;
-  termLanguage: 'Korean' | 'English' | 'Swedish' | 'French' | 'Japanese';
+  termLanguage: StudyLanguage;
   korean?: string;
   swedish?: string;
   french?: string;
   japanese?: string;
+  traditionalChinese?: string;
   english: string;
   translation?: string;
   formality?: string;
   gender?: string; // grammatical gender: Swedish 'en'/'ett', French 'le'/'la'
   furigana?: string; // Japanese kana reading, present when the term contains kanji
+  pinyin?: string; // Traditional Chinese reading, tone-marked
   briefDefinition?: string;
 }
 
@@ -183,7 +229,7 @@ export interface DisambiguationMeaning {
 export interface TermAmbiguous {
   ambiguous: true;
   term: string;
-  termLanguage: 'Korean' | 'English' | 'Swedish';
+  termLanguage: StudyLanguage;
   meanings: DisambiguationMeaning[];
 }
 
@@ -240,6 +286,17 @@ export function getExampleStudyLangText(ex: ExamplePair, studyLanguage?: StudyLa
   return ex.korean ?? ex.swedish ?? '';
 }
 
+/**
+ * The pronunciation reading to show as a badge beside a term, if the study
+ * language has one — Japanese furigana, Traditional Chinese pinyin. A card
+ * only ever carries the field belonging to its own language, so the next
+ * reading-bearing language is one entry here rather than another conditional
+ * at every render site.
+ */
+export function getReading(card: Pick<TermCore, 'furigana' | 'pinyin'>): string | undefined {
+  return card.furigana || card.pinyin || undefined;
+}
+
 /** Splits an example pair into its study-language and translation sides. */
 export function getExampleSides(
   ex: ExamplePair,
@@ -257,7 +314,18 @@ export function getExampleSides(
  * they already understand.
  */
 export function getDepthTarget(
-  core: Pick<TermCore, 'term' | 'termLanguage' | 'korean' | 'swedish' | 'french' | 'japanese' | 'english' | 'briefDefinition'>,
+  core: Pick<
+    TermCore,
+    | 'term'
+    | 'termLanguage'
+    | 'korean'
+    | 'swedish'
+    | 'french'
+    | 'japanese'
+    | 'traditionalChinese'
+    | 'english'
+    | 'briefDefinition'
+  >,
   studyLanguage: StudyLanguage = 'Korean'
 ): { term: string; termLanguage: string; translation?: string; briefDefinition?: string } {
   const config = getStudyLanguageConfig(studyLanguage);
@@ -285,6 +353,7 @@ export interface WordOfTheDay {
   formality?: string; // Korean
   gender?: string; // Swedish/French
   furigana?: string; // Japanese
+  pinyin?: string; // Traditional Chinese
   /**
    * The explanation to show when the card is tapped, generated and stored
    * alongside the word so the tap is a read rather than a second, independently
@@ -312,6 +381,7 @@ export function wordOfTheDayCore(wotd: WordOfTheDay, studyLanguage: StudyLanguag
     formality: wotd.formality,
     gender: wotd.gender,
     furigana: wotd.furigana,
+    pinyin: wotd.pinyin,
   };
   // A field the model left out must be dropped, not carried as undefined:
   // this object is written to Firestore, which rejects undefined values.
@@ -400,7 +470,7 @@ export function resolveNativeLanguage(
     return previousStudyLanguage;
   }
   // Previously studying something we don't support as a native language
-  // (Swedish, French, Japanese) — fall back to any native that isn't the
-  // language they just chose to study.
+  // (Swedish, French, Japanese, Traditional Chinese) — fall back to any
+  // native that isn't the language they just chose to study.
   return SUPPORTED_NATIVE_LANGUAGES.find((l) => l.code !== nextStudyLanguage)!.code;
 }

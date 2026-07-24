@@ -43,6 +43,14 @@ _Reconciled against `main` @ `6e9f3e9` on 2026-07-24, plus the 1.0.2 release cut
   cover all five languages.
 - **Review language-switch fix** (2026-07-08) — the review page load effect now
   depends on `studyLanguage`, so switching no longer shows the previous deck.
+- **Traditional Chinese** (`feat/traditional-chinese`, 2026-07-24) — sixth study
+  language: `cards_chinese_traditional`, `traditionalChinese` study field, and a
+  `pinyin` reading badge alongside Japanese's `furigana` via the shared
+  `getReading()` helper. `/api/explain` detects Han script server-side and the
+  prompt converts Simplified input to Traditional. Simplified is deliberately
+  left as a possible future registry entry, not a script toggle — see
+  `data-model.md`. ⚠️ Security rules + the `archived + createdAt` composite index
+  for `cards_chinese_traditional` still need adding in the Firebase console.
 
 ### Design & polish
 - **Design system** — Forest/Sonokai/Paper/System themes, Source Code Pro,

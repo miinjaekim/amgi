@@ -35,6 +35,11 @@ describe('wordOfTheDayCore', () => {
     expect(wordOfTheDayCore({ term: '木漏れ日', english: 'sunlight through leaves' }, 'Japanese')).toMatchObject({
       japanese: '木漏れ日', english: 'sunlight through leaves',
     });
+    expect(
+      wordOfTheDayCore({ term: '緣分', english: 'fated connection', pinyin: 'yuánfèn' }, 'TraditionalChinese')
+    ).toMatchObject({
+      traditionalChinese: '緣分', english: 'fated connection', pinyin: 'yuánfèn',
+    });
   });
 
   it('uses the Korean side as the back for English study', () => {

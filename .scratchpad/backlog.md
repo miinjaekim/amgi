@@ -108,18 +108,11 @@ regressions are easy to miss.
 - [ ] **Grid view for cards** — an alternative to the current list on the Cards
       page. Denser scanning of a large deck.
 
-- [ ] **Traditional Mandarin as a study language** — a registry entry in
-      `STUDY_LANGUAGE_CONFIGS` + an `/api/explain` prompt branch + i18n keys +
-      the two manual Firestore steps (rules, composite index). Traditional
-      characters specifically, so decide up front how it relates to a possible
-      future Simplified variant — separate study language, or one language with
-      a script preference? That choice is hard to reverse once cards exist.
-      Also worth a per-character breakdown section like Korean's hanja, which
-      shares work with the Japanese kanji item below.
-
-- [ ] **Japanese kanji breakdown section** — Japanese depth currently uses the
-      generic (no-hanja) prompt; add a per-character kanji section like Korean's
-      hanja breakdown. Needs a new stream marker + parser support.
+- [ ] **Kanji / hanzi breakdown section** — Japanese and Traditional Chinese
+      depth both use the generic (no-hanja) prompt; add a per-character section
+      like Korean's hanja breakdown. Needs a new stream marker + parser support.
+      One piece of work covering both: they share the character set, and
+      Chinese wants pronunciation-per-character where Japanese wants readings.
 
 - [ ] **Japanese basics: kana onboarding** — complete beginners need
       hiragana/katakana before vocab. Likely a dedicated kana study/reference
@@ -150,6 +143,9 @@ regressions are easy to miss.
 - [ ] **Pronunciation audio beyond Korean** — `expo-audio` is already installed, so this is voices + config only. — pick a Chirp 3: HD voice per
       language and add it to `STUDY_LANGUAGE_CONFIGS`. Everything else is
       already generic; other languages return a clean "not available" today.
+      Traditional Chinese is the strongest candidate — tones make audio worth
+      more there than the pinyin badge alone conveys; `cmn-TW` is the voice
+      locale to pick, not `cmn-CN`.
 
 - [ ] **Push notifications — WOTD and streaks** — daily review reminders, the
       word of the day, and streak-at-risk nudges. Its prerequisite is met — the

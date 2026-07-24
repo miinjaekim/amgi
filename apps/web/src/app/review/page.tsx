@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { useUser } from '@/components/UserContext';
 import { fetchUserFlashcards, getCardsCollection, Flashcard, ReviewTracking, migrateExistingCards, archiveFlashcard, deleteFlashcard } from '@/services/firestore';
-import { getBackSide, getExampleSides, getStudyLanguageConfig } from '@amgi/core';
+import { getBackSide, getExampleSides, getReading, getStudyLanguageConfig } from '@amgi/core';
 import { db } from '@/config/firebase';
 import { doc, updateDoc } from 'firebase/firestore';
 import { getNextReviewData } from '@/services/sm2';
@@ -503,16 +503,16 @@ export default function ReviewPage() {
                             <div className="text-lg mb-3 text-[var(--color-text)] font-semibold">{getBackSide(currentReview.card)}</div>
                           )}
 
-                          {(currentReview.card.gender || currentReview.card.furigana) && (
+                          {(currentReview.card.gender || getReading(currentReview.card)) && (
                             <div className="mb-3 flex gap-2 flex-wrap">
                               {currentReview.card.gender && (
                                 <span className="px-2 py-0.5 text-xs rounded-full border border-[var(--color-muted)] text-[var(--color-muted)]">
                                   {currentReview.card.gender}
                                 </span>
                               )}
-                              {currentReview.card.furigana && (
+                              {getReading(currentReview.card) && (
                                 <span className="px-2 py-0.5 text-xs rounded-full border border-[var(--color-muted)] text-[var(--color-muted)]">
-                                  {currentReview.card.furigana}
+                                  {getReading(currentReview.card)}
                                 </span>
                               )}
                             </div>
@@ -598,16 +598,16 @@ export default function ReviewPage() {
                             <PronounceButton text={getStudySide(currentReview.card)} studyLanguage={studyLanguage} />
                           </div>
 
-                          {(currentReview.card.gender || currentReview.card.furigana) && (
+                          {(currentReview.card.gender || getReading(currentReview.card)) && (
                             <div className="mb-3 flex gap-2 flex-wrap">
                               {currentReview.card.gender && (
                                 <span className="px-2 py-0.5 text-xs rounded-full border border-[var(--color-muted)] text-[var(--color-muted)]">
                                   {currentReview.card.gender}
                                 </span>
                               )}
-                              {currentReview.card.furigana && (
+                              {getReading(currentReview.card) && (
                                 <span className="px-2 py-0.5 text-xs rounded-full border border-[var(--color-muted)] text-[var(--color-muted)]">
-                                  {currentReview.card.furigana}
+                                  {getReading(currentReview.card)}
                                 </span>
                               )}
                             </div>

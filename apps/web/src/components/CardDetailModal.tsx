@@ -2,7 +2,7 @@
 import { useEffect } from 'react';
 import { Flashcard } from '@/services/firestore';
 import { ExamplePair } from '@/services/gemini';
-import { getBackSide, getExampleSides, getStudyLangSide } from '@amgi/core';
+import { getBackSide, getExampleSides, getReading, getStudyLangSide } from '@amgi/core';
 import Markdown from '@/components/Markdown';
 import { t } from '@/lib/i18n';
 import PronounceButton from '@/components/PronounceButton';
@@ -53,9 +53,9 @@ export default function CardDetailModal({ card, nativeLanguage, onClose }: Props
                   {card.gender}
                 </span>
               )}
-              {card.furigana && (
+              {getReading(card) && (
                 <span className="px-2 py-0.5 text-xs rounded-full border" style={{ borderColor: 'var(--color-muted)', color: 'var(--color-muted)' }}>
-                  {card.furigana}
+                  {getReading(card)}
                 </span>
               )}
             </div>

@@ -26,6 +26,13 @@ describe('parseStreamedExamples', () => {
     expect(parseStreamedExamples(text, 'Japanese')).toHaveLength(1);
   });
 
+  it('parses Traditional Chinese study pairs', () => {
+    const text = '{"traditionalChinese":"我們很有緣分。","english":"We are fated to meet."}';
+    const result = parseStreamedExamples(text, 'TraditionalChinese');
+    expect(result).toHaveLength(1);
+    expect(result[0].traditionalChinese).toBe('我們很有緣分。');
+  });
+
   it('parses English study pairs (Korean back side)', () => {
     const text = '{"english":"I tend to procrastinate.","korean":"저는 미루는 경향이 있어요."}';
     const result = parseStreamedExamples(text, 'English');
