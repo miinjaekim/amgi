@@ -87,6 +87,7 @@ export default function LearnScreen() {
   const [showContextInput, setShowContextInput] = useState(false);
   const [contextInput, setContextInput] = useState('');
   const [wordOfTheDay, setWordOfTheDay] = useState<WordOfTheDay | null>(null);
+  const [wotdLoading, setWotdLoading] = useState(true);
   const [showPacks, setShowPacks] = useState(false);
   const [showGenerate, setShowGenerate] = useState(false);
 
@@ -96,9 +97,12 @@ export default function LearnScreen() {
     if (nativeLanguage === undefined) return; // preferences still loading
     let cancelled = false;
     setWordOfTheDay(null);
+    setWotdLoading(true);
     const date = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD, local timezone
+    // Never rejects — resolves to null on any failure, so the skeleton always
+    // resolves to either the tile or nothing.
     getWordOfTheDay(date, studyLanguage, nativeLanguage ?? 'English')
-      .then(data => { if (!cancelled) setWordOfTheDay(data); });
+      .then(data => { if (!cancelled) { setWordOfTheDay(data); setWotdLoading(false); } });
     return () => { cancelled = true; };
   }, [studyLanguage, nativeLanguage]);
 
@@ -260,6 +264,9 @@ export default function LearnScreen() {
       setFlashcardDraft(null);
       setCore(null); setDepth(null); setExamples(null); setAmbiguity(null);
       setTerm('');
+      // Clears any stale error from this term (a failed depth/examples load).
+      // Left set, it would keep the empty state suppressed after the save.
+      setError(null);
       setSaveSuccess(true);
     } catch {
       setError(t(nativeLanguage, 'errorSaveFlashcard'));
@@ -285,7 +292,11 @@ export default function LearnScreen() {
     );
   }
 
-  const isEmpty = !loading && !core && !ambiguity && !error && !saveSuccess;
+  // Deliberately not gated on saveSuccess: a save clears the result, so the
+  // empty state is where you land afterwards. The success banner renders
+  // inside it rather than suppressing it — otherwise saving leaves you on a
+  // bare search field with no way back to packs or the word of the day.
+  const isEmpty = !loading && !core && !ambiguity && !error;
 
   const saveModal = showSaveModal && flashcardDraft && (
     <SaveFlashcardModal
@@ -351,10 +362,29 @@ export default function LearnScreen() {
         </Pressable>
 
         <KeyboardAvoidingView
+          style={s.kav}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           keyboardVerticalOffset={-(searchRestingBottom - 8)}
         >
-        <View style={[s.bottomBar, { paddingBottom: searchRestingBottom }]}>
+          <View style={s.bottomBar}>
+            {saveSuccess && (
+              <View style={s.successBanner}>
+                <Text style={s.successText}>{t(nativeLanguage, 'flashcardSaved')}</Text>
+              </View>
+            )}
+            {wotdLoading && (
+              // Sized from the real tile's rows so the layout doesn't jump when
+              // the word of the day arrives — the reflow used to squeeze the
+              // hero and spill the tagline over the streak badge.
+              <View style={[s.wotdCard, s.wotdSkeleton]}>
+                <Text style={s.wotdLabel}>{t(nativeLanguage, 'wordOfTheDay')}</Text>
+                <View style={s.wotdRow}>
+                  <View style={[s.skelBar, s.skelTerm]} />
+                  <View style={[s.skelBar, s.skelTranslation]} />
+                </View>
+                <View style={[s.skelBar, s.skelDef]} />
+              </View>
+            )}
             {wordOfTheDay && (
               <TouchableOpacity
                 style={s.wotdCard}
@@ -405,6 +435,9 @@ export default function LearnScreen() {
               </TouchableOpacity>
             </View>
           </View>
+          {/* Rests the search bar ~40% up the screen. Shrinkable, so on a short
+              screen this gives its space back instead of squeezing the hero. */}
+          <View style={[s.restingSpacer, { height: searchRestingBottom }]} />
         </KeyboardAvoidingView>
         {packsModal}
         {generateModal}
@@ -441,12 +474,6 @@ export default function LearnScreen() {
                 : <Text style={s.searchBtnText}>{t(nativeLanguage, 'learnButton')}</Text>}
             </TouchableOpacity>
           </View>
-
-          {saveSuccess && (
-            <View style={s.successBanner}>
-              <Text style={s.successText}>{t(nativeLanguage, 'flashcardSaved')}</Text>
-            </View>
-          )}
 
           {error && (
             <View style={s.errorBanner}>
@@ -617,9 +644,17 @@ function makeStyles(C: Palette, tabBarHeight: number) {
   streakSep: { fontSize: 13, color: C.muted },
   streakMuted: { fontSize: 13, color: C.muted },
 
-  // Empty state layout
-  hero: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32, minHeight: 80 },
-  bottomBar: { paddingHorizontal: 16, paddingBottom: tabBarHeight },
+  // Empty state layout. The hero grows into whatever space is left over but
+  // never shrinks below its own text — squeezing it made the tagline overflow
+  // its centred box in both directions, over the streak badge above it.
+  hero: {
+    flexGrow: 1, flexShrink: 0, flexBasis: 'auto',
+    alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32,
+  },
+  kav: { flexShrink: 1 },
+  bottomBar: { paddingHorizontal: 16 },
+  // Never shrinks past the floating tab bar, so the links row stays tappable.
+  restingSpacer: { flexShrink: 1, minHeight: tabBarHeight },
 
   searchRow: { flexDirection: 'row', gap: 8, marginBottom: 16 },
   searchInput: {
@@ -651,6 +686,14 @@ function makeStyles(C: Palette, tabBarHeight: number) {
   wotdTerm: { fontSize: 20, fontWeight: '700', color: C.highlight },
   wotdTranslation: { fontSize: 15, color: C.text, opacity: 0.85 },
   wotdDef: { fontSize: 13, color: C.muted, marginTop: 4 },
+
+  // Skeleton bars stand in for the term/translation/definition rows at the
+  // same heights, so the card occupies its final height before the fetch lands.
+  wotdSkeleton: { opacity: 0.6 },
+  skelBar: { backgroundColor: C.border, borderRadius: 6 },
+  skelTerm: { width: 92, height: 24 },
+  skelTranslation: { width: 120, height: 18 },
+  skelDef: { width: '70%', height: 16, marginTop: 4 },
 
   // Packs / generate links
   linksRow: { flexDirection: 'row', justifyContent: 'center', flexWrap: 'wrap', gap: 20, marginTop: 4 },
