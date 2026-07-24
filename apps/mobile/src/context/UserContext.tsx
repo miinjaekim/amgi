@@ -6,17 +6,12 @@ import * as WebBrowser from 'expo-web-browser';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { auth } from '../config/firebase';
 import { getUserPreferences, saveUserPreferences } from '../services/userPreferences';
-import type { StudyLanguage } from '@amgi/core';
+import { isStudyLanguage, resolveStudyLanguage, type StudyLanguage } from '@amgi/core';
 
 WebBrowser.maybeCompleteAuthSession();
 
 const LANG_CACHE_KEY = 'amgi_native_language';
 const STUDY_LANG_CACHE_KEY = 'amgi_study_language';
-
-const STUDY_LANGUAGES: StudyLanguage[] = ['Korean', 'Swedish', 'English', 'French', 'Japanese'];
-function isStudyLanguage(value: unknown): value is StudyLanguage {
-  return typeof value === 'string' && (STUDY_LANGUAGES as string[]).includes(value);
-}
 
 function getTodayString(): string {
   return new Date().toLocaleDateString('en-CA');
@@ -115,7 +110,22 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const setNativeLanguage = async (lang: string) => {
     setNativeLanguageState(lang);
     await AsyncStorage.setItem(LANG_CACHE_KEY, lang);
-    if (user) await saveUserPreferences(user.uid, { nativeLanguage: lang });
+
+    // Switching native language can leave the study language set to the user's
+    // own language; move it off silently rather than making them fix it.
+    const nextStudy = resolveStudyLanguage(lang, studyLanguage, nativeLanguage);
+    const studyChanged = nextStudy !== studyLanguage;
+    if (studyChanged) {
+      setStudyLanguageState(nextStudy);
+      await AsyncStorage.setItem(STUDY_LANG_CACHE_KEY, nextStudy);
+    }
+
+    if (user) {
+      await saveUserPreferences(user.uid, {
+        nativeLanguage: lang,
+        ...(studyChanged ? { studyLanguage: nextStudy } : {}),
+      });
+    }
   };
 
   const setStudyLanguage = async (lang: StudyLanguage) => {
