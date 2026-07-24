@@ -42,7 +42,7 @@ export default function CardDetailModal({ card, nativeLanguage, onClose }: Props
           <div>
             <div className="flex items-center gap-3 flex-wrap">
               <h2 className="text-2xl font-bold" style={{ color: 'var(--color-highlight)' }}>{getStudyLangSide(card)}</h2>
-              <PronounceButton text={getStudyLangSide(card)} studyLanguage={card.studyLanguage ?? 'Korean'} />
+              <PronounceButton text={getStudyLangSide(card)} furigana={card.furigana} studyLanguage={card.studyLanguage ?? 'Korean'} />
               {card.formality && card.formality !== 'N/A' && (
                 <span className="px-2 py-0.5 text-xs rounded-full border" style={{ borderColor: 'var(--color-muted)', color: 'var(--color-muted)' }}>
                   {card.formality}

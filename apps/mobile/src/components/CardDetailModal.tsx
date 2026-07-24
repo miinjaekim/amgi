@@ -36,7 +36,7 @@ export default function CardDetailModal({ card, nativeLanguage, onClose }: Props
             <View style={s.headerMain}>
               <View style={s.titleRow}>
                 <Text style={s.term}>{studySide}</Text>
-                <PronounceButton text={studySide} studyLanguage={studyLanguage} />
+                <PronounceButton text={studySide} furigana={card.furigana} studyLanguage={studyLanguage} />
                 {badges.map((b, i) => (
                   <View key={i} style={s.badge}><Text style={s.badgeText}>{b}</Text></View>
                 ))}

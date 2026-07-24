@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
 import { TouchableOpacity, ActivityIndicator, Text, StyleSheet, StyleProp, ViewStyle } from 'react-native';
 import { createAudioPlayer, setAudioModeAsync } from 'expo-audio';
-import { getStudyLanguageConfig } from '@amgi/core';
+import { getSpokenText, getStudyLanguageConfig } from '@amgi/core';
 import type { StudyLanguage } from '@amgi/core';
 import { getPronunciationUrl } from '../services/gemini';
 import { useTheme } from '../context/ThemeContext';
 
 interface Props {
   text: string;
+  /** Japanese kana reading, when the term has one — spoken instead of `text` */
+  furigana?: string;
   studyLanguage: StudyLanguage;
   size?: 'sm' | 'md';
   style?: StyleProp<ViewStyle>;
@@ -23,7 +25,7 @@ function ensureAudioMode() {
   return audioModeReady;
 }
 
-export default function PronounceButton({ text, studyLanguage, size = 'md', style }: Props) {
+export default function PronounceButton({ text, furigana, studyLanguage, size = 'md', style }: Props) {
   const { C } = useTheme();
   const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('idle');
 
@@ -37,7 +39,7 @@ export default function PronounceButton({ text, studyLanguage, size = 'md', styl
     setStatus('loading');
     try {
       await ensureAudioMode();
-      const url = await getPronunciationUrl(text, studyLanguage);
+      const url = await getPronunciationUrl(getSpokenText(text, furigana), studyLanguage);
       const player = createAudioPlayer({ uri: url });
       player.addListener('playbackStatusUpdate', s => {
         if (s.didJustFinish) player.remove();

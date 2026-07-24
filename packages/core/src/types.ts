@@ -76,7 +76,11 @@ export interface StudyLanguageConfig {
   directionBackToFrontKey: DirectionLabelKey;
   promptFrontToBackKey: DirectionPromptKey;
   promptBackToFrontKey: DirectionPromptKey;
-  /** Google Cloud TTS language code + Chirp 3: HD voice name for pronunciation audio, if supported */
+  /**
+   * Google Cloud TTS language code + voice name for pronunciation audio, if
+   * supported. Chirp 3: HD wherever the locale has one — `cmn-TW` doesn't, so
+   * Traditional Chinese takes a WaveNet voice rather than a Mainland accent.
+   */
   ttsLanguageCode?: string;
   ttsVoiceName?: string;
 }
@@ -113,6 +117,8 @@ export const STUDY_LANGUAGE_CONFIGS: Record<StudyLanguage, StudyLanguageConfig> 
     directionBackToFrontKey: 'directionEnglishToSwedish',
     promptFrontToBackKey: 'promptSwedishToEnglish',
     promptBackToFrontKey: 'promptEnglishToSwedish',
+    ttsLanguageCode: 'sv-SE',
+    ttsVoiceName: 'sv-SE-Chirp3-HD-Charon',
   },
   French: {
     code: 'French',
@@ -128,6 +134,8 @@ export const STUDY_LANGUAGE_CONFIGS: Record<StudyLanguage, StudyLanguageConfig> 
     directionBackToFrontKey: 'directionEnglishToFrench',
     promptFrontToBackKey: 'promptFrenchToEnglish',
     promptBackToFrontKey: 'promptEnglishToFrench',
+    ttsLanguageCode: 'fr-FR',
+    ttsVoiceName: 'fr-FR-Chirp3-HD-Charon',
   },
   Japanese: {
     code: 'Japanese',
@@ -143,6 +151,8 @@ export const STUDY_LANGUAGE_CONFIGS: Record<StudyLanguage, StudyLanguageConfig> 
     directionBackToFrontKey: 'directionEnglishToJapanese',
     promptFrontToBackKey: 'promptJapaneseToEnglish',
     promptBackToFrontKey: 'promptEnglishToJapanese',
+    ttsLanguageCode: 'ja-JP',
+    ttsVoiceName: 'ja-JP-Chirp3-HD-Charon',
   },
   TraditionalChinese: {
     code: 'TraditionalChinese',
@@ -158,6 +168,13 @@ export const STUDY_LANGUAGE_CONFIGS: Record<StudyLanguage, StudyLanguageConfig> 
     directionBackToFrontKey: 'directionEnglishToTraditionalChinese',
     promptFrontToBackKey: 'promptTraditionalChineseToEnglish',
     promptBackToFrontKey: 'promptEnglishToTraditionalChinese',
+    // `cmn-TW` has no Chirp 3: HD voice, so this is WaveNet against
+    // `cmn-CN-Chirp3-HD-Charon`: a Taiwanese accent in an older voice, or a
+    // better voice with a Mainland one. Accent fidelity is the point of audio
+    // on a Traditional deck, so the accent wins. Both read Traditional input
+    // fine — the script was never the constraint.
+    ttsLanguageCode: 'cmn-TW',
+    ttsVoiceName: 'cmn-TW-Wavenet-A',
   },
   // English study pairs with Korean — the only non-English native language
   // supported today. A native-Korean learner's card back is Korean.

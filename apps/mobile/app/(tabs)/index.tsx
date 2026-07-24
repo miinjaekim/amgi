@@ -498,7 +498,7 @@ export default function LearnScreen() {
               <View style={s.cardHeaderRow}>
                 <Text style={s.cardTerm}>{core.term}</Text>
                 {core.termLanguage === studyLanguage && (
-                  <PronounceButton text={core.term} studyLanguage={studyLanguage} />
+                  <PronounceButton text={core.term} furigana={core.furigana} studyLanguage={studyLanguage} />
                 )}
                 {core.formality && core.formality !== 'N/A' && (
                   <View style={s.formalityBadge}>
@@ -521,7 +521,7 @@ export default function LearnScreen() {
               <View style={s.translationRow}>
                 <Text style={s.translationText}>{translation || t(nativeLanguage, 'noTranslation')}</Text>
                 {core.termLanguage !== studyLanguage && translation && (
-                  <PronounceButton text={translation} studyLanguage={studyLanguage} />
+                  <PronounceButton text={translation} furigana={core.furigana} studyLanguage={studyLanguage} />
                 )}
               </View>
 
