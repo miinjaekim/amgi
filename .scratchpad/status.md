@@ -122,6 +122,20 @@ _Reconciled against `main` @ `f90e7d1` on 2026-07-23._
   saved flashcard; `wordOfTheDayCore()` reconstructs it for older documents.
   Also fixed a stale study-language cache guard that restored only Korean and
   Swedish, dropping French/Japanese/English learners back to the Korean deck.
+- **Mobile Learn empty state + WOTD loading skeleton**
+  (`fix/mobile-learn-empty-state`, merged straight to `main` 2026-07-24 — no
+  PR) — the two confirmed mobile defects plus the WOTD loading
+  item they shared a fix with. Saving a card no longer suppresses the empty
+  state that hosts the word of the day, example chips and the packs/generate
+  links: `isEmpty` dropped `!saveSuccess` and the banner renders inside the
+  empty state, matching web. A successful save also clears a stale error from a
+  failed depth load, which suppressed the empty state the same way. The mobile
+  tagline was **cut entirely** — the screen read as crowded — so the empty
+  state is now blank above the search bar; the resting padding that holds the
+  search ~40% up the screen became a shrinkable spacer, so a short screen gives
+  that space back instead of squeezing content into an overlap. Both platforms
+  show a skeleton at the WOTD tile's real height while it loads, which removes
+  the reflow that caused the overlap in the first place.
 
 ## In Progress
 
@@ -141,12 +155,10 @@ _Reconciled against `main` @ `f90e7d1` on 2026-07-23._
 
 Root-caused and queued in [backlog.md](backlog.md) — see there for scope.
 
-- **Mobile Learn: tagline overlaps the streak badge** when the WOTD tile loads
-  in — hero is `flex: 1` with a `minHeight: 80` floor, so squeezed content
-  overflows a centered box upward. *(High)*
-- **Mobile Learn: stuck on the search bar after saving** — `isEmpty` includes
-  `!saveSuccess`, so a successful save suppresses the empty state that hosts
-  WOTD, example chips, and the packs button. *(High)*
+_(The two mobile Learn defects that sat here are fixed on
+`fix/mobile-learn-empty-state` — see the Shipped list. They reach the phone
+with the next build, not before.)_
+
 Parked, not fixed:
 - **OTA updates never reached the device** — CI published PR #44 successfully
   (run `29892869152`) but the theme change never appeared. Repeated debugging
