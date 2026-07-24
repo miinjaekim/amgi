@@ -17,8 +17,9 @@ production build when a batch is worth a release. See [tech-stack.md](tech-stack
 
 _Last build: **1.0.2 / build 4**, 2026-07-24. Nothing merged since._
 
-- [ ] **Pronunciation beyond Korean** — no new native module, but the buttons
-      only appear where a voice is configured, so users see it at the next build.
+- [ ] **Japanese & Chinese depth batch** (`feat/ja-zh-depth`) — pronunciation
+      for four more languages, the kanji/hanzi breakdown, and the kana packs.
+      No new native module; all three are invisible until a build ships.
 - [ ] **Push notifications** — needs `expo-notifications` + an `app.json` plugin.
 - [ ] **App rename**, if it happens — changes `app.json` `name`/bundle id.
 
@@ -30,68 +31,16 @@ files, sharing) on the build itself → bump `version` in `app.json` → check
 
 ## Now — Japanese & Chinese depth
 
-### 1. Pronunciation beyond Korean
+✅ **All three shipped on `feat/ja-zh-depth` (2026-07-24)** — see the Shipped
+list in [status.md](status.md). What's left is a judgement call and a follow-up:
 
-Best value-per-hour in the backlog. Adding a language is **two fields in
-`STUDY_LANGUAGE_CONFIGS`** — `/api/pronounce` is generic and both
-`PronounceButton`s render only when a voice is configured, so buttons appear on
-web and mobile as soon as the entry lands.
-
-Voice availability, checked against the live TTS `voices` endpoint 2026-07-24:
-
-| Language | Chirp 3: HD? | Pick |
-|---|---|---|
-| Japanese `ja-JP` | ✅ 30 | `ja-JP-Chirp3-HD-Charon` |
-| Chinese Trad. `cmn-TW` | ❌ **none** — 3 Standard + 3 WaveNet only | see below |
-| French `fr-FR` | ✅ 30 | `fr-FR-Chirp3-HD-Charon` |
-| Swedish `sv-SE` | ✅ 30 | `sv-SE-Chirp3-HD-Charon` |
-
-⚠️ The old note here said to pick `cmn-TW` over `cmn-CN` — not buildable as
-written, `cmn-TW` has no Chirp 3: HD voice. Trade-off is `cmn-TW-Wavenet-A`
-(right Taiwanese accent, older quality) vs `cmn-CN-Chirp3-HD-Charon` (better
-voice, Mainland accent). Both synthesized Traditional input fine at
-`speakingRate: 0.85`, so script isn't the constraint. **Recommend
-`cmn-TW-Wavenet-A`** — accent fidelity is the whole point of audio here. Listen
-before committing; one-line change either way.
-
-Do alongside: **speak Japanese from `furigana` when present.** `PronounceButton`
-gets the raw term (`apps/web/src/app/page.tsx:446`), so TTS picks its own
-reading for a kanji compound — the exact ambiguity `furigana` resolves.
-
-### 2. Kanji / hanzi breakdown
-
-Japanese and Chinese fall into the generic depth prompt, so the most useful
-thing about a Han-character word — what each character means — is missing.
-
-**Cheaper than previously scoped:** no new stream marker or parser work.
-`parseStreamedDepth` (`packages/core/src/gemini.ts:62`) keys off marker
-presence, not language, and render sites gate on the field being non-empty
-(`page.tsx:503`, `CardDetailModal.tsx:93`). Emit the section and it renders.
-
-1. **Prompt branch** in the depth routes — today a flat `studyLanguage !==
-   'Korean'` check (`depth-stream/route.ts:26`). Same shape, different reading
-   per language: Korean 훈음, Japanese on'yomi/kun'yomi, Chinese per-character
-   pinyin.
-2. **Emit "none" with no Han characters** — a pure-kana word has nothing to
-   break down.
-3. **Naming — the one design call.** `hanja` is wrong for Japanese/Chinese.
-   Suggested, matching the `furigana`/`pinyin` → `getReading()` precedent: a
-   generic `characterBreakdown` on `TermDepth` with a resolver falling back to
-   legacy `hanja`, so existing Korean cards need no migration. Marker can be
-   renamed freely (streams are ephemeral). Section label goes per-language.
-
-### 3. Japanese basics: kana onboarding
-
-Nothing exists today. Beginners need hiragana/katakana before vocab.
-
-⚠️ **Tension with the stated audience** — [vision.md](vision.md) says not
-beginners, never "starter" anything. That doesn't make it wrong, but it widens
-who Amgi is for; decide that deliberately before building.
-
-Much the largest of the three — a new surface, not config. Scope down:
-*minimum* is a static kana chart with tap-to-hear (reuses `PronounceButton`,
-unblocked by item 1); *full* adds a drill mode with its own progress. Ship the
-chart first, build the drill only if it gets used. Stroke order out of scope.
+- [ ] **Listen to `cmn-TW-Wavenet-A`** before the next build. Samples are in
+      `audio-test/lang-voices/` (gitignored), paired against
+      `cmn-CN-Chirp3-HD-Charon` on the same four phrases. Shipped on the
+      accent-over-voice-quality argument; it's a one-line change to reverse.
+- [ ] **Kana drill mode**, only if the packs get used. Working through 71 tiles
+      and reviewing them is the whole loop today, which may be enough. Stroke
+      order remains out of scope.
 
 ---
 

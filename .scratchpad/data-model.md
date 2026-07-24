@@ -151,12 +151,16 @@ render sites across web and mobile don't grow a conditional per language.
 - **Fast call** (`/api/explain`) — `term, termLanguage, korean/swedish, english,
   formality (Korean), gender (Swedish), furigana (Japanese), pinyin
   (Traditional Chinese), briefDefinition`
-- **Depth** (`/api/explain/depth`, user-triggered) — `definition, hanja? (Korean
-  only), notes?`
+- **Depth** (`/api/explain/depth`, user-triggered) — `definition,
+  characterBreakdown? (Han-script languages only), notes?`
 - **Examples** (`/api/explain/examples`, user-triggered) — `{ examples: ExamplePair[] }`
 - Stream variants exist for both: `/depth-stream`, `/examples-stream` (NDJSON)
-- Swedish depth prompt omits the `HANJA:` section entirely; the parser handles
-  both formats via `text.includes('HANJA:\n')`
+- The depth prompt emits a `CHARACTERS:` section only for languages carrying
+  `characterSectionKey` (Korean, Japanese, Traditional Chinese); the parser
+  keys off `text.includes('CHARACTERS:\n')`, never off the language. The
+  per-language wording lives in `apps/web/src/lib/characterBreakdown.ts` so the
+  streaming and JSON routes can't drift. Legacy Korean cards still carry
+  `hanja` and are read through `getCharacterBreakdown()` — no migration.
 - **Sense pinning:** `getDepthTarget()` returns the resolved sense (back-side
   translation + `briefDefinition`) and all four depth/examples routes inject a
   "use only this sense" clause. Web spreads it automatically; mobile wrappers
