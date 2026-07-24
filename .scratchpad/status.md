@@ -110,7 +110,7 @@ _Reconciled against `main` @ `f90e7d1` on 2026-07-23._
 
 ### Demo-blocking fixes
 - **Native/study language collision + WOTD repeats + WOTD save drift**
-  (PR #PENDING, 2026-07-24) — the three "Next up" items in one batch.
+  (PR #47, 2026-07-24) — the three "Next up" items in one batch.
   `resolveStudyLanguage()` in `@amgi/core` moves the study language to the
   previous native language when changing native language would leave you
   studying your own; silent, applied in both `UserContext`s. `/api/word-of-the-day`
