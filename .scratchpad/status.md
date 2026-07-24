@@ -123,8 +123,8 @@ _Reconciled against `main` @ `f90e7d1` on 2026-07-23._
   Also fixed a stale study-language cache guard that restored only Korean and
   Swedish, dropping French/Japanese/English learners back to the Korean deck.
 - **Mobile Learn empty state + WOTD loading skeleton**
-  (`fix/mobile-learn-empty-state`, 2026-07-24 — ⚠️ not merged yet, PR number
-  still to fill in) — the two confirmed mobile defects plus the WOTD loading
+  (`fix/mobile-learn-empty-state`, merged straight to `main` 2026-07-24 — no
+  PR) — the two confirmed mobile defects plus the WOTD loading
   item they shared a fix with. Saving a card no longer suppresses the empty
   state that hosts the word of the day, example chips and the packs/generate
   links: `isEmpty` dropped `!saveSuccess` and the banner renders inside the
