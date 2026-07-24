@@ -6,7 +6,7 @@ import * as WebBrowser from 'expo-web-browser';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { auth } from '../config/firebase';
 import { getUserPreferences, saveUserPreferences } from '../services/userPreferences';
-import { isStudyLanguage, resolveStudyLanguage, type StudyLanguage } from '@amgi/core';
+import { isStudyLanguage, resolveNativeLanguage, resolveStudyLanguage, type StudyLanguage } from '@amgi/core';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -131,7 +131,22 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const setStudyLanguage = async (lang: StudyLanguage) => {
     setStudyLanguageState(lang);
     await AsyncStorage.setItem(STUDY_LANG_CACHE_KEY, lang);
-    if (user) await saveUserPreferences(user.uid, { studyLanguage: lang });
+
+    // Choosing to study your own language says the native language is wrong;
+    // move it to the language just being studied. This also switches the UI.
+    const nextNative = resolveNativeLanguage(lang, nativeLanguage, studyLanguage);
+    const nativeChanged = !!nextNative && nextNative !== nativeLanguage;
+    if (nativeChanged) {
+      setNativeLanguageState(nextNative);
+      await AsyncStorage.setItem(LANG_CACHE_KEY, nextNative);
+    }
+
+    if (user) {
+      await saveUserPreferences(user.uid, {
+        studyLanguage: lang,
+        ...(nativeChanged ? { nativeLanguage: nextNative } : {}),
+      });
+    }
   };
 
   const recordReview = () => {
