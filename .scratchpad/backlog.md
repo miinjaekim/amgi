@@ -42,13 +42,13 @@ pops back to Learn *and* resolves.
 
 ## High — everything else user-facing
 
-- [ ] **Deck drill** — the one part of the decks page left unbuilt, and
-      deliberately so: it's worth building **only if the packs get used**.
-      Working through 71 tiles and reviewing them may already be the whole loop,
-      so the page shipped without it rather than guessing. Enter from a deck;
-      closed set, repeatable, not due-gated, and it **writes no SM-2 state** —
-      see the Decisions section of [status.md](status.md) before reopening any
-      of that. Stroke order stays out of scope.
+- [ ] **Drill for lookup packs** — drill currently reads the pack, so only
+      `cards` packs (the kana) have a Drill button. A `LookupPack` holds words
+      with no back side, so there is nothing to check an answer against. Making
+      TOEIC drillable means drilling the user's *saved cards* for that pack
+      instead, which needs `packId` — and that only covers cards saved after
+      2026-07-25, same caveat as the deck filter below. Not obviously wanted:
+      those cards are already in Review, which is the loop they were built for.
 
 - [ ] **Deck filter on Review** — follow-on to the decks page, not part of it.
       Same shape as the existing `directionFilter` (`review/page.tsx`), scoping
