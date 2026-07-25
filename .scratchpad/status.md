@@ -59,8 +59,8 @@ _Reconciled against `main` @ `6e9f3e9` on 2026-07-24, plus the 1.0.2 release cut
     `fr-FR-Chirp3-HD-Charon`, `sv-SE-Chirp3-HD-Charon`, and
     **`cmn-TW-Wavenet-A`** for Traditional Chinese. `cmn-TW` has no Chirp 3: HD
     voice at all, so that one traded voice quality for a Taiwanese rather than
-    Mainland accent. ⚠️ Not yet listened to — samples in
-    `audio-test/lang-voices/`. Japanese also speaks `furigana` when the card
+    Mainland accent — **listened to and accepted 2026-07-25**, so the trade is
+    settled and not a pending review. Japanese also speaks `furigana` when the card
     has one, via `getSpokenText()`; it takes furigana and not `getReading()`
     because pinyin is Latin text a Mandarin voice would spell out.
   - *Character breakdown* — the depth prompt's Han-script section is now
@@ -85,7 +85,9 @@ _Reconciled against `main` @ `6e9f3e9` on 2026-07-24, plus the 1.0.2 release cut
     one bad generation was served forever. `ttsShortVoiceName` now routes single
     characters to a Neural2 voice and the route refuses to cache implausibly
     small audio. No purge needed — the voice name is in the cache path. See
-    [lessons.md](lessons.md).
+    [lessons.md](lessons.md). The side effect — a single kana tile speaks in a
+    different voice than a sentence in the same deck — was **reviewed and
+    accepted 2026-07-25**. It's a decision, not an outstanding defect.
 
 ### Design & polish
 - **Design system** — Forest/Sonokai/Paper/System themes, Source Code Pro,
