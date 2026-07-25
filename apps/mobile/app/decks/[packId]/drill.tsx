@@ -169,17 +169,17 @@ export default function DrillScreen() {
       <View style={s.body}>
         <View style={s.card}>
           <Text style={s.prompt}>{drillPrompt(current, direction)}</Text>
-          {revealed ? (
-            <>
-              <Text style={s.answer}>{drillAnswer(current, direction)}</Text>
-              {pack.pronounceable && (
-                <PronounceButton text={drillSpokenText(current)} studyLanguage={studyLanguage} />
-              )}
-            </>
-          ) : (
-            // Holds the answer's height so the grading buttons don't jump on
-            // reveal — the same problem the review buttons had.
-            <Text style={[s.answer, s.hidden]}> </Text>
+          {/* The answer and the pronounce button are always in the layout and
+              only toggle visibility. Mounting them on reveal grew the card by a
+              whole button, which pushed the grading row down — the answer text
+              alone was never the thing that moved. */}
+          <Text style={[s.answer, !revealed && s.hidden]}>
+            {revealed ? drillAnswer(current, direction) : ' '}
+          </Text>
+          {pack.pronounceable && (
+            <View style={!revealed && s.hidden} pointerEvents={revealed ? 'auto' : 'none'}>
+              <PronounceButton text={drillSpokenText(current)} studyLanguage={studyLanguage} />
+            </View>
           )}
         </View>
 
@@ -244,9 +244,12 @@ function makeStyles(C: Palette) {
     hidden: { opacity: 0 },
     gradeRow: { flexDirection: 'row', gap: 12, marginTop: 4 },
     gradeBtn: { flex: 1, marginTop: 12 },
+    // paddingVertical and marginTop match the grading buttons below (13 + the
+    // 4/12 the row splits between gradeRow and gradeBtn), so the reveal button
+    // sits exactly where the grading pair will.
     revealBtn: {
       backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: 10,
-      paddingVertical: 14, alignItems: 'center', marginTop: 16,
+      paddingVertical: 13, alignItems: 'center', marginTop: 16,
     },
     revealBtnText: { fontSize: 16, fontWeight: '700', color: C.text },
   });

@@ -200,22 +200,24 @@ export default function DrillPage() {
           {drillPrompt(current, direction)}
         </span>
 
-        {revealed ? (
-          <>
-            <span className="text-2xl text-[var(--color-highlight)]">
-              {drillAnswer(current, direction)}
-            </span>
-            {pack.pronounceable && (
-              <PronounceButton text={drillSpokenText(current)} studyLanguage={studyLanguage} />
-            )}
-          </>
-        ) : (
-          // Holds the answer's height so grading buttons don't jump on reveal —
-          // the same problem the review buttons had.
-          <span className="text-2xl invisible">&nbsp;</span>
+        {/* The answer and the pronounce button are always in the layout and
+            only toggle visibility. Mounting them on reveal grew the card by a
+            whole button, which pushed the grading row down the page — the
+            answer text alone was never the thing that moved. `invisible` also
+            keeps the answer out of the DOM text and the a11y tree until it's
+            been earned. */}
+        <span className={`text-2xl text-[var(--color-highlight)] ${revealed ? '' : 'invisible'}`}>
+          {revealed ? drillAnswer(current, direction) : ' '}
+        </span>
+        {pack.pronounceable && (
+          <span className={revealed ? '' : 'invisible pointer-events-none'}>
+            <PronounceButton text={drillSpokenText(current)} studyLanguage={studyLanguage} />
+          </span>
         )}
       </div>
 
+      {/* Both states are one row of `py-3` buttons at the same offset, so the
+          reveal button sits exactly where the grading pair will. */}
       {revealed ? (
         <div className="w-full grid grid-cols-2 gap-3 mt-4">
           <button
@@ -234,7 +236,7 @@ export default function DrillPage() {
       ) : (
         <button
           onClick={() => setRevealed(true)}
-          className="w-full mt-4 px-4 py-3 rounded-lg bg-[var(--color-muted)] text-[var(--color-text)] text-lg font-semibold hover:bg-[var(--color-muted-dark)]"
+          className="w-full mt-4 px-4 py-3 rounded-lg bg-[var(--color-muted)] text-[var(--color-text)] font-semibold hover:bg-[var(--color-muted-dark)]"
         >
           {t(nativeLanguage, 'showAnswer')}
         </button>
