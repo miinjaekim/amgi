@@ -29,38 +29,38 @@ files, sharing) on the build itself → bump `version` in `app.json` → check
 
 ---
 
-## Needs design — a home for decks
-
-**Raised 2026-07-25 by the kana packs.** Packs live in a modal launched from
-Learn (`PacksModal`, both platforms). 71 kana tiles strain that surface, and a
-drill mode would break it outright — so the packs need a page. The open question
-is **what that page is scoped to**, and it is genuinely undecided:
-
-- **A kana page** — dedicated to the Japanese scripts, appearing only for
-  Japanese learners.
-- **A decks page** — a general home for packs in whatever language is being
-  studied, with kana as its first tenant and TOEIC/JLPT/TOPIK following.
-
-*Leaning: the general decks page.* Three reasons. The registry
-(`STUDY_LANGUAGE_CONFIGS`) has made every other language feature per-language
-rather than per-script, and a Japanese-only route would be the first exception.
-TOEIC already exists and has the same "modal is too small" problem, so a kana
-page would leave it homeless. And hangul/注音 would each want the same page
-later — the amendment in [vision.md](vision.md) predicts exactly that.
-
-**The distinction worth not collapsing:** browsing decks and *drilling* one are
-two surfaces, not one. A decks page is a library — pick a pack, see progress.
-Drill mode is a study loop, closer to Review than to Learn. Build the page
-first; enter drill from a deck. That keeps "drill" from being kana-specific
-structurally, which is what a kana page would bake in.
-
-Not blocking anything. Kana drill mode itself is still **only if the packs get
-used** — working through 71 tiles and reviewing them may already be the whole
-loop. Stroke order remains out of scope.
-
----
-
 ## High — everything else user-facing
+
+- [ ] **Decks page** — a home for the packs, replacing `PacksModal`. Shape
+      settled 2026-07-25; the closed calls and their reasoning are in the
+      Decisions section of [status.md](status.md) — read those before
+      reopening any of it. What's left is build work:
+
+      1. **`packId?: string` on `Flashcard`** (`packages/core/src/types.ts:314`),
+         written at save time. Do this first. Pack progress is currently a
+         lowercase text join (`PacksModal.tsx:48`) — fine for a checkmark, but
+         it can't support a deck filter and it breaks when a card's study side
+         is edited. Optional field, so no migration; older cards simply have no
+         pack.
+      2. **`/decks` route**, entered from Learn where `PacksModal` opens today.
+         Lists `getVocabPacks(studyLanguage)`. **Not a nav tab** — see the
+         decision.
+      3. **Deck detail** — tiles + progress, i.e. what `PacksModal` renders now,
+         with room to breathe for 71 kana.
+      4. **Drill**, entered from a deck. Closed set, repeatable, not due-gated,
+         and it **writes no SM-2 state**.
+      5. Retire `PacksModal` on both platforms; mobile mirrors the same route.
+
+      Still true from when this was a design question: kana drill is worth
+      building **only if the packs get used** — working through 71 tiles and
+      reviewing them may already be the whole loop. Stroke order stays out of
+      scope. Steps 1–3 stand on their own if drill never earns its place.
+
+- [ ] **Deck filter on Review** — follow-on to the decks page, not part of it.
+      Same shape as the existing `directionFilter` (`review/page.tsx`), scoping
+      the queue to one pack. Needs `packId` first. Review's default stays
+      whole-collection and due-gated — the filter narrows that loop, it does not
+      add a second one.
 
 - [ ] **Offline review on mobile** — promoted out of the old Offline Amgi
       bundle. Cards are already in Firestore's local cache; make the review loop
