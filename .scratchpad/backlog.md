@@ -38,14 +38,6 @@ files, sharing) on the build itself → bump `version` in `app.json` → check
 
 ## High — everything else user-facing
 
-- [ ] **Drill for lookup packs** — drill currently reads the pack, so only
-      `cards` packs (the kana) have a Drill button. A `LookupPack` holds words
-      with no back side, so there is nothing to check an answer against. Making
-      TOEIC drillable means drilling the user's *saved cards* for that pack
-      instead, which needs `packId` — and that only covers cards saved after
-      2026-07-25, same caveat as the deck filter below. Not obviously wanted:
-      those cards are already in Review, which is the loop they were built for.
-
 - [ ] **Deck filter on Review** — follow-on to the decks page, not part of it.
       Same shape as the existing `directionFilter` (`review/page.tsx`), scoping
       the queue to one pack. `packId` is now written, so the prerequisite is
@@ -102,6 +94,15 @@ are easy to miss. Cheap; do alongside feature work.
       TOPIK, and a JLPT pack pairs naturally with the Japanese work above);
       pre-authored content instead of per-word Gemini calls. Draft:
       `docs/packs/toeic-pack-draft.md`.
+
+- [ ] **Drill for lookup packs** — lowered from High 2026-07-25: the payoff is
+      thin. Drill currently reads the pack, so only `cards` packs (the kana) have
+      a Drill button. A `LookupPack` holds words with no back side, so there is
+      nothing to check an answer against. Making TOEIC drillable means drilling
+      the user's *saved cards* for that pack instead, which needs `packId` — and
+      that only covers cards saved after 2026-07-25, same caveat as the deck
+      filter above. Those cards are already in Review, which is the loop they
+      were built for, so this mostly duplicates an existing surface.
 
 - [ ] **Offline term capture** — jot terms to look up later, queued locally and
       resolved on reconnect. No model needed, just a queue and a flush.
