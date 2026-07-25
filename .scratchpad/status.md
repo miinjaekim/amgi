@@ -228,6 +228,39 @@ Calls that are **closed**. They live here rather than in
 reasoning is kept, because a decision with its reasoning lost gets reopened by
 the next person to notice the symptom.
 
+- **Decks page: drilling lives there, not in Review** (2026-07-25). The
+  alternative considered was letting Review pick a deck and leaving Decks as a
+  passive display. Rejected because it makes Review mean two things: if a
+  deck-scoped Review still respects due dates you get 4 of 71 kana and can't
+  drill, and if it ignores them there are now two loops behind one tab with no
+  way for the user to tell which one they'll get. Drill is a closed set,
+  repeatable, not due-gated; Review is "what the scheduler says". Decks is the
+  library, drill is entered from a deck, and Review keeps its
+  whole-collection default — gaining a *filter* later, which narrows the
+  existing loop rather than adding a second.
+- **Drill writes no SM-2 state** (2026-07-25). Practice and scheduling stay
+  separate, so grinding the kana chart five times in an afternoon can't wreck
+  intervals. Cards saved from a pack still surface in Review on their own
+  schedule. If drill later feels like it "doesn't count", the fix is showing
+  progress in the deck, not writing to the scheduler.
+- **No "All cards" row on the decks page** (2026-07-25). Proposed to make the
+  Decks/Cards naming read the Anki way round, then dropped — it's a nav entry
+  pointing at a nav entry, and a naming fix isn't worth a fake row. The one
+  thing it would genuinely have bought is *drill my whole collection ignoring
+  due dates*, which neither Cards nor Review offers; nobody has asked for it,
+  and if it's ever wanted it's a button on Cards, not a deck.
+- **`/decks` is a route, not a nav tab — for now** (2026-07-25). `VOCAB_PACKS`
+  (`packages/core/src/packs.ts:212`) covers English and Japanese only, so
+  `getVocabPacks()` returns `[]` for Korean, Swedish, French and Traditional
+  Chinese. A tab would be empty for four of six study languages and would change
+  contents on study-language switch, which no other nav item does — that teaches
+  people the page is worthless, which is worse than the modal it replaces.
+  Entered from Learn instead, so a Japanese learner sees it and a Swedish
+  learner doesn't. **Promote it to a tab when pack coverage justifies it** — the
+  trigger is coverage, tied to the packs item in [backlog.md](backlog.md), not
+  the kana work. The Decks-vs-Cards naming collision is deferred with it: a
+  route reached from Learn doesn't sit next to Cards asking to be compared, so
+  no rename is owed until it becomes a tab.
 - **The app keeps the name "Amgi"** (2026-07-25). The open question was whether
   암기 would still fit as the app grew past Korean; it was weighed and the
   answer is yes. The name is settled, the rename backlog item is gone, and the
