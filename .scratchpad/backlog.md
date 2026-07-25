@@ -33,16 +33,6 @@ _Last build: **1.0.2 / build 4**, 2026-07-24._
 files, sharing) on the build itself → bump `version` in `app.json` → check
 `docs/testflight-beta-info-ko.md` is still accurate.
 
-**Verified in Expo Go 2026-07-25:** the drill screen
-(`app/decks/[packId]/drill.tsx`) works as expected, which also exercises
-Learn → `/decks` → deck → drill on a device.
-
-⚠️ **Still unverified: the deck → Learn round trip.**
-`router.navigate({ pathname: '/', params })` in `app/decks/[packId]/index.tsx`
-fires only from a **lookup** pack, so drilling kana never touches it — it needs
-study language English and a tap on a TOEIC word. Confirm it pops back to Learn
-*and* resolves the word. It's the one piece of PR #50 with no web equivalent
-that has exercised it.
 
 ---
 
