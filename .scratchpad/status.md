@@ -59,8 +59,8 @@ _Reconciled against `main` @ `6e9f3e9` on 2026-07-24, plus the 1.0.2 release cut
     `fr-FR-Chirp3-HD-Charon`, `sv-SE-Chirp3-HD-Charon`, and
     **`cmn-TW-Wavenet-A`** for Traditional Chinese. `cmn-TW` has no Chirp 3: HD
     voice at all, so that one traded voice quality for a Taiwanese rather than
-    Mainland accent. ⚠️ Not yet listened to — samples in
-    `audio-test/lang-voices/`. Japanese also speaks `furigana` when the card
+    Mainland accent — **listened to and accepted 2026-07-25**, so the trade is
+    settled and not a pending review. Japanese also speaks `furigana` when the card
     has one, via `getSpokenText()`; it takes furigana and not `getReading()`
     because pinyin is Latin text a Mandarin voice would spell out.
   - *Character breakdown* — the depth prompt's Han-script section is now
@@ -85,7 +85,9 @@ _Reconciled against `main` @ `6e9f3e9` on 2026-07-24, plus the 1.0.2 release cut
     one bad generation was served forever. `ttsShortVoiceName` now routes single
     characters to a Neural2 voice and the route refuses to cache implausibly
     small audio. No purge needed — the voice name is in the cache path. See
-    [lessons.md](lessons.md).
+    [lessons.md](lessons.md). The side effect — a single kana tile speaks in a
+    different voice than a sentence in the same deck — was **reviewed and
+    accepted 2026-07-25**. It's a decision, not an outstanding defect.
 
 ### Design & polish
 - **Design system** — Forest/Sonokai/Paper/System themes, Source Code Pro,
@@ -218,6 +220,33 @@ on a real binary, not Expo Go): pronunciation audio, CSV/Anki export, sharing.
     Transfer doesn't cover TestFlight-only apps.
   - ⚠️ Current console state (approved? link live?) isn't knowable from the
     repo — confirm before assuming.
+
+## Decisions
+
+Calls that are **closed**. They live here rather than in
+[backlog.md](backlog.md) so the backlog stays a list of open work — but the
+reasoning is kept, because a decision with its reasoning lost gets reopened by
+the next person to notice the symptom.
+
+- **The app keeps the name "Amgi"** (2026-07-25). The open question was whether
+  암기 would still fit as the app grew past Korean; it was weighed and the
+  answer is yes. The name is settled, the rename backlog item is gone, and the
+  "cheaper to rename before public launch" urgency goes with it. A domain can be
+  bought against the current name whenever it's wanted. Don't re-raise this as
+  growth advice — it was considered and declined.
+- **`cmn-TW-Wavenet-A` stays** for Traditional Chinese (2026-07-25). Samples in
+  `audio-test/lang-voices/` were listened to against `cmn-CN-Chirp3-HD-Charon`
+  and accepted. `cmn-TW` has no Chirp 3: HD voice at all, so this trades voice
+  quality for a Taiwanese rather than Mainland accent — the accent won.
+- **A single kana may sound different from the rest of its deck** (2026-07-25).
+  Single characters route to a Neural2 voice while everything longer uses
+  Chirp 3: HD, so the speaker audibly changes between a kana tile and a
+  sentence. Accepted: correctness beat consistency, and moving Japanese and
+  Korean wholesale to Neural2 would cost quality on longer text. **Not a
+  consistency bug** — if this resurfaces as a complaint, it's a re-decision, not
+  a fix.
+- **No OTA** (2026-07-23) — see Known Issues below and
+  [tech-stack.md](tech-stack.md).
 
 ## Known Issues
 

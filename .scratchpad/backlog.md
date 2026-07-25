@@ -1,12 +1,13 @@
 # Backlog
 
-Ordered by priority. When something ships, move it to the Shipped list in
-[status.md](status.md). Source of truth is the user's Google Tasks list; this is
-the scoped version. Last synced 2026-07-24.
+Ordered by priority. **Only open work lives here** — shipped, cancelled and
+decided items move to [status.md](status.md), reasoning included, so a closed
+call doesn't get reopened from this file. Source of truth is the user's Google
+Tasks list; this is the scoped version. Last synced 2026-07-25.
 
-**Focus (2026-07-24): depth for Japanese and Chinese.** Six languages are wired
-up, but only Korean has the per-language depth that makes a card worth keeping —
-audio and a character breakdown. Generation features are parked behind it.
+**Focus (2026-07-25): ship the depth work to the phone.** The Japanese/Chinese
+depth batch is merged but invisible until a build goes out, so the next build is
+deliberately narrow — no new native modules, nothing that isn't already on `main`.
 
 **Mobile shipping model: no OTA.** Iterate in Expo Go (`npx expo start`), cut a
 production build when a batch is worth a release. See [tech-stack.md](tech-stack.md).
@@ -21,8 +22,6 @@ _Last build: **1.0.2 / build 4**, 2026-07-24. Nothing merged since._
       languages, the kanji/hanzi breakdown, the kana packs, and the
       single-character TTS fix. No new native module; all of it is invisible on
       the phone until a build ships.
-- [ ] **Push notifications** — needs `expo-notifications` + an `app.json` plugin.
-- [ ] **App rename**, if it happens — changes `app.json` `name`/bundle id.
 
 **Pre-flight:** smoke-test in Expo Go → verify native-adjacent things (audio,
 files, sharing) on the build itself → bump `version` in `app.json` → check
@@ -30,23 +29,34 @@ files, sharing) on the build itself → bump `version` in `app.json` → check
 
 ---
 
-## Now — Japanese & Chinese depth
+## Needs design — a home for decks
 
-✅ **All three shipped in PR #49 (2026-07-25)** — see the Shipped list in
-[status.md](status.md). What's left is a judgement call and a follow-up:
+**Raised 2026-07-25 by the kana packs.** Packs live in a modal launched from
+Learn (`PacksModal`, both platforms). 71 kana tiles strain that surface, and a
+drill mode would break it outright — so the packs need a page. The open question
+is **what that page is scoped to**, and it is genuinely undecided:
 
-- [ ] **Listen to `cmn-TW-Wavenet-A`** before the next build. Samples are in
-      `audio-test/lang-voices/` (gitignored), paired against
-      `cmn-CN-Chirp3-HD-Charon` on the same four phrases. Shipped on the
-      accent-over-voice-quality argument; it's a one-line change to reverse.
-- [ ] **Kana drill mode**, only if the packs get used. Working through 71 tiles
-      and reviewing them is the whole loop today, which may be enough. Stroke
-      order remains out of scope.
-- [ ] **Decide whether a single kana should sound like the rest of the deck.**
-      Single characters now use a Neural2 voice while everything else uses
-      Chirp 3: HD, so the speaker changes between a kana tile and a sentence.
-      Correctness beat consistency; moving Japanese and Korean wholesale to
-      Neural2 would make it uniform at some cost in quality on longer text.
+- **A kana page** — dedicated to the Japanese scripts, appearing only for
+  Japanese learners.
+- **A decks page** — a general home for packs in whatever language is being
+  studied, with kana as its first tenant and TOEIC/JLPT/TOPIK following.
+
+*Leaning: the general decks page.* Three reasons. The registry
+(`STUDY_LANGUAGE_CONFIGS`) has made every other language feature per-language
+rather than per-script, and a Japanese-only route would be the first exception.
+TOEIC already exists and has the same "modal is too small" problem, so a kana
+page would leave it homeless. And hangul/注音 would each want the same page
+later — the amendment in [vision.md](vision.md) predicts exactly that.
+
+**The distinction worth not collapsing:** browsing decks and *drilling* one are
+two surfaces, not one. A decks page is a library — pick a pack, see progress.
+Drill mode is a study loop, closer to Review than to Learn. Build the page
+first; enter drill from a deck. That keeps "drill" from being kana-specific
+structurally, which is what a kana page would bake in.
+
+Not blocking anything. Kana drill mode itself is still **only if the packs get
+used** — working through 71 tiles and reviewing them may already be the whole
+loop. Stroke order remains out of scope.
 
 ---
 
@@ -62,6 +72,8 @@ files, sharing) on the build itself → bump `version` in `app.json` → check
       met: PR #47 fixed WOTD repeats, so a notification can't push a word you
       already saw. Needs `expo-notifications`, scheduling, per-type opt-in.
       Streak nudges are the easiest place to break "no dark patterns".
+      Deliberately **not** in the next build — it brings a native module, so it
+      wants a build of its own rather than riding along with a JS-only release.
 
 - [ ] **Privacy — finish the remaining pieces** — account/data deletion (export
       already exists) and a short "your data" blurb in settings or onboarding.
@@ -132,13 +144,6 @@ explain and remember it" loop. Revisit after the language-depth work.
 - [ ] **Conversation practice** — transcription + per-participant feedback; MVP
       is end-of-conversation feedback on a recording. Same "here's what you
       meant to say" model as Writing review — scope the two together.
-
-- [ ] **Rename the app + buy the domain** — "Amgi" (암기) may not fit as the app
-      grows past Korean. Needs criteria (pronounceable, domain free, not
-      memorization-negative) and a checklist (domain, app metadata, logo).
-      ⏳ Far cheaper now than after public launch — the bundle ID is already
-      disposable and a real launch is a fresh relaunch. Don't buy a domain until
-      the name is settled.
 
 ## Research / exploratory
 
