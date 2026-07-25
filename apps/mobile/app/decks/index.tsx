@@ -1,0 +1,90 @@
+import React, { useEffect, useMemo, useState } from 'react';
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { router } from 'expo-router';
+import {
+  collectSavedTerms, countSavedPackTerms, getPackText, getPackTerms, getVocabPacks, t,
+} from '@amgi/core';
+import { useUser } from '../../src/context/UserContext';
+import { useTheme } from '../../src/context/ThemeContext';
+import { fetchAllUserFlashcards } from '../../src/services/firestore';
+import type { Palette } from '../../src/theme';
+
+export default function DecksScreen() {
+  const { C } = useTheme();
+  const s = useMemo(() => makeStyles(C), [C]);
+  const { user, nativeLanguage, studyLanguage } = useUser();
+  const packs = getVocabPacks(studyLanguage);
+  const [savedTerms, setSavedTerms] = useState<Set<string> | null>(null);
+
+  useEffect(() => {
+    if (!user) { setSavedTerms(null); return; }
+    let cancelled = false;
+    fetchAllUserFlashcards(user.uid, studyLanguage)
+      .then(cards => { if (!cancelled) setSavedTerms(collectSavedTerms(cards)); })
+      .catch(() => {}); // progress is a nicety — browsing still works
+    return () => { cancelled = true; };
+  }, [user, studyLanguage]);
+
+  return (
+    <SafeAreaView style={s.safe} edges={['top', 'bottom']}>
+      <View style={s.header}>
+        <TouchableOpacity onPress={() => router.back()} hitSlop={12}>
+          <Text style={s.back}>←</Text>
+        </TouchableOpacity>
+        <Text style={s.title}>{t(nativeLanguage, 'decksTitle')}</Text>
+      </View>
+
+      {packs.length === 0 ? (
+        <Text style={s.empty}>{t(nativeLanguage, 'decksEmpty')}</Text>
+      ) : (
+        <ScrollView contentContainerStyle={s.scroll}>
+          {packs.map(pack => {
+            const total = getPackTerms(pack).length;
+            const saved = savedTerms ? countSavedPackTerms(pack, savedTerms) : null;
+            return (
+              <TouchableOpacity
+                key={pack.id}
+                style={s.packRow}
+                onPress={() => router.push(`/decks/${pack.id}`)}
+              >
+                <View style={s.packTitleRow}>
+                  <Text style={s.packName}>{getPackText(pack.name, nativeLanguage)}</Text>
+                  <Text style={s.packCount}>
+                    {saved !== null
+                      ? t(nativeLanguage, 'packsSaved', { added: saved, total })
+                      : t(nativeLanguage, 'deckEntryCount', { count: total })}
+                  </Text>
+                </View>
+                <Text style={s.packDesc}>{getPackText(pack.description, nativeLanguage)}</Text>
+                {saved !== null && total > 0 && (
+                  <View style={s.progressTrack}>
+                    <View style={[s.progressFill, { width: `${(saved / total) * 100}%` }]} />
+                  </View>
+                )}
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      )}
+    </SafeAreaView>
+  );
+}
+
+function makeStyles(C: Palette) {
+  return StyleSheet.create({
+    safe: { flex: 1, backgroundColor: C.bg },
+    header: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 20, paddingVertical: 12 },
+    back: { fontSize: 24, color: C.muted, lineHeight: 26 },
+    title: { fontSize: 21, fontWeight: '700', color: C.highlight },
+    empty: { paddingHorizontal: 20, paddingTop: 8, fontSize: 14, color: C.muted },
+    scroll: { paddingHorizontal: 20, paddingBottom: 32, gap: 12 },
+    packRow: { padding: 16, borderWidth: 1, borderColor: C.border, borderRadius: 14 },
+    packTitleRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 },
+    packName: { fontSize: 16, fontWeight: '700', color: C.text, flexShrink: 1 },
+    packCount: { fontSize: 12, color: C.muted },
+    packDesc: { fontSize: 13, color: C.muted, marginTop: 4 },
+    progressTrack: { height: 4, borderRadius: 2, backgroundColor: C.border, marginTop: 12, overflow: 'hidden' },
+    progressFill: { height: '100%', backgroundColor: C.highlight },
+  });
+}

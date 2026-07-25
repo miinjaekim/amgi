@@ -317,6 +317,14 @@ export interface Flashcard extends TermExplanation {
   createdAt: Date;
   archived?: boolean;
   studyLanguage?: StudyLanguage; // undefined = legacy Korean
+  /**
+   * The pack this card came from, when it came from one. Absent on every card
+   * saved by looking a word up, and on every card saved before this field
+   * existed — so it identifies provenance and must never be used to decide
+   * whether a term is already saved. Deck progress matches on the study side
+   * instead, which also credits a word you looked up on your own.
+   */
+  packId?: string;
   frontToBack?: ReviewTracking;
   backToFront?: ReviewTracking;
   /** @deprecated Use frontToBack.nextReview or backToFront.nextReview instead */

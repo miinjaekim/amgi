@@ -12,11 +12,11 @@ import {
 import Markdown from '@/components/Markdown';
 import { saveFlashcardToFirestore, Flashcard } from '@/services/firestore';
 import { getCharacterBreakdown, getExampleSides, getReading, getStudyLanguageConfig, getVocabPacks, parseStreamedExamples, parseStreamedDepth, wordOfTheDayCore } from '@amgi/core';
-import type { PackCard, WordOfTheDay } from '@amgi/core';
+import type { WordOfTheDay } from '@amgi/core';
 import { useUser } from '@/components/UserContext';
 import { t } from '@/lib/i18n';
+import Link from 'next/link';
 import SaveFlashcardModal from '@/components/SaveFlashcardModal';
-import PacksModal from '@/components/PacksModal';
 import PronounceButton from '@/components/PronounceButton';
 import Spinner from '@/components/Spinner';
 import React from 'react';
@@ -74,42 +74,30 @@ export default function Home() {
   const [contextInput, setContextInput] = useState('');
   const [wordOfTheDay, setWordOfTheDay] = useState<WordOfTheDay | null>(null);
   const [wotdLoading, setWotdLoading] = useState(true);
-  const [showPacks, setShowPacks] = useState(false);
   const [showGenerate, setShowGenerate] = useState(false);
 
-  const handlePackWord = (word: string, context?: string) => {
-    setShowPacks(false);
-    setTerm(word);
-    resolveExplanation(word, context);
-  };
-
-  // A pre-authored pack card is already complete, so it goes straight to
-  // Firestore — there is nothing for /api/explain to add about あ, and asking
-  // would cost a model call per character to get prose nobody wants on the card.
-  const handlePackCard = async (card: PackCard) => {
-    if (!user) {
-      setError(t(nativeLanguage, 'signInToSave'));
-      throw new Error('not signed in');
-    }
-    const config = getStudyLanguageConfig(studyLanguage);
-    const draft: Record<string, unknown> = {
-      uid: user.uid,
-      term: card.study,
-      termLanguage: studyLanguage,
-      [config.studyField]: card.study,
-      [config.backField]: card.back,
-    };
-    // `english` is required on every card; on a deck whose back isn't English
-    // neither side above has filled it in.
-    if (draft.english === undefined) draft.english = card.study;
-    try {
-      await saveFlashcardToFirestore(draft as Omit<Flashcard, 'createdAt' | 'id'>, studyLanguage);
-      setError(null);
-    } catch (err) {
-      setError(t(nativeLanguage, 'errorSaveFlashcard'));
-      throw err;
-    }
-  };
+  // A word tapped on a deck page arrives as `?term=`, because looking it up is
+  // this page's job. Read from `window.location` rather than `useSearchParams`,
+  // which would need a Suspense boundary around the whole page to keep
+  // `next build` from failing on prerender.
+  //
+  // Waits for preferences: `studyLanguage` is 'Korean' and `nativeLanguage`
+  // undefined until they load, so firing on mount would look the word up in the
+  // wrong language pair. The ref keeps it to one lookup once they arrive, and
+  // the param is stripped so a refresh doesn't repeat a lookup the user has
+  // moved on from.
+  const packTermConsumed = React.useRef(false);
+  useEffect(() => {
+    if (nativeLanguage === undefined || packTermConsumed.current) return;
+    const params = new URLSearchParams(window.location.search);
+    const packTerm = params.get('term');
+    if (!packTerm) return;
+    packTermConsumed.current = true;
+    window.history.replaceState(null, '', window.location.pathname);
+    setTerm(packTerm);
+    resolveExplanation(packTerm, params.get('context') ?? undefined);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nativeLanguage]);
 
   useEffect(() => {
     if (nativeLanguage === undefined) return; // preferences still loading
@@ -419,12 +407,12 @@ export default function Home() {
           </div>
           <div className="mt-6 flex items-center justify-center gap-5 flex-wrap">
             {getVocabPacks(studyLanguage).length > 0 && (
-              <button
-                onClick={() => setShowPacks(true)}
+              <Link
+                href="/decks"
                 className="text-sm text-[var(--color-muted)] hover:text-[var(--color-text)] transition-colors underline underline-offset-2"
               >
                 {t(nativeLanguage, 'packsLink')}
-              </button>
+              </Link>
             )}
             <button
               onClick={() => setShowGenerate(true)}
@@ -651,14 +639,6 @@ export default function Home() {
         <div className="mt-4 p-4 rounded-lg bg-[var(--color-muted)] text-[var(--color-text)] font-semibold">
           {t(nativeLanguage, 'flashcardSaved')}
         </div>
-      )}
-
-      {showPacks && (
-        <PacksModal
-          onClose={() => setShowPacks(false)}
-          onSelectWord={handlePackWord}
-          onSaveCard={handlePackCard}
-        />
       )}
 
       {/* Goal-based word generation — placeholder until the feature lands */}

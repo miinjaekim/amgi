@@ -89,6 +89,42 @@ _Reconciled against `main` @ `6e9f3e9` on 2026-07-24, plus the 1.0.2 release cut
     different voice than a sentence in the same deck — was **reviewed and
     accepted 2026-07-25**. It's a decision, not an outstanding defect.
 
+- **Decks page** (`feat/decks-page`, 2026-07-25) — `PacksModal` is retired on
+  both platforms. `/decks` lists the packs for the current study language and
+  `/decks/[packId]` is the deck itself, so the 71 kana tiles no longer fight an
+  80vh modal for room. Entered from Learn, where the modal used to open; **not
+  a nav tab**, per the decision below. Mobile mirrors the routes as a stack
+  screen pushed above the tabs.
+  - **`packId` on saved cards** — provenance only. Progress still matches on
+    the study side, so a word looked up on your own counts and cards saved
+    before the field existed aren't orphaned; the comment on the field says so,
+    because using it for saved-marking is the obvious wrong turn.
+  - `buildPackCardDraft`, `collectSavedTerms` and `getVocabPack` moved into
+    `@amgi/core` — web and mobile were building the draft identically.
+  - A looked-up word now reaches Learn as a route param instead of a callback.
+    Both platforms wait for preferences before resolving it: `studyLanguage`
+    reads 'Korean' until they load, so firing on mount looked the word up in
+    the wrong language pair. Mobile passes a `nonce` so tapping the same word
+    twice re-fires.
+  - **Drill** (added 2026-07-25, same branch) — the gate on it ("only if the
+    packs get used") was met by the user wanting it to learn kana. Enter from a
+    deck: shuffled prompt → reveal → knew/missed, with missed cards requeued
+    `DRILL_REQUEUE_GAP` (4) cards later so a session ends only once everything
+    in it has been answered right at least once. Start screen mirrors Review's
+    — direction pills reusing the registry's `directionFrontToBackKey`, plus a
+    10/25/all session length, since 71 kana in one sitting is a lot. Pronounce
+    button on the reveal for `pronounceable` packs.
+    - The queue is pure and lives in `packages/core/src/drill.ts`, so it's the
+      same on both platforms and it's the part under test (13 tests).
+    - **Shuffle before cutting to size** — cutting first would drill the same
+      opening kana every session and never reach the dakuten rows.
+    - **Only `cards` packs are drillable.** A `LookupPack` has words with no
+      back side, so there's nothing to check an answer against. See the backlog
+      for what making TOEIC drillable would take.
+    - The score counts cards actually *answered*, not the session's starting
+      size — ending a 71-card drill after five would otherwise have reported
+      all 71 correct.
+
 ### Design & polish
 - **Design system** — Forest/Sonokai/Paper/System themes, Source Code Pro,
   localized UI (EN + KO)

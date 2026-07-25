@@ -16,50 +16,46 @@ production build when a batch is worth a release. See [tech-stack.md](tech-stack
 
 ## Queued for the next build
 
-_Last build: **1.0.2 / build 4**, 2026-07-24. Nothing merged since._
+_Last build: **1.0.2 / build 4**, 2026-07-24._
 
 - [ ] **Japanese & Chinese depth batch** (PR #49) — pronunciation for four more
       languages, the kanji/hanzi breakdown, the kana packs, and the
       single-character TTS fix. No new native module; all of it is invisible on
       the phone until a build ships.
 
+- [ ] **Decks page** (`feat/decks-page`) — replaces `PacksModal` on both
+      platforms. Still no new native module, so the build stays narrow. The
+      kana packs from the batch above land on a page rather than in a modal,
+      which is the surface most of that work is actually seen through.
+
 **Pre-flight:** smoke-test in Expo Go → verify native-adjacent things (audio,
 files, sharing) on the build itself → bump `version` in `app.json` → check
 `docs/testflight-beta-info-ko.md` is still accurate.
+
+⚠️ **Specifically unverified on mobile:** the deck → Learn round trip.
+`router.navigate({ pathname: '/', params })` from `app/decks/[packId].tsx` is
+typechecked but has never run on a device — it's the one piece with no web
+equivalent to have exercised it. Tap a TOEIC word in Expo Go and confirm it
+pops back to Learn *and* resolves.
 
 ---
 
 ## High — everything else user-facing
 
-- [ ] **Decks page** — a home for the packs, replacing `PacksModal`. Shape
-      settled 2026-07-25; the closed calls and their reasoning are in the
-      Decisions section of [status.md](status.md) — read those before
-      reopening any of it. What's left is build work:
-
-      1. **`packId?: string` on `Flashcard`** (`packages/core/src/types.ts:314`),
-         written at save time. Do this first. Pack progress is currently a
-         lowercase text join (`PacksModal.tsx:48`) — fine for a checkmark, but
-         it can't support a deck filter and it breaks when a card's study side
-         is edited. Optional field, so no migration; older cards simply have no
-         pack.
-      2. **`/decks` route**, entered from Learn where `PacksModal` opens today.
-         Lists `getVocabPacks(studyLanguage)`. **Not a nav tab** — see the
-         decision.
-      3. **Deck detail** — tiles + progress, i.e. what `PacksModal` renders now,
-         with room to breathe for 71 kana.
-      4. **Drill**, entered from a deck. Closed set, repeatable, not due-gated,
-         and it **writes no SM-2 state**.
-      5. Retire `PacksModal` on both platforms; mobile mirrors the same route.
-
-      Still true from when this was a design question: kana drill is worth
-      building **only if the packs get used** — working through 71 tiles and
-      reviewing them may already be the whole loop. Stroke order stays out of
-      scope. Steps 1–3 stand on their own if drill never earns its place.
+- [ ] **Drill for lookup packs** — drill currently reads the pack, so only
+      `cards` packs (the kana) have a Drill button. A `LookupPack` holds words
+      with no back side, so there is nothing to check an answer against. Making
+      TOEIC drillable means drilling the user's *saved cards* for that pack
+      instead, which needs `packId` — and that only covers cards saved after
+      2026-07-25, same caveat as the deck filter below. Not obviously wanted:
+      those cards are already in Review, which is the loop they were built for.
 
 - [ ] **Deck filter on Review** — follow-on to the decks page, not part of it.
       Same shape as the existing `directionFilter` (`review/page.tsx`), scoping
-      the queue to one pack. Needs `packId` first. Review's default stays
-      whole-collection and due-gated — the filter narrows that loop, it does not
+      the queue to one pack. `packId` is now written, so the prerequisite is
+      met — but only for cards saved from a pack *after* 2026-07-25, so the
+      filter will under-report on an existing deck. Review's default stays
+      whole-collection and due-gated: the filter narrows that loop, it does not
       add a second one.
 
 - [ ] **Offline review on mobile** — promoted out of the old Offline Amgi
