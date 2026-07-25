@@ -23,20 +23,26 @@ _Last build: **1.0.2 / build 4**, 2026-07-24._
       single-character TTS fix. No new native module; all of it is invisible on
       the phone until a build ships.
 
-- [ ] **Decks page** (`feat/decks-page`) — replaces `PacksModal` on both
-      platforms. Still no new native module, so the build stays narrow. The
-      kana packs from the batch above land on a page rather than in a modal,
-      which is the surface most of that work is actually seen through.
+- [ ] **Decks page + drill** (PR #50, merged 2026-07-25) — replaces
+      `PacksModal` on both platforms. Still no new native module, so the build
+      stays narrow. The kana packs from the batch above land on a page rather
+      than in a modal, which is the surface most of that work is actually seen
+      through.
 
 **Pre-flight:** smoke-test in Expo Go → verify native-adjacent things (audio,
 files, sharing) on the build itself → bump `version` in `app.json` → check
 `docs/testflight-beta-info-ko.md` is still accurate.
 
-⚠️ **Specifically unverified on mobile:** the deck → Learn round trip.
-`router.navigate({ pathname: '/', params })` from `app/decks/[packId].tsx` is
-typechecked but has never run on a device — it's the one piece with no web
-equivalent to have exercised it. Tap a TOEIC word in Expo Go and confirm it
-pops back to Learn *and* resolves.
+**Verified in Expo Go 2026-07-25:** the drill screen
+(`app/decks/[packId]/drill.tsx`) works as expected, which also exercises
+Learn → `/decks` → deck → drill on a device.
+
+⚠️ **Still unverified: the deck → Learn round trip.**
+`router.navigate({ pathname: '/', params })` in `app/decks/[packId]/index.tsx`
+fires only from a **lookup** pack, so drilling kana never touches it — it needs
+study language English and a tap on a TOEIC word. Confirm it pops back to Learn
+*and* resolves the word. It's the one piece of PR #50 with no web equivalent
+that has exercised it.
 
 ---
 
