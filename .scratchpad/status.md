@@ -221,6 +221,33 @@ on a real binary, not Expo Go): pronunciation audio, CSV/Anki export, sharing.
   - ⚠️ Current console state (approved? link live?) isn't knowable from the
     repo — confirm before assuming.
 
+## Decisions
+
+Calls that are **closed**. They live here rather than in
+[backlog.md](backlog.md) so the backlog stays a list of open work — but the
+reasoning is kept, because a decision with its reasoning lost gets reopened by
+the next person to notice the symptom.
+
+- **The app keeps the name "Amgi"** (2026-07-25). The open question was whether
+  암기 would still fit as the app grew past Korean; it was weighed and the
+  answer is yes. The name is settled, the rename backlog item is gone, and the
+  "cheaper to rename before public launch" urgency goes with it. A domain can be
+  bought against the current name whenever it's wanted. Don't re-raise this as
+  growth advice — it was considered and declined.
+- **`cmn-TW-Wavenet-A` stays** for Traditional Chinese (2026-07-25). Samples in
+  `audio-test/lang-voices/` were listened to against `cmn-CN-Chirp3-HD-Charon`
+  and accepted. `cmn-TW` has no Chirp 3: HD voice at all, so this trades voice
+  quality for a Taiwanese rather than Mainland accent — the accent won.
+- **A single kana may sound different from the rest of its deck** (2026-07-25).
+  Single characters route to a Neural2 voice while everything longer uses
+  Chirp 3: HD, so the speaker audibly changes between a kana tile and a
+  sentence. Accepted: correctness beat consistency, and moving Japanese and
+  Korean wholesale to Neural2 would cost quality on longer text. **Not a
+  consistency bug** — if this resurfaces as a complaint, it's a re-decision, not
+  a fix.
+- **No OTA** (2026-07-23) — see Known Issues below and
+  [tech-stack.md](tech-stack.md).
+
 ## Known Issues
 
 Root-caused and queued in [backlog.md](backlog.md) — see there for scope.

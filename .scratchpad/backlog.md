@@ -1,13 +1,13 @@
 # Backlog
 
-Ordered by priority. When something ships, move it to the Shipped list in
-[status.md](status.md). Source of truth is the user's Google Tasks list; this is
-the scoped version. Last synced 2026-07-25.
+Ordered by priority. **Only open work lives here** — shipped, cancelled and
+decided items move to [status.md](status.md), reasoning included, so a closed
+call doesn't get reopened from this file. Source of truth is the user's Google
+Tasks list; this is the scoped version. Last synced 2026-07-25.
 
 **Focus (2026-07-25): ship the depth work to the phone.** The Japanese/Chinese
 depth batch is merged but invisible until a build goes out, so the next build is
-deliberately narrow — no new native modules, nothing that isn't already on
-`main`. Push notifications and the rename were both taken out of it; see below.
+deliberately narrow — no new native modules, nothing that isn't already on `main`.
 
 **Mobile shipping model: no OTA.** Iterate in Expo Go (`npx expo start`), cut a
 production build when a batch is worth a release. See [tech-stack.md](tech-stack.md).
@@ -23,34 +23,9 @@ _Last build: **1.0.2 / build 4**, 2026-07-24. Nothing merged since._
       single-character TTS fix. No new native module; all of it is invisible on
       the phone until a build ships.
 
-**Scoped down 2026-07-25.** Two items that were sitting here are out:
-
-- **Push notifications — deferred**, not cancelled. Still wanted (see High), just
-  not in this build. Keeps the batch free of any new native module, so this is a
-  JS-only release.
-- **App rename — cancelled.** The user decided not to rename. See Bigger bets.
-
 **Pre-flight:** smoke-test in Expo Go → verify native-adjacent things (audio,
 files, sharing) on the build itself → bump `version` in `app.json` → check
 `docs/testflight-beta-info-ko.md` is still accurate.
-
----
-
-## Now — Japanese & Chinese depth
-
-✅ **All three shipped in PR #49 (2026-07-25)** — see the Shipped list in
-[status.md](status.md). Both open judgement calls were **closed 2026-07-25**:
-
-- [x] **`cmn-TW-Wavenet-A` confirmed.** The user listened to the samples in
-      `audio-test/lang-voices/` and is satisfied. Traditional Chinese keeps the
-      Taiwanese Wavenet voice; the accent-over-voice-quality trade stands and
-      the paired `cmn-CN-Chirp3-HD-Charon` comparison is settled, not pending.
-- [x] **A single kana may sound different from the rest of the deck.** The
-      Neural2 speaker on single characters vs. Chirp 3: HD everywhere else is
-      **accepted as-is**. Correctness wins; nothing moves to Neural2 wholesale.
-      Don't reopen this as a consistency bug — it's a decision.
-
-What's left is one open design question, below.
 
 ---
 
@@ -97,9 +72,8 @@ loop. Stroke order remains out of scope.
       met: PR #47 fixed WOTD repeats, so a notification can't push a word you
       already saw. Needs `expo-notifications`, scheduling, per-type opt-in.
       Streak nudges are the easiest place to break "no dark patterns".
-      **Deferred out of the next build (2026-07-25)** — still wanted, but it
-      brings a native module, so it wants a build of its own rather than riding
-      along with a JS-only release.
+      Deliberately **not** in the next build — it brings a native module, so it
+      wants a build of its own rather than riding along with a JS-only release.
 
 - [ ] **Privacy — finish the remaining pieces** — account/data deletion (export
       already exists) and a short "your data" blurb in settings or onboarding.
@@ -170,14 +144,6 @@ explain and remember it" loop. Revisit after the language-depth work.
 - [ ] **Conversation practice** — transcription + per-participant feedback; MVP
       is end-of-conversation feedback on a recording. Same "here's what you
       meant to say" model as Writing review — scope the two together.
-
-- [x] ~~**Rename the app + buy the domain**~~ — **cancelled 2026-07-25.** The
-      user decided to keep "Amgi". The concern was that 암기 wouldn't fit as the
-      app grew past Korean; that's now been weighed and rejected, so the name is
-      **settled** and no longer a deadline hanging over the launch. The "cheaper
-      before public launch" urgency is gone with it. A domain can be bought
-      against the current name whenever it's wanted. Reopen only if the user
-      raises it — don't re-suggest it as growth advice.
 
 ## Research / exploratory
 
