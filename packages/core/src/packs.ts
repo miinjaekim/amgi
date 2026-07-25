@@ -1,4 +1,5 @@
-import type { StudyLanguage } from './types';
+import type { CardSides, StudyLanguage } from './types';
+import { getStudyLanguageConfig } from './types';
 import { HIRAGANA_PACK, KATAKANA_PACK } from './kana';
 
 /**
@@ -216,6 +217,59 @@ export const VOCAB_PACKS: Partial<Record<StudyLanguage, VocabPack[]>> = {
 
 export function getVocabPacks(studyLanguage: StudyLanguage): VocabPack[] {
   return VOCAB_PACKS[studyLanguage] ?? [];
+}
+
+/** One pack by id, or undefined — a deck route's id comes from the URL. */
+export function getVocabPack(studyLanguage: StudyLanguage, packId: string): VocabPack | undefined {
+  return getVocabPacks(studyLanguage).find(pack => pack.id === packId);
+}
+
+/**
+ * Lowercased study sides of the user's cards, for marking pack entries as
+ * already saved. Matches on text rather than `packId` deliberately: a word you
+ * looked up on your own should count, and cards saved before `packId` existed
+ * carry no pack.
+ */
+export function collectSavedTerms(cards: CardSides[]): Set<string> {
+  const terms = new Set<string>();
+  for (const card of cards) {
+    const config = getStudyLanguageConfig(card.studyLanguage);
+    const study = card[config.studyField] ?? card.term;
+    if (study) terms.add(study.toLowerCase());
+    if (card.term) terms.add(card.term.toLowerCase());
+  }
+  return terms;
+}
+
+/** How many of a pack's entries the user already has a card for. */
+export function countSavedPackTerms(pack: VocabPack, savedTerms: Set<string>): number {
+  return getPackTerms(pack).filter(term => savedTerms.has(term.toLowerCase())).length;
+}
+
+/**
+ * The Firestore draft for a pre-authored pack card. Shared because web and
+ * mobile were building it identically, and because the `english` fallback below
+ * is easy to drop when one platform changes.
+ */
+export function buildPackCardDraft(
+  card: PackCard,
+  packId: string,
+  uid: string,
+  studyLanguage: StudyLanguage,
+): Record<string, unknown> {
+  const config = getStudyLanguageConfig(studyLanguage);
+  const draft: Record<string, unknown> = {
+    uid,
+    term: card.study,
+    termLanguage: studyLanguage,
+    packId,
+    [config.studyField]: card.study,
+    [config.backField]: card.back,
+  };
+  // `english` is required on every card; on a deck whose back isn't English
+  // neither side above has filled it in.
+  if (draft.english === undefined) draft.english = card.study;
+  return draft;
 }
 
 export function getPackText(

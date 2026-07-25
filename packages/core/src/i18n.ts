@@ -184,6 +184,12 @@ const translations = {
     generateLink: 'Generate words for a goal',
     generateComingSoon: 'Describe why you\'re learning and get a word list made for you — this feature is on its way.',
     comingSoon: 'Coming soon',
+    // Decks page
+    decksTitle: 'Word packs',
+    decksBack: 'All packs',
+    decksEmpty: 'No packs for this language yet.',
+    deckNotFound: 'That pack no longer exists.',
+    deckEntryCount: '{count} entries',
   },
   Korean: {
     // Learn page
@@ -372,6 +378,12 @@ const translations = {
     generateLink: '목표에 맞는 단어 만들기',
     generateComingSoon: '학습 목적을 알려주면 딱 맞는 단어 목록을 만들어주는 기능을 준비하고 있어요.',
     comingSoon: '준비 중',
+    // Decks page
+    decksTitle: '단어팩',
+    decksBack: '단어팩 목록',
+    decksEmpty: '이 언어에는 아직 단어팩이 없어요.',
+    deckNotFound: '더 이상 존재하지 않는 단어팩이에요.',
+    deckEntryCount: '{count}개',
   },
 } as const;
 

@@ -5,6 +5,7 @@ import {
   Dimensions, Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useUser } from '../../src/context/UserContext';
 import {
   getTermExplanation, getTermDepth, getTermExamples, getWordOfTheDay,
@@ -14,12 +15,11 @@ import {
   getCharacterBreakdown, getDepthTarget, getReading, getStudyLanguageConfig, getExampleSides,
   getVocabPacks, parseStreamedDepth, parseStreamedExamples, wordOfTheDayCore,
 } from '@amgi/core';
-import type { PackCard, StudyLanguage } from '@amgi/core';
+import type { StudyLanguage } from '@amgi/core';
 import type { TermCore, TermDepth, TermAmbiguous, ExamplePair, WordOfTheDay } from '../../src/services/gemini';
 import { saveFlashcardToFirestore } from '../../src/services/firestore';
 import type { Flashcard } from '../../src/services/firestore';
 import SaveFlashcardModal from '../../src/components/SaveFlashcardModal';
-import PacksModal from '../../src/components/PacksModal';
 import PronounceButton from '../../src/components/PronounceButton';
 import Markdown from '../../src/components/Markdown';
 import { t } from '@amgi/core';
@@ -89,7 +89,6 @@ export default function LearnScreen() {
   const [contextInput, setContextInput] = useState('');
   const [wordOfTheDay, setWordOfTheDay] = useState<WordOfTheDay | null>(null);
   const [wotdLoading, setWotdLoading] = useState(true);
-  const [showPacks, setShowPacks] = useState(false);
   const [showGenerate, setShowGenerate] = useState(false);
 
   // Word of the day — refreshes when the language pair changes. Non-essential:
@@ -107,38 +106,19 @@ export default function LearnScreen() {
     return () => { cancelled = true; };
   }, [studyLanguage, nativeLanguage]);
 
-  const handlePackWord = (word: string, context?: string) => {
-    setShowPacks(false);
-    setTerm(word);
-    resolveExplanation(word, context);
-  };
-
-  // A pre-authored pack card is already complete, so it goes straight to
-  // Firestore — there is nothing for /api/explain to add about あ, and asking
-  // would cost a model call per character to get prose nobody wants on the card.
-  const handlePackCard = async (card: PackCard) => {
-    if (!user) {
-      setError(t(nativeLanguage, 'signInToSave'));
-      throw new Error('not signed in');
-    }
-    const draft: Record<string, unknown> = {
-      uid: user.uid,
-      term: card.study,
-      termLanguage: studyLanguage,
-      [langConfig.studyField]: card.study,
-      [langConfig.backField]: card.back,
-    };
-    // `english` is required on every card; on a deck whose back isn't English
-    // neither side above has filled it in.
-    if (draft.english === undefined) draft.english = card.study;
-    try {
-      await saveFlashcardToFirestore(draft as Omit<Flashcard, 'createdAt' | 'id'>, studyLanguage);
-      setError(null);
-    } catch (err) {
-      setError(t(nativeLanguage, 'errorSaveFlashcard'));
-      throw err;
-    }
-  };
+  // A word tapped on a deck screen arrives as a route param, because looking it
+  // up is this screen's job. `nonce` changes on every tap so the same word twice
+  // still re-fires; waiting on `nativeLanguage` matters because preferences load
+  // after mount and `studyLanguage` reads 'Korean' until they do.
+  const { term: packTerm, context: packContext, nonce } = useLocalSearchParams<{
+    term?: string; context?: string; nonce?: string;
+  }>();
+  useEffect(() => {
+    if (nativeLanguage === undefined || !packTerm) return;
+    setTerm(packTerm);
+    resolveExplanation(packTerm, packContext);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [packTerm, nonce, nativeLanguage]);
 
   const reset = () => {
     setCore(null); setAmbiguity(null); setDepth(null); setExamples(null);
@@ -338,15 +318,6 @@ export default function LearnScreen() {
     />
   );
 
-  const packsModal = showPacks && (
-    <PacksModal
-      studyLanguage={studyLanguage}
-      onClose={() => setShowPacks(false)}
-      onSelectWord={handlePackWord}
-      onSaveCard={handlePackCard}
-    />
-  );
-
   // Goal-based word generation — placeholder until the feature lands.
   const generateModal = showGenerate && (
     <Modal visible transparent animationType="fade" onRequestClose={() => setShowGenerate(false)}>
@@ -453,7 +424,7 @@ export default function LearnScreen() {
             </View>
             <View style={s.linksRow}>
               {getVocabPacks(studyLanguage).length > 0 && (
-                <TouchableOpacity onPress={() => setShowPacks(true)}>
+                <TouchableOpacity onPress={() => router.push('/decks')}>
                   <Text style={s.linkText}>{t(nativeLanguage, 'packsLink')}</Text>
                 </TouchableOpacity>
               )}
@@ -466,7 +437,6 @@ export default function LearnScreen() {
               screen it gives space back instead of pushing content off. */}
           <View style={[s.restingSpacer, { height: searchRestingBottom }]} />
         </KeyboardAvoidingView>
-        {packsModal}
         {generateModal}
         {saveModal}
       </SafeAreaView>
@@ -653,7 +623,6 @@ export default function LearnScreen() {
           )}
         </ScrollView>
       </KeyboardAvoidingView>
-      {packsModal}
       {generateModal}
       {saveModal}
     </SafeAreaView>
