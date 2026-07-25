@@ -105,9 +105,20 @@ export default function DeckDetailPage() {
       <p className="text-sm text-[var(--color-muted)] mt-2">
         {getPackText(pack.description, nativeLanguage)}
       </p>
-      <p className="text-xs text-[var(--color-muted)] opacity-70 mt-2 mb-6">
+      <p className="text-xs text-[var(--color-muted)] opacity-70 mt-2 mb-4">
         {t(nativeLanguage, pack.kind === 'cards' ? 'packTapHintCards' : 'packTapHint')}
       </p>
+
+      {/* Only a `cards` pack can be drilled — a lookup pack holds words with no
+          back side, so there is nothing to check an answer against here. */}
+      {pack.kind === 'cards' && (
+        <Link
+          href={`/decks/${pack.id}/drill`}
+          className="inline-block mb-6 px-5 py-2.5 rounded-lg font-semibold bg-[var(--color-highlight)] text-[var(--color-bg)] hover:bg-[var(--color-text)] transition-colors"
+        >
+          {t(nativeLanguage, 'drillLink')}
+        </Link>
+      )}
 
       {error && (
         <div className="mb-4 p-3 rounded-lg text-sm bg-[var(--color-muted)]/30 text-[var(--color-text)]">

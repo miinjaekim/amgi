@@ -6,12 +6,12 @@ import {
   buildPackCardDraft, collectSavedTerms, getPackText, getPackTerms, getVocabPack, t,
 } from '@amgi/core';
 import type { PackCard } from '@amgi/core';
-import { useUser } from '../../src/context/UserContext';
-import { useTheme } from '../../src/context/ThemeContext';
-import { fetchAllUserFlashcards, saveFlashcardToFirestore } from '../../src/services/firestore';
-import type { Flashcard } from '../../src/services/firestore';
-import PronounceButton from '../../src/components/PronounceButton';
-import type { Palette } from '../../src/theme';
+import { useUser } from '../../../src/context/UserContext';
+import { useTheme } from '../../../src/context/ThemeContext';
+import { fetchAllUserFlashcards, saveFlashcardToFirestore } from '../../../src/services/firestore';
+import type { Flashcard } from '../../../src/services/firestore';
+import PronounceButton from '../../../src/components/PronounceButton';
+import type { Palette } from '../../../src/theme';
 
 export default function DeckDetailScreen() {
   const { packId } = useLocalSearchParams<{ packId: string }>();
@@ -103,6 +103,17 @@ export default function DeckDetailScreen() {
           {t(nativeLanguage, pack.kind === 'cards' ? 'packTapHintCards' : 'packTapHint')}
         </Text>
 
+        {/* Only a `cards` pack can be drilled — a lookup pack holds words with
+            no back side, so there is nothing to check an answer against. */}
+        {pack.kind === 'cards' && (
+          <TouchableOpacity
+            style={s.drillBtn}
+            onPress={() => router.push(`/decks/${pack.id}/drill`)}
+          >
+            <Text style={s.drillBtnText}>{t(nativeLanguage, 'drillLink')}</Text>
+          </TouchableOpacity>
+        )}
+
         {error && <Text style={s.error}>{error}</Text>}
 
         {pack.kind === 'lookup' ? (
@@ -165,7 +176,12 @@ function makeStyles(C: Palette) {
     title: { fontSize: 21, fontWeight: '700', color: C.highlight },
     count: { fontSize: 12, color: C.muted },
     desc: { fontSize: 13, color: C.muted, marginTop: 6 },
-    hint: { fontSize: 12, color: C.muted, opacity: 0.7, marginTop: 6, marginBottom: 18 },
+    hint: { fontSize: 12, color: C.muted, opacity: 0.7, marginTop: 6, marginBottom: 14 },
+    drillBtn: {
+      alignSelf: 'flex-start', backgroundColor: C.highlight,
+      paddingHorizontal: 20, paddingVertical: 10, borderRadius: 10, marginBottom: 18,
+    },
+    drillBtnText: { fontSize: 15, fontWeight: '700', color: C.bg },
     error: { fontSize: 13, color: C.error, marginBottom: 12 },
     wordWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
     wordChip: { borderWidth: 1, borderColor: C.border, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6 },
