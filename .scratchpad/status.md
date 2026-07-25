@@ -89,7 +89,7 @@ _Reconciled against `main` @ `6e9f3e9` on 2026-07-24, plus the 1.0.2 release cut
     different voice than a sentence in the same deck — was **reviewed and
     accepted 2026-07-25**. It's a decision, not an outstanding defect.
 
-- **Decks page** (`feat/decks-page`, 2026-07-25) — `PacksModal` is retired on
+- **Decks page** (PR #50, 2026-07-25) — `PacksModal` is retired on
   both platforms. `/decks` lists the packs for the current study language and
   `/decks/[packId]` is the deck itself, so the 71 kana tiles no longer fight an
   80vh modal for room. Entered from Learn, where the modal used to open; **not
@@ -124,6 +124,10 @@ _Reconciled against `main` @ `6e9f3e9` on 2026-07-24, plus the 1.0.2 release cut
     - The score counts cards actually *answered*, not the session's starting
       size — ending a 71-card drill after five would otherwise have reported
       all 71 correct.
+  - **Verified in Expo Go 2026-07-25**, both pack kinds: drill on a `cards` pack
+    (kana), and tapping a word in a `lookup` pack (TOEIC) — the deck → Learn
+    round trip, which had no web equivalent to prove it since it has to pop a
+    stack screen above the tabs and have Learn pick the param up.
 
 ### Design & polish
 - **Design system** — Forest/Sonokai/Paper/System themes, Source Code Pro,
