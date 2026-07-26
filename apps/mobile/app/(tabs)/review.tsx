@@ -7,10 +7,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams } from 'expo-router';
 import { useUser } from '../../src/context/UserContext';
 import {
-  fetchUserFlashcards, updateFlashcardReview,
   archiveFlashcard, updateFlashcardFields,
 } from '../../src/services/firestore';
 import type { Flashcard, ReviewTracking } from '../../src/services/firestore';
+import {
+  fetchAndCacheReviewCards, readCachedReviewCards, warmKnownLanguages, withTimeout,
+} from '../../src/services/reviewSync';
+import { enqueueReview } from '../../src/services/offlineReview';
+import { usePendingReviewSync } from '../../src/hooks/usePendingReviewSync';
 import {
   buildReviewCollections, getBackSide, getCollectionId, getNextReviewDate,
   getNextReviewData, getStudyLangSide, getStudyLanguageConfig, isDue, t,
@@ -41,7 +45,14 @@ export default function ReviewScreen() {
   const s = useMemo(() => makeStyles(C, tabBarHeight), [C, tabBarHeight]);
   const { user, nativeLanguage, studyLanguage, recordReview } = useUser();
   const config = getStudyLanguageConfig(studyLanguage);
+  const { isOnline, pendingCount, sync } = usePendingReviewSync(user?.uid);
   const [cards, setCards] = useState<Flashcard[]>([]);
+  /**
+   * Offline *and* this device has never loaded this language. Distinct from an
+   * empty deck: the cards exist, they just aren't here. Saying "no flashcards"
+   * would read as though they had been lost.
+   */
+  const [uncachedLanguage, setUncachedLanguage] = useState(false);
   // `undefined` is "hasn't picked yet"; `null` is the cards you made yourself,
   // which is a real choice and not the absence of one.
   const [collectionId, setCollectionId] = useState<string | null | undefined>(undefined);
@@ -72,12 +83,47 @@ export default function ReviewScreen() {
   // switching to another one — the pick resets with the cards.
   useEffect(() => {
     if (!user) return;
+    const uid = user.uid;
+    let active = true;
     setLoading(true);
     setCollectionId(undefined);
-    fetchUserFlashcards(user.uid, studyLanguage)
-      .then(setCards)
-      .finally(() => setLoading(false));
+    setUncachedLanguage(false);
+
+    (async () => {
+      // Cache first, so a session starts on whatever this device already holds
+      // instead of on a spinner — underground that is the only thing there is,
+      // and on a good connection it just makes review open instantly.
+      const cached = await readCachedReviewCards(uid, studyLanguage);
+      if (!active) return;
+      if (cached) {
+        setCards(cached);
+        setLoading(false);
+      }
+
+      try {
+        const fresh = await fetchAndCacheReviewCards(uid, studyLanguage);
+        if (active) setCards(fresh);
+      } catch {
+        // Unreachable. With a snapshot that is invisible; without one, this
+        // language has simply never been on this device.
+        if (active && !cached) {
+          setCards([]);
+          setUncachedLanguage(true);
+        }
+      } finally {
+        if (active) setLoading(false);
+      }
+    })();
+
+    return () => { active = false; };
   }, [user, studyLanguage]);
+
+  // Keep the other languages this device studies ready for a switch made
+  // offline. Best-effort and in the background — nothing waits on it.
+  useEffect(() => {
+    if (!user || !isOnline) return;
+    void warmKnownLanguages(user.uid, studyLanguage);
+  }, [user, isOnline, studyLanguage]);
 
   const collections = useMemo(
     () => buildReviewCollections(cards, studyLanguage, nativeLanguage),
@@ -129,7 +175,8 @@ export default function ReviewScreen() {
   const handleRate = async (rating: Rating) => {
     if (submitting) return;
     const item = queue[index];
-    if (!item) return;
+    const cardId = item?.card.id;
+    if (!item || !cardId || !user) return;
     recordReview();
     setSubmitting(rating);
     const { card, direction } = item;
@@ -138,11 +185,29 @@ export default function ReviewScreen() {
     };
     const next = getNextReviewData(tracking, rating);
     const otherDir = direction === 'frontToBack' ? 'backToFront' : 'frontToBack';
-    try {
-      await updateFlashcardReview(card.id!, direction, next, card[otherDir], studyLanguage);
-    } catch {
-      // fire-and-forget
-    }
+
+    // Durable before anything else. SM-2 already ran locally, so the rating is
+    // complete the moment it is on disk; the network write is delivery, not
+    // commitment. The old code awaited Firestore and swallowed the failure,
+    // which is why a rating made underground quietly never happened.
+    await enqueueReview(user.uid, {
+      cardId,
+      studyLanguage,
+      direction,
+      tracking: next,
+      otherTracking: card[otherDir],
+      reviewedAt: new Date().toISOString(),
+    });
+
+    // Keep the loaded cards in step with the queue, so leaving review and
+    // coming back doesn't resurrect a card that was just answered.
+    setCards(prev => prev.map(c => (c.id === card.id ? { ...c, [direction]: next } : c)));
+
+    // Deliver in the background. Nothing here waits on the network — the rating
+    // is already safe, so the next card comes up immediately whether or not
+    // there is a signal.
+    void sync();
+
     setSubmitting(null);
     resetCardState();
     if (index + 1 >= queue.length) {
@@ -156,7 +221,10 @@ export default function ReviewScreen() {
     const item = queue[index];
     if (!item?.card.id || !editDraft) return;
     try {
-      await updateFlashcardFields(item.card.id, editDraft, studyLanguage);
+      // Unlike a rating, an edit is not queued — so offline it must fail
+      // visibly. Firestore's write promise simply never settles without a
+      // connection, which would leave the form hanging with no explanation.
+      await withTimeout(updateFlashcardFields(item.card.id, editDraft, studyLanguage));
       setQueue(prev => prev.map((qi, i) =>
         i === index ? { ...qi, card: { ...qi.card, ...editDraft } } : qi
       ));
@@ -177,7 +245,8 @@ export default function ReviewScreen() {
         text: 'Archive', style: 'destructive',
         onPress: async () => {
           try {
-            await archiveFlashcard(item.card.id!, studyLanguage);
+            // Not queued either; see handleEditSave.
+            await withTimeout(archiveFlashcard(item.card.id!, studyLanguage));
             const newQueue = queue.filter((_, i) => i !== index);
             setQueue(newQueue);
             resetCardState();
@@ -210,10 +279,32 @@ export default function ReviewScreen() {
   if (cards.length === 0) {
     return (
       <SafeAreaView style={s.center}>
-        <Text style={s.emptyText}>{t(nativeLanguage, 'noFlashcardsForReview')}</Text>
+        <Text style={s.emptyText}>
+          {uncachedLanguage
+            ? t(nativeLanguage, 'offlineNoCachedCards', {
+                language: t(nativeLanguage, config.studyLabelKey),
+              })
+            : t(nativeLanguage, 'noFlashcardsForReview')}
+        </Text>
       </SafeAreaView>
     );
   }
+
+  // Shown on every review surface, because "did my subway session count?"
+  // shouldn't need faith. Offline explains why the cards look frozen; the
+  // pending count stays up while online too, until the queue actually drains.
+  const offlineNotice = (!isOnline || pendingCount > 0) && (
+    <View style={s.offlineNotice}>
+      {!isOnline && (
+        <Text style={s.offlineNoticeText}>{t(nativeLanguage, 'offlineReviewBanner')}</Text>
+      )}
+      {pendingCount > 0 && (
+        <Text style={s.offlineNoticePending}>
+          {t(nativeLanguage, 'offlinePendingReviews', { count: pendingCount })}
+        </Text>
+      )}
+    </View>
+  );
 
   // Your own cards and each pack are reviewed apart — katakana arriving mid-way
   // through Japanese vocabulary is worse review than either done alone — so the
@@ -222,6 +313,7 @@ export default function ReviewScreen() {
     return (
       <SafeAreaView style={s.root} edges={['top']}>
         <ScrollView contentContainerStyle={s.pickerScroll}>
+          {offlineNotice}
           <Text style={s.pickerTitle}>{t(nativeLanguage, 'reviewPickCollection')}</Text>
           {collections.map(collection => (
             <TouchableOpacity
@@ -269,6 +361,7 @@ export default function ReviewScreen() {
   if (done) {
     return (
       <SafeAreaView style={s.center}>
+        {offlineNotice}
         {collections.length > 1 && (
           <Text style={s.collectionLabel}>
             {collections.find(c => c.id === collectionId)?.name}
@@ -310,6 +403,7 @@ export default function ReviewScreen() {
 
   return (
     <SafeAreaView style={s.root} edges={['top']}>
+      {offlineNotice}
       {/* Progress */}
       <View style={s.progressBar}>
         <View style={[s.progressFill, { width: `${(index / queue.length) * 100}%` }]} />
@@ -453,6 +547,17 @@ function makeStyles(C: Palette, tabBarHeight: number) {
   return StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg, paddingBottom: tabBarHeight },
   center: { flex: 1, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center', padding: 32 },
+
+  // Muted rather than an alert colour: being offline is a state to explain,
+  // not an error to apologise for — the session works either way.
+  offlineNotice: {
+    marginHorizontal: 16, marginTop: 10,
+    paddingHorizontal: 14, paddingVertical: 9,
+    borderWidth: 1, borderColor: C.border, borderRadius: 10,
+    gap: 3,
+  },
+  offlineNoticeText: { fontSize: 12, color: C.muted, lineHeight: 17 },
+  offlineNoticePending: { fontSize: 12, color: C.muted, fontWeight: '600' },
 
   progressBar: { height: 3, backgroundColor: C.border, marginTop: 8 },
   progressFill: { height: 3, backgroundColor: C.highlight },

@@ -7,3 +7,4 @@ export * from './collections';
 export * from './kana';
 export * from './drill';
 export * from './tts';
+export * from './offlineReview';

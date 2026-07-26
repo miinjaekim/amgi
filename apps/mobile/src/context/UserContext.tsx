@@ -5,8 +5,14 @@ import * as Google from 'expo-auth-session/providers/google';
 import * as WebBrowser from 'expo-web-browser';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { auth } from '../config/firebase';
-import { getUserPreferences, saveUserPreferences } from '../services/userPreferences';
-import { isStudyLanguage, resolveNativeLanguage, resolveStudyLanguage, type StudyLanguage } from '@amgi/core';
+import { getUserPreferencesFromServer, saveUserPreferences } from '../services/userPreferences';
+import {
+  markStreakSynced, readCachedStreak, writeCachedStreak,
+} from '../services/offlineReview';
+import {
+  isStudyLanguage, mergeStreakState, resolveNativeLanguage, resolveStudyLanguage,
+  type StreakState, type StudyLanguage,
+} from '@amgi/core';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -74,23 +80,71 @@ export function UserProvider({ children }: { children: ReactNode }) {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       setUser(firebaseUser);
       if (firebaseUser) {
-        const prefs = await getUserPreferences(firebaseUser.uid);
-        const lang = prefs?.nativeLanguage ?? null;
+        const uid = firebaseUser.uid;
+
+        // A failed read here means offline, not "no preferences". Treating the
+        // two alike is what used to wipe the cached language and zero a streak
+        // on any launch without a signal.
+        let prefs = null;
+        let reachedServer = false;
+        try {
+          prefs = await getUserPreferencesFromServer(uid);
+          reachedServer = true;
+        } catch {
+          // Fall through to whatever this device already knows.
+        }
+
+        const cachedLang = await AsyncStorage.getItem(LANG_CACHE_KEY);
+        const lang = reachedServer ? (prefs?.nativeLanguage ?? null) : cachedLang;
         setNativeLanguageState(lang);
         if (lang) {
           await AsyncStorage.setItem(LANG_CACHE_KEY, lang);
-        } else {
+        } else if (reachedServer) {
+          // Only the server may say the preference is genuinely unset.
           await AsyncStorage.removeItem(LANG_CACHE_KEY);
         }
-        if (isStudyLanguage(prefs?.studyLanguage)) {
-          setStudyLanguageState(prefs.studyLanguage);
-          await AsyncStorage.setItem(STUDY_LANG_CACHE_KEY, prefs.studyLanguage);
+
+        const study = reachedServer
+          ? prefs?.studyLanguage
+          : await AsyncStorage.getItem(STUDY_LANG_CACHE_KEY);
+        if (isStudyLanguage(study)) {
+          setStudyLanguageState(study);
+          await AsyncStorage.setItem(STUDY_LANG_CACHE_KEY, study);
         }
+
+        const merged = mergeStreakState(
+          await readCachedStreak(uid),
+          reachedServer
+            ? {
+                streak: prefs?.streak ?? 0,
+                longestStreak: prefs?.longestStreak ?? 0,
+                lastReviewDate: prefs?.lastReviewDate ?? null,
+                reviewedToday: prefs?.reviewedToday ?? 0,
+                dirty: false,
+              }
+            : null,
+        );
+
         const today = getTodayString();
-        setStreak(prefs?.streak ?? 0);
-        setLongestStreak(prefs?.longestStreak ?? 0);
-        setLastReviewDate(prefs?.lastReviewDate ?? null);
-        setReviewedToday(prefs?.lastReviewDate === today ? (prefs?.reviewedToday ?? 0) : 0);
+        setStreak(merged.streak);
+        setLongestStreak(merged.longestStreak);
+        setLastReviewDate(merged.lastReviewDate);
+        setReviewedToday(merged.lastReviewDate === today ? merged.reviewedToday : 0);
+
+        // Offline reviews that outlived their session; push them now that we
+        // know the server is reachable and the numbers have been reconciled.
+        if (merged.dirty && reachedServer) {
+          saveUserPreferences(uid, {
+            streak: merged.streak,
+            longestStreak: merged.longestStreak,
+            lastReviewDate: merged.lastReviewDate ?? undefined,
+            reviewedToday: merged.reviewedToday,
+          })
+            .then(() => markStreakSynced(uid, merged))
+            .catch(() => { /* Still unsent; the next launch tries again. */ });
+        } else {
+          await writeCachedStreak(uid, merged);
+        }
       } else {
         const cached = await AsyncStorage.getItem(LANG_CACHE_KEY);
         setNativeLanguageState(cached ?? 'Korean');
@@ -170,12 +224,27 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
     setReviewedToday(newReviewedToday);
 
-    saveUserPreferences(user.uid, {
+    const next: StreakState = {
       streak: newStreak,
       longestStreak: newLongest,
       lastReviewDate: today,
       reviewedToday: newReviewedToday,
-    }).catch(() => {});
+      dirty: true,
+    };
+
+    // Local first, and marked unsent. The Firestore write below does not reject
+    // when offline — it simply never settles — so without this the streak would
+    // exist nowhere but React state until the app was killed.
+    const uid = user.uid;
+    void writeCachedStreak(uid, next);
+    saveUserPreferences(uid, {
+      streak: newStreak,
+      longestStreak: newLongest,
+      lastReviewDate: today,
+      reviewedToday: newReviewedToday,
+    })
+      .then(() => markStreakSynced(uid, next))
+      .catch(() => { /* Stays dirty; reconciled on the next launch that connects. */ });
   };
 
   const handleSignIn = async () => {

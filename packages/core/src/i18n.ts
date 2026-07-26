@@ -67,6 +67,10 @@ const translations = {
     reviewCollectionDue: '{count} due',
     reviewCollectionCaughtUp: 'Caught up',
     reviewChangeCollection: 'Change collection',
+    // Offline review — mobile keeps its own card snapshot and rating queue
+    offlineReviewBanner: 'Offline — reviewing the cards saved on this device.',
+    offlinePendingReviews: '{count} to sync',
+    offlineNoCachedCards: 'No {language} cards saved on this device yet. Reconnect to load them.',
     directionBoth: 'Both directions',
     directionKoreanToEnglish: 'Korean → English',
     directionEnglishToKorean: 'English → Korean',
@@ -290,6 +294,10 @@ const translations = {
     reviewCollectionDue: '{count}개 복습할 차례',
     reviewCollectionCaughtUp: '지금은 없어요',
     reviewChangeCollection: '다른 묶음 고르기',
+    // Offline review — mobile keeps its own card snapshot and rating queue
+    offlineReviewBanner: '오프라인 상태예요. 받아둔 카드로 복습할 수 있어요.',
+    offlinePendingReviews: '{count}개 저장 대기 중',
+    offlineNoCachedCards: '{language} 카드를 아직 받아두지 않았어요. 연결하면 불러올게요.',
     directionBoth: '양방향',
     directionKoreanToEnglish: '한국어 → 영어',
     directionEnglishToKorean: '영어 → 한국어',
