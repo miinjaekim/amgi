@@ -640,9 +640,9 @@ function makeStyles(C: Palette, tabBarHeight: number) {
   // The label stays centred on the screen rather than in the space left over
   // beside the ✕, so it doesn't shift when the collection name appears.
   progressRow: { flexDirection: 'row', alignItems: 'center' },
-  progressLabelWrap: { flex: 1, marginLeft: 32 },
-  stopBtn: { width: 32, alignItems: 'center', justifyContent: 'center', marginTop: 6 },
-  stopBtnText: { fontSize: 15, color: C.muted },
+  progressLabelWrap: { flex: 1, marginLeft: 44 },
+  stopBtn: { width: 44, alignItems: 'center', justifyContent: 'center', marginTop: 6 },
+  stopBtnText: { fontSize: 21, color: C.muted, lineHeight: 24 },
   directionLabel: { fontSize: 12, color: C.muted, textAlign: 'center', marginBottom: 16, textTransform: 'uppercase', letterSpacing: 0.8 },
 
   cardWrap: {
