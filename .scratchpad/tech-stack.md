@@ -5,7 +5,8 @@ Monorepo (npm workspaces + Turborepo): `apps/web`, `apps/mobile`, `packages/core
 ## Web (`apps/web`)
 
 - **Framework:** React / Next.js 16 (App Router)
-- **Database:** Firebase Firestore (IndexedDB persistent cache enabled)
+- **Database:** Firebase Firestore (IndexedDB persistent cache enabled — web
+  only; see the mobile section for why the phone can't have this)
 - **AI:** Google Gemini 2.5 Flash, proxied through Next.js API routes — the key
   never reaches the browser
 - **Auth:** Firebase Authentication (Google sign-in)
@@ -16,7 +17,14 @@ Monorepo (npm workspaces + Turborepo): `apps/web`, `apps/mobile`, `packages/core
 
 - **Framework:** Expo SDK 54 / React Native 0.81, Expo Router (file-based)
 - **Auth:** Firebase Auth via `expo-auth-session` + `expo-web-browser` (Google OAuth)
-- **Storage:** Firebase Firestore + `@react-native-async-storage/async-storage`
+- **Storage:** Firebase Firestore + `@react-native-async-storage/async-storage`.
+  Firestore's persistent cache is IndexedDB-backed and so unavailable here —
+  the client is memory-only, which dies with the process. Anything that must
+  outlive a kill is mirrored to AsyncStorage by hand
+  (`src/services/offlineReview.ts` holds the review snapshot, rating queue and
+  streak). See [lessons.md](lessons.md).
+- **Connectivity:** `expo-network` — drives the offline banner and flushes the
+  rating queue on reconnect
 - **Audio:** `expo-audio` (mic/record permissions explicitly disabled in the plugin config)
 - **Updates:** EAS OTA via `expo-updates`
 

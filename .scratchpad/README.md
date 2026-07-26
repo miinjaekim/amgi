@@ -31,4 +31,4 @@ leaves that file:
 Backlog priority mirrors the user's Google Tasks list — `backlog.md` is the
 scoped version of it.
 
-_Last reviewed against the codebase: 2026-07-26 (PR #51, review by collection)._
+_Last reviewed against the codebase: 2026-07-26 (PR #53, offline review on mobile)._

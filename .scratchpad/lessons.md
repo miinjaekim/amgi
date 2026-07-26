@@ -23,6 +23,20 @@ Gotchas already paid for. Grouped so you can skim the relevant section.
   `Object.fromEntries(Object.entries(data).filter(([,v]) => v !== undefined))`
   before writing. Better still: avoid object literals that always declare every
   key — only include keys with real values.
+- **The persistent cache is web-only.** `persistentLocalCache` is IndexedDB
+  backed, and React Native has no IndexedDB, so `getFirestore` on mobile is a
+  *memory* cache: it survives backgrounding but not a kill. Anything that has
+  to outlive the process on mobile needs its own AsyncStorage layer — which is
+  what `apps/mobile/src/services/offlineReview.ts` is. Do not assume a Firestore
+  behaviour that holds on web holds on the phone.
+- **Neither reads nor writes fail offline, and each lies differently.**
+  `getDocs`/`getDoc` fall back to the local cache, so on RN they resolve
+  *empty* — indistinguishable from "this user has no data", which is how an
+  offline launch came to wipe the cached language and zero the streak. Use
+  `getDocsFromServer`/`getDocFromServer` wherever "couldn't reach the server"
+  has to be told apart from "there is nothing there". Writes are the opposite:
+  `updateDoc` neither resolves nor rejects offline, it stays pending until it
+  can commit — so any await on one needs a timeout, or it hangs forever.
 - **Firebase Admin Storage must initialize lazily.** An eager top-level
   `export const bucket = ...` crashed Vercel's build-time page-data collection,
   which runs before env vars are available. Use a `getBucket()` accessor

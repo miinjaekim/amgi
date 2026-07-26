@@ -3,11 +3,18 @@
 Ordered by priority. **Only open work lives here** — shipped, cancelled and
 decided items move to [status.md](status.md), reasoning included, so a closed
 call doesn't get reopened from this file. Source of truth is the user's Google
-Tasks list; this is the scoped version. Last synced 2026-07-25.
+Tasks list; this is the scoped version. Last synced 2026-07-26.
 
 **Focus (2026-07-25): ship the depth work to the phone.** The Japanese/Chinese
 depth batch is merged but invisible until a build goes out, so the next build is
-deliberately narrow — no new native modules, nothing that isn't already on `main`.
+deliberately narrow — nothing that isn't already on `main`.
+
+_Amended 2026-07-26:_ "no new native modules" was part of that narrowness and no
+longer holds — offline review (PR #53) brings `expo-network`. Taken knowingly: a
+build was going out regardless, and the module buys an accurate offline banner
+and a prompt flush on reconnect. It does mean the depth batch now ships on
+offline review's schedule rather than ahead of it. Push notifications still
+wants a build of its own — see below.
 
 **Mobile shipping model: no OTA.** Iterate in Expo Go (`npx expo start`), cut a
 production build when a batch is worth a release. See [tech-stack.md](tech-stack.md).
@@ -29,19 +36,24 @@ _Last build: **1.0.2 / build 4**, 2026-07-24._
       than in a modal, which is the surface most of that work is actually seen
       through.
 
+- [ ] **Offline review on mobile** (PR #53, merged 2026-07-26) — the first
+      thing in this batch that is *not* JS-only: it adds `expo-network`, so the
+      "no new native modules" line above no longer holds for this build. That
+      was a deliberate call — a build was going out anyway, and the alternative
+      (deriving connectivity from Firestore's own signals) bought a worse banner
+      to save a module. Note this is the one item here that cannot be smoke-
+      tested for real in Expo Go: airplane mode plus a force-kill is the test,
+      and the durable queue is the part worth verifying on the build itself.
+
 **Pre-flight:** smoke-test in Expo Go → verify native-adjacent things (audio,
-files, sharing) on the build itself → bump `version` in `app.json` → check
-`docs/testflight-beta-info-ko.md` is still accurate.
+files, sharing, **offline review + reconnect sync**) on the build itself → bump
+`version` in `app.json` → check `docs/testflight-beta-info-ko.md` is still
+accurate.
 
 
 ---
 
 ## High — everything else user-facing
-
-- [ ] **Offline review on mobile** — promoted out of the old Offline Amgi
-      bundle. Cards are already in Firestore's local cache; make the review loop
-      work offline and sync ratings on reconnect. Web has a banner + cached
-      review, mobile has nothing — and mobile is where people are on a subway.
 
 - [ ] **Push notifications — WOTD and streaks** — for an SRS app "remind me
       before I forget" is the product promise, not a growth hack. Prerequisite
@@ -156,8 +168,9 @@ explain and remember it" loop. Revisit after the language-depth work.
 ## Research / exploratory
 
 - [ ] **Offline definitions/translations** — the hard phase of Offline Amgi
-      (on-device model or pre-cached content). Never allowed to block the two
-      offline items above.
+      (on-device model or pre-cached content). It was never allowed to block the
+      cheap offline work, and that held: offline review shipped in PR #53 and
+      offline term capture is still queued above, both without it.
 - [ ] **Training a language-learning model / survey existing ones** — spike:
       what exists, whether fine-tuning beats prompting, what a first step looks
       like. Would inform offline definitions.

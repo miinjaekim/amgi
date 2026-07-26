@@ -67,6 +67,20 @@ const translations = {
     reviewCollectionDue: '{count} due',
     reviewCollectionCaughtUp: 'Caught up',
     reviewChangeCollection: 'Change collection',
+    // Offline review — mobile keeps its own card snapshot and rating queue
+    offlineReviewBanner: 'Offline — reviewing the cards saved on this device.',
+    offlinePendingReviews: '{count} to sync',
+    offlineNoCachedCards: 'No {language} cards saved on this device yet. Reconnect to load them.',
+    // Stopping early — deliberately not the same as finishing
+    reviewStoppedTitle: 'Stopped here',
+    reviewStoppedSummary: '{count} reviewed. Your progress is saved.',
+    reviewStoppedNone: 'Nothing reviewed this time.',
+    reviewStoppedRemaining: '{count} left in this session',
+    reviewResume: 'Keep going',
+    // Finished the session, but missed cards are still due
+    reviewSessionFinished: 'Session finished',
+    reviewMissedStillDue: '{count} you missed are still due.',
+    reviewAgainMissed: 'Review those again',
     directionBoth: 'Both directions',
     directionKoreanToEnglish: 'Korean → English',
     directionEnglishToKorean: 'English → Korean',
@@ -290,6 +304,20 @@ const translations = {
     reviewCollectionDue: '{count}개 복습할 차례',
     reviewCollectionCaughtUp: '지금은 없어요',
     reviewChangeCollection: '다른 묶음 고르기',
+    // Offline review — mobile keeps its own card snapshot and rating queue
+    offlineReviewBanner: '오프라인 상태예요. 받아둔 카드로 복습할 수 있어요.',
+    offlinePendingReviews: '{count}개 저장 대기 중',
+    offlineNoCachedCards: '{language} 카드를 아직 받아두지 않았어요. 연결하면 불러올게요.',
+    // Stopping early — deliberately not the same as finishing
+    reviewStoppedTitle: '여기까지 했어요',
+    reviewStoppedSummary: '{count}개 복습했어요. 기록은 저장됐어요.',
+    reviewStoppedNone: '이번엔 복습한 카드가 없어요.',
+    reviewStoppedRemaining: '이번 세션에 {count}개 남았어요',
+    reviewResume: '이어서 하기',
+    // Finished the session, but missed cards are still due
+    reviewSessionFinished: '이번 복습 끝!',
+    reviewMissedStillDue: '틀린 {count}개가 아직 남아 있어요.',
+    reviewAgainMissed: '틀린 카드 다시 보기',
     directionBoth: '양방향',
     directionKoreanToEnglish: '한국어 → 영어',
     directionEnglishToKorean: '영어 → 한국어',

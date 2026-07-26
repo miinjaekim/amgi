@@ -76,6 +76,19 @@ export function getNextReviewData(card: CardForReview, response: 'again' | 'hard
 
   ease = Math.max(1.3, ease + 0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02));
 
-  const nextReview = new Date(now.getTime() + interval * 24 * 60 * 60 * 1000);
+  // "Again" means the card is not learned, so it stays due now rather than
+  // being pushed out by the reset interval — answering it wrong should not be
+  // what makes it disappear from today's queue. `interval` still resets to 1,
+  // which is what the *next* successful pass schedules from.
+  //
+  // Staying due is what lets a finished session be restarted to pick up
+  // exactly the cards that were missed. It deliberately does not put the card
+  // back into the session in progress: a session ends when it said it would.
+  //
+  // Web used to patch this at its call site and mobile did not, so the same
+  // card lapsed differently on each platform. It belongs here.
+  const nextReview = quality < 3
+    ? now
+    : new Date(now.getTime() + interval * 24 * 60 * 60 * 1000);
   return { interval, ease, repetitions, nextReview };
 }

@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { getNextReviewData } from './sm2';
+import { isDue } from '@amgi/core';
 import { Flashcard } from './firestore';
 
 describe('getNextReviewData (SM-2)', () => {
@@ -27,6 +28,20 @@ describe('getNextReviewData (SM-2)', () => {
     expect(result.ease).toBeLessThanOrEqual(2.5);
   });
 
+  it('leaves a missed card due now rather than scheduling it out', () => {
+    // Answering wrong is what should *keep* a card in today's queue. The reset
+    // interval of 1 describes the next successful pass, not this one.
+    const before = Date.now();
+    const result = getNextReviewData(baseCard, 'again');
+    expect(result.nextReview.getTime()).toBeGreaterThanOrEqual(before);
+    expect(result.nextReview.getTime()).toBeLessThanOrEqual(Date.now());
+    expect(isDue({ frontToBack: result })).toContain('frontToBack');
+  });
+
+  it('schedules a passed card out by its interval', () => {
+    const result = getNextReviewData({ ...baseCard, interval: 1, repetitions: 1 }, 'good');
+    expect(isDue({ frontToBack: result })).not.toContain('frontToBack');
+  });
   it('should increment repetitions and interval for "good"', () => {
     const card = { ...baseCard, interval: 1, repetitions: 1, ease: 2.5 };
     const result = getNextReviewData(card, 'good');
@@ -49,4 +64,4 @@ describe('getNextReviewData (SM-2)', () => {
     expect(result.interval).toBe(1);
     expect(result.repetitions).toBe(1);
   });
-}); 
+});

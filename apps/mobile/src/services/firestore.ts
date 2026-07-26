@@ -1,6 +1,6 @@
 import {
   collection, addDoc, Timestamp, query, where, orderBy,
-  getDocs, doc, updateDoc, deleteDoc, writeBatch,
+  getDocs, getDocsFromServer, doc, updateDoc, deleteDoc, writeBatch,
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { getStudyLanguageConfig } from '@amgi/core';
@@ -103,15 +103,36 @@ export async function fetchAllUserFlashcards(uid: string, studyLanguage?: StudyL
   return snap.docs.map(d => mapDoc(d, studyLanguage));
 }
 
-export async function fetchUserFlashcards(uid: string, studyLanguage?: StudyLanguage): Promise<Flashcard[]> {
-  const q = query(
+function activeCardsQuery(uid: string, studyLanguage?: StudyLanguage) {
+  return query(
     collection(db, getCardsCollection(studyLanguage)),
     where('uid', '==', uid),
     where('archived', '!=', true),
     orderBy('archived'),
     orderBy('createdAt', 'desc'),
   );
-  const snap = await getDocs(q);
+}
+
+export async function fetchUserFlashcards(uid: string, studyLanguage?: StudyLanguage): Promise<Flashcard[]> {
+  const snap = await getDocs(activeCardsQuery(uid, studyLanguage));
+  return snap.docs.map(d => mapDoc(d, studyLanguage));
+}
+
+/**
+ * The same read, but it fails instead of falling back to the local cache.
+ *
+ * `getDocs` offline resolves against Firestore's cache — which on React Native
+ * is memory-only and usually empty — so it hands back an *empty* result rather
+ * than an error. That is indistinguishable from "this user has no cards", and
+ * feeding it to `writeCachedCards` would wipe a perfectly good offline snapshot
+ * the moment the user opened review underground. Refreshing the snapshot must
+ * therefore use a read that can actually fail.
+ */
+export async function fetchUserFlashcardsFromServer(
+  uid: string,
+  studyLanguage?: StudyLanguage,
+): Promise<Flashcard[]> {
+  const snap = await getDocsFromServer(activeCardsQuery(uid, studyLanguage));
   return snap.docs.map(d => mapDoc(d, studyLanguage));
 }
 
