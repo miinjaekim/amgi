@@ -16,10 +16,11 @@ import {
 import { enqueueReview } from '../../src/services/offlineReview';
 import { usePendingReviewSync } from '../../src/hooks/usePendingReviewSync';
 import {
-  buildReviewCollections, getBackSide, getCollectionId, getNextReviewDate,
-  getNextReviewData, getStudyLangSide, getStudyLanguageConfig, isDue, t,
+  applyPendingReviews, buildReviewCollections, getBackSide, getCollectionId,
+  getNextReviewDate, getNextReviewData, getStudyLangSide, getStudyLanguageConfig,
+  isDue, t,
 } from '@amgi/core';
-import type { CardSideField } from '@amgi/core';
+import type { CardSideField, PendingReview } from '@amgi/core';
 import { useTheme } from '../../src/context/ThemeContext';
 import { useFloatingTabBarHeight } from '../../src/components/FloatingTabBar';
 import Markdown from '../../src/components/Markdown';
@@ -70,6 +71,13 @@ export default function ReviewScreen() {
   const [revealed, setRevealed] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
   const [done, setDone] = useState(false);
+  /**
+   * The user stopped early. Distinct from `done`, which means the queue ran
+   * out — telling someone who quit at card 8 of 30 that they are "all caught
+   * up" would be plainly untrue.
+   */
+  const [stopped, setStopped] = useState(false);
+  const [reviewedCount, setReviewedCount] = useState(0);
   const [nextDate, setNextDate] = useState<Date | null>(null);
   const revealAnim = useRef(new Animated.Value(0)).current;
 
@@ -88,6 +96,9 @@ export default function ReviewScreen() {
     setLoading(true);
     setCollectionId(undefined);
     setUncachedLanguage(false);
+    // A reload already has these folded in — the fetch replays the pending
+    // queue — so keeping them would only double-count.
+    setSessionRatings([]);
 
     (async () => {
       // Cache first, so a session starts on whatever this device already holds
@@ -125,9 +136,23 @@ export default function ReviewScreen() {
     void warmKnownLanguages(user.uid, studyLanguage);
   }, [user, isOnline, studyLanguage]);
 
+  /**
+   * Ratings made since the cards were loaded, kept apart from `cards` on
+   * purpose. Folding them into `cards` would retrigger the queue-building
+   * effect below on every answer, reshuffling the deck and dropping the user
+   * back to the first card. As an overlay they do the one job they are needed
+   * for — keeping the collection picker's due counts honest after a session —
+   * without touching the queue that is mid-flight.
+   */
+  const [sessionRatings, setSessionRatings] = useState<PendingReview[]>([]);
+
   const collections = useMemo(
-    () => buildReviewCollections(cards, studyLanguage, nativeLanguage),
-    [cards, studyLanguage, nativeLanguage]
+    () => buildReviewCollections(
+      applyPendingReviews(cards, sessionRatings, studyLanguage),
+      studyLanguage,
+      nativeLanguage,
+    ),
+    [cards, sessionRatings, studyLanguage, nativeLanguage]
   );
 
   // A deck screen hands the choice over as `collection`; `nonce` makes a second
@@ -148,6 +173,8 @@ export default function ReviewScreen() {
   }, [collections, collectionId, requested, nonce]);
 
   useEffect(() => {
+    setStopped(false);
+    setReviewedCount(0);
     if (collectionId === undefined) { setQueue([]); setQueueFor(undefined); setDone(false); return; }
     const inCollection = cards.filter(card => getCollectionId(card) === collectionId);
     const q = buildQueue(inCollection);
@@ -186,22 +213,22 @@ export default function ReviewScreen() {
     const next = getNextReviewData(tracking, rating);
     const otherDir = direction === 'frontToBack' ? 'backToFront' : 'frontToBack';
 
-    // Durable before anything else. SM-2 already ran locally, so the rating is
-    // complete the moment it is on disk; the network write is delivery, not
-    // commitment. The old code awaited Firestore and swallowed the failure,
-    // which is why a rating made underground quietly never happened.
-    await enqueueReview(user.uid, {
+    const entry: PendingReview = {
       cardId,
       studyLanguage,
       direction,
       tracking: next,
       otherTracking: card[otherDir],
       reviewedAt: new Date().toISOString(),
-    });
+    };
 
-    // Keep the loaded cards in step with the queue, so leaving review and
-    // coming back doesn't resurrect a card that was just answered.
-    setCards(prev => prev.map(c => (c.id === card.id ? { ...c, [direction]: next } : c)));
+    // Durable before anything else. SM-2 already ran locally, so the rating is
+    // complete the moment it is on disk; the network write is delivery, not
+    // commitment. The old code awaited Firestore and swallowed the failure,
+    // which is why a rating made underground quietly never happened.
+    await enqueueReview(user.uid, entry);
+    setSessionRatings(prev => [...prev, entry]);
+    setReviewedCount(n => n + 1);
 
     // Deliver in the background. Nothing here waits on the network — the rating
     // is already safe, so the next card comes up immediately whether or not
@@ -358,6 +385,38 @@ export default function ReviewScreen() {
     </TouchableOpacity>
   );
 
+  // Stopping early is a normal way to finish — a queue is however many cards
+  // happen to be due, not a commitment. So this reports what was done rather
+  // than what is left undone, and offers the way back in.
+  if (stopped) {
+    const remaining = queue.length - index;
+    return (
+      <SafeAreaView style={s.center}>
+        {offlineNotice}
+        {collections.length > 1 && (
+          <Text style={s.collectionLabel}>
+            {collections.find(c => c.id === collectionId)?.name}
+          </Text>
+        )}
+        <Text style={s.stoppedTitle}>{t(nativeLanguage, 'reviewStoppedTitle')}</Text>
+        <Text style={s.doneBody}>
+          {reviewedCount > 0
+            ? t(nativeLanguage, 'reviewStoppedSummary', { count: reviewedCount })
+            : t(nativeLanguage, 'reviewStoppedNone')}
+        </Text>
+        {remaining > 0 && (
+          <Text style={s.nextDate}>
+            {t(nativeLanguage, 'reviewStoppedRemaining', { count: remaining })}
+          </Text>
+        )}
+        <TouchableOpacity style={s.resumeBtn} onPress={() => setStopped(false)}>
+          <Text style={s.resumeBtnText}>{t(nativeLanguage, 'reviewResume')}</Text>
+        </TouchableOpacity>
+        {changeCollectionButton}
+      </SafeAreaView>
+    );
+  }
+
   if (done) {
     return (
       <SafeAreaView style={s.center}>
@@ -408,17 +467,33 @@ export default function ReviewScreen() {
       <View style={s.progressBar}>
         <View style={[s.progressFill, { width: `${(index / queue.length) * 100}%` }]} />
       </View>
-      {/* The name doubles as the way out: without it, picking the wrong
-          collection would mean working through the whole queue to escape it. */}
-      {collections.length > 1 ? (
-        <TouchableOpacity onPress={() => setCollectionId(undefined)} hitSlop={8}>
-          <Text style={s.progressText}>
-            {collections.find(c => c.id === collectionId)?.name} · {index + 1} / {queue.length}
-          </Text>
+      {/* Two different exits, side by side and deliberately distinct: the name
+          switches which collection you are in — without it, picking the wrong
+          one would mean working through the whole queue to escape it — while
+          the ✕ ends the session outright. The ✕ is the only one that shows on
+          a single collection, where there is nothing to switch to. */}
+      <View style={s.progressRow}>
+        <View style={s.progressLabelWrap}>
+          {collections.length > 1 ? (
+            <TouchableOpacity onPress={() => setCollectionId(undefined)} hitSlop={8}>
+              <Text style={s.progressText}>
+                {collections.find(c => c.id === collectionId)?.name} · {index + 1} / {queue.length}
+              </Text>
+            </TouchableOpacity>
+          ) : (
+            <Text style={s.progressText}>{index + 1} / {queue.length}</Text>
+          )}
+        </View>
+        <TouchableOpacity
+          style={s.stopBtn}
+          onPress={() => setStopped(true)}
+          hitSlop={12}
+          accessibilityRole="button"
+          accessibilityLabel={t(nativeLanguage, 'exitReview')}
+        >
+          <Text style={s.stopBtnText}>✕</Text>
         </TouchableOpacity>
-      ) : (
-        <Text style={s.progressText}>{index + 1} / {queue.length}</Text>
-      )}
+      </View>
 
       {/* Direction label */}
       <Text style={s.directionLabel}>
@@ -562,6 +637,12 @@ function makeStyles(C: Palette, tabBarHeight: number) {
   progressBar: { height: 3, backgroundColor: C.border, marginTop: 8 },
   progressFill: { height: 3, backgroundColor: C.highlight },
   progressText: { fontSize: 12, color: C.muted, textAlign: 'center', marginTop: 6 },
+  // The label stays centred on the screen rather than in the space left over
+  // beside the ✕, so it doesn't shift when the collection name appears.
+  progressRow: { flexDirection: 'row', alignItems: 'center' },
+  progressLabelWrap: { flex: 1, marginLeft: 32 },
+  stopBtn: { width: 32, alignItems: 'center', justifyContent: 'center', marginTop: 6 },
+  stopBtnText: { fontSize: 15, color: C.muted },
   directionLabel: { fontSize: 12, color: C.muted, textAlign: 'center', marginBottom: 16, textTransform: 'uppercase', letterSpacing: 0.8 },
 
   cardWrap: {
@@ -638,6 +719,14 @@ function makeStyles(C: Palette, tabBarHeight: number) {
 
   emptyText: { fontSize: 16, color: C.muted, textAlign: 'center', lineHeight: 24 },
   doneTitle: { fontSize: 24, fontWeight: '700', color: C.highlight, marginBottom: 12, textAlign: 'center' },
+  // Not the highlight colour the completion screen uses — stopping early is
+  // fine, but it isn't the small celebration that finishing is.
+  stoppedTitle: { fontSize: 22, fontWeight: '700', color: C.text, marginBottom: 12, textAlign: 'center' },
+  resumeBtn: {
+    marginTop: 20, backgroundColor: C.highlight,
+    borderRadius: 10, paddingHorizontal: 20, paddingVertical: 11,
+  },
+  resumeBtnText: { fontSize: 15, fontWeight: '700', color: C.bg },
   doneBody: { fontSize: 15, color: C.text, textAlign: 'center', lineHeight: 22, marginBottom: 16 },
   nextDate: { fontSize: 13, color: C.muted, textAlign: 'center' },
   });
