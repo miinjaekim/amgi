@@ -45,7 +45,7 @@ _Last build: **1.0.2 / build 4**, 2026-07-24._
       tested for real in Expo Go: airplane mode plus a force-kill is the test,
       and the durable queue is the part worth verifying on the build itself.
 
-- [ ] **Account deletion** (PR #55, open as of 2026-07-27) — required by App Store
+- [ ] **Account deletion** (PR #55, merged 2026-07-27) — required by App Store
       Guideline 5.1.1(v), so this is a *submission blocker*, not a nice-to-have:
       an app offering account creation must offer in-app deletion. The web half
       is already live; the mobile half needs this build. Verify on the build
