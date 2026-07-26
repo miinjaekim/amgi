@@ -57,17 +57,9 @@ files, sharing) on the build itself → bump `version` in `app.json` → check
 
 ## Housekeeping — broken tooling that hides signal
 
-`npm test` and `turbo lint` both fail on a clean checkout, so real regressions
-are easy to miss. Cheap; do alongside feature work.
-
-- [ ] **A stale review test fails on a clean checkout** — predates the monorepo
-      restructure (only commit `dcc87b2`); current behavior is correct.
-      `review-response.test.ts:150` asserts `updateDoc` is called *without*
-      `frontToBack.nextReview`; line 151 asserts it has exactly that. The code
-      writes the field and should — delete line 150.
-
-      (The `isDue` half of this item closed with "Review by collection",
-      PR #51: `isDue` now lives in `@amgi/core` and the test imports it.)
+`turbo lint` fails on a clean checkout, so real regressions are easy to miss.
+Cheap; do alongside feature work. (`npm test` is green again as of 2026-07-26 —
+see the Shipped entry in [status.md](status.md).)
 
 - [ ] **`npm run lint` is broken repo-wide** — `apps/web/package.json` runs
       `next lint`, removed in Next 16; it parses `lint` as a directory and exits

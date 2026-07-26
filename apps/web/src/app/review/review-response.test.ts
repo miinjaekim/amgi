@@ -147,14 +147,15 @@ describe('Review Response Handler', () => {
     
     // Check updateDoc was called with correct arguments for "good"
     expect(mockUpdateDocSpy).toHaveBeenCalledTimes(1);
-    expect(mockUpdateDocSpy.mock.calls[0][1]).not.toHaveProperty('frontToBack.nextReview', expect.any(Date));
     expect(mockUpdateDocSpy.mock.calls[0][1]).toHaveProperty('frontToBack.nextReview');
     
-    // Should be using the mock return value from getNextReviewData, which for "good" is nextWeek
-    const nextWeek = new Date();
-    nextWeek.setDate(nextWeek.getDate() + 6);
-    
+    // Should be using the mock return value from getNextReviewData, which for
+    // "good" is six days out. Measured as elapsed days rather than compared as
+    // `getDate()`: day-of-month goes *down* across a month end, so that form
+    // failed on the last six days of every month.
     const reviewDateInCall = mockUpdateDocSpy.mock.calls[0][1]['frontToBack.nextReview'];
-    expect(reviewDateInCall.getDate()).toBeGreaterThan(new Date().getDate());
+    const daysOut = (reviewDateInCall.getTime() - Date.now()) / (24 * 60 * 60 * 1000);
+    expect(daysOut).toBeGreaterThan(5.9);
+    expect(daysOut).toBeLessThan(6.1);
   });
 }); 
