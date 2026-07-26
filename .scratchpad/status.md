@@ -172,7 +172,17 @@ _Reconciled against `main` @ `6e9f3e9` on 2026-07-24, plus the 1.0.2 release cut
     `cards`-packs only**, because `packId` is written solely by
     `buildPackCardDraft` — a TOEIC word saved via Learn carries none and stays
     in My Cards.
-  - ⚠️ **Not yet verified on device.**
+  - **Crash on picking a collection** (PR #52, 2026-07-26) — found by the first
+    Expo Go pass. `collectionId` was set in a handler and the queue for it built
+    in an effect, leaving one render where the new collection was paired with
+    the previous one's queue, `index` and `done`. Broke *every* path into a
+    mobile session, not just the picker. `queueFor` now records what the queue
+    was built for and the render waits for the two to agree. See
+    [lessons.md](lessons.md) — the general shape is worth not repeating.
+  - **Verified in Expo Go 2026-07-26:** picking a collection and reviewing a
+    pack (katakana). ⚠️ **Still unverified on device:** the five-tab bar, the
+    deck → `/review` handoff (`router.navigate` across tab groups), drill still
+    opening full-screen above the tabs, and the deck page's manage panel.
 
 ### Design & polish
 - **Design system** — Forest/Sonokai/Paper/System themes, Source Code Pro,
