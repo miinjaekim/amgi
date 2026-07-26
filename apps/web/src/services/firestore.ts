@@ -1,5 +1,6 @@
 import { db } from '@/config/firebase';
 import { collection, addDoc, Timestamp, query, where, orderBy, getDocs, getCountFromServer, doc, updateDoc, deleteDoc, writeBatch } from 'firebase/firestore';
+import type { DocumentData, QueryDocumentSnapshot } from 'firebase/firestore';
 import { getStudyLanguageConfig } from '@amgi/core';
 import type { Flashcard, ReviewTracking, StudyLanguage } from '@amgi/core';
 
@@ -78,8 +79,17 @@ export async function saveFlashcardsBatch(
   return flashcards.length;
 }
 
-function mapDocToFlashcard(docSnapshot: any, studyLanguage?: StudyLanguage): Flashcard {
+function mapDocToFlashcard(
+  docSnapshot: QueryDocumentSnapshot<DocumentData>,
+  studyLanguage?: StudyLanguage
+): Flashcard {
   const data = docSnapshot.data();
+  // The stored value is a `Timestamp`, a raw Date, or an ISO string depending on
+  // when the document was written, and each flows on to a differently typed
+  // field below. `any` is the boundary itself: narrowing it here buys nothing
+  // but a cast at every call site, and coercing everything to Date would be a
+  // behaviour change dressed as a type fix.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const processTimestamp = (timestamp: any) => timestamp?.toDate?.() || timestamp;
 
   const processFrontToBack = data.frontToBack ? {
@@ -189,7 +199,7 @@ export async function migrateExistingCards(uid: string): Promise<number> {
     for (const docSnapshot of snapshot.docs) {
       const data = docSnapshot.data();
       const docRef = doc(db, 'cards', docSnapshot.id);
-      const update: Record<string, any> = {};
+      const update: Record<string, unknown> = {};
       let needsUpdate = false;
 
       if (!data.korean || !data.english) {

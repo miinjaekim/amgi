@@ -1,6 +1,7 @@
 'use client';
 import React, { useEffect, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
+import Link from 'next/link';
 import AmgiLogo from './AmgiLogo';
 import SettingsMenu, { StudyLanguageList } from './SettingsMenu';
 import { useUser } from '@/components/UserContext';
@@ -48,14 +49,14 @@ export default function SideNav({ collapsed, onToggle }: Props) {
           its icon centered, so the whole stack sits centered under the shell
           in both states without anything moving. */}
       <div className="px-2 pt-5 pb-2 space-y-1">
-        <a href="/" className="flex items-center gap-3 pl-2">
+        <Link href="/" className="flex items-center gap-3 pl-2">
           <span className="flex-shrink-0">
             <AmgiLogo color="var(--color-highlight)" stroke="var(--color-text)" size={30} />
           </span>
           <span className="sidenav-label font-mono font-bold text-lg whitespace-nowrap" style={{ color: 'var(--color-text)' }}>
             Amgi
           </span>
-        </a>
+        </Link>
         <button
           onClick={onToggle}
           title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}

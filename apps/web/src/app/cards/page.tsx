@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
+import Link from 'next/link';
 import { useUser } from '@/components/UserContext';
 import {
   fetchAllUserFlashcards,
@@ -333,10 +334,10 @@ export default function CardsPage() {
       {!user ? (
         <div className="p-6 rounded-xl bg-[var(--color-surface)] border border-[var(--color-muted)] text-center">
           <p className="text-[var(--color-muted)] mb-4">{t(nativeLanguage, 'cardsSignInPrompt')}</p>
-          <a href="/" className="inline-block px-5 py-2.5 rounded-lg font-semibold transition-colors"
+          <Link href="/" className="inline-block px-5 py-2.5 rounded-lg font-semibold transition-colors"
             style={{ background: 'var(--color-highlight)', color: 'var(--color-bg)' }}>
             {t(nativeLanguage, 'cardsGoLearn')}
-          </a>
+          </Link>
         </div>
       ) : (
         <>
@@ -436,10 +437,10 @@ export default function CardsPage() {
             <div className="text-center py-12">
               <p className="text-[var(--color-muted)] mb-4">{t(nativeLanguage, 'cardsEmpty')}</p>
               {filterKey === 'active' && allCards.length === 0 && (
-                <a href="/" className="inline-block px-5 py-2.5 rounded-lg font-semibold transition-colors"
+                <Link href="/" className="inline-block px-5 py-2.5 rounded-lg font-semibold transition-colors"
                   style={{ background: 'var(--color-highlight)', color: 'var(--color-bg)' }}>
                   {t(nativeLanguage, 'cardsGoLearn')}
-                </a>
+                </Link>
               )}
             </div>
           ) : (

@@ -1,5 +1,6 @@
 'use client';
 import React, { useRef, useState, useEffect } from 'react';
+import Link from 'next/link';
 import AmgiLogo from './AmgiLogo';
 import SettingsMenu from './SettingsMenu';
 import { useUser } from '@/components/UserContext';
@@ -29,9 +30,9 @@ const Header: React.FC = () => {
       className="sm:hidden w-full flex items-center justify-between px-4 py-2 shadow-md"
       style={{ background: 'var(--color-bg)' }}
     >
-      <a href="/" className="flex items-center">
+      <Link href="/" className="flex items-center">
         <AmgiLogo color="var(--color-highlight)" stroke="var(--color-text)" size={30} />
-      </a>
+      </Link>
 
       <div className="flex items-center gap-3">
         <span
