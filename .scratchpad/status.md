@@ -130,6 +130,21 @@ _Reconciled against `main` @ `6e9f3e9` on 2026-07-24, plus the 1.0.2 release cut
     round trip, which had no web equivalent to prove it since it has to pop a
     stack screen above the tabs and have Learn pick the param up.
 
+- **Web review session parity** (PR #54, 2026-07-26) — the session controls from
+  PR #53 brought over, plus a stale-state bug found on the way.
+  - **Ratings never fed back into `userFlashcards`**, which `dueCards` derives
+    from, so the due count was frozen at page load and starting a second review
+    re-served the whole deck instead of the missed cards. Only a reload or Force
+    Synchronize collapsed it. Mirroring each rating locally is safe mid-session
+    because `activeQueue` is its own state, not derived from the cards.
+  - **Render branch order became load-bearing** once that landed: `dueCards
+    .length === 0` was checked before `reviewMode`, so the last answer of a
+    clean session would have replaced the completion screen with the caught-up
+    landing before it was seen. A session in progress outranks the due count.
+  - **Same two surfaces as mobile** — a ✕ that stops a session, and a
+    completion screen that names what is still due and offers it back. No new
+    i18n keys; both platforms read the copy added in PR #53.
+
 - **Offline review on mobile** (PR #53, 2026-07-26) — the review loop works
   without a connection, and ratings sync when one returns. Mobile keeps its own
   durable state because it has to: Firestore's persistent cache is IndexedDB
