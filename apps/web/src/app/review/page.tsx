@@ -70,6 +70,13 @@ export default function ReviewPage() {
   const [reviewMode, setReviewMode] = useState(false);
   const [currentReviewIdx, setCurrentReviewIdx] = useState(0);
   const [reviewComplete, setReviewComplete] = useState(false);
+  /**
+   * The user stopped early. Kept apart from `reviewComplete`, which means the
+   * queue ran out — telling someone who quit at card 8 of 30 that they had
+   * finished would be untrue.
+   */
+  const [reviewStopped, setReviewStopped] = useState(false);
+  const [reviewedCount, setReviewedCount] = useState(0);
   const [showAnswer, setShowAnswer] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -176,6 +183,8 @@ export default function ReviewPage() {
     setReviewMode(true);
     setCurrentReviewIdx(0);
     setReviewComplete(false);
+    setReviewStopped(false);
+    setReviewedCount(0);
     setShowAnswer(false);
     setShowDetails(false);
   };
@@ -218,6 +227,17 @@ export default function ReviewPage() {
       console.error('Failed to update card scheduling:', err);
     });
 
+    // Mirror the write locally. `dueCards` derives from `userFlashcards`, which
+    // nothing updated during a session — so the due count stayed at whatever it
+    // was on load, and starting a second review re-served the whole deck
+    // instead of just what was missed. Safe mid-session because `activeQueue`
+    // is its own state rather than derived from this, so the queue in progress
+    // is untouched.
+    setUserFlashcards(prev => prev.map(existing => existing.id === card.id
+      ? { ...existing, [direction]: { interval, ease, repetitions, nextReview } }
+      : existing));
+    setReviewedCount(n => n + 1);
+
     if (currentReviewIdx + 1 < activeQueue.length) {
       setCurrentReviewIdx(currentReviewIdx + 1);
       setShowAnswer(false);
@@ -233,6 +253,8 @@ export default function ReviewPage() {
   const handleExitReview = () => {
     setReviewMode(false);
     setReviewComplete(false);
+    setReviewStopped(false);
+    setReviewedCount(0);
     setCurrentReviewIdx(0);
     setShowAnswer(false);
     setShowDetails(false);
@@ -399,7 +421,12 @@ export default function ReviewPage() {
             </div>
           ) : collectionId === undefined ? (
             renderCollectionPicker(collections)
-          ) : dueCards.length === 0 ? (
+          ) : /* A session in progress outranks the due count. Ratings now feed
+                 straight back into `dueCards`, so finishing one cleanly drops
+                 it to zero — and if that were checked first, the last answer
+                 would replace the completion screen with the caught-up
+                 landing before the user ever saw it. */
+          !reviewMode && dueCards.length === 0 ? (
             <div className="text-center py-4">
               {canChangeCollection && (
                 <p className="text-xs text-[var(--color-muted)] mb-2">{collectionName}</p>
@@ -424,29 +451,97 @@ export default function ReviewPage() {
           ) : reviewMode ? (
             reviewComplete ? (
               <div className="text-center py-4">
-                <h2 className="text-2xl font-bold mb-2">{t(nativeLanguage, 'reviewComplete')}</h2>
+                {/* Everything answered correctly is scheduled out, so whatever
+                    is still due is what was missed. Claiming the session was
+                    simply complete over the top of that hides work the user
+                    has left to do, and this is the one moment where offering
+                    it back costs a single click. */}
+                {filteredCount > 0 ? (
+                  <>
+                    <h2 className="text-2xl font-bold mb-2">{t(nativeLanguage, 'reviewSessionFinished')}</h2>
+                    <p className="text-[var(--color-muted)] text-sm mb-6">
+                      {t(nativeLanguage, 'reviewMissedStillDue', { count: filteredCount })}
+                    </p>
+                    <div className="flex gap-3 justify-center flex-wrap">
+                      <button
+                        className="px-5 py-2.5 rounded-lg font-semibold transition-colors"
+                        style={{ background: 'var(--color-highlight)', color: 'var(--color-bg)' }}
+                        onClick={handleStartReview}
+                      >
+                        {t(nativeLanguage, 'reviewAgainMissed')}
+                      </button>
+                      <button
+                        className="px-5 py-2.5 rounded-lg border font-semibold transition-colors hover:bg-[var(--color-muted)]/20"
+                        style={{ borderColor: 'var(--color-muted)', color: 'var(--color-text)' }}
+                        onClick={handleExitReview}
+                      >
+                        {t(nativeLanguage, 'exitReview')}
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <h2 className="text-2xl font-bold mb-2">{t(nativeLanguage, 'reviewComplete')}</h2>
+                    <p className="text-[var(--color-muted)] text-sm mb-1">
+                      {nativeLanguage === 'Korean'
+                        ? `${reviewedCount}개 카드를 복습했습니다.`
+                        : `You reviewed ${reviewedCount} card${reviewedCount !== 1 ? 's' : ''}.`}
+                    </p>
+                    <p className="text-[var(--color-muted)] text-sm mb-6">{t(nativeLanguage, 'reviewCompleteMessage')}</p>
+                    <div className="flex gap-3 justify-center flex-wrap">
+                      <button
+                        className="px-5 py-2.5 rounded-lg font-semibold transition-colors"
+                        style={{ background: 'var(--color-highlight)', color: 'var(--color-bg)' }}
+                        onClick={handleExitReview}
+                      >
+                        {t(nativeLanguage, 'exitReview')}
+                      </button>
+                      <Link
+                        href="/"
+                        className="px-5 py-2.5 rounded-lg border font-semibold transition-colors hover:bg-[var(--color-muted)]/20"
+                        style={{ borderColor: 'var(--color-muted)', color: 'var(--color-text)' }}
+                      >
+                        {t(nativeLanguage, 'navLearn')}
+                      </Link>
+                    </div>
+                  </>
+                )}
+              </div>
+            ) : reviewStopped ? (
+              <div className="text-center py-4">
+                {canChangeCollection && (
+                  <p className="text-xs text-[var(--color-muted)] mb-2">{collectionName}</p>
+                )}
+                <h2 className="text-2xl font-bold mb-2">{t(nativeLanguage, 'reviewStoppedTitle')}</h2>
                 <p className="text-[var(--color-muted)] text-sm mb-1">
-                  {nativeLanguage === 'Korean'
-                    ? `${activeQueue.length}개 카드를 복습했습니다.`
-                    : `You reviewed ${activeQueue.length} card${activeQueue.length !== 1 ? 's' : ''}.`}
+                  {reviewedCount > 0
+                    ? t(nativeLanguage, 'reviewStoppedSummary', { count: reviewedCount })
+                    : t(nativeLanguage, 'reviewStoppedNone')}
                 </p>
-                <p className="text-[var(--color-muted)] text-sm mb-6">{t(nativeLanguage, 'reviewCompleteMessage')}</p>
+                {activeQueue.length - currentReviewIdx > 0 && (
+                  <p className="text-[var(--color-muted)] text-sm mb-6">
+                    {t(nativeLanguage, 'reviewStoppedRemaining', {
+                      count: activeQueue.length - currentReviewIdx,
+                    })}
+                  </p>
+                )}
                 <div className="flex gap-3 justify-center flex-wrap">
                   <button
                     className="px-5 py-2.5 rounded-lg font-semibold transition-colors"
                     style={{ background: 'var(--color-highlight)', color: 'var(--color-bg)' }}
+                    onClick={() => setReviewStopped(false)}
+                  >
+                    {t(nativeLanguage, 'reviewResume')}
+                  </button>
+                  <button
+                    className="px-5 py-2.5 rounded-lg border font-semibold transition-colors hover:bg-[var(--color-muted)]/20"
+                    style={{ borderColor: 'var(--color-muted)', color: 'var(--color-text)' }}
                     onClick={handleExitReview}
                   >
                     {t(nativeLanguage, 'exitReview')}
                   </button>
-                  <Link
-                    href="/"
-                    className="px-5 py-2.5 rounded-lg border font-semibold transition-colors hover:bg-[var(--color-muted)]/20"
-                    style={{ borderColor: 'var(--color-muted)', color: 'var(--color-text)' }}
-                  >
-                    {t(nativeLanguage, 'navLearn')}
-                  </Link>
                 </div>
+                <div>{changeCollectionButton}</div>
               </div>
             ) : (
               <>
@@ -459,12 +554,26 @@ export default function ReviewPage() {
                         : t(nativeLanguage, langConfig.directionBackToFrontKey)}
                     </span>
                   </h2>
-                  <button
-                    onClick={() => showManage ? setShowManage(false) : handleOpenManage(currentReview.card)}
-                    className="text-sm px-3 py-1 rounded-lg border border-[var(--color-muted)] text-[var(--color-muted)] hover:text-[var(--color-text)] hover:border-[var(--color-text)] transition-colors"
-                  >
-                    {t(nativeLanguage, 'reviewManageCard')}
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => showManage ? setShowManage(false) : handleOpenManage(currentReview.card)}
+                      className="text-sm px-3 py-1 rounded-lg border border-[var(--color-muted)] text-[var(--color-muted)] hover:text-[var(--color-text)] hover:border-[var(--color-text)] transition-colors"
+                    >
+                      {t(nativeLanguage, 'reviewManageCard')}
+                    </button>
+                    {/* Until now there was no way out of a session on web short
+                        of navigating away — the only Exit Review button lived
+                        on the completion screen, which you reach by answering
+                        every card. */}
+                    <button
+                      onClick={() => { setShowManage(false); setReviewStopped(true); }}
+                      aria-label={t(nativeLanguage, 'exitReview')}
+                      title={t(nativeLanguage, 'exitReview')}
+                      className="text-lg leading-none px-2.5 py-1 rounded-lg border border-[var(--color-muted)] text-[var(--color-muted)] hover:text-[var(--color-text)] hover:border-[var(--color-text)] transition-colors"
+                    >
+                      ✕
+                    </button>
+                  </div>
                 </div>
 
                 {/* Inline manage panel */}
