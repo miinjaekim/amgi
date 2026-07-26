@@ -46,6 +46,14 @@ export default function ReviewScreen() {
   // which is a real choice and not the absence of one.
   const [collectionId, setCollectionId] = useState<string | null | undefined>(undefined);
   const [queue, setQueue] = useState<ReviewItem[]>([]);
+  /**
+   * Which collection `queue` was built for. Picking a collection renders once
+   * before the effect below rebuilds the queue, and on that frame every piece
+   * of session state still belongs to the previous collection — an empty queue
+   * on the way in, or the last deck's `done` when moving between two. Reading
+   * either is wrong, so the render waits for them to agree.
+   */
+  const [queueFor, setQueueFor] = useState<string | null | undefined>(undefined);
   const [index, setIndex] = useState(0);
   const [loading, setLoading] = useState(false);
   const [revealed, setRevealed] = useState(false);
@@ -94,10 +102,11 @@ export default function ReviewScreen() {
   }, [collections, collectionId, requested, nonce]);
 
   useEffect(() => {
-    if (collectionId === undefined) { setQueue([]); setDone(false); return; }
+    if (collectionId === undefined) { setQueue([]); setQueueFor(undefined); setDone(false); return; }
     const inCollection = cards.filter(card => getCollectionId(card) === collectionId);
     const q = buildQueue(inCollection);
     setQueue(q);
+    setQueueFor(collectionId);
     setIndex(0);
     setDone(q.length === 0);
     if (q.length === 0) setNextDate(getNextReviewDate(inCollection));
@@ -234,6 +243,17 @@ export default function ReviewScreen() {
             </TouchableOpacity>
           ))}
         </ScrollView>
+      </SafeAreaView>
+    );
+  }
+
+  // The single frame between picking a collection and the queue being built for
+  // it. Everything below reads session state, and none of it belongs to this
+  // collection yet.
+  if (queueFor !== collectionId) {
+    return (
+      <SafeAreaView style={s.center}>
+        <ActivityIndicator color={C.highlight} size="large" />
       </SafeAreaView>
     );
   }
