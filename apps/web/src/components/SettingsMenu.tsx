@@ -4,6 +4,7 @@ import { useUser } from '@/components/UserContext';
 import { useTheme } from '@/components/ThemeContext';
 import { SUPPORTED_NATIVE_LANGUAGES, SUPPORTED_STUDY_LANGUAGES } from '@/services/userPreferences';
 import { t } from '@/lib/i18n';
+import DeleteAccountModal from '@/components/DeleteAccountModal';
 
 /** The study-language option list — used inside SettingsMenu and standalone
  *  in the sidebar's language popover. */
@@ -41,6 +42,7 @@ export default function SettingsMenu({ onClose }: { onClose: () => void }) {
   const { user, nativeLanguage, studyLanguage, setNativeLanguage, handleSignOut } = useUser();
   const { theme, setTheme, themes } = useTheme();
   const [langListOpen, setLangListOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   return (
     <>
@@ -124,6 +126,17 @@ export default function SettingsMenu({ onClose }: { onClose: () => void }) {
         </div>
       </div>
 
+      {/* What is held, in plain language, next to the control that erases it —
+          a privacy policy nobody opens is not the same as telling someone. */}
+      <div className="px-4 py-3 border-b border-[var(--color-muted)]/50">
+        <p className="text-xs font-mono uppercase tracking-widest mb-2" style={{ color: 'var(--color-muted)' }}>
+          {t(nativeLanguage, 'settingsYourData')}
+        </p>
+        <p className="text-xs leading-relaxed" style={{ color: 'var(--color-muted)' }}>
+          {t(nativeLanguage, 'settingsYourDataBlurb')}
+        </p>
+      </div>
+
       <a
         href={nativeLanguage === 'Korean' ? '/privacy/ko' : '/privacy'}
         onClick={onClose}
@@ -134,14 +147,25 @@ export default function SettingsMenu({ onClose }: { onClose: () => void }) {
       </a>
 
       {user && (
-        <button
-          onClick={() => { handleSignOut(); onClose(); }}
-          className="w-full text-left px-4 py-3 text-sm font-mono hover:bg-[var(--color-muted)]/30 transition-colors"
-          style={{ color: 'var(--color-text)' }}
-        >
-          {t(nativeLanguage, 'signOut')}
-        </button>
+        <>
+          <button
+            onClick={() => { handleSignOut(); onClose(); }}
+            className="w-full text-left px-4 py-3 text-sm font-mono hover:bg-[var(--color-muted)]/30 transition-colors"
+            style={{ color: 'var(--color-text)' }}
+          >
+            {t(nativeLanguage, 'signOut')}
+          </button>
+          <button
+            onClick={() => setDeleteOpen(true)}
+            className="w-full text-left px-4 py-3 text-sm font-mono hover:bg-[var(--color-muted)]/30 transition-colors"
+            style={{ color: 'var(--color-error, #c0392b)' }}
+          >
+            {t(nativeLanguage, 'deleteAccount')}
+          </button>
+        </>
       )}
+
+      {deleteOpen && <DeleteAccountModal onClose={() => setDeleteOpen(false)} />}
     </>
   );
 }
