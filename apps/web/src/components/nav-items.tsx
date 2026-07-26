@@ -40,5 +40,19 @@ export function getNavItems(nativeLanguage: string | null | undefined, pathname:
         </svg>
       ),
     },
+    // Unconditional, even on a language with no packs: a nav item that appears
+    // and disappears would reflow the bar on every study-language switch, which
+    // is worse than a quiet empty state. Packs are a peer of Cards now, not a
+    // drill-down from Learn.
+    {
+      label: t(nativeLanguage, 'navDecks'),
+      href: '/decks',
+      active: pathname.startsWith('/decks'),
+      icon: (active: boolean, className = 'w-6 h-6') => (
+        <svg className={className} fill="none" stroke="currentColor" strokeWidth={active ? 2.5 : 1.8} viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M4 6v13a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V6M4 6a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2m-7 0h7m0 0a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2m-7 0h7M8 10h3m2 0h3" />
+        </svg>
+      ),
+    },
   ];
 }

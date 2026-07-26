@@ -5,14 +5,16 @@ import { router } from 'expo-router';
 import {
   collectSavedTerms, countSavedPackTerms, getPackText, getPackTerms, getVocabPacks, t,
 } from '@amgi/core';
-import { useUser } from '../../src/context/UserContext';
-import { useTheme } from '../../src/context/ThemeContext';
-import { fetchAllUserFlashcards } from '../../src/services/firestore';
-import type { Palette } from '../../src/theme';
+import { useUser } from '../../../src/context/UserContext';
+import { useTheme } from '../../../src/context/ThemeContext';
+import { fetchAllUserFlashcards } from '../../../src/services/firestore';
+import { useFloatingTabBarHeight } from '../../../src/components/FloatingTabBar';
+import type { Palette } from '../../../src/theme';
 
 export default function DecksScreen() {
   const { C } = useTheme();
-  const s = useMemo(() => makeStyles(C), [C]);
+  const tabBarHeight = useFloatingTabBarHeight();
+  const s = useMemo(() => makeStyles(C, tabBarHeight), [C, tabBarHeight]);
   const { user, nativeLanguage, studyLanguage } = useUser();
   const packs = getVocabPacks(studyLanguage);
   const [savedTerms, setSavedTerms] = useState<Set<string> | null>(null);
@@ -28,15 +30,19 @@ export default function DecksScreen() {
 
   return (
     <SafeAreaView style={s.safe} edges={['top', 'bottom']}>
+      {/* A tab root, so no back arrow — there is nothing behind it. */}
       <View style={s.header}>
-        <TouchableOpacity onPress={() => router.back()} hitSlop={12}>
-          <Text style={s.back}>←</Text>
-        </TouchableOpacity>
         <Text style={s.title}>{t(nativeLanguage, 'decksTitle')}</Text>
       </View>
 
       {packs.length === 0 ? (
-        <Text style={s.empty}>{t(nativeLanguage, 'decksEmpty')}</Text>
+        // The tab is there for every language, so this state is reachable on
+        // most of them. It says what a pack is rather than promising one:
+        // nothing is committed to a date.
+        <View style={s.emptyWrap}>
+          <Text style={s.empty}>{t(nativeLanguage, 'decksEmpty')}</Text>
+          <Text style={s.emptyBody}>{t(nativeLanguage, 'decksEmptyBody')}</Text>
+        </View>
       ) : (
         <ScrollView contentContainerStyle={s.scroll}>
           {packs.map(pack => {
@@ -71,14 +77,15 @@ export default function DecksScreen() {
   );
 }
 
-function makeStyles(C: Palette) {
+function makeStyles(C: Palette, tabBarHeight: number) {
   return StyleSheet.create({
     safe: { flex: 1, backgroundColor: C.bg },
     header: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 20, paddingVertical: 12 },
-    back: { fontSize: 24, color: C.muted, lineHeight: 26 },
     title: { fontSize: 21, fontWeight: '700', color: C.highlight },
-    empty: { paddingHorizontal: 20, paddingTop: 8, fontSize: 14, color: C.muted },
-    scroll: { paddingHorizontal: 20, paddingBottom: 32, gap: 12 },
+    emptyWrap: { paddingHorizontal: 20, paddingTop: 8, gap: 8 },
+    empty: { fontSize: 14, color: C.muted },
+    emptyBody: { fontSize: 13, color: C.muted, opacity: 0.7, lineHeight: 19 },
+    scroll: { paddingHorizontal: 20, paddingBottom: tabBarHeight, gap: 12 },
     packRow: { padding: 16, borderWidth: 1, borderColor: C.border, borderRadius: 14 },
     packTitleRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 },
     packName: { fontSize: 16, fontWeight: '700', color: C.text, flexShrink: 1 },

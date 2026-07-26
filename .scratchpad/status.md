@@ -129,6 +129,51 @@ _Reconciled against `main` @ `6e9f3e9` on 2026-07-24, plus the 1.0.2 release cut
     round trip, which had no web equivalent to prove it since it has to pop a
     stack screen above the tabs and have Learn pick the param up.
 
+- **Review by collection** (PR #51, 2026-07-26) — your own cards and each pack
+  are separate collections now, reviewed apart end to end. Replaces the "deck
+  filter on Review" this was scoped as: a filter chip assumed one pool that gets
+  narrowed, when a pack and your own words are learned for different reasons.
+  - **`getCollectionId(card)`** (`packages/core/src/collections.ts`) is the one
+    place `packId` is read for grouping, so collections a user defines
+    themselves are an added branch later rather than a migration.
+    `buildReviewCollections` returns your own cards first, then packs in
+    registry order, omitting any collection holding no cards — an unenrolled
+    pack belongs on Decks, which is where you'd go to enrol in it.
+  - **`isDue` moved into `@amgi/core`** beside sm2 with one signature. The two
+    copies disagreed (web `{due, directions}`, mobile `Direction[]`), and web's
+    never marked a card due backwards when it had `frontToBack` tracking but no
+    `backToFront`. Shared rule: an untracked direction has never been studied,
+    so it's due; only a card with *neither* tracked falls back to the legacy
+    top-level `nextReview`. Closed the stale-test housekeeping item with it.
+  - **Review's landing is the collection picker.** Direction chips moved inside
+    the chosen collection — a separate axis, and collapsing the two into one
+    chip row would multiply out. A single collection (every Korean-only
+    session) skips the picker entirely. `?collection=` preselects for the
+    handoff from a deck and is consumed once, or "change collection" would be
+    dragged straight back to it.
+  - **Pack cards left `/cards` entirely** — not hidden behind a chip. "Only my
+    cards" is what makes that surface coherent. Management moved to the deck
+    page, inline above the grid so `40 / 107` progress and the pronounce
+    buttons survive. Only the back side is editable: rewriting あ would unmatch
+    the entry from the deck it came from.
+  - **Review this deck** enrols every unsaved entry in one batched write
+    (`saveFlashcardsBatch`, chunked at 400) and routes into that collection.
+    Enrolling hiragana creates ~214 due items at once, uncapped — contained to
+    the one collection, which is much of why dropping "All" works.
+  - **Decks became a nav item on both platforms**, and the conditional link on
+    Learn went with it. On mobile that meant moving `app/decks/` into the tab
+    group with its own `Stack` — without that layout expo-router flattens the
+    deck routes into the Tabs navigator and `FloatingTabBar` maps over every
+    route, so each surfaces as an extra icon drawing the generic fallback.
+    Drill stayed on the root stack, where the tab bar still gives way to it.
+    Route tree checked by running expo-router's own `getRoutes` over `app/`.
+  - Two knock-ons worth knowing: `/cards` **export now covers only your own
+    cards**, since it reads the same scoped list; and **"Review this deck" is
+    `cards`-packs only**, because `packId` is written solely by
+    `buildPackCardDraft` — a TOEIC word saved via Learn carries none and stays
+    in My Cards.
+  - ⚠️ **Not yet verified on device.**
+
 ### Design & polish
 - **Design system** — Forest/Sonokai/Paper/System themes, Source Code Pro,
   localized UI (EN + KO)
@@ -275,9 +320,14 @@ the next person to notice the symptom.
   drill, and if it ignores them there are now two loops behind one tab with no
   way for the user to tell which one they'll get. Drill is a closed set,
   repeatable, not due-gated; Review is "what the scheduler says". Decks is the
-  library, drill is entered from a deck, and Review keeps its
-  whole-collection default — gaining a *filter* later, which narrows the
-  existing loop rather than adding a second.
+  library, drill is entered from a deck.
+  - **Amended 2026-07-26 (PR #51):** the "and Review keeps its whole-collection
+    default, gaining a *filter* later" half is superseded. Review composes
+    collections instead of filtering a pool. The load-bearing part stands
+    unchanged and is why: a deck-scoped Review is still due-gated and still
+    isn't drill, so the two loops remain distinct. What changed is only that
+    "which cards" is now a choice you make before starting rather than a
+    narrowing of one queue.
 - **Drill writes no SM-2 state** (2026-07-25). Practice and scheduling stay
   separate, so grinding the kana chart five times in an afternoon can't wreck
   intervals. Cards saved from a pack still surface in Review on their own
@@ -289,6 +339,18 @@ the next person to notice the symptom.
   thing it would genuinely have bought is *drill my whole collection ignoring
   due dates*, which neither Cards nor Review offers; nobody has asked for it,
   and if it's ever wanted it's a button on Cards, not a deck.
+- **~~`/decks` is a route, not a nav tab — for now~~ → reversed 2026-07-26**
+  (PR #51). Decks is a nav item on both platforms now, unconditionally. The
+  trigger below was pack *coverage*; what actually justified it was the
+  **model** changing — a pack became a collection you review, a peer of Cards,
+  and a peer doesn't live behind a link on Learn. The empty-for-four-languages
+  objection was answered rather than outgrown: a *conditional* nav item would
+  reflow the bar on every study-language switch, which is worse than a quiet
+  empty state, so the empty state says what a pack is instead of promising one.
+  The deferred Decks-vs-Cards naming collision comes due with this — the nav now
+  reads Learn / Review / Cards / Packs, using "Packs" rather than "Decks" so the
+  two nav entries don't ask to be compared as Anki-style decks. The original
+  reasoning, kept because it explains what the trigger was watching for:
 - **`/decks` is a route, not a nav tab — for now** (2026-07-25). `VOCAB_PACKS`
   (`packages/core/src/packs.ts:212`) covers English and Japanese only, so
   `getVocabPacks()` returns `[]` for Korean, Swedish, French and Traditional

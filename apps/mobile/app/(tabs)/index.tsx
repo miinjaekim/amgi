@@ -5,7 +5,7 @@ import {
   Dimensions, Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { useUser } from '../../src/context/UserContext';
 import {
   getTermExplanation, getTermDepth, getTermExamples, getWordOfTheDay,
@@ -13,7 +13,7 @@ import {
 } from '../../src/services/gemini';
 import {
   getCharacterBreakdown, getDepthTarget, getReading, getStudyLanguageConfig, getExampleSides,
-  getVocabPacks, parseStreamedDepth, parseStreamedExamples, wordOfTheDayCore,
+  parseStreamedDepth, parseStreamedExamples, wordOfTheDayCore,
 } from '@amgi/core';
 import type { StudyLanguage } from '@amgi/core';
 import type { TermCore, TermDepth, TermAmbiguous, ExamplePair, WordOfTheDay } from '../../src/services/gemini';
@@ -422,12 +422,10 @@ export default function LearnScreen() {
                 <Text style={s.searchBtnText}>{t(nativeLanguage, 'learnButton')}</Text>
               </TouchableOpacity>
             </View>
+            {/* No packs link here any more: Packs is a tab now, and a second,
+                conditional way in was the wrong altitude for a surface that is
+                a peer of Cards. */}
             <View style={s.linksRow}>
-              {getVocabPacks(studyLanguage).length > 0 && (
-                <TouchableOpacity onPress={() => router.push('/decks')}>
-                  <Text style={s.linkText}>{t(nativeLanguage, 'packsLink')}</Text>
-                </TouchableOpacity>
-              )}
               <TouchableOpacity onPress={() => setShowGenerate(true)}>
                 <Text style={s.linkText}>{t(nativeLanguage, 'generateLink')}</Text>
               </TouchableOpacity>

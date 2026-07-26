@@ -12,7 +12,7 @@ import {
   deleteFlashcard, updateFlashcardFields,
 } from '../../src/services/firestore';
 import type { Flashcard } from '../../src/services/firestore';
-import { t, getCharacterBreakdown, getStudyLanguageConfig, getStudyLangSide, getBackSide, getExampleSides } from '@amgi/core';
+import { t, getCharacterBreakdown, getCollectionId, getStudyLanguageConfig, getStudyLangSide, getBackSide, getExampleSides } from '@amgi/core';
 import type { CardSideField } from '@amgi/core';
 import { useTheme } from '../../src/context/ThemeContext';
 import { useFloatingTabBarHeight } from '../../src/components/FloatingTabBar';
@@ -44,11 +44,16 @@ export default function CardsScreen() {
   const [showImport, setShowImport] = useState(false);
   const [importSuccess, setImportSuccess] = useState<string | null>(null);
 
+  // Only the cards you made yourself. A pack's cards are a collection of their
+  // own — reviewed apart and managed on the deck screen — and "these are mine"
+  // is what makes this surface coherent, so they are absent rather than
+  // filtered out by a chip. Everything below (counts, select-all, export)
+  // reads `allCards`, so it all follows from this one scoping.
   useEffect(() => {
     if (!user) { setAllCards([]); return; }
     setLoading(true);
     fetchAllUserFlashcards(user.uid, studyLanguage)
-      .then(setAllCards)
+      .then(cards => setAllCards(cards.filter(card => getCollectionId(card) === null)))
       .catch(() => setError('Failed to load cards.'))
       .finally(() => setLoading(false));
   }, [user, studyLanguage]);

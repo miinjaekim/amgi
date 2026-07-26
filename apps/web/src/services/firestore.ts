@@ -1,5 +1,5 @@
 import { db } from '@/config/firebase';
-import { collection, addDoc, Timestamp, query, where, orderBy, getDocs, getCountFromServer, doc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { collection, addDoc, Timestamp, query, where, orderBy, getDocs, getCountFromServer, doc, updateDoc, deleteDoc, writeBatch } from 'firebase/firestore';
 import { getStudyLanguageConfig } from '@amgi/core';
 import type { Flashcard, ReviewTracking, StudyLanguage } from '@amgi/core';
 
@@ -9,7 +9,7 @@ export function getCardsCollection(studyLanguage?: StudyLanguage) {
   return getStudyLanguageConfig(studyLanguage).collection;
 }
 
-export async function saveFlashcardToFirestore(
+function buildFlashcardDoc(
   flashcard: Omit<Flashcard, 'createdAt' | 'id'>,
   studyLanguage?: StudyLanguage
 ) {
@@ -29,8 +29,6 @@ export async function saveFlashcardToFirestore(
     backToFront.nextReview : new Date(backToFront.nextReview);
   const legacyNextReview = fbDate < bfDate ? fbDate : bfDate;
 
-  const collectionName = getCardsCollection(studyLanguage);
-
   const rawData = {
     ...flashcard,
     studyLanguage: studyLanguage ?? 'Korean',
@@ -45,12 +43,39 @@ export async function saveFlashcardToFirestore(
   };
 
   // Firebase v9 throws on explicit `undefined` field values.
-  const docData = Object.fromEntries(
+  return Object.fromEntries(
     Object.entries(rawData).filter(([, v]) => v !== undefined)
   );
+}
 
-  const docRef = await addDoc(collection(db, collectionName), docData);
+export async function saveFlashcardToFirestore(
+  flashcard: Omit<Flashcard, 'createdAt' | 'id'>,
+  studyLanguage?: StudyLanguage
+) {
+  const collectionName = getCardsCollection(studyLanguage);
+  const docRef = await addDoc(collection(db, collectionName), buildFlashcardDoc(flashcard, studyLanguage));
   return docRef.id;
+}
+
+/**
+ * Save many cards at once — enrolling in a whole deck, which is one action to
+ * the user and should be one round trip. Chunked because a Firestore batch
+ * holds 500 writes and a pack has no ceiling; the chunks are sequential so a
+ * hundred-odd cards don't arrive as a hundred parallel connections.
+ */
+export async function saveFlashcardsBatch(
+  flashcards: Omit<Flashcard, 'createdAt' | 'id'>[],
+  studyLanguage?: StudyLanguage
+) {
+  const collectionName = getCardsCollection(studyLanguage);
+  for (let i = 0; i < flashcards.length; i += 400) {
+    const batch = writeBatch(db);
+    for (const flashcard of flashcards.slice(i, i + 400)) {
+      batch.set(doc(collection(db, collectionName)), buildFlashcardDoc(flashcard, studyLanguage));
+    }
+    await batch.commit();
+  }
+  return flashcards.length;
 }
 
 function mapDocToFlashcard(docSnapshot: any, studyLanguage?: StudyLanguage): Flashcard {
