@@ -45,8 +45,17 @@ _Last build: **1.0.2 / build 4**, 2026-07-24._
       tested for real in Expo Go: airplane mode plus a force-kill is the test,
       and the durable queue is the part worth verifying on the build itself.
 
+- [ ] **Account deletion** (PR #55, merged 2026-07-27) — required by App Store
+      Guideline 5.1.1(v), so this is a *submission blocker*, not a nice-to-have:
+      an app offering account creation must offer in-app deletion. The web half
+      is already live; the mobile half needs this build. Verify on the build
+      that deletion actually signs you out and leaves no cards behind — it calls
+      the deployed API, so `EXPO_PUBLIC_API_BASE_URL` must be right in the
+      production profile, not just in the dev env.
+
 **Pre-flight:** smoke-test in Expo Go → verify native-adjacent things (audio,
-files, sharing, **offline review + reconnect sync**) on the build itself → bump
+files, sharing, **offline review + reconnect sync**, **account deletion**) on
+the build itself → bump
 `version` in `app.json` → check `docs/testflight-beta-info-ko.md` is still
 accurate.
 
@@ -63,9 +72,8 @@ accurate.
       Deliberately **not** in the next build — it brings a native module, so it
       wants a build of its own rather than riding along with a JS-only release.
 
-- [ ] **Privacy — finish the remaining pieces** — account/data deletion (export
-      already exists) and a short "your data" blurb in settings or onboarding.
-      Deletion is table stakes before any wider launch.
+_Privacy is done — see the Shipped entry for PR #55. The mobile half rides this
+build; the web half went live on merge._
 
 ## Housekeeping — broken tooling that hides signal
 

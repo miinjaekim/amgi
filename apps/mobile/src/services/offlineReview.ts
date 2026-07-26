@@ -170,6 +170,28 @@ export function removePendingReviews(uid: string, sent: PendingReview[]): Promis
   });
 }
 
+/**
+ * Wipe everything this app has put on the device.
+ *
+ * Used after account deletion. Enumerating keys rather than listing them means
+ * a cache added later is covered without anyone remembering to come back here
+ * — leaving a deleted user's cards and streak sitting in storage would make a
+ * completed deletion look unfinished, and on the phone that data is the part
+ * they can actually still see.
+ *
+ * The theme is spared: it describes this device, not the person, and resetting
+ * it on sign-out would read as a bug rather than as privacy.
+ */
+export async function clearAllLocalData(): Promise<void> {
+  try {
+    const keys = await AsyncStorage.getAllKeys();
+    const ours = keys.filter(key => key.startsWith('amgi_') && key !== 'amgi_theme');
+    if (ours.length > 0) await AsyncStorage.multiRemove(ours);
+  } catch {
+    // Nothing useful to do — the account itself is already gone server-side.
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Streak
 // ---------------------------------------------------------------------------
