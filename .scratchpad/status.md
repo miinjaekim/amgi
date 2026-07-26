@@ -184,6 +184,17 @@ _Reconciled against `main` @ `6e9f3e9` on 2026-07-24, plus the 1.0.2 release cut
     deck → `/review` handoff (`router.navigate` across tab groups), drill still
     opening full-screen above the tabs, and the deck page's manage panel.
 
+- **The web suite is green again** (2026-07-26) — 73/73. The two stale review
+  tests that predated the monorepo restructure are both gone: `isDue` moved into
+  `@amgi/core` with PR #51, and `review-response.test.ts` is fixed. The second
+  one was scoped in the backlog as "delete line 150", which was wrong — that
+  line (`not.toHaveProperty('frontToBack.nextReview')`, contradicted by the next
+  line) was masking a **date bug in the same test**: it asserted the written
+  review date by comparing `getDate()` against today's, so it failed on the last
+  six days of every month and would have started failing on its own on 25 July
+  regardless. Now measured as elapsed days. Worth remembering that a test failing
+  for the stated reason doesn't mean that is the only reason it fails.
+
 ### Design & polish
 - **Design system** — Forest/Sonokai/Paper/System themes, Source Code Pro,
   localized UI (EN + KO)
