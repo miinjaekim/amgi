@@ -77,6 +77,10 @@ const translations = {
     reviewStoppedNone: 'Nothing reviewed this time.',
     reviewStoppedRemaining: '{count} left in this session',
     reviewResume: 'Keep going',
+    // Finished the session, but missed cards are still due
+    reviewSessionFinished: 'Session finished',
+    reviewMissedStillDue: '{count} you missed are still due.',
+    reviewAgainMissed: 'Review those again',
     directionBoth: 'Both directions',
     directionKoreanToEnglish: 'Korean → English',
     directionEnglishToKorean: 'English → Korean',
@@ -310,6 +314,10 @@ const translations = {
     reviewStoppedNone: '이번엔 복습한 카드가 없어요.',
     reviewStoppedRemaining: '이번 세션에 {count}개 남았어요',
     reviewResume: '이어서 하기',
+    // Finished the session, but missed cards are still due
+    reviewSessionFinished: '이번 복습 끝!',
+    reviewMissedStillDue: '틀린 {count}개가 아직 남아 있어요.',
+    reviewAgainMissed: '틀린 카드 다시 보기',
     directionBoth: '양방향',
     directionKoreanToEnglish: '한국어 → 영어',
     directionEnglishToKorean: '영어 → 한국어',

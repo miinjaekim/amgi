@@ -81,36 +81,14 @@ export function getNextReviewData(card: CardForReview, response: 'again' | 'hard
   // what makes it disappear from today's queue. `interval` still resets to 1,
   // which is what the *next* successful pass schedules from.
   //
+  // Staying due is what lets a finished session be restarted to pick up
+  // exactly the cards that were missed. It deliberately does not put the card
+  // back into the session in progress: a session ends when it said it would.
+  //
   // Web used to patch this at its call site and mobile did not, so the same
   // card lapsed differently on each platform. It belongs here.
   const nextReview = quality < 3
     ? now
     : new Date(now.getTime() + interval * 24 * 60 * 60 * 1000);
   return { interval, ease, repetitions, nextReview };
-}
-
-/**
- * How many cards later a missed card comes back inside the same session.
- * Mirrors `DRILL_REQUEUE_GAP` — far enough that it isn't answered from
- * short-term memory, near enough to still be the same sitting.
- */
-export const REVIEW_REQUEUE_GAP = 4;
-
-/**
- * Put a missed card back into the queue, a few positions ahead.
- *
- * Marking a card "again" and watching it vanish until tomorrow is the opposite
- * of what the rating says. Scheduling alone can't fix that — the session's
- * queue is built once, so a card that is due again is still not *asked* again
- * — which is why the card has to be reinserted explicitly.
- */
-export function requeueMissedCard<T>(
-  queue: T[],
-  index: number,
-  item: T,
-  gap: number = REVIEW_REQUEUE_GAP,
-): T[] {
-  const rest = queue.slice(index + 1);
-  const at = Math.min(gap, rest.length);
-  return [...queue.slice(0, index + 1), ...rest.slice(0, at), item, ...rest.slice(at)];
 }

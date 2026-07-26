@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import {
   View, Text, TouchableOpacity, ActivityIndicator,
   StyleSheet, Animated, TextInput, Alert, ScrollView,
@@ -18,7 +18,7 @@ import { usePendingReviewSync } from '../../src/hooks/usePendingReviewSync';
 import {
   applyPendingReviews, buildReviewCollections, getBackSide, getCollectionId,
   getNextReviewDate, getNextReviewData, getStudyLangSide, getStudyLanguageConfig,
-  isDue, requeueMissedCard, t,
+  isDue, t,
 } from '@amgi/core';
 import type { CardSideField, PendingReview } from '@amgi/core';
 import { useTheme } from '../../src/context/ThemeContext';
@@ -78,7 +78,6 @@ export default function ReviewScreen() {
    */
   const [stopped, setStopped] = useState(false);
   const [reviewedCount, setReviewedCount] = useState(0);
-  const [nextDate, setNextDate] = useState<Date | null>(null);
   const revealAnim = useRef(new Animated.Value(0)).current;
 
   // Card options (⋯ menu)
@@ -146,13 +145,25 @@ export default function ReviewScreen() {
    */
   const [sessionRatings, setSessionRatings] = useState<PendingReview[]>([]);
 
+  /** The cards as they now stand: loaded, plus everything rated this visit. */
+  const reviewedCards = useMemo(
+    () => applyPendingReviews(cards, sessionRatings, studyLanguage),
+    [cards, sessionRatings, studyLanguage]
+  );
+
   const collections = useMemo(
-    () => buildReviewCollections(
-      applyPendingReviews(cards, sessionRatings, studyLanguage),
-      studyLanguage,
-      nativeLanguage,
-    ),
-    [cards, sessionRatings, studyLanguage, nativeLanguage]
+    () => buildReviewCollections(reviewedCards, studyLanguage, nativeLanguage),
+    [reviewedCards, studyLanguage, nativeLanguage]
+  );
+
+  /**
+   * When this collection next comes back. Derived rather than captured at
+   * session start, which used to leave it stale — it was only ever assigned
+   * for a session that began with nothing due.
+   */
+  const nextDate = useMemo(
+    () => getNextReviewDate(reviewedCards.filter(card => getCollectionId(card) === collectionId)),
+    [reviewedCards, collectionId]
   );
 
   // A deck screen hands the choice over as `collection`; `nonce` makes a second
@@ -172,18 +183,35 @@ export default function ReviewScreen() {
     }
   }, [collections, collectionId, requested, nonce]);
 
-  useEffect(() => {
-    setStopped(false);
-    setReviewedCount(0);
-    if (collectionId === undefined) { setQueue([]); setQueueFor(undefined); setDone(false); return; }
-    const inCollection = cards.filter(card => getCollectionId(card) === collectionId);
-    const q = buildQueue(inCollection);
+  /**
+   * Begin a session over whatever is due in a collection right now. Also the
+   * "review those again" path: a card rated `again` stays due, so rebuilding
+   * from the current cards yields exactly what was missed and nothing else.
+   */
+  const startSession = useCallback((sourceCards: Flashcard[], collection: string | null) => {
+    const q = buildQueue(sourceCards.filter(card => getCollectionId(card) === collection));
     setQueue(q);
-    setQueueFor(collectionId);
+    setQueueFor(collection);
     setIndex(0);
     setDone(q.length === 0);
-    if (q.length === 0) setNextDate(getNextReviewDate(inCollection));
-  }, [collectionId, cards]);
+    setStopped(false);
+    setReviewedCount(0);
+  }, []);
+
+  useEffect(() => {
+    if (collectionId === undefined) {
+      setQueue([]); setQueueFor(undefined); setDone(false);
+      setStopped(false); setReviewedCount(0);
+      return;
+    }
+    startSession(reviewedCards, collectionId);
+    // `reviewedCards` is deliberately not a dependency. It changes on every
+    // rating, and rebuilding then would reshuffle the queue mid-session and
+    // send the user back to the first card. Sessions start when the collection
+    // changes or the cards reload — and read the freshest cards when they do,
+    // so re-entering a collection doesn't re-serve what was already answered.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [collectionId, cards, startSession]);
 
   const resetCardState = () => {
     setRevealed(false);
@@ -237,20 +265,10 @@ export default function ReviewScreen() {
 
     setSubmitting(null);
     resetCardState();
-
-    // A missed card comes back later in the same sitting. It carries the
-    // lapsed tracking with it, so answering it wrong twice compounds from the
-    // first lapse rather than from where the card started.
-    const missed = rating === 'again';
-    if (missed) {
-      const relapsed: ReviewItem = { ...item, card: { ...card, [direction]: next } };
-      setQueue(prev => requeueMissedCard(prev, index, relapsed));
-    }
-
-    // `queue` is still the pre-requeue array here, so the end of the session is
-    // measured against what the queue is about to become — otherwise a card
-    // missed on the last question would end the session instead of coming back.
-    if (index + 1 >= queue.length + (missed ? 1 : 0)) {
+    // A missed card is not put back into this session. It stays due, so the
+    // completion screen offers it back as a fresh one — finishing is the
+    // user's to declare, not something withheld until they get everything right.
+    if (index + 1 >= queue.length) {
       setDone(true);
     } else {
       setIndex(i => i + 1);
@@ -431,6 +449,10 @@ export default function ReviewScreen() {
   }
 
   if (done) {
+    // Everything answered correctly is scheduled out, so whatever is still due
+    // is what was missed. Claiming "all caught up" over the top of that would
+    // be untrue, and it is the one moment where offering them back costs a tap.
+    const stillDue = collections.find(c => c.id === collectionId)?.dueCount ?? 0;
     return (
       <SafeAreaView style={s.center}>
         {offlineNotice}
@@ -439,12 +461,29 @@ export default function ReviewScreen() {
             {collections.find(c => c.id === collectionId)?.name}
           </Text>
         )}
-        <Text style={s.doneTitle}>{t(nativeLanguage, 'allCaughtUp')}</Text>
-        <Text style={s.doneBody}>{t(nativeLanguage, 'reviewCompleteMessage')}</Text>
-        {nextDate && (
-          <Text style={s.nextDate}>
-            {t(nativeLanguage, 'nextReviewOn')} {nextDate.toLocaleDateString()}
-          </Text>
+        {stillDue > 0 ? (
+          <>
+            <Text style={s.stoppedTitle}>{t(nativeLanguage, 'reviewSessionFinished')}</Text>
+            <Text style={s.doneBody}>
+              {t(nativeLanguage, 'reviewMissedStillDue', { count: stillDue })}
+            </Text>
+            <TouchableOpacity
+              style={s.resumeBtn}
+              onPress={() => startSession(reviewedCards, collectionId)}
+            >
+              <Text style={s.resumeBtnText}>{t(nativeLanguage, 'reviewAgainMissed')}</Text>
+            </TouchableOpacity>
+          </>
+        ) : (
+          <>
+            <Text style={s.doneTitle}>{t(nativeLanguage, 'allCaughtUp')}</Text>
+            <Text style={s.doneBody}>{t(nativeLanguage, 'reviewCompleteMessage')}</Text>
+            {nextDate && (
+              <Text style={s.nextDate}>
+                {t(nativeLanguage, 'nextReviewOn')} {nextDate.toLocaleDateString()}
+              </Text>
+            )}
+          </>
         )}
         {changeCollectionButton}
       </SafeAreaView>
