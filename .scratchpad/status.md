@@ -16,7 +16,8 @@ _Reconciled against `main` @ `6e9f3e9` on 2026-07-24, plus the 1.0.2 release cut
   (newest/oldest/A→Z), card order toggle, detail modal, edit/archive/delete,
   bulk actions, CSV + Anki export, bulk import
 - **Review loop** — manage cards mid-session (edit/archive/delete), offline
-  banner + cached review, force-sync button
+  banner + cached review, force-sync button. _Web; mobile got its own offline
+  story in PR #53, built differently — see below._
 - **Streaks** — streak count + cards reviewed today in header, persisted to Firestore
 - **Streaming + cache** — typewriter animation on depth/examples; Firestore
   IndexedDB persistent cache for instant repeat visits
@@ -128,6 +129,44 @@ _Reconciled against `main` @ `6e9f3e9` on 2026-07-24, plus the 1.0.2 release cut
     (kana), and tapping a word in a `lookup` pack (TOEIC) — the deck → Learn
     round trip, which had no web equivalent to prove it since it has to pop a
     stack screen above the tabs and have Learn pick the param up.
+
+- **Offline review on mobile** (PR #53, 2026-07-26) — the review loop works
+  without a connection, and ratings sync when one returns. Mobile keeps its own
+  durable state because it has to: Firestore's persistent cache is IndexedDB
+  and therefore web-only, so `getFirestore` on RN is memory-only. See the
+  Firestore section of [lessons.md](lessons.md) — the two "offline doesn't
+  fail, it lies" gotchas are the load-bearing part.
+  - **Card snapshots per user and study language**, in AsyncStorage. Review
+    loads cache-first, which also removed the spinner online. Languages this
+    device has loaded are refreshed in the background, so switching study
+    language offline works; one never loaded says so rather than showing the
+    empty-deck state.
+  - **A durable queue of unsent ratings.** Committed to disk *before* the
+    network is attempted and replayed over the snapshot on load, so an offline
+    session survives the app being killed instead of re-serving cards already
+    answered. Conflicts are last-flush-wins — entries carry `reviewedAt` so a
+    future "newer wins" has its half, but that rule also needs a timestamp *on
+    the card*, written by web too, or every web review looks infinitely old and
+    always loses. Decided against paying for that until it bites.
+  - **Two bugs beyond review**, both from the offline-reads gotcha: an offline
+    launch wiped the cached native language and reset the streak to zero,
+    because "couldn't reach the server" and "no preferences" were the same
+    value.
+  - **`getNextReviewData` scheduled a lapse a day out**, so rating a card
+    "again" removed it from today's queue. Web patched this at its call site
+    and mobile never did — the same card lapsed differently per platform. Rule
+    moved into the scheduler, web's override deleted. Three tests asserted the
+    old behaviour; two had comments saying the card should be due "today
+    (immediately)" directly above an assertion for tomorrow.
+  - **A session can be stopped early** (✕ on the progress row) and is allowed
+    to *finish*: a missed card stays due but does not reappear mid-session, and
+    the completion screen offers another pass over exactly what was missed
+    instead of claiming "all caught up". Rejected the alternative — reinserting
+    missed cards a few positions later, as drill does — because it makes
+    session length unpredictable and takes the choice of when to stop away from
+    the user.
+  - **Needs a production build**: adds `expo-network`, so it cannot ride a
+    JS-only release.
 
 - **Review by collection** (PR #51, 2026-07-26) — your own cards and each pack
   are separate collections now, reviewed apart end to end. Replaces the "deck
