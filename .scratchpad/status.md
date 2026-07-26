@@ -130,30 +130,6 @@ _Reconciled against `main` @ `6e9f3e9` on 2026-07-24, plus the 1.0.2 release cut
     round trip, which had no web equivalent to prove it since it has to pop a
     stack screen above the tabs and have Learn pick the param up.
 
-- **Account deletion + "your data"** (PR #55, 2026-07-27) — self-service account
-  deletion on both platforms, closing the privacy backlog item.
-  - **App Store Guideline 5.1.1(v) makes this a submission blocker**, not
-    hygiene: an app offering account creation must offer in-app deletion. Worth
-    knowing before the next review cycle, not after.
-  - **Server-side, via a new `DELETE /api/account`.** Sweeping six collections
-    from the client would be a long batched delete with no recovery from
-    stopping halfway, and client `deleteUser()` needs a recent sign-in — a
-    second Google OAuth round trip mid-deletion. The Admin SDK has neither
-    problem, and mobile already calls the web API, so one route serves both.
-  - **The first route in the codebase that verifies auth.** `verifyRequestUid`
-    derives the uid from a Firebase ID token; a uid in the body is a claim, not
-    proof, and trusting one here would let anyone erase any account. Any future
-    route acting on behalf of a user should use it.
-  - **Pronunciation audio is deliberately kept.** It is keyed by a hash of the
-    text, not by user, and shared — deleting it would break playback on other
-    people's cards. The privacy policy now says so explicitly.
-  - **`userDataCollections()` is derived from the language registry** and
-    tested, so adding a study language cannot silently leave that language's
-    cards behind after a deletion the user was told had finished.
-  - **Both privacy policies rewritten** — they previously stated the opposite
-    ("does not yet have a self-service option… email us"), so shipping without
-    touching them would have made the policy false on merge.
-
 - **Web review session parity** (PR #54, 2026-07-26) — the session controls from
   PR #53 brought over, plus a stale-state bug found on the way.
   - **Ratings never fed back into `userFlashcards`**, which `dueCards` derives

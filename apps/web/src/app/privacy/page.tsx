@@ -12,7 +12,7 @@ export default function PrivacyPage() {
       <div>
         <h1 className="text-2xl font-bold mb-1">Privacy Policy</h1>
         <p className="opacity-70 text-sm">
-          Last updated: July 27, 2026 ·{" "}
+          Last updated: July 20, 2026 ·{" "}
           <Link href="/privacy/ko" className="underline">
             한국어
           </Link>
@@ -102,21 +102,9 @@ export default function PrivacyPage() {
       <section className="space-y-2">
         <h2 className="text-lg font-semibold">Data retention and deletion</h2>
         <p>
-          Your data is retained as long as your account exists. You can delete
-          your account at any time from Settings, on the web or in the mobile
-          app. Deletion is immediate and permanent: it removes your account,
-          every saved card in every language, your review history and streak,
-          and your settings. It cannot be undone, so if you want a copy of your
-          vocabulary, export it from the Cards page first.
-        </p>
-        <p>
-          One thing is deliberately not deleted: cached pronunciation audio.
-          It is stored under a name derived from the word itself rather than
-          from your account, contains no personal information, and is shared by
-          everyone studying that word.
-        </p>
-        <p>
-          If you would rather we handled it, or you can no longer sign in, email{" "}
+          Your data is retained as long as your account exists. Amgi does not yet
+          have a self-service option to delete your account from within the app.
+          To request deletion of your account and associated data, email{" "}
           <a href="mailto:kenyamjkim@gmail.com" className="underline">
             kenyamjkim@gmail.com
           </a>{" "}
