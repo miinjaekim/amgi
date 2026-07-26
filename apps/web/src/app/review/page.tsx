@@ -206,8 +206,11 @@ export default function ReviewPage() {
     update[`${direction}.interval`] = interval;
     update[`${direction}.ease`] = ease;
     update[`${direction}.repetitions`] = repetitions;
-    update[`${direction}.nextReview`] = response === 'again' ? new Date() : nextReview;
-    update.nextReview = response === 'again' ? new Date() : nextReview;
+    // `getNextReviewData` now keeps a lapsed card due now, so the special case
+    // that used to live here has moved into the scheduler — where mobile gets
+    // it too.
+    update[`${direction}.nextReview`] = nextReview;
+    update.nextReview = nextReview;
 
     const collectionName = getCardsCollection(studyLanguage);
     // Fire-and-forget: Firestore queues writes offline and syncs when reconnected.

@@ -12,14 +12,15 @@ describe('Review Date Calculation Tests', () => {
       repetitions: 0
     };
     
-    // Test "again" response - should set interval to 1 day (before we override it)
+    // "again" resets the interval to 1 day, but the card itself stays due now —
+    // answering wrong should not be what removes it from today's queue.
     const againResult = getNextReviewData(testCardData, 'again');
     expect(againResult.interval).toBe(1);
-    
+    expect(againResult.nextReview.getDate()).toBe(now.getDate());
+
     // Calculate expected date for interval = 1
     const expectedTomorrowDate = new Date(now.getTime() + 24 * 60 * 60 * 1000);
     // Compare just the dates, not exact times (may vary slightly during test execution)
-    expect(againResult.nextReview.getDate()).toBe(expectedTomorrowDate.getDate());
     
     // Test "good" response on a new card
     const goodResult = getNextReviewData(testCardData, 'good');
@@ -71,8 +72,8 @@ describe('Review Date Calculation Tests', () => {
     const goodDate = getNextReviewData(testCardData, 'good').nextReview;
     const easyDate = getNextReviewData(testCardData, 'easy').nextReview;
     
-    // All dates should be in the future
-    expect(againDate.getTime()).toBeGreaterThan(now.getTime());
+    // A missed card is due immediately; everything that passed goes forward.
+    expect(againDate.getTime()).toBeLessThanOrEqual(Date.now());
     expect(hardDate.getTime()).toBeGreaterThan(now.getTime());
     expect(goodDate.getTime()).toBeGreaterThan(now.getTime());
     expect(easyDate.getTime()).toBeGreaterThan(now.getTime());

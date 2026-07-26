@@ -18,7 +18,7 @@ import { usePendingReviewSync } from '../../src/hooks/usePendingReviewSync';
 import {
   applyPendingReviews, buildReviewCollections, getBackSide, getCollectionId,
   getNextReviewDate, getNextReviewData, getStudyLangSide, getStudyLanguageConfig,
-  isDue, t,
+  isDue, requeueMissedCard, t,
 } from '@amgi/core';
 import type { CardSideField, PendingReview } from '@amgi/core';
 import { useTheme } from '../../src/context/ThemeContext';
@@ -237,7 +237,20 @@ export default function ReviewScreen() {
 
     setSubmitting(null);
     resetCardState();
-    if (index + 1 >= queue.length) {
+
+    // A missed card comes back later in the same sitting. It carries the
+    // lapsed tracking with it, so answering it wrong twice compounds from the
+    // first lapse rather than from where the card started.
+    const missed = rating === 'again';
+    if (missed) {
+      const relapsed: ReviewItem = { ...item, card: { ...card, [direction]: next } };
+      setQueue(prev => requeueMissedCard(prev, index, relapsed));
+    }
+
+    // `queue` is still the pre-requeue array here, so the end of the session is
+    // measured against what the queue is about to become — otherwise a card
+    // missed on the last question would end the session instead of coming back.
+    if (index + 1 >= queue.length + (missed ? 1 : 0)) {
       setDone(true);
     } else {
       setIndex(i => i + 1);

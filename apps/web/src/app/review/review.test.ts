@@ -53,10 +53,12 @@ describe('Review Scheduling Logic', () => {
   });
 
   it('should schedule new date based on response type', () => {
-    // Test "again" response - should be scheduled for today (immediately)
+    // Test "again" response - should be scheduled for today (immediately).
+    // `interval` still resets to 1: that is what the next *successful* pass
+    // schedules from, not this one.
     const againResult = getNextReviewData(sampleCard.frontToBack as ReviewTracking, 'again');
     expect(againResult.interval).toBe(1);
-    expect(againResult.nextReview.getDate()).toBe(tomorrow.getDate());
+    expect(againResult.nextReview.getDate()).toBe(today.getDate());
     
     // Test "good" response - should be scheduled for tomorrow (1 day) for first review
     const goodResult = getNextReviewData(sampleCard.frontToBack as ReviewTracking, 'good');

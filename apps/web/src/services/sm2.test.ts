@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { getNextReviewData } from './sm2';
+import { isDue, requeueMissedCard } from '@amgi/core';
 import { Flashcard } from './firestore';
 
 describe('getNextReviewData (SM-2)', () => {
@@ -27,6 +28,20 @@ describe('getNextReviewData (SM-2)', () => {
     expect(result.ease).toBeLessThanOrEqual(2.5);
   });
 
+  it('leaves a missed card due now rather than scheduling it out', () => {
+    // Answering wrong is what should *keep* a card in today's queue. The reset
+    // interval of 1 describes the next successful pass, not this one.
+    const before = Date.now();
+    const result = getNextReviewData(baseCard, 'again');
+    expect(result.nextReview.getTime()).toBeGreaterThanOrEqual(before);
+    expect(result.nextReview.getTime()).toBeLessThanOrEqual(Date.now());
+    expect(isDue({ frontToBack: result })).toContain('frontToBack');
+  });
+
+  it('schedules a passed card out by its interval', () => {
+    const result = getNextReviewData({ ...baseCard, interval: 1, repetitions: 1 }, 'good');
+    expect(isDue({ frontToBack: result })).not.toContain('frontToBack');
+  });
   it('should increment repetitions and interval for "good"', () => {
     const card = { ...baseCard, interval: 1, repetitions: 1, ease: 2.5 };
     const result = getNextReviewData(card, 'good');
@@ -49,4 +64,40 @@ describe('getNextReviewData (SM-2)', () => {
     expect(result.interval).toBe(1);
     expect(result.repetitions).toBe(1);
   });
-}); 
+});
+
+describe('requeueMissedCard', () => {
+  const queue = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+
+  it('puts the missed card back the standard gap ahead', () => {
+    expect(requeueMissedCard(queue, 0, 'a')).toEqual(
+      ['a', 'b', 'c', 'd', 'e', 'a', 'f', 'g', 'h'],
+    );
+  });
+
+  it('keeps everything before and including the current card untouched', () => {
+    const result = requeueMissedCard(queue, 2, 'c');
+    expect(result.slice(0, 3)).toEqual(['a', 'b', 'c']);
+  });
+
+  it('adds exactly one entry', () => {
+    expect(requeueMissedCard(queue, 3, 'd')).toHaveLength(queue.length + 1);
+  });
+
+  it('appends at the end when fewer cards remain than the gap', () => {
+    // Missing the second-to-last card: only one card is left to hide it behind.
+    expect(requeueMissedCard(queue, 6, 'g')).toEqual(
+      ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'g'],
+    );
+  });
+
+  it('asks the card again immediately when it was the last one', () => {
+    expect(requeueMissedCard(queue, 7, 'h')).toEqual([...queue, 'h']);
+  });
+
+  it('honours a custom gap', () => {
+    expect(requeueMissedCard(queue, 0, 'a', 1)).toEqual(
+      ['a', 'b', 'a', 'c', 'd', 'e', 'f', 'g', 'h'],
+    );
+  });
+});
