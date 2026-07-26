@@ -1,7 +1,6 @@
 import { getApps, initializeApp, cert, App } from 'firebase-admin/app';
 import { getStorage } from 'firebase-admin/storage';
 import { getFirestore } from 'firebase-admin/firestore';
-import { getAuth } from 'firebase-admin/auth';
 
 function getAdminApp(): App {
   if (getApps().length > 0) return getApps()[0];
@@ -27,28 +26,4 @@ export function getBucket() {
 
 export function getDb() {
   return getFirestore(getAdminApp());
-}
-
-export function getAdminAuth() {
-  return getAuth(getAdminApp());
-}
-
-/**
- * The uid behind a request's `Authorization: Bearer <Firebase ID token>`, or
- * null if there isn't a valid one.
- *
- * A uid sent in the body or a query string is a claim, not proof — anyone
- * could send someone else's. For a request that destroys an account, the uid
- * has to come from a token the server has verified, which is what this is for.
- */
-export async function verifyRequestUid(request: Request): Promise<string | null> {
-  const header = request.headers.get('authorization') ?? '';
-  const [scheme, token] = header.split(' ');
-  if (scheme?.toLowerCase() !== 'bearer' || !token) return null;
-  try {
-    return (await getAdminAuth().verifyIdToken(token)).uid;
-  } catch {
-    // Expired, malformed, or signed by someone else — all equally "no".
-    return null;
-  }
 }

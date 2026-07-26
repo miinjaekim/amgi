@@ -12,7 +12,7 @@ export default function PrivacyPageKo() {
       <div>
         <h1 className="text-2xl font-bold mb-1">개인정보처리방침</h1>
         <p className="opacity-70 text-sm">
-          최종 수정일: 2026년 7월 27일 ·{" "}
+          최종 수정일: 2026년 7월 21일 ·{" "}
           <Link href="/privacy" className="underline">
             English
           </Link>
@@ -109,19 +109,9 @@ export default function PrivacyPageKo() {
       <section className="space-y-2">
         <h2 className="text-lg font-semibold">데이터 보관 및 삭제</h2>
         <p>
-          이용자의 데이터는 계정이 유지되는 동안 보관됩니다. 계정은 웹과 모바일
-          앱의 설정 화면에서 언제든지 직접 삭제할 수 있습니다. 삭제는 즉시
-          이루어지며 되돌릴 수 없습니다. 계정, 모든 언어의 저장된 카드, 복습
-          기록과 연속 학습 기록, 설정이 모두 지워집니다. 저장한 단어를 남겨두고
-          싶다면 삭제하기 전에 카드 페이지에서 내보내 주세요.
-        </p>
-        <p>
-          한 가지는 삭제되지 않습니다. 발음 오디오는 계정이 아니라 단어 자체에서
-          만들어진 이름으로 저장되며, 개인정보를 담고 있지 않고, 같은 단어를
-          공부하는 모든 이용자가 함께 사용합니다.
-        </p>
-        <p>
-          직접 처리하기 어렵거나 로그인할 수 없는 경우{" "}
+          이용자의 데이터는 계정이 유지되는 동안 보관됩니다. 현재 Amgi에는 앱
+          안에서 직접 계정을 삭제하는 기능이 없습니다. 계정과 관련 데이터의 삭제를
+          원하시면{" "}
           <a href="mailto:kenyamjkim@gmail.com" className="underline">
             kenyamjkim@gmail.com
           </a>

@@ -1,7 +1,7 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, Image,
-  ScrollView, ActivityIndicator, Alert,
+  ScrollView, ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -9,8 +9,6 @@ import * as WebBrowser from 'expo-web-browser';
 import { useUser } from '../../src/context/UserContext';
 import { useTheme } from '../../src/context/ThemeContext';
 import { useFloatingTabBarHeight } from '../../src/components/FloatingTabBar';
-import { deleteAccount } from '../../src/services/account';
-import { clearAllLocalData } from '../../src/services/offlineReview';
 import { SUPPORTED_LANGUAGES, SUPPORTED_STUDY_LANGUAGES, t } from '@amgi/core';
 import { THEMES } from '../../src/theme';
 import type { Palette } from '../../src/theme';
@@ -23,54 +21,10 @@ export default function SettingsScreen() {
   const tabBarHeight = useFloatingTabBarHeight();
   const s = useMemo(() => makeStyles(C, tabBarHeight), [C, tabBarHeight]);
   const { user, authLoading, nativeLanguage, studyLanguage, setNativeLanguage, setStudyLanguage, handleSignIn, handleSignOut } = useUser();
-  const [deleting, setDeleting] = useState(false);
 
   const openPrivacyPolicy = () => {
     const url = nativeLanguage === 'Korean' ? `${PRIVACY_URL_BASE}/ko` : PRIVACY_URL_BASE;
     WebBrowser.openBrowserAsync(url);
-  };
-
-  /**
-   * Two confirmations rather than the typed one the web uses. Making someone
-   * type an email address on a phone keyboard to close their account is
-   * hostile, and a destructive iOS alert is the platform's own idiom for
-   * "this is irreversible".
-   */
-  const handleDeleteAccount = () => {
-    Alert.alert(
-      t(nativeLanguage, 'deleteAccountConfirmTitle'),
-      `${t(nativeLanguage, 'deleteAccountWarning')}\n\n${t(nativeLanguage, 'deleteAccountExportHint')}`,
-      [
-        { text: t(nativeLanguage, 'cancel'), style: 'cancel' },
-        {
-          text: t(nativeLanguage, 'deleteAccount'),
-          style: 'destructive',
-          onPress: () => Alert.alert(
-            t(nativeLanguage, 'deleteAccountConfirmTitle'),
-            t(nativeLanguage, 'deleteAccountWarning'),
-            [
-              { text: t(nativeLanguage, 'cancel'), style: 'cancel' },
-              { text: t(nativeLanguage, 'deleteAccountAction'), style: 'destructive', onPress: runDelete },
-            ],
-          ),
-        },
-      ],
-    );
-  };
-
-  const runDelete = async () => {
-    setDeleting(true);
-    try {
-      await deleteAccount();
-      // The account is gone; everything below is this device catching up.
-      await clearAllLocalData();
-      await handleSignOut();
-      Alert.alert(t(nativeLanguage, 'deleteAccountSignedOut'));
-    } catch {
-      Alert.alert(t(nativeLanguage, 'deleteAccountFailed'));
-    } finally {
-      setDeleting(false);
-    }
   };
 
   if (authLoading) {
@@ -178,13 +132,6 @@ export default function SettingsScreen() {
           </View>
         </View>
 
-        {/* What is held, in plain language, on the screen that also erases it —
-            a privacy policy behind a link is not the same as telling someone. */}
-        <Text style={s.sectionLabel}>{t(nativeLanguage, 'settingsYourData')}</Text>
-        <View style={s.card}>
-          <Text style={s.blurbText}>{t(nativeLanguage, 'settingsYourDataBlurb')}</Text>
-        </View>
-
         {/* About */}
         <Text style={s.sectionLabel}>{t(nativeLanguage, 'settingsAbout')}</Text>
         <View style={s.card}>
@@ -197,23 +144,9 @@ export default function SettingsScreen() {
         {/* Auth action */}
         <View style={s.authSection}>
           {user ? (
-            <>
-              <TouchableOpacity style={s.signOutBtn} onPress={handleSignOut}>
-                <Text style={s.signOutBtnText}>{t(nativeLanguage, 'signOut')}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={s.deleteBtn}
-                onPress={handleDeleteAccount}
-                disabled={deleting}
-              >
-                {deleting ? (
-                  <ActivityIndicator size="small" color={C.error} />
-                ) : (
-                  <Text style={s.deleteBtnText}>{t(nativeLanguage, 'deleteAccount')}</Text>
-                )}
-              </TouchableOpacity>
-              <Text style={s.deleteHint}>{t(nativeLanguage, 'deleteAccountBlurb')}</Text>
-            </>
+            <TouchableOpacity style={s.signOutBtn} onPress={handleSignOut}>
+              <Text style={s.signOutBtnText}>{t(nativeLanguage, 'signOut')}</Text>
+            </TouchableOpacity>
           ) : (
             <TouchableOpacity style={s.signInBtn} onPress={handleSignIn}>
               <Text style={s.signInBtnText}>{t(nativeLanguage, 'settingsSignInWithGoogle')}</Text>
@@ -265,7 +198,6 @@ function makeStyles(C: Palette, tabBarHeight: number) {
   // About
   linkRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   linkRowText: { fontSize: 15, color: C.text, fontWeight: '500' },
-  blurbText: { fontSize: 13, color: C.muted, lineHeight: 19 },
 
   // Auth
   authSection: { marginTop: 8 },
@@ -274,11 +206,6 @@ function makeStyles(C: Palette, tabBarHeight: number) {
     paddingVertical: 13, alignItems: 'center',
   },
   signOutBtnText: { color: C.error, fontSize: 15, fontWeight: '600' },
-  // Deliberately quieter than sign out: findable, as the App Store requires,
-  // but not sitting at the same visual weight as the thing people click daily.
-  deleteBtn: { marginTop: 14, paddingVertical: 11, alignItems: 'center' },
-  deleteBtnText: { color: C.error, fontSize: 14, fontWeight: '600' },
-  deleteHint: { color: C.muted, fontSize: 12, textAlign: 'center', marginTop: 2, lineHeight: 17 },
   signInBtn: {
     backgroundColor: C.highlight, borderRadius: 12,
     paddingVertical: 13, alignItems: 'center',

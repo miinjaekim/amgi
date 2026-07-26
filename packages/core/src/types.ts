@@ -488,20 +488,6 @@ export const SUPPORTED_STUDY_LANGUAGES: { code: StudyLanguage; label: string; la
 // Backward compat alias used by existing UI code
 export const SUPPORTED_LANGUAGES = SUPPORTED_NATIVE_LANGUAGES;
 
-/**
- * Every Firestore collection holding documents owned by a user, keyed by
- * `uid`. What account deletion has to sweep.
- *
- * Derived from the language registry rather than listed by hand: a language
- * added later is covered without anyone remembering to come back here, and a
- * missed collection would leave real data behind after a deletion the user was
- * told had finished. `users/{uid}` is not here — it is one document addressed
- * by id, not a collection to query.
- */
-export function userDataCollections(): string[] {
-  return [...new Set(Object.values(STUDY_LANGUAGE_CONFIGS).map(config => config.collection))];
-}
-
 export function isStudyLanguage(value: unknown): value is StudyLanguage {
   return typeof value === 'string' && value in STUDY_LANGUAGE_CONFIGS;
 }
