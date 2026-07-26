@@ -1,16 +1,20 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   View, Text, TouchableOpacity, ActivityIndicator,
-  StyleSheet, Animated, TextInput, Alert,
+  StyleSheet, Animated, TextInput, Alert, ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useLocalSearchParams } from 'expo-router';
 import { useUser } from '../../src/context/UserContext';
 import {
   fetchUserFlashcards, updateFlashcardReview,
   archiveFlashcard, updateFlashcardFields,
 } from '../../src/services/firestore';
 import type { Flashcard, ReviewTracking } from '../../src/services/firestore';
-import { getNextReviewData, t, getStudyLanguageConfig, getStudyLangSide, getBackSide } from '@amgi/core';
+import {
+  buildReviewCollections, getBackSide, getCollectionId, getNextReviewDate,
+  getNextReviewData, getStudyLangSide, getStudyLanguageConfig, isDue, t,
+} from '@amgi/core';
 import type { CardSideField } from '@amgi/core';
 import { useTheme } from '../../src/context/ThemeContext';
 import { useFloatingTabBarHeight } from '../../src/components/FloatingTabBar';
@@ -20,16 +24,6 @@ import type { Palette } from '../../src/theme';
 type Direction = 'frontToBack' | 'backToFront';
 type Rating = 'again' | 'hard' | 'good' | 'easy';
 interface ReviewItem { card: Flashcard; direction: Direction }
-
-function isDue(card: Flashcard): Direction[] {
-  const now = new Date();
-  const dirs: Direction[] = [];
-  const fbDate = card.frontToBack ? new Date(card.frontToBack.nextReview) : null;
-  const bfDate = card.backToFront ? new Date(card.backToFront.nextReview) : null;
-  if (!fbDate || fbDate <= now) dirs.push('frontToBack');
-  if (!bfDate || bfDate <= now) dirs.push('backToFront');
-  return dirs;
-}
 
 function buildQueue(cards: Flashcard[]): ReviewItem[] {
   const items: ReviewItem[] = [];
@@ -47,6 +41,10 @@ export default function ReviewScreen() {
   const s = useMemo(() => makeStyles(C, tabBarHeight), [C, tabBarHeight]);
   const { user, nativeLanguage, studyLanguage, recordReview } = useUser();
   const config = getStudyLanguageConfig(studyLanguage);
+  const [cards, setCards] = useState<Flashcard[]>([]);
+  // `undefined` is "hasn't picked yet"; `null` is the cards you made yourself,
+  // which is a real choice and not the absence of one.
+  const [collectionId, setCollectionId] = useState<string | null | undefined>(undefined);
   const [queue, setQueue] = useState<ReviewItem[]>([]);
   const [index, setIndex] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -62,25 +60,48 @@ export default function ReviewScreen() {
   const [editDraft, setEditDraft] = useState<Partial<Record<CardSideField, string>> | null>(null);
   const [submitting, setSubmitting] = useState<Rating | null>(null);
 
+  // Packs belong to one study language, so a deck is not a choice that survives
+  // switching to another one — the pick resets with the cards.
   useEffect(() => {
     if (!user) return;
     setLoading(true);
+    setCollectionId(undefined);
     fetchUserFlashcards(user.uid, studyLanguage)
-      .then(cards => {
-        const q = buildQueue(cards);
-        setQueue(q);
-        setIndex(0);
-        setDone(q.length === 0);
-        if (q.length === 0) {
-          const earliest = cards
-            .flatMap(c => [c.frontToBack?.nextReview, c.backToFront?.nextReview].filter(Boolean))
-            .map(d => new Date(d!))
-            .sort((a, b) => a.getTime() - b.getTime())[0] ?? null;
-          setNextDate(earliest);
-        }
-      })
+      .then(setCards)
       .finally(() => setLoading(false));
   }, [user, studyLanguage]);
+
+  const collections = useMemo(
+    () => buildReviewCollections(cards, studyLanguage, nativeLanguage),
+    [cards, studyLanguage, nativeLanguage]
+  );
+
+  // A deck screen hands the choice over as `collection`; `nonce` makes a second
+  // handoff of the same deck re-fire. One collection means there is no choice to
+  // make — every Korean-only session — so nobody pays a tap for it.
+  const { collection: requested, nonce } = useLocalSearchParams<{ collection?: string; nonce?: string }>();
+  const consumedNonce = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    if (collections.length === 0 || collectionId !== undefined) return;
+    // The param outlives the handoff, so it is consumed once — otherwise
+    // "change collection" would be dragged straight back to the deck.
+    if (requested && consumedNonce.current !== nonce && collections.some(c => c.id === requested)) {
+      consumedNonce.current = nonce;
+      setCollectionId(requested);
+    } else if (collections.length === 1) {
+      setCollectionId(collections[0].id);
+    }
+  }, [collections, collectionId, requested, nonce]);
+
+  useEffect(() => {
+    if (collectionId === undefined) { setQueue([]); setDone(false); return; }
+    const inCollection = cards.filter(card => getCollectionId(card) === collectionId);
+    const q = buildQueue(inCollection);
+    setQueue(q);
+    setIndex(0);
+    setDone(q.length === 0);
+    if (q.length === 0) setNextDate(getNextReviewDate(inCollection));
+  }, [collectionId, cards]);
 
   const resetCardState = () => {
     setRevealed(false);
@@ -177,9 +198,62 @@ export default function ReviewScreen() {
     );
   }
 
+  if (cards.length === 0) {
+    return (
+      <SafeAreaView style={s.center}>
+        <Text style={s.emptyText}>{t(nativeLanguage, 'noFlashcardsForReview')}</Text>
+      </SafeAreaView>
+    );
+  }
+
+  // Your own cards and each pack are reviewed apart — katakana arriving mid-way
+  // through Japanese vocabulary is worse review than either done alone — so the
+  // landing is a choice of collection, not a filter over one pool.
+  if (collectionId === undefined) {
+    return (
+      <SafeAreaView style={s.root} edges={['top']}>
+        <ScrollView contentContainerStyle={s.pickerScroll}>
+          <Text style={s.pickerTitle}>{t(nativeLanguage, 'reviewPickCollection')}</Text>
+          {collections.map(collection => (
+            <TouchableOpacity
+              key={collection.id ?? 'mine'}
+              style={s.pickerRow}
+              onPress={() => setCollectionId(collection.id)}
+            >
+              <View style={s.pickerRowTop}>
+                <Text style={s.pickerName}>{collection.name}</Text>
+                <Text style={[s.pickerDue, collection.dueCount > 0 && { color: C.highlight }]}>
+                  {collection.dueCount > 0
+                    ? t(nativeLanguage, 'reviewCollectionDue', { count: collection.dueCount })
+                    : t(nativeLanguage, 'reviewCollectionCaughtUp')}
+                </Text>
+              </View>
+              <Text style={s.pickerCount}>
+                {t(nativeLanguage, 'deckEntryCount', { count: collection.cardCount })}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
+
+  // Only offered when there is something else to change to — a single
+  // collection is not a choice, and a control for it would only be noise.
+  const changeCollectionButton = collections.length > 1 && (
+    <TouchableOpacity style={s.changeBtn} onPress={() => setCollectionId(undefined)}>
+      <Text style={s.changeBtnText}>{t(nativeLanguage, 'reviewChangeCollection')}</Text>
+    </TouchableOpacity>
+  );
+
   if (done) {
     return (
       <SafeAreaView style={s.center}>
+        {collections.length > 1 && (
+          <Text style={s.collectionLabel}>
+            {collections.find(c => c.id === collectionId)?.name}
+          </Text>
+        )}
         <Text style={s.doneTitle}>{t(nativeLanguage, 'allCaughtUp')}</Text>
         <Text style={s.doneBody}>{t(nativeLanguage, 'reviewCompleteMessage')}</Text>
         {nextDate && (
@@ -187,14 +261,7 @@ export default function ReviewScreen() {
             {t(nativeLanguage, 'nextReviewOn')} {nextDate.toLocaleDateString()}
           </Text>
         )}
-      </SafeAreaView>
-    );
-  }
-
-  if (queue.length === 0) {
-    return (
-      <SafeAreaView style={s.center}>
-        <Text style={s.emptyText}>{t(nativeLanguage, 'noFlashcardsForReview')}</Text>
+        {changeCollectionButton}
       </SafeAreaView>
     );
   }
@@ -227,7 +294,17 @@ export default function ReviewScreen() {
       <View style={s.progressBar}>
         <View style={[s.progressFill, { width: `${(index / queue.length) * 100}%` }]} />
       </View>
-      <Text style={s.progressText}>{index + 1} / {queue.length}</Text>
+      {/* The name doubles as the way out: without it, picking the wrong
+          collection would mean working through the whole queue to escape it. */}
+      {collections.length > 1 ? (
+        <TouchableOpacity onPress={() => setCollectionId(undefined)} hitSlop={8}>
+          <Text style={s.progressText}>
+            {collections.find(c => c.id === collectionId)?.name} · {index + 1} / {queue.length}
+          </Text>
+        </TouchableOpacity>
+      ) : (
+        <Text style={s.progressText}>{index + 1} / {queue.length}</Text>
+      )}
 
       {/* Direction label */}
       <Text style={s.directionLabel}>
@@ -419,6 +496,20 @@ function makeStyles(C: Palette, tabBarHeight: number) {
     paddingVertical: 12, alignItems: 'center',
   },
   ratingBtnText: { fontSize: 13, fontWeight: '700' },
+
+  pickerScroll: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 24, gap: 12 },
+  pickerTitle: { fontSize: 15, color: C.muted, marginBottom: 4 },
+  pickerRow: { padding: 16, borderWidth: 1, borderColor: C.border, borderRadius: 14 },
+  pickerRowTop: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 },
+  pickerName: { fontSize: 16, fontWeight: '700', color: C.text, flexShrink: 1 },
+  pickerDue: { fontSize: 12, color: C.muted },
+  pickerCount: { fontSize: 12, color: C.muted, marginTop: 4 },
+  collectionLabel: { fontSize: 13, color: C.muted, marginBottom: 8 },
+  changeBtn: {
+    marginTop: 20, borderWidth: 1, borderColor: C.border,
+    borderRadius: 10, paddingHorizontal: 16, paddingVertical: 9,
+  },
+  changeBtnText: { fontSize: 14, fontWeight: '600', color: C.text },
 
   emptyText: { fontSize: 16, color: C.muted, textAlign: 'center', lineHeight: 24 },
   doneTitle: { fontSize: 24, fontWeight: '700', color: C.highlight, marginBottom: 12, textAlign: 'center' },

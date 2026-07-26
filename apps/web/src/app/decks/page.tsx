@@ -34,7 +34,15 @@ export default function DecksPage() {
       </h1>
 
       {packs.length === 0 ? (
-        <p className="text-[var(--color-muted)]">{t(nativeLanguage, 'decksEmpty')}</p>
+        // Packs is in the nav for every language, so this state is reachable on
+        // most of them. It says what a pack is rather than promising one:
+        // nothing is committed to a date.
+        <div>
+          <p className="text-[var(--color-muted)]">{t(nativeLanguage, 'decksEmpty')}</p>
+          <p className="text-sm text-[var(--color-muted)] opacity-70 mt-2">
+            {t(nativeLanguage, 'decksEmptyBody')}
+          </p>
+        </div>
       ) : (
         <ul className="flex flex-col gap-3">
           {packs.map(pack => {

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { getNextReviewData } from '@/services/sm2';
+import { buildReviewCollections, isDue } from '@amgi/core';
 import { Flashcard, ReviewTracking } from '@/services/firestore';
 
 // Mock updateDoc function
@@ -88,40 +89,83 @@ describe('Review Scheduling Logic', () => {
   });
 
   it('should correctly check if a card is due', () => {
-    // Import the isDue function directly
-    const { isDue } = require('../review/page');
-    
     // Test a card that's due today
-    const dueCard = { 
+    const dueCard = {
       ...sampleCard,
       frontToBack: { ...sampleCard.frontToBack, nextReview: today }
     };
-    const dueResult = isDue(dueCard);
-    expect(dueResult.due).toBe(true);
-    expect(dueResult.directions).toContain('frontToBack');
-    
+    expect(isDue(dueCard as Flashcard)).toContain('frontToBack');
+
     // Test a card that's not due yet
     const futureDate = new Date(today);
     futureDate.setDate(futureDate.getDate() + 7);
-    
+
     const notDueCard = {
       ...sampleCard,
       frontToBack: { ...sampleCard.frontToBack, nextReview: futureDate },
       backToFront: { ...sampleCard.backToFront, nextReview: futureDate }
     };
-    const notDueResult = isDue(notDueCard);
-    expect(notDueResult.due).toBe(false);
-    expect(notDueResult.directions).toHaveLength(0);
-    
+    expect(isDue(notDueCard as Flashcard)).toHaveLength(0);
+
     // Test a card with only one direction due
     const partialDueCard = {
       ...sampleCard,
       frontToBack: { ...sampleCard.frontToBack, nextReview: today },
       backToFront: { ...sampleCard.backToFront, nextReview: futureDate }
     };
-    const partialDueResult = isDue(partialDueCard);
-    expect(partialDueResult.due).toBe(true);
-    expect(partialDueResult.directions).toContain('frontToBack');
-    expect(partialDueResult.directions).not.toContain('backToFront');
+    const partialDueResult = isDue(partialDueCard as Flashcard);
+    expect(partialDueResult).toContain('frontToBack');
+    expect(partialDueResult).not.toContain('backToFront');
   });
-}); 
+
+  // A direction with no tracking has never been studied that way, so it is due
+  // — that is what puts a freshly saved card at the front of the queue.
+  it('treats an untracked direction as due', () => {
+    const halfTracked = { ...sampleCard, backToFront: undefined };
+    expect(isDue(halfTracked as Flashcard)).toEqual(['frontToBack', 'backToFront']);
+  });
+
+  // Pre-bidirectional cards carry only a top-level nextReview.
+  it('falls back to the legacy nextReview when neither direction is tracked', () => {
+    const futureDate = new Date(today);
+    futureDate.setDate(futureDate.getDate() + 7);
+    const legacy = { ...sampleCard, frontToBack: undefined, backToFront: undefined };
+    expect(isDue({ ...legacy, nextReview: today } as Flashcard)).toHaveLength(2);
+    expect(isDue({ ...legacy, nextReview: futureDate } as Flashcard)).toHaveLength(0);
+  });
+});
+
+describe('buildReviewCollections', () => {
+  const now = new Date('2026-07-26T12:00:00Z');
+  const past = new Date('2026-07-25T12:00:00Z');
+  const future = new Date('2026-08-02T12:00:00Z');
+  const tracked = (nextReview: Date) => ({ nextReview, interval: 1, ease: 2.5, repetitions: 1 });
+
+  const card = (packId: string | undefined, nextReview: Date): Flashcard => ({
+    uid: 'u', term: 'あ', termLanguage: 'Japanese', japanese: 'あ', english: 'a',
+    createdAt: new Date('2026-07-01'), studyLanguage: 'Japanese', packId,
+    frontToBack: tracked(nextReview), backToFront: tracked(nextReview),
+  });
+
+  it('keeps your own cards and each pack apart, your own first', () => {
+    const collections = buildReviewCollections(
+      [card('kana-hiragana', past), card(undefined, past), card('kana-hiragana', future)],
+      'Japanese',
+      'English',
+      now
+    );
+    expect(collections.map(c => c.id)).toEqual([null, 'kana-hiragana']);
+    expect(collections[0].name).toBe('My cards');
+    expect(collections[0].dueCount).toBe(2); // both directions of the one card
+    expect(collections[1].cardCount).toBe(2);
+    expect(collections[1].dueCount).toBe(2);
+    expect(collections[1].nextReview).toEqual(future);
+  });
+
+  // A pack you have not enrolled in belongs on Decks, which is where you would
+  // go to enrol in it — not in the review picker as a zero row.
+  it('omits collections with no cards', () => {
+    const collections = buildReviewCollections([card(undefined, past)], 'Japanese', 'English', now);
+    expect(collections.map(c => c.id)).toEqual([null]);
+  });
+});

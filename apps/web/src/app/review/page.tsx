@@ -1,8 +1,18 @@
 'use client';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useUser } from '@/components/UserContext';
 import { fetchUserFlashcards, getCardsCollection, Flashcard, ReviewTracking, migrateExistingCards, archiveFlashcard, deleteFlashcard } from '@/services/firestore';
-import { getBackSide, getExampleSides, getReading, getStudyLanguageConfig } from '@amgi/core';
+import {
+  buildReviewCollections,
+  getBackSide,
+  getCollectionId,
+  getExampleSides,
+  getNextReviewDate,
+  getReading,
+  getStudyLanguageConfig,
+  isDue,
+} from '@amgi/core';
+import type { ReviewCollection } from '@amgi/core';
 import { db } from '@/config/firebase';
 import { doc, updateDoc } from 'firebase/firestore';
 import { getNextReviewData } from '@/services/sm2';
@@ -12,54 +22,9 @@ import Markdown from '@/components/Markdown';
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 import PronounceButton from '@/components/PronounceButton';
 
-// Direction for review
-export type ReviewDirection = 'frontToBack' | 'backToFront';
-
-// Check if a card is due in either direction
-function isDue(card: Flashcard): { due: boolean, directions: ReviewDirection[] } {
-  const now = new Date();
-  const directions: ReviewDirection[] = [];
-
-  // Check frontToBack direction
-  if (card.frontToBack) {
-    const fbReviewDate = card.frontToBack.nextReview instanceof Date ?
-      card.frontToBack.nextReview :
-      new Date(card.frontToBack.nextReview);
-    if (fbReviewDate <= now) {
-      directions.push('frontToBack');
-    }
-  } else if (card.nextReview) {
-    const legacyReviewDate = card.nextReview instanceof Date ?
-      card.nextReview :
-      new Date(card.nextReview);
-    if (legacyReviewDate <= now) {
-      directions.push('frontToBack');
-    }
-  } else {
-    directions.push('frontToBack');
-  }
-
-  // Check backToFront direction
-  if (card.backToFront) {
-    const bfReviewDate = card.backToFront.nextReview instanceof Date ?
-      card.backToFront.nextReview :
-      new Date(card.backToFront.nextReview);
-    if (bfReviewDate <= now) {
-      directions.push('backToFront');
-    }
-  } else if (card.nextReview && directions.length === 0) {
-    const legacyReviewDate = card.nextReview instanceof Date ?
-      card.nextReview :
-      new Date(card.nextReview);
-    if (legacyReviewDate <= now) {
-      directions.push('backToFront');
-    }
-  } else if (!card.frontToBack) {
-    directions.push('backToFront');
-  }
-
-  return { due: directions.length > 0, directions };
-}
+// Direction for review — re-exported from core, where `isDue` lives too.
+export type { ReviewDirection } from '@amgi/core';
+import type { ReviewDirection } from '@amgi/core';
 
 // Define a type for cards in the review queue
 interface ReviewQueueItem {
@@ -82,19 +47,6 @@ function isExamplePairArray(arr: unknown[]): arr is ExamplePair[] {
   return arr.length === 0 || (typeof arr[0] === 'object' && arr[0] !== null && ('korean' in arr[0] || 'swedish' in arr[0] || 'english' in arr[0]));
 }
 
-function getEarliestNextReview(cards: Flashcard[]): Date | null {
-  const now = new Date();
-  const dates: Date[] = [];
-  for (const card of cards) {
-    if (card.frontToBack?.nextReview) dates.push(new Date(card.frontToBack.nextReview as string));
-    if (card.backToFront?.nextReview) dates.push(new Date(card.backToFront.nextReview as string));
-    if (!card.frontToBack && !card.backToFront && card.nextReview) dates.push(new Date(card.nextReview as string));
-  }
-  const future = dates.filter(d => d > now);
-  if (future.length === 0) return null;
-  return new Date(Math.min(...future.map(d => d.getTime())));
-}
-
 function formatRelativeDate(date: Date, lang: string | null | undefined, now: Date): string {
   const tomorrow = new Date(now);
   tomorrow.setDate(tomorrow.getDate() + 1);
@@ -109,7 +61,9 @@ export default function ReviewPage() {
   const [userFlashcards, setUserFlashcards] = useState<Flashcard[]>([]);
   const [flashcardsLoading, setFlashcardsLoading] = useState(false);
   const [migrationComplete, setMigrationComplete] = useState(false);
-  const [dueCards, setDueCards] = useState<ReviewQueueItem[]>([]);
+  // `undefined` is "hasn't picked yet"; `null` is the cards you made yourself,
+  // which is a real choice and not the absence of one.
+  const [collectionId, setCollectionId] = useState<string | null | undefined>(undefined);
   const [directionFilter, setDirectionFilter] = useState<DirectionFilter>('both');
   const [activeQueue, setActiveQueue] = useState<ReviewQueueItem[]>([]);
   const [reviewMode, setReviewMode] = useState(false);
@@ -130,20 +84,62 @@ export default function ReviewPage() {
   useEffect(() => { setClientNow(new Date()); }, []);
 
   // Reload (and exit any in-progress session) when the user or study language
-  // changes — loadCards itself only runs the legacy migration once.
+  // changes — loadCards itself only runs the legacy migration once. The
+  // collection resets too: packs belong to one language, so a Japanese deck is
+  // not a choice that survives switching to Korean.
   useEffect(() => {
+    setCollectionId(undefined);
     if (user) {
       handleExitReview();
     } else {
       setUserFlashcards([]);
-      setDueCards([]);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, studyLanguage]);
 
+  const collections = useMemo(
+    () => buildReviewCollections(userFlashcards, studyLanguage, nativeLanguage),
+    [userFlashcards, studyLanguage, nativeLanguage]
+  );
+
+  // One collection means there is no choice to make — every Korean-only session
+  // — so nobody pays a tap for it. Coming from a deck's "Review this deck", the
+  // choice was already made on the way here.
+  // `?collection=` is stripped once used, so "Change collection" isn't fighting
+  // a handoff the user has already moved past.
+  const requestedCollection = React.useRef<string | null | undefined>(undefined);
   useEffect(() => {
-    setNextReviewDate(dueCards.length === 0 ? getEarliestNextReview(userFlashcards) : null);
-  }, [userFlashcards, dueCards]);
+    if (collectionId !== undefined || collections.length === 0) return;
+    if (requestedCollection.current === undefined) {
+      requestedCollection.current = new URLSearchParams(window.location.search).get('collection');
+      if (requestedCollection.current !== null) {
+        window.history.replaceState(null, '', window.location.pathname);
+      }
+    }
+    const requested = requestedCollection.current;
+    if (requested && collections.some(c => c.id === requested)) setCollectionId(requested);
+    else if (collections.length === 1) setCollectionId(collections[0].id);
+    requestedCollection.current = null;
+  }, [collections, collectionId]);
+
+  const collectionCards = useMemo(
+    () => collectionId === undefined
+      ? []
+      : userFlashcards.filter(card => getCollectionId(card) === collectionId),
+    [userFlashcards, collectionId]
+  );
+
+  const dueCards = useMemo(() => {
+    const queue: ReviewQueueItem[] = [];
+    for (const card of collectionCards) {
+      for (const direction of isDue(card)) queue.push({ card, direction });
+    }
+    return queue;
+  }, [collectionCards]);
+
+  useEffect(() => {
+    setNextReviewDate(dueCards.length === 0 ? getNextReviewDate(collectionCards) : null);
+  }, [collectionCards, dueCards]);
 
   const loadCards = async (forceMigration = false) => {
     if (!user) return;
@@ -156,23 +152,10 @@ export default function ReviewPage() {
         setMigrationComplete(true);
       }
 
-      const cards = await fetchUserFlashcards(user.uid, studyLanguage);
-      setUserFlashcards(cards);
-
-      const queue: ReviewQueueItem[] = [];
-      cards.forEach(card => {
-        const { due, directions } = isDue(card);
-        if (due) {
-          directions.forEach(dir => {
-            queue.push({ card, direction: dir });
-          });
-        }
-      });
-      setDueCards(queue);
+      setUserFlashcards(await fetchUserFlashcards(user.uid, studyLanguage));
     } catch (error) {
       console.error('Error during migration or fetching cards:', error);
       setUserFlashcards([]);
-      setDueCards([]);
     } finally {
       setFlashcardsLoading(false);
       setIsSyncing(false);
@@ -329,6 +312,51 @@ export default function ReviewPage() {
 
   const currentReview = activeQueue[currentReviewIdx];
 
+  // Only offered when there is something else to change to — a single
+  // collection is not a choice, and a control for it would only be noise.
+  const canChangeCollection = collections.length > 1;
+  const changeCollectionButton = canChangeCollection && (
+    <button
+      onClick={() => { setCollectionId(undefined); setDirectionFilter('both'); }}
+      className="mt-4 text-sm px-3 py-1.5 rounded-lg border border-[var(--color-muted)] text-[var(--color-muted)] hover:text-[var(--color-text)] hover:border-[var(--color-text)] transition-colors"
+    >
+      {t(nativeLanguage, 'reviewChangeCollection')}
+    </button>
+  );
+
+  const collectionName = collections.find(c => c.id === collectionId)?.name;
+
+  const renderCollectionPicker = (list: ReviewCollection[]) => (
+    <div>
+      <p className="text-sm text-[var(--color-muted)] mb-4">{t(nativeLanguage, 'reviewPickCollection')}</p>
+      <ul className="flex flex-col gap-3">
+        {list.map(collection => (
+          <li key={collection.id ?? 'mine'}>
+            <button
+              onClick={() => setCollectionId(collection.id)}
+              className="w-full text-left p-4 rounded-xl border border-[var(--color-muted)] hover:bg-[var(--color-muted)]/20 transition-colors"
+            >
+              <div className="flex items-baseline justify-between gap-3 flex-wrap">
+                <span className="font-bold text-[var(--color-text)]">{collection.name}</span>
+                <span
+                  className="text-xs shrink-0"
+                  style={{ color: collection.dueCount > 0 ? 'var(--color-highlight)' : 'var(--color-muted)' }}
+                >
+                  {collection.dueCount > 0
+                    ? t(nativeLanguage, 'reviewCollectionDue', { count: collection.dueCount })
+                    : t(nativeLanguage, 'reviewCollectionCaughtUp')}
+                </span>
+              </div>
+              <p className="text-xs text-[var(--color-muted)] mt-1">
+                {t(nativeLanguage, 'deckEntryCount', { count: collection.cardCount })}
+              </p>
+            </button>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+
   const filteredCount = directionFilter === 'both'
     ? dueCards.length
     : dueCards.filter(item => item.direction === directionFilter).length;
@@ -365,14 +393,20 @@ export default function ReviewPage() {
                 {t(nativeLanguage, 'goToLearnPage')}
               </a>
             </div>
+          ) : collectionId === undefined ? (
+            renderCollectionPicker(collections)
           ) : dueCards.length === 0 ? (
             <div className="text-center py-4">
+              {canChangeCollection && (
+                <p className="text-xs text-[var(--color-muted)] mb-2">{collectionName}</p>
+              )}
               <p className="text-xl font-bold mb-2">{t(nativeLanguage, 'allCaughtUp')}</p>
               {nextReviewDate && clientNow && (
                 <p className="text-[var(--color-muted)] text-sm">
                   {t(nativeLanguage, 'nextReviewOn')} {formatRelativeDate(nextReviewDate, nativeLanguage, clientNow)}
                 </p>
               )}
+              <div>{changeCollectionButton}</div>
               {isDevelopment && (
                 <button
                   className="mt-4 px-3 py-1 bg-[var(--color-muted)] text-[var(--color-text)] rounded hover:bg-[var(--color-muted-dark)] text-sm"
@@ -722,6 +756,12 @@ export default function ReviewPage() {
             )
           ) : (
             <div className="flex flex-col items-center">
+              {canChangeCollection && (
+                <p className="text-sm font-bold text-[var(--color-text)] mb-4">{collectionName}</p>
+              )}
+              {/* Direction is a separate axis from collection — which cards you
+                  are studying, then how you want to be asked. Collapsing the two
+                  into one chip row would multiply out. */}
               <div className="flex flex-wrap gap-2 mb-6 justify-center">
                 {(['both', 'frontToBack', 'backToFront'] as DirectionFilter[]).map(dir => (
                   <button
@@ -749,6 +789,8 @@ export default function ReviewPage() {
               >
                 {reviewCardsDueLabel}
               </button>
+
+              {changeCollectionButton && <div className="mb-4 -mt-2">{changeCollectionButton}</div>}
 
               {isDevelopment && (
                 <button

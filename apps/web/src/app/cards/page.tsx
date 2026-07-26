@@ -10,7 +10,7 @@ import {
   getCardsCollection,
   Flashcard,
 } from '@/services/firestore';
-import { getBackSide, getCharacterBreakdown, getExampleSides, getStudyLanguageConfig } from '@amgi/core';
+import { getBackSide, getCharacterBreakdown, getCollectionId, getExampleSides, getStudyLanguageConfig } from '@amgi/core';
 import { db } from '@/config/firebase';
 import { doc, updateDoc } from 'firebase/firestore';
 import { t } from '@/lib/i18n';
@@ -59,13 +59,23 @@ export default function CardsPage() {
   const getStudySide = (card: Flashcard) =>
     card[langConfig.studyField] ?? card.term ?? '';
 
-  useEffect(() => {
-    if (!user) { setAllCards([]); return; }
+  // Only the cards you made yourself. A pack's cards are a collection of their
+  // own — reviewed apart and managed on the deck page — and "these are mine" is
+  // what makes this surface coherent, so they are absent rather than filtered
+  // out by a chip. Everything below (counts, select-all, export) reads
+  // `allCards`, so it all follows from this one scoping.
+  const loadCards = (uid: string) => {
     setLoading(true);
-    fetchAllUserFlashcards(user.uid, studyLanguage)
-      .then(setAllCards)
+    fetchAllUserFlashcards(uid, studyLanguage)
+      .then(cards => setAllCards(cards.filter(card => getCollectionId(card) === null)))
       .catch(() => setAllCards([]))
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    if (!user) { setAllCards([]); return; }
+    loadCards(user.uid);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, studyLanguage]);
 
   const visibleCards = useMemo(() => {
@@ -261,9 +271,7 @@ export default function CardsPage() {
 
   const handleImportSaved = async (count: number) => {
     setShowImport(false);
-    if (user) {
-      fetchAllUserFlashcards(user.uid, studyLanguage).then(setAllCards).catch(() => {});
-    }
+    if (user) loadCards(user.uid);
     setImportSuccess(t(nativeLanguage, count === 1 ? 'importSavedToastOne' : 'importSavedToast', { count }));
     setTimeout(() => setImportSuccess(null), 4000);
   };

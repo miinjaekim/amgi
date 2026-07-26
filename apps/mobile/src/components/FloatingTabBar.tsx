@@ -15,6 +15,7 @@ const ICONS: Record<string, { on: IoniconsName; off: IoniconsName }> = {
   index:    { on: 'search',    off: 'search-outline'   },
   review:   { on: 'layers',   off: 'layers-outline'   },
   cards:    { on: 'albums',   off: 'albums-outline'   },
+  decks:    { on: 'library',  off: 'library-outline'  },
   settings: { on: 'settings', off: 'settings-outline' },
 };
 
@@ -23,6 +24,7 @@ const LABEL_KEYS: Record<string, TranslationKey> = {
   index:    'navLearn',
   review:   'navReview',
   cards:    'navCards',
+  decks:    'navDecks',
   settings: 'navSettings',
 };
 

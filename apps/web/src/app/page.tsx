@@ -11,11 +11,10 @@ import {
 } from '@/services/gemini';
 import Markdown from '@/components/Markdown';
 import { saveFlashcardToFirestore, Flashcard } from '@/services/firestore';
-import { getCharacterBreakdown, getExampleSides, getReading, getStudyLanguageConfig, getVocabPacks, parseStreamedExamples, parseStreamedDepth, wordOfTheDayCore } from '@amgi/core';
+import { getCharacterBreakdown, getExampleSides, getReading, getStudyLanguageConfig, parseStreamedExamples, parseStreamedDepth, wordOfTheDayCore } from '@amgi/core';
 import type { WordOfTheDay } from '@amgi/core';
 import { useUser } from '@/components/UserContext';
 import { t } from '@/lib/i18n';
-import Link from 'next/link';
 import SaveFlashcardModal from '@/components/SaveFlashcardModal';
 import PronounceButton from '@/components/PronounceButton';
 import Spinner from '@/components/Spinner';
@@ -405,15 +404,10 @@ export default function Home() {
               </button>
             ))}
           </div>
+          {/* No packs link here any more: Packs is in the nav on every screen,
+              and a second, conditional way in was the wrong altitude for a
+              surface that is now a peer of Cards. */}
           <div className="mt-6 flex items-center justify-center gap-5 flex-wrap">
-            {getVocabPacks(studyLanguage).length > 0 && (
-              <Link
-                href="/decks"
-                className="text-sm text-[var(--color-muted)] hover:text-[var(--color-text)] transition-colors underline underline-offset-2"
-              >
-                {t(nativeLanguage, 'packsLink')}
-              </Link>
-            )}
             <button
               onClick={() => setShowGenerate(true)}
               className="text-sm text-[var(--color-muted)] hover:text-[var(--color-text)] transition-colors underline underline-offset-2"
