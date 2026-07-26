@@ -1,7 +1,8 @@
 'use client';
 import React, { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { useUser } from '@/components/UserContext';
-import { fetchUserFlashcards, getCardsCollection, Flashcard, ReviewTracking, migrateExistingCards, archiveFlashcard, deleteFlashcard } from '@/services/firestore';
+import { fetchUserFlashcards, getCardsCollection, Flashcard, migrateExistingCards, archiveFlashcard, deleteFlashcard } from '@/services/firestore';
 import {
   buildReviewCollections,
   getBackSide,
@@ -201,7 +202,7 @@ export default function ReviewPage() {
 
     recordReview();
 
-    const update: Record<string, any> = {};
+    const update: Record<string, unknown> = {};
     update[`${direction}.interval`] = interval;
     update[`${direction}.ease`] = ease;
     update[`${direction}.repetitions`] = repetitions;
@@ -385,13 +386,13 @@ export default function ReviewPage() {
           ) : userFlashcards.length === 0 ? (
             <div className="text-center py-4">
               <p className="text-[var(--color-muted)] mb-6">{t(nativeLanguage, 'noFlashcardsForReview')}</p>
-              <a
+              <Link
                 href="/"
                 className="inline-block px-5 py-2.5 rounded-lg font-semibold transition-colors"
                 style={{ background: 'var(--color-highlight)', color: 'var(--color-bg)' }}
               >
                 {t(nativeLanguage, 'goToLearnPage')}
-              </a>
+              </Link>
             </div>
           ) : collectionId === undefined ? (
             renderCollectionPicker(collections)
@@ -435,13 +436,13 @@ export default function ReviewPage() {
                   >
                     {t(nativeLanguage, 'exitReview')}
                   </button>
-                  <a
+                  <Link
                     href="/"
                     className="px-5 py-2.5 rounded-lg border font-semibold transition-colors hover:bg-[var(--color-muted)]/20"
                     style={{ borderColor: 'var(--color-muted)', color: 'var(--color-text)' }}
                   >
                     {t(nativeLanguage, 'navLearn')}
-                  </a>
+                  </Link>
                 </div>
               </div>
             ) : (

@@ -20,7 +20,7 @@ export default function PrivacyPage() {
       </div>
 
       <p>
-        Amgi ("the app," "we," "us") is an independently operated language-learning
+        Amgi (&ldquo;the app,&rdquo; &ldquo;we,&rdquo; &ldquo;us&rdquo;) is an independently operated language-learning
         app. This page explains what information we collect, how it&apos;s used,
         and your choices. If you have questions, contact{" "}
         <a href="mailto:kenyamjkim@gmail.com" className="underline">

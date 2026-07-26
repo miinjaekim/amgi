@@ -195,6 +195,30 @@ _Reconciled against `main` @ `6e9f3e9` on 2026-07-24, plus the 1.0.2 release cut
   regardless. Now measured as elapsed days. Worth remembering that a test failing
   for the stated reason doesn't mean that is the only reason it fails.
 
+- **`npm run lint` works again** (2026-07-26) — `next lint` was removed in Next
+  16 and parsed its own name as a directory, so the script exited 1 before
+  linting anything. Now `eslint .`, which turned up more than a script change:
+  - `eslint-config-next@16` **is** a flat config, so the `FlatCompat` wrapper
+    `create-next-app` generated for the eslintrc era fails on it with
+    "Converting circular structure to JSON". Imported directly now
+    (`core-web-vitals` + `typescript` — the latter is what turns on
+    `no-explicit-any`, and dropping it would have weakened the lint while
+    looking like a fix). The package was also pinned at 15.3.1 against Next
+    16.2.7; `@eslint/eslintrc` is gone with the wrapper.
+  - `next lint` ignored build output implicitly. Running eslint directly does
+    not, and `.next/` buried 90 real findings under **25,000** generated ones —
+    the ignores are load-bearing, not tidiness.
+  - The 24 real errors underneath are fixed: six `<a href="/">` became `<Link>`
+    (a full page reload on every logo and "go to Learn" click), unescaped
+    quotes, two unused bindings, and two `Record<string, any>` update objects.
+    `no-explicit-any` is off for test files only, and the one survivor in
+    `mapDocToFlashcard` carries a disable comment explaining that the Firestore
+    timestamp boundary is genuinely dynamic.
+  - ⚠️ Two React Compiler rules new in v16 find 13 pre-existing spots and are
+    set to `warn` — see [backlog.md](backlog.md). Warnings, not disabled.
+  - Lint still covers `apps/web` only; core and mobile have no `lint` script,
+    so `turbo lint` reports success for one package. Backlogged with the CI gate.
+
 ### Design & polish
 - **Design system** — Forest/Sonokai/Paper/System themes, Source Code Pro,
   localized UI (EN + KO)

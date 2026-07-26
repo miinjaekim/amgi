@@ -57,14 +57,27 @@ files, sharing) on the build itself → bump `version` in `app.json` → check
 
 ## Housekeeping — broken tooling that hides signal
 
-`turbo lint` fails on a clean checkout, so real regressions are easy to miss.
-Cheap; do alongside feature work. (`npm test` is green again as of 2026-07-26 —
-see the Shipped entry in [status.md](status.md).)
+`npm test` and `npm run lint` are both green on a clean checkout as of
+2026-07-26 — see the Shipped entries in [status.md](status.md). What is left
+here is what those two now *show*.
 
-- [ ] **`npm run lint` is broken repo-wide** — `apps/web/package.json` runs
-      `next lint`, removed in Next 16; it parses `lint` as a directory and exits
-      1 before linting anything. Move to `eslint .` and confirm the flat config
-      Next 16 expects. Do before adding a lint gate to CI.
+- [ ] **13 React Compiler warnings, then turn the rules back up** — `eslint-config-next@16`
+      brought `react-hooks/set-state-in-effect` (11) and `react-hooks/immutability`
+      (2), and they are real: a `useEffect` that calls `setState` synchronously
+      renders twice on mount. Set to `warn` in `apps/web/eslint.config.mjs` so
+      landing the lint fix didn't mean landing 13 rushed ones. Most want
+      `useSyncExternalStore` — `useOnlineStatus` reading `navigator.onLine`,
+      `review/page.tsx` setting `clientNow` to dodge a hydration mismatch — so
+      each is a small design call, not a mechanical edit. Clear them, then
+      delete the override; **don't silence them further**, which is the failure
+      mode the override exists to avoid.
+
+- [ ] **Lint covers `apps/web` only** — `@amgi/core` and `@amgi/mobile` have no
+      `lint` script, so `turbo lint` runs one package and reports success.
+      Honest today, misleading the moment it gates CI. Mobile needs
+      `eslint-config-expo` (`npx expo lint` installs it and writes the config);
+      core needs a small flat config of its own. Do it with the CI gate, not
+      before — a lint nobody runs is the thing this section is about.
 
 ## Medium
 

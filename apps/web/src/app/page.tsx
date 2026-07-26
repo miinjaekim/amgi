@@ -303,7 +303,7 @@ export default function Home() {
         setShowContextInput(false);
         setContextInput('');
         setSaveSuccess(true);
-      } catch (err) {
+      } catch {
         setError(t(nativeLanguage, 'errorSaveFlashcard'));
       } finally {
         setSaving(false);
