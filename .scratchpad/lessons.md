@@ -53,11 +53,31 @@ Gotchas already paid for. Grouped so you can skim the relevant section.
   as `redirectUri`.
 - **`EXPO_PUBLIC_*` env vars are baked at bundle time** — restart Metro with
   `--clear` after changing `.env.local`.
+- **State set in a handler and derived in an effect leaves one render where the
+  two disagree** — and that render still runs, so anything reading both crashes
+  or shows the wrong thing. Cost a `Cannot read property 'card' of undefined` in
+  mobile review (PR #52): tapping a collection set `collectionId`, the queue for
+  it was built in an effect, and the frame in between had the new collection
+  with the old collection's empty queue. Web had the same shape and no bug,
+  because it derives with `useMemo` during render.
+  - **Prefer deriving during render.** Where the value must stay state — a
+    shuffled queue that local edits mutate — record *what it was built for* and
+    have the render wait for the two to agree, rather than guarding the one
+    field that happened to crash. The guard fixes the crash and leaves the
+    siblings: `index` and `done` were equally stale, so moving between two
+    decks also flashed the previous one's "all caught up".
+  - Reading it is not enough to catch this; it needs the device.
 
 ## Expo Go dev loop
 
 - **`npx expo start` from `apps/mobile`, scan the QR — this is the dev loop.**
   Confirmed working 2026-07-23.
+- **There are no React Native component tests in this repo**, so a mobile
+  screen's render order is checked by running it and by nothing else. Web tests
+  and `tsc` passing says nothing about it — PR #51 shipped mobile review broken
+  on every path into a session with both green. When a change restructures what
+  a mobile screen renders, the Expo Go pass *is* the test, not a formality after
+  one.
 - **Google sign-in works in Expo Go**, even though the redirect is the custom
   scheme `com.googleusercontent.apps.…:/oauthredirect`, which Expo Go does not
   register. It works because `expo-web-browser` uses iOS's
