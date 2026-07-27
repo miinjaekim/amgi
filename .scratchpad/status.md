@@ -410,6 +410,7 @@ so this is the record of what actually landed on the phone and when.
 
 | Version | Build | Date | Cut from |
 |---|---|---|---|
+| 1.1.0 | 6 | 2026-07-27 | `8359adf` — on `fix/drop-push-entitlement`, before it merged as PR #63 |
 | 1.0.2 | 4 | 2026-07-24 | `0288136` — version bump on `release/mobile-1.0.2` |
 | 1.0.1 | 3 | 2026-07-21 | `a85270d` — merge of PR #43 (EAS channel fix) |
 | 1.0.1 | 2 | 2026-07-21 | `4d217f3` — runtimeVersion pin, pre-channel-fix |
@@ -427,6 +428,27 @@ in the console before assuming testers have it.
 
 Not yet verified on the build itself (the checklist item that can only be done
 on a real binary, not Expo Go): pronunciation audio, CSV/Anki export, sharing.
+
+**1.1.0** — six merged items: the Japanese/Chinese depth batch (PR #49), Decks +
+drill (#50), offline review (#53), account deletion (#59), the Learn keyboard fix
+(#60) and reminders (#61). Two native modules, `expo-network` and
+`expo-notifications`, sharing one build rather than costing two. Submitted and
+put up for review for external testing on 2026-07-27.
+
+⚠️ **Cut from a branch, not `main`.** Build 6 was made from `8359adf` on
+`fix/drop-push-entitlement` while that PR was still open, because `main` at the
+time could not produce a working binary. The branch merged immediately after, so
+`main` and the build agree now — but the table records the commit that was
+actually built, not the merge.
+
+Build 5 does not exist: it was consumed by a failed attempt. With
+`appVersionSource: "remote"` the number is reserved when the job is created, not
+awarded on success, so gaps are normal.
+
+Still unverified on this binary, and each one only provable there: the review
+reminder firing *and disappearing once you review*, offline review across a
+force-kill and reconnect, and account deletion against the production
+`EXPO_PUBLIC_API_BASE_URL` — the logic is verified, that env binding is not.
 
 ## In Progress
 
