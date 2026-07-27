@@ -102,6 +102,25 @@ Gotchas already paid for. Grouped so you can skim the relevant section.
     decks also flashed the previous one's "all caught up".
   - Reading it is not enough to catch this; it needs the device.
 
+- **`expo-notifications` stamps the push entitlement on whether you use push or
+  not.** Its iOS plugin sets `aps-environment` unconditionally — no option to
+  opt out — because it cannot tell local notifications from remote push. The
+  build then fails with *"Provisioning profile doesn't support the Push
+  Notifications capability"*, which reads like a credentials problem and is
+  really a capability the app does not need. Amgi schedules locally, so
+  `apps/mobile/plugins/withoutPushEntitlement.js` deletes the key again.
+- **Config plugin mods run in reverse registration order.** The most recently
+  registered entitlement mod runs *first*, so to have the last word you must be
+  listed **first** in `plugins`. Registering after the plugin you mean to
+  correct silently does nothing — it edits the value before that plugin has
+  written it. `npx expo config --type introspect` shows the resolved
+  entitlements without generating `ios/`, which is how to check this in seconds
+  rather than by waiting on a cloud build.
+- **A failed EAS build still consumes its build number.** With
+  `appVersionSource: "remote"` and `autoIncrement`, the number is reserved when
+  the job is created, not awarded on success. Gaps are harmless — App Store
+  Connect only needs them to increase.
+
 ## Expo Go dev loop
 
 - **`npx expo start` from `apps/mobile`, scan the QR — this is the dev loop.**
