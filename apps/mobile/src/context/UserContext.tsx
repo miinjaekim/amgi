@@ -1,6 +1,9 @@
-import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useEffect, useRef, useState, ReactNode } from 'react';
 import { Platform } from 'react-native';
-import { GoogleAuthProvider, signInWithCredential, signOut, onAuthStateChanged, User } from 'firebase/auth';
+import {
+  GoogleAuthProvider, signInWithCredential, signOut, onAuthStateChanged,
+  deleteUser, reauthenticateWithCredential, User,
+} from 'firebase/auth';
 import * as Google from 'expo-auth-session/providers/google';
 import * as WebBrowser from 'expo-web-browser';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -42,6 +45,7 @@ interface UserContextType {
   setNativeLanguage: (lang: string) => Promise<void>;
   setStudyLanguage: (lang: StudyLanguage) => Promise<void>;
   recordReview: () => void;
+  deleteAccount: () => Promise<void>;
   handleSignIn: () => Promise<void>;
   handleSignOut: () => Promise<void>;
 }
@@ -64,8 +68,19 @@ export function UserProvider({ children }: { children: ReactNode }) {
     ...(nativeRedirectUri ? { redirectUri: nativeRedirectUri } : {}),
   });
 
+  /**
+   * OAuth responses already consumed by `reauthenticate` below.
+   *
+   * That flow drives the same `promptAsync`, so its response also reaches the
+   * sign-in effect. Letting it through after an account deletion would sign the
+   * user straight back in — and since the old account no longer exists, Firebase
+   * would create a brand new one from the same Google identity.
+   */
+  const handledResponse = useRef<unknown>(null);
+
   // Sign into Firebase once Google OAuth completes (after auto code exchange, id_token is in params)
   useEffect(() => {
+    if (response && response === handledResponse.current) return;
     if (response?.type === 'success') {
       const { id_token } = response.params;
       if (id_token) {
@@ -251,12 +266,46 @@ export function UserProvider({ children }: { children: ReactNode }) {
     await promptAsync();
   };
 
+  /**
+   * Delete the account and everything in it. Irreversible.
+   *
+   * The Firestore data is not touched here: the Delete User Data extension
+   * triggers on the deletion below and sweeps it server-side, so it finishes
+   * whether or not the app stays open — which a client-side sweep could not
+   * promise on a phone.
+   *
+   * Firebase refuses this unless the sign-in is recent (about five minutes),
+   * so an older session is sent back through Google and retried. Proving it is
+   * the same person is a fair ask for something that cannot be undone.
+   */
+  const deleteAccount = async () => {
+    const current = auth.currentUser;
+    if (!current) throw new Error('Not signed in.');
+    try {
+      await deleteUser(current);
+      return;
+    } catch (error) {
+      if ((error as { code?: string }).code !== 'auth/requires-recent-login') throw error;
+    }
+
+    const result = await promptAsync();
+    handledResponse.current = result;
+    if (result?.type !== 'success' || !result.params?.id_token) {
+      throw new Error('Reauthentication cancelled.');
+    }
+    await reauthenticateWithCredential(
+      auth.currentUser ?? current,
+      GoogleAuthProvider.credential(result.params.id_token),
+    );
+    await deleteUser(auth.currentUser ?? current);
+  };
+
   const handleSignOut = async () => {
     await signOut(auth);
   };
 
   return (
-    <UserContext.Provider value={{ user, authLoading, nativeLanguage, studyLanguage, streak, reviewedToday, setNativeLanguage, setStudyLanguage, recordReview, handleSignIn, handleSignOut }}>
+    <UserContext.Provider value={{ user, authLoading, nativeLanguage, studyLanguage, streak, reviewedToday, setNativeLanguage, setStudyLanguage, recordReview, deleteAccount, handleSignIn, handleSignOut }}>
       {children}
     </UserContext.Provider>
   );
