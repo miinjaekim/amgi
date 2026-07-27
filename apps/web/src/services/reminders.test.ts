@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   DEFAULT_REMINDER_PREFERENCES,
   WORD_OF_THE_DAY_HOUR,
+  WORD_OF_THE_DAY_MINUTE,
   formatReminderTime,
   planReminders,
   reminderTimeOptions,
@@ -36,11 +37,20 @@ describe('planReminders', () => {
     expect(DEFAULT_REMINDER_PREFERENCES.reviewReminder).toBe(false);
   });
 
-  it('repeats the word of the day daily at a fixed hour', () => {
+  it('repeats the word of the day daily at a fixed time', () => {
     const [wotd] = planReminders(context({ preferences: prefs({ reviewReminder: false }) }));
     expect(wotd.id).toBe('wordOfTheDay');
     expect(wotd.repeats).toBe(true);
     expect(wotd.hour).toBe(WORD_OF_THE_DAY_HOUR);
+    expect(wotd.minute).toBe(WORD_OF_THE_DAY_MINUTE);
+  });
+
+  it('keeps the word of the day at 09:00', () => {
+    // Pinned deliberately: this constant gets moved to a minute or two ahead
+    // when testing that a notification fires at all, and a stray commit would
+    // otherwise ship whatever that happened to be.
+    expect(WORD_OF_THE_DAY_HOUR).toBe(9);
+    expect(WORD_OF_THE_DAY_MINUTE).toBe(0);
   });
 
   it('skips the review reminder when nothing is due', () => {

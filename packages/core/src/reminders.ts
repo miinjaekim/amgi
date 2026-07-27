@@ -8,8 +8,9 @@
  * nothing but the scheduling calls.
  */
 
-/** The hour of day the word of the day arrives. Not configurable by design. */
+/** The time of day the word of the day arrives. Not configurable by design. */
 export const WORD_OF_THE_DAY_HOUR = 9;
+export const WORD_OF_THE_DAY_MINUTE = 0;
 
 export interface ReminderPreferences {
   wordOfTheDay: boolean;
@@ -81,7 +82,7 @@ export function planReminders(context: ReminderContext): PlannedReminder[] {
     planned.push({
       id: 'wordOfTheDay',
       hour: WORD_OF_THE_DAY_HOUR,
-      minute: 0,
+      minute: WORD_OF_THE_DAY_MINUTE,
       repeats: true,
     });
   }
