@@ -24,51 +24,17 @@ production build when a batch is worth a release. See [tech-stack.md](tech-stack
 
 ## Queued for the next build
 
-_Last build: **1.0.2 / build 4**, 2026-07-24. **1.1.0 cut 2026-07-27** with the six items below._
-
-- [ ] **Japanese & Chinese depth batch** (PR #49) — pronunciation for four more
-      languages, the kanji/hanzi breakdown, the kana packs, and the
-      single-character TTS fix. No new native module; all of it is invisible on
-      the phone until a build ships.
-
-- [ ] **Decks page + drill** (PR #50, merged 2026-07-25) — replaces
-      `PacksModal` on both platforms. Still no new native module, so the build
-      stays narrow. The kana packs from the batch above land on a page rather
-      than in a modal, which is the surface most of that work is actually seen
-      through.
-
-- [ ] **Offline review on mobile** (PR #53, merged 2026-07-26) — the first
-      thing in this batch that is *not* JS-only: it adds `expo-network`, so the
-      "no new native modules" line above no longer holds for this build. That
-      was a deliberate call — a build was going out anyway, and the alternative
-      (deriving connectivity from Firestore's own signals) bought a worse banner
-      to save a module. Note this is the one item here that cannot be smoke-
-      tested for real in Expo Go: airplane mode plus a force-kill is the test,
-      and the durable queue is the part worth verifying on the build itself.
-
-- [ ] **Account deletion** (PR #59) — required by App Store Guideline 5.1.1(v),
-      so this is a *submission blocker*, not a nice-to-have: an app offering
-      account creation must offer in-app deletion. Client-side `deleteUser()`
-      plus the Delete User Data extension, after the Admin SDK version (PR #55)
-      took production down and was reverted. Extension installed and both
-      platforms verified end to end against it on 2026-07-27 — config in
-      [tech-stack.md](tech-stack.md). Only the mobile half waits on this build;
-      the web half is already live.
-
-- [ ] **Reminders — word of the day + review** (PR #61) — local scheduled
-      notifications, no push tokens and no server job: everything the decision
-      needs is already on the device from offline review. Brings
-      `expo-notifications`, so it needs this build — but local notifications
-      still work in Expo Go on SDK 54, so it can be exercised before then.
-      *Scoped down from three reminders to two:* a separate "streak at risk"
-      nudge was dropped as both redundant (reviewing is what keeps the streak)
-      and the easiest place to break "no dark patterns".
+_Last build: **1.1.0 / build 6**, 2026-07-27 — submitted and under review for
+external testing. Nothing queued behind it yet; mobile work merged from here on
+waits for the next one._
 
 **Pre-flight:** smoke-test in Expo Go → verify native-adjacent things (audio,
 files, sharing, **offline review + reconnect sync**, **account deletion**,
 **the review reminder actually firing and then disappearing once you review**)
 on the build itself → bump `version` in `app.json` → check
-`docs/testflight-beta-info-ko.md` is still accurate.
+`docs/testflight-beta-info-ko.md` is still accurate → **`expo config --type
+introspect` if any native module was added**, which is where an entitlement you
+did not ask for shows up before a cloud build finds it.
 
 _The listing check earned its place in this list on 2026-07-27: it still
 advertised five study languages after Traditional Chinese made six, and said
