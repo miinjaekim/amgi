@@ -73,7 +73,6 @@ export default function Home() {
   const [contextInput, setContextInput] = useState('');
   const [wordOfTheDay, setWordOfTheDay] = useState<WordOfTheDay | null>(null);
   const [wotdLoading, setWotdLoading] = useState(true);
-  const [showGenerate, setShowGenerate] = useState(false);
 
   // A word tapped on a deck page arrives as `?term=`, because looking it up is
   // this page's job. Read from `window.location` rather than `useSearchParams`,
@@ -404,17 +403,6 @@ export default function Home() {
               </button>
             ))}
           </div>
-          {/* No packs link here any more: Packs is in the nav on every screen,
-              and a second, conditional way in was the wrong altitude for a
-              surface that is now a peer of Cards. */}
-          <div className="mt-6 flex items-center justify-center gap-5 flex-wrap">
-            <button
-              onClick={() => setShowGenerate(true)}
-              className="text-sm text-[var(--color-muted)] hover:text-[var(--color-text)] transition-colors underline underline-offset-2"
-            >
-              {t(nativeLanguage, 'generateLink')}
-            </button>
-          </div>
         </div>
       )}
 
@@ -632,31 +620,6 @@ export default function Home() {
       {saveSuccess && (
         <div className="mt-4 p-4 rounded-lg bg-[var(--color-muted)] text-[var(--color-text)] font-semibold">
           {t(nativeLanguage, 'flashcardSaved')}
-        </div>
-      )}
-
-      {/* Goal-based word generation — placeholder until the feature lands */}
-      {showGenerate && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={() => setShowGenerate(false)}>
-          <div
-            className="w-full max-w-sm mx-4 p-6 rounded-2xl shadow-2xl border border-[var(--color-muted)]"
-            style={{ background: 'var(--color-surface)' }}
-            onClick={e => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between mb-2">
-              <h2 className="text-lg font-bold text-[var(--color-highlight)]">{t(nativeLanguage, 'generateLink')}</h2>
-              <button
-                onClick={() => setShowGenerate(false)}
-                className="text-[var(--color-muted)] hover:text-[var(--color-text)] text-2xl leading-none"
-              >
-                &times;
-              </button>
-            </div>
-            <span className="inline-block mb-3 px-2 py-0.5 text-xs rounded-full border border-[var(--color-muted)] text-[var(--color-muted)]">
-              {t(nativeLanguage, 'comingSoon')}
-            </span>
-            <p className="text-sm text-[var(--color-text)] opacity-80">{t(nativeLanguage, 'generateComingSoon')}</p>
-          </div>
         </div>
       )}
 

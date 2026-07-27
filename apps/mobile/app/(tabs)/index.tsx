@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, ActivityIndicator,
   ScrollView, StyleSheet, KeyboardAvoidingView, Platform, Keyboard, Pressable,
-  Dimensions, Modal,
+  Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams } from 'expo-router';
@@ -65,7 +65,20 @@ export default function LearnScreen() {
   const { C } = useTheme();
   const tabBarHeight = useFloatingTabBarHeight();
   const s = useMemo(() => makeStyles(C, tabBarHeight), [C, tabBarHeight]);
-  const searchRestingBottom = Dimensions.get('window').height * 0.40;
+  /**
+   * How much room to hold open below the search bar for the keyboard.
+   *
+   * A tuned constant rather than a measurement, because measuring means
+   * reacting, and reacting means the field moves the first time you tap it.
+   * iOS keyboards with the predictive bar land near 39-40% of screen height
+   * across the current range, so 46% clears them with margin to spare and puts
+   * the field close to the middle of the screen — which is where it wants to be
+   * anyway.
+   *
+   * If a keyboard ever exceeds this, the field goes back under it. Raising the
+   * number is the fix; it costs nothing but a slightly higher resting position.
+   */
+  const keyboardReserve = Dimensions.get('window').height * 0.46;
   const { user, nativeLanguage, studyLanguage, authLoading, handleSignIn, streak, reviewedToday } = useUser();
   const langConfig = getStudyLanguageConfig(studyLanguage);
   const exampleTerms = EXAMPLE_TERMS[studyLanguage] ?? EXAMPLE_TERMS.Korean;
@@ -89,7 +102,6 @@ export default function LearnScreen() {
   const [contextInput, setContextInput] = useState('');
   const [wordOfTheDay, setWordOfTheDay] = useState<WordOfTheDay | null>(null);
   const [wotdLoading, setWotdLoading] = useState(true);
-  const [showGenerate, setShowGenerate] = useState(false);
 
   // Word of the day — refreshes when the language pair changes. Non-essential:
   // any failure just hides the card (getWordOfTheDay returns null).
@@ -318,26 +330,6 @@ export default function LearnScreen() {
     />
   );
 
-  // Goal-based word generation — placeholder until the feature lands.
-  const generateModal = showGenerate && (
-    <Modal visible transparent animationType="fade" onRequestClose={() => setShowGenerate(false)}>
-      <Pressable style={s.genBackdrop} onPress={() => setShowGenerate(false)}>
-        <Pressable style={s.genSheet} onPress={() => {}}>
-          <View style={s.genHeader}>
-            <Text style={s.genTitle}>{t(nativeLanguage, 'generateLink')}</Text>
-            <TouchableOpacity onPress={() => setShowGenerate(false)} hitSlop={12}>
-              <Text style={s.genClose}>×</Text>
-            </TouchableOpacity>
-          </View>
-          <View style={s.genBadge}>
-            <Text style={s.genBadgeText}>{t(nativeLanguage, 'comingSoon')}</Text>
-          </View>
-          <Text style={s.genBody}>{t(nativeLanguage, 'generateComingSoon')}</Text>
-        </Pressable>
-      </Pressable>
-    </Modal>
-  );
-
   const streakBadge = user && streak > 0 ? (
     <View style={s.streakBadge}>
       <Text style={s.streakFlame}>🔥</Text>
@@ -356,24 +348,56 @@ export default function LearnScreen() {
     return (
       <SafeAreaView style={s.root} edges={['top']}>
         {streakBadge}
-        {/* Empty above the fold by design — the tagline was cut to give the
-            screen room to breathe. Still tappable to dismiss the keyboard. */}
-        <Pressable style={s.topSpacer} onPress={Keyboard.dismiss} />
+        {/* One big dismiss target. With the bar pinned rather than lifted,
+            there is no guarantee of a large empty spacer to aim at, and a
+            keyboard you cannot put away is worse than one that covers things.
+            Children with their own handlers still take their taps first. */}
+        <Pressable style={s.flex} onPress={Keyboard.dismiss}>
+          <View style={s.topSpacer} />
 
-        <KeyboardAvoidingView
-          style={s.kav}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          keyboardVerticalOffset={-(searchRestingBottom - 8)}
-        >
           <View style={s.bottomBar}>
             {saveSuccess && (
               <View style={s.successBanner}>
                 <Text style={s.successText}>{t(nativeLanguage, 'flashcardSaved')}</Text>
               </View>
             )}
+            <View style={s.exampleRow}>
+              <Text style={s.exampleLabel}>{t(nativeLanguage, 'exampleTermsLabel')}</Text>
+              {exampleTerms.map(ex => (
+                <TouchableOpacity key={ex} style={s.chip} onPress={() => { setTerm(ex); resolveExplanation(ex); }}>
+                  <Text style={s.chipText}>{ex}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <View style={s.searchRow}>
+              <TextInput
+                style={s.searchInput}
+                value={term}
+                onChangeText={setTerm}
+                placeholder={t(nativeLanguage, 'inputPlaceholder')}
+                placeholderTextColor={C.muted}
+                returnKeyType="search"
+                onSubmitEditing={handleSubmit}
+              />
+              <TouchableOpacity style={s.searchBtn} onPress={handleSubmit}>
+                <Text style={s.searchBtnText}>{t(nativeLanguage, 'learnButton')}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* The space the keyboard will take, held open whether or not it is
+              up, so the field sits in exactly one place either way. Nothing
+              lifts on focus — a search bar that jumps as you tap it is the
+              thing being fixed here, and KeyboardAvoidingView cannot help
+              without moving something.
+
+              Word of the day lives inside this band: below the field where it
+              belongs when you are browsing, and simply covered by the keyboard
+              once you start typing. */}
+          <View style={[s.keyboardReserve, { height: keyboardReserve }]}>
             {wotdLoading && (
-              // Sized from the real tile's rows so the bar doesn't shift when
-              // the word of the day arrives.
+              // Sized from the real tile's rows so nothing shifts when the word
+              // of the day arrives.
               <View style={[s.wotdCard, s.wotdSkeleton]}>
                 <Text style={s.wotdLabel}>{t(nativeLanguage, 'wordOfTheDay')}</Text>
                 <View style={s.wotdRow}>
@@ -400,42 +424,8 @@ export default function LearnScreen() {
                 )}
               </TouchableOpacity>
             )}
-            <View style={s.exampleRow}>
-              <Text style={s.exampleLabel}>{t(nativeLanguage, 'exampleTermsLabel')}</Text>
-              {exampleTerms.map(ex => (
-                <TouchableOpacity key={ex} style={s.chip} onPress={() => { setTerm(ex); resolveExplanation(ex); }}>
-                  <Text style={s.chipText}>{ex}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-            <View style={s.searchRow}>
-              <TextInput
-                style={s.searchInput}
-                value={term}
-                onChangeText={setTerm}
-                placeholder={t(nativeLanguage, 'inputPlaceholder')}
-                placeholderTextColor={C.muted}
-                returnKeyType="search"
-                onSubmitEditing={handleSubmit}
-              />
-              <TouchableOpacity style={s.searchBtn} onPress={handleSubmit}>
-                <Text style={s.searchBtnText}>{t(nativeLanguage, 'learnButton')}</Text>
-              </TouchableOpacity>
-            </View>
-            {/* No packs link here any more: Packs is a tab now, and a second,
-                conditional way in was the wrong altitude for a surface that is
-                a peer of Cards. */}
-            <View style={s.linksRow}>
-              <TouchableOpacity onPress={() => setShowGenerate(true)}>
-                <Text style={s.linkText}>{t(nativeLanguage, 'generateLink')}</Text>
-              </TouchableOpacity>
-            </View>
           </View>
-          {/* Rests the search bar ~40% up the screen. Shrinkable, so on a short
-              screen it gives space back instead of pushing content off. */}
-          <View style={[s.restingSpacer, { height: searchRestingBottom }]} />
-        </KeyboardAvoidingView>
-        {generateModal}
+        </Pressable>
         {saveModal}
       </SafeAreaView>
     );
@@ -621,7 +611,6 @@ export default function LearnScreen() {
           )}
         </ScrollView>
       </KeyboardAvoidingView>
-      {generateModal}
       {saveModal}
     </SafeAreaView>
   );
@@ -643,10 +632,10 @@ function makeStyles(C: Palette, tabBarHeight: number) {
   // Empty state layout. Absorbs the space above the bottom bar; shrinks to
   // nothing rather than pushing the bar off screen.
   topSpacer: { flexGrow: 1, flexShrink: 1, flexBasis: 0 },
-  kav: { flexShrink: 1 },
   bottomBar: { paddingHorizontal: 16 },
-  // Never shrinks past the floating tab bar, so the links row stays tappable.
-  restingSpacer: { flexShrink: 1, minHeight: tabBarHeight },
+  // Fixed height, never shrinks: the whole point is that this band does not
+  // change size when the keyboard appears in it.
+  keyboardReserve: { flexShrink: 0, paddingHorizontal: 16 },
 
   searchRow: { flexDirection: 'row', gap: 8, marginBottom: 16 },
   searchInput: {
@@ -685,19 +674,6 @@ function makeStyles(C: Palette, tabBarHeight: number) {
   skelTranslation: { width: 120, height: 18 },
   skelDef: { width: '70%', height: 16, marginTop: 4 },
 
-  // Packs / generate links
-  linksRow: { flexDirection: 'row', justifyContent: 'center', flexWrap: 'wrap', gap: 20, marginTop: 4 },
-  linkText: { fontSize: 13, color: C.muted, textDecorationLine: 'underline' },
-
-  // Generate coming-soon modal
-  genBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', padding: 24 },
-  genSheet: { backgroundColor: C.surface, borderRadius: 20, borderWidth: 1, borderColor: C.border, padding: 24 },
-  genHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-  genTitle: { fontSize: 17, fontWeight: '700', color: C.highlight },
-  genClose: { fontSize: 26, color: C.muted, lineHeight: 28 },
-  genBadge: { alignSelf: 'flex-start', borderWidth: 1, borderColor: C.border, borderRadius: 12, paddingHorizontal: 8, paddingVertical: 2, marginBottom: 12 },
-  genBadgeText: { fontSize: 11, color: C.muted },
-  genBody: { fontSize: 14, color: C.text, opacity: 0.85, lineHeight: 20 },
 
   successBanner: { backgroundColor: C.border, borderRadius: 10, padding: 14, marginBottom: 12 },
   successText: { color: C.text, fontWeight: '600' },
