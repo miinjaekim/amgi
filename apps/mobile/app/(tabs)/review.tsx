@@ -15,6 +15,7 @@ import {
 } from '../../src/services/reviewSync';
 import { enqueueReview } from '../../src/services/offlineReview';
 import { usePendingReviewSync } from '../../src/hooks/usePendingReviewSync';
+import { refreshReminders } from '../../src/services/reminders';
 import {
   applyPendingReviews, buildReviewCollections, getBackSide, getCollectionId,
   getNextReviewDate, getNextReviewData, getStudyLangSide, getStudyLanguageConfig,
@@ -262,6 +263,10 @@ export default function ReviewScreen() {
     // is already safe, so the next card comes up immediately whether or not
     // there is a signal.
     void sync();
+    // The reminder exists because cards were due and today had no review; both
+    // may have just stopped being true, so it is re-planned rather than left
+    // to fire for work already done.
+    void refreshReminders(user.uid, nativeLanguage);
 
     setSubmitting(null);
     resetCardState();

@@ -1,7 +1,7 @@
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, Image,
-  ScrollView, ActivityIndicator, Alert,
+  ScrollView, ActivityIndicator, Alert, Switch, Modal, Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -10,7 +10,14 @@ import { useUser } from '../../src/context/UserContext';
 import { useTheme } from '../../src/context/ThemeContext';
 import { useFloatingTabBarHeight } from '../../src/components/FloatingTabBar';
 import { clearAllLocalData } from '../../src/services/offlineReview';
-import { SUPPORTED_LANGUAGES, SUPPORTED_STUDY_LANGUAGES, t } from '@amgi/core';
+import {
+  cancelAllReminders, ensureNotificationPermission, hasNotificationPermission,
+  readReminderPreferences, refreshReminders, writeReminderPreferences,
+} from '../../src/services/reminders';
+import {
+  SUPPORTED_LANGUAGES, SUPPORTED_STUDY_LANGUAGES, formatReminderTime,
+  reminderTimeOptions, t, type ReminderPreferences,
+} from '@amgi/core';
 import { THEMES } from '../../src/theme';
 import type { Palette } from '../../src/theme';
 
@@ -23,6 +30,32 @@ export default function SettingsScreen() {
   const s = useMemo(() => makeStyles(C, tabBarHeight), [C, tabBarHeight]);
   const { user, authLoading, nativeLanguage, studyLanguage, setNativeLanguage, setStudyLanguage, deleteAccount, handleSignIn, handleSignOut } = useUser();
   const [deleting, setDeleting] = useState(false);
+  const [reminders, setReminders] = useState<ReminderPreferences | null>(null);
+  const [remindersBlocked, setRemindersBlocked] = useState(false);
+  const [timePickerOpen, setTimePickerOpen] = useState(false);
+
+  useEffect(() => {
+    readReminderPreferences().then(setReminders);
+    hasNotificationPermission().then(granted => setRemindersBlocked(!granted));
+  }, []);
+
+  /**
+   * Persist, then re-plan. Permission is requested on the way *in* to the first
+   * reminder — iOS shows that dialog once ever, so it is spent where the reason
+   * is obvious rather than on a cold launch. Turning something off never asks.
+   */
+  const updateReminders = useCallback(async (next: ReminderPreferences) => {
+    const turningOn = (next.wordOfTheDay && !reminders?.wordOfTheDay)
+      || (next.reviewReminder && !reminders?.reviewReminder);
+    if (turningOn && !(await ensureNotificationPermission())) {
+      setRemindersBlocked(true);
+      return;
+    }
+    setRemindersBlocked(false);
+    setReminders(next);
+    await writeReminderPreferences(next);
+    await refreshReminders(user?.uid, nativeLanguage);
+  }, [reminders, user, nativeLanguage]);
 
   const openPrivacyPolicy = () => {
     const url = nativeLanguage === 'Korean' ? `${PRIVACY_URL_BASE}/ko` : PRIVACY_URL_BASE;
@@ -181,6 +214,59 @@ export default function SettingsScreen() {
           </View>
         </View>
 
+        {/* Reminders. Both default off — switching notifications on for someone
+            who never asked is the dark pattern that comes before the copy. */}
+        {user && reminders && (
+          <>
+            <Text style={s.sectionLabel}>{t(nativeLanguage, 'settingsReminders')}</Text>
+            <View style={s.card}>
+              <View style={s.toggleRow}>
+                <View style={s.toggleLabel}>
+                  <Text style={s.linkRowText}>{t(nativeLanguage, 'reminderWordOfTheDay')}</Text>
+                  <Text style={s.toggleDesc}>{t(nativeLanguage, 'reminderWordOfTheDayDesc')}</Text>
+                </View>
+                <Switch
+                  value={reminders.wordOfTheDay}
+                  onValueChange={value => updateReminders({ ...reminders, wordOfTheDay: value })}
+                  trackColor={{ true: C.highlight, false: C.border }}
+                />
+              </View>
+
+              <View style={s.toggleDivider} />
+
+              <View style={s.toggleRow}>
+                <View style={s.toggleLabel}>
+                  <Text style={s.linkRowText}>{t(nativeLanguage, 'reminderReview')}</Text>
+                  <Text style={s.toggleDesc}>{t(nativeLanguage, 'reminderReviewDesc')}</Text>
+                </View>
+                <Switch
+                  value={reminders.reviewReminder}
+                  onValueChange={value => updateReminders({ ...reminders, reviewReminder: value })}
+                  trackColor={{ true: C.highlight, false: C.border }}
+                />
+              </View>
+
+              {/* Only the review reminder is timed. The word of the day is the
+                  same word all day, so a choice of when to hear about it is a
+                  setting without a decision behind it. */}
+              {reminders.reviewReminder && (
+                <TouchableOpacity style={s.timeRow} onPress={() => setTimePickerOpen(true)}>
+                  <Text style={s.toggleDesc}>{t(nativeLanguage, 'reminderTime')}</Text>
+                  <Text style={s.timeValue}>
+                    {formatReminderTime(reminders.reviewHour, reminders.reviewMinute)}
+                  </Text>
+                </TouchableOpacity>
+              )}
+
+              {remindersBlocked && (
+                <TouchableOpacity style={s.blockedRow} onPress={() => Linking.openSettings()}>
+                  <Text style={s.blockedText}>{t(nativeLanguage, 'reminderBlocked')}</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </>
+        )}
+
         {/* What is held, in plain language, on the screen that also erases it —
             a privacy policy behind a link is not the same as telling someone. */}
         <Text style={s.sectionLabel}>{t(nativeLanguage, 'settingsYourData')}</Text>
@@ -224,6 +310,35 @@ export default function SettingsScreen() {
           )}
         </View>
       </ScrollView>
+
+      {reminders && (
+        <Modal visible={timePickerOpen} transparent animationType="slide" onRequestClose={() => setTimePickerOpen(false)}>
+          <TouchableOpacity style={s.sheetBackdrop} activeOpacity={1} onPress={() => setTimePickerOpen(false)}>
+            <View style={s.sheet}>
+              <Text style={s.sheetTitle}>{t(nativeLanguage, 'reminderTime')}</Text>
+              <ScrollView>
+                {reminderTimeOptions().map(({ hour, minute }) => {
+                  const selected = hour === reminders.reviewHour && minute === reminders.reviewMinute;
+                  return (
+                    <TouchableOpacity
+                      key={`${hour}:${minute}`}
+                      style={s.sheetRow}
+                      onPress={() => {
+                        setTimePickerOpen(false);
+                        updateReminders({ ...reminders, reviewHour: hour, reviewMinute: minute });
+                      }}
+                    >
+                      <Text style={[s.sheetRowText, selected && s.sheetRowSelected]}>
+                        {formatReminderTime(hour, minute)}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            </View>
+          </TouchableOpacity>
+        </Modal>
+      )}
     </SafeAreaView>
   );
 }
@@ -269,6 +384,33 @@ function makeStyles(C: Palette, tabBarHeight: number) {
   linkRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   linkRowText: { fontSize: 15, color: C.text, fontWeight: '500' },
   blurbText: { fontSize: 13, color: C.muted, lineHeight: 19 },
+
+  // Reminders
+  toggleRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  toggleLabel: { flex: 1 },
+  toggleDesc: { fontSize: 12, color: C.muted, marginTop: 2, lineHeight: 17 },
+  toggleDivider: { height: 1, backgroundColor: C.border, marginVertical: 14 },
+  timeRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    marginTop: 14, paddingTop: 12, borderTopWidth: 1, borderTopColor: C.border,
+  },
+  timeValue: { fontSize: 15, color: C.highlight, fontWeight: '700' },
+  blockedRow: { marginTop: 12 },
+  blockedText: { fontSize: 12, color: C.error, lineHeight: 17, textDecorationLine: 'underline' },
+
+  // Time sheet
+  sheetBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+  sheet: {
+    backgroundColor: C.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20,
+    paddingTop: 16, paddingBottom: 24, maxHeight: '60%',
+  },
+  sheetTitle: {
+    fontSize: 13, color: C.muted, textTransform: 'uppercase', letterSpacing: 1,
+    paddingHorizontal: 20, marginBottom: 8,
+  },
+  sheetRow: { paddingVertical: 12, paddingHorizontal: 20 },
+  sheetRowText: { fontSize: 16, color: C.text, textAlign: 'center' },
+  sheetRowSelected: { color: C.highlight, fontWeight: '700' },
 
   // Auth
   authSection: { marginTop: 8 },

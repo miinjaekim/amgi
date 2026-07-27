@@ -13,8 +13,9 @@ _Amended 2026-07-26:_ "no new native modules" was part of that narrowness and no
 longer holds — offline review (PR #53) brings `expo-network`. Taken knowingly: a
 build was going out regardless, and the module buys an accurate offline banner
 and a prompt flush on reconnect. It does mean the depth batch now ships on
-offline review's schedule rather than ahead of it. Push notifications still
-wants a build of its own — see below.
+offline review's schedule rather than ahead of it. The same reasoning then
+applied to reminders (PR #61): once one native module is in the build, a second
+rides along for free rather than costing a build of its own.
 
 **Mobile shipping model: no OTA.** Iterate in Expo Go (`npx expo start`), cut a
 production build when a batch is worth a release. See [tech-stack.md](tech-stack.md).
@@ -54,6 +55,15 @@ _Last build: **1.0.2 / build 4**, 2026-07-24._
       [tech-stack.md](tech-stack.md). Only the mobile half waits on this build;
       the web half is already live.
 
+- [ ] **Reminders — word of the day + review** (PR #61) — local scheduled
+      notifications, no push tokens and no server job: everything the decision
+      needs is already on the device from offline review. Brings
+      `expo-notifications`, so it needs this build — but local notifications
+      still work in Expo Go on SDK 54, so it can be exercised before then.
+      *Scoped down from three reminders to two:* a separate "streak at risk"
+      nudge was dropped as both redundant (reviewing is what keeps the streak)
+      and the easiest place to break "no dark patterns".
+
 **Pre-flight:** smoke-test in Expo Go → verify native-adjacent things (audio,
 files, sharing, **offline review + reconnect sync**, **account deletion**) on
 the build itself → bump `version` in `app.json` → check
@@ -63,14 +73,6 @@ the build itself → bump `version` in `app.json` → check
 ---
 
 ## High — everything else user-facing
-
-- [ ] **Push notifications — WOTD and streaks** — for an SRS app "remind me
-      before I forget" is the product promise, not a growth hack. Prerequisite
-      met: PR #47 fixed WOTD repeats, so a notification can't push a word you
-      already saw. Needs `expo-notifications`, scheduling, per-type opt-in.
-      Streak nudges are the easiest place to break "no dark patterns".
-      Deliberately **not** in the next build — it brings a native module, so it
-      wants a build of its own rather than riding along with a JS-only release.
 
 ## Housekeeping — broken tooling that hides signal
 
