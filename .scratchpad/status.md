@@ -156,6 +156,14 @@ _Reconciled against `main` @ `6e9f3e9` on 2026-07-24, plus the 1.0.2 release cut
     rather than by user, and shared — deleting it would break playback on other
     people's cards. Storage paths are left empty in the extension config for
     exactly this reason.
+  - **Verified end to end on web, 2026-07-27**, against the real extension with
+    a throwaway account: the account was deleted, the reauthentication prompt
+    fired, and the cards disappeared from Firestore. That second half is the one
+    worth checking — the extension can install cleanly and still match nothing
+    if auto discovery is misconfigured, and it fails silently when it does.
+  - **Mobile is not verified.** It shares `deleteUser()` but reauthenticates
+    through the Expo Google flow rather than a popup, which the web pass does
+    not cover. Check it in Expo Go before the build.
 
 - **Web review session parity** (PR #54, 2026-07-26) — the session controls from
   PR #53 brought over, plus a stale-state bug found on the way.
