@@ -21,6 +21,15 @@ Gotchas already paid for. Grouped so you can skim the relevant section.
   [tech-stack.md](tech-stack.md) — it is console state, like the rules below.
   Expect `auth/requires-recent-login`: deletion is security-sensitive and needs
   a sign-in from the last ~5 minutes, so both platforms reauthenticate and retry.
+- **Extension installs can fail on a service account that plainly exists.**
+  Installing *Delete User Data* failed twice with "Default service account
+  `<project-number>-compute@developer.gserviceaccount.com` doesn't exist" while
+  that account was sitting right there in IAM, enabled. Retrying later, config
+  unchanged, worked. Extensions deploy 1st gen Cloud Functions, and on projects
+  that have not used Compute Engine the default account is provisioned lazily
+  and propagates slowly — so the error means "not ready yet" at least as often
+  as it means "missing". **Retry before changing anything**; the temptation is
+  to start editing config that had nothing to do with it.
 - **Security rules are manual** (Firebase console), not in the codebase. Add
   rules for every new collection — there is no wildcard support.
 - **Composite indexes** are required for multi-field filter+sort queries (e.g.
