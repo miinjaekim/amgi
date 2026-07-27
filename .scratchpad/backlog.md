@@ -24,7 +24,7 @@ production build when a batch is worth a release. See [tech-stack.md](tech-stack
 
 ## Queued for the next build
 
-_Last build: **1.0.2 / build 4**, 2026-07-24._
+_Last build: **1.0.2 / build 4**, 2026-07-24. **1.1.0 cut 2026-07-27** with the six items below._
 
 - [ ] **Japanese & Chinese depth batch** (PR #49) — pronunciation for four more
       languages, the kanji/hanzi breakdown, the kana packs, and the
@@ -65,9 +65,14 @@ _Last build: **1.0.2 / build 4**, 2026-07-24._
       and the easiest place to break "no dark patterns".
 
 **Pre-flight:** smoke-test in Expo Go → verify native-adjacent things (audio,
-files, sharing, **offline review + reconnect sync**, **account deletion**) on
-the build itself → bump `version` in `app.json` → check
+files, sharing, **offline review + reconnect sync**, **account deletion**,
+**the review reminder actually firing and then disappearing once you review**)
+on the build itself → bump `version` in `app.json` → check
 `docs/testflight-beta-info-ko.md` is still accurate.
+
+_The listing check earned its place in this list on 2026-07-27: it still
+advertised five study languages after Traditional Chinese made six, and said
+nothing about account deletion — which Apple looks for under 5.1.1(v)._
 
 
 ---
