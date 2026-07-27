@@ -14,9 +14,13 @@
     "plugins": [
       "expo-router",
       "expo-web-browser",
+      "expo-notifications",
       [
         "expo-audio",
-        { "microphonePermission": false, "recordAudioAndroid": false }
+        {
+          "microphonePermission": false,
+          "recordAudioAndroid": false
+        }
       ]
     ],
     "ios": {

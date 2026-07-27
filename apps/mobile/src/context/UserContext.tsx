@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useRef, useState, ReactNode } from 'react';
-import { Platform } from 'react-native';
+import { AppState, Platform } from 'react-native';
 import {
   GoogleAuthProvider, signInWithCredential, signOut, onAuthStateChanged,
   deleteUser, reauthenticateWithCredential, User,
@@ -9,6 +9,7 @@ import * as WebBrowser from 'expo-web-browser';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { auth } from '../config/firebase';
 import { getUserPreferencesFromServer, saveUserPreferences } from '../services/userPreferences';
+import { refreshReminders } from '../services/reminders';
 import {
   markStreakSynced, readCachedStreak, writeCachedStreak,
 } from '../services/offlineReview';
@@ -175,6 +176,21 @@ export function UserProvider({ children }: { children: ReactNode }) {
     });
     return () => unsubscribe();
   }, []);
+
+  /**
+   * Reminders are planned from local state, so they need re-planning whenever
+   * that state may have moved underneath them: a different user, a changed
+   * language for the copy, or simply returning to the app after enough time
+   * that yesterday's plan is stale. Signing out passes no uid, which cancels
+   * everything rather than leaving a stranger's reminders on the device.
+   */
+  useEffect(() => {
+    void refreshReminders(user?.uid, nativeLanguage);
+    const subscription = AppState.addEventListener('change', state => {
+      if (state === 'active') void refreshReminders(user?.uid, nativeLanguage);
+    });
+    return () => subscription.remove();
+  }, [user, nativeLanguage]);
 
   const setNativeLanguage = async (lang: string) => {
     setNativeLanguageState(lang);
