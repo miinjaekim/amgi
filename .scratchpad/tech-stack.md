@@ -13,6 +13,32 @@ Monorepo (npm workspaces + Turborepo): `apps/web`, `apps/mobile`, `packages/core
 - **TTS:** Google Cloud TTS (Chirp 3: HD), audio cached in Firebase Storage
 - **Deployment:** Vercel — https://amgi-iota.vercel.app
 
+### Delete User Data extension (console config)
+
+Account deletion is `deleteUser()` from the client SDK; this extension does the
+data cleanup, triggered by the auth deletion. Console state, not repo code —
+same category as security rules and composite indexes. Requires Blaze.
+
+Install `firebase/delete-user-data` and set:
+
+| Parameter | Value | Why |
+|---|---|---|
+| Cloud Firestore paths | `users/{UID}` | preferences doc, addressed by id |
+| Firestore delete mode | `recursive` | cheap insurance if subcollections ever appear |
+| Enable auto discovery | `yes` | cards are found by field, not by path |
+| Auto discovery search fields | `uid` | every card document carries `uid` |
+| Auto discovery depth | `3` (default) | cards are top-level; no need to go deeper |
+| Realtime Database / Storage paths | *leave empty* | neither holds per-user data |
+
+Leaving the Storage paths empty is deliberate: pronunciation audio is keyed by a
+hash of the text, not by user, and is shared — deleting it would break playback
+on other people's cards.
+
+Auto discovery is what covers the six per-language card collections without
+naming them, so adding a language needs no change here. It does not match UIDs
+nested in arrays or maps; ours is a flat top-level field, so that limit does not
+bite.
+
 ## Mobile (`apps/mobile`)
 
 - **Framework:** Expo SDK 54 / React Native 0.81, Expo Router (file-based)

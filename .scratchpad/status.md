@@ -130,6 +130,33 @@ _Reconciled against `main` @ `6e9f3e9` on 2026-07-24, plus the 1.0.2 release cut
     round trip, which had no web equivalent to prove it since it has to pop a
     stack screen above the tabs and have Learn pick the param up.
 
+- **Account deletion + "your data"** (PR #59, 2026-07-27) — self-service account
+  deletion on both platforms, closing the privacy backlog item.
+  - **App Store Guideline 5.1.1(v) makes this a submission blocker**, not
+    hygiene: an app offering account creation must offer in-app deletion.
+  - **Client `deleteUser()` plus the Delete User Data extension** — the
+    documented Firebase pattern. The client removes the account; the extension
+    triggers on that and sweeps Firestore server-side, so cleanup finishes even
+    if the app is closed mid-way. No API route, no `firebase-admin`.
+  - **This is the second attempt.** PR #55 did it server-side with the Admin
+    SDK, and adding `firebase-admin/auth` to `lib/firebaseAdmin` took
+    `/api/pronounce` and `/api/word-of-the-day` down with it — every route
+    importing that module returned 500 before its handler ran. PR #56 guessed at
+    a bundling fix and did not help; PR #57 reverted both. **The root cause was
+    never found.** A standalone build using Vercel's own dependency tracer
+    serves all three routes correctly, so the bundling theory is unproven. What
+    changed is that the current design does not need that module at all.
+  - **Requires a console step.** The extension is installed and configured by
+    hand — see [tech-stack.md](tech-stack.md). Without it the account is deleted
+    but the cards remain, so the two have to land together.
+  - **Expect a reauthentication prompt.** Deletion is security-sensitive and
+    Firebase requires a sign-in from the last few minutes; both platforms catch
+    `auth/requires-recent-login`, send the user back through Google, and retry.
+  - **Pronunciation audio is deliberately kept.** Keyed by a hash of the text
+    rather than by user, and shared — deleting it would break playback on other
+    people's cards. Storage paths are left empty in the extension config for
+    exactly this reason.
+
 - **Web review session parity** (PR #54, 2026-07-26) — the session controls from
   PR #53 brought over, plus a stale-state bug found on the way.
   - **Ratings never fed back into `userFlashcards`**, which `dueCards` derives

@@ -10,6 +10,17 @@ Gotchas already paid for. Grouped so you can skim the relevant section.
 
 ## Firestore
 
+- **Account deletion is the client SDK plus an extension, not the Admin SDK.**
+  `deleteUser()` from the client removes the account; the *Delete User Data*
+  extension triggers on that and sweeps Firestore server-side, so cleanup
+  finishes even if the app is closed. This is the documented Firebase pattern
+  and it keeps `firebase-admin` out of it entirely — which matters, because the
+  attempt that did use `firebase-admin/auth` (PR #55) took `/api/pronounce` and
+  `/api/word-of-the-day` down with it and was reverted. Root cause was never
+  found; the fix was to not need it. Config lives in
+  [tech-stack.md](tech-stack.md) — it is console state, like the rules below.
+  Expect `auth/requires-recent-login`: deletion is security-sensitive and needs
+  a sign-in from the last ~5 minutes, so both platforms reauthenticate and retry.
 - **Security rules are manual** (Firebase console), not in the codebase. Add
   rules for every new collection — there is no wildcard support.
 - **Composite indexes** are required for multi-field filter+sort queries (e.g.
