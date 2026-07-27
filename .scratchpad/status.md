@@ -161,9 +161,11 @@ _Reconciled against `main` @ `6e9f3e9` on 2026-07-24, plus the 1.0.2 release cut
     fired, and the cards disappeared from Firestore. That second half is the one
     worth checking — the extension can install cleanly and still match nothing
     if auto discovery is misconfigured, and it fails silently when it does.
-  - **Mobile is not verified.** It shares `deleteUser()` but reauthenticates
-    through the Expo Google flow rather than a popup, which the web pass does
-    not cover. Check it in Expo Go before the build.
+  - **Verified on mobile too, 2026-07-27**, in Expo Go. Reauthentication there
+    re-runs the Expo Google flow rather than a popup, and that response is
+    marked consumed so the sign-in effect skips it — without that guard,
+    deleting an account would immediately sign the user back in as a brand new
+    one from the same Google identity, looking exactly like a failed deletion.
 
 - **Web review session parity** (PR #54, 2026-07-26) — the session controls from
   PR #53 brought over, plus a stale-state bug found on the way.

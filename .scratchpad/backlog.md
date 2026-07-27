@@ -49,9 +49,10 @@ _Last build: **1.0.2 / build 4**, 2026-07-24._
       so this is a *submission blocker*, not a nice-to-have: an app offering
       account creation must offer in-app deletion. Client-side `deleteUser()`
       plus the Delete User Data extension, after the Admin SDK version (PR #55)
-      took production down and was reverted. **Blocked until the extension is
-      installed** — config in [tech-stack.md](tech-stack.md); without it the
-      account goes but the cards stay.
+      took production down and was reverted. Extension installed and both
+      platforms verified end to end against it on 2026-07-27 — config in
+      [tech-stack.md](tech-stack.md). Only the mobile half waits on this build;
+      the web half is already live.
 
 **Pre-flight:** smoke-test in Expo Go → verify native-adjacent things (audio,
 files, sharing, **offline review + reconnect sync**, **account deletion**) on
