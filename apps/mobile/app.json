@@ -12,6 +12,7 @@
     "userInterfaceStyle": "automatic",
     "icon": "./assets/icon.png",
     "plugins": [
+      "./plugins/withoutPushEntitlement",
       "expo-router",
       "expo-web-browser",
       "expo-notifications",
