@@ -17,29 +17,19 @@ import { enqueueReview } from '../../src/services/offlineReview';
 import { usePendingReviewSync } from '../../src/hooks/usePendingReviewSync';
 import { refreshReminders } from '../../src/services/reminders';
 import {
-  applyPendingReviews, buildReviewCollections, getBackSide, getCollectionId,
-  getNextReviewDate, getNextReviewData, getStudyLangSide, getStudyLanguageConfig,
-  isDue, t,
+  DIRECTION_FILTERS, applyPendingReviews, buildReviewCollections, buildReviewQueue,
+  dueReviewItems, filterByDirection, getBackSide, getCollectionId, getNextReviewDate,
+  getNextReviewData, getStudyLangSide, getStudyLanguageConfig, t,
 } from '@amgi/core';
-import type { CardSideField, PendingReview } from '@amgi/core';
+import type {
+  CardSideField, DirectionFilter, PendingReview, ReviewQueueItem,
+} from '@amgi/core';
 import { useTheme } from '../../src/context/ThemeContext';
 import { useFloatingTabBarHeight } from '../../src/components/FloatingTabBar';
 import Markdown from '../../src/components/Markdown';
 import type { Palette } from '../../src/theme';
 
-type Direction = 'frontToBack' | 'backToFront';
 type Rating = 'again' | 'hard' | 'good' | 'easy';
-interface ReviewItem { card: Flashcard; direction: Direction }
-
-function buildQueue(cards: Flashcard[]): ReviewItem[] {
-  const items: ReviewItem[] = [];
-  for (const card of cards) {
-    for (const dir of isDue(card)) {
-      items.push({ card, direction: dir });
-    }
-  }
-  return items.sort(() => Math.random() - 0.5);
-}
 
 export default function ReviewScreen() {
   const { C } = useTheme();
@@ -58,13 +48,21 @@ export default function ReviewScreen() {
   // `undefined` is "hasn't picked yet"; `null` is the cards you made yourself,
   // which is a real choice and not the absence of one.
   const [collectionId, setCollectionId] = useState<string | null | undefined>(undefined);
-  const [queue, setQueue] = useState<ReviewItem[]>([]);
   /**
-   * Which collection `queue` was built for. Picking a collection renders once
-   * before the effect below rebuilds the queue, and on that frame every piece
-   * of session state still belongs to the previous collection — an empty queue
-   * on the way in, or the last deck's `done` when moving between two. Reading
-   * either is wrong, so the render waits for them to agree.
+   * Deliberately per-session and not remembered: it resets to `both` with the
+   * collection, so a one-off drill in one direction never quietly becomes how
+   * you review from then on.
+   */
+  const [directionFilter, setDirectionFilter] = useState<DirectionFilter>('both');
+  /** False on the start screen, true once a queue is running. */
+  const [started, setStarted] = useState(false);
+  const [queue, setQueue] = useState<ReviewQueueItem[]>([]);
+  /**
+   * Which collection `queue` was built for. Changing collection renders once
+   * before the effect below clears the session, and on that frame every piece
+   * of session state still belongs to the previous collection — the last
+   * deck's queue, or its `done`. Reading either is wrong, so the session only
+   * renders once the two agree.
    */
   const [queueFor, setQueueFor] = useState<string | null | undefined>(undefined);
   const [index, setIndex] = useState(0);
@@ -158,6 +156,23 @@ export default function ReviewScreen() {
   );
 
   /**
+   * What is due in the chosen collection right now, both ways round. Derived
+   * from `reviewedCards`, so it stays honest after a session without a refetch.
+   */
+  const dueItems = useMemo(
+    () => collectionId === undefined
+      ? []
+      : dueReviewItems(reviewedCards.filter(card => getCollectionId(card) === collectionId)),
+    [reviewedCards, collectionId]
+  );
+
+  /** How many of those the chosen direction would actually serve. */
+  const filteredDueCount = useMemo(
+    () => filterByDirection(dueItems, directionFilter).length,
+    [dueItems, directionFilter]
+  );
+
+  /**
    * When this collection next comes back. Derived rather than captured at
    * session start, which used to leave it stale — it was only ever assigned
    * for a session that began with nothing due.
@@ -185,34 +200,49 @@ export default function ReviewScreen() {
   }, [collections, collectionId, requested, nonce]);
 
   /**
-   * Begin a session over whatever is due in a collection right now. Also the
-   * "review those again" path: a card rated `again` stays due, so rebuilding
-   * from the current cards yields exactly what was missed and nothing else.
+   * Begin a session over whatever is due in a collection right now, one way
+   * round or both. Also the "review those again" path: a card rated `again`
+   * stays due, so rebuilding from the current cards yields exactly what was
+   * missed and nothing else — in the direction it was missed in.
    */
-  const startSession = useCallback((sourceCards: Flashcard[], collection: string | null) => {
-    const q = buildQueue(sourceCards.filter(card => getCollectionId(card) === collection));
+  const startSession = useCallback((
+    sourceCards: Flashcard[],
+    collection: string | null,
+    filter: DirectionFilter,
+  ) => {
+    const q = buildReviewQueue(sourceCards.filter(card => getCollectionId(card) === collection), filter);
     setQueue(q);
     setQueueFor(collection);
+    setStarted(true);
     setIndex(0);
     setDone(q.length === 0);
     setStopped(false);
     setReviewedCount(0);
   }, []);
 
+  /** Back to the start screen, where both choices can be made again. */
+  const endSession = useCallback(() => {
+    setStarted(false);
+    setQueue([]);
+    setIndex(0);
+    setDone(false);
+    setStopped(false);
+    setReviewedCount(0);
+  }, []);
+
+  // Changing collection drops whatever session was running back to the start
+  // screen. Direction goes with it: it belongs to the session that just ended,
+  // not to the next collection.
+  //
+  // `cards` is deliberately not a dependency. The queue is built on the Start
+  // tap, from the freshest cards there are — so unlike when a session began the
+  // moment a collection was picked, there is nothing to rebuild when the
+  // background fetch lands, and rebuilding would throw away a direction the
+  // user had just chosen and a session they were part-way through.
   useEffect(() => {
-    if (collectionId === undefined) {
-      setQueue([]); setQueueFor(undefined); setDone(false);
-      setStopped(false); setReviewedCount(0);
-      return;
-    }
-    startSession(reviewedCards, collectionId);
-    // `reviewedCards` is deliberately not a dependency. It changes on every
-    // rating, and rebuilding then would reshuffle the queue mid-session and
-    // send the user back to the first card. Sessions start when the collection
-    // changes or the cards reload — and read the freshest cards when they do,
-    // so re-entering a collection doesn't re-serve what was already answered.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [collectionId, cards, startSession]);
+    endSession();
+    setDirectionFilter('both');
+  }, [collectionId, endSession]);
 
   const resetCardState = () => {
     setRevealed(false);
@@ -402,17 +432,6 @@ export default function ReviewScreen() {
     );
   }
 
-  // The single frame between picking a collection and the queue being built for
-  // it. Everything below reads session state, and none of it belongs to this
-  // collection yet.
-  if (queueFor !== collectionId) {
-    return (
-      <SafeAreaView style={s.center}>
-        <ActivityIndicator color={C.highlight} size="large" />
-      </SafeAreaView>
-    );
-  }
-
   // Only offered when there is something else to change to — a single
   // collection is not a choice, and a control for it would only be noise.
   const changeCollectionButton = collections.length > 1 && (
@@ -420,6 +439,76 @@ export default function ReviewScreen() {
       <Text style={s.changeBtnText}>{t(nativeLanguage, 'reviewChangeCollection')}</Text>
     </TouchableOpacity>
   );
+
+  const collectionName = collections.find(c => c.id === collectionId)?.name;
+
+  // No session running. `queueFor` also catches the single frame after a
+  // collection change, where `started` still belongs to the collection just
+  // left and reading its queue would show the wrong deck.
+  if (!started || queueFor !== collectionId) {
+    // Nothing due is a state to report, not a choice to offer — a direction
+    // picker over an empty collection is a control with no outcome.
+    if (dueItems.length === 0) {
+      return (
+        <SafeAreaView style={s.center}>
+          {offlineNotice}
+          {collections.length > 1 && <Text style={s.collectionLabel}>{collectionName}</Text>}
+          <Text style={s.doneTitle}>{t(nativeLanguage, 'allCaughtUp')}</Text>
+          <Text style={s.doneBody}>{t(nativeLanguage, 'reviewCompleteMessage')}</Text>
+          {nextDate && (
+            <Text style={s.nextDate}>
+              {t(nativeLanguage, 'nextReviewOn')} {nextDate.toLocaleDateString()}
+            </Text>
+          )}
+          {changeCollectionButton}
+        </SafeAreaView>
+      );
+    }
+
+    // Which cards, then which way round — a separate axis, asked after the
+    // collection rather than folded into it, because one chip row covering both
+    // would multiply out.
+    return (
+      <SafeAreaView style={s.root} edges={['top']}>
+        <ScrollView contentContainerStyle={s.startScroll}>
+          {offlineNotice}
+          <Text style={s.startTitle}>{collectionName}</Text>
+          <View style={s.pillRow}>
+            {DIRECTION_FILTERS.map(dir => (
+              <TouchableOpacity
+                key={dir}
+                onPress={() => setDirectionFilter(dir)}
+                style={[s.pill, directionFilter === dir && s.pillOn]}
+              >
+                <Text style={[s.pillText, directionFilter === dir && s.pillTextOn]}>
+                  {t(nativeLanguage, dir === 'both'
+                    ? 'directionBoth'
+                    : dir === 'frontToBack'
+                      ? config.directionFrontToBackKey
+                      : config.directionBackToFrontKey)}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          <TouchableOpacity
+            style={[s.startBtn, filteredDueCount === 0 && s.startBtnOff]}
+            disabled={filteredDueCount === 0}
+            onPress={() => startSession(reviewedCards, collectionId, directionFilter)}
+          >
+            <Text style={s.startBtnText}>
+              {t(nativeLanguage, 'reviewStartCount', { count: filteredDueCount })}
+            </Text>
+          </TouchableOpacity>
+          {/* Only the other direction has cards left. Saying so beats a dead
+              button with no explanation. */}
+          {filteredDueCount === 0 && (
+            <Text style={s.startNote}>{t(nativeLanguage, 'reviewNothingInDirection')}</Text>
+          )}
+          {changeCollectionButton}
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
 
   // Stopping early is a normal way to finish — a queue is however many cards
   // happen to be due, not a commitment. So this reports what was done rather
@@ -429,11 +518,7 @@ export default function ReviewScreen() {
     return (
       <SafeAreaView style={s.center}>
         {offlineNotice}
-        {collections.length > 1 && (
-          <Text style={s.collectionLabel}>
-            {collections.find(c => c.id === collectionId)?.name}
-          </Text>
-        )}
+        {collections.length > 1 && <Text style={s.collectionLabel}>{collectionName}</Text>}
         <Text style={s.stoppedTitle}>{t(nativeLanguage, 'reviewStoppedTitle')}</Text>
         <Text style={s.doneBody}>
           {reviewedCount > 0
@@ -448,6 +533,11 @@ export default function ReviewScreen() {
         <TouchableOpacity style={s.resumeBtn} onPress={() => setStopped(false)}>
           <Text style={s.resumeBtnText}>{t(nativeLanguage, 'reviewResume')}</Text>
         </TouchableOpacity>
+        {/* Back to the start screen rather than out of Review — that is where
+            the direction and the collection are both changeable. */}
+        <TouchableOpacity style={s.changeBtn} onPress={endSession}>
+          <Text style={s.changeBtnText}>{t(nativeLanguage, 'exitReview')}</Text>
+        </TouchableOpacity>
         {changeCollectionButton}
       </SafeAreaView>
     );
@@ -455,41 +545,39 @@ export default function ReviewScreen() {
 
   if (done) {
     // Everything answered correctly is scheduled out, so whatever is still due
-    // is what was missed. Claiming "all caught up" over the top of that would
-    // be untrue, and it is the one moment where offering them back costs a tap.
-    const stillDue = collections.find(c => c.id === collectionId)?.dueCount ?? 0;
+    // is what was missed. Claiming the session was simply complete over the top
+    // of that would hide work, and it is the one moment where offering it back
+    // costs a tap. Counted within the direction just reviewed — cards due the
+    // other way round were never part of this session to miss.
     return (
       <SafeAreaView style={s.center}>
         {offlineNotice}
-        {collections.length > 1 && (
-          <Text style={s.collectionLabel}>
-            {collections.find(c => c.id === collectionId)?.name}
-          </Text>
-        )}
-        {stillDue > 0 ? (
+        {collections.length > 1 && <Text style={s.collectionLabel}>{collectionName}</Text>}
+        {filteredDueCount > 0 ? (
           <>
             <Text style={s.stoppedTitle}>{t(nativeLanguage, 'reviewSessionFinished')}</Text>
             <Text style={s.doneBody}>
-              {t(nativeLanguage, 'reviewMissedStillDue', { count: stillDue })}
+              {t(nativeLanguage, 'reviewMissedStillDue', { count: filteredDueCount })}
             </Text>
             <TouchableOpacity
               style={s.resumeBtn}
-              onPress={() => startSession(reviewedCards, collectionId)}
+              onPress={() => startSession(reviewedCards, collectionId, directionFilter)}
             >
               <Text style={s.resumeBtnText}>{t(nativeLanguage, 'reviewAgainMissed')}</Text>
             </TouchableOpacity>
           </>
         ) : (
+          // Finishing a direction is not the same as being caught up — the
+          // other way round may still hold cards. "All caught up" is claimed
+          // one tap later, on the start screen, and only when it is true.
           <>
-            <Text style={s.doneTitle}>{t(nativeLanguage, 'allCaughtUp')}</Text>
+            <Text style={s.doneTitle}>{t(nativeLanguage, 'reviewComplete')}</Text>
             <Text style={s.doneBody}>{t(nativeLanguage, 'reviewCompleteMessage')}</Text>
-            {nextDate && (
-              <Text style={s.nextDate}>
-                {t(nativeLanguage, 'nextReviewOn')} {nextDate.toLocaleDateString()}
-              </Text>
-            )}
           </>
         )}
+        <TouchableOpacity style={s.changeBtn} onPress={endSession}>
+          <Text style={s.changeBtnText}>{t(nativeLanguage, 'exitReview')}</Text>
+        </TouchableOpacity>
         {changeCollectionButton}
       </SafeAreaView>
     );
@@ -768,6 +856,27 @@ function makeStyles(C: Palette, tabBarHeight: number) {
   pickerDue: { fontSize: 12, color: C.muted },
   pickerCount: { fontSize: 12, color: C.muted, marginTop: 4 },
   collectionLabel: { fontSize: 13, color: C.muted, marginBottom: 8 },
+
+  // Start screen — same pill vocabulary as the deck drill's start screen, so
+  // the two ways into a session look like the same app.
+  startScroll: {
+    flexGrow: 1, paddingHorizontal: 20, paddingBottom: 24,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  startTitle: { fontSize: 20, fontWeight: '700', color: C.text, textAlign: 'center' },
+  pillRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'center', marginTop: 20 },
+  pill: { borderWidth: 1, borderColor: C.border, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 9 },
+  pillOn: { backgroundColor: C.highlight, borderColor: C.highlight },
+  pillText: { fontSize: 13, color: C.text },
+  pillTextOn: { color: C.bg, fontWeight: '700' },
+  startBtn: {
+    marginTop: 24, backgroundColor: C.highlight,
+    borderRadius: 12, paddingHorizontal: 24, paddingVertical: 13,
+  },
+  startBtnOff: { opacity: 0.4 },
+  startBtnText: { fontSize: 16, fontWeight: '700', color: C.bg },
+  startNote: { fontSize: 13, color: C.muted, textAlign: 'center', marginTop: 12 },
+
   changeBtn: {
     marginTop: 20, borderWidth: 1, borderColor: C.border,
     borderRadius: 10, paddingHorizontal: 16, paddingVertical: 9,

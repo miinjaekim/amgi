@@ -4,16 +4,19 @@ import Link from 'next/link';
 import { useUser } from '@/components/UserContext';
 import { fetchUserFlashcards, getCardsCollection, Flashcard, migrateExistingCards, archiveFlashcard, deleteFlashcard } from '@/services/firestore';
 import {
+  DIRECTION_FILTERS,
   buildReviewCollections,
+  buildReviewQueue,
+  dueReviewItems,
+  filterByDirection,
   getBackSide,
   getCollectionId,
   getExampleSides,
   getNextReviewDate,
   getReading,
   getStudyLanguageConfig,
-  isDue,
 } from '@amgi/core';
-import type { ReviewCollection } from '@amgi/core';
+import type { DirectionFilter, ReviewCollection, ReviewQueueItem } from '@amgi/core';
 import { db } from '@/config/firebase';
 import { doc, updateDoc } from 'firebase/firestore';
 import { getNextReviewData } from '@/services/sm2';
@@ -25,24 +28,6 @@ import PronounceButton from '@/components/PronounceButton';
 
 // Direction for review — re-exported from core, where `isDue` lives too.
 export type { ReviewDirection } from '@amgi/core';
-import type { ReviewDirection } from '@amgi/core';
-
-// Define a type for cards in the review queue
-interface ReviewQueueItem {
-  card: Flashcard;
-  direction: ReviewDirection;
-}
-
-type DirectionFilter = 'both' | 'frontToBack' | 'backToFront';
-
-function shuffle<T>(arr: T[]): T[] {
-  const a = [...arr];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
-}
 
 function isExamplePairArray(arr: unknown[]): arr is ExamplePair[] {
   return arr.length === 0 || (typeof arr[0] === 'object' && arr[0] !== null && ('korean' in arr[0] || 'swedish' in arr[0] || 'english' in arr[0]));
@@ -137,13 +122,7 @@ export default function ReviewPage() {
     [userFlashcards, collectionId]
   );
 
-  const dueCards = useMemo(() => {
-    const queue: ReviewQueueItem[] = [];
-    for (const card of collectionCards) {
-      for (const direction of isDue(card)) queue.push({ card, direction });
-    }
-    return queue;
-  }, [collectionCards]);
+  const dueCards = useMemo(() => dueReviewItems(collectionCards), [collectionCards]);
 
   useEffect(() => {
     setNextReviewDate(dueCards.length === 0 ? getNextReviewDate(collectionCards) : null);
@@ -176,10 +155,7 @@ export default function ReviewPage() {
   };
 
   const handleStartReview = () => {
-    const filtered = directionFilter === 'both'
-      ? dueCards
-      : dueCards.filter(item => item.direction === directionFilter);
-    setActiveQueue(shuffle(filtered));
+    setActiveQueue(buildReviewQueue(collectionCards, directionFilter));
     setReviewMode(true);
     setCurrentReviewIdx(0);
     setReviewComplete(false);
@@ -383,9 +359,7 @@ export default function ReviewPage() {
     </div>
   );
 
-  const filteredCount = directionFilter === 'both'
-    ? dueCards.length
-    : dueCards.filter(item => item.direction === directionFilter).length;
+  const filteredCount = filterByDirection(dueCards, directionFilter).length;
 
   const reviewCardsDueLabel = nativeLanguage === 'Korean'
     ? `${filteredCount}개 카드 복습하기`
@@ -876,7 +850,7 @@ export default function ReviewPage() {
                   are studying, then how you want to be asked. Collapsing the two
                   into one chip row would multiply out. */}
               <div className="flex flex-wrap gap-2 mb-6 justify-center">
-                {(['both', 'frontToBack', 'backToFront'] as DirectionFilter[]).map(dir => (
+                {DIRECTION_FILTERS.map(dir => (
                   <button
                     key={dir}
                     onClick={() => setDirectionFilter(dir)}
