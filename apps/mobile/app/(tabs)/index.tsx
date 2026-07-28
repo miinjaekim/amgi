@@ -1,11 +1,12 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, ActivityIndicator,
   ScrollView, StyleSheet, KeyboardAvoidingView, Platform, Keyboard, Pressable,
   Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useNavigation } from 'expo-router';
+import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { useUser } from '../../src/context/UserContext';
 import {
   getTermExplanation, getTermDepth, getTermExamples, getWordOfTheDay,
@@ -140,20 +141,61 @@ export default function LearnScreen() {
     setLoadingExamples(false); setStreamingExamples(false);
   };
 
+  /**
+   * Identifies the lookup currently on screen. Every new lookup and every
+   * clear bumps it, and the async writers below check it before touching
+   * state — otherwise a request the user has walked away from still lands,
+   * repopulating results they dismissed or pasting one term's depth under
+   * another's translation.
+   */
+  const runId = useRef(0);
+
+  /** Back to the empty state, abandoning whatever is on screen or in flight. */
+  const clearSearch = () => {
+    runId.current += 1;
+    reset();
+    setTerm('');
+    setLoading(false);
+    Keyboard.dismiss();
+  };
+
+  // A second tap on the Learn tab means "start over". Nothing else on this
+  // screen goes back: the search bar sits above the results rather than
+  // replacing them, so a term you looked up and decided against stays put
+  // until you save it or restart the app. Re-tapping the tab you are already
+  // on is where people reach for that, so it is what clears it.
+  const navigation = useNavigation<BottomTabNavigationProp<Record<string, undefined>>>();
+  useEffect(() => {
+    return navigation.addListener('tabPress', () => {
+      // Only a re-tap. Arriving from another tab should leave your lookup
+      // where you left it.
+      if (!navigation.isFocused()) return;
+      // Spelled out rather than reusing `isEmpty`: that is declared past the
+      // authLoading early return, so it does not exist on every render, and
+      // the success banner counts as something to clear even though it sits
+      // in the empty state.
+      if (loading || core || ambiguity || error || saveSuccess) clearSearch();
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [navigation, loading, core, ambiguity, error, saveSuccess]);
+
   const resolveExplanation = async (termValue: string, context?: string) => {
+    const run = ++runId.current;
     setLoading(true);
     reset();
     try {
       const result = await getTermExplanation(termValue, nativeLanguage ?? 'English', context, studyLanguage);
+      if (run !== runId.current) return;
       if ('ambiguous' in result && result.ambiguous) {
         setAmbiguity(result as TermAmbiguous);
       } else {
         setCore(result as TermCore);
       }
     } catch (e) {
+      if (run !== runId.current) return;
       setError(t(nativeLanguage, 'errorExplanation'));
     } finally {
-      setLoading(false);
+      if (run === runId.current) setLoading(false);
     }
   };
 
@@ -163,6 +205,7 @@ export default function LearnScreen() {
    * text, so what gets saved is what was tapped.
    */
   const showWordOfTheDay = (wotd: WordOfTheDay) => {
+    runId.current += 1;
     reset();
     setTerm(wotd.term);
     setCore(wordOfTheDayCore(wotd, studyLanguage));
@@ -180,6 +223,7 @@ export default function LearnScreen() {
 
   const handleLoadDepth = async () => {
     if (!core) return;
+    const run = runId.current;
     setLoadingDepth(true);
     setStreamingDepth(false);
     setDepth(null);
@@ -195,24 +239,26 @@ export default function LearnScreen() {
       let firstChunk = true;
       animateText(
         accRef, doneRef,
-        slice => setDepth(parseStreamedDepth(slice)),
-        () => setStreamingDepth(false),
+        slice => { if (run === runId.current) setDepth(parseStreamedDepth(slice)); },
+        () => { if (run === runId.current) setStreamingDepth(false); },
       );
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
         accRef.current += decoder.decode(value, { stream: true });
-        if (firstChunk) { firstChunk = false; setLoadingDepth(false); setStreamingDepth(true); }
+        if (firstChunk && run === runId.current) { firstChunk = false; setLoadingDepth(false); setStreamingDepth(true); }
       }
       doneRef.current = true;
     } catch {
       // Streaming can fail (offline, proxy buffering) — fall back to the
       // non-streamed endpoint so digging deeper still works.
       try {
-        setDepth(await getTermDepth(target.term, target.termLanguage, nativeLanguage ?? 'English', sense, studyLanguage));
+        const fallback = await getTermDepth(target.term, target.termLanguage, nativeLanguage ?? 'English', sense, studyLanguage);
+        if (run === runId.current) setDepth(fallback);
       } catch {
-        setError(t(nativeLanguage, 'errorLoadDepth'));
+        if (run === runId.current) setError(t(nativeLanguage, 'errorLoadDepth'));
       }
+      if (run !== runId.current) return;
       setLoadingDepth(false);
       setStreamingDepth(false);
     }
@@ -220,6 +266,7 @@ export default function LearnScreen() {
 
   const handleLoadExamples = async () => {
     if (!core) return;
+    const run = runId.current;
     setLoadingExamples(true);
     setStreamingExamples(false);
     setExamples(null);
@@ -236,24 +283,27 @@ export default function LearnScreen() {
       animateText(
         accRef, doneRef,
         slice => {
+          if (run !== runId.current) return;
           const parsed = parseStreamedExamples(slice, studyLanguage);
           if (parsed.length > 0) setExamples(parsed);
         },
-        () => setStreamingExamples(false),
+        () => { if (run === runId.current) setStreamingExamples(false); },
       );
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
         accRef.current += decoder.decode(value, { stream: true });
-        if (firstChunk) { firstChunk = false; setLoadingExamples(false); setStreamingExamples(true); }
+        if (firstChunk && run === runId.current) { firstChunk = false; setLoadingExamples(false); setStreamingExamples(true); }
       }
       doneRef.current = true;
     } catch {
       try {
-        setExamples(await getTermExamples(target.term, target.termLanguage, nativeLanguage ?? 'English', sense, studyLanguage));
+        const fallback = await getTermExamples(target.term, target.termLanguage, nativeLanguage ?? 'English', sense, studyLanguage);
+        if (run === runId.current) setExamples(fallback);
       } catch {
-        setError(t(nativeLanguage, 'errorLoadExamples'));
+        if (run === runId.current) setError(t(nativeLanguage, 'errorLoadExamples'));
       }
+      if (run !== runId.current) return;
       setLoadingExamples(false);
       setStreamingExamples(false);
     }
@@ -280,6 +330,9 @@ export default function LearnScreen() {
     setSaving(true);
     try {
       await saveFlashcardToFirestore({ ...(flashcardDraft as Omit<Flashcard, 'createdAt' | 'id'>), uid: user.uid }, studyLanguage);
+      // A save clears the screen like any other exit, so a depth or examples
+      // stream still running for this term must not write into the next one.
+      runId.current += 1;
       setShowSaveModal(false);
       setFlashcardDraft(null);
       setCore(null); setDepth(null); setExamples(null); setAmbiguity(null);
