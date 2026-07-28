@@ -247,6 +247,25 @@ export function collectSavedTerms(cards: CardSides[]): Set<string> {
   return terms;
 }
 
+/**
+ * Which of a pack's entries this account does not have a card for yet, or
+ * `null` when that is not knowable.
+ *
+ * The null is the point. Callers hold the saved set as `Set | null`, where null
+ * means the fetch is still in flight or has failed, and reading that as "none
+ * saved" enrolled whole decks on top of themselves — one account ended up with
+ * all 71 katakana cards twice. Propagating the unknown instead of collapsing it
+ * to an empty set makes the caller answer for it, which a comment asking them
+ * to check first does not.
+ */
+export function unsavedPackCards(
+  pack: CardPack,
+  savedTerms: ReadonlySet<string> | null,
+): PackCard[] | null {
+  if (savedTerms === null) return null;
+  return pack.cards.filter(card => !savedTerms.has(card.study.toLowerCase()));
+}
+
 /** How many of a pack's entries the user already has a card for. */
 export function countSavedPackTerms(pack: VocabPack, savedTerms: Set<string>): number {
   return getPackTerms(pack).filter(term => savedTerms.has(term.toLowerCase())).length;

@@ -3,7 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Alert 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import {
-  buildPackCardDraft, collectSavedTerms, getCollectionId, getPackText, getPackTerms,
+  buildPackCardDraft, collectSavedTerms, unsavedPackCards, getCollectionId, getPackText, getPackTerms,
   getStudyLanguageConfig,
   getBackSideConfig, getStudyLangSide, getVocabPack, t,
 } from '@amgi/core';
@@ -33,6 +33,7 @@ export default function DeckDetailScreen() {
   const [cards, setCards] = useState<Flashcard[] | null>(null);
   const [savingTerm, setSavingTerm] = useState<string | null>(null);
   const [enrolling, setEnrolling] = useState(false);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [manageTerm, setManageTerm] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState<string | null>(null);
@@ -40,8 +41,11 @@ export default function DeckDetailScreen() {
   const loadCards = useCallback(() => {
     if (!user) { setCards(null); return; }
     fetchAllUserFlashcards(user.uid, studyLanguage)
-      .then(setCards)
-      .catch(() => {}); // saved-marking is a nicety — browsing still works
+      .then(fetched => { setCards(fetched); setLoadFailed(false); })
+      // Browsing still works without this, but enrolling does not: a failure
+      // used to be swallowed, leaving the deck looking empty and the enrol
+      // button primed to add every card a second time.
+      .catch(() => setLoadFailed(true));
   }, [user, studyLanguage]);
 
   useEffect(loadCards, [loadCards]);
@@ -51,6 +55,17 @@ export default function DeckDetailScreen() {
   // only a card this deck produced belongs to this deck — one you looked up is
   // yours, and stays on My Cards.
   const savedTerms = useMemo(() => cards && collectSavedTerms(cards), [cards]);
+
+  /**
+   * Whether we actually know what this account has already saved.
+   *
+   * `savedTerms` is null while the fetch is in flight and after it fails, and
+   * the enrol path read that as "nothing is saved" — so a tap before the load
+   * landed, or any failed load, enrolled the entire deck on top of itself. One
+   * account ended up with all 71 katakana cards twice that way. Not knowing has
+   * to block the write, not wave it through.
+   */
+  const knowsSaved = savedTerms !== null;
   const deckCards = useMemo(() => {
     const byTerm = new Map<string, Flashcard>();
     for (const card of cards ?? []) {
@@ -95,6 +110,9 @@ export default function DeckDetailScreen() {
   const handleSaveCard = async (card: PackCard) => {
     if (savingTerm || savedTerms?.has(card.study.toLowerCase())) return;
     if (!user) { setError(t(nativeLanguage, 'signInToSave')); return; }
+    // Same reasoning as the deck enrol: without the saved set we cannot tell a
+    // new card from one already held, and a duplicate costs more than a wait.
+    if (!knowsSaved) { setError(t(nativeLanguage, 'deckCardsUnavailable')); return; }
     setSavingTerm(card.study);
     try {
       const draft = buildPackCardDraft(card, pack.id, user.uid, studyLanguage);
@@ -120,7 +138,8 @@ export default function DeckDetailScreen() {
   const handleReviewDeck = async () => {
     if (pack.kind !== 'cards') return;
     if (!user) { setError(t(nativeLanguage, 'signInToSave')); return; }
-    const unsaved = pack.cards.filter(card => !savedTerms?.has(card.study.toLowerCase()));
+    const unsaved = unsavedPackCards(pack, savedTerms);
+    if (unsaved === null) { setError(t(nativeLanguage, 'deckCardsUnavailable')); return; }
     if (unsaved.length > 0) {
       setEnrolling(true);
       try {
@@ -248,9 +267,11 @@ export default function DeckDetailScreen() {
         {pack.kind === 'cards' && (
           <View style={s.actionRow}>
             <TouchableOpacity
-              style={[s.reviewBtn, enrolling && s.btnDisabled]}
+              style={[s.reviewBtn, (enrolling || (!!user && !knowsSaved)) && s.btnDisabled]}
               onPress={handleReviewDeck}
-              disabled={enrolling}
+              // Signed out is not the same as still loading: that case keeps
+              // the button live so the tap can explain itself.
+              disabled={enrolling || (!!user && !knowsSaved)}
             >
               <Text style={s.reviewBtnText}>
                 {enrolling ? t(nativeLanguage, 'deckEnrolling') : t(nativeLanguage, 'deckReviewDeck')}
@@ -265,6 +286,12 @@ export default function DeckDetailScreen() {
           </View>
         )}
 
+        {/* A failed load leaves the deck looking empty, which reads as "nothing
+            saved yet" — say so, rather than letting it be discovered by
+            enrolling a second copy. */}
+        {loadFailed && !error && (
+          <Text style={s.error}>{t(nativeLanguage, 'deckCardsUnavailable')}</Text>
+        )}
         {error && <Text style={s.error}>{error}</Text>}
 
         {/* Management for one entry. Inline above the list rather than a control

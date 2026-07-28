@@ -6,6 +6,7 @@ import {
   countSavedPackTerms,
   getVocabPack,
   getVocabPacks,
+  unsavedPackCards,
   SUPPORTED_STUDY_LANGUAGES,
 } from '@amgi/core';
 import type { CardSides } from '@amgi/core';
@@ -53,6 +54,34 @@ describe('collectSavedTerms', () => {
     const terms = collectSavedTerms(mixed);
     expect(terms.has('か')).toBe(true);
     expect(terms.has('갈등')).toBe(true);
+  });
+});
+
+describe('unsavedPackCards', () => {
+  const pack = HIRAGANA_PACK;
+
+  it('returns the entries not already held', () => {
+    const saved = new Set(['あ', 'い']);
+    const unsaved = unsavedPackCards(pack, saved)!;
+    expect(unsaved).toHaveLength(pack.cards.length - 2);
+    expect(unsaved.map(c => c.study)).not.toContain('あ');
+  });
+
+  it('returns everything when the account genuinely has none', () => {
+    expect(unsavedPackCards(pack, new Set())).toHaveLength(pack.cards.length);
+  });
+
+  // The regression. A null saved-set means the fetch is in flight or failed,
+  // and the enrol path used to read it as "nothing saved" and re-add the whole
+  // deck — one account ended up holding all 71 katakana cards twice. Unknown
+  // has to stay unknown all the way to the caller.
+  it('refuses to answer when the saved set is unknown', () => {
+    expect(unsavedPackCards(pack, null)).toBeNull();
+  });
+
+  it('matches case-insensitively, as saved terms are stored', () => {
+    const englishPack = { ...pack, cards: [{ study: 'Comply', back: { English: 'x', Korean: 'ㅇ' } }] };
+    expect(unsavedPackCards(englishPack, new Set(['comply']))).toHaveLength(0);
   });
 });
 

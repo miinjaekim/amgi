@@ -22,6 +22,7 @@ import {
   getCollectionId,
   getPackText,
   getPackTerms,
+  unsavedPackCards,
   getStudyLanguageConfig,
   getBackSideConfig,
   getStudyLangSide,
@@ -46,13 +47,17 @@ export default function DeckDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [manageTerm, setManageTerm] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState<string | null>(null);
+  const [loadFailed, setLoadFailed] = useState(false);
 
   const loadCards = useCallback(() => {
     if (!user) { setCards(null); return () => {}; }
     let cancelled = false;
     fetchAllUserFlashcards(user.uid, studyLanguage)
-      .then(fetched => { if (!cancelled) setCards(fetched); })
-      .catch(() => {}); // saved-marking is a nicety — browsing still works
+      .then(fetched => { if (!cancelled) { setCards(fetched); setLoadFailed(false); } })
+      // Browsing still works without this, but enrolling does not: a failure
+      // used to be swallowed, leaving the deck looking empty and the enrol
+      // button primed to add every card a second time.
+      .catch(() => { if (!cancelled) setLoadFailed(true); });
     return () => { cancelled = true; };
   }, [user, studyLanguage]);
 
@@ -63,6 +68,17 @@ export default function DeckDetailPage() {
   // only a card this deck produced belongs to this deck — one you looked up is
   // yours, and stays on My Cards.
   const savedTerms = useMemo(() => cards && collectSavedTerms(cards), [cards]);
+
+  /**
+   * Whether we actually know what this account has already saved.
+   *
+   * `savedTerms` is null while the fetch is in flight and after it fails, and
+   * the enrol path read that as "nothing is saved" — so a tap before the load
+   * landed, or any failed load, enrolled the entire deck on top of itself. One
+   * account ended up with all 71 katakana cards twice that way. Not knowing has
+   * to block the write, not wave it through.
+   */
+  const knowsSaved = savedTerms !== null;
   const deckCards = useMemo(() => {
     const byTerm = new Map<string, Flashcard>();
     for (const card of cards ?? []) {
@@ -106,6 +122,9 @@ export default function DeckDetailPage() {
   async function handleSaveCard(card: PackCard) {
     if (!pack || savingTerm || savedTerms?.has(card.study.toLowerCase())) return;
     if (!user) { setError(t(nativeLanguage, 'signInToSave')); return; }
+    // Same reasoning as the deck enrol: without the saved set we cannot tell a
+    // new card from one already held, and a duplicate costs more than a wait.
+    if (!knowsSaved) { setError(t(nativeLanguage, 'deckCardsUnavailable')); return; }
     setSavingTerm(card.study);
     try {
       const draft = buildPackCardDraft(card, pack.id, user.uid, studyLanguage);
@@ -131,7 +150,8 @@ export default function DeckDetailPage() {
   async function handleReviewDeck() {
     if (!pack || pack.kind !== 'cards') return;
     if (!user) { setError(t(nativeLanguage, 'signInToSave')); return; }
-    const unsaved = pack.cards.filter(card => !savedTerms?.has(card.study.toLowerCase()));
+    const unsaved = unsavedPackCards(pack, savedTerms);
+    if (unsaved === null) { setError(t(nativeLanguage, 'deckCardsUnavailable')); return; }
     if (unsaved.length > 0) {
       setEnrolling(true);
       try {
@@ -249,7 +269,9 @@ export default function DeckDetailPage() {
         <div className="flex gap-3 mb-6 flex-wrap">
           <button
             onClick={handleReviewDeck}
-            disabled={enrolling}
+            // Signed out is not the same as still loading: that case keeps the
+            // button live so the click can explain itself.
+            disabled={enrolling || (!!user && !knowsSaved)}
             className="px-5 py-2.5 rounded-lg font-semibold bg-[var(--color-highlight)] text-[var(--color-bg)] hover:bg-[var(--color-text)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {enrolling ? t(nativeLanguage, 'deckEnrolling') : t(nativeLanguage, 'deckReviewDeck')}
@@ -260,6 +282,15 @@ export default function DeckDetailPage() {
           >
             {t(nativeLanguage, 'drillLink')}
           </Link>
+        </div>
+      )}
+
+      {/* A failed load leaves the deck looking empty, which reads as "nothing
+          saved yet" — say so, rather than letting it be discovered by enrolling
+          a second copy. */}
+      {loadFailed && !error && (
+        <div className="mb-4 p-3 rounded-lg text-sm bg-[var(--color-muted)]/30 text-[var(--color-text)]">
+          {t(nativeLanguage, 'deckCardsUnavailable')}
         </div>
       )}
 
