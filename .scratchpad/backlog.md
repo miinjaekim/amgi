@@ -85,10 +85,18 @@ here is what those two now *show*.
       133 words). *Principles (2026-07-13):* audience is not beginners; packs
       unlock domains, never "starter" anything; curated from real sources, not
       AI-generated; word lists need user approval before shipping.
-      *Next:* daily-draw UX; section themes as filters; more packs (TOEFL,
-      TOPIK, and a JLPT pack pairs naturally with the Japanese work above);
-      pre-authored content instead of per-word Gemini calls. Draft:
+      *Next:* daily-draw UX; section themes as filters; more packs (TOEFL, and
+      a JLPT pack pairs naturally with the Japanese work above); pre-authored
+      content instead of per-word Gemini calls. Drafts:
       `docs/packs/toeic-pack-draft.md`.
+
+- [ ] **TOPIK 고급 pack — approve the word list** — 160 words for TOPIK II
+      5–6급, the first Korean pack, written to the same filter as TOEIC.
+      Awaiting the approval step the principles above call for: read
+      `docs/packs/topik-pack-draft.md` and cut/add. Open there too — whether
+      고급-only is the right cut or a `topik-intermediate` companion is needed,
+      and whether the phrase entries (관용구, 이에 따라) read well as Learn
+      results, which no pack had exercised before this one.
 
 - [ ] **Drill for lookup packs** — lowered from High 2026-07-25: the payoff is
       thin. Drill currently reads the pack, so only `cards` packs (the kana) have

@@ -1,6 +1,7 @@
 import type { CardSides, StudyLanguage } from './types';
 import { getStudyLanguageConfig } from './types';
 import { HIRAGANA_PACK, KATAKANA_PACK } from './kana';
+import { TOPIK_ADVANCED_PACK } from './topik';
 
 /**
  * Curated packs — pools a user draws from over time. Two kinds, because two
@@ -219,6 +220,7 @@ const TOEIC_PACK: LookupPack = {
 export const VOCAB_PACKS: Partial<Record<StudyLanguage, VocabPack[]>> = {
   English: [TOEIC_PACK],
   Japanese: [HIRAGANA_PACK, KATAKANA_PACK],
+  Korean: [TOPIK_ADVANCED_PACK],
 };
 
 export function getVocabPacks(studyLanguage: StudyLanguage): VocabPack[] {

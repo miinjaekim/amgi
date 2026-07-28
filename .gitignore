@@ -51,7 +51,10 @@ next-env.d.ts
 
 # local data / docs / assets not tracked in git
 apps/web/data/
-docs/
+# `docs/*`, not `docs/`: git never descends into an excluded *directory*, so
+# the re-include below silently did nothing and the TOEIC draft was only
+# tracked because it was force-added.
+docs/*
 # ...except curated pack source drafts, which tracked code references
 !docs/packs/
 !docs/packs/**
