@@ -231,6 +231,7 @@ const translations = {
     deckReviewDeck: 'Review this deck',
     deckEnrolling: 'Adding the rest of the deck…',
     deckEnrollError: 'Could not add the rest of the deck. Try again.',
+    deckCardsUnavailable: "Could not check which cards you already have. Reload before adding the deck, or it may be added twice.",
     deckManageHint: 'Cards from this deck are managed here rather than on My Cards.',
     // Deck drill
     drillLink: 'Drill',
@@ -480,6 +481,7 @@ const translations = {
     deckReviewDeck: '이 단어팩 복습하기',
     deckEnrolling: '남은 카드를 추가하는 중…',
     deckEnrollError: '남은 카드를 추가하지 못했어요. 다시 시도해 주세요.',
+    deckCardsUnavailable: '이미 가지고 있는 카드를 확인할 수 없어요. 덱이 중복으로 추가될 수 있으니 새로고침한 뒤 다시 시도해 주세요.',
     deckManageHint: '이 단어팩의 카드는 내 카드가 아니라 여기에서 관리해요.',
     // Deck drill
     drillLink: '연습하기',
