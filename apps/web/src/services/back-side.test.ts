@@ -3,6 +3,7 @@ import {
   SUPPORTED_STUDY_LANGUAGES,
   getBackSide,
   getBackSideConfig,
+  getTermBackSide,
   getStudyLanguageConfig,
   directionLabel,
   directionPrompt,
@@ -89,6 +90,36 @@ describe('getBackSide', () => {
 
   it('returns empty rather than throwing on a card with no back at all', () => {
     expect(getBackSide({ studyLanguage: 'Japanese', japanese: '食べる' }, 'Korean')).toBe('');
+  });
+});
+
+// A looked-up term is not a card: it carries `termLanguage`, and it comes from
+// whatever /api/explain is deployed rather than from our own writes. Both of
+// those cost a bug — the Learn screen rendered "번역이 없습니다" for a Korean
+// native studying Japanese, because production still returned `english` only.
+describe('getTermBackSide', () => {
+  const fromCurrentApi = {
+    term: '食べる',
+    japanese: '食べる',
+    english: 'to eat',
+    korean: '먹다',
+  };
+
+  it('prefers the native side when the model returned one', () => {
+    expect(getTermBackSide(fromCurrentApi, 'Japanese', 'Korean')).toBe('먹다');
+    expect(getTermBackSide(fromCurrentApi, 'Japanese', 'English')).toBe('to eat');
+  });
+
+  // The regression. An API older than this code returns no `korean` field at
+  // all, and a term with no translation shown is worse than one shown in
+  // English.
+  it('shows english when the deployed API has no native side', () => {
+    const fromOlderApi = { term: '食べる', japanese: '食べる', english: 'to eat' };
+    expect(getTermBackSide(fromOlderApi, 'Japanese', 'Korean')).toBe('to eat');
+  });
+
+  it('is empty only when the term genuinely has no back', () => {
+    expect(getTermBackSide({ term: '食べる', japanese: '食べる' }, 'Japanese', 'Korean')).toBe('');
   });
 });
 

@@ -327,6 +327,25 @@ export function getBackSide(card: CardSides, nativeLanguage?: string | null): st
   return card[backField] || card.english || card.translation || '';
 }
 
+/**
+ * The back-side text of a term that was just looked up.
+ *
+ * Card-shaped `getBackSide` cannot serve this: a `TermCore` carries
+ * `termLanguage` — the language the user typed in — where a card carries
+ * `studyLanguage`, so the pair has to be passed rather than read off the value.
+ * The `english` fallback is the same one and exists for a sharper reason here:
+ * nothing guarantees the model filled the native slot. An API deployment older
+ * than this code will not, and the term must still show a translation.
+ */
+export function getTermBackSide(
+  core: CardSides,
+  studyLanguage?: StudyLanguage,
+  nativeLanguage?: string | null
+): string {
+  const { backField } = getBackSideConfig(studyLanguage, nativeLanguage);
+  return core[backField] || core.english || core.translation || '';
+}
+
 /** Returns the study-language text from an example pair. */
 export function getExampleStudyLangText(ex: ExamplePair, studyLanguage?: StudyLanguage): string {
   if (studyLanguage) return ex[getStudyLanguageConfig(studyLanguage).studyField] ?? '';

@@ -11,7 +11,7 @@ import {
 } from '@/services/gemini';
 import Markdown from '@/components/Markdown';
 import { saveFlashcardToFirestore, Flashcard } from '@/services/firestore';
-import { getBackSideConfig, getCharacterBreakdown, getExampleSides, getReading, getStudyLanguageConfig, parseStreamedExamples, parseStreamedDepth, wordOfTheDayCore } from '@amgi/core';
+import { getBackSideConfig, getTermBackSide, getCharacterBreakdown, getExampleSides, getReading, getStudyLanguageConfig, parseStreamedExamples, parseStreamedDepth, wordOfTheDayCore } from '@amgi/core';
 import type { WordOfTheDay } from '@amgi/core';
 import { useUser } from '@/components/UserContext';
 import { t } from '@/lib/i18n';
@@ -315,7 +315,7 @@ export default function Home() {
 
   const translation = core
     ? (core.termLanguage === studyLanguage
-        ? core[backConfig.backField] || core.english
+        ? getTermBackSide(core, studyLanguage, nativeLanguage)
         : core[langConfig.studyField]) || core.translation
     : null;
 
@@ -563,7 +563,7 @@ export default function Home() {
               const backSide =
                 core.termLanguage === backConfig.backLanguage
                   ? core.term
-                  : (core[backConfig.backField] || core.english || '');
+                  : getTermBackSide(core, studyLanguage, nativeLanguage);
 
               setFlashcardDraft({
                 ...core,

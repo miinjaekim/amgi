@@ -13,7 +13,8 @@ import {
   streamTermDepth, streamTermExamples,
 } from '../../src/services/gemini';
 import {
-  getCharacterBreakdown, getDepthTarget, getReading, getStudyLanguageConfig, getBackSideConfig, getExampleSides,
+  getCharacterBreakdown, getDepthTarget, getReading, getStudyLanguageConfig, getBackSideConfig,
+  getTermBackSide, getExampleSides,
   parseStreamedDepth, parseStreamedExamples, wordOfTheDayCore,
 } from '@amgi/core';
 import type { StudyLanguage } from '@amgi/core';
@@ -313,7 +314,9 @@ export default function LearnScreen() {
   const handleOpenSave = () => {
     if (!core) return;
     const studySide = core.termLanguage === studyLanguage ? core.term : (core[langConfig.studyField] ?? '');
-    const backSide = core.termLanguage === backConfig.backLanguage ? core.term : (core[backConfig.backField] ?? '');
+    const backSide = core.termLanguage === backConfig.backLanguage
+      ? core.term
+      : getTermBackSide(core, studyLanguage, nativeLanguage);
     setFlashcardDraft({
       ...core,
       ...(depth ?? {}),
@@ -355,7 +358,9 @@ export default function LearnScreen() {
   };
 
   const translation = core
-    ? (core.termLanguage === studyLanguage ? core[backConfig.backField] : core[langConfig.studyField]) || core.translation
+    ? (core.termLanguage === studyLanguage
+        ? getTermBackSide(core, studyLanguage, nativeLanguage)
+        : core[langConfig.studyField]) || core.translation
     : null;
 
   if (authLoading) {

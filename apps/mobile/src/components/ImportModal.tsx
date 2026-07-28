@@ -161,7 +161,7 @@ export default function ImportModal({ studyLanguage, onClose, onSaved }: Props) 
                           {item.status === 'ambiguous' && <Text style={s.itemMeta}>{t(nativeLanguage, 'importStatusAmbiguous')}</Text>}
                           {item.status === 'success' && item.data && (
                             <Text style={s.itemMeta} numberOfLines={1}>
-                              {item.data[langConfig.studyField]} · {item.data[backConfig.backField]}
+                              {item.data[langConfig.studyField]} · {item.data[backConfig.backField] || item.data.english}
                             </Text>
                           )}
                         </View>
