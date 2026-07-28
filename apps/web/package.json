@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint .",
     "test": "vitest",
-    "backfill:pack-backs": "tsx --env-file=.env.local scripts/backfill-pack-backs.ts"
+    "backfill:pack-backs": "tsx --env-file=.env.local scripts/backfill-pack-backs.ts",
+    "dedupe:pack-cards": "tsx --env-file=.env.local scripts/dedupe-pack-cards.ts"
   },
   "dependencies": {
     "@amgi/core": "*",
