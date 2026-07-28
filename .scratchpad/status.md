@@ -402,6 +402,17 @@ _Reconciled against `main` @ `6e9f3e9` on 2026-07-24, plus the 1.0.2 release cut
   that space back instead of squeezing content into an overlap. Both platforms
   show a skeleton at the WOTD tile's real height while it loads, which removes
   the reflow that caused the overlap in the first place.
+- **Direction choice on mobile Review** (PR #65, 2026-07-28) — mobile served
+  both directions with no way to pick; web has had chips since the collection
+  picker landed. Mobile gained a start screen after the collection pick, rather
+  than pills on the picker itself: the picker is skipped for single-collection
+  users and for the deck handoff, so pills there would be invisible to exactly
+  the people studying one deck. Worth one tap. Per-session and reset to `both`
+  with the collection — a `reviewDirection` on the user doc was rejected as a
+  schema change plus offline-write handling for a one-second choice. The queue
+  moved to `packages/core/src/reviewQueue.ts` beside the drill queue (12 tests)
+  because it existed twice after this and the copies would have drifted the way
+  `isDue` did.
 
 ## Builds
 
