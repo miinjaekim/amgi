@@ -4,7 +4,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import {
   buildPackCardDraft, collectSavedTerms, getCollectionId, getPackText, getPackTerms,
-  getStudyLanguageConfig, getStudyLangSide, getVocabPack, t,
+  getStudyLanguageConfig,
+  getBackSideConfig, getStudyLangSide, getVocabPack, t,
 } from '@amgi/core';
 import type { PackCard } from '@amgi/core';
 import { useUser } from '../../../../src/context/UserContext';
@@ -25,6 +26,9 @@ export default function DeckDetailScreen() {
   const s = useMemo(() => makeStyles(C, tabBarHeight), [C, tabBarHeight]);
   const { user, nativeLanguage, studyLanguage } = useUser();
   const config = getStudyLanguageConfig(studyLanguage);
+  const backConfig = getBackSideConfig(studyLanguage, nativeLanguage);
+  /** The pack's authored back, in the language this reader wants it. */
+  const packBack = (card: PackCard) => getPackText(card.back, nativeLanguage);
   const pack = getVocabPack(studyLanguage, packId);
   const [cards, setCards] = useState<Flashcard[] | null>(null);
   const [savingTerm, setSavingTerm] = useState<string | null>(null);
@@ -142,7 +146,7 @@ export default function DeckDetailScreen() {
     const card = deckCards.get(term.toLowerCase());
     if (!card) return;
     setManageTerm(term);
-    setEditDraft(card[config.backField] ?? card.translation ?? '');
+    setEditDraft(card[backConfig.backField] ?? card.english ?? card.translation ?? '');
     setError(null);
   };
 
@@ -156,7 +160,7 @@ export default function DeckDetailScreen() {
   const handleManageSave = async () => {
     if (!managed?.id || editDraft === null) return;
     try {
-      await updateFlashcardFields(managed.id, { [config.backField]: editDraft }, studyLanguage);
+      await updateFlashcardFields(managed.id, { [backConfig.backField]: editDraft }, studyLanguage);
       loadCards();
       closeManage();
     } catch {
@@ -274,7 +278,7 @@ export default function DeckDetailScreen() {
                 <Text style={s.manageBadge}>{t(nativeLanguage, 'cardsFilterArchived')}</Text>
               )}
             </View>
-            <Text style={s.manageLabel}>{t(nativeLanguage, config.backLabelKey)}</Text>
+            <Text style={s.manageLabel}>{t(nativeLanguage, backConfig.backLabelKey)}</Text>
             <TextInput
               style={s.manageInput}
               value={editDraft ?? ''}
@@ -344,12 +348,12 @@ export default function DeckDetailScreen() {
                     disabled={saved && !owned}
                     style={s.cardTapArea}
                     accessibilityLabel={owned
-                      ? `Manage the card for ${card.study} (${card.back})`
-                      : `Save ${card.study} (${card.back}) as a card`}
+                      ? `Manage the card for ${card.study} (${packBack(card)})`
+                      : `Save ${card.study} (${packBack(card)}) as a card`}
                   >
                     <Text style={s.cardStudy}>{card.study}</Text>
                     <Text style={s.cardBack}>
-                      {owned ? (owned[config.backField] ?? card.back) : card.back}{saved ? ' ✓' : ''}
+                      {owned ? (owned[backConfig.backField] ?? packBack(card)) : packBack(card)}{saved ? ' ✓' : ''}
                     </Text>
                   </TouchableOpacity>
                   {pack.pronounceable && (

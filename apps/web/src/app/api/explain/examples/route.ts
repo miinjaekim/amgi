@@ -1,6 +1,6 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { NextRequest, NextResponse } from 'next/server';
-import { getStudyLanguageConfig } from '@amgi/core';
+import { getStudyLanguageConfig, getBackSideConfig } from '@amgi/core';
 
 function stripMarkdownCodeBlock(text: string): string {
   return text.replace(/```[a-zA-Z]*\n?|```/g, '').trim();
@@ -22,6 +22,10 @@ export async function POST(req: NextRequest) {
   const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash', generationConfig: { temperature: 0.4 } });
 
   const config = getStudyLanguageConfig(studyLanguage);
+  // This route always asked for translations in the native language; before
+  // backs were native-aware it then stored them under `english`, so a Korean
+  // learner's example translations were Korean sitting in the English field.
+  const back = getBackSideConfig(studyLanguage, nativeLanguage);
   const isStudyLang = termLanguage === config.code;
 
   const hasSense = (typeof translation === 'string' && translation.trim()) || (typeof briefDefinition === 'string' && briefDefinition.trim());
@@ -33,13 +37,13 @@ export async function POST(req: NextRequest) {
 ${senseNote}
 Each example must have:
 - "${config.studyField}": ${isStudyLang ? `a natural ${config.code} sentence using the term` : `the ${config.code} translation of the example sentence`}
-- "${config.backField}": ${isStudyLang ? `a ${nativeLanguage} translation of the ${config.code} sentence` : `the original ${config.backLanguage} sentence using the term`}
+- "${back.backField}": ${isStudyLang ? `a ${nativeLanguage} translation of the ${config.code} sentence` : `the original ${back.backLanguage} sentence using the term`}
 
 Respond with only this JSON:
 {
   "examples": [
-    { "${config.studyField}": "...", "${config.backField}": "..." },
-    { "${config.studyField}": "...", "${config.backField}": "..." }
+    { "${config.studyField}": "...", "${back.backField}": "..." },
+    { "${config.studyField}": "...", "${back.backField}": "..." }
   ]
 }`;
 

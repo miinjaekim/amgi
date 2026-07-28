@@ -1,6 +1,6 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { NextRequest } from 'next/server';
-import { getStudyLanguageConfig } from '@amgi/core';
+import { getStudyLanguageConfig, getBackSideConfig } from '@amgi/core';
 
 export async function POST(req: NextRequest) {
   const { term, termLanguage, nativeLanguage = 'English', studyLanguage = 'Korean', translation, briefDefinition } = await req.json();
@@ -18,7 +18,8 @@ export async function POST(req: NextRequest) {
   const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash', generationConfig: { temperature: 0.4 } });
 
   const config = getStudyLanguageConfig(studyLanguage);
-  const line = `{"${config.studyField}":"<${config.code} sentence>","${config.backField}":"<${nativeLanguage} translation>"}`;
+  const { backField } = getBackSideConfig(studyLanguage, nativeLanguage);
+  const line = `{"${config.studyField}":"<${config.code} sentence>","${backField}":"<${nativeLanguage} translation>"}`;
 
   const hasSense = (typeof translation === 'string' && translation.trim()) || (typeof briefDefinition === 'string' && briefDefinition.trim());
   const senseNote = hasSense

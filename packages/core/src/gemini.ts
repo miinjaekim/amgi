@@ -29,7 +29,11 @@ export async function getWordOfTheDay(
  * (per STUDY_LANGUAGE_CONFIGS) are present — tolerant of partial lines
  * while the stream is still arriving.
  */
-export function parseStreamedExamples(text: string, studyLanguage: StudyLanguage = 'Korean'): ExamplePair[] {
+export function parseStreamedExamples(
+  text: string,
+  studyLanguage: StudyLanguage = 'Korean',
+  nativeLanguage?: string | null
+): ExamplePair[] {
   return text
     .split('\n')
     .map(l => l.trim())
@@ -37,7 +41,7 @@ export function parseStreamedExamples(text: string, studyLanguage: StudyLanguage
     .flatMap(line => {
       try {
         const parsed = JSON.parse(line);
-        const sides = getExampleSides(parsed, studyLanguage);
+        const sides = getExampleSides(parsed, studyLanguage, nativeLanguage);
         if (sides.study && sides.back) return [parsed as ExamplePair];
       } catch {}
       return [];

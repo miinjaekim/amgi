@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import {
   DRILL_SIZES, advanceDrillQueue, drillAnswer, drillPrompt, drillSpokenText,
-  getPackText, getStudyLanguageConfig, getVocabPack, startDrillQueue, t,
+  getPackText, getStudyLanguageConfig, getVocabPack, startDrillQueue, directionLabel, t,
 } from '@amgi/core';
 import type { DrillDirection, PackCard } from '@amgi/core';
 import { useUser } from '../../../src/context/UserContext';
@@ -85,9 +85,7 @@ export default function DrillScreen() {
                 style={[s.pill, direction === dir && s.pillOn]}
               >
                 <Text style={[s.pillText, direction === dir && s.pillTextOn]}>
-                  {t(nativeLanguage, dir === 'studyToBack'
-                    ? langConfig.directionFrontToBackKey
-                    : langConfig.directionBackToFrontKey)}
+                  {directionLabel(nativeLanguage, studyLanguage, dir === 'studyToBack' ? 'frontToBack' : 'backToFront')}
                 </Text>
               </TouchableOpacity>
             ))}
@@ -168,13 +166,13 @@ export default function DrillScreen() {
 
       <View style={s.body}>
         <View style={s.card}>
-          <Text style={s.prompt}>{drillPrompt(current, direction)}</Text>
+          <Text style={s.prompt}>{drillPrompt(current, direction, nativeLanguage)}</Text>
           {/* The answer and the pronounce button are always in the layout and
               only toggle visibility. Mounting them on reveal grew the card by a
               whole button, which pushed the grading row down — the answer text
               alone was never the thing that moved. */}
           <Text style={[s.answer, !revealed && s.hidden]}>
-            {revealed ? drillAnswer(current, direction) : ' '}
+            {revealed ? drillAnswer(current, direction, nativeLanguage) : ' '}
           </Text>
           {pack.pronounceable && (
             <View style={!revealed && s.hidden} pointerEvents={revealed ? 'auto' : 'none'}>

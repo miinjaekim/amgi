@@ -3,7 +3,7 @@ import {
   Modal, View, Text, TextInput, TouchableOpacity,
   StyleSheet, KeyboardAvoidingView, Platform, ActivityIndicator,
 } from 'react-native';
-import { t, getStudyLanguageConfig } from '@amgi/core';
+import { t, getStudyLanguageConfig, getBackSideConfig } from '@amgi/core';
 import type { StudyLanguage, CardSideField } from '@amgi/core';
 import { useTheme } from '../context/ThemeContext';
 import type { Palette } from '../theme';
@@ -23,6 +23,7 @@ export default function SaveFlashcardModal({ draft, nativeLanguage, studyLanguag
   const { C } = useTheme();
   const s = useMemo(() => makeStyles(C), [C]);
   const config = getStudyLanguageConfig(studyLanguage);
+  const backConfig = getBackSideConfig(studyLanguage, nativeLanguage);
   return (
     <Modal visible transparent animationType="fade" onRequestClose={onClose}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={s.flex}>
@@ -39,11 +40,11 @@ export default function SaveFlashcardModal({ draft, nativeLanguage, studyLanguag
               returnKeyType="next"
             />
 
-            <Text style={s.label}>{t(nativeLanguage, config.backLabelKey)}</Text>
+            <Text style={s.label}>{t(nativeLanguage, backConfig.backLabelKey)}</Text>
             <TextInput
               style={s.input}
-              value={draft[config.backField] ?? ''}
-              onChangeText={v => onChange(config.backField, v)}
+              value={draft[backConfig.backField] ?? ''}
+              onChangeText={v => onChange(backConfig.backField, v)}
               returnKeyType="done"
               onSubmitEditing={onSave}
             />

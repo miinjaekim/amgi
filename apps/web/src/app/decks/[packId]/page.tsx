@@ -23,6 +23,7 @@ import {
   getPackText,
   getPackTerms,
   getStudyLanguageConfig,
+  getBackSideConfig,
   getStudyLangSide,
   getVocabPack,
 } from '@amgi/core';
@@ -36,6 +37,9 @@ export default function DeckDetailPage() {
   const { user, nativeLanguage, studyLanguage } = useUser();
   const pack = getVocabPack(studyLanguage, packId);
   const langConfig = getStudyLanguageConfig(studyLanguage);
+  const backConfig = getBackSideConfig(studyLanguage, nativeLanguage);
+  /** The pack's authored back, in the language this reader wants it. */
+  const packBack = (card: PackCard) => getPackText(card.back, nativeLanguage);
   const [cards, setCards] = useState<Flashcard[] | null>(null);
   const [savingTerm, setSavingTerm] = useState<string | null>(null);
   const [enrolling, setEnrolling] = useState(false);
@@ -151,7 +155,7 @@ export default function DeckDetailPage() {
     const card = deckCards.get(term.toLowerCase());
     if (!card) return;
     setManageTerm(term);
-    setEditDraft(card[langConfig.backField] ?? card.translation ?? '');
+    setEditDraft(card[backConfig.backField] ?? card.english ?? card.translation ?? '');
     setError(null);
   }
 
@@ -166,7 +170,7 @@ export default function DeckDetailPage() {
     if (!managed?.id || editDraft === null) return;
     try {
       await updateDoc(doc(db, getCardsCollection(studyLanguage), managed.id), {
-        [langConfig.backField]: editDraft,
+        [backConfig.backField]: editDraft,
       });
       loadCards();
       closeManage();
@@ -280,7 +284,7 @@ export default function DeckDetailPage() {
           </div>
           <div>
             <label className="block text-xs font-semibold text-[var(--color-muted)] mb-1">
-              {t(nativeLanguage, langConfig.backLabelKey)}
+              {t(nativeLanguage, backConfig.backLabelKey)}
             </label>
             <input
               type="text"
@@ -373,12 +377,12 @@ export default function DeckDetailPage() {
                   disabled={saved && !owned}
                   className="w-full flex flex-col items-center rounded hover:bg-[var(--color-muted)]/30 disabled:hover:bg-transparent"
                   aria-label={owned
-                    ? `Manage the card for ${card.study} (${card.back})`
-                    : `Save ${card.study} (${card.back}) as a card`}
+                    ? `Manage the card for ${card.study} (${packBack(card)})`
+                    : `Save ${card.study} (${packBack(card)}) as a card`}
                 >
                   <span className="text-2xl leading-tight text-[var(--color-text)]">{card.study}</span>
                   <span className="text-[10px] leading-tight text-[var(--color-muted)]">
-                    {owned ? (owned[langConfig.backField] ?? card.back) : card.back}{saved && ' ✓'}
+                    {owned ? (owned[backConfig.backField] ?? packBack(card)) : packBack(card)}{saved && ' ✓'}
                   </span>
                 </button>
                 {pack.pronounceable && (

@@ -17,7 +17,7 @@ describe('kana packs', () => {
     const hira = HIRAGANA_PACK.cards;
     const kata = KATAKANA_PACK.cards;
     for (let i = 0; i < KANA_COUNT; i++) {
-      expect(kata[i].back).toBe(hira[i].back);
+      expect(kata[i].back).toEqual(hira[i].back);
       expect(kata[i].study).not.toBe(hira[i].study);
     }
   });
@@ -37,8 +37,29 @@ describe('kana packs', () => {
   it('gives every card a romaji back', () => {
     for (const pack of [HIRAGANA_PACK, KATAKANA_PACK]) {
       for (const { study, back } of pack.cards) {
-        expect(back, `${study} has no reading`).toMatch(/^[a-z]+( \([a-z]+\))?$/);
+        expect(back.English, `${study} has no reading`).toMatch(/^[a-z]+( \([a-z]+\))?$/);
       }
+    }
+  });
+
+  // The hangul column is hand-written per row rather than derived, so this is
+  // what catches a row that was added to the table without one.
+  it('gives every card a hangul back', () => {
+    for (const pack of [HIRAGANA_PACK, KATAKANA_PACK]) {
+      for (const { study, back } of pack.cards) {
+        expect(back.Korean, `${study} has no hangul reading`).toMatch(/^[가-힣]+( \([가-힣]+\))?$/);
+      }
+    }
+  });
+
+  // 청음 and 탁음 are the distinction these packs teach, so the two columns
+  // must keep them apart — か/が collapsing to 가 is the specific failure the
+  // word-initial 외래어 표기법 column would have produced.
+  it('keeps voiced and voiceless rows distinct in both columns', () => {
+    const byStudy = new Map(HIRAGANA_PACK.cards.map(c => [c.study, c.back]));
+    for (const [voiceless, voiced] of [['か', 'が'], ['た', 'だ'], ['さ', 'ざ'], ['は', 'ば']]) {
+      expect(byStudy.get(voiceless)!.Korean).not.toBe(byStudy.get(voiced)!.Korean);
+      expect(byStudy.get(voiceless)!.English).not.toBe(byStudy.get(voiced)!.English);
     }
   });
 

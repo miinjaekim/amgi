@@ -12,29 +12,6 @@ export type StudyLanguage =
   | 'Japanese'
   | 'TraditionalChinese';
 
-// i18n keys used for review directions/prompts — must exist in i18n.ts
-export type DirectionLabelKey =
-  | 'directionKoreanToEnglish'
-  | 'directionEnglishToKorean'
-  | 'directionSwedishToEnglish'
-  | 'directionEnglishToSwedish'
-  | 'directionFrenchToEnglish'
-  | 'directionEnglishToFrench'
-  | 'directionJapaneseToEnglish'
-  | 'directionEnglishToJapanese'
-  | 'directionTraditionalChineseToEnglish'
-  | 'directionEnglishToTraditionalChinese';
-export type DirectionPromptKey =
-  | 'promptKoreanToEnglish'
-  | 'promptEnglishToKorean'
-  | 'promptSwedishToEnglish'
-  | 'promptEnglishToSwedish'
-  | 'promptFrenchToEnglish'
-  | 'promptEnglishToFrench'
-  | 'promptJapaneseToEnglish'
-  | 'promptEnglishToJapanese'
-  | 'promptTraditionalChineseToEnglish'
-  | 'promptEnglishToTraditionalChinese';
 /**
  * i18n keys for the character-breakdown section heading. Every Han-script
  * language gets its own key because English names the script differently per
@@ -70,18 +47,8 @@ export interface StudyLanguageConfig {
   collection: string;
   /** Field on cards/TermCore/ExamplePair holding the study-language text */
   studyField: CardSideField;
-  /** Field holding the translation side of the card */
-  backField: CardSideField;
-  /** Language of the translation side */
-  backLanguage: 'English' | 'Korean';
-  /** i18n keys for the two card-side labels */
+  /** i18n key for the study-side label */
   studyLabelKey: FieldLabelKey;
-  backLabelKey: FieldLabelKey;
-  /** i18n keys for review direction chips and question prompts */
-  directionFrontToBackKey: DirectionLabelKey;
-  directionBackToFrontKey: DirectionLabelKey;
-  promptFrontToBackKey: DirectionPromptKey;
-  promptBackToFrontKey: DirectionPromptKey;
   /**
    * Section heading for the per-character breakdown, on languages written with
    * Han characters. Absent means the language has no characters to break down,
@@ -120,14 +87,7 @@ export const STUDY_LANGUAGE_CONFIGS: Record<StudyLanguage, StudyLanguageConfig> 
     labelNative: '한국어',
     collection: 'cards',
     studyField: 'korean',
-    backField: 'english',
-    backLanguage: 'English',
     studyLabelKey: 'labelKorean',
-    backLabelKey: 'labelEnglish',
-    directionFrontToBackKey: 'directionKoreanToEnglish',
-    directionBackToFrontKey: 'directionEnglishToKorean',
-    promptFrontToBackKey: 'promptKoreanToEnglish',
-    promptBackToFrontKey: 'promptEnglishToKorean',
     characterSectionKey: 'sectionHanja',
     ttsLanguageCode: 'ko-KR',
     ttsVoiceName: 'ko-KR-Chirp3-HD-Charon',
@@ -139,14 +99,7 @@ export const STUDY_LANGUAGE_CONFIGS: Record<StudyLanguage, StudyLanguageConfig> 
     labelNative: 'Svenska',
     collection: 'cards_swedish',
     studyField: 'swedish',
-    backField: 'english',
-    backLanguage: 'English',
     studyLabelKey: 'labelSwedish',
-    backLabelKey: 'labelEnglish',
-    directionFrontToBackKey: 'directionSwedishToEnglish',
-    directionBackToFrontKey: 'directionEnglishToSwedish',
-    promptFrontToBackKey: 'promptSwedishToEnglish',
-    promptBackToFrontKey: 'promptEnglishToSwedish',
     ttsLanguageCode: 'sv-SE',
     ttsVoiceName: 'sv-SE-Chirp3-HD-Charon',
   },
@@ -156,14 +109,7 @@ export const STUDY_LANGUAGE_CONFIGS: Record<StudyLanguage, StudyLanguageConfig> 
     labelNative: 'Français',
     collection: 'cards_french',
     studyField: 'french',
-    backField: 'english',
-    backLanguage: 'English',
     studyLabelKey: 'labelFrench',
-    backLabelKey: 'labelEnglish',
-    directionFrontToBackKey: 'directionFrenchToEnglish',
-    directionBackToFrontKey: 'directionEnglishToFrench',
-    promptFrontToBackKey: 'promptFrenchToEnglish',
-    promptBackToFrontKey: 'promptEnglishToFrench',
     ttsLanguageCode: 'fr-FR',
     ttsVoiceName: 'fr-FR-Chirp3-HD-Charon',
   },
@@ -173,14 +119,7 @@ export const STUDY_LANGUAGE_CONFIGS: Record<StudyLanguage, StudyLanguageConfig> 
     labelNative: '日本語',
     collection: 'cards_japanese',
     studyField: 'japanese',
-    backField: 'english',
-    backLanguage: 'English',
     studyLabelKey: 'labelJapanese',
-    backLabelKey: 'labelEnglish',
-    directionFrontToBackKey: 'directionJapaneseToEnglish',
-    directionBackToFrontKey: 'directionEnglishToJapanese',
-    promptFrontToBackKey: 'promptJapaneseToEnglish',
-    promptBackToFrontKey: 'promptEnglishToJapanese',
     characterSectionKey: 'sectionKanji',
     ttsLanguageCode: 'ja-JP',
     ttsVoiceName: 'ja-JP-Chirp3-HD-Charon',
@@ -192,14 +131,7 @@ export const STUDY_LANGUAGE_CONFIGS: Record<StudyLanguage, StudyLanguageConfig> 
     labelNative: '繁體中文',
     collection: 'cards_chinese_traditional',
     studyField: 'traditionalChinese',
-    backField: 'english',
-    backLanguage: 'English',
     studyLabelKey: 'labelTraditionalChinese',
-    backLabelKey: 'labelEnglish',
-    directionFrontToBackKey: 'directionTraditionalChineseToEnglish',
-    directionBackToFrontKey: 'directionEnglishToTraditionalChinese',
-    promptFrontToBackKey: 'promptTraditionalChineseToEnglish',
-    promptBackToFrontKey: 'promptEnglishToTraditionalChinese',
     characterSectionKey: 'sectionHanzi',
     // `cmn-TW` has no Chirp 3: HD voice, so this is WaveNet against
     // `cmn-CN-Chirp3-HD-Charon`: a Taiwanese accent in an older voice, or a
@@ -217,14 +149,7 @@ export const STUDY_LANGUAGE_CONFIGS: Record<StudyLanguage, StudyLanguageConfig> 
     labelNative: 'English',
     collection: 'cards_english',
     studyField: 'english',
-    backField: 'korean',
-    backLanguage: 'Korean',
     studyLabelKey: 'labelEnglish',
-    backLabelKey: 'labelKorean',
-    directionFrontToBackKey: 'directionEnglishToKorean',
-    directionBackToFrontKey: 'directionKoreanToEnglish',
-    promptFrontToBackKey: 'promptEnglishToKorean',
-    promptBackToFrontKey: 'promptKoreanToEnglish',
     ttsLanguageCode: 'en-US',
     ttsVoiceName: 'en-US-Chirp3-HD-Charon',
   },
@@ -232,6 +157,45 @@ export const STUDY_LANGUAGE_CONFIGS: Record<StudyLanguage, StudyLanguageConfig> 
 
 export function getStudyLanguageConfig(studyLanguage?: StudyLanguage | string): StudyLanguageConfig {
   return STUDY_LANGUAGE_CONFIGS[studyLanguage as StudyLanguage] ?? STUDY_LANGUAGE_CONFIGS.Korean;
+}
+
+/** Which card slot holds the back, and how to name it. */
+export interface BackSideConfig {
+  /** Field holding the translation side of the card */
+  backField: CardSideField;
+  /** Language of the translation side */
+  backLanguage: 'English' | 'Korean';
+  /** i18n key for the back-side label */
+  backLabelKey: FieldLabelKey;
+}
+
+/**
+ * The back side belongs to the *pair* of languages, not to either one alone,
+ * which is why this is separate from `getStudyLanguageConfig` rather than a
+ * field on it: a Korean native studying Japanese wants a Korean back, but a
+ * Korean native studying Korean cannot have one.
+ *
+ * Deliberately not named for its input. `getStudyLanguageConfig` is a real
+ * lookup into `STUDY_LANGUAGE_CONFIGS`; there is no table keyed on native
+ * language and there could not be one.
+ *
+ * The rule is just "your own language", with one escape hatch. Studying the
+ * language you already speak is the only case where that collides with the
+ * front of the card, and there the back falls to the other side — which
+ * reproduces exactly what the old hardcoded table said for every pair.
+ */
+export function getBackSideConfig(
+  studyLanguage?: StudyLanguage | string,
+  nativeLanguage?: string | null,
+): BackSideConfig {
+  const { studyField } = getStudyLanguageConfig(studyLanguage);
+  const own: CardSideField = nativeLanguage === 'Korean' ? 'korean' : 'english';
+  const backField = own !== studyField ? own : own === 'korean' ? 'english' : 'korean';
+  return {
+    backField,
+    backLanguage: backField === 'korean' ? 'Korean' : 'English',
+    backLabelKey: backField === 'korean' ? 'labelKorean' : 'labelEnglish',
+  };
 }
 
 // Example pairs — one side per language, see StudyLanguageConfig field names
@@ -350,10 +314,17 @@ export function getStudyLangSide(card: CardSides): string {
   return card[config.studyField] || card.term || '';
 }
 
-/** Returns the translation side of a card. */
-export function getBackSide(card: CardSides): string {
-  const config = getStudyLanguageConfig(card.studyLanguage);
-  return card[config.backField] || card.translation || '';
+/**
+ * Returns the translation side of a card.
+ *
+ * Falls back to `english` because backs only became native-aware after people
+ * had saved cards: every document written before that carries its back there
+ * and nowhere else. A Korean native sees English on those rather than a blank
+ * card, until the card is next saved and gains a Korean side.
+ */
+export function getBackSide(card: CardSides, nativeLanguage?: string | null): string {
+  const { backField } = getBackSideConfig(card.studyLanguage, nativeLanguage);
+  return card[backField] || card.english || card.translation || '';
 }
 
 /** Returns the study-language text from an example pair. */
@@ -376,10 +347,12 @@ export function getReading(card: Pick<TermCore, 'furigana' | 'pinyin'>): string 
 /** Splits an example pair into its study-language and translation sides. */
 export function getExampleSides(
   ex: ExamplePair,
-  studyLanguage?: StudyLanguage
+  studyLanguage?: StudyLanguage,
+  nativeLanguage?: string | null
 ): { study: string; back: string } {
-  const config = getStudyLanguageConfig(studyLanguage);
-  return { study: ex[config.studyField] ?? '', back: ex[config.backField] ?? '' };
+  const { studyField } = getStudyLanguageConfig(studyLanguage);
+  const { backField } = getBackSideConfig(studyLanguage, nativeLanguage);
+  return { study: ex[studyField] ?? '', back: ex[backField] ?? ex.english ?? '' };
 }
 
 /**
@@ -402,15 +375,18 @@ export function getDepthTarget(
     | 'english'
     | 'briefDefinition'
   >,
-  studyLanguage: StudyLanguage = 'Korean'
+  studyLanguage: StudyLanguage = 'Korean',
+  nativeLanguage?: string | null
 ): { term: string; termLanguage: string; translation?: string; briefDefinition?: string } {
   const config = getStudyLanguageConfig(studyLanguage);
+  const { backField } = getBackSideConfig(studyLanguage, nativeLanguage);
   // Pass the already-resolved sense along: for polysemous terms (pack context
   // hints, disambiguation picker, "not what you meant") depth/examples must
   // elaborate on the meaning the user chose, not whichever sense Gemini
   // reaches for first.
   const sense = {
-    translation: core[config.backField] || (core.termLanguage !== studyLanguage ? core.term : undefined),
+    translation:
+      core[backField] || core.english || (core.termLanguage !== studyLanguage ? core.term : undefined),
     briefDefinition: core.briefDefinition,
   };
   if (core.termLanguage !== studyLanguage) {
@@ -444,15 +420,22 @@ export interface WordOfTheDay {
  * explanation without regenerating one. Prefers the stored `core`; falls back
  * to assembling the fields the word of the day always carries.
  */
-export function wordOfTheDayCore(wotd: WordOfTheDay, studyLanguage: StudyLanguage): TermCore {
+export function wordOfTheDayCore(
+  wotd: WordOfTheDay,
+  studyLanguage: StudyLanguage,
+  nativeLanguage?: string | null
+): TermCore {
   if (wotd.core) return wotd.core;
   const config = getStudyLanguageConfig(studyLanguage);
+  const { backField } = getBackSideConfig(studyLanguage, nativeLanguage);
   const core: Record<string, unknown> = {
     term: wotd.term,
     termLanguage: studyLanguage,
     english: config.studyField === 'english' ? wotd.term : wotd.english,
     [config.studyField]: wotd.term,
-    [config.backField]: config.backField === 'korean' ? wotd.korean : wotd.english,
+    // `korean` may be absent on a word of the day generated before backs became
+    // native-aware; the English side is what those documents have.
+    [backField]: (backField === 'korean' ? wotd.korean : wotd.english) ?? wotd.english,
     briefDefinition: wotd.briefDefinition,
     formality: wotd.formality,
     gender: wotd.gender,
