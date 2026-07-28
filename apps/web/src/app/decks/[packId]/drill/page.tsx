@@ -10,6 +10,7 @@ import {
   drillAnswer,
   drillPrompt,
   drillSpokenText,
+  directionLabel,
   getPackText,
   getStudyLanguageConfig,
   getVocabPack,
@@ -96,9 +97,7 @@ export default function DrillPage() {
                   : { background: 'transparent', color: 'var(--color-text)', borderColor: 'var(--color-muted)' }
               }
             >
-              {t(nativeLanguage, dir === 'studyToBack'
-                ? langConfig.directionFrontToBackKey
-                : langConfig.directionBackToFrontKey)}
+              {directionLabel(nativeLanguage, studyLanguage, dir === 'studyToBack' ? 'frontToBack' : 'backToFront')}
             </button>
           ))}
         </div>
@@ -197,7 +196,7 @@ export default function DrillPage() {
         style={{ background: 'var(--color-surface)' }}
       >
         <span className="text-5xl text-[var(--color-text)] leading-tight">
-          {drillPrompt(current, direction)}
+          {drillPrompt(current, direction, nativeLanguage)}
         </span>
 
         {/* The answer and the pronounce button are always in the layout and
@@ -207,7 +206,7 @@ export default function DrillPage() {
             keeps the answer out of the DOM text and the a11y tree until it's
             been earned. */}
         <span className={`text-2xl text-[var(--color-highlight)] ${revealed ? '' : 'invisible'}`}>
-          {revealed ? drillAnswer(current, direction) : ' '}
+          {revealed ? drillAnswer(current, direction, nativeLanguage) : ' '}
         </span>
         {pack.pronounceable && (
           <span className={revealed ? '' : 'invisible pointer-events-none'}>

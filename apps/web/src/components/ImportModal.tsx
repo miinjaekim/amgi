@@ -4,7 +4,7 @@ import React, { useState, useRef } from 'react';
 import { useUser } from '@/components/UserContext';
 import { saveFlashcardToFirestore, Flashcard } from '@/services/firestore';
 import { TermCore } from '@/services/gemini';
-import { getStudyLanguageConfig } from '@amgi/core';
+import { getStudyLanguageConfig, getBackSideConfig } from '@amgi/core';
 import { t } from '@/lib/i18n';
 import Spinner from '@/components/Spinner';
 
@@ -25,6 +25,7 @@ export default function ImportModal({
 }) {
   const { user, nativeLanguage, studyLanguage } = useUser();
   const langConfig = getStudyLanguageConfig(studyLanguage);
+  const backConfig = getBackSideConfig(studyLanguage, nativeLanguage);
   const [input, setInput] = useState('');
   const [items, setItems] = useState<ImportItem[]>([]);
   const [step, setStep] = useState<'input' | 'processing' | 'done'>('input');
@@ -174,7 +175,7 @@ export default function ImportModal({
                         {item.status === 'ambiguous' && <span className="text-xs text-[var(--color-muted)]">{t(nativeLanguage, 'importStatusAmbiguous')}</span>}
                         {item.status === 'success' && item.data && (
                           <span className="text-xs text-[var(--color-muted)]">
-                            {item.data[langConfig.studyField]} · {item.data[langConfig.backField]}
+                            {item.data[langConfig.studyField]} · {item.data[backConfig.backField] || item.data.english}
                             {item.data.formality && item.data.formality !== 'N/A' && ` · ${item.data.formality}`}
                           </span>
                         )}

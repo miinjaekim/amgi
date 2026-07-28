@@ -13,7 +13,8 @@ import {
   streamTermDepth, streamTermExamples,
 } from '../../src/services/gemini';
 import {
-  getCharacterBreakdown, getDepthTarget, getReading, getStudyLanguageConfig, getExampleSides,
+  getCharacterBreakdown, getDepthTarget, getReading, getStudyLanguageConfig, getBackSideConfig,
+  getTermBackSide, getExampleSides,
   parseStreamedDepth, parseStreamedExamples, wordOfTheDayCore,
 } from '@amgi/core';
 import type { StudyLanguage } from '@amgi/core';
@@ -82,6 +83,7 @@ export default function LearnScreen() {
   const keyboardReserve = Dimensions.get('window').height * 0.46;
   const { user, nativeLanguage, studyLanguage, authLoading, handleSignIn, streak, reviewedToday } = useUser();
   const langConfig = getStudyLanguageConfig(studyLanguage);
+  const backConfig = getBackSideConfig(studyLanguage, nativeLanguage);
   const exampleTerms = EXAMPLE_TERMS[studyLanguage] ?? EXAMPLE_TERMS.Korean;
 
   const [term, setTerm] = useState('');
@@ -208,7 +210,7 @@ export default function LearnScreen() {
     runId.current += 1;
     reset();
     setTerm(wotd.term);
-    setCore(wordOfTheDayCore(wotd, studyLanguage));
+    setCore(wordOfTheDayCore(wotd, studyLanguage, nativeLanguage));
   };
 
   const handleSubmit = () => {
@@ -227,7 +229,7 @@ export default function LearnScreen() {
     setLoadingDepth(true);
     setStreamingDepth(false);
     setDepth(null);
-    const target = getDepthTarget(core, studyLanguage);
+    const target = getDepthTarget(core, studyLanguage, nativeLanguage);
     const sense = { translation: target.translation, briefDefinition: target.briefDefinition };
     try {
       const res = await streamTermDepth({ ...target, nativeLanguage, studyLanguage });
@@ -270,7 +272,7 @@ export default function LearnScreen() {
     setLoadingExamples(true);
     setStreamingExamples(false);
     setExamples(null);
-    const target = getDepthTarget(core, studyLanguage);
+    const target = getDepthTarget(core, studyLanguage, nativeLanguage);
     const sense = { translation: target.translation, briefDefinition: target.briefDefinition };
     try {
       const res = await streamTermExamples({ ...target, nativeLanguage, studyLanguage });
@@ -284,7 +286,7 @@ export default function LearnScreen() {
         accRef, doneRef,
         slice => {
           if (run !== runId.current) return;
-          const parsed = parseStreamedExamples(slice, studyLanguage);
+          const parsed = parseStreamedExamples(slice, studyLanguage, nativeLanguage);
           if (parsed.length > 0) setExamples(parsed);
         },
         () => { if (run === runId.current) setStreamingExamples(false); },
@@ -312,14 +314,16 @@ export default function LearnScreen() {
   const handleOpenSave = () => {
     if (!core) return;
     const studySide = core.termLanguage === studyLanguage ? core.term : (core[langConfig.studyField] ?? '');
-    const backSide = core.termLanguage === langConfig.backLanguage ? core.term : (core[langConfig.backField] ?? '');
+    const backSide = core.termLanguage === backConfig.backLanguage
+      ? core.term
+      : getTermBackSide(core, studyLanguage, nativeLanguage);
     setFlashcardDraft({
       ...core,
       ...(depth ?? {}),
       examples: examples ?? [],
       studyLanguage,
       [langConfig.studyField]: studySide,
-      [langConfig.backField]: backSide,
+      [backConfig.backField]: backSide,
     });
     setShowSaveModal(true);
     setSaveSuccess(false);
@@ -354,7 +358,9 @@ export default function LearnScreen() {
   };
 
   const translation = core
-    ? (core.termLanguage === studyLanguage ? core[langConfig.backField] : core[langConfig.studyField]) || core.translation
+    ? (core.termLanguage === studyLanguage
+        ? getTermBackSide(core, studyLanguage, nativeLanguage)
+        : core[langConfig.studyField]) || core.translation
     : null;
 
   if (authLoading) {
@@ -606,7 +612,7 @@ export default function LearnScreen() {
                 <View style={s.examplesSection}>
                   <Text style={s.sectionLabel}>{t(nativeLanguage, 'sectionExamples')}</Text>
                   {(examples ?? []).map((ex, i) => {
-                    const sides = getExampleSides(ex, studyLanguage);
+                    const sides = getExampleSides(ex, studyLanguage, nativeLanguage);
                     return (
                       <View key={i} style={s.exampleItem}>
                         {sides.study ? (

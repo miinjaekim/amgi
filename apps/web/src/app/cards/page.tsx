@@ -11,7 +11,7 @@ import {
   getCardsCollection,
   Flashcard,
 } from '@/services/firestore';
-import { getBackSide, getCharacterBreakdown, getCollectionId, getExampleSides, getStudyLanguageConfig } from '@amgi/core';
+import { getBackSide, getBackSideConfig, getCharacterBreakdown, getCollectionId, getExampleSides, getStudyLanguageConfig } from '@amgi/core';
 import { db } from '@/config/firebase';
 import { doc, updateDoc } from 'firebase/firestore';
 import { t } from '@/lib/i18n';
@@ -56,6 +56,7 @@ export default function CardsPage() {
   const [showExportMenu, setShowExportMenu] = useState(false);
 
   const langConfig = getStudyLanguageConfig(studyLanguage);
+  const backConfig = getBackSideConfig(studyLanguage, nativeLanguage);
 
   const getStudySide = (card: Flashcard) =>
     card[langConfig.studyField] ?? card.term ?? '';
@@ -87,7 +88,7 @@ export default function CardsPage() {
       const q = search.trim().toLowerCase();
       cards = cards.filter(c =>
         getStudySide(c).toLowerCase().includes(q) ||
-        getBackSide(c).toLowerCase().includes(q)
+        getBackSide(c, nativeLanguage).toLowerCase().includes(q)
       );
     }
     if (sortKey === 'newest') cards = [...cards].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
@@ -151,7 +152,7 @@ export default function CardsPage() {
 
   const handleEditStart = (card: Flashcard) => {
     setEditingCardId(card.id || null);
-    setEditDraft({ studySide: getStudySide(card), backSide: getBackSide(card) });
+    setEditDraft({ studySide: getStudySide(card), backSide: getBackSide(card, nativeLanguage) });
     setError(null);
   };
 
@@ -160,7 +161,7 @@ export default function CardsPage() {
     const collectionName = getCardsCollection(studyLanguage);
     const update = {
       [langConfig.studyField]: editDraft.studySide,
-      [langConfig.backField]: editDraft.backSide,
+      [backConfig.backField]: editDraft.backSide,
     };
     try {
       await updateDoc(doc(db, collectionName, card.id), update);
@@ -231,17 +232,17 @@ export default function CardsPage() {
   };
 
   const exportCSV = () => {
-    const rows = [[langConfig.label, langConfig.backLanguage, 'Formality', 'Definition', 'Characters', 'Notes', 'Examples', 'Saved', 'Status']];
+    const rows = [[langConfig.label, backConfig.backLanguage, 'Formality', 'Definition', 'Characters', 'Notes', 'Examples', 'Saved', 'Status']];
     for (const c of allCards) {
       const studySide = getStudySide(c);
       const examples = c.examples?.map(e => {
-        const sides = getExampleSides(e, studyLanguage);
+        const sides = getExampleSides(e, studyLanguage, nativeLanguage);
         return `${sides.study} / ${sides.back}`;
       }).join(' | ') ?? '';
       const saved = c.createdAt instanceof Date ? c.createdAt.toISOString().slice(0, 10) : '';
       rows.push([
         studySide,
-        getBackSide(c),
+        getBackSide(c, nativeLanguage),
         c.formality || '',
         c.definition || '',
         getCharacterBreakdown(c) || '',
@@ -261,7 +262,7 @@ export default function CardsPage() {
     for (const c of allCards) {
       if (c.archived) continue;
       const front = getStudySide(c);
-      const backParts = [getBackSide(c)];
+      const backParts = [getBackSide(c, nativeLanguage)];
       if (c.briefDefinition) backParts.push(c.briefDefinition);
       else if (c.definition) backParts.push(c.definition);
       lines.push(`${front}\t${backParts.join(' — ')}`);
@@ -513,10 +514,10 @@ export default function CardsPage() {
                             onClick={() => selectMode && card.id ? toggleSelect(card.id) : setDetailCard(card)}
                           >
                             <div className="font-semibold text-lg text-[var(--color-text)]">
-                              {highlight(cardOrder === 'korean-first' ? getStudySide(card) : getBackSide(card), search)}
+                              {highlight(cardOrder === 'korean-first' ? getStudySide(card) : getBackSide(card, nativeLanguage), search)}
                             </div>
                             <div className="text-[var(--color-highlight)] text-base">
-                              {highlight(cardOrder === 'korean-first' ? getBackSide(card) : getStudySide(card), search)}
+                              {highlight(cardOrder === 'korean-first' ? getBackSide(card, nativeLanguage) : getStudySide(card), search)}
                             </div>
                           </button>
                           <div className="text-xs text-[var(--color-muted)]">

@@ -1,3 +1,7 @@
+import { getStudyLanguageConfig, getBackSideConfig } from './types';
+import type { StudyLanguage } from './types';
+import type { ReviewDirection } from './sm2';
+
 const translations = {
   English: {
     // Learn page
@@ -86,26 +90,8 @@ const translations = {
     reviewMissedStillDue: '{count} you missed are still due.',
     reviewAgainMissed: 'Review those again',
     directionBoth: 'Both directions',
-    directionKoreanToEnglish: 'Korean → English',
-    directionEnglishToKorean: 'English → Korean',
-    directionSwedishToEnglish: 'Swedish → English',
-    directionEnglishToSwedish: 'English → Swedish',
-    directionFrenchToEnglish: 'French → English',
-    directionEnglishToFrench: 'English → French',
-    directionJapaneseToEnglish: 'Japanese → English',
-    directionEnglishToJapanese: 'English → Japanese',
-    directionTraditionalChineseToEnglish: 'Chinese (Traditional) → English',
-    directionEnglishToTraditionalChinese: 'English → Chinese (Traditional)',
-    promptKoreanToEnglish: 'What does this mean in English?',
-    promptEnglishToKorean: 'How do you say this in Korean?',
-    promptSwedishToEnglish: 'What does this mean in English?',
-    promptEnglishToSwedish: 'How do you say this in Swedish?',
-    promptFrenchToEnglish: 'What does this mean in English?',
-    promptEnglishToFrench: 'How do you say this in French?',
-    promptJapaneseToEnglish: 'What does this mean in English?',
-    promptEnglishToJapanese: 'How do you say this in Japanese?',
-    promptTraditionalChineseToEnglish: 'What does this mean in English?',
-    promptEnglishToTraditionalChinese: 'How do you say this in Traditional Chinese?',
+    promptMeaning: 'What does this mean in {language}?',
+    promptProduce: 'How do you say this in {language}?',
     // Header
     navLearn: 'Learn',
     navReview: 'Review',
@@ -350,26 +336,11 @@ const translations = {
     reviewMissedStillDue: '틀린 {count}개가 아직 남아 있어요.',
     reviewAgainMissed: '틀린 카드 다시 보기',
     directionBoth: '양방향',
-    directionKoreanToEnglish: '한국어 → 영어',
-    directionEnglishToKorean: '영어 → 한국어',
-    directionSwedishToEnglish: '스웨덴어 → 영어',
-    directionEnglishToSwedish: '영어 → 스웨덴어',
-    directionFrenchToEnglish: '프랑스어 → 영어',
-    directionEnglishToFrench: '영어 → 프랑스어',
-    directionJapaneseToEnglish: '일본어 → 영어',
-    directionEnglishToJapanese: '영어 → 일본어',
-    directionTraditionalChineseToEnglish: '중국어(번체) → 영어',
-    directionEnglishToTraditionalChinese: '영어 → 중국어(번체)',
-    promptKoreanToEnglish: '이 단어는 영어로 무슨 뜻인가요?',
-    promptEnglishToKorean: '이것을 한국어로 어떻게 말하나요?',
-    promptSwedishToEnglish: '이 단어는 영어로 무슨 뜻인가요?',
-    promptEnglishToSwedish: '이것을 스웨덴어로 어떻게 말하나요?',
-    promptFrenchToEnglish: '이 단어는 영어로 무슨 뜻인가요?',
-    promptEnglishToFrench: '이것을 프랑스어로 어떻게 말하나요?',
-    promptJapaneseToEnglish: '이 단어는 영어로 무슨 뜻인가요?',
-    promptEnglishToJapanese: '이것을 일본어로 어떻게 말하나요?',
-    promptTraditionalChineseToEnglish: '이 단어는 영어로 무슨 뜻인가요?',
-    promptEnglishToTraditionalChinese: '이것을 번체 중국어로 어떻게 말하나요?',
+    // Every language name in the label table (영어, 한국어, 일본어, 프랑스어,
+    // 스웨덴어, 중국어(번체)) ends in a vowel, so `로` is correct for all of
+    // them and no `으로` branch is needed.
+    promptMeaning: '이 단어는 {language}로 무슨 뜻인가요?',
+    promptProduce: '이것을 {language}로 어떻게 말하나요?',
     // Header
     navLearn: '학습',
     navReview: '복습',
@@ -544,4 +515,37 @@ export function t(
     }
   }
   return text;
+}
+
+/**
+ * Direction chip text — "Japanese → English", localized.
+ *
+ * Composed from the six language labels rather than stored as its own key per
+ * pair. Once the back side follows native language, the pairs multiply: keys
+ * for every study language against both back languages would be 16 more
+ * strings in two locales, all of them the same arrow between two names that
+ * are already translated.
+ */
+export function directionLabel(
+  nativeLanguage: string | null | undefined,
+  studyLanguage: StudyLanguage | string | undefined,
+  direction: ReviewDirection
+): string {
+  const study = t(nativeLanguage, getStudyLanguageConfig(studyLanguage).studyLabelKey);
+  const back = t(nativeLanguage, getBackSideConfig(studyLanguage, nativeLanguage).backLabelKey);
+  return direction === 'frontToBack' ? `${study} → ${back}` : `${back} → ${study}`;
+}
+
+/** The question a review card asks, in the direction being tested. */
+export function directionPrompt(
+  nativeLanguage: string | null | undefined,
+  studyLanguage: StudyLanguage | string | undefined,
+  direction: ReviewDirection
+): string {
+  const key = direction === 'frontToBack' ? 'promptMeaning' : 'promptProduce';
+  const labelKey =
+    direction === 'frontToBack'
+      ? getBackSideConfig(studyLanguage, nativeLanguage).backLabelKey
+      : getStudyLanguageConfig(studyLanguage).studyLabelKey;
+  return t(nativeLanguage, key, { language: t(nativeLanguage, labelKey) });
 }

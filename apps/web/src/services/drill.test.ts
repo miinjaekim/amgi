@@ -11,7 +11,7 @@ import type { PackCard } from '@amgi/core';
 
 const deck: PackCard[] = Array.from({ length: 10 }, (_, i) => ({
   study: `s${i}`,
-  back: `b${i}`,
+  back: { English: `b${i}`, Korean: `ㅂ${i}` },
 }));
 
 describe('startDrillQueue', () => {
@@ -91,7 +91,7 @@ describe('advanceDrillQueue', () => {
 });
 
 describe('drill direction', () => {
-  const card: PackCard = { study: 'あ', back: 'a' };
+  const card: PackCard = { study: 'あ', back: { English: 'a', Korean: '아' } };
 
   it('shows the character and asks for the sound', () => {
     expect(drillPrompt(card, 'studyToBack')).toBe('あ');
@@ -101,5 +101,13 @@ describe('drill direction', () => {
   it('reverses cleanly', () => {
     expect(drillPrompt(card, 'backToStudy')).toBe('a');
     expect(drillAnswer(card, 'backToStudy')).toBe('あ');
+  });
+
+  // The drill is the one pack surface where the back is both shown and typed
+  // against, so it has to follow native language the way the deck tiles do.
+  it('answers in the reader\'s own script', () => {
+    expect(drillAnswer(card, 'studyToBack', 'Korean')).toBe('아');
+    expect(drillPrompt(card, 'backToStudy', 'Korean')).toBe('아');
+    expect(drillAnswer(card, 'studyToBack', 'English')).toBe('a');
   });
 });

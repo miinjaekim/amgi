@@ -22,10 +22,16 @@ export interface PackWord {
   context?: string;
 }
 
-/** A complete card, needing no lookup: front text and the back it answers to. */
+/**
+ * A complete card, needing no lookup: front text and the back it answers to.
+ *
+ * The back is keyed by native language like `name` and `description` are —
+ * romaji answers "what sound is あ" for an English speaker and 아 answers it
+ * for a Korean one, and neither is a translation of the other.
+ */
 export interface PackCard {
   study: string;
-  back: string;
+  back: { English: string; Korean: string };
 }
 
 interface PackBase {
@@ -258,18 +264,21 @@ export function buildPackCardDraft(
   studyLanguage: StudyLanguage,
 ): Record<string, unknown> {
   const config = getStudyLanguageConfig(studyLanguage);
-  const draft: Record<string, unknown> = {
+  return {
     uid,
     term: card.study,
     termLanguage: studyLanguage,
     packId,
+    // Both backs are authored, so both are written, and the draft needs no
+    // native language of its own: which side gets *shown* is `getBackSide`'s
+    // decision at render time. A card that stored only the side its owner
+    // happened to be reading would go blank on them the day they switched.
+    english: card.back.English,
+    korean: card.back.Korean,
+    // Last, because on an English or Korean deck the study side is one of the
+    // two slots above and has to win — a back never replaces the front.
     [config.studyField]: card.study,
-    [config.backField]: card.back,
   };
-  // `english` is required on every card; on a deck whose back isn't English
-  // neither side above has filled it in.
-  if (draft.english === undefined) draft.english = card.study;
-  return draft;
 }
 
 export function getPackText(

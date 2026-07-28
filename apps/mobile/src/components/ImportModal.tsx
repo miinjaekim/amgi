@@ -3,7 +3,7 @@ import {
   Modal, View, Text, TextInput, TouchableOpacity, ScrollView,
   ActivityIndicator, StyleSheet,
 } from 'react-native';
-import { getStudyLanguageConfig, t } from '@amgi/core';
+import { getStudyLanguageConfig, getBackSideConfig, t } from '@amgi/core';
 import type { StudyLanguage } from '@amgi/core';
 import { useUser } from '../context/UserContext';
 import { useTheme } from '../context/ThemeContext';
@@ -29,6 +29,7 @@ export default function ImportModal({ studyLanguage, onClose, onSaved }: Props) 
   const s = useMemo(() => makeStyles(C), [C]);
   const { user, nativeLanguage } = useUser();
   const langConfig = getStudyLanguageConfig(studyLanguage);
+  const backConfig = getBackSideConfig(studyLanguage, nativeLanguage);
   const [input, setInput] = useState('');
   const [items, setItems] = useState<ImportItem[]>([]);
   const [step, setStep] = useState<'input' | 'processing' | 'done'>('input');
@@ -160,7 +161,7 @@ export default function ImportModal({ studyLanguage, onClose, onSaved }: Props) 
                           {item.status === 'ambiguous' && <Text style={s.itemMeta}>{t(nativeLanguage, 'importStatusAmbiguous')}</Text>}
                           {item.status === 'success' && item.data && (
                             <Text style={s.itemMeta} numberOfLines={1}>
-                              {item.data[langConfig.studyField]} · {item.data[langConfig.backField]}
+                              {item.data[langConfig.studyField]} · {item.data[backConfig.backField] || item.data.english}
                             </Text>
                           )}
                         </View>

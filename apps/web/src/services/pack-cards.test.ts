@@ -64,26 +64,45 @@ describe('buildPackCardDraft', () => {
     expect(draft.termLanguage).toBe('Japanese');
   });
 
-  it('fills the study and back sides for the language', () => {
-    const draft = buildPackCardDraft({ study: 'あ', back: 'a' }, 'kana-hiragana', 'uid-1', 'Japanese');
+  // Both authored backs are stored, not just the one the saver happened to be
+  // reading — this is what lets `getBackSide` switch with native language on a
+  // card that is already saved.
+  it('fills the study side and both backs', () => {
+    const draft = buildPackCardDraft(
+      { study: 'あ', back: { English: 'a', Korean: '아' } },
+      'kana-hiragana', 'uid-1', 'Japanese',
+    );
     expect(draft.japanese).toBe('あ');
     expect(draft.english).toBe('a');
+    expect(draft.korean).toBe('아');
   });
 
-  // `english` is required on every card. Every current config puts english on
-  // one side or the other, so the fallback in buildPackCardDraft is dead today
-  // — this asserts the requirement it exists to guarantee, which is what would
-  // actually break if a language were added with neither side English.
+  // `english` is required on every card, and is also the fallback `getBackSide`
+  // reaches for on documents written before backs were native-aware.
   it('always populates english, whichever side it lands on', () => {
     for (const { code: lang } of SUPPORTED_STUDY_LANGUAGES) {
-      const draft = buildPackCardDraft({ study: 'x', back: 'y' }, 'p', 'uid-1', lang);
+      const draft = buildPackCardDraft(
+        { study: 'x', back: { English: 'y', Korean: 'ㅇ' } }, 'p', 'uid-1', lang,
+      );
       expect(draft.english, `${lang} left english empty`).toBeTruthy();
     }
   });
 
-  it('puts the back on the native side when studying English', () => {
-    const draft = buildPackCardDraft({ study: 'comply', back: '따르다' }, 'toeic-core', 'uid-1', 'English');
+  // The study side is one of the two back slots on an English or Korean deck,
+  // so it has to be written last — a back overwriting the front would leave the
+  // card unmatched against the deck it came from.
+  it('never lets a back overwrite the study side', () => {
+    const draft = buildPackCardDraft(
+      { study: 'comply', back: { English: 'to obey a rule', Korean: '따르다' } },
+      'toeic-core', 'uid-1', 'English',
+    );
     expect(draft.english).toBe('comply');
     expect(draft.korean).toBe('따르다');
+
+    const ko = buildPackCardDraft(
+      { study: '갈등', back: { English: 'conflict', Korean: '충돌' } }, 'p', 'uid-1', 'Korean',
+    );
+    expect(ko.korean).toBe('갈등');
+    expect(ko.english).toBe('conflict');
   });
 });

@@ -1,5 +1,6 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { NextRequest, NextResponse } from 'next/server';
+import { getBackSideConfig } from '@amgi/core';
 
 function stripMarkdownCodeBlock(text: string): string {
   return text.replace(/```[a-zA-Z]*\n?|```/g, '').trim();
@@ -35,6 +36,17 @@ export async function POST(req: NextRequest) {
   const genAI = new GoogleGenerativeAI(apiKey);
   const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash', generationConfig: { temperature: 0.1 } });
 
+  // The back side follows native language, but `english` stays populated on
+  // every card: it is what documents written before this existed carry, what
+  // CSV and Anki export read, and what makes switching native language later
+  // show a back rather than a blank. Asking for both sides costs a field in
+  // one response, not a second call.
+  const back = getBackSideConfig(studyLanguage, nativeLanguage);
+  const nativeBackRule = back.backField === 'english' ? '' :
+    `\n- "${back.backField}" must always be the ${back.backLanguage} word or phrase for that same meaning, written in ${back.backLanguage}. Single best translation — never list synonyms with semicolons or slashes.`;
+  const nativeBackJson = back.backField === 'english' ? '' :
+    `\n  "${back.backField}": "${back.backLanguage} word/phrase",`;
+
   let prompt: string;
 
   if (studyLanguage === 'Swedish') {
@@ -46,7 +58,7 @@ Determine whether "${term}" is Swedish or English and set "termLanguage" accordi
 
 IMPORTANT:
 - "swedish" must always be the Swedish word or phrase written in Swedish
-- "english" must always be the English word or phrase written in English
+- "english" must always be the English word or phrase written in English${nativeBackRule}
 - Both fields should use the single best translation. Only use 2-3 words if one word is genuinely insufficient. Never list synonyms with semicolons or slashes.
 - "gender": if the Swedish term is a noun, set to "en" or "ett". Otherwise set to null.
 - "briefDefinition": a single clear sentence defining the term in ${nativeLanguage}.
@@ -56,7 +68,7 @@ Respond with only this JSON:
   "term": "${term}",
   "termLanguage": "Swedish or English",
   "swedish": "Swedish word/phrase",
-  "english": "English word/phrase",
+  "english": "English word/phrase",${nativeBackJson}
   "gender": "en" | "ett" | null,
   "briefDefinition": "one-sentence definition"
 }`;
@@ -90,14 +102,14 @@ If NOT ambiguous, respond with only this JSON:
   "term": "${term}",
   "termLanguage": "Swedish or English",
   "swedish": "Swedish word/phrase",
-  "english": "English word/phrase",
+  "english": "English word/phrase",${nativeBackJson}
   "gender": "en" | "ett" | null,
   "briefDefinition": "one-sentence definition in ${nativeLanguage}"
 }
 
 IMPORTANT for the non-ambiguous case:
 - "swedish" must always be written in Swedish
-- "english" must always be written in English
+- "english" must always be written in English${nativeBackRule}
 - Both should be the single best translation. Never list synonyms with semicolons or slashes.
 - "gender": if the Swedish term is a noun, set to "en" or "ett". Otherwise set to null.
 - "briefDefinition" must be a single sentence defining the core meaning. No examples, no cultural context.`;
@@ -111,7 +123,7 @@ Determine whether "${term}" is French or English and set "termLanguage" accordin
 
 IMPORTANT:
 - "french" must always be the French word or phrase written in French
-- "english" must always be the English word or phrase written in English
+- "english" must always be the English word or phrase written in English${nativeBackRule}
 - Both fields should use the single best translation. Only use 2-3 words if one word is genuinely insufficient. Never list synonyms with semicolons or slashes.
 - "gender": if the French term is a noun, set to "le" or "la". Otherwise set to null.
 - "briefDefinition": a single clear sentence defining the term in ${nativeLanguage}.
@@ -121,7 +133,7 @@ Respond with only this JSON:
   "term": "${term}",
   "termLanguage": "French or English",
   "french": "French word/phrase",
-  "english": "English word/phrase",
+  "english": "English word/phrase",${nativeBackJson}
   "gender": "le" | "la" | null,
   "briefDefinition": "one-sentence definition"
 }`;
@@ -155,14 +167,14 @@ If NOT ambiguous, respond with only this JSON:
   "term": "${term}",
   "termLanguage": "French or English",
   "french": "French word/phrase",
-  "english": "English word/phrase",
+  "english": "English word/phrase",${nativeBackJson}
   "gender": "le" | "la" | null,
   "briefDefinition": "one-sentence definition in ${nativeLanguage}"
 }
 
 IMPORTANT for the non-ambiguous case:
 - "french" must always be written in French
-- "english" must always be written in English
+- "english" must always be written in English${nativeBackRule}
 - Both should be the single best translation. Never list synonyms with semicolons or slashes.
 - "gender": if the French term is a noun, set to "le" or "la". Otherwise set to null.
 - "briefDefinition" must be a single sentence defining the core meaning. No examples, no cultural context.`;
@@ -176,7 +188,7 @@ IMPORTANT for the non-ambiguous case:
 
 IMPORTANT: The "japanese" and "english" fields must ALWAYS be in their respective languages:
 - "japanese" must always be the Japanese word or phrase written the way it is naturally written (kanji where usual)
-- "english" must always be the English word or phrase written in English
+- "english" must always be the English word or phrase written in English${nativeBackRule}
 - Both fields should use the single best translation. Only use 2-3 words if one word is genuinely insufficient. Never list synonyms with semicolons or slashes.
 - "furigana": if "japanese" contains kanji, give its full reading in hiragana. Otherwise set to null.
 
@@ -187,7 +199,7 @@ Respond with only this JSON:
   "term": "${term}",
   "termLanguage": "${termLanguage}",
   "japanese": "Japanese word/phrase",
-  "english": "English word/phrase",
+  "english": "English word/phrase",${nativeBackJson}
   "furigana": "reading in hiragana" | null,
   "briefDefinition": "one-sentence definition"
 }`;
@@ -221,14 +233,14 @@ If NOT ambiguous, respond with only this JSON:
   "term": "${term}",
   "termLanguage": "${termLanguage}",
   "japanese": "Japanese word/phrase",
-  "english": "English word/phrase",
+  "english": "English word/phrase",${nativeBackJson}
   "furigana": "reading in hiragana" | null,
   "briefDefinition": "one-sentence definition in ${nativeLanguage}"
 }
 
 IMPORTANT for the non-ambiguous case:
 - "japanese" must always be written the way it is naturally written in Japanese (kanji where usual)
-- "english" must always be written in English
+- "english" must always be written in English${nativeBackRule}
 - Both should be the single best translation. Only use 2-3 words if truly necessary. Never list synonyms with semicolons or slashes.
 - "furigana": if "japanese" contains kanji, give its full reading in hiragana. Otherwise null.
 - "briefDefinition" must be a single sentence defining the core meaning. No examples, no cultural context.`;
@@ -242,7 +254,7 @@ IMPORTANT for the non-ambiguous case:
 
 IMPORTANT: The "traditionalChinese" and "english" fields must ALWAYS be in their respective languages:
 - "traditionalChinese" must always be the Mandarin word or phrase written in Traditional characters (繁體字) as used in Taiwan. Never return Simplified characters (简体字) — convert them if the input used them.
-- "english" must always be the English word or phrase written in English
+- "english" must always be the English word or phrase written in English${nativeBackRule}
 - Both fields should use the single best translation. Only use 2-3 words if one word is genuinely insufficient. Never list synonyms with semicolons or slashes.
 - "pinyin": the full Hanyu Pinyin reading of "traditionalChinese", with tone marks (e.g. "dōngxi"), spaced by word.
 
@@ -253,7 +265,7 @@ Respond with only this JSON:
   "term": "${term}",
   "termLanguage": "${termLanguage}",
   "traditionalChinese": "Mandarin word/phrase in 繁體字",
-  "english": "English word/phrase",
+  "english": "English word/phrase",${nativeBackJson}
   "pinyin": "tone-marked pinyin",
   "briefDefinition": "one-sentence definition"
 }`;
@@ -287,14 +299,14 @@ If NOT ambiguous, respond with only this JSON:
   "term": "${term}",
   "termLanguage": "${termLanguage}",
   "traditionalChinese": "Mandarin word/phrase in 繁體字",
-  "english": "English word/phrase",
+  "english": "English word/phrase",${nativeBackJson}
   "pinyin": "tone-marked pinyin",
   "briefDefinition": "one-sentence definition in ${nativeLanguage}"
 }
 
 IMPORTANT for the non-ambiguous case:
 - "traditionalChinese" must always be written in Traditional characters (繁體字) as used in Taiwan. Never return Simplified characters (简体字) — convert them if the input used them.
-- "english" must always be written in English
+- "english" must always be written in English${nativeBackRule}
 - Both should be the single best translation. Only use 2-3 words if truly necessary. Never list synonyms with semicolons or slashes.
 - "pinyin": the full Hanyu Pinyin reading of "traditionalChinese", with tone marks (e.g. "dōngxi"), spaced by word.
 - "briefDefinition" must be a single sentence defining the core meaning. No examples, no cultural context.`;

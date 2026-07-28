@@ -11,7 +11,7 @@ import {
 } from '@/services/gemini';
 import Markdown from '@/components/Markdown';
 import { saveFlashcardToFirestore, Flashcard } from '@/services/firestore';
-import { getCharacterBreakdown, getExampleSides, getReading, getStudyLanguageConfig, parseStreamedExamples, parseStreamedDepth, wordOfTheDayCore } from '@amgi/core';
+import { getBackSideConfig, getTermBackSide, getCharacterBreakdown, getExampleSides, getReading, getStudyLanguageConfig, parseStreamedExamples, parseStreamedDepth, wordOfTheDayCore } from '@amgi/core';
 import type { WordOfTheDay } from '@amgi/core';
 import { useUser } from '@/components/UserContext';
 import { t } from '@/lib/i18n';
@@ -157,7 +157,7 @@ export default function Home() {
     setSaveSuccess(false);
     setShowContextInput(false);
     setContextInput('');
-    setCore(wordOfTheDayCore(wotd, studyLanguage));
+    setCore(wordOfTheDayCore(wotd, studyLanguage, nativeLanguage));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -187,7 +187,7 @@ export default function Home() {
     const doneRef = { current: false };
     let canceled = false;
 
-    const depthTarget = getDepthTarget(core, studyLanguage);
+    const depthTarget = getDepthTarget(core, studyLanguage, nativeLanguage);
 
     try {
       const res = await fetch('/api/explain/depth-stream', {
@@ -238,7 +238,7 @@ export default function Home() {
     const doneRef = { current: false };
     let canceled = false;
 
-    const examplesTarget = getDepthTarget(core, studyLanguage);
+    const examplesTarget = getDepthTarget(core, studyLanguage, nativeLanguage);
 
     try {
       const res = await fetch('/api/explain/examples-stream', {
@@ -311,9 +311,12 @@ export default function Home() {
   };
 
   const langConfig = getStudyLanguageConfig(studyLanguage);
+  const backConfig = getBackSideConfig(studyLanguage, nativeLanguage);
 
   const translation = core
-    ? (core.termLanguage === studyLanguage ? core[langConfig.backField] : core[langConfig.studyField]) || core.translation
+    ? (core.termLanguage === studyLanguage
+        ? getTermBackSide(core, studyLanguage, nativeLanguage)
+        : core[langConfig.studyField]) || core.translation
     : null;
 
   const exampleTerms = EXAMPLE_TERMS[studyLanguage] ?? EXAMPLE_TERMS.Korean;
@@ -532,7 +535,7 @@ export default function Home() {
               <h3 className="font-semibold text-[var(--color-text)] mb-2">{t(nativeLanguage, 'sectionExamples')}</h3>
               <ul className="space-y-3">
                 {(examples ?? []).map((ex, i) => {
-                  const sides = getExampleSides(ex, studyLanguage);
+                  const sides = getExampleSides(ex, studyLanguage, nativeLanguage);
                   return (
                     <li key={i} className="text-[var(--color-text)] opacity-80">
                       {sides.study && (
@@ -557,7 +560,10 @@ export default function Home() {
             className="px-4 py-2 rounded-lg bg-[var(--color-muted)] text-[var(--color-text)] font-bold hover:bg-[var(--color-highlight)] hover:text-[var(--color-bg)] focus:outline-none focus:ring-2 focus:ring-[var(--color-highlight)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             onClick={() => {
               const studySide = core.termLanguage === studyLanguage ? core.term : (core[langConfig.studyField] || '');
-              const backSide = core.termLanguage === langConfig.backLanguage ? core.term : (core[langConfig.backField] || '');
+              const backSide =
+                core.termLanguage === backConfig.backLanguage
+                  ? core.term
+                  : getTermBackSide(core, studyLanguage, nativeLanguage);
 
               setFlashcardDraft({
                 ...core,
@@ -565,7 +571,7 @@ export default function Home() {
                 examples: examples || [],
                 studyLanguage,
                 [langConfig.studyField]: studySide,
-                [langConfig.backField]: backSide,
+                [backConfig.backField]: backSide,
               });
               setShowFlashcardForm(true);
               setSaveSuccess(false);

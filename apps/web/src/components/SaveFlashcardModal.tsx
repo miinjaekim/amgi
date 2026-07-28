@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import { Flashcard } from '@/services/firestore';
 import { t } from '@/lib/i18n';
 import Spinner from '@/components/Spinner';
-import { getStudyLanguageConfig } from '@amgi/core';
+import { getStudyLanguageConfig, getBackSideConfig } from '@amgi/core';
 import type { CardSideField, StudyLanguage } from '@amgi/core';
 import PronounceButton from '@/components/PronounceButton';
 
@@ -26,6 +26,7 @@ export default function SaveFlashcardModal({ draft, nativeLanguage, studyLanguag
   }, [onClose]);
 
   const langConfig = getStudyLanguageConfig(studyLanguage);
+  const backConfig = getBackSideConfig(studyLanguage, nativeLanguage);
   const studyLangLabel = t(nativeLanguage, langConfig.studyLabelKey);
   const studyLangValue = draft[langConfig.studyField] || '';
 
@@ -77,12 +78,12 @@ export default function SaveFlashcardModal({ draft, nativeLanguage, studyLanguag
           </div>
           <div>
             <label className="block text-xs font-semibold uppercase tracking-widest mb-2" style={{ color: 'var(--color-muted)' }}>
-              {t(nativeLanguage, langConfig.backLabelKey)}
+              {t(nativeLanguage, backConfig.backLabelKey)}
             </label>
             <input
               type="text"
-              value={draft[langConfig.backField] || ''}
-              onChange={e => onChange(langConfig.backField, e.target.value)}
+              value={draft[backConfig.backField] || ''}
+              onChange={e => onChange(backConfig.backField, e.target.value)}
               className="w-full p-2 rounded-lg border text-[var(--color-text)]"
               style={{ background: 'var(--color-bg)', borderColor: 'var(--color-muted)' }}
             />

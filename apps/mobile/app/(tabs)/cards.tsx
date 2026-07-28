@@ -12,7 +12,7 @@ import {
   deleteFlashcard, updateFlashcardFields,
 } from '../../src/services/firestore';
 import type { Flashcard } from '../../src/services/firestore';
-import { t, getCharacterBreakdown, getCollectionId, getStudyLanguageConfig, getStudyLangSide, getBackSide, getExampleSides } from '@amgi/core';
+import { t, getCharacterBreakdown, getCollectionId, getStudyLanguageConfig, getBackSideConfig, getStudyLangSide, getBackSide, getExampleSides } from '@amgi/core';
 import type { CardSideField } from '@amgi/core';
 import { useTheme } from '../../src/context/ThemeContext';
 import { useFloatingTabBarHeight } from '../../src/components/FloatingTabBar';
@@ -29,6 +29,7 @@ export default function CardsScreen() {
   const s = useMemo(() => makeStyles(C, tabBarHeight), [C, tabBarHeight]);
   const { user, nativeLanguage, studyLanguage } = useUser();
   const config = getStudyLanguageConfig(studyLanguage);
+  const backConfig = getBackSideConfig(studyLanguage, nativeLanguage);
   const [allCards, setAllCards] = useState<Flashcard[]>([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
@@ -66,7 +67,7 @@ export default function CardsScreen() {
       const q = search.trim().toLowerCase();
       cards = cards.filter(c =>
         getStudyLangSide(c).toLowerCase().includes(q) ||
-        getBackSide(c).toLowerCase().includes(q)
+        getBackSide(c, nativeLanguage).toLowerCase().includes(q)
       );
     }
     if (sortKey === 'newest') return [...cards].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
@@ -145,15 +146,15 @@ export default function CardsScreen() {
   };
 
   const exportCSV = () => {
-    const rows = [[config.label, config.backLanguage, 'Formality', 'Definition', 'Characters', 'Notes', 'Examples', 'Saved', 'Status']];
+    const rows = [[config.label, backConfig.backLanguage, 'Formality', 'Definition', 'Characters', 'Notes', 'Examples', 'Saved', 'Status']];
     for (const c of allCards) {
       const examples = c.examples?.map(e => {
-        const sides = getExampleSides(e, studyLanguage);
+        const sides = getExampleSides(e, studyLanguage, nativeLanguage);
         return `${sides.study} / ${sides.back}`;
       }).join(' | ') ?? '';
       const saved = c.createdAt instanceof Date ? c.createdAt.toISOString().slice(0, 10) : '';
       rows.push([
-        getStudyLangSide(c), getBackSide(c), c.formality || '', c.definition || '',
+        getStudyLangSide(c), getBackSide(c, nativeLanguage), c.formality || '', c.definition || '',
         getCharacterBreakdown(c) || '', c.notes || '', examples, saved, c.archived ? 'archived' : 'active',
       ]);
     }
@@ -165,7 +166,7 @@ export default function CardsScreen() {
     const lines = ['#separator:Tab', '#html:false', '#notetype:Basic', '#deck:Amgi'];
     for (const c of allCards) {
       if (c.archived) continue;
-      const backParts = [getBackSide(c)];
+      const backParts = [getBackSide(c, nativeLanguage)];
       if (c.briefDefinition) backParts.push(c.briefDefinition);
       else if (c.definition) backParts.push(c.definition);
       lines.push(`${getStudyLangSide(c)}\t${backParts.join(' — ')}`);
@@ -264,8 +265,8 @@ export default function CardsScreen() {
             />
             <TextInput
               style={s.editInput}
-              value={editDraft[config.backField] ?? ''}
-              onChangeText={v => setEditDraft(d => d ? { ...d, [config.backField]: v } : d)}
+              value={editDraft[backConfig.backField] ?? ''}
+              onChangeText={v => setEditDraft(d => d ? { ...d, [backConfig.backField]: v } : d)}
             />
             <View style={s.editActions}>
               <TouchableOpacity style={s.editSaveBtn} onPress={() => handleEditSave(card)}>
@@ -293,7 +294,7 @@ export default function CardsScreen() {
               >
                 <View style={s.cardContent}>
                   <Text style={s.cardKorean}>{getStudyLangSide(card)}</Text>
-                  <Text style={s.cardEnglish}>{getBackSide(card)}</Text>
+                  <Text style={s.cardEnglish}>{getBackSide(card, nativeLanguage)}</Text>
                   <Text style={s.cardDate}>
                     {t(nativeLanguage, 'savedAt')} {new Date(card.createdAt).toLocaleDateString()}
                     {card.archived ? `  ·  ${t(nativeLanguage, 'cardsFilterArchived')}` : ''}
@@ -306,7 +307,7 @@ export default function CardsScreen() {
                     <>
                       <TouchableOpacity style={s.actionBtn} onPress={() => {
                         setEditingCardId(card.id!);
-                        setEditDraft({ [config.studyField]: getStudyLangSide(card), [config.backField]: getBackSide(card) });
+                        setEditDraft({ [config.studyField]: getStudyLangSide(card), [backConfig.backField]: getBackSide(card, nativeLanguage) });
                       }}>
                         <Text style={s.actionBtnText}>{t(nativeLanguage, 'edit')}</Text>
                       </TouchableOpacity>

@@ -1,4 +1,5 @@
 import type { PackCard } from './packs';
+import { getPackText } from './packs';
 
 /**
  * Drilling a deck is not reviewing it. Review asks the scheduler what is due
@@ -57,19 +58,28 @@ export function advanceDrillQueue(queue: readonly PackCard[], knew: boolean): Pa
 }
 
 /** What the drill shows before the reveal. */
-export function drillPrompt(card: PackCard, direction: DrillDirection): string {
-  return direction === 'studyToBack' ? card.study : card.back;
+export function drillPrompt(
+  card: PackCard,
+  direction: DrillDirection,
+  nativeLanguage?: string | null,
+): string {
+  return direction === 'studyToBack' ? card.study : getPackText(card.back, nativeLanguage);
 }
 
 /** What the reveal shows. */
-export function drillAnswer(card: PackCard, direction: DrillDirection): string {
-  return direction === 'studyToBack' ? card.back : card.study;
+export function drillAnswer(
+  card: PackCard,
+  direction: DrillDirection,
+  nativeLanguage?: string | null,
+): string {
+  return direction === 'studyToBack' ? getPackText(card.back, nativeLanguage) : card.study;
 }
 
 /**
  * The text to pronounce for a card, which is always the study side whichever
  * way the drill runs — the romaji of a kana card is a description of the
- * sound, not the sound.
+ * sound, not the sound. Unaffected by native language for the same reason:
+ * 아 describes it no more audibly than "a" does.
  */
 export function drillSpokenText(card: PackCard): string {
   return card.study;

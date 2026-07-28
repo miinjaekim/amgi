@@ -15,6 +15,9 @@ import {
   getNextReviewDate,
   getReading,
   getStudyLanguageConfig,
+  getBackSideConfig,
+  directionLabel,
+  directionPrompt,
 } from '@amgi/core';
 import type { DirectionFilter, ReviewCollection, ReviewQueueItem } from '@amgi/core';
 import { db } from '@/config/firebase';
@@ -44,6 +47,7 @@ function formatRelativeDate(date: Date, lang: string | null | undefined, now: Da
 export default function ReviewPage() {
   const { user, nativeLanguage, studyLanguage, recordReview } = useUser();
   const langConfig = getStudyLanguageConfig(studyLanguage);
+  const backConfig = getBackSideConfig(studyLanguage, nativeLanguage);
   const [userFlashcards, setUserFlashcards] = useState<Flashcard[]>([]);
   const [flashcardsLoading, setFlashcardsLoading] = useState(false);
   const [migrationComplete, setMigrationComplete] = useState(false);
@@ -244,7 +248,7 @@ export default function ReviewPage() {
     card[langConfig.studyField] ?? card.term ?? '';
 
   const handleOpenManage = (card: Flashcard) => {
-    setManageEditDraft({ studySide: getStudySide(card), backSide: getBackSide(card) });
+    setManageEditDraft({ studySide: getStudySide(card), backSide: getBackSide(card, nativeLanguage) });
     setManageStatus(null);
     setShowManage(true);
   };
@@ -256,7 +260,7 @@ export default function ReviewPage() {
     const collectionName = getCardsCollection(studyLanguage);
     const update = {
       [langConfig.studyField]: manageEditDraft.studySide,
-      [langConfig.backField]: manageEditDraft.backSide,
+      [backConfig.backField]: manageEditDraft.backSide,
     };
     try {
       await updateDoc(doc(db, collectionName, card.id), update);
@@ -523,9 +527,7 @@ export default function ReviewPage() {
                   <h2 className="text-xl font-bold">
                     {reviewCardProgressLabel}
                     <span className="ml-2 px-2 py-1 text-sm bg-[var(--color-muted)] rounded-md">
-                      {currentReview.direction === 'frontToBack'
-                        ? t(nativeLanguage, langConfig.directionFrontToBackKey)
-                        : t(nativeLanguage, langConfig.directionBackToFrontKey)}
+                      {directionLabel(nativeLanguage, studyLanguage, currentReview.direction)}
                     </span>
                   </h2>
                   <div className="flex items-center gap-2">
@@ -565,7 +567,7 @@ export default function ReviewPage() {
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-[var(--color-muted)] mb-1">{t(nativeLanguage, langConfig.backLabelKey)}</label>
+                      <label className="block text-xs font-semibold text-[var(--color-muted)] mb-1">{t(nativeLanguage, backConfig.backLabelKey)}</label>
                       <input
                         type="text"
                         value={manageEditDraft.backSide}
@@ -620,8 +622,8 @@ export default function ReviewPage() {
 
                       {showAnswer ? (
                         <>
-                          {getBackSide(currentReview.card) && (
-                            <div className="text-lg mb-3 text-[var(--color-text)] font-semibold">{getBackSide(currentReview.card)}</div>
+                          {getBackSide(currentReview.card, nativeLanguage) && (
+                            <div className="text-lg mb-3 text-[var(--color-text)] font-semibold">{getBackSide(currentReview.card, nativeLanguage)}</div>
                           )}
 
                           {(currentReview.card.gender || getReading(currentReview.card)) && (
@@ -672,7 +674,7 @@ export default function ReviewPage() {
                                         return (rawExamples as string[]).map((ex, i) => <li key={i}>{ex}</li>);
                                       } else if (Array.isArray(rawExamples) && isExamplePairArray(rawExamples)) {
                                         return (rawExamples as ExamplePair[]).map((ex, i) => {
-                                          const sides = getExampleSides(ex, studyLanguage);
+                                          const sides = getExampleSides(ex, studyLanguage, nativeLanguage);
                                           return (
                                             <li key={i}>
                                               <div>
@@ -702,14 +704,14 @@ export default function ReviewPage() {
                         </>
                       ) : (
                         <div className="text-[var(--color-muted)] text-lg mt-4 italic">
-                          {t(nativeLanguage, langConfig.promptFrontToBackKey)}
+                          {directionPrompt(nativeLanguage, studyLanguage, 'frontToBack')}
                         </div>
                       )}
                     </>
                   ) : (
                     <>
-                      {getBackSide(currentReview.card) && (
-                        <div className="text-lg mb-2 text-[var(--color-text)]">{getBackSide(currentReview.card)}</div>
+                      {getBackSide(currentReview.card, nativeLanguage) && (
+                        <div className="text-lg mb-2 text-[var(--color-text)]">{getBackSide(currentReview.card, nativeLanguage)}</div>
                       )}
 
                       {showAnswer ? (
@@ -767,7 +769,7 @@ export default function ReviewPage() {
                                         return (rawExamples as string[]).map((ex, i) => <li key={i}>{ex}</li>);
                                       } else if (Array.isArray(rawExamples) && isExamplePairArray(rawExamples)) {
                                         return (rawExamples as ExamplePair[]).map((ex, i) => {
-                                          const sides = getExampleSides(ex, studyLanguage);
+                                          const sides = getExampleSides(ex, studyLanguage, nativeLanguage);
                                           return (
                                             <li key={i}>
                                               <div>
@@ -797,7 +799,7 @@ export default function ReviewPage() {
                         </>
                       ) : (
                         <div className="text-[var(--color-muted)] text-lg mt-4 italic">
-                          {t(nativeLanguage, langConfig.promptBackToFrontKey)}
+                          {directionPrompt(nativeLanguage, studyLanguage, 'backToFront')}
                         </div>
                       )}
                     </>
@@ -863,9 +865,7 @@ export default function ReviewPage() {
                   >
                     {dir === 'both'
                       ? t(nativeLanguage, 'directionBoth')
-                      : dir === 'frontToBack'
-                        ? t(nativeLanguage, langConfig.directionFrontToBackKey)
-                        : t(nativeLanguage, langConfig.directionBackToFrontKey)}
+                      : directionLabel(nativeLanguage, studyLanguage, dir)}
                   </button>
                 ))}
               </div>

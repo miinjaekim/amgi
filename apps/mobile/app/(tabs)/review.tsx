@@ -19,7 +19,8 @@ import { refreshReminders } from '../../src/services/reminders';
 import {
   DIRECTION_FILTERS, applyPendingReviews, buildReviewCollections, buildReviewQueue,
   dueReviewItems, filterByDirection, getBackSide, getCollectionId, getNextReviewDate,
-  getNextReviewData, getStudyLangSide, getStudyLanguageConfig, t,
+  getNextReviewData, getStudyLangSide, getStudyLanguageConfig, getBackSideConfig,
+  directionLabel, directionPrompt, t,
 } from '@amgi/core';
 import type {
   CardSideField, DirectionFilter, PendingReview, ReviewQueueItem,
@@ -37,6 +38,7 @@ export default function ReviewScreen() {
   const s = useMemo(() => makeStyles(C, tabBarHeight), [C, tabBarHeight]);
   const { user, nativeLanguage, studyLanguage, recordReview } = useUser();
   const config = getStudyLanguageConfig(studyLanguage);
+  const backConfig = getBackSideConfig(studyLanguage, nativeLanguage);
   const { isOnline, pendingCount, sync } = usePendingReviewSync(user?.uid);
   const [cards, setCards] = useState<Flashcard[]>([]);
   /**
@@ -481,11 +483,9 @@ export default function ReviewScreen() {
                 style={[s.pill, directionFilter === dir && s.pillOn]}
               >
                 <Text style={[s.pillText, directionFilter === dir && s.pillTextOn]}>
-                  {t(nativeLanguage, dir === 'both'
-                    ? 'directionBoth'
-                    : dir === 'frontToBack'
-                      ? config.directionFrontToBackKey
-                      : config.directionBackToFrontKey)}
+                  {dir === 'both'
+                    ? t(nativeLanguage, 'directionBoth')
+                    : directionLabel(nativeLanguage, studyLanguage, dir)}
                 </Text>
               </TouchableOpacity>
             ))}
@@ -586,12 +586,10 @@ export default function ReviewScreen() {
   const { card, direction } = queue[index];
   const isFront = direction === 'frontToBack';
   const studySide = getStudyLangSide(card);
-  const backSide = getBackSide(card);
+  const backSide = getBackSide(card, nativeLanguage);
   const frontText = isFront ? studySide : backSide;
   const backText = isFront ? backSide : studySide;
-  const prompt = isFront
-    ? t(nativeLanguage, config.promptFrontToBackKey)
-    : t(nativeLanguage, config.promptBackToFrontKey);
+  const prompt = directionPrompt(nativeLanguage, studyLanguage, isFront ? 'frontToBack' : 'backToFront');
 
   const revealStyle = {
     opacity: revealAnim,
@@ -642,7 +640,7 @@ export default function ReviewScreen() {
 
       {/* Direction label */}
       <Text style={s.directionLabel}>
-        {isFront ? t(nativeLanguage, config.directionFrontToBackKey) : t(nativeLanguage, config.directionBackToFrontKey)}
+        {directionLabel(nativeLanguage, studyLanguage, isFront ? 'frontToBack' : 'backToFront')}
       </Text>
 
       {/* Card */}
@@ -670,7 +668,7 @@ export default function ReviewScreen() {
             <TouchableOpacity
               style={s.optionsMenuItem}
               onPress={() => {
-                setEditDraft({ [config.studyField]: studySide, [config.backField]: backSide });
+                setEditDraft({ [config.studyField]: studySide, [backConfig.backField]: backSide });
                 setEditing(true);
                 setShowOptions(false);
               }}
@@ -694,11 +692,11 @@ export default function ReviewScreen() {
               onChangeText={v => setEditDraft(d => d ? { ...d, [config.studyField]: v } : d)}
               autoFocus
             />
-            <Text style={s.editLabel}>{t(nativeLanguage, config.backLabelKey)}</Text>
+            <Text style={s.editLabel}>{t(nativeLanguage, backConfig.backLabelKey)}</Text>
             <TextInput
               style={s.editInput}
-              value={editDraft[config.backField] ?? ''}
-              onChangeText={v => setEditDraft(d => d ? { ...d, [config.backField]: v } : d)}
+              value={editDraft[backConfig.backField] ?? ''}
+              onChangeText={v => setEditDraft(d => d ? { ...d, [backConfig.backField]: v } : d)}
             />
             <View style={s.editActions}>
               <TouchableOpacity style={s.editSaveBtn} onPress={handleEditSave}>

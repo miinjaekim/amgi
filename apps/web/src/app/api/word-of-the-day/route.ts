@@ -1,7 +1,7 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/firebaseAdmin';
-import { getStudyLanguageConfig, isStudyLanguage, wordOfTheDayCore, type WordOfTheDay } from '@amgi/core';
+import { getStudyLanguageConfig, getBackSideConfig, isStudyLanguage, wordOfTheDayCore, type WordOfTheDay } from '@amgi/core';
 
 function stripMarkdownCodeBlock(text: string): string {
   return text.replace(/```[a-zA-Z]*\n?|```/g, '').trim();
@@ -128,10 +128,17 @@ export async function GET(req: NextRequest) {
               ? '"formality": "Casual | Standard | Formal | Honorific | Slang"'
               : null;
 
+  // `english` is always asked for, even when the learner reads Korean backs:
+  // the stored document is shared by every reader of that date and language
+  // pair, and `wordOfTheDayCore` falls back to it for cards saved from a word
+  // of the day generated before backs became native-aware.
+  const { backField } = getBackSideConfig(studyLanguage, nativeLanguage);
   const translationLine =
     studyLanguage === 'English'
       ? '"korean": "the best Korean translation", "english": "the word itself"'
-      : '"english": "the best English translation"';
+      : backField === 'korean'
+        ? '"english": "the best English translation", "korean": "the best Korean translation"'
+        : '"english": "the best English translation"';
 
   // The registry code is an identifier, not prose — "TraditionalChinese" reads
   // badly in a prompt and says nothing about which script to write in.
@@ -188,7 +195,7 @@ Respond with only this JSON:
   // fresh /api/explain call, so the saved card could be worded differently from
   // the panel that was tapped; now the tap is a read of this.
   const stored: WordOfTheDay = { ...parsed };
-  stored.core = wordOfTheDayCore(stored, isStudyLanguage(studyLanguage) ? studyLanguage : 'Korean');
+  stored.core = wordOfTheDayCore(stored, isStudyLanguage(studyLanguage) ? studyLanguage : 'Korean', nativeLanguage);
 
   if (docRef) {
     try {
