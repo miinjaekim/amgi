@@ -413,6 +413,32 @@ _Reconciled against `main` @ `6e9f3e9` on 2026-07-24, plus the 1.0.2 release cut
   moved to `packages/core/src/reviewQueue.ts` beside the drill queue (12 tests)
   because it existed twice after this and the copies would have drifted the way
   `isDue` did.
+- **Card backs follow native language** (PR #67, 2026-07-28) — which slot held
+  the back was decided per *study* language, so every non-English study language
+  was hardcoded to `english` and a Korean native studying Japanese got English
+  backs everywhere. The back-side fields came off `StudyLanguageConfig` onto
+  `getBackSideConfig(studyLanguage, nativeLanguage)`, which is what made a
+  31-file change tractable: the call sites that only want a collection name or a
+  TTS voice kept compiling, and the 42 `backField` reads all became compiler
+  errors. Cards now carry **both** back slots, so switching native language
+  switches existing cards with you and no Firestore migration was needed —
+  `getBackSide` falls back to `english` for anything written earlier. The 20
+  `directionJapaneseToEnglish`-style i18n keys are composed from the six
+  language labels instead, which deleted 40 strings rather than adding 32. Kana
+  packs gained hangul backs from the 어중·어말 column of 외래어 표기법 (the
+  word-initial column collapses か/が to 가); つ is 츠 (쓰) and ん is 응 by
+  decision, not by the standard.
+  - Two one-off scripts in `apps/web/scripts/`, both applied 2026-07-28:
+    `backfill-pack-backs` filled hangul on 355 already-saved pack cards, and
+    `dedupe-pack-cards` removed 71 duplicates. Kept as the record of what was
+    written to production and why.
+  - The duplicates were a **separate bug found on the way** and fixed in the
+    same session: `savedTerms` is null both while the card fetch is in flight
+    and after it fails, and the enrol path read that as "nothing is saved", so
+    a tap before the load landed re-enrolled the whole deck. `unsavedPackCards`
+    now returns `null` rather than an empty list when the saved set is unknown,
+    which makes the caller answer for it — a comment asking them to check first
+    is precisely what had failed.
 
 ## Builds
 

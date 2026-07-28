@@ -25,8 +25,18 @@ production build when a batch is worth a release. See [tech-stack.md](tech-stack
 ## Queued for the next build
 
 _Last build: **1.1.0 / build 6**, 2026-07-27 — submitted and under review for
-external testing. Nothing queued behind it yet; mobile work merged from here on
-waits for the next one._
+external testing._
+
+Merged since, waiting on the next build. All three are JS-only, so no native
+module was added and `expo config --type introspect` is not needed this time:
+
+- **Direction choice on mobile Review** (PR #65)
+- **A second Learn tab tap clears the search** (PR #66)
+- **Card backs follow native language** (PR #67) — the one worth testing
+  deliberately; see the What to Test block in
+  `docs/testflight-beta-info-ko.md`, which was rewritten for this build.
+  Production data was already backfilled and de-duplicated, so a Korean-native
+  tester's existing kana cards should read hangul the moment the build lands.
 
 **Pre-flight:** smoke-test in Expo Go → verify native-adjacent things (audio,
 files, sharing, **offline review + reconnect sync**, **account deletion**,
