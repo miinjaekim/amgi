@@ -67,6 +67,10 @@ const translations = {
     reviewCollectionDue: '{count} due',
     reviewCollectionCaughtUp: 'Caught up',
     reviewChangeCollection: 'Change collection',
+    // Count in parentheses rather than "{count} cards": `t` has no plural
+    // support, and this way the copy is right at 1 in both languages.
+    reviewStartCount: 'Start review ({count})',
+    reviewNothingInDirection: 'Nothing due this way right now.',
     // Offline review — mobile keeps its own card snapshot and rating queue
     offlineReviewBanner: 'Offline — reviewing the cards saved on this device.',
     offlinePendingReviews: '{count} to sync',
@@ -329,6 +333,8 @@ const translations = {
     reviewCollectionDue: '{count}개 복습할 차례',
     reviewCollectionCaughtUp: '지금은 없어요',
     reviewChangeCollection: '다른 묶음 고르기',
+    reviewStartCount: '복습 시작 ({count}개)',
+    reviewNothingInDirection: '이 방향은 지금 복습할 카드가 없어요.',
     // Offline review — mobile keeps its own card snapshot and rating queue
     offlineReviewBanner: '오프라인 상태예요. 받아둔 카드로 복습할 수 있어요.',
     offlinePendingReviews: '{count}개 저장 대기 중',
