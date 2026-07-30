@@ -19,7 +19,10 @@ Related docs outside this folder:
   (referenced from `packages/core/src/packs.ts`)
 - `docs/packs/topik-pack-draft.md` — source draft for the TOPIK 고급 pack
   (referenced from `packages/core/src/topik.ts`)
-- `docs/testflight-beta-info-ko.md` — Korean TestFlight listing copy
+- `docs/testflight-beta-info-ko.md` — Korean TestFlight listing copy.
+  ⚠️ **Untracked**: `.gitignore` excludes `docs/*` and only re-includes
+  `docs/packs/`, so this file exists on one machine only despite the release
+  checklist in [backlog.md](backlog.md) depending on it.
 
 **Convention:** `backlog.md` holds **only open work**. When something closes it
 leaves that file:
@@ -33,4 +36,7 @@ leaves that file:
 Backlog priority mirrors the user's Google Tasks list — `backlog.md` is the
 scoped version of it.
 
-_Last reviewed against the codebase: 2026-07-26 (PR #53, offline review on mobile)._
+_Last reviewed against the codebase: 2026-07-30, `main` @ `da5f081` (PR #68, the
+TOPIK pack). Tests and lint were run, not assumed; `data-model.md`'s type
+architecture and `tech-stack.md`'s `@amgi/core` table were both rewritten
+against the source._

@@ -25,6 +25,11 @@ labels in `app/(tabs)/settings.tsx`). No System option yet — see open question
 
 ## Navigation
 
+- **Nav is Learn / Review / Cards / Packs** on both platforms. The label is
+  "Packs" (`navDecks` → 단어팩) but the **route is `/decks`** — the rename was a
+  copy change, not a move. "Packs" rather than "Decks" is deliberate: it sits
+  next to Cards, and calling both a "deck" invites an Anki-style comparison
+  neither one is. See the reversed `/decks` decision in [status.md](status.md).
 - **Web desktop** — fixed left `SideNav`: logo, nav, streak, study-language
   chip, user/settings popover. Collapsible to an icon rail, state persisted.
 - **Web mobile** — top header + bottom nav. Nav icons shared with the sidebar

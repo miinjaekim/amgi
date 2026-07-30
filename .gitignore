@@ -58,6 +58,10 @@ docs/*
 # ...except curated pack source drafts, which tracked code references
 !docs/packs/
 !docs/packs/**
+# ...and the TestFlight listing copy, which the release checklist in
+# .scratchpad/backlog.md says to verify before every build. Untracked, it
+# existed on one machine only.
+!docs/testflight-beta-info-ko.md
 
 # pronunciation audio test output (throwaway)
 /audio-test/

@@ -1,6 +1,6 @@
 # Project Status
 
-_Reconciled against `main` @ `6e9f3e9` on 2026-07-24, plus the 1.0.2 release cut._
+_Reconciled against `main` @ `da5f081` on 2026-07-30 (PR #68, the TOPIK pack)._
 
 ## Shipped
 
@@ -90,6 +90,34 @@ _Reconciled against `main` @ `6e9f3e9` on 2026-07-24, plus the 1.0.2 release cut
     different voice than a sentence in the same deck — was **reviewed and
     accepted 2026-07-25**. It's a decision, not an outstanding defect.
 
+- **Card backs follow native language** (PR #67, 2026-07-28) — which slot held
+  the back was decided per *study* language, so every non-English study language
+  was hardcoded to `english` and a Korean native studying Japanese got English
+  backs everywhere. The back-side fields came off `StudyLanguageConfig` onto
+  `getBackSideConfig(studyLanguage, nativeLanguage)`, which is what made a
+  31-file change tractable: the call sites that only want a collection name or a
+  TTS voice kept compiling, and the 42 `backField` reads all became compiler
+  errors. Cards now carry **both** back slots, so switching native language
+  switches existing cards with you and no Firestore migration was needed —
+  `getBackSide` falls back to `english` for anything written earlier. The 20
+  `directionJapaneseToEnglish`-style i18n keys are composed from the six
+  language labels instead, which deleted 40 strings rather than adding 32. Kana
+  packs gained hangul backs from the 어중·어말 column of 외래어 표기법 (the
+  word-initial column collapses か/が to 가); つ is 츠 (쓰) and ん is 응 by
+  decision, not by the standard.
+  - Two one-off scripts in `apps/web/scripts/`, both applied 2026-07-28:
+    `backfill-pack-backs` filled hangul on 355 already-saved pack cards, and
+    `dedupe-pack-cards` removed 71 duplicates. Kept as the record of what was
+    written to production and why.
+  - The duplicates were a **separate bug found on the way** and fixed in the
+    same session: `savedTerms` is null both while the card fetch is in flight
+    and after it fails, and the enrol path read that as "nothing is saved", so
+    a tap before the load landed re-enrolled the whole deck. `unsavedPackCards`
+    now returns `null` rather than an empty list when the saved set is unknown,
+    which makes the caller answer for it — a comment asking them to check first
+    is precisely what had failed.
+
+### Decks, packs & collections
 - **Decks page** (PR #50, 2026-07-25) — `PacksModal` is retired on
   both platforms. `/decks` lists the packs for the current study language and
   `/decks/[packId]` is the deck itself, so the 71 kana tiles no longer fight an
@@ -129,96 +157,6 @@ _Reconciled against `main` @ `6e9f3e9` on 2026-07-24, plus the 1.0.2 release cut
     (kana), and tapping a word in a `lookup` pack (TOEIC) — the deck → Learn
     round trip, which had no web equivalent to prove it since it has to pop a
     stack screen above the tabs and have Learn pick the param up.
-
-- **Account deletion + "your data"** (PR #59, 2026-07-27) — self-service account
-  deletion on both platforms, closing the privacy backlog item.
-  - **App Store Guideline 5.1.1(v) makes this a submission blocker**, not
-    hygiene: an app offering account creation must offer in-app deletion.
-  - **Client `deleteUser()` plus the Delete User Data extension** — the
-    documented Firebase pattern. The client removes the account; the extension
-    triggers on that and sweeps Firestore server-side, so cleanup finishes even
-    if the app is closed mid-way. No API route, no `firebase-admin`.
-  - **This is the second attempt.** PR #55 did it server-side with the Admin
-    SDK, and adding `firebase-admin/auth` to `lib/firebaseAdmin` took
-    `/api/pronounce` and `/api/word-of-the-day` down with it — every route
-    importing that module returned 500 before its handler ran. PR #56 guessed at
-    a bundling fix and did not help; PR #57 reverted both. **The root cause was
-    never found.** A standalone build using Vercel's own dependency tracer
-    serves all three routes correctly, so the bundling theory is unproven. What
-    changed is that the current design does not need that module at all.
-  - **Requires a console step.** The extension is installed and configured by
-    hand — see [tech-stack.md](tech-stack.md). Without it the account is deleted
-    but the cards remain, so the two have to land together.
-  - **Expect a reauthentication prompt.** Deletion is security-sensitive and
-    Firebase requires a sign-in from the last few minutes; both platforms catch
-    `auth/requires-recent-login`, send the user back through Google, and retry.
-  - **Pronunciation audio is deliberately kept.** Keyed by a hash of the text
-    rather than by user, and shared — deleting it would break playback on other
-    people's cards. Storage paths are left empty in the extension config for
-    exactly this reason.
-  - **Verified end to end on web, 2026-07-27**, against the real extension with
-    a throwaway account: the account was deleted, the reauthentication prompt
-    fired, and the cards disappeared from Firestore. That second half is the one
-    worth checking — the extension can install cleanly and still match nothing
-    if auto discovery is misconfigured, and it fails silently when it does.
-  - **Verified on mobile too, 2026-07-27**, in Expo Go. Reauthentication there
-    re-runs the Expo Google flow rather than a popup, and that response is
-    marked consumed so the sign-in effect skips it — without that guard,
-    deleting an account would immediately sign the user back in as a brand new
-    one from the same Google identity, looking exactly like a failed deletion.
-
-- **Web review session parity** (PR #54, 2026-07-26) — the session controls from
-  PR #53 brought over, plus a stale-state bug found on the way.
-  - **Ratings never fed back into `userFlashcards`**, which `dueCards` derives
-    from, so the due count was frozen at page load and starting a second review
-    re-served the whole deck instead of the missed cards. Only a reload or Force
-    Synchronize collapsed it. Mirroring each rating locally is safe mid-session
-    because `activeQueue` is its own state, not derived from the cards.
-  - **Render branch order became load-bearing** once that landed: `dueCards
-    .length === 0` was checked before `reviewMode`, so the last answer of a
-    clean session would have replaced the completion screen with the caught-up
-    landing before it was seen. A session in progress outranks the due count.
-  - **Same two surfaces as mobile** — a ✕ that stops a session, and a
-    completion screen that names what is still due and offers it back. No new
-    i18n keys; both platforms read the copy added in PR #53.
-
-- **Offline review on mobile** (PR #53, 2026-07-26) — the review loop works
-  without a connection, and ratings sync when one returns. Mobile keeps its own
-  durable state because it has to: Firestore's persistent cache is IndexedDB
-  and therefore web-only, so `getFirestore` on RN is memory-only. See the
-  Firestore section of [lessons.md](lessons.md) — the two "offline doesn't
-  fail, it lies" gotchas are the load-bearing part.
-  - **Card snapshots per user and study language**, in AsyncStorage. Review
-    loads cache-first, which also removed the spinner online. Languages this
-    device has loaded are refreshed in the background, so switching study
-    language offline works; one never loaded says so rather than showing the
-    empty-deck state.
-  - **A durable queue of unsent ratings.** Committed to disk *before* the
-    network is attempted and replayed over the snapshot on load, so an offline
-    session survives the app being killed instead of re-serving cards already
-    answered. Conflicts are last-flush-wins — entries carry `reviewedAt` so a
-    future "newer wins" has its half, but that rule also needs a timestamp *on
-    the card*, written by web too, or every web review looks infinitely old and
-    always loses. Decided against paying for that until it bites.
-  - **Two bugs beyond review**, both from the offline-reads gotcha: an offline
-    launch wiped the cached native language and reset the streak to zero,
-    because "couldn't reach the server" and "no preferences" were the same
-    value.
-  - **`getNextReviewData` scheduled a lapse a day out**, so rating a card
-    "again" removed it from today's queue. Web patched this at its call site
-    and mobile never did — the same card lapsed differently per platform. Rule
-    moved into the scheduler, web's override deleted. Three tests asserted the
-    old behaviour; two had comments saying the card should be due "today
-    (immediately)" directly above an assertion for tomorrow.
-  - **A session can be stopped early** (✕ on the progress row) and is allowed
-    to *finish*: a missed card stays due but does not reappear mid-session, and
-    the completion screen offers another pass over exactly what was missed
-    instead of claiming "all caught up". Rejected the alternative — reinserting
-    missed cards a few positions later, as drill does — because it makes
-    session length unpredictable and takes the choice of when to stop away from
-    the user.
-  - **Needs a production build**: adds `expo-network`, so it cannot ride a
-    JS-only release.
 
 - **Review by collection** (PR #51, 2026-07-26) — your own cards and each pack
   are separate collections now, reviewed apart end to end. Replaces the "deck
@@ -275,6 +213,300 @@ _Reconciled against `main` @ `6e9f3e9` on 2026-07-24, plus the 1.0.2 release cut
     deck → `/review` handoff (`router.navigate` across tab groups), drill still
     opening full-screen above the tabs, and the deck page's manage panel.
 
+### Review loop & reminders
+- **Web review session parity** (PR #54, 2026-07-26) — the session controls from
+  PR #53 brought over, plus a stale-state bug found on the way.
+  - **Ratings never fed back into `userFlashcards`**, which `dueCards` derives
+    from, so the due count was frozen at page load and starting a second review
+    re-served the whole deck instead of the missed cards. Only a reload or Force
+    Synchronize collapsed it. Mirroring each rating locally is safe mid-session
+    because `activeQueue` is its own state, not derived from the cards.
+  - **Render branch order became load-bearing** once that landed: `dueCards
+    .length === 0` was checked before `reviewMode`, so the last answer of a
+    clean session would have replaced the completion screen with the caught-up
+    landing before it was seen. A session in progress outranks the due count.
+  - **Same two surfaces as mobile** — a ✕ that stops a session, and a
+    completion screen that names what is still due and offers it back. No new
+    i18n keys; both platforms read the copy added in PR #53.
+
+- **Offline review on mobile** (PR #53, 2026-07-26) — the review loop works
+  without a connection, and ratings sync when one returns. Mobile keeps its own
+  durable state because it has to: Firestore's persistent cache is IndexedDB
+  and therefore web-only, so `getFirestore` on RN is memory-only. See the
+  Firestore section of [lessons.md](lessons.md) — the two "offline doesn't
+  fail, it lies" gotchas are the load-bearing part.
+  - **Card snapshots per user and study language**, in AsyncStorage. Review
+    loads cache-first, which also removed the spinner online. Languages this
+    device has loaded are refreshed in the background, so switching study
+    language offline works; one never loaded says so rather than showing the
+    empty-deck state.
+  - **A durable queue of unsent ratings.** Committed to disk *before* the
+    network is attempted and replayed over the snapshot on load, so an offline
+    session survives the app being killed instead of re-serving cards already
+    answered. Conflicts are last-flush-wins — entries carry `reviewedAt` so a
+    future "newer wins" has its half, but that rule also needs a timestamp *on
+    the card*, written by web too, or every web review looks infinitely old and
+    always loses. Decided against paying for that until it bites.
+  - **Two bugs beyond review**, both from the offline-reads gotcha: an offline
+    launch wiped the cached native language and reset the streak to zero,
+    because "couldn't reach the server" and "no preferences" were the same
+    value.
+  - **`getNextReviewData` scheduled a lapse a day out**, so rating a card
+    "again" removed it from today's queue. Web patched this at its call site
+    and mobile never did — the same card lapsed differently per platform. Rule
+    moved into the scheduler, web's override deleted. Three tests asserted the
+    old behaviour; two had comments saying the card should be due "today
+    (immediately)" directly above an assertion for tomorrow.
+  - **A session can be stopped early** (✕ on the progress row) and is allowed
+    to *finish*: a missed card stays due but does not reappear mid-session, and
+    the completion screen offers another pass over exactly what was missed
+    instead of claiming "all caught up". Rejected the alternative — reinserting
+    missed cards a few positions later, as drill does — because it makes
+    session length unpredictable and takes the choice of when to stop away from
+    the user.
+  - **Needs a production build**: adds `expo-network`, so it cannot ride a
+    JS-only release.
+
+- **Direction choice on mobile Review** (PR #65, 2026-07-28) — mobile served
+  both directions with no way to pick; web has had chips since the collection
+  picker landed. Mobile gained a start screen after the collection pick, rather
+  than pills on the picker itself: the picker is skipped for single-collection
+  users and for the deck handoff, so pills there would be invisible to exactly
+  the people studying one deck. Worth one tap. Per-session and reset to `both`
+  with the collection — a `reviewDirection` on the user doc was rejected as a
+  schema change plus offline-write handling for a one-second choice. The queue
+  moved to `packages/core/src/reviewQueue.ts` beside the drill queue (12 tests)
+  because it existed twice after this and the copies would have drifted the way
+  `isDue` did.
+
+- **Word-of-the-day and review reminders** (PR #61, 2026-07-27) — local
+  scheduled notifications, not remote push. Everything the decision needs (which
+  cards are due, when the user last reviewed) is already on the device from the
+  offline review work, so a server would recompute what the phone knows — and it
+  avoids an APNs key on a borrowed developer account. Both reminders are
+  independently opt-in and **off by default**.
+  - **Word of the day fires at a fixed 09:00.** It's the same word all day, so
+    choosing when to hear about it is a setting with no decision behind it.
+  - **The review reminder is a one-shot, re-planned whenever its inputs move** —
+    after each rating, on returning to the app, on a preference change. It is
+    scheduled only when cards are actually due *and* today has had no review: a
+    reminder to do something already done is what makes people switch
+    notifications off for good. A repeating trigger would have kept firing long
+    after the reason for it was gone.
+  - A separate **"streak at risk" reminder was considered and dropped** —
+    reviewing is what keeps a streak, so the review reminder already protects
+    it. What a dedicated one adds is the loss-aversion framing, which is the
+    part worth not building.
+  - The scheduling decision is pure and lives in `packages/core/src/reminders.ts`
+    under test (15 tests). Notifications are the surface nobody watches being
+    built — one that fires wrongly is switched off forever, one that never fires
+    isn't noticed at all — so that logic isn't left to a device.
+  - **Permission is requested when the first reminder is switched on**, never on
+    launch: iOS shows that dialog once ever, so it's spent where the reason is
+    self-evident. A denied prompt shows as blocked with a link to system
+    settings, rather than a toggle that silently does nothing.
+  - **Needs a production build**: adds `expo-notifications`. It rode along with
+    offline review's build rather than costing one of its own.
+
+### Privacy & account
+- **Account deletion + "your data"** (PR #59, 2026-07-27) — self-service account
+  deletion on both platforms, closing the privacy backlog item.
+  - **App Store Guideline 5.1.1(v) makes this a submission blocker**, not
+    hygiene: an app offering account creation must offer in-app deletion.
+  - **Client `deleteUser()` plus the Delete User Data extension** — the
+    documented Firebase pattern. The client removes the account; the extension
+    triggers on that and sweeps Firestore server-side, so cleanup finishes even
+    if the app is closed mid-way. No API route, no `firebase-admin`.
+  - **This is the second attempt.** PR #55 did it server-side with the Admin
+    SDK, and adding `firebase-admin/auth` to `lib/firebaseAdmin` took
+    `/api/pronounce` and `/api/word-of-the-day` down with it — every route
+    importing that module returned 500 before its handler ran. PR #56 guessed at
+    a bundling fix and did not help; PR #57 reverted both. **The root cause was
+    never found.** A standalone build using Vercel's own dependency tracer
+    serves all three routes correctly, so the bundling theory is unproven. What
+    changed is that the current design does not need that module at all.
+  - **Requires a console step.** The extension is installed and configured by
+    hand — see [tech-stack.md](tech-stack.md). Without it the account is deleted
+    but the cards remain, so the two have to land together.
+  - **Expect a reauthentication prompt.** Deletion is security-sensitive and
+    Firebase requires a sign-in from the last few minutes; both platforms catch
+    `auth/requires-recent-login`, send the user back through Google, and retry.
+  - **Pronunciation audio is deliberately kept.** Keyed by a hash of the text
+    rather than by user, and shared — deleting it would break playback on other
+    people's cards. Storage paths are left empty in the extension config for
+    exactly this reason.
+  - **Verified end to end on web, 2026-07-27**, against the real extension with
+    a throwaway account: the account was deleted, the reauthentication prompt
+    fired, and the cards disappeared from Firestore. That second half is the one
+    worth checking — the extension can install cleanly and still match nothing
+    if auto discovery is misconfigured, and it fails silently when it does.
+  - **Verified on mobile too, 2026-07-27**, in Expo Go. Reauthentication there
+    re-runs the Expo Google flow rather than a popup, and that response is
+    marked consumed so the sign-in effect skips it — without that guard,
+    deleting an account would immediately sign the user back in as a brand new
+    one from the same Google identity, looking exactly like a failed deletion.
+
+### Design & polish
+- **Design system** — Forest/Sonokai/Paper/System themes, Source Code Pro,
+  localized UI (EN + KO)
+- **Desktop side navigation** (`feat/side-nav`, 2026-07-08) — fixed `SideNav`,
+  collapsible icon rail, shared `SettingsMenu`
+- **Theme rework + review/nav polish** (`feat/theme-rework`, 2026-07-09) —
+  pre-paint inline script kills the theme and sidebar flashes; System theme;
+  Sonokai replaces indigo Slate; review buttons no longer jump on reveal
+
+### Content & audio
+- **Pronunciation audio** (`feat/pronunciation-audio`, 2026-07-11) — Korean
+  only. Google Cloud TTS Chirp 3: HD (`ko-KR-Chirp3-HD-Charon`) at
+  `speakingRate: 0.85`. Lazy-generated on first play, cached in Firebase Storage
+  keyed by text+language+voice+rate. Other languages return a clean "not
+  available" until a voice is added to `STUDY_LANGUAGE_CONFIGS`.
+- **Korean-user UX + TOEIC vocab pack** (PR #34, 2026-07-13) — setup modal step
+  2 localized to the chosen native language; cards import/export fully localized
+  EN+KO with `{token}` interpolation; **TOEIC Core Vocabulary pack v1** —
+  `packages/core/src/packs.ts`, 133 curated words, `PacksModal` with
+  saved-marking + progress, tap-a-word → normal Learn flow, polysemes carry
+  context hints. ImportModal is paste-only; goal-based generation is still a
+  coming-soon placeholder.
+- **Depth/examples sense fix** (PR #35, 2026-07-14) — depth and examples prompts
+  pinned to the disambiguated sense across all four routes. Fixes pack context
+  hints, the disambiguation picker, and "not what you meant" in one go.
+- **Word of the day fixes** (PR #37, `fix/wotd-disambiguation`) — four commits:
+  pronunciation buttons on example sentences; WOTD sense pinned when opening its
+  explanation (`briefDefinition` passed as a context hint); **WOTD persisted in
+  Firestore** — one doc per `date_studyLanguage_nativeLanguage` in the
+  `wordOfTheDay` collection, with `create()` resolving the first-request race,
+  so the CDN header is now only a fast path and consistency no longer depends on
+  cache behavior; prompt steered toward practical, date-relevant picks.
+
+- **TOPIK 고급 pack** (PR #68, 2026-07-30) — the first Korean pack, 160 words
+  for TOPIK II 5–6급 in `packages/core/src/topik.ts`. Korean had no pack at
+  all until now, so `/decks` was the empty state on the app's own original
+  study language. A `lookup` pack by design: most entries are Sino-Korean, so
+  the hanja breakdown the Korean Learn flow already writes is the value, and
+  여건/취지 have no one-word English gloss worth pre-authoring. Six sections
+  (시사·사회 30, 추상 개념 30, 고급 동사 40, 형용사 20, 부사·연결 표현 20,
+  관용 표현·사자성어 20), sourced from 국립국어원's 고급 learner lists,
+  released TOPIK II papers and the university 5–6급 series — draft and open
+  questions kept in `docs/packs/topik-pack-draft.md`.
+  - **48 context hints**, carrying more weight than they did on TOEIC: Korean
+    homographs are one form with unrelated senses (경기, 미치다, 지나치다),
+    several everyday verbs are tested in their written sense (밝히다, 꼽히다),
+    and every idiom needs one — 발이 넓다 read literally is a sentence about
+    feet. First pack with **multi-word entries** (관용구, 이에 따라); the
+    format always allowed them and no pack had exercised it.
+  - The word list was **approved 2026-07-30** after use on mobile, which is
+    the approval step the pack principles ask for.
+  - Fixed on the way: `.gitignore` said `docs/`, and git never descends into
+    an excluded directory, so the `!docs/packs/**` re-include beneath it had
+    never worked — the TOEIC draft was tracked only because it was
+    force-added. Now `docs/*`.
+
+### iOS launch & mobile parity
+- **iOS TestFlight prep** (PR #38, 2026-07-19) — bundle ID `com.tegi.amgi`,
+  icon, env vars; production build submitted to App Store Connect; privacy
+  policy page (`apps/web/src/app/privacy/page.tsx`) written from an actual audit
+  of what the app collects
+- **EAS OTA automation** (PRs #39–#41, 2026-07-21) — `mobile-ota-update.yml`
+  publishes on pushes to `main` touching `apps/mobile/**` or `packages/core/**`;
+  `mobile-typecheck.yml` gates PRs; `runtimeVersion` pinned to `appVersion`,
+  `appVersionSource: remote`, iOS build auto-increment
+- **Mobile ↔ web parity** (4 phases, 2026-07-21) — closes the old "mobile is
+  Korean-only" gap:
+  - *Phase 1* — study-language support across Learn/Cards/Review/Settings,
+    `UserContext`, firestore + gemini services
+  - *Phase 2* — Learn-screen features: `PacksModal`, `PronounceButton`
+    (`expo-audio`), word of the day
+  - *Phase 3* — Cards import/export, `CardDetailModal`, bulk actions
+  - *Phase 4* — streaming depth/examples with typewriter cursor, shared
+    `Markdown` renderer
+- **Korean TestFlight beta info** (PR #42, 2026-07-21) — Korean privacy policy
+  at `/privacy/ko` (mobile settings picks the version matching native language),
+  localized mobile settings screen and tab accessibility labels, Korean beta
+  listing copy in `docs/testflight-beta-info-ko.md`
+- **EAS update channel fix** (PR #43, 2026-07-21) — production builds bound to
+  the `default` channel so CI-published updates actually reach installed builds.
+  ⚠️ Only affects builds cut *after* it — it can't retrofit a binary already in
+  TestFlight.
+- **Mobile theme parity** (PR #44, 2026-07-22) — mobile theme options matched to
+  web; `THEMES` now carries its own `labelKey` instead of a separate lookup map.
+  Held back from the previous build as a deliberate OTA test, which never
+  arrived; **reaches the device in 1.0.2** (below).
+- **Push entitlement dropped** (PR #63, 2026-07-27) — the 1.1.0 build failed
+  with *"Provisioning profile doesn't support the Push Notifications
+  capability"*, which reads like a credentials problem and is really an
+  entitlement the app has no use for. `expo-notifications` sets `aps-environment`
+  unconditionally — its iOS plugin has no option for it — because it can't tell
+  local notifications from remote push. Amgi only schedules locally, so
+  `apps/mobile/plugins/withoutPushEntitlement.js` deletes the key again.
+  **Registration order is the subtle part**: Expo composes entitlement mods so
+  the most recently registered runs *first*, meaning the plugin must be listed
+  **first** in `plugins` to have the last word — listed after
+  `expo-notifications`, the intuitive reading, it edits the key before that
+  plugin writes it and silently does nothing. See [lessons.md](lessons.md).
+
+### Learn screen fixes
+- **Learn keyboard + generate link** (PR #60, 2026-07-27) — tapping the mobile
+  search field raised the keyboard over it, and with the tappable spacer
+  collapsed there was nothing left to tap to dismiss it. The old
+  `KeyboardAvoidingView` subtracted the resting height (40% of screen) from the
+  padding, so on any phone whose keyboard is shorter than that the padding
+  clamped to zero and the bar never moved. **Lifting was the wrong idea
+  regardless** — a field that jumps as you tap it is its own annoyance. The bar
+  now sits above a band held open permanently at **46% of screen height**, so
+  the field is in the same place before and after focus. 46% is *tuned, not
+  measured*: measuring means reacting, and reacting means movement on first
+  focus; current iOS keyboards with the predictive bar sit near 39–40%, and if
+  one ever exceeds 46% the number is the fix. Word of the day moved into that
+  band, and the whole screen now dismisses the keyboard on tap.
+  - Also **removed the "generate words for a goal" link**, which only opened a
+    coming-soon modal — from web too, since a placeholder on one platform and
+    not the other is drift worth avoiding. The strings stay for when it lands.
+    It belongs on Decks, beside the packs it would produce.
+- **A second Learn tab tap clears the search** (PR #66, 2026-07-28) — the Learn
+  screen had no way back: searching swapped the empty state (example chips, word
+  of the day) for results, and the only exits were saving a card or restarting
+  the app. Re-tapping the tab you're already on is where people reach for "start
+  over", so that's what clears it. Arriving at Learn from *another* tab is left
+  alone — a lookup you walked away from should still be there — and a tap with
+  nothing to clear does nothing, so a half-typed term is never eaten.
+  - **Clearing exposed a race the screen already had**: nothing cancelled an
+    in-flight request, so a lookup could land after the user moved on and
+    repopulate the screen, and a depth or examples stream could keep writing
+    into whatever term came next. A `runId` ref now marks the lookup on screen —
+    bumped by every new lookup, clear and save — and the async writers check it
+    before touching state.
+
+### Demo-blocking fixes
+- **Native/study language collision + WOTD repeats + WOTD save drift**
+  (PR #47, 2026-07-24) — the three "Next up" items in one batch.
+  `resolveStudyLanguage()` in `@amgi/core` moves the study language to the
+  previous native language when changing native language would leave you
+  studying your own; silent, applied in both `UserContext`s. `/api/word-of-the-day`
+  now reads the last 60 days of picks for the language pair **by document ID**
+  (no composite index, so no manual Firestore step) and feeds them to the prompt
+  as an exclusion list, retrying once on a collision. The card's explanation is
+  generated and stored *with* the word, so tapping it is a read — halving the
+  Gemini calls per word and ending the wording drift between the card and the
+  saved flashcard; `wordOfTheDayCore()` reconstructs it for older documents.
+  Also fixed a stale study-language cache guard that restored only Korean and
+  Swedish, dropping French/Japanese/English learners back to the Korean deck.
+- **Mobile Learn empty state + WOTD loading skeleton**
+  (`fix/mobile-learn-empty-state`, merged straight to `main` 2026-07-24 — no
+  PR) — the two confirmed mobile defects plus the WOTD loading
+  item they shared a fix with. Saving a card no longer suppresses the empty
+  state that hosts the word of the day, example chips and the packs/generate
+  links: `isEmpty` dropped `!saveSuccess` and the banner renders inside the
+  empty state, matching web. A successful save also clears a stale error from a
+  failed depth load, which suppressed the empty state the same way. The mobile
+  tagline was **cut entirely** — the screen read as crowded — so the empty
+  state is now blank above the search bar; the resting padding that holds the
+  search ~40% up the screen became a shrinkable spacer, so a short screen gives
+  that space back instead of squeezing content into an overlap. Both platforms
+  show a skeleton at the WOTD tile's real height while it loads, which removes
+  the reflow that caused the overlap in the first place.
+
+### Tooling
 - **The web suite is green again** (2026-07-26) — 73/73. The two stale review
   tests that predated the monorepo restructure are both gone: `isDue` moved into
   `@amgi/core` with PR #51, and `review-response.test.ts` is fixed. The second
@@ -310,157 +542,15 @@ _Reconciled against `main` @ `6e9f3e9` on 2026-07-24, plus the 1.0.2 release cut
   - Lint still covers `apps/web` only; core and mobile have no `lint` script,
     so `turbo lint` reports success for one package. Backlogged with the CI gate.
 
-### Design & polish
-- **Design system** — Forest/Sonokai/Paper/System themes, Source Code Pro,
-  localized UI (EN + KO)
-- **Desktop side navigation** (`feat/side-nav`, 2026-07-08) — fixed `SideNav`,
-  collapsible icon rail, shared `SettingsMenu`
-- **Theme rework + review/nav polish** (`feat/theme-rework`, 2026-07-09) —
-  pre-paint inline script kills the theme and sidebar flashes; System theme;
-  Sonokai replaces indigo Slate; review buttons no longer jump on reveal
-
-### Content & audio
-- **Pronunciation audio** (`feat/pronunciation-audio`, 2026-07-11) — Korean
-  only. Google Cloud TTS Chirp 3: HD (`ko-KR-Chirp3-HD-Charon`) at
-  `speakingRate: 0.85`. Lazy-generated on first play, cached in Firebase Storage
-  keyed by text+language+voice+rate. Other languages return a clean "not
-  available" until a voice is added to `STUDY_LANGUAGE_CONFIGS`.
-- **Korean-user UX + TOEIC vocab pack** (PR #34, 2026-07-13) — setup modal step
-  2 localized to the chosen native language; cards import/export fully localized
-  EN+KO with `{token}` interpolation; **TOEIC Core Vocabulary pack v1** —
-  `packages/core/src/packs.ts`, 133 curated words, `PacksModal` with
-  saved-marking + progress, tap-a-word → normal Learn flow, polysemes carry
-  context hints. ImportModal is paste-only; goal-based generation is still a
-  coming-soon placeholder.
-- **Depth/examples sense fix** (PR #35, 2026-07-14) — depth and examples prompts
-  pinned to the disambiguated sense across all four routes. Fixes pack context
-  hints, the disambiguation picker, and "not what you meant" in one go.
-- **Word of the day fixes** (PR #37, `fix/wotd-disambiguation`) — four commits:
-  pronunciation buttons on example sentences; WOTD sense pinned when opening its
-  explanation (`briefDefinition` passed as a context hint); **WOTD persisted in
-  Firestore** — one doc per `date_studyLanguage_nativeLanguage` in the
-  `wordOfTheDay` collection, with `create()` resolving the first-request race,
-  so the CDN header is now only a fast path and consistency no longer depends on
-  cache behavior; prompt steered toward practical, date-relevant picks.
-
-### iOS launch & mobile parity
-- **iOS TestFlight prep** (PR #38, 2026-07-19) — bundle ID `com.tegi.amgi`,
-  icon, env vars; production build submitted to App Store Connect; privacy
-  policy page (`apps/web/src/app/privacy/page.tsx`) written from an actual audit
-  of what the app collects
-- **EAS OTA automation** (PRs #39–#41, 2026-07-21) — `mobile-ota-update.yml`
-  publishes on pushes to `main` touching `apps/mobile/**` or `packages/core/**`;
-  `mobile-typecheck.yml` gates PRs; `runtimeVersion` pinned to `appVersion`,
-  `appVersionSource: remote`, iOS build auto-increment
-- **Mobile ↔ web parity** (4 phases, 2026-07-21) — closes the old "mobile is
-  Korean-only" gap:
-  - *Phase 1* — study-language support across Learn/Cards/Review/Settings,
-    `UserContext`, firestore + gemini services
-  - *Phase 2* — Learn-screen features: `PacksModal`, `PronounceButton`
-    (`expo-audio`), word of the day
-  - *Phase 3* — Cards import/export, `CardDetailModal`, bulk actions
-  - *Phase 4* — streaming depth/examples with typewriter cursor, shared
-    `Markdown` renderer
-- **Korean TestFlight beta info** (PR #42, 2026-07-21) — Korean privacy policy
-  at `/privacy/ko` (mobile settings picks the version matching native language),
-  localized mobile settings screen and tab accessibility labels, Korean beta
-  listing copy in `docs/testflight-beta-info-ko.md`
-- **EAS update channel fix** (PR #43, 2026-07-21) — production builds bound to
-  the `default` channel so CI-published updates actually reach installed builds.
-  ⚠️ Only affects builds cut *after* it — it can't retrofit a binary already in
-  TestFlight.
-- **Mobile theme parity** (PR #44, 2026-07-22) — mobile theme options matched to
-  web; `THEMES` now carries its own `labelKey` instead of a separate lookup map.
-  Held back from the previous build as a deliberate OTA test, which never
-  arrived; **reaches the device in 1.0.2** (below).
-
-### Demo-blocking fixes
-- **Native/study language collision + WOTD repeats + WOTD save drift**
-  (PR #47, 2026-07-24) — the three "Next up" items in one batch.
-  `resolveStudyLanguage()` in `@amgi/core` moves the study language to the
-  previous native language when changing native language would leave you
-  studying your own; silent, applied in both `UserContext`s. `/api/word-of-the-day`
-  now reads the last 60 days of picks for the language pair **by document ID**
-  (no composite index, so no manual Firestore step) and feeds them to the prompt
-  as an exclusion list, retrying once on a collision. The card's explanation is
-  generated and stored *with* the word, so tapping it is a read — halving the
-  Gemini calls per word and ending the wording drift between the card and the
-  saved flashcard; `wordOfTheDayCore()` reconstructs it for older documents.
-  Also fixed a stale study-language cache guard that restored only Korean and
-  Swedish, dropping French/Japanese/English learners back to the Korean deck.
-- **Mobile Learn empty state + WOTD loading skeleton**
-  (`fix/mobile-learn-empty-state`, merged straight to `main` 2026-07-24 — no
-  PR) — the two confirmed mobile defects plus the WOTD loading
-  item they shared a fix with. Saving a card no longer suppresses the empty
-  state that hosts the word of the day, example chips and the packs/generate
-  links: `isEmpty` dropped `!saveSuccess` and the banner renders inside the
-  empty state, matching web. A successful save also clears a stale error from a
-  failed depth load, which suppressed the empty state the same way. The mobile
-  tagline was **cut entirely** — the screen read as crowded — so the empty
-  state is now blank above the search bar; the resting padding that holds the
-  search ~40% up the screen became a shrinkable spacer, so a short screen gives
-  that space back instead of squeezing content into an overlap. Both platforms
-  show a skeleton at the WOTD tile's real height while it loads, which removes
-  the reflow that caused the overlap in the first place.
-- **Direction choice on mobile Review** (PR #65, 2026-07-28) — mobile served
-  both directions with no way to pick; web has had chips since the collection
-  picker landed. Mobile gained a start screen after the collection pick, rather
-  than pills on the picker itself: the picker is skipped for single-collection
-  users and for the deck handoff, so pills there would be invisible to exactly
-  the people studying one deck. Worth one tap. Per-session and reset to `both`
-  with the collection — a `reviewDirection` on the user doc was rejected as a
-  schema change plus offline-write handling for a one-second choice. The queue
-  moved to `packages/core/src/reviewQueue.ts` beside the drill queue (12 tests)
-  because it existed twice after this and the copies would have drifted the way
-  `isDue` did.
-- **Card backs follow native language** (PR #67, 2026-07-28) — which slot held
-  the back was decided per *study* language, so every non-English study language
-  was hardcoded to `english` and a Korean native studying Japanese got English
-  backs everywhere. The back-side fields came off `StudyLanguageConfig` onto
-  `getBackSideConfig(studyLanguage, nativeLanguage)`, which is what made a
-  31-file change tractable: the call sites that only want a collection name or a
-  TTS voice kept compiling, and the 42 `backField` reads all became compiler
-  errors. Cards now carry **both** back slots, so switching native language
-  switches existing cards with you and no Firestore migration was needed —
-  `getBackSide` falls back to `english` for anything written earlier. The 20
-  `directionJapaneseToEnglish`-style i18n keys are composed from the six
-  language labels instead, which deleted 40 strings rather than adding 32. Kana
-  packs gained hangul backs from the 어중·어말 column of 외래어 표기법 (the
-  word-initial column collapses か/が to 가); つ is 츠 (쓰) and ん is 응 by
-  decision, not by the standard.
-  - Two one-off scripts in `apps/web/scripts/`, both applied 2026-07-28:
-    `backfill-pack-backs` filled hangul on 355 already-saved pack cards, and
-    `dedupe-pack-cards` removed 71 duplicates. Kept as the record of what was
-    written to production and why.
-  - The duplicates were a **separate bug found on the way** and fixed in the
-    same session: `savedTerms` is null both while the card fetch is in flight
-    and after it fails, and the enrol path read that as "nothing is saved", so
-    a tap before the load landed re-enrolled the whole deck. `unsavedPackCards`
-    now returns `null` rather than an empty list when the saved set is unknown,
-    which makes the caller answer for it — a comment asking them to check first
-    is precisely what had failed.
-- **TOPIK 고급 pack** (PR #68, 2026-07-30) — the first Korean pack, 160 words
-  for TOPIK II 5–6급 in `packages/core/src/topik.ts`. Korean had no pack at
-  all until now, so `/decks` was the empty state on the app's own original
-  study language. A `lookup` pack by design: most entries are Sino-Korean, so
-  the hanja breakdown the Korean Learn flow already writes is the value, and
-  여건/취지 have no one-word English gloss worth pre-authoring. Six sections
-  (시사·사회 30, 추상 개념 30, 고급 동사 40, 형용사 20, 부사·연결 표현 20,
-  관용 표현·사자성어 20), sourced from 국립국어원's 고급 learner lists,
-  released TOPIK II papers and the university 5–6급 series — draft and open
-  questions kept in `docs/packs/topik-pack-draft.md`.
-  - **48 context hints**, carrying more weight than they did on TOEIC: Korean
-    homographs are one form with unrelated senses (경기, 미치다, 지나치다),
-    several everyday verbs are tested in their written sense (밝히다, 꼽히다),
-    and every idiom needs one — 발이 넓다 read literally is a sentence about
-    feet. First pack with **multi-word entries** (관용구, 이에 따라); the
-    format always allowed them and no pack had exercised it.
-  - The word list was **approved 2026-07-30** after use on mobile, which is
-    the approval step the pack principles ask for.
-  - Fixed on the way: `.gitignore` said `docs/`, and git never descends into
-    an excluded directory, so the `!docs/packs/**` re-include beneath it had
-    never worked — the TOEIC draft was tracked only because it was
-    force-added. Now `docs/*`.
+- **Current state, measured 2026-07-30** (the two entries above are snapshots
+  from the day they landed, kept for their reasoning): `npm test` is **148/148
+  across 16 files**, and `npx eslint .` in `apps/web` is **0 errors, 18
+  warnings**. The 13 React Compiler warnings the backlog tracks are still
+  exactly 13 (11 `set-state-in-effect`, 2 `immutability`) — the other five
+  accumulated since and are *not* covered by that item: 2
+  `@typescript-eslint/no-unused-vars` (`decks/[packId]/page.tsx`,
+  `decks/[packId]/drill/page.tsx`), 2 `@next/next/no-img-element` (`Header`,
+  `SideNav`), 1 `react-hooks/exhaustive-deps` (`cards/page.tsx`).
 
 ## Builds
 
