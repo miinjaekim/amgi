@@ -6,6 +6,7 @@ export * from './packs';
 export * from './collections';
 export * from './reviewQueue';
 export * from './kana';
+export * from './topik';
 export * from './drill';
 export * from './tts';
 export * from './offlineReview';

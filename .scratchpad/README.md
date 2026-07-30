@@ -17,6 +17,8 @@ Related docs outside this folder:
 
 - `docs/packs/toeic-pack-draft.md` — source draft for the TOEIC vocabulary pack
   (referenced from `packages/core/src/packs.ts`)
+- `docs/packs/topik-pack-draft.md` — source draft for the TOPIK 고급 pack
+  (referenced from `packages/core/src/topik.ts`)
 - `docs/testflight-beta-info-ko.md` — Korean TestFlight listing copy
 
 **Convention:** `backlog.md` holds **only open work**. When something closes it

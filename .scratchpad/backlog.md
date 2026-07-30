@@ -85,9 +85,9 @@ here is what those two now *show*.
       133 words). *Principles (2026-07-13):* audience is not beginners; packs
       unlock domains, never "starter" anything; curated from real sources, not
       AI-generated; word lists need user approval before shipping.
-      *Next:* daily-draw UX; section themes as filters; more packs (TOEFL,
-      TOPIK, and a JLPT pack pairs naturally with the Japanese work above);
-      pre-authored content instead of per-word Gemini calls. Draft:
+      *Next:* daily-draw UX; section themes as filters; more packs (TOEFL, and
+      a JLPT pack pairs naturally with the Japanese work above); pre-authored
+      content instead of per-word Gemini calls. Drafts:
       `docs/packs/toeic-pack-draft.md`.
 
 - [ ] **Drill for lookup packs** — lowered from High 2026-07-25: the payoff is
