@@ -439,6 +439,28 @@ _Reconciled against `main` @ `6e9f3e9` on 2026-07-24, plus the 1.0.2 release cut
     now returns `null` rather than an empty list when the saved set is unknown,
     which makes the caller answer for it — a comment asking them to check first
     is precisely what had failed.
+- **TOPIK 고급 pack** (PR #68, 2026-07-30) — the first Korean pack, 160 words
+  for TOPIK II 5–6급 in `packages/core/src/topik.ts`. Korean had no pack at
+  all until now, so `/decks` was the empty state on the app's own original
+  study language. A `lookup` pack by design: most entries are Sino-Korean, so
+  the hanja breakdown the Korean Learn flow already writes is the value, and
+  여건/취지 have no one-word English gloss worth pre-authoring. Six sections
+  (시사·사회 30, 추상 개념 30, 고급 동사 40, 형용사 20, 부사·연결 표현 20,
+  관용 표현·사자성어 20), sourced from 국립국어원's 고급 learner lists,
+  released TOPIK II papers and the university 5–6급 series — draft and open
+  questions kept in `docs/packs/topik-pack-draft.md`.
+  - **48 context hints**, carrying more weight than they did on TOEIC: Korean
+    homographs are one form with unrelated senses (경기, 미치다, 지나치다),
+    several everyday verbs are tested in their written sense (밝히다, 꼽히다),
+    and every idiom needs one — 발이 넓다 read literally is a sentence about
+    feet. First pack with **multi-word entries** (관용구, 이에 따라); the
+    format always allowed them and no pack had exercised it.
+  - The word list was **approved 2026-07-30** after use on mobile, which is
+    the approval step the pack principles ask for.
+  - Fixed on the way: `.gitignore` said `docs/`, and git never descends into
+    an excluded directory, so the `!docs/packs/**` re-include beneath it had
+    never worked — the TOEIC draft was tracked only because it was
+    force-added. Now `docs/*`.
 
 ## Builds
 
