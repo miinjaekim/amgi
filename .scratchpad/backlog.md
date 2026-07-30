@@ -3,22 +3,16 @@
 Ordered by priority. **Only open work lives here** — shipped, cancelled and
 decided items move to [status.md](status.md), reasoning included, so a closed
 call doesn't get reopened from this file. Source of truth is the user's Google
-Tasks list; this is the scoped version. Last synced 2026-07-26.
-
-**Focus (2026-07-25): ship the depth work to the phone.** The Japanese/Chinese
-depth batch is merged but invisible until a build goes out, so the next build is
-deliberately narrow — nothing that isn't already on `main`.
-
-_Amended 2026-07-26:_ "no new native modules" was part of that narrowness and no
-longer holds — offline review (PR #53) brings `expo-network`. Taken knowingly: a
-build was going out regardless, and the module buys an accurate offline banner
-and a prompt flush on reconnect. It does mean the depth batch now ships on
-offline review's schedule rather than ahead of it. The same reasoning then
-applied to reminders (PR #61): once one native module is in the build, a second
-rides along for free rather than costing a build of its own.
+Tasks list; this is the scoped version. Last synced 2026-07-30.
 
 **Mobile shipping model: no OTA.** Iterate in Expo Go (`npx expo start`), cut a
 production build when a batch is worth a release. See [tech-stack.md](tech-stack.md).
+
+_The 2026-07-25 focus ("ship the depth work to the phone", with its
+no-new-native-modules constraint) is spent — that batch went out in 1.1.0 / build
+6 along with `expo-network` and `expo-notifications`. The reasoning it produced
+is worth keeping though: once one native module is in a build, a second rides
+along for free rather than costing a build of its own._
 
 ---
 
@@ -27,7 +21,7 @@ production build when a batch is worth a release. See [tech-stack.md](tech-stack
 _Last build: **1.1.0 / build 6**, 2026-07-27 — submitted and under review for
 external testing._
 
-Merged since, waiting on the next build. All three are JS-only, so no native
+Merged since, waiting on the next build. All four are JS-only, so no native
 module was added and `expo config --type introspect` is not needed this time:
 
 - **Direction choice on mobile Review** (PR #65)
@@ -37,6 +31,11 @@ module was added and `expo config --type introspect` is not needed this time:
   `docs/testflight-beta-info-ko.md`, which was rewritten for this build.
   Production data was already backfilled and de-duplicated, so a Korean-native
   tester's existing kana cards should read hangul the moment the build lands.
+- **TOPIK 고급 pack** (PR #68) — Korean's first pack, so `/decks` is no longer
+  the empty state on the app's original study language. Worth a look on the
+  build specifically because it's a `lookup` pack: tapping a word has to hand
+  off to Learn, which is the deck → Learn round trip that only exists on mobile
+  as a stack screen above the tabs.
 
 **Pre-flight:** smoke-test in Expo Go → verify native-adjacent things (audio,
 files, sharing, **offline review + reconnect sync**, **account deletion**,
@@ -53,13 +52,11 @@ nothing about account deletion — which Apple looks for under 5.1.1(v)._
 
 ---
 
-## High — everything else user-facing
+## Housekeeping — tooling that hides signal
 
-## Housekeeping — broken tooling that hides signal
-
-`npm test` and `npm run lint` are both green on a clean checkout as of
-2026-07-26 — see the Shipped entries in [status.md](status.md). What is left
-here is what those two now *show*.
+`npm test` (148/148) and `npx eslint .` (0 errors) are both green on a clean
+checkout as of 2026-07-30 — see the Tooling entries in [status.md](status.md).
+What is left here is what those two now *show*.
 
 - [ ] **13 React Compiler warnings, then turn the rules back up** — `eslint-config-next@16`
       brought `react-hooks/set-state-in-effect` (11) and `react-hooks/immutability`
@@ -71,6 +68,16 @@ here is what those two now *show*.
       each is a small design call, not a mechanical edit. Clear them, then
       delete the override; **don't silence them further**, which is the failure
       mode the override exists to avoid.
+      _Still exactly 13 as of 2026-07-30 — the override is holding._
+
+- [ ] **Five other warnings have accumulated since** (2026-07-30, total 18) and
+      are *not* covered by the item above, so clearing that one won't clear the
+      lint. Two are dead bindings in `decks/[packId]/page.tsx` and
+      `decks/[packId]/drill/page.tsx` (`@typescript-eslint/no-unused-vars`), two
+      are `<img>` that should be `next/image` in `Header` and `SideNav`, one is a
+      missing dep in `cards/page.tsx`. Small, but this is exactly the drift the
+      section is named for — warnings nobody reads become warnings nobody can
+      read.
 
 - [ ] **Lint covers `apps/web` only** — `@amgi/core` and `@amgi/mobile` have no
       `lint` script, so `turbo lint` runs one package and reports success.
@@ -81,14 +88,20 @@ here is what those two now *show*.
 
 ## Medium
 
-- [ ] **Vocabulary packs — iterate beyond v1** — v1 shipped in PR #34 (TOEIC,
-      133 words). *Principles (2026-07-13):* audience is not beginners; packs
-      unlock domains, never "starter" anything; curated from real sources, not
-      AI-generated; word lists need user approval before shipping.
-      *Next:* daily-draw UX; section themes as filters; more packs (TOEFL, and
-      a JLPT pack pairs naturally with the Japanese work above); pre-authored
-      content instead of per-word Gemini calls. Drafts:
-      `docs/packs/toeic-pack-draft.md`.
+- [ ] **Vocabulary packs — iterate beyond v1** — shipped so far: TOEIC (PR #34,
+      133 words, `lookup`), hiragana + katakana (PR #49, `cards`), TOPIK 고급
+      (PR #68, 160 words, `lookup`). *Principles (2026-07-13):* audience is not
+      beginners; packs unlock domains, never "starter" anything; curated from
+      real sources, not AI-generated; word lists need user approval before
+      shipping — with the scripts exception amended into
+      [vision.md](vision.md) 2026-07-24.
+      *Next:* daily-draw UX; section themes as filters; pre-authored content
+      instead of per-word Gemini calls; more packs — **JLPT** is the obvious gap
+      now (Japanese has only the kana packs, so a Japanese learner past the
+      scripts has nothing), then TOEFL. Swedish, French and Traditional Chinese
+      still have **no pack at all**.
+      Drafts live in `docs/packs/` (`toeic-pack-draft.md`,
+      `topik-pack-draft.md`) and are referenced from the pack source files.
 
 - [ ] **Drill for lookup packs** — lowered from High 2026-07-25: the payoff is
       thin. Drill currently reads the pack, so only `cards` packs (the kana) have

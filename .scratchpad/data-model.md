@@ -2,69 +2,82 @@
 
 ## Flashcard type architecture
 
-Cards use a **discriminated union** — a minimal shared base type plus
-language-specific subtypes. Each language (or topic) gets exactly the fields that
-make sense for it, nothing more.
+⚠️ **This replaced a discriminated union** (`KoreanFlashcard | SwedishFlashcard
+| …`, one subtype per language, exhaustiveness-checked with `never`). That
+scaled badly: every new language meant a new subtype, a new arm in every
+switch, and a mapper that had to name each one. The registry below does the same
+job — each language gets exactly the fields that make sense for it — without a
+type per language. Don't reintroduce the union.
+
+There is **one** card type (`packages/core/src/types.ts`), flat, with the
+language side fields all optional. Which of them a given card actually uses is
+looked up, not encoded in the type:
 
 ```ts
-// Only the structural skeleton — identity, ownership, and SRS data
-interface BaseFlashcard {
+export type CardSideField =
+  | 'korean' | 'swedish' | 'english' | 'french' | 'japanese' | 'traditionalChinese';
+
+interface TermCore {
+  term: string;
+  termLanguage: StudyLanguage;
+  korean?: string; swedish?: string; french?: string;
+  japanese?: string; traditionalChinese?: string;
+  english: string;
+  formality?: string;   // Korean: Casual | Standard | Formal | Honorific | Slang
+  gender?: string;      // grammatical gender: Swedish en/ett, French le/la
+  furigana?: string;    // Japanese kana reading, when the term contains kanji
+  pinyin?: string;      // Traditional Chinese, tone-marked
+  briefDefinition?: string;
+  translation?: string; // legacy only — cards pre-dating the korean/english fields
+}
+
+interface TermDepth { definition?: string; characterBreakdown?: string; notes?: string; hanja?: string /* deprecated */ }
+interface TermExplanation extends TermCore, TermDepth { examples?: ExamplePair[] }
+
+export interface Flashcard extends TermExplanation {
   id?: string;
   uid: string;
   createdAt: Date;
   archived?: boolean;
+  studyLanguage?: StudyLanguage;   // undefined = legacy Korean
+  packId?: string;                 // provenance only — see below
   frontToBack?: ReviewTracking;
   backToFront?: ReviewTracking;
+  // plus deprecated top-level nextReview/interval/ease/repetitions
 }
-
-// All content is language-specific
-interface KoreanFlashcard extends BaseFlashcard {
-  studyLanguage: 'Korean';
-  term: string;
-  termLanguage: 'Korean' | 'English';
-  korean: string;
-  english: string;
-  formality?: string;   // Casual | Standard | Formal | Honorific | Slang
-  hanja?: string;
-  briefDefinition?: string;
-  definition?: string;
-  notes?: string;
-  examples?: { korean: string; english: string }[];
-  translation?: string; // legacy only — old cards pre-dating korean/english fields
-}
-
-interface SwedishFlashcard extends BaseFlashcard {
-  studyLanguage: 'Swedish';
-  term: string;
-  termLanguage: 'Swedish' | 'English';
-  swedish: string;
-  english: string;
-  gender?: string;   // 'en' | 'ett' | absent — only for nouns
-  briefDefinition?: string;
-  definition?: string;
-  notes?: string;
-  examples?: { swedish: string; english: string }[];
-  // no formality, no hanja
-}
-
-type AnyFlashcard = KoreanFlashcard | SwedishFlashcard;
 ```
+
+**Which slot is the front** comes from `getStudyLanguageConfig(studyLanguage)
+.studyField`; **which is the back** from `getBackSideConfig(studyLanguage,
+nativeLanguage)`. Read them through `getStudyLangSide()` / `getBackSide()`
+rather than indexing a field name yourself.
+
+**The back belongs to the *pair* of languages, not to either one alone** (PR
+#67). It was a field on `StudyLanguageConfig`, which meant every non-English
+study language was hardcoded to `english` — a Korean native studying Japanese
+got English backs everywhere. It's a separate function and not a second registry
+because there is no table keyed on native language and there could not be one:
+the rule is just "your own language", with one escape hatch for studying the
+language you already speak, where the back falls to the other side.
+
+Cards carry **both** back slots, so switching native language switches existing
+cards with you and **no Firestore migration was needed** — `getBackSide` falls
+back to `english` for anything written earlier.
+
+**`packId` is provenance only.** It's absent on every card saved by looking a
+word up and on every card saved before the field existed, so it must never
+decide whether a term is already saved — deck progress matches on the study
+side instead, which also credits a word you looked up on your own. It *is* read
+for grouping, through `getCollectionId()` (`packages/core/src/collections.ts`),
+which is the single place that happens.
 
 **Why `studyLanguage` is stored on the Firestore document** (not just inferred
 from the collection name): the collection name controls routing — which
 documents get queried. `studyLanguage` on the document makes each document
-self-describing, enables a single shared mapper function, and protects against
-future migrations where collection context might not be available. It's a small
-redundancy with meaningful practical benefits. The mapper handles the Korean
-legacy case (old cards without the field) by defaulting:
-
-```ts
-function mapDocToFlashcard(doc): AnyFlashcard {
-  const data = doc.data();
-  if (data.studyLanguage === 'Swedish') return { ...data, id: doc.id } as SwedishFlashcard;
-  return { ...data, studyLanguage: 'Korean', id: doc.id } as KoreanFlashcard;
-}
-```
+self-describing, enables a single shared mapper (`mapDocToFlashcard` in
+`apps/web/src/services/firestore.ts`), and protects against future migrations
+where collection context might not be available. Cards written before the field
+existed are legacy Korean, which is why it's optional rather than required.
 
 **`termLanguage` detection differs by script.** Korean supports bidirectional
 lookup (user can type Korean or English) and detection is trivial — Hangul is
@@ -75,15 +88,11 @@ languages `termLanguage` is set by Gemini in the model response rather than
 detected client-side. This generalizes to any future Latin-script language and
 removes the fragile local detection entirely.
 
-**Exhaustiveness checking** via TypeScript `never` ensures every card type is
-handled — if `JapaneseFlashcard` is added to the union and a switch/if-chain
-doesn't cover it, the compiler errors before it can silently fail at runtime.
-
-**Future extensibility:** the same pattern works beyond languages. A
-`MedicalFlashcard` could carry `bodySystem` or `drugClass`; a `LegalFlashcard`
-could carry `jurisdiction` and `caseReference`. Further out: letting users
-configure which fields appear on their cards for a given deck (e.g. toggling off
-formality, adding a custom grammar note field).
+**Future extensibility:** the same pattern works beyond languages. A medical or
+legal deck would add its fields to the card and a registry entry describing
+which ones it uses. Further out: letting users configure which fields appear on
+their cards for a given deck (e.g. toggling off formality, adding a custom
+grammar note field).
 
 ## Firestore collections
 
@@ -146,6 +155,14 @@ render sites across web and mobile don't grow a conditional per language.
 - `studyLanguage`: string — which deck is currently active
 - `streak`, `longestStreak`, `lastReviewDate`, `reviewedToday` — SRS progress
 
+**Reminder preferences are deliberately *not* here.** They live on the device
+(`AsyncStorage`, via `apps/mobile/src/services/reminders.ts`) because a
+notification setting belongs to the phone that would do the notifying — the same
+account on a second device shouldn't inherit the first one's schedule. The
+review direction chosen on Review is per-session and not persisted anywhere, for
+the same class of reason: a `reviewDirection` on the user doc would have been a
+schema change plus offline-write handling for a one-second choice (PR #65).
+
 ## API shape (term explanation)
 
 - **Fast call** (`/api/explain`) — `term, termLanguage, korean/swedish, english,
@@ -173,6 +190,9 @@ render sites across web and mobile don't grow a conditional per language.
   first request for a pair generates and `create()`s it (which also resolves
   the concurrent-first-request race), everyone else reads it back. The
   `s-maxage=86400` CDN header is only a fast path — a cache miss re-reads
-  Firestore and serves the same word. Note it never reads *other* dates, which
-  is why words repeat across days (see backlog).
+  Firestore and serves the same word. It reads the **last 60 days** of picks for
+  the pair *by document ID* (so no composite index, and no manual Firestore
+  step) and feeds them to the prompt as an exclusion list, retrying once on a
+  collision — this is what stopped words repeating across days (PR #47). The
+  explanation is generated and stored *with* the word, so tapping it is a read.
 - `POST /api/pronounce` — returns a cached-or-generated audio URL

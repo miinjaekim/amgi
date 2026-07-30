@@ -52,7 +52,13 @@ bite.
 - **Connectivity:** `expo-network` — drives the offline banner and flushes the
   rating queue on reconnect
 - **Audio:** `expo-audio` (mic/record permissions explicitly disabled in the plugin config)
-- **Updates:** EAS OTA via `expo-updates`
+- **Notifications:** `expo-notifications` — *local* scheduling only, no push. Its
+  iOS plugin stamps the `aps-environment` entitlement regardless, so
+  `plugins/withoutPushEntitlement.js` deletes it again and **must be listed
+  first** in `plugins` to win (see [lessons.md](lessons.md))
+- **Updates:** `expo-updates` is installed and configured, but **OTA is not used**
+  — see the shipping-model section below. Don't read its presence as a delivery
+  path
 
 **EAS configuration** (`app.json` / `eas.json`) — these four settings work as a
 set; changing one without the others breaks OTA delivery:
@@ -72,22 +78,43 @@ iOS bundle ID is `com.tegi.amgi` (borrowed developer account — see
 
 | File | Contents |
 |---|---|
-| `types.ts` | Flashcard union, `STUDY_LANGUAGE_CONFIGS`, `getStudyLanguageConfig()` |
-| `sm2.ts` | SM-2 spaced repetition scheduling |
+| `types.ts` | `Flashcard`, `STUDY_LANGUAGE_CONFIGS`, `getStudyLanguageConfig()`, `getBackSideConfig()` |
+| `sm2.ts` | SM-2 spaced repetition scheduling, `isDue()` |
+| `collections.ts` | `getCollectionId()`, `buildReviewCollections()` — the one place `packId` is read for grouping |
+| `reviewQueue.ts` | Review queue construction (direction filter, shuffle) |
+| `drill.ts` | Drill queue — pure, requeues missed cards `DRILL_REQUEUE_GAP` later |
+| `reminders.ts` | What to schedule and when, for the two local notifications |
+| `offlineReview.ts` | Snapshot + rating-queue shapes replayed by mobile's AsyncStorage layer |
 | `gemini.ts` | Prompt/response helpers, `parseStreamedDepth`, `parseStreamedExamples` |
 | `i18n.ts` | EN + KO strings, `t()` with `{token}` interpolation |
-| `packs.ts` | Curated vocabulary packs (source draft in `docs/packs/`) |
+| `packs.ts` | Pack registry + TOEIC pack; `buildPackCardDraft`, `getVocabPack` |
+| `kana.ts` | Hiragana/katakana packs, generated from one table |
+| `topik.ts` | TOPIK 고급 pack (Korean) |
 | `tts.ts` | `getPronunciationUrl` — shared fetch for `/api/pronounce` |
+
+Pack source drafts live in `docs/packs/` and are referenced from the pack files
+themselves.
+
+The queue modules (`reviewQueue`, `drill`) and `reminders` are here rather than
+per-platform on purpose: each existed twice at some point, and the copies
+drifted — see `isDue` in [status.md](status.md).
 
 ## CI (`.github/workflows`)
 
 - **`mobile-typecheck.yml`** — PRs touching `apps/mobile/**` or
-  `packages/core/**` run `npx tsc --noEmit` in `apps/mobile`.
-- **`mobile-ota-update.yml`** — pushes to `main` touching those same paths
-  typecheck, then `eas update --channel default`. Needs the `EXPO_TOKEN` secret.
+  `packages/core/**` run `npx tsc --noEmit` in `apps/mobile`. This is the only
+  automatic gate.
+- **`mobile-ota-update.yml`** — typecheck, then `eas update --channel default`.
+  **`workflow_dispatch` only.** Its push trigger was commented out when OTA was
+  abandoned, because publishing on every merge burned CI time and EAS update
+  quota on updates nobody received. The pipeline is kept, not deleted, in case
+  OTA is ever revisited; needs the `EXPO_TOKEN` secret.
 
-Manual OTA push, if needed: `npx eas-cli update --branch main --message "..."`
-from `apps/mobile`.
+There is **no lint or test gate in CI** — see the housekeeping section of
+[backlog.md](backlog.md).
+
+Manual OTA push, if it's ever wanted: `npx eas-cli update --branch main
+--message "..."` from `apps/mobile`.
 
 ## Shipping to mobile: Expo Go for dev, builds for release
 
