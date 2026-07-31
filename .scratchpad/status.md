@@ -646,6 +646,16 @@ the next person to notice the symptom.
     fixes: `-다가` with a back of "after doing, then…" is a good card, and for a
     beginner it is the *most* valuable one on the page. One-off typos still get
     no card, because they teach nothing.
+  - **A card back may carry up to two glosses, never more** (2026-07-31). The
+    first build forced exactly one, copied from `/api/explain`'s "single best
+    translation — never list synonyms with semicolons or slashes". Too strict:
+    words are sometimes genuinely interchangeable, and sometimes no single word
+    in the other language covers the term, so forcing one gloss makes the card
+    wrong rather than clean. Two is the ceiling and it is for necessity only —
+    not a licence to pad, and never a third. ⚠️ **`/api/explain` still enforces
+    strictly one** and was deliberately left alone here, since relaxing the core
+    lookup loop's prompt does not belong in a writing-review change. That
+    inconsistency is now the open question, not the rule itself.
   - **Submissions are ephemeral; only saved cards persist.** No new Firestore
     collection, so neither of the two manual console steps applies. The cards
     are the durable artifact. Reopen this if a progress-over-time surface is

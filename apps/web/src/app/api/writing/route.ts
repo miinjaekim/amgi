@@ -89,9 +89,10 @@ Each finding is an object:
   gloss — never a dictionary definition, never a full sentence, and never a
   definition that uses the term itself. For a grammar pattern, gloss what it
   does in a few words.
-  Each back is ONE gloss, not a list. Never separate alternatives with a
-  semicolon, a slash, or a comma — pick the single best one and drop the rest.
-  Write "it's my routine", never "it's what I always do; it's my routine".${scriptRule}
+  Prefer a single gloss, and give a second one only when a single gloss would
+  genuinely mislead — words used interchangeably, or a term no one word in the
+  other language covers. Separate the two with a comma. Never more than two,
+  and never a second one added just for completeness.${scriptRule}
 
 Every "note", and both "back" values, must be written so the learner can read
 them: notes in ${nativeLanguage}, backs in English and Korean respectively.

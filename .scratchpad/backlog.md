@@ -166,8 +166,17 @@ explain and remember it" loop. Revisit after the language-depth work.
       returned a single naturalness finding and no grammar at all.
       *Still open:* **mobile parity** (JS-only, no native module, so it rides
       the next build); the pronunciation of a multi-sentence rewrite is
-      untested against TTS length limits; and card backs occasionally still
-      arrive as two glosses rather than one despite the prompt rule.
+      untested against TTS length limits.
+
+- [ ] **Should `/api/explain` allow two glosses too?** Surfaced 2026-07-31 by
+      the writing-review card-back rule (see Decisions in
+      [status.md](status.md)). Writing review now permits up to two glosses when
+      one would genuinely mislead; `/api/explain` still says "single best
+      translation — never list synonyms with semicolons or slashes", in six
+      prompt branches. The reasoning that relaxed one applies to the other, but
+      changing the core lookup loop's output is a bigger blast radius than a new
+      surface and wasn't done blind. Decide deliberately; if yes, all six
+      branches move together.
 
 - [ ] **Conversation practice** — transcription + per-participant feedback; MVP
       is end-of-conversation feedback on a recording. Same "here's what you
