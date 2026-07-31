@@ -11,3 +11,4 @@ export * from './drill';
 export * from './tts';
 export * from './offlineReview';
 export * from './reminders';
+export * from './writing';

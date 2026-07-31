@@ -156,15 +156,27 @@ explain and remember it" loop. Revisit after the language-depth work.
 
 ## Bigger bets — need design first
 
-- [ ] **Writing review** — submit writing, get grammar feedback *plus* how a
-      native would express what you were reaching for. The second half is what
-      fits Amgi's premise. Open: input surface, whether corrections generate
-      flashcards (that's the loop back into the product), length limits, and
-      whether submissions are stored or ephemeral.
+- [ ] **Writing review — web v1 built 2026-07-31, mobile still open.** All four
+      design questions this item was blocked on are now closed; see the writing
+      review entry in the Decisions section of [status.md](status.md) for the
+      reasoning. Web is on `feat/writing-review`: `@amgi/core`'s `writing.ts`,
+      `POST /api/writing`, `WritingReviewPanel`, and a Word/Passage toggle on
+      Learn. Level calibration was verified against real passages, not assumed
+      — a beginner passage returned grammar + register findings, an advanced one
+      returned a single naturalness finding and no grammar at all.
+      *Still open:* **mobile parity** (JS-only, no native module, so it rides
+      the next build); the pronunciation of a multi-sentence rewrite is
+      untested against TTS length limits; and card backs occasionally still
+      arrive as two glosses rather than one despite the prompt rule.
 
 - [ ] **Conversation practice** — transcription + per-participant feedback; MVP
       is end-of-conversation feedback on a recording. Same "here's what you
       meant to say" model as Writing review — scope the two together.
+      **Reuse `packages/core/src/writing.ts`**: `WritingFinding` and
+      `WritingCardCandidate` deliberately say nothing about writing, because
+      per-utterance feedback is the same job on a different capture. Growing a
+      parallel copy is the drift that put `reviewQueue`/`drill`/`reminders` in
+      core in the first place.
 
 ## Research / exploratory
 

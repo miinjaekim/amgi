@@ -620,6 +620,37 @@ Calls that are **closed**. They live here rather than in
 reasoning is kept, because a decision with its reasoning lost gets reopened by
 the next person to notice the symptom.
 
+- **Writing review: four design calls** (2026-07-31). The backlog item was
+  blocked on "needs design first"; these are the answers, with reasoning.
+  - **It lives as a Word/Passage toggle on Learn, not a fifth nav tab.** The
+    considered alternatives were a `/write` route entered from Learn (the
+    `/decks` precedent) and a fifth tab. The toggle won on the vision statement
+    itself — "Amgi is ONE place to ask, understand, and remember" — since a
+    passage you're unsure about is the same question as a word you're unsure
+    about, asked at a different size. It also **defers the nav question until
+    conversation practice lands and there are two output surfaces to place
+    together**, which is what the backlog already said to do. Cost accepted:
+    discoverability rests entirely on the toggle, so it's a visible segmented
+    control rather than a subtle affordance. Promote to a route or tab later if
+    it earns one.
+  - **Findings are one ordered list, not fixed sections.** This is the whole
+    level-adaptivity mechanism and is easy to undo by accident. The model orders
+    by what *this* writer most needs; a beginner's list leads with grammar, an
+    advanced writer's with register and naturalness. Split it back into fixed
+    sections and a beginner gets an empty register heading while an advanced
+    writer gets an empty grammar one — and the adaptivity has to be rebuilt as
+    configuration. Verified against real passages, both directions.
+  - **Any teachable unit becomes a card, including grammar patterns.** The
+    first draft of this reasoned that only vocabulary items should — wrong, and
+    wrong for the reason the audience amendment in [vision.md](vision.md)
+    fixes: `-다가` with a back of "after doing, then…" is a good card, and for a
+    beginner it is the *most* valuable one on the page. One-off typos still get
+    no card, because they teach nothing.
+  - **Submissions are ephemeral; only saved cards persist.** No new Firestore
+    collection, so neither of the two manual console steps applies. The cards
+    are the durable artifact. Reopen this if a progress-over-time surface is
+    ever wanted — storing writing is the only way to show a level actually
+    moving — but it's purely additive, so it isn't owed now.
 - **Decks page: drilling lives there, not in Review** (2026-07-25). The
   alternative considered was letting Review pick a deck and leaving Decks as a
   passive display. Rejected because it makes Review mean two things: if a
