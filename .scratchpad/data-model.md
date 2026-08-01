@@ -196,3 +196,12 @@ schema change plus offline-write handling for a one-second choice (PR #65).
   collision — this is what stopped words repeating across days (PR #47). The
   explanation is generated and stored *with* the word, so tapping it is a read.
 - `POST /api/pronounce` — returns a cached-or-generated audio URL
+- `POST /api/writing` — writing review. Takes `{ text, nativeLanguage,
+  studyLanguage }`, returns `{ rewrite, rewriteNative?, findings[] }`. Nothing
+  is stored: submissions are ephemeral and only saved cards persist, so **there
+  is no collection here and neither manual Firestore step applies**. `text` is
+  capped at `WRITING_MAX_CHARS` on both the client and the route — the cap is
+  about the cost and readability of the *response*, which is not something a
+  client gets to decide. Card candidates carry **both** backs, same as pack
+  cards and for the same reason, and a candidate missing one is dropped rather
+  than saved half-blank.

@@ -161,22 +161,25 @@ explain and remember it" loop. Revisit after the language-depth work.
 
 ## Bigger bets — need design first
 
-- [ ] **Writing review — web v1 built 2026-07-31, mobile still open.** All four
-      design questions this item was blocked on are now closed; see the writing
-      review entry in the Decisions section of [status.md](status.md) for the
-      reasoning. Web is on `feat/writing-review`: `@amgi/core`'s `writing.ts`,
-      `POST /api/writing`, `WritingReviewPanel`, and a Word/Passage toggle on
-      Learn. Level calibration was verified against real passages, not assumed
-      — a beginner passage returned grammar + register findings, an advanced one
-      returned a single naturalness finding and no grammar at all.
-      **Mobile parity landed 2026-08-01** — `LearnModeToggle` +
-      `WritingReviewPanel` on the native side, both apps calling the one
-      `getWritingReview` in `@amgi/core`. JS-only, no native module, so it
-      **rides the next production build** rather than needing one of its own.
-      *Still open:* the pronunciation of a multi-sentence rewrite is untested
-      against TTS length limits; and passage mode has only been verified by
-      typecheck and `expo export`, never on a device — smoke-test it in Expo Go
-      before the build.
+_Writing review shipped in PR #69 (2026-08-01) and has left this section — see
+Shipped in [status.md](status.md), and the four design calls in Decisions there.
+What remains of it is open work in its own right and is listed below._
+
+- [ ] **Writing review: iterate past v1.** Nothing here blocks anyone; the loop
+      works end to end on web.
+      - **A multi-sentence rewrite is handed to `PronounceButton` untested.**
+        That's far longer than anything that button has been given before, and
+        Google TTS has length limits — check before assuming it degrades kindly.
+      - **Card backs still occasionally arrive as two glosses where one would
+        do.** The rule permits two for necessity; the model reads that
+        generously. Prompt-level, small.
+      - Findings are not streamed. `/api/writing` is a single JSON call, so a
+        long passage sits on a spinner. The upgrade is NDJSON-per-finding, which
+        is exactly `examples-stream` + `parseStreamedExamples`.
+      - `/api/writing` has no `try`/`catch`, so a Gemini outage or a malformed
+        model response is a 500. The client shows the right error either way,
+        and `/api/explain` has the same exposure — fix them together or not at
+        all.
 
 - [ ] **Should `/api/explain` allow two glosses too?** Surfaced 2026-07-31 by
       the writing-review card-back rule (see Decisions in

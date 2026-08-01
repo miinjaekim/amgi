@@ -36,7 +36,8 @@ leaves that file:
 Backlog priority mirrors the user's Google Tasks list — `backlog.md` is the
 scoped version of it.
 
-_Last reviewed against the codebase: 2026-07-30, `main` @ `da5f081` (PR #68, the
+_Last reviewed against the codebase: 2026-08-01, `main` @ `1c4f9c0` (PR #69,
+writing review). Previously 2026-07-30 @ `da5f081` (PR #68, the
 TOPIK pack). Tests and lint were run, not assumed; `data-model.md`'s type
 architecture and `tech-stack.md`'s `@amgi/core` table were both rewritten
 against the source._

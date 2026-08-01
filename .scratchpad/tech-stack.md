@@ -91,6 +91,7 @@ iOS bundle ID is `com.tegi.amgi` (borrowed developer account — see
 | `kana.ts` | Hiragana/katakana packs, generated from one table |
 | `topik.ts` | TOPIK 고급 pack (Korean) |
 | `tts.ts` | `getPronunciationUrl` — shared fetch for `/api/pronounce` |
+| `writing.ts` | Writing-review types, `parseWritingReview`, `buildWritingCardDraft`, `getWritingReview`. Names nothing about writing — conversation practice reuses it |
 
 Pack source drafts live in `docs/packs/` and are referenced from the pack files
 themselves.

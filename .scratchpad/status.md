@@ -477,6 +477,35 @@ _Reconciled against `main` @ `da5f081` on 2026-07-30 (PR #68, the TOPIK pack)._
     bumped by every new lookup, clear and save — and the async writers check it
     before touching state.
 
+### Writing review
+- **Writing review, web + mobile** (PR #69, merged 2026-08-01) — a **Passage**
+  mode alongside **Word** on Learn. Submit a passage, get the rewrite a native
+  would have written, that rewrite rendered in your own language as a check on
+  whether a correction changed your meaning, and an ordered list of findings —
+  each offering a flashcard when it holds something worth remembering.
+  The first surface above word level on the **production** side of the four-skills
+  ladder in [vision.md](vision.md); `backToFront` review was already the rung
+  below it.
+  - **Level adaptivity is emergent, not configured.** The passage is the level
+    signal, so one prompt line replaces a placement test, a level field on
+    `users/{uid}`, and per-level content. Measured, not assumed: a beginner
+    passage returned grammar + register findings and a grammar-pattern card, an
+    advanced one a single naturalness finding and no grammar at all. The four
+    design calls behind this are in Decisions below — the ordered-list shape is
+    the mechanism and is easy to undo by accident.
+  - `packages/core/src/writing.ts` holds the types, the tolerant parser,
+    `buildWritingCardDraft` and the one `getWritingReview` fetch both apps call.
+    It deliberately says nothing about writing, because conversation practice is
+    the same job on a different capture.
+  - ⚠️ **Mobile has never been run on a device** — verified by `tsc` and a clean
+    `expo export` only. It ships in the next production build; see the
+    "Queued for the next build" list in [backlog.md](backlog.md).
+  - The mobile panel uses `automaticallyAdjustKeyboardInsets` rather than a
+    `KeyboardAvoidingView`. KAV with `padding` only shrinks the container and
+    never scrolls the caret into view, so a passage past a few lines was typed
+    underneath the keyboard — the same class of bug as PR #60 above, and the
+    reason the input is now bounded at both ends rather than only a `minHeight`.
+
 ### Demo-blocking fixes
 - **Native/study language collision + WOTD repeats + WOTD save drift**
   (PR #47, 2026-07-24) — the three "Next up" items in one batch.
