@@ -136,8 +136,28 @@ down — file references below are what was actually read, not guesses._
          above the tabs. If backs are pre-authored, a word can be saved inline
          and the round trip becomes optional rather than mandatory.
 
-      Depends on **Stamp `packId` on words saved through Learn** (Medium) for
-      any of this to give lookup packs a review collection of their own.
+      **Stamping `packId` on words saved through Learn folds in here** (moved
+      up from Medium 2026-08-01 — it is the same surface, and leaving it a tier
+      down is how the deck page ends up half-migrated). It is *not* a
+      prerequisite, though: `buildPackCardDraft` already stamps `packId`
+      (`packages/core/src/packs.ts:292`), so bulk save gives lookup packs a
+      review collection on its own. The two halves ship independently, and they
+      carry different risk:
+      - *Bulk save from the deck* — pure addition. Those cards are born with a
+        `packId` exactly as kana are, so nothing that exists today changes
+        behaviour. Do this first.
+      - *Stamping in the Learn flow* — this is where the one subtraction lives.
+        `/cards` filters to `getCollectionId(card) === null` on both platforms
+        (`apps/web/src/app/cards/page.tsx:72`,
+        `apps/mobile/app/(tabs)/cards.tsx:57`), so stamping does not add a deck
+        membership — it **moves** the card out of `/cards`. A TOEIC word you
+        chose to look up, thought about and saved would disappear from your own
+        card list. Without it, though, the same word saved two ways lands in two
+        different places, which is its own incoherence.
+        _Still undecided, and it is the whole question:_ either accept the move,
+        or let a card belong to a pack *and* to `/cards` by loosening that
+        filter to something other than "has no collection". The second is the
+        larger change and the one that makes the Export item below moot.
 
 - [ ] **Onboarding for new users** — there is nothing today except web's
       `LanguageSetupModal`, which asks two questions and vanishes; mobile has no
@@ -246,23 +266,11 @@ down — file references below are what was actually read, not guesses._
       the user's *saved cards* for that pack instead, which needs `packId` —
       read via `getCollectionId` since PR #51. But `packId` is written only by
       `buildPackCardDraft`, so a TOEIC word saved through Learn still carries
-      none: this now needs the Learn flow to stamp the pack it came from, which
-      would also give lookup packs a review collection of their own. That is the
-      real prerequisite, and it is the more valuable half — drill would still
-      duplicate a loop those cards already have.
-
-- [ ] **Stamp `packId` on words saved through Learn from a pack** — surfaced by
-      PR #51. A pack word reaches Learn as `?term=`/`context=`, and whatever you
-      save there carries no pack, so a `lookup` pack (TOEIC) has no review
-      collection and no "Review this deck" — only `cards` packs (the kana) do.
-      Carry the pack id through the handoff and into the draft and the asymmetry
-      goes. Weigh one thing first: those cards then *leave* `/cards`, same as
-      kana. For a word you chose to look up and thought about, that may be the
-      wrong call — the deck is where it came from, not necessarily where it
-      belongs. Decide that before building; it is the whole question.
-      _Promoted in effect on 2026-08-01: bulk save under High depends on this,
-      so it is no longer optional — but the decision above still has to be made
-      first, and it is the same decision either way._
+      none. Both halves of that — bulk save stamping at creation, and the Learn
+      flow stamping on the way through — now live under **Bulk save and review
+      for packs** in High, which is the real prerequisite and the more valuable
+      work either way: drill would still duplicate a loop those cards already
+      have. Revisit once a lookup pack has a populated collection to drill.
 
 - [ ] **Export covers only your own cards** — noticed in PR #51, not decided.
       `/cards` export reads the now-scoped list, so a CSV/Anki dump omits every
