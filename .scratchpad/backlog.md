@@ -26,6 +26,11 @@ module was added and `expo config --type introspect` is not needed this time:
 
 - **Direction choice on mobile Review** (PR #65)
 - **A second Learn tab tap clears the search** (PR #66)
+- **Writing review, both platforms** (PR #69) — new passage mode on Learn.
+  JS-only. Worth testing deliberately on the build: the Word/Passage toggle
+  renders in all three of the Learn screen's render paths, and the rewrite's
+  `PronounceButton` hands TTS a multi-sentence string, which is longer than
+  anything that button has been given before.
 - **Card backs follow native language** (PR #67) — the one worth testing
   deliberately; see the What to Test block in
   `docs/testflight-beta-info-ko.md`, which was rewritten for this build.
@@ -156,15 +161,41 @@ explain and remember it" loop. Revisit after the language-depth work.
 
 ## Bigger bets — need design first
 
-- [ ] **Writing review** — submit writing, get grammar feedback *plus* how a
-      native would express what you were reaching for. The second half is what
-      fits Amgi's premise. Open: input surface, whether corrections generate
-      flashcards (that's the loop back into the product), length limits, and
-      whether submissions are stored or ephemeral.
+- [ ] **Writing review — web v1 built 2026-07-31, mobile still open.** All four
+      design questions this item was blocked on are now closed; see the writing
+      review entry in the Decisions section of [status.md](status.md) for the
+      reasoning. Web is on `feat/writing-review`: `@amgi/core`'s `writing.ts`,
+      `POST /api/writing`, `WritingReviewPanel`, and a Word/Passage toggle on
+      Learn. Level calibration was verified against real passages, not assumed
+      — a beginner passage returned grammar + register findings, an advanced one
+      returned a single naturalness finding and no grammar at all.
+      **Mobile parity landed 2026-08-01** — `LearnModeToggle` +
+      `WritingReviewPanel` on the native side, both apps calling the one
+      `getWritingReview` in `@amgi/core`. JS-only, no native module, so it
+      **rides the next production build** rather than needing one of its own.
+      *Still open:* the pronunciation of a multi-sentence rewrite is untested
+      against TTS length limits; and passage mode has only been verified by
+      typecheck and `expo export`, never on a device — smoke-test it in Expo Go
+      before the build.
+
+- [ ] **Should `/api/explain` allow two glosses too?** Surfaced 2026-07-31 by
+      the writing-review card-back rule (see Decisions in
+      [status.md](status.md)). Writing review now permits up to two glosses when
+      one would genuinely mislead; `/api/explain` still says "single best
+      translation — never list synonyms with semicolons or slashes", in six
+      prompt branches. The reasoning that relaxed one applies to the other, but
+      changing the core lookup loop's output is a bigger blast radius than a new
+      surface and wasn't done blind. Decide deliberately; if yes, all six
+      branches move together.
 
 - [ ] **Conversation practice** — transcription + per-participant feedback; MVP
       is end-of-conversation feedback on a recording. Same "here's what you
       meant to say" model as Writing review — scope the two together.
+      **Reuse `packages/core/src/writing.ts`**: `WritingFinding` and
+      `WritingCardCandidate` deliberately say nothing about writing, because
+      per-utterance feedback is the same job on a different capture. Growing a
+      parallel copy is the drift that put `reviewQueue`/`drill`/`reminders` in
+      core in the first place.
 
 ## Research / exploratory
 

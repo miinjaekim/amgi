@@ -620,6 +620,58 @@ Calls that are **closed**. They live here rather than in
 reasoning is kept, because a decision with its reasoning lost gets reopened by
 the next person to notice the symptom.
 
+- **Writing review: four design calls** (2026-07-31). The backlog item was
+  blocked on "needs design first"; these are the answers, with reasoning.
+  - **It lives as a Word/Passage toggle on Learn, not a fifth nav tab.** The
+    considered alternatives were a `/write` route entered from Learn (the
+    `/decks` precedent) and a fifth tab. The toggle won on the vision statement
+    itself — "Amgi is ONE place to ask, understand, and remember" — since a
+    passage you're unsure about is the same question as a word you're unsure
+    about, asked at a different size. It also **defers the nav question until
+    conversation practice lands and there are two output surfaces to place
+    together**, which is what the backlog already said to do. Cost accepted:
+    discoverability rests entirely on the toggle, so it's a visible segmented
+    control rather than a subtle affordance. Promote to a route or tab later if
+    it earns one.
+  - **Findings are one ordered list, not fixed sections.** This is the whole
+    level-adaptivity mechanism and is easy to undo by accident. The model orders
+    by what *this* writer most needs; a beginner's list leads with grammar, an
+    advanced writer's with register and naturalness. Split it back into fixed
+    sections and a beginner gets an empty register heading while an advanced
+    writer gets an empty grammar one — and the adaptivity has to be rebuilt as
+    configuration. Verified against real passages, both directions.
+  - **Any teachable unit becomes a card, including grammar patterns.** The
+    first draft of this reasoned that only vocabulary items should — wrong, and
+    wrong for the reason the audience amendment in [vision.md](vision.md)
+    fixes: `-다가` with a back of "after doing, then…" is a good card, and for a
+    beginner it is the *most* valuable one on the page. One-off typos still get
+    no card, because they teach nothing.
+  - **The rewrite is shown in the native language too** (2026-08-01,
+    `rewriteNative`). Not a convenience — a correctness check. The rewrite is
+    the one text on screen the user did *not* write, so it is the one text whose
+    meaning they cannot verify, and a correction that quietly changed what they
+    were trying to say is worse than no correction because they will go on to
+    learn the changed version. Rendered subordinate to the rewrite but **not**
+    behind a tap, despite "depth on demand": a check nobody opens is a check
+    nobody runs. The prompt is told to translate faithfully *including* where
+    the rewrite departs from what they wrote — smoothing that over would defeat
+    the whole point. Optional in the type, so a malformed one costs this line
+    rather than the review.
+  - **A card back may carry up to two glosses, never more** (2026-07-31). The
+    first build forced exactly one, copied from `/api/explain`'s "single best
+    translation — never list synonyms with semicolons or slashes". Too strict:
+    words are sometimes genuinely interchangeable, and sometimes no single word
+    in the other language covers the term, so forcing one gloss makes the card
+    wrong rather than clean. Two is the ceiling and it is for necessity only —
+    not a licence to pad, and never a third. ⚠️ **`/api/explain` still enforces
+    strictly one** and was deliberately left alone here, since relaxing the core
+    lookup loop's prompt does not belong in a writing-review change. That
+    inconsistency is now the open question, not the rule itself.
+  - **Submissions are ephemeral; only saved cards persist.** No new Firestore
+    collection, so neither of the two manual console steps applies. The cards
+    are the durable artifact. Reopen this if a progress-over-time surface is
+    ever wanted — storing writing is the only way to show a level actually
+    moving — but it's purely additive, so it isn't owed now.
 - **Decks page: drilling lives there, not in Review** (2026-07-25). The
   alternative considered was letting Review pick a deck and leaving Decks as a
   passive display. Rejected because it makes Review mean two things: if a

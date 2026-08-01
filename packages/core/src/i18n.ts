@@ -153,6 +153,32 @@ const translations = {
     taglineSubtitle: 'Get an instant AI-powered explanation, then save it as a flashcard to review with spaced repetition.',
     exampleTermsLabel: 'Try:',
     wordOfTheDay: 'Word of the day',
+    // Writing review — the second mode on Learn. A word you met and a sentence
+    // you wrote are the same question ("is this right?") asked at two sizes,
+    // which is why they share a surface rather than splitting the nav.
+    learnModeWord: 'Word',
+    learnModePassage: 'Passage',
+    writingPlaceholder: 'Write a few sentences in {language}, and see how a native would put it...',
+    writingButton: 'Review',
+    writingTagline: 'Write something. See how a native would say it.',
+    writingTaglineSubtitle: 'Grammar where you need it, natural phrasing where you don\'t — pitched at whatever you wrote. Keep the phrases you were reaching for as flashcards.',
+    writingRewriteHeading: 'How a native would put it',
+    // The rewrite is the one text on screen the user didn't write, so it's the
+    // one whose meaning they can't check. This is that check.
+    writingRewriteMeaning: 'What that says',
+    writingFindingsHeading: 'What to notice',
+    // Shown when the model returns no findings. Deliberately not "no errors" —
+    // an advanced writer gets an empty list because their prose is natural,
+    // not because it was checked and passed.
+    writingNoFindings: 'This reads naturally. Nothing worth flagging.',
+    writingKindGrammar: 'grammar',
+    writingKindNaturalness: 'naturalness',
+    writingKindRegister: 'register',
+    writingKindVocabulary: 'vocabulary',
+    writingAddCard: '+ card',
+    writingCardSaved: 'Saved',
+    writingStartOver: 'Write something else',
+    errorWritingReview: 'Could not review this. Please try again.',
     // Depth / examples errors
     errorLoadDepth: 'Failed to load definition. Please try again.',
     errorLoadExamples: 'Failed to load examples. Please try again.',
@@ -401,6 +427,26 @@ const translations = {
     taglineSubtitle: 'AI로 즉각적인 설명을 받고, 플래시카드로 저장해 간격 반복 학습을 시작하세요.',
     exampleTermsLabel: '예시:',
     wordOfTheDay: '오늘의 단어',
+    // Writing review. 첨삭 is what Koreans actually call written correction —
+    // "글 검토" would be the literal render and reads like a document review.
+    learnModeWord: '단어',
+    learnModePassage: '글',
+    writingPlaceholder: '{language}로 몇 문장 써보세요. 원어민이라면 어떻게 쓸지 보여드릴게요...',
+    writingButton: '첨삭',
+    writingTagline: '직접 써보세요. 원어민이라면 이렇게 씁니다.',
+    writingTaglineSubtitle: '문법이 필요하면 문법을, 아니면 더 자연스러운 표현을 — 쓴 글에 맞춰 짚어드려요. 떠올리지 못했던 표현은 카드로 저장하세요.',
+    writingRewriteHeading: '원어민이라면 이렇게',
+    writingRewriteMeaning: '이런 뜻이에요',
+    writingFindingsHeading: '눈여겨볼 점',
+    writingNoFindings: '자연스럽게 읽혀요. 따로 짚을 부분이 없네요.',
+    writingKindGrammar: '문법',
+    writingKindNaturalness: '자연스러움',
+    writingKindRegister: '말투',
+    writingKindVocabulary: '어휘',
+    writingAddCard: '+ 카드',
+    writingCardSaved: '저장됨',
+    writingStartOver: '다른 글 써보기',
+    errorWritingReview: '첨삭에 실패했어요. 다시 시도해주세요.',
     // Depth / examples errors
     errorLoadDepth: '정의를 불러오지 못했습니다. 다시 시도해주세요.',
     errorLoadExamples: '예문을 불러오지 못했습니다. 다시 시도해주세요.',
