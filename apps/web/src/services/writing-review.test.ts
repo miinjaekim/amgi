@@ -37,6 +37,24 @@ describe('parseWritingReview', () => {
     expect(parsed?.findings[0].note).toBe('x');
   });
 
+  it('carries the native rendering of the rewrite when present', () => {
+    const parsed = parseWritingReview({
+      rewrite: '어제 친구 집에 잠깐 들렀어요.',
+      rewriteNative: 'I stopped by a friend\'s place yesterday.',
+      findings: [],
+    });
+    expect(parsed?.rewriteNative).toBe('I stopped by a friend\'s place yesterday.');
+  });
+
+  it('keeps the review when the native rendering is missing or blank', () => {
+    // It is the check on whether a correction changed the user's meaning, so
+    // losing it costs that line — never the rewrite and findings they waited on.
+    expect(parseWritingReview({ rewrite: 'r', findings: [] })).not.toHaveProperty('rewriteNative');
+    const blank = parseWritingReview({ rewrite: 'r', rewriteNative: '   ', findings: [] });
+    expect(blank).not.toHaveProperty('rewriteNative');
+    expect(blank?.rewrite).toBe('r');
+  });
+
   it('returns null only when there is no rewrite to show', () => {
     expect(parseWritingReview({ findings: [{ kind: 'grammar', note: 'x' }] })).toBeNull();
     expect(parseWritingReview({ rewrite: '   ' })).toBeNull();

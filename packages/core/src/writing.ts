@@ -72,6 +72,19 @@ export interface WritingFinding {
 export interface WritingReview {
   /** The whole passage as a native would have written it. */
   rewrite: string;
+  /**
+   * `rewrite`, rendered in the user's native language.
+   *
+   * This is a correctness check, not a convenience. The rewrite is the one text
+   * on the screen the user did *not* write, so it is the one text whose meaning
+   * they cannot verify — and a correction that quietly changes what they were
+   * trying to say is worse than no correction, because they will learn the
+   * changed version. Reading it back in their own language is how they catch
+   * that the model misread their intent.
+   *
+   * Optional because a malformed one should cost this line, not the review.
+   */
+  rewriteNative?: string;
   /** Ordered by what this writer most needs to see. May be empty. */
   findings: WritingFinding[];
 }
@@ -124,6 +137,7 @@ export function parseWritingReview(raw: unknown): WritingReview | null {
   const findings = Array.isArray(r.findings) ? r.findings : [];
   return {
     rewrite: r.rewrite.trim(),
+    ...(isNonEmptyString(r.rewriteNative) ? { rewriteNative: r.rewriteNative.trim() } : {}),
     findings: findings.flatMap(item => {
       if (!item || typeof item !== 'object') return [];
       const f = item as Record<string, unknown>;

@@ -646,6 +646,17 @@ the next person to notice the symptom.
     fixes: `-다가` with a back of "after doing, then…" is a good card, and for a
     beginner it is the *most* valuable one on the page. One-off typos still get
     no card, because they teach nothing.
+  - **The rewrite is shown in the native language too** (2026-08-01,
+    `rewriteNative`). Not a convenience — a correctness check. The rewrite is
+    the one text on screen the user did *not* write, so it is the one text whose
+    meaning they cannot verify, and a correction that quietly changed what they
+    were trying to say is worse than no correction because they will go on to
+    learn the changed version. Rendered subordinate to the rewrite but **not**
+    behind a tap, despite "depth on demand": a check nobody opens is a check
+    nobody runs. The prompt is told to translate faithfully *including* where
+    the rewrite departs from what they wrote — smoothing that over would defeat
+    the whole point. Optional in the type, so a malformed one costs this line
+    rather than the review.
   - **A card back may carry up to two glosses, never more** (2026-07-31). The
     first build forced exactly one, copied from `/api/explain`'s "single best
     translation — never list synonyms with semicolons or slashes". Too strict:

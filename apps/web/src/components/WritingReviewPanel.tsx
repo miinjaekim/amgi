@@ -141,6 +141,20 @@ export default function WritingReviewPanel() {
               <PronounceButton text={review.rewrite} studyLanguage={studyLanguage} />
             </div>
             <p className="text-lg leading-relaxed whitespace-pre-wrap text-[var(--color-text)]">{review.rewrite}</p>
+
+            {/* Subordinate to the rewrite, not hidden behind a tap: it is how
+                the user verifies a correction didn't change what they meant,
+                and a check nobody opens is a check nobody runs. */}
+            {review.rewriteNative && (
+              <div className="mt-4 pt-4 border-t" style={{ borderColor: 'var(--color-muted)' }}>
+                <h3 className="text-xs font-semibold uppercase tracking-widest mb-1" style={{ color: 'var(--color-muted)' }}>
+                  {t(nativeLanguage, 'writingRewriteMeaning')}
+                </h3>
+                <p className="text-sm leading-relaxed whitespace-pre-wrap text-[var(--color-text)] opacity-70">
+                  {review.rewriteNative}
+                </p>
+              </div>
+            )}
           </section>
 
           <section>

@@ -43,7 +43,7 @@ PASSAGE:
 ${text}
 """
 
-Return two things.
+Return three things.
 
 1. "rewrite" — the whole passage as a native ${language} speaker would naturally
 have written it, preserving what the learner was trying to say. Keep their
@@ -51,7 +51,13 @@ voice and their intent; do not make it longer, more formal, or more literary
 than they were going for. If the passage is already natural, return it
 essentially unchanged.
 
-2. "findings" — what is worth noticing, as a single ordered list.
+2. "rewriteNative" — "rewrite" translated into ${nativeLanguage}, so the learner
+can check that the corrected version still says what they meant. Translate the
+rewrite faithfully, including any place where it departs from what they wrote —
+this is the line that lets them catch a correction that changed their meaning,
+so smoothing it over defeats the purpose. Match the register of the rewrite.
+
+3. "findings" — what is worth noticing, as a single ordered list.
 
 CALIBRATION — this matters more than anything else here:
 Judge the level from the passage itself and pitch the feedback to that level.
@@ -100,6 +106,7 @@ them: notes in ${nativeLanguage}, backs in English and Korean respectively.
 Respond with only this JSON:
 {
   "rewrite": "the passage, natively written",
+  "rewriteNative": "that same text in ${nativeLanguage}",
   "findings": [
     { "kind": "…", "original": "…", "suggested": "…", "note": "…",
       "card": { "study": "…", "back": { "English": "…", "Korean": "…" } } }
