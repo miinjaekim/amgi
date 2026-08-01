@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, ActivityIndicator,
-  ScrollView, StyleSheet, KeyboardAvoidingView, Platform, Keyboard, Pressable,
+  ScrollView, StyleSheet, Keyboard, Pressable,
 } from 'react-native';
 import {
   buildWritingCardDraft, getStudyLanguageConfig, t, WRITING_MAX_CHARS,
@@ -84,124 +84,132 @@ export default function WritingReviewPanel() {
   };
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={s.flex}>
-      <ScrollView
-        style={s.flex}
-        contentContainerStyle={s.scroll}
-        keyboardShouldPersistTaps="handled"
-        keyboardDismissMode="on-drag"
-      >
-        {!review && !error && (
-          <Pressable onPress={Keyboard.dismiss}>
-            <Text style={s.tagline}>{t(nativeLanguage, 'writingTagline')}</Text>
-            <Text style={s.taglineSub}>{t(nativeLanguage, 'writingTaglineSubtitle')}</Text>
-          </Pressable>
-        )}
+    /**
+     * `automaticallyAdjustKeyboardInsets` rather than a `KeyboardAvoidingView`.
+     *
+     * KAV with `padding` only shrinks the container — it does not scroll the
+     * caret back into view, so on a passage longer than a few lines the text
+     * you are actively typing ends up under the keyboard. Letting the
+     * ScrollView own the keyboard inset keeps the caret visible as the input
+     * grows, and the two mechanisms fight each other if both are present.
+     */
+    <ScrollView
+      style={s.flex}
+      contentContainerStyle={s.scroll}
+      keyboardShouldPersistTaps="handled"
+      keyboardDismissMode="interactive"
+      automaticallyAdjustKeyboardInsets
+    >
+      {!review && !error && (
+        <Pressable onPress={Keyboard.dismiss}>
+          <Text style={s.tagline}>{t(nativeLanguage, 'writingTagline')}</Text>
+          <Text style={s.taglineSub}>{t(nativeLanguage, 'writingTaglineSubtitle')}</Text>
+        </Pressable>
+      )}
 
-        <TextInput
-          style={s.input}
-          value={text}
-          onChangeText={setText}
-          placeholder={t(nativeLanguage, 'writingPlaceholder', { language: languageLabel })}
-          placeholderTextColor={C.muted}
-          multiline
-          textAlignVertical="top"
-          editable={!loading}
-        />
-        <View style={s.actionRow}>
-          <Text style={[s.counter, overLimit && s.counterOver]}>
-            {text.length} / {WRITING_MAX_CHARS}
-          </Text>
-          <TouchableOpacity
-            style={[s.submitBtn, (loading || !text.trim() || overLimit) && s.submitBtnDisabled]}
-            onPress={handleSubmit}
-            disabled={loading || !text.trim() || overLimit}
-          >
-            {loading
-              ? <ActivityIndicator color={C.bg} size="small" />
-              : <Text style={s.submitBtnText}>{t(nativeLanguage, 'writingButton')}</Text>}
-          </TouchableOpacity>
+      <TextInput
+        style={s.input}
+        value={text}
+        onChangeText={setText}
+        placeholder={t(nativeLanguage, 'writingPlaceholder', { language: languageLabel })}
+        placeholderTextColor={C.muted}
+        multiline
+        textAlignVertical="top"
+        editable={!loading}
+      />
+      <View style={s.actionRow}>
+        <Text style={[s.counter, overLimit && s.counterOver]}>
+          {text.length} / {WRITING_MAX_CHARS}
+        </Text>
+        <TouchableOpacity
+          style={[s.submitBtn, (loading || !text.trim() || overLimit) && s.submitBtnDisabled]}
+          onPress={handleSubmit}
+          disabled={loading || !text.trim() || overLimit}
+        >
+          {loading
+            ? <ActivityIndicator color={C.bg} size="small" />
+            : <Text style={s.submitBtnText}>{t(nativeLanguage, 'writingButton')}</Text>}
+        </TouchableOpacity>
+      </View>
+
+      {error && (
+        <View style={s.errorBanner}>
+          <Text style={s.errorText}>{error}</Text>
         </View>
+      )}
 
-        {error && (
-          <View style={s.errorBanner}>
-            <Text style={s.errorText}>{error}</Text>
-          </View>
-        )}
-
-        {review && (
-          <>
-            <View style={s.card}>
-              <View style={s.rewriteHeaderRow}>
-                <Text style={s.sectionLabel}>{t(nativeLanguage, 'writingRewriteHeading')}</Text>
-                <PronounceButton text={review.rewrite} studyLanguage={studyLanguage} />
-              </View>
-              <Text style={s.rewriteText}>{review.rewrite}</Text>
-
-              {/* The check that a correction didn't change what they meant.
-                  Subordinate to the rewrite, but never behind a tap — a check
-                  nobody opens is a check nobody runs. */}
-              {review.rewriteNative && (
-                <View style={s.nativeBlock}>
-                  <Text style={s.sectionLabel}>{t(nativeLanguage, 'writingRewriteMeaning')}</Text>
-                  <Text style={s.nativeText}>{review.rewriteNative}</Text>
-                </View>
-              )}
+      {review && (
+        <>
+          <View style={s.card}>
+            <View style={s.rewriteHeaderRow}>
+              <Text style={s.sectionLabel}>{t(nativeLanguage, 'writingRewriteHeading')}</Text>
+              <PronounceButton text={review.rewrite} studyLanguage={studyLanguage} />
             </View>
+            <Text style={s.rewriteText}>{review.rewrite}</Text>
 
-            <Text style={s.findingsHeading}>{t(nativeLanguage, 'writingFindingsHeading')}</Text>
-
-            {review.findings.length === 0 ? (
-              <Text style={s.noFindings}>{t(nativeLanguage, 'writingNoFindings')}</Text>
-            ) : (
-              /* One ordered list, never grouped by kind — the order is the
-                 model's judgement of what this writer most needs, which is what
-                 makes the feedback meet them at their level. */
-              review.findings.map((finding, i) => {
-                const saved = finding.card ? savedCards.has(finding.card.study) : false;
-                const savingThis = finding.card ? savingCard === finding.card.study : false;
-                return (
-                  <View key={i} style={s.finding}>
-                    <View style={s.kindBadge}>
-                      <Text style={s.kindText}>{t(nativeLanguage, KIND_LABEL_KEY[finding.kind])}</Text>
-                    </View>
-
-                    {(finding.original || finding.suggested) && (
-                      <View style={s.spanRow}>
-                        {finding.original && <Text style={s.original}>{finding.original}</Text>}
-                        {finding.original && finding.suggested && <Text style={s.arrow}>→</Text>}
-                        {finding.suggested && <Text style={s.suggested}>{finding.suggested}</Text>}
-                      </View>
-                    )}
-
-                    <Text style={s.note}>{finding.note}</Text>
-
-                    {finding.card && (
-                      <View style={s.cardRow}>
-                        <Text style={s.cardStudy}>{finding.card.study}</Text>
-                        <PronounceButton text={finding.card.study} studyLanguage={studyLanguage} />
-                        <Text style={s.cardBack} numberOfLines={2}>
-                          {nativeLanguage === 'Korean' ? finding.card.back.Korean : finding.card.back.English}
-                        </Text>
-                        <TouchableOpacity
-                          style={[s.addBtn, (saved || savingThis) && s.addBtnDisabled]}
-                          onPress={() => finding.card && handleAddCard(finding.card)}
-                          disabled={saved || savingThis}
-                        >
-                          {savingThis
-                            ? <ActivityIndicator color={C.text} size="small" />
-                            : <Text style={s.addBtnText}>{t(nativeLanguage, saved ? 'writingCardSaved' : 'writingAddCard')}</Text>}
-                        </TouchableOpacity>
-                      </View>
-                    )}
-                  </View>
-                );
-              })
+            {/* The check that a correction didn't change what they meant.
+                Subordinate to the rewrite, but never behind a tap — a check
+                nobody opens is a check nobody runs. */}
+            {review.rewriteNative && (
+              <View style={s.nativeBlock}>
+                <Text style={s.sectionLabel}>{t(nativeLanguage, 'writingRewriteMeaning')}</Text>
+                <Text style={s.nativeText}>{review.rewriteNative}</Text>
+              </View>
             )}
-          </>
-        )}
-      </ScrollView>
-    </KeyboardAvoidingView>
+          </View>
+
+          <Text style={s.findingsHeading}>{t(nativeLanguage, 'writingFindingsHeading')}</Text>
+
+          {review.findings.length === 0 ? (
+            <Text style={s.noFindings}>{t(nativeLanguage, 'writingNoFindings')}</Text>
+          ) : (
+            /* One ordered list, never grouped by kind — the order is the
+               model's judgement of what this writer most needs, which is what
+               makes the feedback meet them at their level. */
+            review.findings.map((finding, i) => {
+              const saved = finding.card ? savedCards.has(finding.card.study) : false;
+              const savingThis = finding.card ? savingCard === finding.card.study : false;
+              return (
+                <View key={i} style={s.finding}>
+                  <View style={s.kindBadge}>
+                    <Text style={s.kindText}>{t(nativeLanguage, KIND_LABEL_KEY[finding.kind])}</Text>
+                  </View>
+
+                  {(finding.original || finding.suggested) && (
+                    <View style={s.spanRow}>
+                      {finding.original && <Text style={s.original}>{finding.original}</Text>}
+                      {finding.original && finding.suggested && <Text style={s.arrow}>→</Text>}
+                      {finding.suggested && <Text style={s.suggested}>{finding.suggested}</Text>}
+                    </View>
+                  )}
+
+                  <Text style={s.note}>{finding.note}</Text>
+
+                  {finding.card && (
+                    <View style={s.cardRow}>
+                      <Text style={s.cardStudy}>{finding.card.study}</Text>
+                      <PronounceButton text={finding.card.study} studyLanguage={studyLanguage} />
+                      <Text style={s.cardBack} numberOfLines={2}>
+                        {nativeLanguage === 'Korean' ? finding.card.back.Korean : finding.card.back.English}
+                      </Text>
+                      <TouchableOpacity
+                        style={[s.addBtn, (saved || savingThis) && s.addBtnDisabled]}
+                        onPress={() => finding.card && handleAddCard(finding.card)}
+                        disabled={saved || savingThis}
+                      >
+                        {savingThis
+                          ? <ActivityIndicator color={C.text} size="small" />
+                          : <Text style={s.addBtnText}>{t(nativeLanguage, saved ? 'writingCardSaved' : 'writingAddCard')}</Text>}
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                </View>
+              );
+            })
+          )}
+        </>
+      )}
+    </ScrollView>
   );
 }
 
@@ -216,7 +224,11 @@ function makeStyles(C: Palette, tabBarHeight: number) {
     input: {
       borderWidth: 1, borderColor: C.border, borderRadius: 12,
       paddingHorizontal: 14, paddingVertical: 12, fontSize: 16, lineHeight: 23,
-      color: C.text, backgroundColor: C.surface, minHeight: 150,
+      color: C.text, backgroundColor: C.surface,
+      // Bounded on both ends. Without a ceiling the field grows with the
+      // passage until the counter and the submit button are pushed off screen,
+      // so past `maxHeight` the text scrolls inside the field instead.
+      minHeight: 150, maxHeight: 260,
     },
     actionRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 10, marginBottom: 16 },
     counter: { fontSize: 12, color: C.muted },

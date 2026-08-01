@@ -119,7 +119,11 @@ export async function getWritingReview(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ text, nativeLanguage, studyLanguage }),
   });
-  if (!res.ok) throw new Error('Failed to review writing');
+  // The status is in the message on purpose. Mobile points at a deployed
+  // `baseUrl`, so the first failure of a *new* route is normally a 404 from an
+  // app version that predates it — indistinguishable from a real bug unless the
+  // code is visible. The sibling fetches in `gemini.ts` still swallow theirs.
+  if (!res.ok) throw new Error(`Failed to review writing (${res.status})`);
   return res.json();
 }
 
