@@ -91,6 +91,134 @@ What is left here is what those two now *show*.
       core needs a small flat config of its own. Do it with the CI gate, not
       before — a lint nobody runs is the thing this section is about.
 
+## High
+
+_Added 2026-08-01. The first two are product work; the last three are defects
+found in use, and #3–#5 were each checked against the code before being written
+down — file references below are what was actually read, not guesses._
+
+- [ ] **Bulk save and review for packs** — a `cards` pack already has this:
+      "Review this deck" calls `unsavedPackCards` + `saveFlashcardsBatch` in one
+      batched write, so 107 kana enrol on one tap. A `lookup` pack (TOEIC 133,
+      TOPIK 고급 160) has neither button, and the only way in is tapping one word
+      at a time through Learn. **The blocker is `PackWord`, which is
+      `{ word, context? }` with no back side** — there is nothing to batch-write.
+      Two ways out:
+      - *Pre-author the backs into the pack source* (an optional `back` on
+        `PackWord`, keyed by native language the way `PackCard.back` already is).
+        Then every existing mechanism — `unsavedPackCards`, `saveFlashcardsBatch`,
+        "Review this deck", Drill — starts working for lookup packs with no new
+        machinery. This is the same "pre-authored content instead of per-word
+        Gemini calls" already listed under the Medium pack item, which makes it
+        the load-bearing piece rather than a nice-to-have. **Recommended.**
+      - *Batch-generate on enrol* — one Gemini call per chunk at save time.
+        Cheaper to build, but it puts a long spinner on the enrol tap and it
+        contradicts the curated-not-generated principle in
+        [vision.md](vision.md). Only worth it if authoring 293 backs by hand is
+        judged too slow.
+
+      Beyond the save itself, the open question is what actually makes a
+      160-word pack learnable. Candidates, roughly in order of payoff — **pick
+      deliberately, don't build all four**:
+      1. **Chunked enrolment, not all-or-nothing.** 160 words is not one
+         decision. Sections/themes as filters (already noted in the Medium item)
+         plus "save this section" turns the pack into ~8 sittings. This is
+         probably the single highest-value change.
+      2. **Select-mode on the deck page.** `/cards` already has exactly this
+         (`selectMode` / `selectedIds` / `bulkWorking` in
+         `apps/mobile/app/(tabs)/cards.tsx`), so it is a port rather than a
+         design. Gives the user the middle ground between one word and all 160.
+      3. **Daily draw** — carried over from the Medium item. Pairs naturally
+         with (1): the pack feeds review a fixed number of new words a day
+         instead of dumping them into one queue.
+      4. **Save without leaving the deck.** On a lookup pack every word is a
+         deck → Learn → back round trip, which on mobile crosses a stack screen
+         above the tabs. If backs are pre-authored, a word can be saved inline
+         and the round trip becomes optional rather than mandatory.
+
+      Depends on **Stamp `packId` on words saved through Learn** (Medium) for
+      any of this to give lookup packs a review collection of their own.
+
+- [ ] **Onboarding for new users** — there is nothing today except web's
+      `LanguageSetupModal`, which asks two questions and vanishes; mobile has no
+      first-run experience at all (see the language-defaults item below, which
+      is the same gap seen as a bug). A new user lands on Learn with an empty
+      search box and no indication that packs, review, drill or writing review
+      exist. Scope it as two separate things — they have different lifetimes and
+      conflating them is how onboarding becomes a tutorial nobody finishes:
+      - *First run*: the language setup mobile is missing, then the shortest
+        possible pass over what the app does. Lean and single-purpose per
+        [vision.md](vision.md) — resist a multi-screen carousel.
+      - *Contextual tips later on*: surfaced when a feature first becomes
+        reachable rather than up front. Needs somewhere to record "this user has
+        seen tip X" — `users/{uid}` is the obvious home, alongside the language
+        preferences.
+
+      Decide before building: does first run block the app, or is it
+      dismissible? The web modal blocks, and it is the reason the study/native
+      collision can't happen there — so a dismissible version needs the defaults
+      fixed independently.
+
+- [ ] **Skeletons instead of spinners** — mobile has 23 `ActivityIndicator`
+      uses and one skeleton; the very first thing a cold launch shows is a
+      full-screen spinner (`apps/mobile/app/(tabs)/index.tsx:370`, gated on
+      `authLoading`), which is the worst placement of the 23 because it is the
+      first impression and it replaces the whole screen with nothing. Web is
+      further along — `page.tsx` already skeletons the word-of-the-day card with
+      `animate-pulse` — so the pattern exists to copy.
+      Priority order: (1) the `authLoading` full-screen spinner, (2) the card
+      and review lists, which have a known row shape and so skeleton cleanly,
+      (3) leave in-button spinners alone — a spinner inside a button the user
+      just pressed is the right control and does not want a skeleton.
+
+- [ ] **Saved cards don't appear until the app is restarted** — confirmed, and
+      the cause is structural rather than a stale variable. Nothing in
+      `apps/mobile` uses `useFocusEffect`, `useIsFocused` or `onSnapshot`. Both
+      `apps/mobile/app/(tabs)/cards.tsx:53` and
+      `apps/mobile/app/(tabs)/review.tsx:92` load inside a `useEffect` keyed on
+      `[user, studyLanguage]`, and Expo Router keeps tab screens mounted once
+      visited — so the effect never re-runs and only killing the process
+      reloads. Review is worse than Cards: it also writes a disk cache
+      (`fetchAndCacheReviewCards`), so the stale list survives the restart until
+      the fetch lands.
+      Three options, increasing cost:
+      1. `useFocusEffect` to refetch on tab focus. Smallest change, fixes the
+         reported symptom, costs a redundant read every tab switch.
+      2. A mutation counter in context that save/archive/delete bump and the
+         lists depend on. Refetches only when something actually changed; needs
+         every write path to remember to bump it.
+      3. `onSnapshot` for live queries. Correct by construction, but it
+         interacts with the offline cache and the pending-review queue, which is
+         the part of this app most expensive to get wrong.
+      **(2) is the recommendation** — (1) is a papering-over that will read as
+      slow on a large deck, and (3) is a bigger change than the bug justifies.
+      Whichever is chosen, the disk cache in review has to be invalidated too,
+      or the fix works only on the surface that doesn't cache.
+
+- [ ] **New users can end up native Korean + study Korean** — real, and
+      mobile-only. Web can't reach the state: `LanguageSetupModal` filters the
+      chosen native language out of the study options, and it blocks the app
+      until both are answered. Mobile has no equivalent, so it falls back to two
+      hardcoded defaults that were chosen independently —
+      `apps/mobile/src/context/UserContext.tsx:60` starts `studyLanguage` at
+      `'Korean'`, and line 166 defaults `nativeLanguage` to `'Korean'` when
+      signed out. That is exactly the collision `resolveStudyLanguage` and
+      `resolveNativeLanguage` exist to prevent. It then self-corrects on the
+      first touch of either setting, which matches the reported symptom, because
+      those resolvers only run on a *change*.
+      Two further wrinkles worth fixing in the same pass:
+      - `resolveStudyLanguage` returns early when the previous native is `null`
+        (`packages/core/src/types.ts:518`), deliberately leaving first-run to
+        the setup modal. That comment is true on web and false on mobile.
+      - A brand-new signed-in account has no `users/{uid}` fields at all, so
+        `nativeLanguage` is `null` while mobile's settings screen highlights
+        English (`settings.tsx:156`) — the app shows a preference that was never
+        stored. Signing in also clears the `'Korean'` the signed-out path had
+        just cached.
+      The durable fix is mobile's missing first-run setup, which is why this
+      wants doing alongside the onboarding item rather than as a patch to the
+      defaults.
+
 ## Medium
 
 - [ ] **Vocabulary packs — iterate beyond v1** — shipped so far: TOEIC (PR #34,
@@ -101,7 +229,10 @@ What is left here is what those two now *show*.
       shipping — with the scripts exception amended into
       [vision.md](vision.md) 2026-07-24.
       *Next:* daily-draw UX; section themes as filters; pre-authored content
-      instead of per-word Gemini calls; more packs — **JLPT** is the obvious gap
+      instead of per-word Gemini calls — **all three were promoted into "Bulk
+      save and review for packs" under High on 2026-08-01**, where pre-authored
+      backs turn out to be the prerequisite rather than one option among
+      several; more packs — **JLPT** is the obvious gap
       now (Japanese has only the kana packs, so a Japanese learner past the
       scripts has nothing), then TOEFL. Swedish, French and Traditional Chinese
       still have **no pack at all**.
@@ -129,6 +260,9 @@ What is left here is what those two now *show*.
       kana. For a word you chose to look up and thought about, that may be the
       wrong call — the deck is where it came from, not necessarily where it
       belongs. Decide that before building; it is the whole question.
+      _Promoted in effect on 2026-08-01: bulk save under High depends on this,
+      so it is no longer optional — but the decision above still has to be made
+      first, and it is the same decision either way._
 
 - [ ] **Export covers only your own cards** — noticed in PR #51, not decided.
       `/cards` export reads the now-scoped list, so a CSV/Anki dump omits every
