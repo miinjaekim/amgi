@@ -4,6 +4,7 @@ import { useState } from 'react';
 import {
   buildWritingCardDraft,
   getStudyLanguageConfig,
+  getWritingReview,
   WRITING_MAX_CHARS,
 } from '@amgi/core';
 import type { FindingKind, TranslationKey, WritingCardCandidate, WritingReview } from '@amgi/core';
@@ -53,13 +54,7 @@ export default function WritingReviewPanel() {
     setReview(null);
     setSavedCards(new Set());
     try {
-      const res = await fetch('/api/writing', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: text.trim(), nativeLanguage, studyLanguage }),
-      });
-      if (!res.ok) throw new Error('Review failed');
-      setReview(await res.json());
+      setReview(await getWritingReview(text.trim(), nativeLanguage ?? 'English', studyLanguage));
     } catch (err) {
       setError(t(nativeLanguage, 'errorWritingReview'));
       console.error(err);

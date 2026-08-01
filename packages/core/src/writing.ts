@@ -100,6 +100,29 @@ export interface WritingReview {
  */
 export const WRITING_MAX_CHARS = 1000;
 
+/**
+ * Fetches a review of `text` from /api/writing.
+ *
+ * Shared rather than left as a `fetch` in each app for the reason the queue
+ * modules are shared: mobile passes a `baseUrl` and web passes none, and that
+ * is the *only* difference between the two call sites. A copy on each side is
+ * a copy that drifts.
+ */
+export async function getWritingReview(
+  text: string,
+  nativeLanguage = 'English',
+  studyLanguage: StudyLanguage = 'Korean',
+  baseUrl = '',
+): Promise<WritingReview> {
+  const res = await fetch(`${baseUrl}/api/writing`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text, nativeLanguage, studyLanguage }),
+  });
+  if (!res.ok) throw new Error('Failed to review writing');
+  return res.json();
+}
+
 function isNonEmptyString(v: unknown): v is string {
   return typeof v === 'string' && v.trim().length > 0;
 }

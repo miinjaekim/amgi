@@ -5,6 +5,7 @@ import {
   getTermExamples as _examples,
   getWordOfTheDay as _wotd,
   getPronunciationUrl as _pronounce,
+  getWritingReview as _writingReview,
 } from '@amgi/core';
 import type { StudyLanguage } from '@amgi/core';
 
@@ -46,6 +47,12 @@ export const getPronunciationUrl = (
   text: string,
   studyLanguage: StudyLanguage = 'Korean',
 ) => _pronounce(text, studyLanguage, BASE_URL);
+
+export const getWritingReview = (
+  text: string,
+  nativeLanguage?: string,
+  studyLanguage: StudyLanguage = 'Korean',
+) => _writingReview(text, nativeLanguage, studyLanguage, BASE_URL);
 
 // Streaming variants — expo/fetch exposes a WHATWG ReadableStream body so the
 // Learn screen can reveal depth/examples as they arrive, like web does.

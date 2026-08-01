@@ -22,6 +22,9 @@ import type { TermCore, TermDepth, TermAmbiguous, ExamplePair, WordOfTheDay } fr
 import { saveFlashcardToFirestore } from '../../src/services/firestore';
 import type { Flashcard } from '../../src/services/firestore';
 import SaveFlashcardModal from '../../src/components/SaveFlashcardModal';
+import LearnModeToggle from '../../src/components/LearnModeToggle';
+import type { LearnMode } from '../../src/components/LearnModeToggle';
+import WritingReviewPanel from '../../src/components/WritingReviewPanel';
 import PronounceButton from '../../src/components/PronounceButton';
 import Markdown from '../../src/components/Markdown';
 import { t } from '@amgi/core';
@@ -86,6 +89,7 @@ export default function LearnScreen() {
   const backConfig = getBackSideConfig(studyLanguage, nativeLanguage);
   const exampleTerms = EXAMPLE_TERMS[studyLanguage] ?? EXAMPLE_TERMS.Korean;
 
+  const [mode, setMode] = useState<LearnMode>('word');
   const [term, setTerm] = useState('');
   const [core, setCore] = useState<TermCore | null>(null);
   const [ambiguity, setAmbiguity] = useState<TermAmbiguous | null>(null);
@@ -371,6 +375,20 @@ export default function LearnScreen() {
     );
   }
 
+  const modeToggle = <LearnModeToggle mode={mode} onChange={setMode} nativeLanguage={nativeLanguage} />;
+
+  // Passage mode replaces the whole word flow rather than nesting inside it:
+  // the empty state below is a tuned keyboard-reserve layout built around a
+  // one-line search field, and a six-line textarea does not belong in it.
+  if (mode === 'passage') {
+    return (
+      <SafeAreaView style={s.root} edges={['top']}>
+        {modeToggle}
+        <WritingReviewPanel />
+      </SafeAreaView>
+    );
+  }
+
   // Deliberately not gated on saveSuccess: a save clears the result, so the
   // empty state is where you land afterwards. The success banner renders
   // inside it rather than suppressing it — otherwise saving leaves you on a
@@ -407,6 +425,7 @@ export default function LearnScreen() {
     return (
       <SafeAreaView style={s.root} edges={['top']}>
         {streakBadge}
+        {modeToggle}
         {/* One big dismiss target. With the bar pinned rather than lifted,
             there is no guarantee of a large empty spacer to aim at, and a
             keyboard you cannot put away is worse than one that covers things.
@@ -494,6 +513,7 @@ export default function LearnScreen() {
   return (
     <SafeAreaView style={s.root} edges={['top']}>
       {streakBadge}
+      {modeToggle}
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={s.flex}>
         <ScrollView
           style={s.flex}
