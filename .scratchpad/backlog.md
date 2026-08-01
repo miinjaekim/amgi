@@ -154,10 +154,39 @@ down — file references below are what was actually read, not guesses._
         chose to look up, thought about and saved would disappear from your own
         card list. Without it, though, the same word saved two ways lands in two
         different places, which is its own incoherence.
-        _Still undecided, and it is the whole question:_ either accept the move,
-        or let a card belong to a pack *and* to `/cards` by loosening that
-        filter to something other than "has no collection". The second is the
-        larger change and the one that makes the Export item below moot.
+        **Decided 2026-08-01 — loosen the filter instead of accepting the
+        move.** A card belongs to a pack *and* to `/cards`; see the sub-item
+        below, which is the prerequisite for stamping.
+
+      - *Loosen the `/cards` filter* — **do this before the Learn-flow
+        stamping**, because it is what makes stamping a pure addition rather
+        than a relocation. Decided 2026-08-01:
+        - `/cards` stops filtering to `getCollectionId(card) === null` at load
+          and holds every card for the study language.
+        - The **default view hides `cards`-kind packs only** — kana today.
+          Lookup-pack words (TOEIC, TOPIK 고급) are visible by default, because
+          a word you can look up is vocabulary and belongs in your list, while a
+          107-character drill set would swamp it. Keying on `pack.kind` rather
+          than on pack ids means a future drill-style pack inherits the rule
+          without anyone remembering to update a list.
+        - A deck dimension reaches everything: `All / Mine / <each enrolled
+          deck>`. Note this is a **second axis**, orthogonal to the existing
+          `FilterKey` (`active | archived | all`) — it is not another chip in
+          that row, and conflating them is the easy mistake here.
+        - **Export follows the visible filter**, so what you see is what you
+          get. This deliberately leaves the Export item under Medium open: a
+          true backup is a separate call, and it should not change silently as
+          a side effect of this.
+        - **Review must not change.** It already reads `buildReviewCollections`
+          and `getCollectionId(card) === collectionId` and never touches the
+          cards-page filter, so "My cards" in review stays cards with no
+          `packId` — including after stamping, which is the point of doing the
+          loosening first. Verified 2026-08-01: the coupling is one `.filter()`
+          per platform at load time and nothing else reads it.
+        - Both platforms carry a comment asserting the *old* rule — "they are
+          absent rather than filtered out by a chip" (`cards/page.tsx:63-68`,
+          `cards.tsx:47-52`). It encodes the reasoning being reversed here, so
+          it has to be rewritten, not deleted.
 
 - [ ] **Onboarding for new users** — there is nothing today except web's
       `LanguageSetupModal`, which asks two questions and vanishes; mobile has no
@@ -278,6 +307,13 @@ down — file references below are what was actually read, not guesses._
       silently drops 107 kana is a different thing from a scoped view. Either an
       export on the deck page, or an "include pack cards" option — small either
       way, but pick one deliberately.
+      _Deliberately still open after the 2026-08-01 `/cards` decision under
+      High. Export follows the visible filter there, which was chosen precisely
+      so this item stays a separate call — widening the load would otherwise
+      have resolved it as a silent side effect, and "the same tap now yields 107
+      more cards" is not a change to make by accident. Note the shape has
+      shifted though: once the filter is loosened, "include pack cards" is no
+      longer a new mechanism, just a choice about which axis export reads._
 
 - [ ] **Offline term capture** — jot terms to look up later, queued locally and
       resolved on reconnect. No model needed, just a queue and a flush.
