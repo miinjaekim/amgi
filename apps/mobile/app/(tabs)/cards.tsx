@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, FlatList,
   StyleSheet, ActivityIndicator, Alert,
@@ -50,7 +50,7 @@ export default function CardsScreen() {
   // is what makes this surface coherent, so they are absent rather than
   // filtered out by a chip. Everything below (counts, select-all, export)
   // reads `allCards`, so it all follows from this one scoping.
-  useEffect(() => {
+  const loadCards = useCallback(() => {
     if (!user) { setAllCards([]); return; }
     setLoading(true);
     fetchAllUserFlashcards(user.uid, studyLanguage)
@@ -58,6 +58,8 @@ export default function CardsScreen() {
       .catch(() => setError('Failed to load cards.'))
       .finally(() => setLoading(false));
   }, [user, studyLanguage]);
+
+  useEffect(loadCards, [loadCards]);
 
   const visibleCards = useMemo(() => {
     let cards = allCards;
@@ -488,8 +490,12 @@ export default function CardsScreen() {
       {detailCard && (
         <CardDetailModal
           card={detailCard}
+          studyLanguage={studyLanguage}
           nativeLanguage={nativeLanguage}
           onClose={() => setDetailCard(null)}
+          // The modal can now write — enrichment, an edited back, archive,
+          // delete — so this list has to hear about it.
+          onChanged={loadCards}
         />
       )}
     </SafeAreaView>
