@@ -608,8 +608,12 @@ export default function CardsPage() {
       {detailCard && (
         <CardDetailModal
           card={detailCard}
+          studyLanguage={studyLanguage}
           nativeLanguage={nativeLanguage}
           onClose={() => setDetailCard(null)}
+          // The modal can now write — enrichment, an edited back, archive,
+          // delete — so this list has to hear about it.
+          onChanged={() => user && loadCards(user.uid)}
         />
       )}
     </div>

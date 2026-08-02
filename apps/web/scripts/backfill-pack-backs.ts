@@ -27,7 +27,8 @@ import {
   VOCAB_PACKS,
   getStudyLanguageConfig,
   type CardSideField,
-  type PackCard,
+  getPackEntries,
+  type PackEntry,
   type StudyLanguage,
 } from '@amgi/core';
 
@@ -68,16 +69,18 @@ async function planForLanguage(
   studyLanguage: StudyLanguage,
   uidFilter: string | null,
 ): Promise<Repair[]> {
-  const packs = (VOCAB_PACKS[studyLanguage] ?? []).filter(p => p.kind === 'cards');
+  // Every pack is pre-authored now, so there is no kind to filter on — the
+  // packs that used to be skipped here are exactly the ones this can repair.
+  const packs = VOCAB_PACKS[studyLanguage] ?? [];
   if (packs.length === 0) return [];
 
   const { collection, studyField } = getStudyLanguageConfig(studyLanguage);
   // Study side → entry, per pack. Lowercased for the same reason the app
   // matches saved terms that way.
-  const byPack = new Map<string, Map<string, PackCard>>(
+  const byPack = new Map<string, Map<string, PackEntry>>(
     packs.map(pack => [
       pack.id,
-      new Map(pack.cards.map(card => [card.study.toLowerCase(), card])),
+      new Map(getPackEntries(pack).map(entry => [entry.study.toLowerCase(), entry])),
     ]),
   );
 
@@ -103,7 +106,12 @@ async function planForLanguage(
       if (field === studyField) continue;
       const current = data[field];
       if (typeof current === 'string' && current.trim()) continue;
-      fill[field] = entry.back[key];
+      // A pack only authors the side it can store, so the other one is
+      // routinely absent. Firestore throws on an explicit undefined, and a
+      // side the pack never wrote is not a gap this can fill anyway.
+      const authored = entry.back[key];
+      if (authored === undefined) continue;
+      fill[field] = authored;
     }
     if (Object.keys(fill).length > 0) {
       repairs.push({ ref: doc.ref, uid: String(data.uid ?? '?'), study: String(study), fill });

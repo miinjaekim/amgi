@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseStreamedDepth, getCharacterBreakdown } from '@amgi/core';
+import { parseStreamedDepth, getCharacterBreakdown, depthFieldsToPersist } from '@amgi/core';
 
 describe('parseStreamedDepth', () => {
   it('parses a Han-script response with all three sections', () => {
@@ -60,5 +60,34 @@ describe('getCharacterBreakdown', () => {
 
   it('returns undefined when a card has neither', () => {
     expect(getCharacterBreakdown({})).toBeUndefined();
+  });
+});
+
+// What enrichment writes back to a card. Both depth prompts are told to leave a
+// section empty when it has nothing to add, and both routinely do — so the
+// filtering here is what keeps "no notes yet" distinct from "notes are empty",
+// which every `card.notes &&` render check depends on.
+describe('depthFieldsToPersist', () => {
+  it('keeps the sections that have content', () => {
+    expect(depthFieldsToPersist({ definition: 'a rule you follow', notes: 'formal register' }))
+      .toEqual({ definition: 'a rule you follow', notes: 'formal register' });
+  });
+
+  it('drops empty and whitespace-only sections rather than writing them', () => {
+    const fields = depthFieldsToPersist({ definition: 'x', characterBreakdown: '', notes: '   ' });
+    expect(fields).toEqual({ definition: 'x' });
+    expect('notes' in fields).toBe(false);
+    expect('characterBreakdown' in fields).toBe(false);
+  });
+
+  it('trims, so a section is never stored with the prompt\'s stray newlines', () => {
+    expect(depthFieldsToPersist({ definition: '  a rule\n' })).toEqual({ definition: 'a rule' });
+  });
+
+  // A model that returned nothing usable must produce no write at all, so the
+  // caller can tell the user it failed instead of silently doing nothing.
+  it('returns an empty object when nothing came back', () => {
+    expect(depthFieldsToPersist({})).toEqual({});
+    expect(depthFieldsToPersist({ definition: '', notes: '' })).toEqual({});
   });
 });

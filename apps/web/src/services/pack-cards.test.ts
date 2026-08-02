@@ -4,10 +4,13 @@ import {
   buildPackCardDraft,
   collectSavedTerms,
   countSavedPackTerms,
+  getPackEntries,
   getVocabPack,
   getVocabPacks,
-  unsavedPackCards,
+  resolvePackBack,
+  unsavedEntries,
   SUPPORTED_STUDY_LANGUAGES,
+  getStudyLanguageConfig,
 } from '@amgi/core';
 import type { CardSides } from '@amgi/core';
 
@@ -57,18 +60,18 @@ describe('collectSavedTerms', () => {
   });
 });
 
-describe('unsavedPackCards', () => {
-  const pack = HIRAGANA_PACK;
+describe('unsavedEntries', () => {
+  const entries = getPackEntries(HIRAGANA_PACK);
 
   it('returns the entries not already held', () => {
     const saved = new Set(['あ', 'い']);
-    const unsaved = unsavedPackCards(pack, saved)!;
-    expect(unsaved).toHaveLength(pack.cards.length - 2);
-    expect(unsaved.map(c => c.study)).not.toContain('あ');
+    const unsaved = unsavedEntries(entries, saved)!;
+    expect(unsaved).toHaveLength(entries.length - 2);
+    expect(unsaved.map(e => e.study)).not.toContain('あ');
   });
 
   it('returns everything when the account genuinely has none', () => {
-    expect(unsavedPackCards(pack, new Set())).toHaveLength(pack.cards.length);
+    expect(unsavedEntries(entries, new Set())).toHaveLength(entries.length);
   });
 
   // The regression. A null saved-set means the fetch is in flight or failed,
@@ -76,18 +79,52 @@ describe('unsavedPackCards', () => {
   // deck — one account ended up holding all 71 katakana cards twice. Unknown
   // has to stay unknown all the way to the caller.
   it('refuses to answer when the saved set is unknown', () => {
-    expect(unsavedPackCards(pack, null)).toBeNull();
+    expect(unsavedEntries(entries, null)).toBeNull();
   });
 
   it('matches case-insensitively, as saved terms are stored', () => {
-    const englishPack = { ...pack, cards: [{ study: 'Comply', back: { English: 'x', Korean: 'ㅇ' } }] };
-    expect(unsavedPackCards(englishPack, new Set(['comply']))).toHaveLength(0);
+    const one = [{ study: 'Comply', back: { Korean: '따르다' } }];
+    expect(unsavedEntries(one, new Set(['comply']))).toHaveLength(0);
+  });
+
+  // Taking entries rather than a pack is what lets one function serve both
+  // enrolment units — a section, or the whole deck.
+  it('scopes to whichever entries it is handed', () => {
+    const section = HIRAGANA_PACK.sections[0];
+    const unsaved = unsavedEntries(section.entries, new Set())!;
+    expect(unsaved).toHaveLength(section.entries.length);
+    expect(unsaved.length).toBeLessThan(entries.length);
+  });
+});
+
+describe('resolvePackBack', () => {
+  // The case `getPackText` gets wrong. On an English pack the English slot is
+  // the *front* of the card, so both a Korean native and an English native read
+  // the Korean back — the back belongs to the pair of languages, not to the
+  // reader alone.
+  it('picks the side the card will actually store', () => {
+    const back = { Korean: '준수하다' };
+    expect(resolvePackBack(back, 'English', 'Korean')).toBe('준수하다');
+    expect(resolvePackBack(back, 'English', 'English')).toBe('준수하다');
+  });
+
+  it('follows native language where the two languages differ', () => {
+    const back = { English: 'a', Korean: '아' };
+    expect(resolvePackBack(back, 'Japanese', 'English')).toBe('a');
+    expect(resolvePackBack(back, 'Japanese', 'Korean')).toBe('아');
+  });
+
+  // A pack authors only the side it can store, so the other side is routinely
+  // absent and must never render as blank.
+  it('falls back to whichever side exists', () => {
+    expect(resolvePackBack({ English: 'conflict' }, 'Korean', 'Korean')).toBe('conflict');
+    expect(resolvePackBack({}, 'Korean', 'English')).toBe('');
   });
 });
 
 describe('buildPackCardDraft', () => {
   it('stamps the pack it came from', () => {
-    const draft = buildPackCardDraft(HIRAGANA_PACK.cards[0], 'hiragana', 'uid-1', 'Japanese');
+    const draft = buildPackCardDraft(getPackEntries(HIRAGANA_PACK)[0], 'hiragana', 'uid-1', 'Japanese');
     expect(draft.packId).toBe('hiragana');
     expect(draft.uid).toBe('uid-1');
     expect(draft.termLanguage).toBe('Japanese');
@@ -106,32 +143,86 @@ describe('buildPackCardDraft', () => {
     expect(draft.korean).toBe('아');
   });
 
-  // `english` is required on every card, and is also the fallback `getBackSide`
-  // reaches for on documents written before backs were native-aware.
-  it('always populates english, whichever side it lands on', () => {
-    for (const { code: lang } of SUPPORTED_STUDY_LANGUAGES) {
-      const draft = buildPackCardDraft(
-        { study: 'x', back: { English: 'y', Korean: 'ㅇ' } }, 'p', 'uid-1', lang,
-      );
-      expect(draft.english, `${lang} left english empty`).toBeTruthy();
-    }
-  });
-
   // The study side is one of the two back slots on an English or Korean deck,
   // so it has to be written last — a back overwriting the front would leave the
   // card unmatched against the deck it came from.
   it('never lets a back overwrite the study side', () => {
     const draft = buildPackCardDraft(
-      { study: 'comply', back: { English: 'to obey a rule', Korean: '따르다' } },
+      { study: 'comply', back: { Korean: '준수하다, 따르다' } },
       'toeic-core', 'uid-1', 'English',
     );
     expect(draft.english).toBe('comply');
-    expect(draft.korean).toBe('따르다');
+    expect(draft.korean).toBe('준수하다, 따르다');
 
     const ko = buildPackCardDraft(
-      { study: '갈등', back: { English: 'conflict', Korean: '충돌' } }, 'p', 'uid-1', 'Korean',
+      { study: '갈등', back: { English: 'conflict' } }, 'p', 'uid-1', 'Korean',
     );
     expect(ko.korean).toBe('갈등');
     expect(ko.english).toBe('conflict');
+  });
+
+  it('omits a side the pack did not author rather than writing undefined', () => {
+    // Firestore throws on an explicit undefined, and the write path filters
+    // them — but only the ones it knows about. Absent is the safe shape.
+    const draft = buildPackCardDraft(
+      { study: '갈등', back: { English: 'conflict' } }, 'p', 'uid-1', 'Korean',
+    );
+    expect(Object.keys(draft)).not.toContain('formality');
+    expect(draft.korean).toBe('갈등');
+  });
+
+  // The carry that makes on-demand depth correct. Both /api/explain/depth and
+  // /api/explain/examples read briefDefinition to pin which sense they are
+  // explaining, so a hint dropped at save time means `fine` gets a paragraph
+  // about quality months later.
+  it('carries the sense hint onto the card as briefDefinition', () => {
+    const draft = buildPackCardDraft(
+      { study: 'fine', back: { Korean: '벌금' }, context: 'a penalty payment' },
+      'toeic-core', 'uid-1', 'English',
+    );
+    expect(draft.briefDefinition).toBe('a penalty payment');
+  });
+
+  it('leaves briefDefinition off an entry with no hint', () => {
+    const draft = buildPackCardDraft(
+      { study: 'comply', back: { Korean: '준수하다' } }, 'toeic-core', 'uid-1', 'English',
+    );
+    expect('briefDefinition' in draft).toBe(false);
+  });
+});
+
+// `english` is required on every Flashcard and is the fallback `getBackSide`
+// reaches for on documents written before backs were native-aware. A pack that
+// authors only the side its study language overwrites would produce cards with
+// no English at all — this is the check that a future pack cannot do that
+// quietly.
+describe('every registered pack authors a storable back', () => {
+  it('leaves english populated on every entry of every pack', () => {
+    for (const { code: lang } of SUPPORTED_STUDY_LANGUAGES) {
+      for (const pack of getVocabPacks(lang)) {
+        for (const entry of getPackEntries(pack)) {
+          const draft = buildPackCardDraft(entry, pack.id, 'uid-1', lang);
+          expect(draft.english, `${pack.id}/${entry.study} left english empty`).toBeTruthy();
+        }
+      }
+    }
+  });
+
+  it('gives every entry a back the reader can actually see', () => {
+    for (const { code: lang } of SUPPORTED_STUDY_LANGUAGES) {
+      for (const pack of getVocabPacks(lang)) {
+        const { studyField } = getStudyLanguageConfig(lang);
+        for (const entry of getPackEntries(pack)) {
+          for (const native of ['English', 'Korean']) {
+            const back = resolvePackBack(entry.back, lang, native);
+            expect(back, `${pack.id}/${entry.study} has no back for a ${native} native`).toBeTruthy();
+            // The back must not just be the front again, which is what an
+            // authored side landing in the study slot would produce.
+            expect(back, `${pack.id}/${entry.study} back repeats the front`).not.toBe(entry.study);
+          }
+        }
+        expect(studyField).toBeTruthy();
+      }
+    }
   });
 });

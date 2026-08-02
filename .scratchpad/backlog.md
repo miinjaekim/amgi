@@ -97,96 +97,47 @@ _Added 2026-08-01. The first two are product work; the last three are defects
 found in use, and #3–#5 were each checked against the code before being written
 down — file references below are what was actually read, not guesses._
 
-- [ ] **Bulk save and review for packs** — a `cards` pack already has this:
-      "Review this deck" calls `unsavedPackCards` + `saveFlashcardsBatch` in one
-      batched write, so 107 kana enrol on one tap. A `lookup` pack (TOEIC 133,
-      TOPIK 고급 160) has neither button, and the only way in is tapping one word
-      at a time through Learn. **The blocker is `PackWord`, which is
-      `{ word, context? }` with no back side** — there is nothing to batch-write.
-      Two ways out:
-      - *Pre-author the backs into the pack source* (an optional `back` on
-        `PackWord`, keyed by native language the way `PackCard.back` already is).
-        Then every existing mechanism — `unsavedPackCards`, `saveFlashcardsBatch`,
-        "Review this deck", Drill — starts working for lookup packs with no new
-        machinery. This is the same "pre-authored content instead of per-word
-        Gemini calls" already listed under the Medium pack item, which makes it
-        the load-bearing piece rather than a nice-to-have. **Recommended.**
-      - *Batch-generate on enrol* — one Gemini call per chunk at save time.
-        Cheaper to build, but it puts a long spinner on the enrol tap and it
-        contradicts the curated-not-generated principle in
-        [vision.md](vision.md). Only worth it if authoring 293 backs by hand is
-        judged too slow.
+- [ ] **Loosen the `/cards` filter** — decided 2026-08-01, still not built, and
+      now the last structural piece of the pack work. It is what makes the
+      Learn-flow `packId` stamping below a pure addition rather than a
+      relocation.
+      - `/cards` stops filtering to `getCollectionId(card) === null` at load
+        and holds every card for the study language.
+      - The **default view hides `cards`-kind packs only** — kana today.
+        ⚠️ **This wording is now stale**: `kind` no longer exists. The rule it
+        described still holds and should key on `pack.layout === 'grid'`, which
+        is the property that actually separates a 107-glyph drill set from
+        vocabulary. A word you can look up belongs in your list; a wall of kana
+        would swamp it.
+      - A deck dimension reaches everything: `All / Mine / <each enrolled
+        deck>`. Note this is a **second axis**, orthogonal to the existing
+        `FilterKey` (`active | archived | all`) — it is not another chip in
+        that row, and conflating them is the easy mistake here.
+      - **Export follows the visible filter**, so what you see is what you get.
+        This deliberately leaves the Export item under Medium open.
+      - **Review must not change.** It reads `buildReviewCollections` and
+        `getCollectionId(card) === collectionId` and never touches the
+        cards-page filter. Verified 2026-08-01: the coupling is one `.filter()`
+        per platform at load time and nothing else reads it.
+      - Both platforms carry a comment asserting the *old* rule
+        (`cards/page.tsx:48-52`, `cards.tsx:48-52`). It encodes the reasoning
+        being reversed, so it has to be rewritten, not deleted.
 
-      Beyond the save itself, the open question is what actually makes a
-      160-word pack learnable. Candidates, roughly in order of payoff — **pick
-      deliberately, don't build all four**:
-      1. **Chunked enrolment, not all-or-nothing.** 160 words is not one
-         decision. Sections/themes as filters (already noted in the Medium item)
-         plus "save this section" turns the pack into ~8 sittings. This is
-         probably the single highest-value change.
-      2. **Select-mode on the deck page.** `/cards` already has exactly this
-         (`selectMode` / `selectedIds` / `bulkWorking` in
-         `apps/mobile/app/(tabs)/cards.tsx`), so it is a port rather than a
-         design. Gives the user the middle ground between one word and all 160.
-      3. **Daily draw** — carried over from the Medium item. Pairs naturally
-         with (1): the pack feeds review a fixed number of new words a day
-         instead of dumping them into one queue.
-      4. **Save without leaving the deck.** On a lookup pack every word is a
-         deck → Learn → back round trip, which on mobile crosses a stack screen
-         above the tabs. If backs are pre-authored, a word can be saved inline
-         and the round trip becomes optional rather than mandatory.
+- [ ] **Stamp `packId` on words saved through Learn** — blocked on the filter
+      loosening above, and only worth doing after it. Without it the same word
+      saved two ways lands in two different places; with it but without the
+      loosening, a TOEIC word you looked up and thought about would *disappear*
+      from your own card list.
+      _Much less urgent than it was._ The deck page no longer routes to Learn at
+      all, so the two-paths-one-word problem now only arises when you type a
+      pack word into Learn by hand.
 
-      **Stamping `packId` on words saved through Learn folds in here** (moved
-      up from Medium 2026-08-01 — it is the same surface, and leaving it a tier
-      down is how the deck page ends up half-migrated). It is *not* a
-      prerequisite, though: `buildPackCardDraft` already stamps `packId`
-      (`packages/core/src/packs.ts:292`), so bulk save gives lookup packs a
-      review collection on its own. The two halves ship independently, and they
-      carry different risk:
-      - *Bulk save from the deck* — pure addition. Those cards are born with a
-        `packId` exactly as kana are, so nothing that exists today changes
-        behaviour. Do this first.
-      - *Stamping in the Learn flow* — this is where the one subtraction lives.
-        `/cards` filters to `getCollectionId(card) === null` on both platforms
-        (`apps/web/src/app/cards/page.tsx:72`,
-        `apps/mobile/app/(tabs)/cards.tsx:57`), so stamping does not add a deck
-        membership — it **moves** the card out of `/cards`. A TOEIC word you
-        chose to look up, thought about and saved would disappear from your own
-        card list. Without it, though, the same word saved two ways lands in two
-        different places, which is its own incoherence.
-        **Decided 2026-08-01 — loosen the filter instead of accepting the
-        move.** A card belongs to a pack *and* to `/cards`; see the sub-item
-        below, which is the prerequisite for stamping.
-
-      - *Loosen the `/cards` filter* — **do this before the Learn-flow
-        stamping**, because it is what makes stamping a pure addition rather
-        than a relocation. Decided 2026-08-01:
-        - `/cards` stops filtering to `getCollectionId(card) === null` at load
-          and holds every card for the study language.
-        - The **default view hides `cards`-kind packs only** — kana today.
-          Lookup-pack words (TOEIC, TOPIK 고급) are visible by default, because
-          a word you can look up is vocabulary and belongs in your list, while a
-          107-character drill set would swamp it. Keying on `pack.kind` rather
-          than on pack ids means a future drill-style pack inherits the rule
-          without anyone remembering to update a list.
-        - A deck dimension reaches everything: `All / Mine / <each enrolled
-          deck>`. Note this is a **second axis**, orthogonal to the existing
-          `FilterKey` (`active | archived | all`) — it is not another chip in
-          that row, and conflating them is the easy mistake here.
-        - **Export follows the visible filter**, so what you see is what you
-          get. This deliberately leaves the Export item under Medium open: a
-          true backup is a separate call, and it should not change silently as
-          a side effect of this.
-        - **Review must not change.** It already reads `buildReviewCollections`
-          and `getCollectionId(card) === collectionId` and never touches the
-          cards-page filter, so "My cards" in review stays cards with no
-          `packId` — including after stamping, which is the point of doing the
-          loosening first. Verified 2026-08-01: the coupling is one `.filter()`
-          per platform at load time and nothing else reads it.
-        - Both platforms carry a comment asserting the *old* rule — "they are
-          absent rather than filtered out by a chip" (`cards/page.tsx:63-68`,
-          `cards.tsx:47-52`). It encodes the reasoning being reversed here, so
-          it has to be rewritten, not deleted.
+- [ ] **Daily draw** — the one candidate from the original bulk-save item that
+      was deliberately *not* built. Sections turned 160 words into six sittings,
+      which was the high-value half; a daily draw would feed review a fixed
+      number of new words a day instead of letting a section land at once. Worth
+      revisiting only after living with section enrolment for a while — it may
+      turn out sections were enough.
 
 - [ ] **Onboarding for new users** — there is nothing today except web's
       `LanguageSetupModal`, which asks two questions and vanishes; mobile has no
@@ -271,35 +222,25 @@ down — file references below are what was actually read, not guesses._
 ## Medium
 
 - [ ] **Vocabulary packs — iterate beyond v1** — shipped so far: TOEIC (PR #34,
-      133 words, `lookup`), hiragana + katakana (PR #49, `cards`), TOPIK 고급
-      (PR #68, 160 words, `lookup`). *Principles (2026-07-13):* audience is not
+      133 words), hiragana + katakana (PR #49), TOPIK 고급 (PR #68, 160 words).
+      All three are now one kind — pre-authored, sectioned — since the
+      unification; `lookup` and `cards` no longer exist. *Principles (2026-07-13):* audience is not
       beginners; packs unlock domains, never "starter" anything; curated from
       real sources, not AI-generated; word lists need user approval before
       shipping — with the scripts exception amended into
       [vision.md](vision.md) 2026-07-24.
-      *Next:* daily-draw UX; section themes as filters; pre-authored content
-      instead of per-word Gemini calls — **all three were promoted into "Bulk
-      save and review for packs" under High on 2026-08-01**, where pre-authored
-      backs turn out to be the prerequisite rather than one option among
-      several; more packs — **JLPT** is the obvious gap
+      *Next:* **pre-authored content and section enrolment both shipped** in
+      the pack unification; daily draw stayed deliberately unbuilt and is under
+      High. Section themes as *filters* on `/cards` are still open and now fold
+      into the `/cards` loosening. More packs — **JLPT** is the obvious gap
       now (Japanese has only the kana packs, so a Japanese learner past the
       scripts has nothing), then TOEFL. Swedish, French and Traditional Chinese
       still have **no pack at all**.
-      Drafts live in `docs/packs/` (`toeic-pack-draft.md`,
-      `topik-pack-draft.md`) and are referenced from the pack source files.
-
-- [ ] **Drill for lookup packs** — lowered from High 2026-07-25: the payoff is
-      thin. Drill currently reads the pack, so only `cards` packs (the kana) have
-      a Drill button. A `LookupPack` holds words with no back side, so there is
-      nothing to check an answer against. Making TOEIC drillable means drilling
-      the user's *saved cards* for that pack instead, which needs `packId` —
-      read via `getCollectionId` since PR #51. But `packId` is written only by
-      `buildPackCardDraft`, so a TOEIC word saved through Learn still carries
-      none. Both halves of that — bulk save stamping at creation, and the Learn
-      flow stamping on the way through — now live under **Bulk save and review
-      for packs** in High, which is the real prerequisite and the more valuable
-      work either way: drill would still duplicate a loop those cards already
-      have. Revisit once a lookup pack has a populated collection to drill.
+      Drafts live in `docs/packs/` — `toeic-pack-draft.md` and
+      `topik-pack-draft.md` for the word lists, `toeic-backs-draft.md` and
+      `topik-backs-draft.md` for the card backs — and are referenced from the
+      pack source files. **A new pack now needs backs drafted alongside its word
+      list**, since there is no longer a kind that ships without them.
 
 - [ ] **Export covers only your own cards** — noticed in PR #51, not decided.
       `/cards` export reads the now-scoped list, so a CSV/Anki dump omits every

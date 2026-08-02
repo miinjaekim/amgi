@@ -1,5 +1,6 @@
-import type { PackCard } from './packs';
-import { getPackText } from './packs';
+import type { PackEntry } from './packs';
+import { resolvePackBack } from './packs';
+import type { StudyLanguage } from './types';
 
 /**
  * Drilling a deck is not reviewing it. Review asks the scheduler what is due
@@ -37,7 +38,7 @@ function shuffle<T>(arr: readonly T[]): T[] {
  * The starting queue: shuffled, then cut to `size`. Shuffling before cutting
  * matters — cutting first would drill the same opening ten kana every time.
  */
-export function startDrillQueue(cards: readonly PackCard[], size: number | null): PackCard[] {
+export function startDrillQueue(cards: readonly PackEntry[], size: number | null): PackEntry[] {
   const shuffled = shuffle(cards);
   return size === null ? shuffled : shuffled.slice(0, size);
 }
@@ -47,7 +48,7 @@ export function startDrillQueue(cards: readonly PackCard[], size: number | null)
  * back in, so a session ends only once everything in it has been answered
  * correctly at least once.
  */
-export function advanceDrillQueue(queue: readonly PackCard[], knew: boolean): PackCard[] {
+export function advanceDrillQueue(queue: readonly PackEntry[], knew: boolean): PackEntry[] {
   const [current, ...rest] = queue;
   if (current === undefined) return [];
   if (knew) return rest;
@@ -59,20 +60,26 @@ export function advanceDrillQueue(queue: readonly PackCard[], knew: boolean): Pa
 
 /** What the drill shows before the reveal. */
 export function drillPrompt(
-  card: PackCard,
+  card: PackEntry,
   direction: DrillDirection,
+  studyLanguage: StudyLanguage,
   nativeLanguage?: string | null,
 ): string {
-  return direction === 'studyToBack' ? card.study : getPackText(card.back, nativeLanguage);
+  return direction === 'studyToBack'
+    ? card.study
+    : resolvePackBack(card.back, studyLanguage, nativeLanguage);
 }
 
 /** What the reveal shows. */
 export function drillAnswer(
-  card: PackCard,
+  card: PackEntry,
   direction: DrillDirection,
+  studyLanguage: StudyLanguage,
   nativeLanguage?: string | null,
 ): string {
-  return direction === 'studyToBack' ? getPackText(card.back, nativeLanguage) : card.study;
+  return direction === 'studyToBack'
+    ? resolvePackBack(card.back, studyLanguage, nativeLanguage)
+    : card.study;
 }
 
 /**
@@ -81,6 +88,6 @@ export function drillAnswer(
  * sound, not the sound. Unaffected by native language for the same reason:
  * 아 describes it no more audibly than "a" does.
  */
-export function drillSpokenText(card: PackCard): string {
+export function drillSpokenText(card: PackEntry): string {
   return card.study;
 }

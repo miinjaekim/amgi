@@ -4,7 +4,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { getStudyLanguageConfig } from '@amgi/core';
-import type { Flashcard, ReviewTracking, StudyLanguage, CardSideField } from '@amgi/core';
+import type { Flashcard, ReviewTracking, StudyLanguage } from '@amgi/core';
 
 export type { Flashcard, ReviewTracking, StudyLanguage } from '@amgi/core';
 
@@ -148,9 +148,14 @@ export async function deleteFlashcard(cardId: string, studyLanguage?: StudyLangu
   await deleteDoc(doc(db, getCardsCollection(studyLanguage), cardId));
 }
 
+/**
+ * Merge arbitrary fields into a card. Widened from the card-side fields it was
+ * written for: enrichment writes `definition`, `characterBreakdown`, `notes`
+ * and `examples`, none of which are language sides.
+ */
 export async function updateFlashcardFields(
   cardId: string,
-  fields: Partial<Record<CardSideField, string>>,
+  fields: Record<string, unknown>,
   studyLanguage?: StudyLanguage,
 ): Promise<void> {
   await updateDoc(doc(db, getCardsCollection(studyLanguage), cardId), fields);

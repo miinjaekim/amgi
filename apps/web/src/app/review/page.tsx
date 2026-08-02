@@ -1,5 +1,5 @@
 'use client';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useUser } from '@/components/UserContext';
 import { fetchUserFlashcards, getCardsCollection, Flashcard, migrateExistingCards, archiveFlashcard, deleteFlashcard } from '@/services/firestore';
@@ -11,7 +11,6 @@ import {
   filterByDirection,
   getBackSide,
   getCollectionId,
-  getExampleSides,
   getNextReviewDate,
   getReading,
   getStudyLanguageConfig,
@@ -23,18 +22,13 @@ import type { DirectionFilter, ReviewCollection, ReviewQueueItem } from '@amgi/c
 import { db } from '@/config/firebase';
 import { doc, updateDoc } from 'firebase/firestore';
 import { getNextReviewData } from '@/services/sm2';
-import { ExamplePair } from '@/services/gemini';
 import { t } from '@/lib/i18n';
-import Markdown from '@/components/Markdown';
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 import PronounceButton from '@/components/PronounceButton';
+import ReviewDetailsPanel from '@/components/ReviewDetailsPanel';
 
 // Direction for review — re-exported from core, where `isDue` lives too.
 export type { ReviewDirection } from '@amgi/core';
-
-function isExamplePairArray(arr: unknown[]): arr is ExamplePair[] {
-  return arr.length === 0 || (typeof arr[0] === 'object' && arr[0] !== null && ('korean' in arr[0] || 'swedish' in arr[0] || 'english' in arr[0]));
-}
 
 function formatRelativeDate(date: Date, lang: string | null | undefined, now: Date): string {
   const tomorrow = new Date(now);
@@ -315,6 +309,22 @@ export default function ReviewPage() {
       setShowDetails(false);
     }
   };
+
+  /**
+   * Store a card that enrichment just wrote to.
+   *
+   * The details panel unmounts whenever details are hidden, so anything it held
+   * would be lost — generating a definition, hiding details and reopening them
+   * came back empty even though the write had succeeded. The queue is the owner
+   * of the card, so the queue is what has to be updated. `userFlashcards` too,
+   * or the generated content vanishes again the moment the queue is rebuilt.
+   */
+  const handleCardEnriched = useCallback((card: Flashcard) => {
+    setActiveQueue(prev => prev.map(item =>
+      item.card.id === card.id ? { ...item, card: { ...item.card, ...card } } : item
+    ));
+    setUserFlashcards(prev => prev.map(c => (c.id === card.id ? { ...c, ...card } : c)));
+  }, []);
 
   const currentReview = activeQueue[currentReviewIdx];
 
@@ -649,57 +659,12 @@ export default function ReviewPage() {
                           </button>
 
                           {showDetails && (
-                            <div className="mt-3 pt-3 border-t border-[var(--color-muted)]">
-                              {currentReview.card.formality && currentReview.card.formality !== 'N/A' && (
-                                <div className="mb-3">
-                                  <span className="px-2 py-0.5 text-xs rounded-full border border-[var(--color-muted)] text-[var(--color-muted)]">
-                                    {currentReview.card.formality}
-                                  </span>
-                                </div>
-                              )}
-                              {currentReview.card.definition && (
-                                <div className="mb-4">
-                                  <div className="font-semibold text-[var(--color-highlight)] text-sm mb-1">{t(nativeLanguage, 'sectionDefinition')}</div>
-                                  <Markdown className="text-[var(--color-text)] opacity-90">{currentReview.card.definition}</Markdown>
-                                </div>
-                              )}
-
-                              {currentReview.card.examples && currentReview.card.examples.length > 0 && (
-                                <div className="mb-4">
-                                  <div className="font-semibold text-[var(--color-highlight)] text-sm mb-1">{t(nativeLanguage, 'sectionExamples')}</div>
-                                  <ul className="list-disc list-inside text-[var(--color-text)] opacity-90 space-y-2">
-                                    {(() => {
-                                      const rawExamples = currentReview.card.examples as unknown[];
-                                      if (Array.isArray(rawExamples) && rawExamples.length > 0 && typeof rawExamples[0] === 'string') {
-                                        return (rawExamples as string[]).map((ex, i) => <li key={i}>{ex}</li>);
-                                      } else if (Array.isArray(rawExamples) && isExamplePairArray(rawExamples)) {
-                                        return (rawExamples as ExamplePair[]).map((ex, i) => {
-                                          const sides = getExampleSides(ex, studyLanguage, nativeLanguage);
-                                          return (
-                                            <li key={i}>
-                                              <div>
-                                                {sides.study}
-                                                <PronounceButton text={sides.study} studyLanguage={studyLanguage} size="sm" className="ml-1 align-middle" />
-                                              </div>
-                                              <div className="text-[var(--color-highlight)] text-sm">{sides.back}</div>
-                                            </li>
-                                          );
-                                        });
-                                      } else {
-                                        return null;
-                                      }
-                                    })()}
-                                  </ul>
-                                </div>
-                              )}
-
-                              {currentReview.card.notes && (
-                                <div className="mt-2">
-                                  <div className="font-semibold text-[var(--color-highlight)] text-sm mb-1">{t(nativeLanguage, 'sectionNotes')}</div>
-                                  <Markdown className="text-[var(--color-text)] opacity-70 text-sm">{currentReview.card.notes}</Markdown>
-                                </div>
-                              )}
-                            </div>
+                            <ReviewDetailsPanel
+                              card={currentReview.card}
+                              studyLanguage={studyLanguage}
+                              nativeLanguage={nativeLanguage}
+                              onChanged={handleCardEnriched}
+                            />
                           )}
                         </>
                       ) : (
@@ -744,57 +709,12 @@ export default function ReviewPage() {
                           </button>
 
                           {showDetails && (
-                            <div className="mt-3 pt-3 border-t border-[var(--color-muted)]">
-                              {currentReview.card.formality && currentReview.card.formality !== 'N/A' && (
-                                <div className="mb-3">
-                                  <span className="px-2 py-0.5 text-xs rounded-full border border-[var(--color-muted)] text-[var(--color-muted)]">
-                                    {currentReview.card.formality}
-                                  </span>
-                                </div>
-                              )}
-                              {currentReview.card.definition && (
-                                <div className="mb-4">
-                                  <div className="font-semibold text-[var(--color-highlight)] text-sm mb-1">{t(nativeLanguage, 'sectionDefinition')}</div>
-                                  <Markdown className="text-[var(--color-text)] opacity-90">{currentReview.card.definition}</Markdown>
-                                </div>
-                              )}
-
-                              {currentReview.card.examples && currentReview.card.examples.length > 0 && (
-                                <div className="mb-4">
-                                  <div className="font-semibold text-[var(--color-highlight)] text-sm mb-1">{t(nativeLanguage, 'sectionExamples')}</div>
-                                  <ul className="list-disc list-inside text-[var(--color-text)] opacity-90 space-y-2">
-                                    {(() => {
-                                      const rawExamples = currentReview.card.examples as unknown[];
-                                      if (Array.isArray(rawExamples) && rawExamples.length > 0 && typeof rawExamples[0] === 'string') {
-                                        return (rawExamples as string[]).map((ex, i) => <li key={i}>{ex}</li>);
-                                      } else if (Array.isArray(rawExamples) && isExamplePairArray(rawExamples)) {
-                                        return (rawExamples as ExamplePair[]).map((ex, i) => {
-                                          const sides = getExampleSides(ex, studyLanguage, nativeLanguage);
-                                          return (
-                                            <li key={i}>
-                                              <div>
-                                                {sides.study}
-                                                <PronounceButton text={sides.study} studyLanguage={studyLanguage} size="sm" className="ml-1 align-middle" />
-                                              </div>
-                                              <div className="text-[var(--color-highlight)] text-sm">{sides.back}</div>
-                                            </li>
-                                          );
-                                        });
-                                      } else {
-                                        return null;
-                                      }
-                                    })()}
-                                  </ul>
-                                </div>
-                              )}
-
-                              {currentReview.card.notes && (
-                                <div className="mt-2">
-                                  <div className="font-semibold text-[var(--color-highlight)] text-sm mb-1">{t(nativeLanguage, 'sectionNotes')}</div>
-                                  <Markdown className="text-[var(--color-text)] opacity-70 text-sm">{currentReview.card.notes}</Markdown>
-                                </div>
-                              )}
-                            </div>
+                            <ReviewDetailsPanel
+                              card={currentReview.card}
+                              studyLanguage={studyLanguage}
+                              nativeLanguage={nativeLanguage}
+                              onChanged={handleCardEnriched}
+                            />
                           )}
                         </>
                       ) : (

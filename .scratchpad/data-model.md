@@ -178,6 +178,49 @@ schema change plus offline-write handling for a one-second choice (PR #65).
   per-language wording lives in `apps/web/src/lib/characterBreakdown.ts` so the
   streaming and JSON routes can't drift. Legacy Korean cards still carry
   `hanja` and are read through `getCharacterBreakdown()` — no migration.
+## Packs
+
+`packages/core/src/packs.ts`. **One kind, since 2026-08-02** — the `lookup` /
+`cards` split and the `PackWord` / `PackCard` types no longer exist.
+
+```ts
+PackBack   = { English?: string; Korean?: string }   // partial, deliberately
+PackEntry  = { study: string; back: PackBack; context?: string }
+PackSection = { id, name: {English,Korean}, note?, entries: PackEntry[] }
+VocabPack  = { id, name, description, sections: PackSection[],
+               layout: 'grid' | 'list', pronounceable?: boolean }
+```
+
+- **`back` is partial because one side is usually unstorable.**
+  `buildPackCardDraft` writes `english`, `korean`, then the study side *last* so
+  it wins. On an English pack the study side **is** the `english` slot, so an
+  authored English back is overwritten at save time and could never be read.
+  TOEIC therefore authors Korean only, TOPIK English only; kana authors both,
+  because romaji and 아 answer the same question in different scripts.
+- **Read a back with `resolvePackBack(back, studyLanguage, nativeLanguage)`,
+  not `getPackText`.** `getPackText` keys on native language, which is right for
+  a pack's name and description (UI copy) and wrong for a back, which must match
+  the slot it will be stored in. The two disagree in exactly one case — someone
+  studying the language they already speak — where the back falls to the other
+  side.
+- **`context` outlives the save.** `buildPackCardDraft` carries it onto the card
+  as `briefDefinition`, which `getDepthTarget` then feeds to the depth and
+  examples routes. Dropping it is how 경기 gets explained as a sports match
+  months later.
+- **Sections are the enrolment unit** and are semantic, not even: TOEIC 45/30/35/23,
+  TOPIK 30/30/40/20/20/20, kana 46/20/5. `getPackEntries(pack)` flattens them in
+  order; `unsavedEntries(entries, savedTerms)` takes entries rather than a pack
+  so one function serves both a section and the whole deck.
+- **`unsavedEntries` returns `null` when the saved set is unknown**, and callers
+  must not read that as "none saved" — that bug enrolled all 71 katakana cards
+  twice on one account.
+- **`layout` drives the deck page**, not the pack identity: `grid` for walls of
+  single glyphs, `list` for words.
+
+A test asserts every registered pack authors a back its own study language can
+store, and that no back merely repeats the front — that is what stops a future
+pack authoring the overwritten side and shipping cards with no readable back.
+
 - **Sense pinning:** `getDepthTarget()` returns the resolved sense (back-side
   translation + `briefDefinition`) and all four depth/examples routes inject a
   "use only this sense" clause. Web spreads it automatically; mobile wrappers

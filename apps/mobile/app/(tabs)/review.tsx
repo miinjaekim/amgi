@@ -6,6 +6,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams } from 'expo-router';
 import { useUser } from '../../src/context/UserContext';
+import { useCardEnrichment } from '../../src/hooks/useCardEnrichment';
 import {
   archiveFlashcard, updateFlashcardFields,
 } from '../../src/services/firestore';
@@ -20,7 +21,7 @@ import {
   DIRECTION_FILTERS, applyPendingReviews, buildReviewCollections, buildReviewQueue,
   dueReviewItems, filterByDirection, getBackSide, getCollectionId, getNextReviewDate,
   getNextReviewData, getStudyLangSide, getStudyLanguageConfig, getBackSideConfig,
-  directionLabel, directionPrompt, t,
+  directionLabel, directionPrompt, getCharacterBreakdown, getExampleSides, t,
 } from '@amgi/core';
 import type {
   CardSideField, DirectionFilter, PendingReview, ReviewQueueItem,
@@ -68,6 +69,26 @@ export default function ReviewScreen() {
    */
   const [queueFor, setQueueFor] = useState<string | null | undefined>(undefined);
   const [index, setIndex] = useState(0);
+
+  // Enrichment for whichever card is in front of the reviewer. Declared up here
+  // rather than beside its button because the render body returns early on
+  // several paths, and a hook cannot follow a conditional return.
+  const {
+    saved: enrichedCard, isRunning: enrichRunning, error: enrichError, enrich,
+  } = useCardEnrichment({
+    card: queue[index]?.card,
+    studyLanguage,
+    nativeLanguage,
+    // The queue owns the card, so the queue has to store what enrichment
+    // wrote — the reveal panel is remounted on every advance and on every
+    // hide, and anything held inside it dies with it.
+    onChanged: card => {
+      setQueue(prev => prev.map(item =>
+        item.card.id === card.id ? { ...item, card: { ...item.card, ...card } } : item
+      ));
+      setCards(prev => prev.map(c => (c.id === card.id ? { ...c, ...card } : c)));
+    },
+  });
   const [loading, setLoading] = useState(false);
   const [revealed, setRevealed] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
@@ -590,6 +611,13 @@ export default function ReviewScreen() {
   const frontText = isFront ? studySide : backSide;
   const backText = isFront ? backSide : studySide;
   const prompt = directionPrompt(nativeLanguage, studyLanguage, isFront ? 'frontToBack' : 'backToFront');
+  // The enriched copy when something was just generated, the queue's otherwise.
+  const shownCard = enrichedCard ?? card;
+  const definition = shownCard.definition;
+  const characterBreakdown = getCharacterBreakdown(shownCard);
+  const characterSectionKey = config.characterSectionKey ?? 'sectionHanja';
+  const hasExamples = !!shownCard.examples && shownCard.examples.length > 0;
+  const hasDepth = !!(definition || characterBreakdown || shownCard.notes);
 
   const revealStyle = {
     opacity: revealAnim,
@@ -708,26 +736,105 @@ export default function ReviewScreen() {
             </View>
           </View>
         ) : (
-          <>
+          // Scrollable: a generated definition plus notes and three examples is
+          // far taller than a card front, and the fixed-height card used to
+          // simply clip it with no way to reach the rest.
+          <ScrollView
+            style={s.cardScroll}
+            contentContainerStyle={s.cardScrollContent}
+            showsVerticalScrollIndicator={false}
+          >
             <Text style={s.frontText}>{frontText}</Text>
 
             {revealed && (
               <Animated.View style={[s.revealWrap, revealStyle]}>
                 <View style={s.divider} />
                 <Text style={s.backText}>{backText}</Text>
-                {card.definition && !showDetails && (
-                  <TouchableOpacity style={s.detailsBtn} onPress={() => setShowDetails(true)}>
-                    <Text style={s.detailsBtnText}>Show definition</Text>
-                  </TouchableOpacity>
-                )}
-                {card.definition && showDetails && (
+
+                {/* One toggle for everything, shown whenever there is either
+                    something to read or something to write. */}
+                <TouchableOpacity style={s.detailsBtn} onPress={() => setShowDetails(v => !v)}>
+                  <Text style={s.detailsBtnText}>
+                    {t(nativeLanguage, showDetails ? 'hideDetails' : 'showDetails')}
+                  </Text>
+                </TouchableOpacity>
+
+                {showDetails && (
                   <View style={s.definitionWrap}>
-                    <Markdown style={s.definitionText}>{card.definition}</Markdown>
+                    {!!definition && (
+                      <View style={s.detailSection}>
+                        <Text style={s.detailLabel}>{t(nativeLanguage, 'sectionDefinition')}</Text>
+                        <Markdown style={s.definitionText}>{definition}</Markdown>
+                      </View>
+                    )}
+                    {!!characterBreakdown && (
+                      <View style={s.detailSection}>
+                        <Text style={s.detailLabel}>{t(nativeLanguage, characterSectionKey)}</Text>
+                        <Markdown style={s.definitionText}>{characterBreakdown}</Markdown>
+                      </View>
+                    )}
+                    {!!shownCard.notes && (
+                      <View style={s.detailSection}>
+                        <Text style={s.detailLabel}>{t(nativeLanguage, 'sectionNotes')}</Text>
+                        <Markdown style={s.definitionText}>{shownCard.notes}</Markdown>
+                      </View>
+                    )}
+                    {hasExamples && (
+                      <View style={s.detailSection}>
+                        <Text style={s.detailLabel}>{t(nativeLanguage, 'sectionExamples')}</Text>
+                        {shownCard.examples!.map((ex, i) => {
+                          const sides = getExampleSides(ex, studyLanguage, nativeLanguage);
+                          return (
+                            <View key={i} style={s.exampleItem}>
+                              <Text style={s.exampleStudy}>{sides.study}</Text>
+                              {sides.back ? <Text style={s.exampleBack}>{sides.back}</Text> : null}
+                            </View>
+                          );
+                        })}
+                      </View>
+                    )}
+
+                    {/* Mid-review is where a one-line gloss most often turns out
+                        not to be enough — you find out at the moment you fail to
+                        recall it. Offering the write here means that discovery
+                        does not cost you the session. Each button waits only on
+                        its own request. */}
+                    {(!hasDepth || !hasExamples) && (
+                      <View style={s.enrichRow}>
+                        {!hasDepth && (
+                          <TouchableOpacity
+                            style={[s.detailsBtn, enrichRunning('depth') && s.btnDisabled]}
+                            onPress={() => enrich('depth')}
+                            disabled={enrichRunning('depth')}
+                          >
+                            <Text style={s.detailsBtnText}>
+                              {enrichRunning('depth')
+                                ? t(nativeLanguage, 'cardEnriching')
+                                : t(nativeLanguage, 'loadDefinition')}
+                            </Text>
+                          </TouchableOpacity>
+                        )}
+                        {!hasExamples && (
+                          <TouchableOpacity
+                            style={[s.detailsBtn, enrichRunning('examples') && s.btnDisabled]}
+                            onPress={() => enrich('examples')}
+                            disabled={enrichRunning('examples')}
+                          >
+                            <Text style={s.detailsBtnText}>
+                              {enrichRunning('examples')
+                                ? t(nativeLanguage, 'cardEnriching')
+                                : t(nativeLanguage, 'loadExamples')}
+                            </Text>
+                          </TouchableOpacity>
+                        )}
+                      </View>
+                    )}
+                    {enrichError && <Text style={s.enrichError}>{enrichError}</Text>}
                   </View>
                 )}
               </Animated.View>
             )}
-          </>
+          </ScrollView>
         )}
       </View>
 
@@ -827,7 +934,20 @@ function makeStyles(C: Palette, tabBarHeight: number) {
     borderRadius: 8, paddingVertical: 8, paddingHorizontal: 14, alignSelf: 'flex-start',
   },
   detailsBtnText: { fontSize: 13, color: C.muted, fontWeight: '500' },
+  btnDisabled: { opacity: 0.5 },
+  enrichError: { fontSize: 12, color: C.error, marginTop: 8, textAlign: 'center' },
+  cardScroll: { flex: 1 },
+  cardScrollContent: { paddingBottom: 8 },
   definitionWrap: { marginTop: 14 },
+  detailSection: { marginBottom: 16 },
+  detailLabel: {
+    fontSize: 11, fontWeight: '700', color: C.muted,
+    textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6,
+  },
+  exampleItem: { marginBottom: 10 },
+  exampleStudy: { fontSize: 14, color: C.text, lineHeight: 21 },
+  exampleBack: { fontSize: 13, color: C.highlight, marginTop: 2 },
+  enrichRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 4 },
   definitionText: { fontSize: 14, color: C.text, opacity: 0.7, lineHeight: 20 },
   revealWrap: {},
   showBtn: {
