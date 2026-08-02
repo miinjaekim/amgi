@@ -60,8 +60,13 @@ labels in `app/(tabs)/settings.tsx`). No System option yet — see open question
 
 - Mobile themes: add System (follow OS) to match web, or keep the simpler
   three-option set?
-- What does onboarding look like beyond the language modal — tooltip hints, or a
-  guided first search?
+- ~~What does onboarding look like beyond the language modal?~~ **Answered
+  2026-08-02 for first run**: one card naming the four surfaces, as step 3 of
+  the setup modal. A *guided first search* — running an example lookup for you
+  end-to-end — was the considered alternative and was not taken; it is the most
+  to build and the most to get wrong on a surface the user hasn't asked anything
+  of yet. Still open for **contextual tips**, which is the other half of the
+  backlog item and where tooltip hints would actually live.
 - Packs: should section themes (verbs / familiar-words-new-meanings /
   adjectives / nouns) surface as filter chips, or stay an editorial convenience?
 - Daily-draw UX for packs: swipeable word feed, checklist, or "show me N I

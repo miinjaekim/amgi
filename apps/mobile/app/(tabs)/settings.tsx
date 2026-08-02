@@ -153,7 +153,11 @@ export default function SettingsScreen() {
           </Text>
           <View style={s.langRow}>
             {SUPPORTED_LANGUAGES.map(({ code, label }) => {
-              const active = nativeLanguage === code || (!nativeLanguage && code === 'English');
+              // No fallback highlight for an unset native language: showing
+              // English as selected claimed a preference nothing had stored.
+              // First run now answers this before settings is reachable, so
+              // an empty row here means the value is genuinely absent.
+              const active = nativeLanguage === code;
               return (
                 <TouchableOpacity
                   key={code}

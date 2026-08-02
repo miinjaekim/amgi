@@ -31,6 +31,8 @@ export default function LayoutWithUser({ children }: { children: React.ReactNode
     <>
       <Header />
       <SideNav collapsed={navCollapsed} onToggle={toggleNav} />
+      {/* Stays mounted through its own third step because it commits both
+          answers on the last tap, not as they are given — see the modal. */}
       {!authLoading && nativeLanguage === null && <LanguageSetupModal />}
       <main className="sm:ml-[var(--sidenav-w,14rem)] container mx-auto px-4 py-6 sm:py-8 pb-24 sm:pb-8 transition-[margin] duration-200">
         {children}

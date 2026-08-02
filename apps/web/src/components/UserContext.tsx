@@ -50,7 +50,17 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       setUser(firebaseUser);
       if (firebaseUser) {
         const prefs = await getUserPreferences(firebaseUser.uid);
-        const lang = prefs?.nativeLanguage ?? null;
+        const cachedLang = localStorage.getItem(LANG_CACHE_KEY);
+        const cachedStudy = localStorage.getItem(STUDY_LANG_CACHE_KEY);
+
+        // A brand-new account inherits what this browser already answered. The
+        // setup modal shows to signed-out visitors too, so without this every
+        // sign-up is asked the same two questions a second time. Gated on
+        // there being no preferences document at all: a document that exists
+        // and omits the field is a real "unset", not a gap to fill.
+        const adopting = prefs === null && !!cachedLang;
+
+        const lang = adopting ? cachedLang : (prefs?.nativeLanguage ?? null);
         setNativeLanguageState(lang);
         if (lang) {
           localStorage.setItem(LANG_CACHE_KEY, lang);
@@ -58,9 +68,17 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
           localStorage.removeItem(LANG_CACHE_KEY);
         }
 
-        if (prefs?.studyLanguage) {
-          setStudyLanguageState(prefs.studyLanguage);
-          localStorage.setItem(STUDY_LANG_CACHE_KEY, prefs.studyLanguage);
+        const study = adopting ? cachedStudy : prefs?.studyLanguage;
+        if (isStudyLanguage(study)) {
+          setStudyLanguageState(study);
+          localStorage.setItem(STUDY_LANG_CACHE_KEY, study);
+        }
+
+        if (adopting && cachedLang) {
+          saveUserPreferences(firebaseUser.uid, {
+            nativeLanguage: cachedLang,
+            ...(isStudyLanguage(study) ? { studyLanguage: study } : {}),
+          }).catch(() => { /* Asked again next visit; harmless. */ });
         }
 
         const today = getTodayString();
