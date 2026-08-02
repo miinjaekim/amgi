@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Modal, View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
+import { Modal, View, Text, TouchableOpacity, Pressable, ScrollView, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { t } from '@amgi/core';
 import type { TranslationKey } from '@amgi/core';
@@ -54,12 +54,22 @@ export default function PageHeader({ titleKey, helpTitleKey, helpBodyKey }: Prop
         animationType="fade"
         onRequestClose={() => setHelpOpen(false)}
       >
-        <TouchableOpacity
-          style={s.backdrop}
-          activeOpacity={1}
-          onPress={() => setHelpOpen(false)}
-        >
-          <TouchableOpacity activeOpacity={1} style={s.sheet} onPress={() => {}}>
+        <View style={s.backdrop}>
+          {/* Tap-to-dismiss sits on its own layer *behind* the sheet rather
+              than wrapping it. Wrapping is the usual shape (see
+              `SaveFlashcardModal`) and it is wrong the moment the sheet holds
+              a ScrollView: the enclosing press handler and the scroll gesture
+              both want the same touch, so a drag is sometimes claimed as a
+              press and the body only scrolls intermittently. Keeping the sheet
+              a plain View leaves the ScrollView the sole responder for
+              anything that starts inside it. */}
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            onPress={() => setHelpOpen(false)}
+            accessibilityRole="button"
+            accessibilityLabel={t(nativeLanguage, 'helpClose')}
+          />
+          <View style={s.sheet}>
             <Text style={s.helpTitle}>{t(nativeLanguage, helpTitleKey)}</Text>
             {/* Long in Korean on a small screen, and the button must stay
                 reachable — same reason the setup modal scrolls its tour. */}
@@ -69,8 +79,8 @@ export default function PageHeader({ titleKey, helpTitleKey, helpBodyKey }: Prop
             <TouchableOpacity style={s.closeBtn} onPress={() => setHelpOpen(false)}>
               <Text style={s.closeBtnText}>{t(nativeLanguage, 'helpClose')}</Text>
             </TouchableOpacity>
-          </TouchableOpacity>
-        </TouchableOpacity>
+          </View>
+        </View>
       </Modal>
     </>
   );
@@ -91,6 +101,9 @@ function makeStyles(C: Palette) {
     sheet: {
       width: '100%', maxHeight: '75%', backgroundColor: C.surface,
       borderRadius: 18, padding: 24, borderWidth: 1, borderColor: C.border,
+      // Matches the other scrollable sheets — keeps a mid-scroll line from
+      // painting over the rounded corners.
+      overflow: 'hidden',
     },
     helpTitle: { fontSize: 18, fontWeight: '700', color: C.highlight, marginBottom: 14 },
     bodyScroll: { flexShrink: 1 },
