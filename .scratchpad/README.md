@@ -19,6 +19,9 @@ Related docs outside this folder:
   (referenced from `packages/core/src/packs.ts`)
 - `docs/packs/topik-pack-draft.md` — source draft for the TOPIK 고급 pack
   (referenced from `packages/core/src/topik.ts`)
+- `docs/packs/toeic-backs-draft.md`, `docs/packs/topik-backs-draft.md` — the 293
+  card backs, **awaiting approval**. Both are in the source already; these are
+  the review surface for correcting a gloss.
 - `docs/testflight-beta-info-ko.md` — Korean TestFlight listing copy.
   ⚠️ **Untracked**: `.gitignore` excludes `docs/*` and only re-includes
   `docs/packs/`, so this file exists on one machine only despite the release
@@ -36,8 +39,8 @@ leaves that file:
 Backlog priority mirrors the user's Google Tasks list — `backlog.md` is the
 scoped version of it.
 
-_Last reviewed against the codebase: 2026-08-01, `main` @ `1c4f9c0` (PR #69,
-writing review). Previously 2026-07-30 @ `da5f081` (PR #68, the
-TOPIK pack). Tests and lint were run, not assumed; `data-model.md`'s type
-architecture and `tech-stack.md`'s `@amgi/core` table were both rewritten
-against the source._
+_Last reviewed against the codebase: 2026-08-02, branch
+`feat/pack-cards-unification` (the pack unification). `data-model.md` gained a
+Packs section and `backlog.md`'s High tier was rewritten against what the change
+actually closed. Tests were run, not assumed: 175 passing, both apps typecheck.
+Previously 2026-08-01 @ `1c4f9c0` (PR #69, writing review)._

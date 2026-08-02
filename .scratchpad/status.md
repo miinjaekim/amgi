@@ -118,6 +118,34 @@ _Reconciled against `main` @ `da5f081` on 2026-07-30 (PR #68, the TOPIK pack)._
     is precisely what had failed.
 
 ### Decks, packs & collections
+- **Packs unified into one pre-authored kind** (2026-08-02) — `lookup` and
+  `cards` are gone, along with `LookupPack`, `CardPack`, `PackWord` and
+  `PackCard`. Every pack is now `PackEntry {study, back, context?}` grouped into
+  named `PackSection`s, with `layout: 'grid' | 'list'` and `pronounceable` as
+  the only remaining differences. See the decision below for why.
+  - **Section enrolment.** Sections are the unit: TOEIC is 4, TOPIK 6, kana 3
+    (gojūon/dakuten/handakuten). Each has its own save button and saved count;
+    the whole-deck button is deliberately secondary below them — still right on
+    71 kana, wrong on 160 TOPIK words.
+  - **293 card backs authored** — 133 Korean for TOEIC, 160 English for TOPIK.
+    One side per pack, not both: `buildPackCardDraft` writes the study side last
+    so it wins, so an authored back in that same slot could never be read.
+    ⚠️ **Pending approval** — see the High backlog item.
+  - **`CardDetailModal` is now the one card surface**, reached identically from
+    the deck, `/cards` and review. Tapping any deck entry opens it, saved or
+    not; it carries save, edit, archive, delete, and on-demand depth/examples.
+    The deck's own management panel and the deck→Learn round trip are both gone.
+  - **On-demand enrichment.** `/api/explain/depth` and `/api/explain/examples`
+    already existed; what was missing was anywhere to call them from after a
+    card was saved. Now callable from the deck, the card list and mid-review,
+    persisting onto the card. Enrichment auto-saves an unsaved pack entry first.
+  - **`context` survives onto the card** as `briefDefinition`, which is what
+    `getDepthTarget` reads to pin the sense — without it, depth on `fine`
+    returns a paragraph about quality.
+  - **Drill works on every pack** now, TOEIC and TOPIK included. This closes the
+    old "Drill for lookup packs" backlog item without building what it
+    described: it proposed drilling the user's *saved cards* for a pack, and
+    unification made the pack itself drillable instead.
 - **Decks page** (PR #50, 2026-07-25) — `PacksModal` is retired on
   both platforms. `/decks` lists the packs for the current study language and
   `/decks/[packId]` is the deck itself, so the 71 kana tiles no longer fight an
@@ -148,8 +176,10 @@ _Reconciled against `main` @ `da5f081` on 2026-07-30 (PR #68, the TOPIK pack)._
     - **Shuffle before cutting to size** — cutting first would drill the same
       opening kana every session and never reach the dakuten rows.
     - **Only `cards` packs are drillable.** A `LookupPack` has words with no
-      back side, so there's nothing to check an answer against. See the backlog
-      for what making TOEIC drillable would take.
+      back side, so there's nothing to check an answer against.
+      ⚠️ **Superseded 2026-08-02** by the pack unification: every pack is
+      drillable now, and the kind check this describes was deleted. Kept for
+      the reasoning — it is a good record of *why* the split was a problem.
     - The score counts cards actually *answered*, not the session's starting
       size — ending a 71-card drill after five would otherwise have reported
       all 71 correct.
@@ -157,6 +187,9 @@ _Reconciled against `main` @ `da5f081` on 2026-07-30 (PR #68, the TOPIK pack)._
     (kana), and tapping a word in a `lookup` pack (TOEIC) — the deck → Learn
     round trip, which had no web equivalent to prove it since it has to pop a
     stack screen above the tabs and have Learn pick the param up.
+    ⚠️ **The deck → Learn round trip no longer exists** (2026-08-02): tapping a
+    deck entry opens the card detail instead. Nothing on a deck navigates to
+    Learn, so this particular mobile-only path is gone rather than changed.
 
 - **Review by collection** (PR #51, 2026-07-26) — your own cards and each pack
   are separate collections now, reviewed apart end to end. Replaces the "deck
@@ -648,6 +681,37 @@ Calls that are **closed**. They live here rather than in
 [backlog.md](backlog.md) so the backlog stays a list of open work — but the
 reasoning is kept, because a decision with its reasoning lost gets reopened by
 the next person to notice the symptom.
+
+- **Packs: one kind, not two** (2026-08-02). The `lookup`/`cards` split was
+  introduced as a cheap way to ship a word list without authoring backs for it.
+  It was cheap in exactly the wrong place: a `lookup` pack could not be
+  bulk-saved, drilled, or reviewed as a deck, because there was no card to
+  write — so the packs with the most words were the ones with the least
+  machinery. Rejected alternatives and why:
+  - *Keep `lookup` and batch-generate backs at enrol time.* One Gemini call per
+    chunk. Cheaper to build, but it puts a long spinner on the enrol tap and it
+    generates the curated half of the content, which contradicts the
+    curated-not-generated principle in [vision.md](vision.md).
+  - *Keep `lookup` and migrate pack by pack.* Would have left two code paths
+    live indefinitely — the half-migrated deck page the backlog kept warning
+    about.
+
+  **The tension worth remembering:** both packs' own headers argue these are
+  words where a one-word gloss is *not enough* (여건, 취지, `outstanding`). That
+  is still true. The resolution is that **the back is a seed, not a finished
+  card** — it exists to make the word savable and reviewable at all, and depth
+  is generated on demand per card afterwards. Before, that generation was
+  mandatory and came *before* the card existed; now it is optional and comes
+  after. If a future change makes on-demand depth hard to reach, this
+  justification goes with it and the gloss-only cards become a real regression.
+
+  Sections are **semantic, not uniform slices** — "Familiar words, second
+  meanings" is a theme a learner can hold, "words 31–60" is not. That costs
+  evenness: sections run 20 to 45. Accepted deliberately.
+
+  `layout` replaced `kind` for the deck page's grid-vs-list choice, keyed on the
+  shape of the content rather than on the pack, so a future single-character
+  pack inherits the grid without anyone remembering to ask for it.
 
 - **Writing review: four design calls** (2026-07-31). The backlog item was
   blocked on "needs design first"; these are the answers, with reasoning.
