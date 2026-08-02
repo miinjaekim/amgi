@@ -582,6 +582,42 @@ _Reconciled against `main` @ `da5f081` on 2026-07-30 (PR #68, the TOPIK pack)._
     its own, being a mode on Learn rather than a tab.
   - ⚠️ **Mobile has never been run on a device** — verified by `tsc` only. Ships
     in the next production build.
+- **Per-page help on mobile** (PR #74, merged 2026-08-02) — a "?" in the page
+  title on **Learn, Packs and Review**, opening a short explanation of what the
+  page is for. This is the *contextual* half of onboarding, arrived at after the
+  checklist was rejected (see Decisions).
+  - **Pull, not push**, which is the whole reason this shape works where the
+    checklist didn't: the answer is there when you wonder and invisible when you
+    don't. It also **needs no per-user state at all** — no record of who has
+    seen what — which was the open problem blocking the contextual-tips backlog
+    item. Deriving beat storing again.
+  - **Explaining rather than demonstrating is fine here and only here, because
+    the user asked.** Unsolicited, the same text is the lecture the checklist
+    was rejected for being. That distinction is the whole design.
+  - **Shape, not just length**: one sentence answering "what is this page", then
+    the mechanics you cannot infer from the screen, one fact per line. First
+    draft was ~90 and ~110 words of prose and was cut to ~35 and ~45. Someone
+    who taps "?" wants to stop reading quickly, and a paragraph makes them hunt
+    for the sentence that applies to them.
+  - **Review mounts it twice**, on the collection picker *and* on the "nothing
+    saved yet" state. The picker only renders once cards exist, so a single
+    mount would have been invisible to a brand-new user — precisely the person
+    asking what the page is for.
+  - **Learn got a title after all.** The objection was that its layout is tuned
+    to the pixel; the tuning turned out to be bottom-anchored (`topSpacer` is
+    flexible, the search bar is positioned from `bottomBar` plus the keyboard
+    reserve), so a header costs the spacer and not the field. Mounted on the two
+    resting states and deliberately not on a result — there you asked a question
+    and are reading the answer.
+  - **The passage tagline was removed** in the same change, which is what makes
+    Learn a net gain in space: it said what the textarea's own placeholder
+    already says, and cost ~100pt directly above the input. Web keeps both.
+  - **Korean copy was reworked, not re-translated.** `「」` is a Japanese
+    convention that appeared nowhere else in `i18n.ts`; `내 단어` contradicted
+    `내 카드` a line above it; `~해서` was joining sentences that wanted a full
+    stop. Chasing the second one exposed a claim that was wrong in *both*
+    languages — pack words do become your cards, and what is separate is the
+    review session, not the ownership. See the copy rule in [ui-ux.md](ui-ux.md).
 - **New users can end up native Korean + study Korean** — fixed by the above.
   Mobile's signed-out path defaulted `nativeLanguage` to `'Korean'` against a
   `studyLanguage` whose initial state was independently also `'Korean'`; it now
