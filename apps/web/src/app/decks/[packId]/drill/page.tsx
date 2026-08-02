@@ -15,8 +15,9 @@ import {
   getStudyLanguageConfig,
   getVocabPack,
   startDrillQueue,
+  getPackEntries,
 } from '@amgi/core';
-import type { DrillDirection, PackCard } from '@amgi/core';
+import type { DrillDirection, PackEntry } from '@amgi/core';
 import PronounceButton from '@/components/PronounceButton';
 import { t } from '@/lib/i18n';
 
@@ -28,10 +29,10 @@ export default function DrillPage() {
 
   const [direction, setDirection] = useState<DrillDirection>('studyToBack');
   const [size, setSize] = useState<number | null>(null);
-  const [queue, setQueue] = useState<PackCard[] | null>(null);
+  const [queue, setQueue] = useState<PackEntry[] | null>(null);
   const [revealed, setRevealed] = useState(false);
   const [answered, setAnswered] = useState<Set<string>>(new Set());
-  const [missed, setMissed] = useState<PackCard[]>([]);
+  const [missed, setMissed] = useState<PackEntry[]>([]);
 
   const backToDeck = (
     <Link
@@ -42,9 +43,10 @@ export default function DrillPage() {
     </Link>
   );
 
-  // Only a `cards` pack can be drilled: a lookup pack holds words with no back
-  // side, because its answers are the explanations Gemini writes at save time.
-  if (!pack || pack.kind !== 'cards') {
+  // Every pack is drillable now that every pack is pre-authored — the check
+  // that used to sit here excluded exactly the word lists this is most useful
+  // for. Only a missing pack is an error.
+  if (!pack) {
     return (
       <div className="max-w-xl mx-auto">
         {backToDeck}
@@ -53,7 +55,7 @@ export default function DrillPage() {
     );
   }
 
-  function begin(cards: readonly PackCard[], sessionSize: number | null) {
+  function begin(cards: readonly PackEntry[], sessionSize: number | null) {
     const next = startDrillQueue(cards, sessionSize);
     setQueue(next);
     setAnswered(new Set());
@@ -74,7 +76,8 @@ export default function DrillPage() {
     setRevealed(false);
   }
 
-  const sizeOptions = DRILL_SIZES.filter(s => s === null || s < pack.cards.length);
+  const entries = getPackEntries(pack);
+  const sizeOptions = DRILL_SIZES.filter(s => s === null || s < entries.length);
 
   // Start screen — mirrors Review's, which is the loop this one is a sibling of.
   if (queue === null) {
@@ -116,7 +119,7 @@ export default function DrillPage() {
                 }
               >
                 {option === null
-                  ? t(nativeLanguage, 'drillSizeAll', { count: pack.cards.length })
+                  ? t(nativeLanguage, 'drillSizeAll', { count: entries.length })
                   : t(nativeLanguage, 'drillSizeCards', { count: option })}
               </button>
             ))}
@@ -124,7 +127,7 @@ export default function DrillPage() {
         )}
 
         <button
-          onClick={() => begin(pack.cards, size)}
+          onClick={() => begin(entries, size)}
           className="mt-6 px-6 py-3 rounded-lg text-lg font-semibold bg-[var(--color-highlight)] text-[var(--color-bg)] hover:bg-[var(--color-text)]"
         >
           {t(nativeLanguage, 'drillStart')}
@@ -166,7 +169,7 @@ export default function DrillPage() {
             </button>
           )}
           <button
-            onClick={() => begin(pack.cards, size)}
+            onClick={() => begin(entries, size)}
             className="px-5 py-3 rounded-lg font-semibold border border-[var(--color-muted)] text-[var(--color-text)] hover:bg-[var(--color-muted)]/30"
           >
             {t(nativeLanguage, 'drillAgain')}
@@ -196,7 +199,7 @@ export default function DrillPage() {
         style={{ background: 'var(--color-surface)' }}
       >
         <span className="text-5xl text-[var(--color-text)] leading-tight">
-          {drillPrompt(current, direction, nativeLanguage)}
+          {drillPrompt(current, direction, studyLanguage, nativeLanguage)}
         </span>
 
         {/* The answer and the pronounce button are always in the layout and
@@ -206,7 +209,7 @@ export default function DrillPage() {
             keeps the answer out of the DOM text and the a11y tree until it's
             been earned. */}
         <span className={`text-2xl text-[var(--color-highlight)] ${revealed ? '' : 'invisible'}`}>
-          {revealed ? drillAnswer(current, direction, nativeLanguage) : ' '}
+          {revealed ? drillAnswer(current, direction, studyLanguage, nativeLanguage) : ' '}
         </span>
         {pack.pronounceable && (
           <span className={revealed ? '' : 'invisible pointer-events-none'}>

@@ -76,6 +76,29 @@ export function parseStreamedDepth(text: string): TermDepth {
   return result;
 }
 
+/**
+ * The depth fields worth writing to a card, from what the model returned.
+ *
+ * Both depth prompts are told to omit a section or leave it an empty string
+ * when it has nothing useful to add, and both routinely do — `notes` on a plain
+ * noun, `characterBreakdown` on anything that isn't Han script. Writing those
+ * through would replace "this card has no notes yet" with "this card's notes
+ * are empty", which reads the same to a user and differently to every `card.x &&`
+ * check that decides whether to render a section.
+ *
+ * Shared because enrichment now happens from four surfaces across two platforms
+ * and the filtering has to be identical on all of them: a card enriched from
+ * review and the same card enriched from its deck must end up the same shape.
+ */
+export function depthFieldsToPersist(depth: TermDepth): Partial<TermDepth> {
+  const fields: Partial<TermDepth> = {};
+  for (const key of ['definition', 'characterBreakdown', 'notes'] as const) {
+    const value = depth[key];
+    if (typeof value === 'string' && value.trim()) fields[key] = value.trim();
+  }
+  return fields;
+}
+
 export async function getTermExplanation(
   term: string,
   nativeLanguage = 'English',

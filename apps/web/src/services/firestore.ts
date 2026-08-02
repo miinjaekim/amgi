@@ -188,6 +188,21 @@ export async function deleteFlashcard(cardId: string, studyLanguage?: StudyLangu
   await deleteDoc(doc(db, collectionName, cardId));
 }
 
+/**
+ * Merge arbitrary fields into a card. Mobile has had this since the deck
+ * management panel needed it; web was writing `updateDoc` inline at each call
+ * site, which was fine for one field and stopped being fine once enrichment
+ * wrote three at once from three different surfaces.
+ */
+export async function updateFlashcardFields(
+  cardId: string,
+  fields: Record<string, unknown>,
+  studyLanguage?: StudyLanguage
+): Promise<void> {
+  const collectionName = getCardsCollection(studyLanguage);
+  await updateDoc(doc(db, collectionName, cardId), fields);
+}
+
 export async function migrateExistingCards(uid: string): Promise<number> {
   try {
     const q = query(collection(db, 'cards'), where('uid', '==', uid));

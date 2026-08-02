@@ -5,11 +5,14 @@ import {
   advanceDrillQueue,
   drillAnswer,
   drillPrompt,
+  getPackEntries,
   startDrillQueue,
 } from '@amgi/core';
-import type { PackCard } from '@amgi/core';
+import type { PackEntry } from '@amgi/core';
 
-const deck: PackCard[] = Array.from({ length: 10 }, (_, i) => ({
+const hiraganaEntries = getPackEntries(HIRAGANA_PACK);
+
+const deck: PackEntry[] = Array.from({ length: 10 }, (_, i) => ({
   study: `s${i}`,
   back: { English: `b${i}`, Korean: `ㅂ${i}` },
 }));
@@ -32,17 +35,17 @@ describe('startDrillQueue', () => {
   it('draws a short session from the whole deck, not just the front of it', () => {
     const seen = new Set<string>();
     for (let i = 0; i < 60; i++) {
-      for (const card of startDrillQueue(HIRAGANA_PACK.cards, 5)) seen.add(card.study);
+      for (const card of startDrillQueue(hiraganaEntries, 5)) seen.add(card.study);
     }
-    const lastKana = HIRAGANA_PACK.cards[HIRAGANA_PACK.cards.length - 1].study;
+    const lastKana = hiraganaEntries[hiraganaEntries.length - 1].study;
     expect(seen.has(lastKana)).toBe(true);
     expect(seen.size).toBeGreaterThan(40);
   });
 
   it('leaves the pack itself untouched', () => {
-    const before = HIRAGANA_PACK.cards.map(c => c.study).join('');
-    startDrillQueue(HIRAGANA_PACK.cards, null);
-    expect(HIRAGANA_PACK.cards.map(c => c.study).join('')).toBe(before);
+    const before = hiraganaEntries.map(c => c.study).join('');
+    startDrillQueue(hiraganaEntries, null);
+    expect(hiraganaEntries.map(c => c.study).join('')).toBe(before);
   });
 });
 
@@ -91,23 +94,23 @@ describe('advanceDrillQueue', () => {
 });
 
 describe('drill direction', () => {
-  const card: PackCard = { study: 'あ', back: { English: 'a', Korean: '아' } };
+  const card: PackEntry = { study: 'あ', back: { English: 'a', Korean: '아' } };
 
   it('shows the character and asks for the sound', () => {
-    expect(drillPrompt(card, 'studyToBack')).toBe('あ');
-    expect(drillAnswer(card, 'studyToBack')).toBe('a');
+    expect(drillPrompt(card, 'studyToBack', 'Japanese')).toBe('あ');
+    expect(drillAnswer(card, 'studyToBack', 'Japanese')).toBe('a');
   });
 
   it('reverses cleanly', () => {
-    expect(drillPrompt(card, 'backToStudy')).toBe('a');
-    expect(drillAnswer(card, 'backToStudy')).toBe('あ');
+    expect(drillPrompt(card, 'backToStudy', 'Japanese')).toBe('a');
+    expect(drillAnswer(card, 'backToStudy', 'Japanese')).toBe('あ');
   });
 
   // The drill is the one pack surface where the back is both shown and typed
   // against, so it has to follow native language the way the deck tiles do.
   it('answers in the reader\'s own script', () => {
-    expect(drillAnswer(card, 'studyToBack', 'Korean')).toBe('아');
-    expect(drillPrompt(card, 'backToStudy', 'Korean')).toBe('아');
-    expect(drillAnswer(card, 'studyToBack', 'English')).toBe('a');
+    expect(drillAnswer(card, 'studyToBack', 'Japanese', 'Korean')).toBe('아');
+    expect(drillPrompt(card, 'backToStudy', 'Japanese', 'Korean')).toBe('아');
+    expect(drillAnswer(card, 'studyToBack', 'Japanese', 'English')).toBe('a');
   });
 });
