@@ -159,6 +159,21 @@ const translations = {
     tourWritingLabel: 'Writing',
     tourWritingBody: 'Write a few sentences and see how a native would put it.',
     tourStart: 'Get started',
+    // Per-page help, opened from the "?" in a page title. Deliberately answers
+    // the question the page actually raises rather than restating its name —
+    // a user who taps "?" on Packs already knows the word "packs".
+    helpButtonLabel: 'What is this page for?',
+    helpClose: 'Got it',
+    helpPacksTitle: 'About packs',
+    helpPacksBody:
+      'A pack is a curated deck for a domain you want to open up — exam vocabulary, a writing system — not a beginner starter set.\n\n' +
+      'Adding entries from a pack saves them as your own flashcards. They are yours: you can edit, archive or delete them like anything you looked up yourself.\n\n' +
+      'Each pack is still reviewed as its own collection, so a 107-character drill never turns up in the middle of your vocabulary. You pick what you are reviewing when you open Review.',
+    helpReviewTitle: 'About review',
+    helpReviewBody:
+      'Cards come back on a schedule built from how well you recalled them. Rate one Again and it returns almost immediately; rate it Easy and it waits much longer. The point is to meet each card just before you would have forgotten it.\n\n' +
+      'Every card is asked in both directions. Recognising a word and being able to produce it are different skills, and the schedule tracks them separately — so the same card can be easy one way and due the other.\n\n' +
+      'Your own cards and each pack are reviewed apart, which is why you choose a collection first.',
     // Empty state / onboarding
     tagline: 'Look up any word or phrase.',
     taglineSubtitle: 'Get an instant AI-powered explanation, then save it as a flashcard to review with spaced repetition.',
@@ -453,6 +468,19 @@ const translations = {
     tourWritingLabel: '글쓰기',
     tourWritingBody: '몇 문장 써 보면 원어민이라면 어떻게 쓸지 보여드려요.',
     tourStart: '시작하기',
+    // Per-page help
+    helpButtonLabel: '이 화면은 무엇을 하는 곳인가요?',
+    helpClose: '알겠어요',
+    helpPacksTitle: '단어팩이란',
+    helpPacksBody:
+      '단어팩은 한 분야를 통째로 열어주는 큐레이션 덱이에요. 시험 어휘나 문자 체계처럼요. 초보자용 기본 세트가 아닙니다.\n\n' +
+      '팩에서 단어를 담으면 그대로 내 플래시카드가 돼요. 직접 찾아 저장한 카드와 똑같이 수정하고, 보관하고, 삭제할 수 있어요.\n\n' +
+      '대신 복습은 팩별로 따로 진행돼요. 107자짜리 문자 연습이 단어 공부 중간에 끼어들지 않도록요. 복습을 시작할 때 무엇을 복습할지 고르게 됩니다.',
+    helpReviewTitle: '복습이란',
+    helpReviewBody:
+      '얼마나 잘 기억했는지에 따라 카드가 다시 나타나는 시점이 정해져요. 「다시」를 누르면 금방 돌아오고, 「쉬움」을 누르면 훨씬 나중에 나와요. 잊어버리기 직전에 다시 만나는 게 핵심이에요.\n\n' +
+      '모든 카드는 양방향으로 물어봐요. 단어를 알아보는 것과 직접 말해내는 것은 다른 능력이라, 방향마다 따로 기록됩니다. 그래서 같은 카드가 한쪽은 쉽고 다른 쪽은 복습할 때가 되기도 해요.\n\n' +
+      '내 카드와 각 단어팩은 따로 복습해요. 시작할 때 무엇을 복습할지 먼저 고르는 이유예요.',
     // Empty state / onboarding
     tagline: '단어나 표현을 검색해보세요.',
     taglineSubtitle: 'AI로 즉각적인 설명을 받고, 플래시카드로 저장해 간격 반복 학습을 시작하세요.',

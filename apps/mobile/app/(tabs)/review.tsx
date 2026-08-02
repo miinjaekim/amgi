@@ -28,6 +28,7 @@ import type {
 } from '@amgi/core';
 import { useTheme } from '../../src/context/ThemeContext';
 import { useFloatingTabBarHeight } from '../../src/components/FloatingTabBar';
+import PageHeader from '../../src/components/PageHeader';
 import Markdown from '../../src/components/Markdown';
 import type { Palette } from '../../src/theme';
 
@@ -392,16 +393,26 @@ export default function ReviewScreen() {
     );
   }
 
+  // A new user with nothing saved lands here, not on the picker below — which
+  // makes this the one Review surface where "what is this page for?" is most
+  // likely to be asked, and the only one the picker's help would never reach.
   if (cards.length === 0) {
     return (
-      <SafeAreaView style={s.center}>
-        <Text style={s.emptyText}>
-          {uncachedLanguage
-            ? t(nativeLanguage, 'offlineNoCachedCards', {
-                language: t(nativeLanguage, config.studyLabelKey),
-              })
-            : t(nativeLanguage, 'noFlashcardsForReview')}
-        </Text>
+      <SafeAreaView style={s.root} edges={['top']}>
+        <PageHeader
+          titleKey="reviewPageTitle"
+          helpTitleKey="helpReviewTitle"
+          helpBodyKey="helpReviewBody"
+        />
+        <View style={s.centerFill}>
+          <Text style={s.emptyText}>
+            {uncachedLanguage
+              ? t(nativeLanguage, 'offlineNoCachedCards', {
+                  language: t(nativeLanguage, config.studyLabelKey),
+                })
+              : t(nativeLanguage, 'noFlashcardsForReview')}
+          </Text>
+        </View>
       </SafeAreaView>
     );
   }
@@ -428,6 +439,11 @@ export default function ReviewScreen() {
   if (collectionId === undefined) {
     return (
       <SafeAreaView style={s.root} edges={['top']}>
+        <PageHeader
+          titleKey="reviewPageTitle"
+          helpTitleKey="helpReviewTitle"
+          helpBodyKey="helpReviewBody"
+        />
         <ScrollView contentContainerStyle={s.pickerScroll}>
           {offlineNotice}
           <Text style={s.pickerTitle}>{t(nativeLanguage, 'reviewPickCollection')}</Text>
@@ -872,6 +888,8 @@ function makeStyles(C: Palette, tabBarHeight: number) {
   return StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg, paddingBottom: tabBarHeight },
   center: { flex: 1, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center', padding: 32 },
+  // `center` owns the whole screen; this centers within what a header leaves.
+  centerFill: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 },
 
   // Muted rather than an alert colour: being offline is a state to explain,
   // not an error to apologise for — the session works either way.
