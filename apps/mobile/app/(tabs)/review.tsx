@@ -128,18 +128,30 @@ export default function ReviewScreen() {
    *
    * Rebuilding the queue under someone eight cards into thirty would be worse
    * than the staleness, and the load below resets `collectionId` — so a
-   * session in progress defers the refresh until they return to the picker.
-   * `collectionId` is read from a ref to keep this callback stable: in the
-   * deps it would be rebuilt the moment a collection was picked, and the
-   * screen is focused then, so the effect would re-run and fight the pick.
+   * session actually in progress defers the refresh.
+   *
+   * "In progress" is the same expression the render uses, and emphatically not
+   * `collectionId !== undefined`. That was the first guard and it silently
+   * disabled the whole fix for the commonest case: with a single collection
+   * the effect above auto-selects it, so `collectionId` is `null` from the
+   * first render and never `undefined` again. Anyone whose only cards are
+   * their own — which is every new user — got no refresh at all, while anyone
+   * with a pack landed on the picker and did. A guard that keys on a *choice*
+   * rather than on the *session* it was protecting.
+   *
+   * Read through a ref so the callback stays stable: in the deps it would be
+   * rebuilt the moment a collection was picked, and the screen is focused
+   * then, so the effect would re-run and fight the pick.
    */
-  const collectionIdRef = useRef(collectionId);
-  useEffect(() => { collectionIdRef.current = collectionId; }, [collectionId]);
+  const sessionRunningRef = useRef(false);
+  useEffect(() => {
+    sessionRunningRef.current = started && queueFor === collectionId && !done && !stopped;
+  }, [started, queueFor, collectionId, done, stopped]);
   const firstFocus = useRef(true);
   useFocusEffect(useCallback(() => {
     // Mount already loads; without this the first focus would fetch twice.
     if (firstFocus.current) { firstFocus.current = false; return; }
-    if (collectionIdRef.current !== undefined) return;
+    if (sessionRunningRef.current) return;
     setReloadToken(n => n + 1);
   }, []));
 
@@ -540,17 +552,25 @@ export default function ReviewScreen() {
     // picker over an empty collection is a control with no outcome.
     if (dueItems.length === 0) {
       return (
-        <SafeAreaView style={s.center}>
-          {offlineNotice}
-          {collections.length > 1 && <Text style={s.collectionLabel}>{collectionName}</Text>}
-          <Text style={s.doneTitle}>{t(nativeLanguage, 'allCaughtUp')}</Text>
-          <Text style={s.doneBody}>{t(nativeLanguage, 'reviewCompleteMessage')}</Text>
-          {nextDate && (
-            <Text style={s.nextDate}>
-              {t(nativeLanguage, 'nextReviewOn')} {nextDate.toLocaleDateString()}
-            </Text>
-          )}
-          {changeCollectionButton}
+        <SafeAreaView style={s.root} edges={['top']}>
+          <PageHeader
+            titleKey="reviewPageTitle"
+            helpTitleKey="helpReviewTitle"
+            helpLeadKey="helpReviewLead"
+            helpPointsKey="helpReviewPoints"
+          />
+          <View style={s.centerFill}>
+            {offlineNotice}
+            {collections.length > 1 && <Text style={s.collectionLabel}>{collectionName}</Text>}
+            <Text style={s.doneTitle}>{t(nativeLanguage, 'allCaughtUp')}</Text>
+            <Text style={s.doneBody}>{t(nativeLanguage, 'reviewCompleteMessage')}</Text>
+            {nextDate && (
+              <Text style={s.nextDate}>
+                {t(nativeLanguage, 'nextReviewOn')} {nextDate.toLocaleDateString()}
+              </Text>
+            )}
+            {changeCollectionButton}
+          </View>
         </SafeAreaView>
       );
     }
@@ -560,6 +580,12 @@ export default function ReviewScreen() {
     // would multiply out.
     return (
       <SafeAreaView style={s.root} edges={['top']}>
+        <PageHeader
+          titleKey="reviewPageTitle"
+          helpTitleKey="helpReviewTitle"
+          helpLeadKey="helpReviewLead"
+          helpPointsKey="helpReviewPoints"
+        />
         <ScrollView contentContainerStyle={s.startScroll}>
           {offlineNotice}
           <Text style={s.startTitle}>{collectionName}</Text>

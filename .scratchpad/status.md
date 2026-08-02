@@ -635,8 +635,19 @@ _Reconciled against `main` @ `da5f081` on 2026-07-30 (PR #68, the TOPIK pack)._
     lies is the worse trade.
   - **Review defers a refresh while a session is in progress.** Its load resets
     `collectionId`, so refreshing mid-session would drop someone eight cards
-    into thirty back to the picker — a worse bug than the one being fixed. The
-    refresh lands when they next return to the picker.
+    into thirty back to the picker — a worse bug than the one being fixed.
+    "In progress" is `started && queueFor === collectionId && !done && !stopped`,
+    the same expression the render uses. The first version guarded on
+    `collectionId !== undefined` and **silently disabled the fix for every new
+    user**: with one collection, `review.tsx:270` auto-selects it, so
+    `collectionId` is `null` from the first render and never `undefined`
+    again. Only accounts with a pack enrolled ever reached the picker, and
+    only those saw a refresh. A guard keyed on a *choice* rather than on the
+    *session* it was meant to protect.
+  - **Review's header is on all four non-session surfaces**, not just the
+    picker — same reasoning as mounting it on the empty state. A single-
+    collection user never sees the picker, so the title and its help were
+    unreachable for exactly the people most likely to want them.
   - The disk cache needed no invalidation — `fetchAndCacheReviewCards` rewrites
     it on every load. What it needed was to stop being *displayed* on a
     mutation-driven refresh, where it predates the change by definition and
