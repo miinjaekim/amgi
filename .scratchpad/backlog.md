@@ -98,21 +98,20 @@ found in use, and #3–#5 were each checked against the code before being writte
 down — file references below are what was actually read, not guesses._
 
 - [ ] **Loosen the `/cards` filter** — decided 2026-08-01, still not built, and
-      now the last structural piece of the pack work. It is what makes the
-      Learn-flow `packId` stamping below a pure addition rather than a
-      relocation.
-      - `/cards` stops filtering to `getCollectionId(card) === null` at load
-        and holds every card for the study language.
-      - The **default view hides `cards`-kind packs only** — kana today.
-        ⚠️ **This wording is now stale**: `kind` no longer exists. The rule it
-        described still holds and should key on `pack.layout === 'grid'`, which
-        is the property that actually separates a 107-glyph drill set from
-        vocabulary. A word you can look up belongs in your list; a wall of kana
-        would swamp it.
+      the last structural piece of the pack work. Today `/cards` filters to
+      `getCollectionId(card) === null` at load, so a card belongs to a pack *or*
+      to your list. It should belong to both.
+      - `/cards` stops filtering at load and holds every card for the study
+        language.
+      - The **default view hides grid-layout packs only** — kana today. Keyed on
+        `pack.layout === 'grid'` rather than on pack ids, so a future
+        single-character pack inherits the rule without anyone remembering to
+        update a list. A word you can look up is vocabulary and belongs in your
+        list; a 107-character drill set would swamp it.
       - A deck dimension reaches everything: `All / Mine / <each enrolled
-        deck>`. Note this is a **second axis**, orthogonal to the existing
-        `FilterKey` (`active | archived | all`) — it is not another chip in
-        that row, and conflating them is the easy mistake here.
+        deck>`. This is a **second axis**, orthogonal to the existing
+        `FilterKey` (`active | archived | all`) — not another chip in that row,
+        and conflating them is the easy mistake here.
       - **Export follows the visible filter**, so what you see is what you get.
         This deliberately leaves the Export item under Medium open.
       - **Review must not change.** It reads `buildReviewCollections` and
@@ -122,22 +121,6 @@ down — file references below are what was actually read, not guesses._
       - Both platforms carry a comment asserting the *old* rule
         (`cards/page.tsx:48-52`, `cards.tsx:48-52`). It encodes the reasoning
         being reversed, so it has to be rewritten, not deleted.
-
-- [ ] **Stamp `packId` on words saved through Learn** — blocked on the filter
-      loosening above, and only worth doing after it. Without it the same word
-      saved two ways lands in two different places; with it but without the
-      loosening, a TOEIC word you looked up and thought about would *disappear*
-      from your own card list.
-      _Much less urgent than it was._ The deck page no longer routes to Learn at
-      all, so the two-paths-one-word problem now only arises when you type a
-      pack word into Learn by hand.
-
-- [ ] **Daily draw** — the one candidate from the original bulk-save item that
-      was deliberately *not* built. Sections turned 160 words into six sittings,
-      which was the high-value half; a daily draw would feed review a fixed
-      number of new words a day instead of letting a section land at once. Worth
-      revisiting only after living with section enrolment for a while — it may
-      turn out sections were enough.
 
 - [ ] **Onboarding for new users** — there is nothing today except web's
       `LanguageSetupModal`, which asks two questions and vanishes; mobile has no
@@ -230,9 +213,10 @@ down — file references below are what was actually read, not guesses._
       shipping — with the scripts exception amended into
       [vision.md](vision.md) 2026-07-24.
       *Next:* **pre-authored content and section enrolment both shipped** in
-      the pack unification; daily draw stayed deliberately unbuilt and is under
-      High. Section themes as *filters* on `/cards` are still open and now fold
-      into the `/cards` loosening. More packs — **JLPT** is the obvious gap
+      the pack unification, and section enrolment closed the daily-draw question
+      rather than deferring it. Section themes as *filters* on `/cards` are
+      still open and now fold into the `/cards` loosening. More packs — **JLPT**
+      is the obvious gap
       now (Japanese has only the kana packs, so a Japanese learner past the
       scripts has nothing), then TOEFL. Swedish, French and Traditional Chinese
       still have **no pack at all**.
