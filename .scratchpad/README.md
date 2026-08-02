@@ -23,10 +23,11 @@ Related docs outside this folder:
   card backs, approved 2026-08-02. Kept as the record of what was authored and
   why; still the place to read before changing a gloss, since each leads with
   the near-synonym collisions that a bare source diff would not explain.
-- `docs/testflight-beta-info-ko.md` — Korean TestFlight listing copy.
-  ⚠️ **Untracked**: `.gitignore` excludes `docs/*` and only re-includes
-  `docs/packs/`, so this file exists on one machine only despite the release
-  checklist in [backlog.md](backlog.md) depending on it.
+- `docs/testflight-beta-info.md` — TestFlight listing copy, Korean *and*
+  English in one file (the `-ko` suffix was dropped 2026-08-02 for that
+  reason). Tracked, despite `.gitignore` excluding `docs/*`, via an explicit
+  `!docs/testflight-beta-info.md` re-include — so if you rename it again,
+  rename it there too or it silently stops being tracked.
 
 **Convention:** `backlog.md` holds **only open work**. When something closes it
 leaves that file:

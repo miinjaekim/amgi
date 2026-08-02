@@ -463,7 +463,7 @@ _Reconciled against `main` @ `da5f081` on 2026-07-30 (PR #68, the TOPIK pack)._
 - **Korean TestFlight beta info** (PR #42, 2026-07-21) — Korean privacy policy
   at `/privacy/ko` (mobile settings picks the version matching native language),
   localized mobile settings screen and tab accessibility labels, Korean beta
-  listing copy in `docs/testflight-beta-info-ko.md`
+  listing copy in `docs/testflight-beta-info.md`
 - **EAS update channel fix** (PR #43, 2026-07-21) — production builds bound to
   the `default` channel so CI-published updates actually reach installed builds.
   ⚠️ Only affects builds cut *after* it — it can't retrofit a binary already in

@@ -1,4 +1,8 @@
-# TestFlight 베타 정보 (한국어 / English)
+# TestFlight Beta Information · TestFlight 베타 정보
+
+_한국어와 영어 문구가 모두 이 파일에 있습니다. Both languages live here._
+
+_마지막 갱신: 2026-08-02, 1.2.0용._
 
 App Store Connect → TestFlight → **Test Information**에 붙여넣는 문구 모음입니다.
 Test Information은 로컬라이제이션을 지원하므로, 언어 목록에 **Korean (ko)** 과
@@ -21,6 +25,9 @@ Amgi는 그 두 단계를 하나로 합쳤습니다. 단어를 입력하면 번�
 플래시카드로 저장합니다. 저장한 카드는 간격 반복(spaced repetition) 알고리즘이
 복습 시점을 계산해 알맞은 때에 다시 보여 줍니다.
 
+단어뿐 아니라 직접 쓴 글도 봐 드립니다. 몇 문장 써서 올리면 원어민이라면
+어떻게 썼을지 보여주고, 문법과 자연스러움을 쓴 사람 수준에 맞춰 짚어 줍니다.
+
 지원 학습 언어: 영어, 일본어, 중국어(번체), 스웨덴어, 프랑스어, 한국어
 앱 화면 언어: 한국어 / 영어 (설정에서 변경)
 
@@ -39,6 +46,10 @@ separate flashcard app to memorize it. Amgi combines both steps. Type in a
 word and instead of just a translation, get nuance, register, usage, hanja
 breakdown, and real example sentences — saved directly as a flashcard. Saved
 cards resurface at the right time using a spaced-repetition algorithm.
+
+It reviews your writing too, not just single words. Write a few sentences and
+Amgi shows how a native would have put it, with grammar and naturalness pitched
+at the level the writing itself demonstrates.
 
 Study languages: English, Japanese, Traditional Chinese, Swedish, French, Korean
 App display language: Korean / English (change in Settings)
@@ -77,14 +88,18 @@ kenyamjkim@gmail.com
 도움이 됩니다.
 
 이번 빌드에서 새로 확인해 보시면 좋은 것들:
-· 카드 뒷면 언어 — 설정에서 모국어를 한국어로 두면 카드 뒷면도 한국어로
-  나옵니다. 히라가나·가타카나 팩은 로마자 대신 한글 발음(아, 카, 시…)으로
-  보여요. 뜻이 어색한 글자가 있으면 알려 주세요.
-· 모국어 바꿔 보기 — 설정에서 모국어를 영어로 바꿨다가 다시 한국어로
-  돌려 보세요. 카드가 그때그때 알맞은 언어로 바뀌면 정상입니다.
-· 복습 방향 — 복습을 시작할 때 방향(일본어 → 한국어 등)을 고를 수 있습니다.
-· 검색 지우기 — 단어를 찾은 뒤 아래 학습 탭을 한 번 더 누르면 첫 화면으로
-  돌아갑니다.
+· 글 첨삭 (가장 큰 변화) — 학습 화면 위쪽에서 '글'을 고르고 몇 문장 써
+  보세요. 원어민이라면 어떻게 썼을지 보여주고, 짚어준 표현은 카드로 저장할
+  수 있습니다. 지적이 과하거나 반대로 너무 뻔하지는 않은지 봐 주세요.
+· 첫 실행 화면 — 앱을 지웠다가 다시 설치하면 모국어와 학습 언어를 먼저
+  묻습니다. 처음 쓰는 사람 입장에서 자연스러운지, 안내가 충분한지 봐 주세요.
+· 화면 설명 (?) — 학습·복습·단어팩 화면 제목 옆 물음표를 눌러 보세요.
+  설명이 실제로 궁금했던 것을 답해 주는지 알려 주시면 좋습니다.
+· 저장한 카드가 바로 보이기 — 단어를 저장하고 복습이나 카드 화면으로 가면
+  앱을 껐다 켜지 않아도 바로 나타나야 합니다. 안 보이면 꼭 알려 주세요.
+· TOPIK 고급 단어팩 — 한국어를 학습 언어로 두면 단어팩에 새로 보입니다.
+· 카드 뒷면 언어 — 모국어를 한국어로 두면 카드 뒷면도 한국어로 나옵니다.
+  히라가나·가타카나 팩은 로마자 대신 한글 발음(아, 카, 시…)으로 보여요.
 
 피드백은 TestFlight의 '피드백 보내기' 또는 kenyamjkim@gmail.com으로 보내주세요.
 ```
@@ -98,16 +113,22 @@ AI explanations that seem wrong or awkward, any freezes or crashes, or
 screens showing the wrong language for your settings.
 
 New in this build, worth a look:
-· Card backs follow your language — set Native Language to Korean in
-  Settings and card backs come out in Korean. The hiragana/katakana packs
-  show hangul readings (아, 카, 시…) instead of romaji. Tell us if any
-  character's reading looks off.
-· Try switching — change Native Language to English and back again. Your
-  cards should read in whichever language you're set to.
-· Review direction — you can now pick a direction (Japanese → Korean and
-  so on) when starting a review.
-· Clearing a search — after looking a word up, tap the Learn tab again to
-  get back to the start.
+· Writing review (the big one) — pick "Passage" at the top of the Learn
+  screen and write a few sentences. You'll see how a native would have put
+  it, and can keep any phrase as a card. Tell us if the feedback nags about
+  too much, or states the obvious.
+· First run — delete and reinstall the app and it asks for your native and
+  study language before anything else. Does that read well to someone
+  starting from scratch, and does it explain enough?
+· The "?" buttons — next to the title on Learn, Review and Packs. Do they
+  answer what you actually wondered about that screen?
+· Saved cards appear straight away — save a word, then go to Review or
+  Cards. It should be there without restarting the app. Please flag it if
+  it isn't.
+· TOPIK 고급 pack — appears under Packs when Korean is your study language.
+· Card backs follow your language — set Native Language to Korean and card
+  backs come out in Korean; the kana packs show hangul readings (아, 카,
+  시…) instead of romaji.
 
 Send feedback via TestFlight's "Send Beta Feedback" or to
 kenyamjkim@gmail.com.
@@ -134,11 +155,18 @@ Sign-in: The app uses Google Sign-In (Firebase Authentication) only. Demo
 credentials are provided in the demo account fields above. Any Google account can
 sign in and immediately access all functionality.
 
-How to test: After signing in, open Settings and choose a native language and a
-study language. On the Learn tab, type any word or phrase and tap Learn to get an
-explanation, then save it as a flashcard. The Review tab runs the spaced-repetition
-session over saved cards. The Cards tab lists, edits, and exports saved cards. The
-Packs tab holds pre-made decks that can be saved as cards or drilled directly.
+How to test: On first launch the app asks for a native language and a study
+language before anything else, and cannot be used until both are answered. This is
+required because explanations are written in the native language, and a learner
+cannot study the language they already speak. Both can be changed later in Settings.
+
+On the Learn tab, type any word or phrase and tap Learn to get an explanation, then
+save it as a flashcard. The Word/Passage toggle at the top of the same tab switches
+to writing review: enter a few sentences and the app returns a native-sounding
+rewrite plus specific notes on grammar and phrasing. The Review tab runs the
+spaced-repetition session over saved cards. The Cards tab lists, edits, and exports
+saved cards. The Packs tab holds pre-made decks that can be saved as cards or
+drilled directly.
 
 Account deletion: Settings → Delete account, at the bottom of the screen. This
 permanently deletes the account and all associated data from within the app, as
@@ -151,10 +179,10 @@ Settings; the permission prompt appears only when one is enabled. These are loca
 notifications scheduled on the device — the app sends no remote push and stores no
 push tokens.
 
-Third-party processing: Word explanations are generated with Google's Gemini API and
-pronunciation audio with Google Cloud Text-to-Speech. Only the word text, optional
-context, and language settings are sent — never account identifiers. This is
-described in the privacy policy.
+Third-party processing: Word explanations and writing review are generated with
+Google's Gemini API, and pronunciation audio with Google Cloud Text-to-Speech. Only
+the submitted text, optional context, and language settings are sent — never account
+identifiers. This is described in the privacy policy.
 
 The app contains no ads, no analytics, and no tracking. It does not access location,
 contacts, camera, or photos.
