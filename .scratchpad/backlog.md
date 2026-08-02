@@ -31,7 +31,7 @@ module was added and `expo config --type introspect` is not needed this time:
   initial release**, so this one is no longer the batch's open question.
 - **Card backs follow native language** (PR #67) — the one worth testing
   deliberately; see the What to Test block in
-  `docs/testflight-beta-info-ko.md`, which was rewritten for this build.
+  `docs/testflight-beta-info.md`, which was rewritten for this build.
   Production data was already backfilled and de-duplicated, so a Korean-native
   tester's existing kana cards should read hangul the moment the build lands.
 - **Card lists reload on tab focus** (PR #75) — saving a card no longer needs
@@ -57,11 +57,20 @@ module was added and `expo config --type introspect` is not needed this time:
   off to Learn, which is the deck → Learn round trip that only exists on mobile
   as a stack screen above the tabs.
 
+**Pre-flight progress (2026-08-02):** Expo Go smoke pass **done** — the whole
+batch was exercised there during development. `app.json` bumped to **1.2.0**
+(`runtimeVersion` follows `appVersion`, so this is a new runtime, which is what
+a no-OTA production build wants). `docs/testflight-beta-info.md` rewritten for
+this batch and renamed off its `-ko` suffix, since it has always held both
+languages. **What remains is the on-build verification below** — the native
+things Expo Go cannot answer for, done on the build before releasing it to
+testers rather than before cutting it.
+
 **Pre-flight:** smoke-test in Expo Go → verify native-adjacent things (audio,
 files, sharing, **offline review + reconnect sync**, **account deletion**,
 **the review reminder actually firing and then disappearing once you review**)
 on the build itself → bump `version` in `app.json` → check
-`docs/testflight-beta-info-ko.md` is still accurate → **`expo config --type
+`docs/testflight-beta-info.md` is still accurate → **`expo config --type
 introspect` if any native module was added**, which is where an entitlement you
 did not ask for shows up before a cloud build finds it.
 

@@ -61,7 +61,7 @@ docs/*
 # ...and the TestFlight listing copy, which the release checklist in
 # .scratchpad/backlog.md says to verify before every build. Untracked, it
 # existed on one machine only.
-!docs/testflight-beta-info-ko.md
+!docs/testflight-beta-info.md
 
 # pronunciation audio test output (throwaway)
 /audio-test/
