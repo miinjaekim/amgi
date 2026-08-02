@@ -16,7 +16,15 @@ interface Props {
   card: Flashcard;
   studyLanguage: StudyLanguage;
   nativeLanguage: string | null | undefined;
-  /** Fired after enrichment writes, so the queue's copy of the card follows. */
+  /**
+   * The card after enrichment wrote to it.
+   *
+   * Review must store this. This panel unmounts every time details are hidden,
+   * and anything held inside it dies with it — generating a definition, hiding
+   * details and showing them again used to come back empty even though the
+   * write had succeeded, because the queue still held the card as it was
+   * before.
+   */
   onChanged?: (card: Flashcard) => void;
 }
 
@@ -33,11 +41,11 @@ interface Props {
  * rather than only on a screen you would have to leave the session to reach.
  */
 export default function ReviewDetailsPanel({ card, studyLanguage, nativeLanguage, onChanged }: Props) {
-  const { saved, working, error, busy, enrich } = useCardEnrichment({
+  const { saved, isRunning, error, enrich } = useCardEnrichment({
     card,
     studyLanguage,
     nativeLanguage,
-    onChanged: () => {},
+    onChanged,
   });
   // `saved` is the card plus anything just generated; fall back to the prop so
   // the first render is never empty.
@@ -47,11 +55,6 @@ export default function ReviewDetailsPanel({ card, studyLanguage, nativeLanguage
   const examples = shown.examples;
   const hasExamples = !!examples && examples.length > 0;
   const hasDepth = !!(shown.definition || characterBreakdown || shown.notes);
-
-  async function run(kind: 'depth' | 'examples') {
-    await enrich(kind);
-    onChanged?.(shown);
-  }
 
   return (
     <div className="mt-3 pt-3 border-t border-[var(--color-muted)]">
@@ -119,20 +122,21 @@ export default function ReviewDetailsPanel({ card, studyLanguage, nativeLanguage
         <div className="mt-3 flex flex-wrap gap-2 items-center">
           {!hasDepth && (
             <button
-              onClick={() => run('depth')}
-              disabled={busy}
+              onClick={() => enrich('depth')}
+              // Only this button waits on this request. Examples stays live.
+              disabled={isRunning('depth')}
               className="px-3 py-1 rounded text-sm border border-[var(--color-muted)] text-[var(--color-text)] hover:bg-[var(--color-muted)]/20 transition-colors disabled:opacity-50"
             >
-              {working === 'depth' ? t(nativeLanguage, 'cardEnriching') : t(nativeLanguage, 'loadDefinition')}
+              {isRunning('depth') ? t(nativeLanguage, 'cardEnriching') : t(nativeLanguage, 'loadDefinition')}
             </button>
           )}
           {!hasExamples && (
             <button
-              onClick={() => run('examples')}
-              disabled={busy}
+              onClick={() => enrich('examples')}
+              disabled={isRunning('examples')}
               className="px-3 py-1 rounded text-sm border border-[var(--color-muted)] text-[var(--color-text)] hover:bg-[var(--color-muted)]/20 transition-colors disabled:opacity-50"
             >
-              {working === 'examples' ? t(nativeLanguage, 'cardEnriching') : t(nativeLanguage, 'loadExamples')}
+              {isRunning('examples') ? t(nativeLanguage, 'cardEnriching') : t(nativeLanguage, 'loadExamples')}
             </button>
           )}
           {error && <span className="text-xs text-[var(--color-muted)]">{error}</span>}

@@ -1,5 +1,5 @@
 'use client';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useUser } from '@/components/UserContext';
 import { fetchUserFlashcards, getCardsCollection, Flashcard, migrateExistingCards, archiveFlashcard, deleteFlashcard } from '@/services/firestore';
@@ -309,6 +309,22 @@ export default function ReviewPage() {
       setShowDetails(false);
     }
   };
+
+  /**
+   * Store a card that enrichment just wrote to.
+   *
+   * The details panel unmounts whenever details are hidden, so anything it held
+   * would be lost — generating a definition, hiding details and reopening them
+   * came back empty even though the write had succeeded. The queue is the owner
+   * of the card, so the queue is what has to be updated. `userFlashcards` too,
+   * or the generated content vanishes again the moment the queue is rebuilt.
+   */
+  const handleCardEnriched = useCallback((card: Flashcard) => {
+    setActiveQueue(prev => prev.map(item =>
+      item.card.id === card.id ? { ...item, card: { ...item.card, ...card } } : item
+    ));
+    setUserFlashcards(prev => prev.map(c => (c.id === card.id ? { ...c, ...card } : c)));
+  }, []);
 
   const currentReview = activeQueue[currentReviewIdx];
 
@@ -647,6 +663,7 @@ export default function ReviewPage() {
                               card={currentReview.card}
                               studyLanguage={studyLanguage}
                               nativeLanguage={nativeLanguage}
+                              onChanged={handleCardEnriched}
                             />
                           )}
                         </>
@@ -696,6 +713,7 @@ export default function ReviewPage() {
                               card={currentReview.card}
                               studyLanguage={studyLanguage}
                               nativeLanguage={nativeLanguage}
+                              onChanged={handleCardEnriched}
                             />
                           )}
                         </>

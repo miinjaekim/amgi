@@ -66,8 +66,12 @@ export default function CardDetailModal({
 }: Props) {
   const lang: StudyLanguage = studyLanguage ?? card?.studyLanguage ?? 'Korean';
   const {
-    saved, setSaved, working, error, setError, busy, canEnrich, save: handleSave, enrich,
-  } = useCardEnrichment({ card, entry, packId, uid, studyLanguage: lang, nativeLanguage, onChanged });
+    saved, setSaved, isRunning, savingEntry, error, setError, canEnrich,
+    save: handleSave, enrich,
+  } = useCardEnrichment({
+    card, entry, packId, uid, studyLanguage: lang, nativeLanguage,
+    onChanged: () => onChanged?.(),
+  });
   /** Non-null while the back is being edited. */
   const [editDraft, setEditDraft] = useState<string | null>(null);
 
@@ -198,11 +202,11 @@ export default function CardDetailModal({
           {!saved && (
             <button
               onClick={handleSave}
-              disabled={busy || !canEnrich}
+              disabled={savingEntry || !canEnrich}
               className={actionClass}
               style={{ background: 'var(--color-highlight)', color: 'var(--color-bg)', borderColor: 'var(--color-highlight)' }}
             >
-              {working === 'save' ? t(nativeLanguage, 'cardSaving') : t(nativeLanguage, 'cardSaveEntry')}
+              {savingEntry ? t(nativeLanguage, 'cardSaving') : t(nativeLanguage, 'cardSaveEntry')}
             </button>
           )}
           {/* Only offered where the section is missing: a card that already has
@@ -211,21 +215,22 @@ export default function CardDetailModal({
           {!hasDepth && (
             <button
               onClick={() => enrich('depth')}
-              disabled={busy || !canEnrich}
+              // Only this button waits on this request. Examples stays live.
+              disabled={isRunning('depth') || !canEnrich}
               className={actionClass}
               style={{ borderColor: 'var(--color-muted)', color: 'var(--color-text)' }}
             >
-              {working === 'depth' ? t(nativeLanguage, 'cardEnriching') : t(nativeLanguage, 'loadDefinition')}
+              {isRunning('depth') ? t(nativeLanguage, 'cardEnriching') : t(nativeLanguage, 'loadDefinition')}
             </button>
           )}
           {!hasExamples && (
             <button
               onClick={() => enrich('examples')}
-              disabled={busy || !canEnrich}
+              disabled={isRunning('examples') || !canEnrich}
               className={actionClass}
               style={{ borderColor: 'var(--color-muted)', color: 'var(--color-text)' }}
             >
-              {working === 'examples' ? t(nativeLanguage, 'cardEnriching') : t(nativeLanguage, 'loadExamples')}
+              {isRunning('examples') ? t(nativeLanguage, 'cardEnriching') : t(nativeLanguage, 'loadExamples')}
             </button>
           )}
 
@@ -235,7 +240,7 @@ export default function CardDetailModal({
               {editDraft === null && (
                 <button
                   onClick={() => setEditDraft(saved[backField] ?? saved.english ?? saved.translation ?? '')}
-                  disabled={busy}
+                  disabled={savingEntry}
                   className={actionClass}
                   style={{ borderColor: 'var(--color-muted)', color: 'var(--color-muted)' }}
                 >
@@ -244,7 +249,7 @@ export default function CardDetailModal({
               )}
               <button
                 onClick={handleArchiveToggle}
-                disabled={busy}
+                disabled={savingEntry}
                 className={actionClass}
                 style={{ borderColor: 'var(--color-muted)', color: 'var(--color-muted)' }}
               >
@@ -252,7 +257,7 @@ export default function CardDetailModal({
               </button>
               <button
                 onClick={handleDelete}
-                disabled={busy}
+                disabled={savingEntry}
                 className={`${actionClass} hover:border-red-400 hover:text-red-400`}
                 style={{ borderColor: 'var(--color-muted)', color: 'var(--color-muted)' }}
               >
@@ -275,7 +280,7 @@ export default function CardDetailModal({
             />
             <button
               onClick={handleEditSave}
-              disabled={busy}
+              disabled={savingEntry}
               className={actionClass}
               style={{ background: 'var(--color-highlight)', color: 'var(--color-bg)', borderColor: 'var(--color-highlight)' }}
             >

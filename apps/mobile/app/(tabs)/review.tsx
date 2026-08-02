@@ -74,11 +74,20 @@ export default function ReviewScreen() {
   // rather than beside its button because the render body returns early on
   // several paths, and a hook cannot follow a conditional return.
   const {
-    saved: enrichedCard, working: enrichWorking, error: enrichError, busy: enrichBusy, enrich,
+    saved: enrichedCard, isRunning: enrichRunning, error: enrichError, enrich,
   } = useCardEnrichment({
     card: queue[index]?.card,
     studyLanguage,
     nativeLanguage,
+    // The queue owns the card, so the queue has to store what enrichment
+    // wrote — the reveal panel is remounted on every advance and on every
+    // hide, and anything held inside it dies with it.
+    onChanged: card => {
+      setQueue(prev => prev.map(item =>
+        item.card.id === card.id ? { ...item, card: { ...item.card, ...card } } : item
+      ));
+      setCards(prev => prev.map(c => (c.id === card.id ? { ...c, ...card } : c)));
+    },
   });
   const [loading, setLoading] = useState(false);
   const [revealed, setRevealed] = useState(false);
@@ -745,12 +754,12 @@ export default function ReviewScreen() {
                     cost you the session. */}
                 {!definition && (
                   <TouchableOpacity
-                    style={[s.detailsBtn, enrichBusy && s.btnDisabled]}
+                    style={[s.detailsBtn, enrichRunning('depth') && s.btnDisabled]}
                     onPress={() => enrich('depth')}
-                    disabled={enrichBusy}
+                    disabled={enrichRunning('depth')}
                   >
                     <Text style={s.detailsBtnText}>
-                      {enrichWorking === 'depth'
+                      {enrichRunning('depth')
                         ? t(nativeLanguage, 'cardEnriching')
                         : t(nativeLanguage, 'loadDefinition')}
                     </Text>

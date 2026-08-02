@@ -65,8 +65,12 @@ export default function CardDetailModal({
   const s = useMemo(() => makeStyles(C), [C]);
   const lang: StudyLanguage = studyLanguage ?? card?.studyLanguage ?? 'Korean';
   const {
-    saved, setSaved, working, error, setError, busy, canEnrich, save: handleSave, enrich,
-  } = useCardEnrichment({ card, entry, packId, uid, studyLanguage: lang, nativeLanguage, onChanged });
+    saved, setSaved, isRunning, savingEntry, error, setError, canEnrich,
+    save: handleSave, enrich,
+  } = useCardEnrichment({
+    card, entry, packId, uid, studyLanguage: lang, nativeLanguage,
+    onChanged: () => onChanged?.(),
+  });
   /** Non-null while the back is being edited. */
   const [editDraft, setEditDraft] = useState<string | null>(null);
 
@@ -175,12 +179,12 @@ export default function CardDetailModal({
           <View style={s.actions}>
             {!saved && (
               <TouchableOpacity
-                style={[s.primaryBtn, (busy || !canEnrich) && s.btnDisabled]}
+                style={[s.primaryBtn, (savingEntry || !canEnrich) && s.btnDisabled]}
                 onPress={handleSave}
-                disabled={busy || !canEnrich}
+                disabled={savingEntry || !canEnrich}
               >
                 <Text style={s.primaryBtnText}>
-                  {working === 'save' ? t(nativeLanguage, 'cardSaving') : t(nativeLanguage, 'cardSaveEntry')}
+                  {savingEntry ? t(nativeLanguage, 'cardSaving') : t(nativeLanguage, 'cardSaveEntry')}
                 </Text>
               </TouchableOpacity>
             )}
@@ -188,23 +192,24 @@ export default function CardDetailModal({
                 has a definition does not need a second one. */}
             {!hasDepth && (
               <TouchableOpacity
-                style={[s.secondaryBtn, (busy || !canEnrich) && s.btnDisabled]}
+                // Only this button waits on this request. Examples stays live.
+                style={[s.secondaryBtn, (isRunning('depth') || !canEnrich) && s.btnDisabled]}
                 onPress={() => enrich('depth')}
-                disabled={busy || !canEnrich}
+                disabled={isRunning('depth') || !canEnrich}
               >
                 <Text style={s.secondaryBtnText}>
-                  {working === 'depth' ? t(nativeLanguage, 'cardEnriching') : t(nativeLanguage, 'loadDefinition')}
+                  {isRunning('depth') ? t(nativeLanguage, 'cardEnriching') : t(nativeLanguage, 'loadDefinition')}
                 </Text>
               </TouchableOpacity>
             )}
             {!hasExamples && (
               <TouchableOpacity
-                style={[s.secondaryBtn, (busy || !canEnrich) && s.btnDisabled]}
+                style={[s.secondaryBtn, (isRunning('examples') || !canEnrich) && s.btnDisabled]}
                 onPress={() => enrich('examples')}
-                disabled={busy || !canEnrich}
+                disabled={isRunning('examples') || !canEnrich}
               >
                 <Text style={s.secondaryBtnText}>
-                  {working === 'examples' ? t(nativeLanguage, 'cardEnriching') : t(nativeLanguage, 'loadExamples')}
+                  {isRunning('examples') ? t(nativeLanguage, 'cardEnriching') : t(nativeLanguage, 'loadExamples')}
                 </Text>
               </TouchableOpacity>
             )}
@@ -215,16 +220,16 @@ export default function CardDetailModal({
               <TouchableOpacity
                 style={s.secondaryBtn}
                 onPress={() => setEditDraft(saved[backField] ?? saved.english ?? saved.translation ?? '')}
-                disabled={busy}
+                disabled={savingEntry}
               >
                 <Text style={s.mutedBtnText}>{t(nativeLanguage, 'edit')}</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={s.secondaryBtn} onPress={handleArchiveToggle} disabled={busy}>
+              <TouchableOpacity style={s.secondaryBtn} onPress={handleArchiveToggle} disabled={savingEntry}>
                 <Text style={s.mutedBtnText}>
                   {t(nativeLanguage, saved.archived ? 'restore' : 'archive')}
                 </Text>
               </TouchableOpacity>
-              <TouchableOpacity style={s.secondaryBtn} onPress={handleDelete} disabled={busy}>
+              <TouchableOpacity style={s.secondaryBtn} onPress={handleDelete} disabled={savingEntry}>
                 <Text style={[s.mutedBtnText, { color: C.error }]}>{t(nativeLanguage, 'delete')}</Text>
               </TouchableOpacity>
             </View>
@@ -238,7 +243,7 @@ export default function CardDetailModal({
                 onChangeText={setEditDraft}
                 autoFocus
               />
-              <TouchableOpacity style={s.primaryBtn} onPress={handleEditSave} disabled={busy}>
+              <TouchableOpacity style={s.primaryBtn} onPress={handleEditSave} disabled={savingEntry}>
                 <Text style={s.primaryBtnText}>{t(nativeLanguage, 'save')}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={s.secondaryBtn} onPress={() => setEditDraft(null)}>
