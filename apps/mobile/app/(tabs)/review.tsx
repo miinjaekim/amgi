@@ -6,6 +6,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams } from 'expo-router';
 import { useUser } from '../../src/context/UserContext';
+import { useCardEnrichment } from '../../src/hooks/useCardEnrichment';
 import {
   archiveFlashcard, updateFlashcardFields,
 } from '../../src/services/firestore';
@@ -68,6 +69,17 @@ export default function ReviewScreen() {
    */
   const [queueFor, setQueueFor] = useState<string | null | undefined>(undefined);
   const [index, setIndex] = useState(0);
+
+  // Enrichment for whichever card is in front of the reviewer. Declared up here
+  // rather than beside its button because the render body returns early on
+  // several paths, and a hook cannot follow a conditional return.
+  const {
+    saved: enrichedCard, working: enrichWorking, error: enrichError, busy: enrichBusy, enrich,
+  } = useCardEnrichment({
+    card: queue[index]?.card,
+    studyLanguage,
+    nativeLanguage,
+  });
   const [loading, setLoading] = useState(false);
   const [revealed, setRevealed] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
@@ -590,6 +602,8 @@ export default function ReviewScreen() {
   const frontText = isFront ? studySide : backSide;
   const backText = isFront ? backSide : studySide;
   const prompt = directionPrompt(nativeLanguage, studyLanguage, isFront ? 'frontToBack' : 'backToFront');
+  // The enriched copy when something was just generated, the queue's otherwise.
+  const definition = (enrichedCard ?? card).definition;
 
   const revealStyle = {
     opacity: revealAnim,
@@ -715,16 +729,34 @@ export default function ReviewScreen() {
               <Animated.View style={[s.revealWrap, revealStyle]}>
                 <View style={s.divider} />
                 <Text style={s.backText}>{backText}</Text>
-                {card.definition && !showDetails && (
+                {definition && !showDetails && (
                   <TouchableOpacity style={s.detailsBtn} onPress={() => setShowDetails(true)}>
-                    <Text style={s.detailsBtnText}>Show definition</Text>
+                    <Text style={s.detailsBtnText}>{t(nativeLanguage, 'showDetails')}</Text>
                   </TouchableOpacity>
                 )}
-                {card.definition && showDetails && (
+                {definition && showDetails && (
                   <View style={s.definitionWrap}>
-                    <Markdown style={s.definitionText}>{card.definition}</Markdown>
+                    <Markdown style={s.definitionText}>{definition}</Markdown>
                   </View>
                 )}
+                {/* Mid-review is where a one-line gloss most often turns out not
+                    to be enough — you find out at the moment you fail to recall
+                    it. Offering the write here means that discovery does not
+                    cost you the session. */}
+                {!definition && (
+                  <TouchableOpacity
+                    style={[s.detailsBtn, enrichBusy && s.btnDisabled]}
+                    onPress={() => enrich('depth')}
+                    disabled={enrichBusy}
+                  >
+                    <Text style={s.detailsBtnText}>
+                      {enrichWorking === 'depth'
+                        ? t(nativeLanguage, 'cardEnriching')
+                        : t(nativeLanguage, 'loadDefinition')}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+                {enrichError && <Text style={s.enrichError}>{enrichError}</Text>}
               </Animated.View>
             )}
           </>
@@ -827,6 +859,8 @@ function makeStyles(C: Palette, tabBarHeight: number) {
     borderRadius: 8, paddingVertical: 8, paddingHorizontal: 14, alignSelf: 'flex-start',
   },
   detailsBtnText: { fontSize: 13, color: C.muted, fontWeight: '500' },
+  btnDisabled: { opacity: 0.5 },
+  enrichError: { fontSize: 12, color: C.error, marginTop: 8, textAlign: 'center' },
   definitionWrap: { marginTop: 14 },
   definitionText: { fontSize: 14, color: C.text, opacity: 0.7, lineHeight: 20 },
   revealWrap: {},

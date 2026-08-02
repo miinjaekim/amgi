@@ -3,12 +3,9 @@ import {
   Modal, View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Alert,
 } from 'react-native';
 import {
-  buildPackCardDraft,
-  depthFieldsToPersist,
   getBackSide,
   getBackSideConfig,
   getCharacterBreakdown,
-  getDepthTarget,
   getExampleSides,
   getReading,
   getStudyLangSide,
@@ -16,16 +13,15 @@ import {
   resolvePackBack,
   t,
 } from '@amgi/core';
+import { useCardEnrichment } from '../hooks/useCardEnrichment';
 import type { ExamplePair, PackEntry, StudyLanguage } from '@amgi/core';
 import { useTheme } from '../context/ThemeContext';
 import PronounceButton from './PronounceButton';
 import Markdown from './Markdown';
 import {
-  archiveFlashcard, deleteFlashcard, restoreFlashcard,
-  saveFlashcardToFirestore, updateFlashcardFields,
+  archiveFlashcard, deleteFlashcard, restoreFlashcard, updateFlashcardFields,
 } from '../services/firestore';
 import type { Flashcard } from '../services/firestore';
-import { getTermDepth, getTermExamples } from '../services/gemini';
 import type { Palette } from '../theme';
 
 interface Props {
@@ -67,13 +63,13 @@ export default function CardDetailModal({
 }: Props) {
   const { C } = useTheme();
   const s = useMemo(() => makeStyles(C), [C]);
-  const [saved, setSaved] = useState<Flashcard | null>(card ?? null);
-  const [working, setWorking] = useState<'depth' | 'examples' | 'save' | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const lang: StudyLanguage = studyLanguage ?? card?.studyLanguage ?? 'Korean';
+  const {
+    saved, setSaved, working, error, setError, busy, canEnrich, save: handleSave, enrich,
+  } = useCardEnrichment({ card, entry, packId, uid, studyLanguage: lang, nativeLanguage, onChanged });
   /** Non-null while the back is being edited. */
   const [editDraft, setEditDraft] = useState<string | null>(null);
 
-  const lang: StudyLanguage = studyLanguage ?? saved?.studyLanguage ?? 'Korean';
   // The header reads the same whether or not a card exists behind it, so an
   // unsaved entry is projected onto the two fields it can fill.
   const studySide = saved ? getStudyLangSide(saved) : entry?.study ?? '';
@@ -94,63 +90,6 @@ export default function CardDetailModal({
     saved ? getReading(saved) : undefined,
   ].filter(Boolean) as string[];
 
-  /** The card to write to, saving the pack entry first if there isn't one yet. */
-  const ensureSaved = async (): Promise<Flashcard | null> => {
-    if (saved?.id) return saved;
-    if (!entry || !packId || !uid) return null;
-    const draft = buildPackCardDraft(entry, packId, uid, lang);
-    const id = await saveFlashcardToFirestore(draft as Omit<Flashcard, 'createdAt' | 'id'>, lang);
-    const next = { ...draft, id } as unknown as Flashcard;
-    setSaved(next);
-    onChanged?.();
-    return next;
-  };
-
-  const handleSave = async () => {
-    setWorking('save');
-    setError(null);
-    try {
-      if (!await ensureSaved()) setError(t(nativeLanguage, 'errorSaveFlashcard'));
-    } catch {
-      setError(t(nativeLanguage, 'errorSaveFlashcard'));
-    } finally {
-      setWorking(null);
-    }
-  };
-
-  const enrich = async (kind: 'depth' | 'examples') => {
-    setWorking(kind);
-    setError(null);
-    try {
-      const target = await ensureSaved();
-      if (!target?.id) { setError(t(nativeLanguage, 'errorSaveFlashcard')); return; }
-      // getDepthTarget resolves which sense to elaborate on — for a pack card
-      // that is the `briefDefinition` the entry's context hint was carried into,
-      // which is what keeps depth on 경기 about the economy.
-      const { term, termLanguage, translation, briefDefinition } =
-        getDepthTarget(target, lang, nativeLanguage);
-      const sense = { translation, briefDefinition };
-
-      if (kind === 'depth') {
-        const depth = await getTermDepth(term, termLanguage, nativeLanguage ?? 'English', sense, lang);
-        const fields = depthFieldsToPersist(depth);
-        if (Object.keys(fields).length === 0) { setError(t(nativeLanguage, 'cardEnrichError')); return; }
-        await updateFlashcardFields(target.id, fields, lang);
-        setSaved(prev => (prev ? { ...prev, ...fields } : prev));
-      } else {
-        const next = await getTermExamples(term, termLanguage, nativeLanguage ?? 'English', sense, lang);
-        if (!next?.length) { setError(t(nativeLanguage, 'cardEnrichError')); return; }
-        await updateFlashcardFields(target.id, { examples: next }, lang);
-        setSaved(prev => (prev ? { ...prev, examples: next } : prev));
-      }
-      onChanged?.();
-    } catch {
-      setError(t(nativeLanguage, 'cardEnrichError'));
-    } finally {
-      setWorking(null);
-    }
-  };
-
   /**
    * Editing, archiving and deleting live here too, because the deck screen now
    * opens this for every entry — if management stayed on the deck as its own
@@ -160,7 +99,6 @@ export default function CardDetailModal({
    */
   const handleEditSave = async () => {
     if (!saved?.id || editDraft === null) return;
-    setWorking('save');
     try {
       await updateFlashcardFields(saved.id, { [backField]: editDraft }, lang);
       setSaved(prev => (prev ? { ...prev, [backField]: editDraft } : prev));
@@ -168,8 +106,6 @@ export default function CardDetailModal({
       onChanged?.();
     } catch {
       setError(t(nativeLanguage, 'errorSaveChanges'));
-    } finally {
-      setWorking(null);
     }
   };
 
@@ -212,9 +148,6 @@ export default function CardDetailModal({
       },
     ]);
   };
-
-  const canEnrich = !!saved?.id || !!(entry && packId && uid);
-  const busy = working !== null;
 
   return (
     <Modal visible transparent animationType="fade" onRequestClose={onClose}>

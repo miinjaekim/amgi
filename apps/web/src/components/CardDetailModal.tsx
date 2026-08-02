@@ -5,23 +5,20 @@ import {
   archiveFlashcard,
   deleteFlashcard,
   restoreFlashcard,
-  saveFlashcardToFirestore,
   updateFlashcardFields,
 } from '@/services/firestore';
-import { ExamplePair, getTermDepth, getTermExamples } from '@/services/gemini';
+import { ExamplePair } from '@/services/gemini';
 import {
-  buildPackCardDraft,
-  depthFieldsToPersist,
   getBackSide,
   getBackSideConfig,
   getCharacterBreakdown,
-  getDepthTarget,
   getExampleSides,
   getReading,
   getStudyLangSide,
   getStudyLanguageConfig,
   resolvePackBack,
 } from '@amgi/core';
+import { useCardEnrichment } from '@/hooks/useCardEnrichment';
 import type { PackEntry, StudyLanguage } from '@amgi/core';
 import Markdown from '@/components/Markdown';
 import { t } from '@/lib/i18n';
@@ -67,9 +64,10 @@ interface Props {
 export default function CardDetailModal({
   card, entry, packId, uid, studyLanguage, nativeLanguage, onClose, onChanged,
 }: Props) {
-  const [saved, setSaved] = useState<Flashcard | null>(card ?? null);
-  const [working, setWorking] = useState<'depth' | 'examples' | 'save' | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const lang: StudyLanguage = studyLanguage ?? card?.studyLanguage ?? 'Korean';
+  const {
+    saved, setSaved, working, error, setError, busy, canEnrich, save: handleSave, enrich,
+  } = useCardEnrichment({ card, entry, packId, uid, studyLanguage: lang, nativeLanguage, onChanged });
   /** Non-null while the back is being edited. */
   const [editDraft, setEditDraft] = useState<string | null>(null);
 
@@ -79,7 +77,6 @@ export default function CardDetailModal({
     return () => document.removeEventListener('keydown', handler);
   }, [onClose]);
 
-  const lang: StudyLanguage = studyLanguage ?? saved?.studyLanguage ?? 'Korean';
   // The header reads the same whether or not a card exists behind it, so an
   // unsaved entry is projected onto the two fields it can fill.
   const studySide = saved ? getStudyLangSide(saved) : entry?.study ?? '';
@@ -95,63 +92,6 @@ export default function CardDetailModal({
   const hasDepth = !!(saved?.definition || characterBreakdown || saved?.notes);
   const hasDetails = hasDepth || hasExamples;
 
-  /** The card to write to, saving the pack entry first if there isn't one yet. */
-  async function ensureSaved(): Promise<Flashcard | null> {
-    if (saved?.id) return saved;
-    if (!entry || !packId || !uid) return null;
-    const draft = buildPackCardDraft(entry, packId, uid, lang);
-    const id = await saveFlashcardToFirestore(draft as Omit<Flashcard, 'createdAt' | 'id'>, lang);
-    const next = { ...draft, id } as unknown as Flashcard;
-    setSaved(next);
-    onChanged?.();
-    return next;
-  }
-
-  async function handleSave() {
-    setWorking('save');
-    setError(null);
-    try {
-      if (!await ensureSaved()) setError(t(nativeLanguage, 'errorSaveFlashcard'));
-    } catch {
-      setError(t(nativeLanguage, 'errorSaveFlashcard'));
-    } finally {
-      setWorking(null);
-    }
-  }
-
-  async function enrich(kind: 'depth' | 'examples') {
-    setWorking(kind);
-    setError(null);
-    try {
-      const target = await ensureSaved();
-      if (!target?.id) { setError(t(nativeLanguage, 'errorSaveFlashcard')); return; }
-      // getDepthTarget resolves which sense to elaborate on — for a pack card
-      // that is the `briefDefinition` the entry's context hint was carried into,
-      // which is what keeps depth on `fine` about penalties.
-      const { term, termLanguage, translation, briefDefinition } =
-        getDepthTarget(target, lang, nativeLanguage);
-      const sense = { translation, briefDefinition };
-
-      if (kind === 'depth') {
-        const depth = await getTermDepth(term, termLanguage, nativeLanguage ?? 'English', '', lang, sense);
-        const fields = depthFieldsToPersist(depth);
-        if (Object.keys(fields).length === 0) { setError(t(nativeLanguage, 'cardEnrichError')); return; }
-        await updateFlashcardFields(target.id, fields, lang);
-        setSaved(prev => (prev ? { ...prev, ...fields } : prev));
-      } else {
-        const next = await getTermExamples(term, termLanguage, nativeLanguage ?? 'English', '', lang, sense);
-        if (!next?.length) { setError(t(nativeLanguage, 'cardEnrichError')); return; }
-        await updateFlashcardFields(target.id, { examples: next }, lang);
-        setSaved(prev => (prev ? { ...prev, examples: next } : prev));
-      }
-      onChanged?.();
-    } catch {
-      setError(t(nativeLanguage, 'cardEnrichError'));
-    } finally {
-      setWorking(null);
-    }
-  }
-
   /**
    * Editing, archiving and deleting live here too, because the deck page now
    * opens this for every entry — if management stayed on the deck as its own
@@ -161,7 +101,6 @@ export default function CardDetailModal({
    */
   async function handleEditSave() {
     if (!saved?.id || editDraft === null) return;
-    setWorking('save');
     setError(null);
     try {
       await updateFlashcardFields(saved.id, { [backField]: editDraft }, lang);
@@ -170,15 +109,12 @@ export default function CardDetailModal({
       onChanged?.();
     } catch {
       setError(t(nativeLanguage, 'errorSaveChanges'));
-    } finally {
-      setWorking(null);
     }
   }
 
   async function handleArchiveToggle() {
     if (!saved?.id) return;
     if (!saved.archived && !window.confirm(t(nativeLanguage, 'confirmArchive'))) return;
-    setWorking('save');
     setError(null);
     try {
       const next = !saved.archived;
@@ -187,8 +123,6 @@ export default function CardDetailModal({
       onChanged?.();
     } catch {
       setError(t(nativeLanguage, saved.archived ? 'errorRestoreFlashcard' : 'errorArchiveFlashcard'));
-    } finally {
-      setWorking(null);
     }
   }
 
@@ -204,8 +138,6 @@ export default function CardDetailModal({
     }
   }
 
-  const canEnrich = !!saved?.id || !!(entry && packId && uid);
-  const busy = working !== null;
   const actionClass =
     'px-3 py-1.5 rounded-lg text-sm font-semibold border transition-colors disabled:opacity-50 disabled:cursor-not-allowed';
 
