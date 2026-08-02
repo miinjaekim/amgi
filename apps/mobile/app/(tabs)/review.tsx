@@ -402,7 +402,8 @@ export default function ReviewScreen() {
         <PageHeader
           titleKey="reviewPageTitle"
           helpTitleKey="helpReviewTitle"
-          helpBodyKey="helpReviewBody"
+          helpLeadKey="helpReviewLead"
+          helpPointsKey="helpReviewPoints"
         />
         <View style={s.centerFill}>
           <Text style={s.emptyText}>
@@ -442,7 +443,8 @@ export default function ReviewScreen() {
         <PageHeader
           titleKey="reviewPageTitle"
           helpTitleKey="helpReviewTitle"
-          helpBodyKey="helpReviewBody"
+          helpLeadKey="helpReviewLead"
+          helpPointsKey="helpReviewPoints"
         />
         <ScrollView contentContainerStyle={s.pickerScroll}>
           {offlineNotice}

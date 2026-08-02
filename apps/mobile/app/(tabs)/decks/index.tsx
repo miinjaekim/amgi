@@ -37,7 +37,8 @@ export default function DecksScreen() {
       <PageHeader
         titleKey="decksTitle"
         helpTitleKey="helpPacksTitle"
-        helpBodyKey="helpPacksBody"
+        helpLeadKey="helpPacksLead"
+        helpPointsKey="helpPacksPoints"
       />
 
       {packs.length === 0 ? (
