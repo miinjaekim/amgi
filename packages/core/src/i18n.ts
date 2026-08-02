@@ -169,7 +169,16 @@ const translations = {
     // One fact per line. Each is something the screen cannot show you.
     helpPacksPoints:
       'Words you add become your own cards — edit or delete them like any other.\n' +
-      'Each pack is reviewed on its own, so it never mixes into your vocabulary.',
+      // Not "never mixes into your vocabulary": the line above just said pack
+      // words *become* your cards, so that read as a contradiction. What is
+      // actually separate is the review session, not the ownership.
+      'Each pack has its own review session, apart from your other cards.',
+    helpLearnTitle: 'Word and Passage',
+    helpLearnLead: 'Two sizes of the same question: is this right?',
+    helpLearnPoints:
+      'Word — look up a word or phrase and keep the explanation as a card.\n' +
+      'Passage — write a few sentences and see how a native would put it.\n' +
+      'Both turn what you learn into flashcards.',
     helpReviewTitle: 'How review works',
     helpReviewLead: 'Cards come back just before you would forget them.',
     helpReviewPoints:
@@ -477,13 +486,26 @@ const translations = {
     helpPacksLead: '주제별로 미리 정리해 둔 단어 모음이에요.',
     helpPacksPoints:
       '담은 단어는 그대로 내 카드가 돼요. 수정하거나 삭제할 수 있어요.\n' +
-      '팩마다 따로 복습해서 내 단어와 섞이지 않아요.',
+      // Was '팩마다 따로 복습해서 내 단어와 섞이지 않아요' — '내 단어' contradicted
+      // '내 카드' one line up, and '~해서' is a loose causal join where a full
+      // stop reads better.
+      '복습은 팩별로 따로 해요. 다른 카드와 섞이지 않아요.',
+    helpLearnTitle: '단어와 글',
+    helpLearnLead: '궁금한 게 단어 하나든 직접 쓴 글이든, 여기서 물어보세요.',
+    // '글' and '단어' rather than '문장'/'어휘' — they are what the toggle on
+    // screen actually says, and help that renames the controls is worse than none.
+    helpLearnPoints:
+      '단어 — 모르는 단어나 표현을 찾아보고 설명을 카드로 저장해요.\n' +
+      '글 — 몇 문장 써 보면 원어민이라면 어떻게 쓸지 알려드려요.\n' +
+      '어느 쪽이든 배운 건 카드로 남길 수 있어요.',
     helpReviewTitle: '복습은 이렇게 진행돼요',
     helpReviewLead: '잊어버릴 때쯤 카드가 다시 나타나요.',
     helpReviewPoints:
-      '「다시」를 누르면 금방, 「쉬움」을 누르면 한참 뒤에 나와요.\n' +
-      '한 카드를 양방향으로 물어봐요. 알아보기와 말하기는 따로 기록돼요.\n' +
-      '내 카드와 단어팩은 따로 복습해서, 시작할 때 하나를 골라요.',
+      // 「」 is a Japanese convention and appeared nowhere else in this file;
+      // Korean quotes with ''.
+      '\'다시\'를 누르면 금방, \'쉬움\'을 누르면 한참 뒤에 다시 나와요.\n' +
+      '같은 카드를 양쪽 방향으로 물어봐요. 알아보기와 말하기는 따로 기록돼요.\n' +
+      '내 카드와 단어팩은 따로 복습해요. 시작할 때 하나를 골라 주세요.',
     // Empty state / onboarding
     tagline: '단어나 표현을 검색해보세요.',
     taglineSubtitle: 'AI로 즉각적인 설명을 받고, 플래시카드로 저장해 간격 반복 학습을 시작하세요.',

@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, ActivityIndicator,
-  ScrollView, StyleSheet, Keyboard, Pressable,
+  ScrollView, StyleSheet, Keyboard,
 } from 'react-native';
 import {
   buildWritingCardDraft, getStudyLanguageConfig, t, WRITING_MAX_CHARS,
@@ -100,13 +100,6 @@ export default function WritingReviewPanel() {
       keyboardDismissMode="interactive"
       automaticallyAdjustKeyboardInsets
     >
-      {!review && !error && (
-        <Pressable onPress={Keyboard.dismiss}>
-          <Text style={s.tagline}>{t(nativeLanguage, 'writingTagline')}</Text>
-          <Text style={s.taglineSub}>{t(nativeLanguage, 'writingTaglineSubtitle')}</Text>
-        </Pressable>
-      )}
-
       <TextInput
         style={s.input}
         value={text}
@@ -218,8 +211,6 @@ function makeStyles(C: Palette, tabBarHeight: number) {
     flex: { flex: 1 },
     scroll: { padding: 16, paddingBottom: tabBarHeight + 16 },
 
-    tagline: { fontSize: 17, fontWeight: '700', color: C.text, textAlign: 'center', marginTop: 24 },
-    taglineSub: { fontSize: 13, color: C.muted, textAlign: 'center', marginTop: 6, marginBottom: 20, lineHeight: 19 },
 
     input: {
       borderWidth: 1, borderColor: C.border, borderRadius: 12,
