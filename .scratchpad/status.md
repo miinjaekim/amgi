@@ -689,6 +689,23 @@ Calls that are **closed**. They live here rather than in
 reasoning is kept, because a decision with its reasoning lost gets reopened by
 the next person to notice the symptom.
 
+- **Learn-flow `packId` stamping and daily draw: both dropped** (2026-08-02).
+  Removed from the backlog rather than deferred — the pack unification answered
+  each of them, and neither is waiting on anything.
+  - *Stamping `packId` on words saved through Learn* existed because the same
+    word saved two ways landed in two different places. The deck page no longer
+    routes to Learn at all — tapping an entry opens the card detail — so the two
+    paths that needed reconciling are now one. What remains is typing a pack
+    word into Learn by hand, which is a person deliberately looking something
+    up, and a card born from that genuinely is their own. Reopen only if a
+    second surface starts saving pack words without a `packId`.
+  - *Daily draw* was one of four candidates for making a 160-word pack
+    learnable, and the one deliberately left unbuilt. Section enrolment turned
+    TOPIK into six sittings of 20–40, which was the same problem solved a
+    simpler way — no scheduling state, no per-day bookkeeping, and the user
+    picks when to sit down rather than the app rationing. Reopen only if
+    sections turn out to land too much at once in practice.
+
 - **Packs: one kind, not two** (2026-08-02). The `lookup`/`cards` split was
   introduced as a cheap way to ship a word list without authoring backs for it.
   It was cheap in exactly the wrong place: a `lookup` pack could not be

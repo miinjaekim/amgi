@@ -40,8 +40,8 @@ leaves that file:
 Backlog priority mirrors the user's Google Tasks list — `backlog.md` is the
 scoped version of it.
 
-_Last reviewed against the codebase: 2026-08-02, branch
-`feat/pack-cards-unification` (the pack unification). `data-model.md` gained a
+_Last reviewed against the codebase: 2026-08-02, `main` @ `9a51a6e` (PR #71,
+the pack unification). `data-model.md` gained a
 Packs section and `backlog.md`'s High tier was rewritten against what the change
 actually closed. Tests were run, not assumed: 175 passing, both apps typecheck.
 Previously 2026-08-01 @ `1c4f9c0` (PR #69, writing review)._
