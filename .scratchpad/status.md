@@ -734,6 +734,28 @@ Calls that are **closed**. They live here rather than in
 reasoning is kept, because a decision with its reasoning lost gets reopened by
 the next person to notice the symptom.
 
+- **Onboarding is not a checklist** (2026-08-02). Built and rejected, so this is
+  a measured call rather than a guess. The complaint that prompted it was fair —
+  the tour card only *names* the four surfaces and cannot teach any of them — but
+  a three-step "look up a word / save it / review it" card on the Learn empty
+  state was the wrong answer for two reasons, both worth keeping:
+  - **It occupied the Learn page permanently** until the loop was closed. Learn
+    is the surface [vision.md](vision.md) most wants out of the way ("UI never
+    drags attention away from the word"), and a progress tracker parked above
+    the search field is the opposite of that. Anything that lives on Learn has
+    to earn the space against the search box, and onboarding doesn't.
+  - **It was still telling, not showing.** Ticking a box after the fact narrates
+    what you just did; it does not teach the thing. This is the same objection
+    the checklist was *meant* to answer, which is the real lesson: the fix for
+    "onboarding is just text" is not a different widget describing the app.
+  Whatever comes next should teach inside the flow rather than alongside it, and
+  should not be a persistent resident of Learn. The derived-signal machinery was
+  the good part and is easy to rebuild if wanted (`cardCount > 0`,
+  `lastReviewDate !== null` — no new stored state); it is at `ba9a844` in the
+  reflog of `feat/onboarding-first-run`. What shipped instead: the two setup
+  questions plus a one-card tour, and that is deliberately where onboarding
+  rests for now.
+
 - **Learn-flow `packId` stamping and daily draw: both dropped** (2026-08-02).
   Removed from the backlog rather than deferred — the pack unification answered
   each of them, and neither is waiting on anything.
