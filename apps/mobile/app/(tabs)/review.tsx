@@ -4,7 +4,7 @@ import {
   StyleSheet, Animated, TextInput, Alert, ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useLocalSearchParams } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useUser } from '../../src/context/UserContext';
 import { useCardEnrichment } from '../../src/hooks/useCardEnrichment';
 import {
@@ -109,13 +109,70 @@ export default function ReviewScreen() {
   const [editDraft, setEditDraft] = useState<Partial<Record<CardSideField, string>> | null>(null);
   const [submitting, setSubmitting] = useState<Rating | null>(null);
 
+  const [reloadToken, setReloadToken] = useState(0);
+
+  /**
+   * Re-read whenever this tab is focused again — but never mid-session.
+   *
+   * The first attempt gated this on a module-scope counter bumped by every
+   * write. It did not work on the device, and the likely reason is that Fast
+   * Refresh re-evaluates a module when anything importing it is edited, so the
+   * counter silently reset to zero mid-session. Nothing here depends on module
+   * state now: focus is the signal, and `reloadToken` below distinguishes a
+   * focus reload from a first load without anything outliving the component.
+   *
+   * The cost is one query per visit to a Review tab that has nothing new,
+   * which the backlog called papering over. That objection was about a large
+   * deck reading slowly; the screen already pays this exact query on mount,
+   * and a list that silently lies is worse than a query that repeats.
+   *
+   * Rebuilding the queue under someone eight cards into thirty would be worse
+   * than the staleness, and the load below resets `collectionId` — so a
+   * session actually in progress defers the refresh.
+   *
+   * "In progress" is the same expression the render uses, and emphatically not
+   * `collectionId !== undefined`. That was the first guard and it silently
+   * disabled the whole fix for the commonest case: with a single collection
+   * the effect above auto-selects it, so `collectionId` is `null` from the
+   * first render and never `undefined` again. Anyone whose only cards are
+   * their own — which is every new user — got no refresh at all, while anyone
+   * with a pack landed on the picker and did. A guard that keys on a *choice*
+   * rather than on the *session* it was protecting.
+   *
+   * Read through a ref so the callback stays stable: in the deps it would be
+   * rebuilt the moment a collection was picked, and the screen is focused
+   * then, so the effect would re-run and fight the pick.
+   */
+  const sessionRunningRef = useRef(false);
+  useEffect(() => {
+    sessionRunningRef.current = started && queueFor === collectionId && !done && !stopped;
+  }, [started, queueFor, collectionId, done, stopped]);
+  const firstFocus = useRef(true);
+  useFocusEffect(useCallback(() => {
+    // Mount already loads; without this the first focus would fetch twice.
+    if (firstFocus.current) { firstFocus.current = false; return; }
+    if (sessionRunningRef.current) return;
+    setReloadToken(n => n + 1);
+  }, []));
+
   // Packs belong to one study language, so a deck is not a choice that survives
   // switching to another one — the pick resets with the cards.
+  const appliedToken = useRef(reloadToken);
   useEffect(() => {
     if (!user) return;
     const uid = user.uid;
     let active = true;
-    setLoading(true);
+
+    // True when this run came from returning to the tab, false on a first load
+    // or a study-language switch — which still want the cached snapshot and a
+    // spinner. Presentation only; the reload itself already happened.
+    const isRefresh = appliedToken.current !== reloadToken;
+    appliedToken.current = reloadToken;
+
+    // A refresh keeps the current list on screen while it re-reads. Blanking to
+    // a full-screen spinner because a card was saved on another tab would be a
+    // worse flicker than the staleness being fixed.
+    if (!isRefresh) setLoading(true);
     setCollectionId(undefined);
     setUncachedLanguage(false);
     // A reload already has these folded in — the fetch replays the pending
@@ -128,7 +185,11 @@ export default function ReviewScreen() {
       // and on a good connection it just makes review open instantly.
       const cached = await readCachedReviewCards(uid, studyLanguage);
       if (!active) return;
-      if (cached) {
+      // Still read on a refresh — it is the offline fallback in the catch
+      // below — but not shown, because it predates the change that triggered
+      // this and would flash the stale list before the fetch lands. A cold
+      // start still opens on it, which is the whole offline story.
+      if (cached && !isRefresh) {
         setCards(cached);
         setLoading(false);
       }
@@ -149,7 +210,7 @@ export default function ReviewScreen() {
     })();
 
     return () => { active = false; };
-  }, [user, studyLanguage]);
+  }, [user, studyLanguage, reloadToken]);
 
   // Keep the other languages this device studies ready for a switch made
   // offline. Best-effort and in the background — nothing waits on it.
@@ -491,17 +552,25 @@ export default function ReviewScreen() {
     // picker over an empty collection is a control with no outcome.
     if (dueItems.length === 0) {
       return (
-        <SafeAreaView style={s.center}>
-          {offlineNotice}
-          {collections.length > 1 && <Text style={s.collectionLabel}>{collectionName}</Text>}
-          <Text style={s.doneTitle}>{t(nativeLanguage, 'allCaughtUp')}</Text>
-          <Text style={s.doneBody}>{t(nativeLanguage, 'reviewCompleteMessage')}</Text>
-          {nextDate && (
-            <Text style={s.nextDate}>
-              {t(nativeLanguage, 'nextReviewOn')} {nextDate.toLocaleDateString()}
-            </Text>
-          )}
-          {changeCollectionButton}
+        <SafeAreaView style={s.root} edges={['top']}>
+          <PageHeader
+            titleKey="reviewPageTitle"
+            helpTitleKey="helpReviewTitle"
+            helpLeadKey="helpReviewLead"
+            helpPointsKey="helpReviewPoints"
+          />
+          <View style={s.centerFill}>
+            {offlineNotice}
+            {collections.length > 1 && <Text style={s.collectionLabel}>{collectionName}</Text>}
+            <Text style={s.doneTitle}>{t(nativeLanguage, 'allCaughtUp')}</Text>
+            <Text style={s.doneBody}>{t(nativeLanguage, 'reviewCompleteMessage')}</Text>
+            {nextDate && (
+              <Text style={s.nextDate}>
+                {t(nativeLanguage, 'nextReviewOn')} {nextDate.toLocaleDateString()}
+              </Text>
+            )}
+            {changeCollectionButton}
+          </View>
         </SafeAreaView>
       );
     }
@@ -511,6 +580,12 @@ export default function ReviewScreen() {
     // would multiply out.
     return (
       <SafeAreaView style={s.root} edges={['top']}>
+        <PageHeader
+          titleKey="reviewPageTitle"
+          helpTitleKey="helpReviewTitle"
+          helpLeadKey="helpReviewLead"
+          helpPointsKey="helpReviewPoints"
+        />
         <ScrollView contentContainerStyle={s.startScroll}>
           {offlineNotice}
           <Text style={s.startTitle}>{collectionName}</Text>

@@ -18,24 +18,28 @@ along for free rather than costing a build of its own._
 
 ## Queued for the next build
 
-_Last build: **1.1.0 / build 6**, 2026-07-27 — submitted and under review for
-external testing._
+_Last build: **1.1.0 / build 8**, 2026-07-27 — **approved for external
+testing**. Builds 6 and 7 failed; 8 is the one that went out._
 
-Merged since, waiting on the next build. All four are JS-only, so no native
+Merged since, waiting on the next build. All of them are JS-only, so no native
 module was added and `expo config --type introspect` is not needed this time:
 
 - **Direction choice on mobile Review** (PR #65)
 - **A second Learn tab tap clears the search** (PR #66)
 - **Writing review, both platforms** (PR #69) — new passage mode on Learn.
-  JS-only. Worth testing deliberately on the build: the Word/Passage toggle
-  renders in all three of the Learn screen's render paths, and the rewrite's
-  `PronounceButton` hands TTS a multi-sentence string, which is longer than
-  anything that button has been given before.
+  JS-only. **Tested on a device 2026-08-02 and judged good enough for an
+  initial release**, so this one is no longer the batch's open question.
 - **Card backs follow native language** (PR #67) — the one worth testing
   deliberately; see the What to Test block in
   `docs/testflight-beta-info-ko.md`, which was rewritten for this build.
   Production data was already backfilled and de-duplicated, so a Korean-native
   tester's existing kana cards should read hangul the moment the build lands.
+- **Card lists reload on tab focus** (PR #75) — saving a card no longer needs
+  an app restart to show up in Cards or Review. Mobile-only, JS-only, and
+  confirmed on device. What still wants a look on the build is the guard rather
+  than the fix: leaving Review mid-session and returning should keep your place,
+  and switching study language should still open on that language's cached
+  snapshot rather than a spinner.
 - **Per-page help** (PR #74) — a "?" in the title on Learn, Packs and Review.
   Mobile-only, JS-only. Two things on it were settled by feel rather than by
   test and want a look on the build: that the help sheet scrolls reliably at
@@ -164,32 +168,6 @@ down — file references below are what was actually read, not guesses._
       and review lists, which have a known row shape and so skeleton cleanly,
       (3) leave in-button spinners alone — a spinner inside a button the user
       just pressed is the right control and does not want a skeleton.
-
-- [ ] **Saved cards don't appear until the app is restarted** — confirmed, and
-      the cause is structural rather than a stale variable. Nothing in
-      `apps/mobile` uses `useFocusEffect`, `useIsFocused` or `onSnapshot`. Both
-      `apps/mobile/app/(tabs)/cards.tsx:53` and
-      `apps/mobile/app/(tabs)/review.tsx:92` load inside a `useEffect` keyed on
-      `[user, studyLanguage]`, and Expo Router keeps tab screens mounted once
-      visited — so the effect never re-runs and only killing the process
-      reloads. Review is worse than Cards: it also writes a disk cache
-      (`fetchAndCacheReviewCards`), so the stale list survives the restart until
-      the fetch lands.
-      Three options, increasing cost:
-      1. `useFocusEffect` to refetch on tab focus. Smallest change, fixes the
-         reported symptom, costs a redundant read every tab switch.
-      2. A mutation counter in context that save/archive/delete bump and the
-         lists depend on. Refetches only when something actually changed; needs
-         every write path to remember to bump it.
-      3. `onSnapshot` for live queries. Correct by construction, but it
-         interacts with the offline cache and the pending-review queue, which is
-         the part of this app most expensive to get wrong.
-      **(2) is the recommendation** — (1) is a papering-over that will read as
-      slow on a large deck, and (3) is a bigger change than the bug justifies.
-      Whichever is chosen, the disk cache in review has to be invalidated too,
-      or the fix works only on the surface that doesn't cache.
-
-## Medium
 
 - [ ] **Vocabulary packs — iterate beyond v1** — shipped so far: TOEIC (PR #34,
       133 words), hiragana + katakana (PR #49), TOPIK 고급 (PR #68, 160 words).

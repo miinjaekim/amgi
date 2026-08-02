@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, FlatList,
   StyleSheet, ActivityIndicator, Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from 'expo-router';
 import { File, Paths } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import { useUser } from '../../src/context/UserContext';
@@ -43,6 +44,7 @@ export default function CardsScreen() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkWorking, setBulkWorking] = useState(false);
   const [showImport, setShowImport] = useState(false);
+  const [reloadToken, setReloadToken] = useState(0);
   const [importSuccess, setImportSuccess] = useState<string | null>(null);
 
   // Only the cards you made yourself. A pack's cards are a collection of their
@@ -57,9 +59,27 @@ export default function CardsScreen() {
       .then(cards => setAllCards(cards.filter(card => getCollectionId(card) === null)))
       .catch(() => setError('Failed to load cards.'))
       .finally(() => setLoading(false));
-  }, [user, studyLanguage]);
+  }, [user, studyLanguage, reloadToken]);
 
   useEffect(loadCards, [loadCards]);
+
+  /**
+   * Re-read whenever this tab is focused again.
+   *
+   * Expo Router keeps this screen mounted, so the effect above would otherwise
+   * never run and a card saved on Learn would not appear until the process was
+   * killed. Deliberately unconditional rather than gated on the card counter:
+   * that counter lives in module scope, and Fast Refresh re-evaluates a module
+   * when anything importing it is edited, so its value cannot be trusted to
+   * survive a dev session. One query per tab visit is the honest price of a
+   * list that is never quietly wrong.
+   */
+  const firstFocus = useRef(true);
+  useFocusEffect(useCallback(() => {
+    // Mount already loads; without this the first focus would fetch twice.
+    if (firstFocus.current) { firstFocus.current = false; return; }
+    setReloadToken(n => n + 1);
+  }, []));
 
   const visibleCards = useMemo(() => {
     let cards = allCards;
