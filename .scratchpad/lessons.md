@@ -85,6 +85,24 @@ Gotchas already paid for. Grouped so you can skim the relevant section.
 - **Mobile OAuth redirect** — `makeRedirectUri()` always returns `exp://...`,
   which Google rejects. Fix: explicitly pass the reversed iOS client ID scheme
   as `redirectUri`.
+- **Review auto-selects a single collection, so `collectionId` is never
+  `undefined` for most users.** `review.tsx` sets it as soon as `collections`
+  holds exactly one entry — which is every account whose only cards are their
+  own. Anything keyed on `collectionId === undefined` therefore runs *only* for
+  users with a pack enrolled. Cost two rounds of debugging on the
+  stale-card-lists fix: the refresh guard used that check to mean "not
+  mid-session", so the fix worked for an account with a pack and did nothing
+  for everyone else, while the symptom looked like the reload never firing.
+  - **A session in flight is `started && queueFor === collectionId && !done &&
+    !stopped`** — the expression the render already uses. A guard keyed on a
+    *choice* rather than on the *state it protects* is how this happened.
+  - The same auto-select hides anything mounted only on the collection picker,
+    which is why Review's header sits on all four non-session surfaces.
+  - **Suspect your own recent change before the environment.** The wrong turn
+    was blaming a stale Metro bundle and rewriting a working mechanism. The
+    evidence that cracked it — a page title missing on one screen — was in the
+    first report and pointed straight at the render path.
+
 - **A `ScrollView` inside a `TouchableOpacity` scrolls only sometimes.** The
   enclosing press handler and the scroll gesture compete for the same touch, so
   a drag is intermittently resolved as a press — which reads as "scrolling is

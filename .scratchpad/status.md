@@ -621,14 +621,15 @@ _Reconciled against `main` @ `da5f081` on 2026-07-30 (PR #68, the TOPIK pack)._
 - **Saved cards now appear without restarting the app** (2026-08-02) — Expo
   Router keeps tab screens mounted, so `cards.tsx` and `review.tsx`, whose loads
   are keyed on `[user, studyLanguage]`, never re-ran; only killing the process
-  reloaded. Fixed as the backlog's option (1), refetch on tab focus — **after
-  option (2), the mutation counter, was built and failed on the device**:
-  - **Option (2) is recorded as tried and rejected, not untried.** A
-    module-scope counter bumped by every write in `services/firestore` looked
-    right, typechecked, and did nothing on the phone. Fast Refresh
-    re-evaluates a module when anything importing it is edited, so the counter
-    reset to zero mid-session and the save's bump vanished. **Don't put
-    correctness in module-scope state** — see [lessons.md](lessons.md).
+  reloaded. Fixed as the backlog's option (1), refetch on tab focus.
+  - **Option (2), the mutation counter, was built first and dropped — but not
+    because it was broken.** It was replaced while chasing a failure that
+    turned out to be the guard below, and a suspicion that Fast Refresh was
+    resetting its module-scope counter was written down here as fact before it
+    was ever confirmed. It never was. The counter may well have worked; the
+    reload simply never ran, for either mechanism. What settles the choice is
+    that focus needs no state outliving the component, not that the counter
+    failed.
   - The redundant read that made the backlog call option (1) "papering over"
     is real but small: one query per visit to a tab with nothing new, on a
     screen that already pays the same query on mount. A list that silently
