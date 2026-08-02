@@ -547,7 +547,7 @@ _Reconciled against `main` @ `da5f081` on 2026-07-30 (PR #68, the TOPIK pack)._
     reason the input is now bounded at both ends rather than only a `minHeight`.
 
 ### Onboarding
-- **First run, web + mobile** (branch `feat/onboarding-first-run`, 2026-08-02) —
+- **First run, web + mobile** (PR #73, merged 2026-08-02) —
   mobile got the blocking language setup it never had, and both platforms gained
   a third step: one card naming Learn / Review / Packs / Writing, one line each.
   This is the *first run* half of the onboarding backlog item; contextual tips

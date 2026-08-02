@@ -36,6 +36,12 @@ module was added and `expo config --type introspect` is not needed this time:
   `docs/testflight-beta-info-ko.md`, which was rewritten for this build.
   Production data was already backfilled and de-duplicated, so a Korean-native
   tester's existing kana cards should read hangul the moment the build lands.
+- **First run on both platforms** (PR #73) — mobile's blocking language setup,
+  which it never had, plus a one-card tour of the four surfaces. JS-only. The
+  setup modal was run in Expo Go and works; what wants testing on the build is
+  the state it now closes off — a genuinely new install should be *unable* to
+  reach native Korean + study Korean, and mobile settings should show no native
+  language highlighted until the modal has been answered.
 - **TOPIK 고급 pack** (PR #68) — Korean's first pack, so `/decks` is no longer
   the empty state on the app's original study language. Worth a look on the
   build specifically because it's a `lookup` pack: tapping a word has to hand
