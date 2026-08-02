@@ -515,7 +515,10 @@ export function resolveStudyLanguage(
 ): StudyLanguage {
   // No previous native means first-time setup, which the setup modal owns —
   // it already excludes the native language from the study options, and
-  // stepping in here would only fight the choice being made.
+  // stepping in here would only fight the choice being made. True on both
+  // platforms since mobile got its own blocking setup modal; before that
+  // mobile had no first run at all, and this early return was the hole the
+  // native-Korean-studying-Korean collision came through.
   if (previousNativeLanguage == null) return currentStudyLanguage;
   if (currentStudyLanguage !== nextNativeLanguage) return currentStudyLanguage;
   if (isStudyLanguage(previousNativeLanguage) && previousNativeLanguage !== nextNativeLanguage) {

@@ -546,6 +546,51 @@ _Reconciled against `main` @ `da5f081` on 2026-07-30 (PR #68, the TOPIK pack)._
     underneath the keyboard — the same class of bug as PR #60 above, and the
     reason the input is now bounded at both ends rather than only a `minHeight`.
 
+### Onboarding
+- **First run, web + mobile** (PR #73, merged 2026-08-02) —
+  mobile got the blocking language setup it never had, and both platforms gained
+  a third step: one card naming Learn / Review / Packs / Writing, one line each.
+  This is the *first run* half of the onboarding backlog item; contextual tips
+  remain open there.
+  - **Mobile blocks, matching web.** Filtering the chosen native language out of
+    the study options is what makes "native Korean, studying Korean"
+    unreachable, and that only holds if the questions cannot be walked past. So
+    the collision below is now fixed by construction rather than by patching
+    defaults, which is what the old backlog item had asked for.
+  - **The tour is step 3 of the setup modal, not its own surface.** That is what
+    keeps it to a single showing with *nothing recorded* — no `seenTour` field
+    anywhere. Contextual tips will be the first per-user onboarding state the
+    app carries.
+  - **Both answers commit on the last tap, not as they are given.** Committing
+    earlier falsifies the caller's `nativeLanguage === null` gate while the tour
+    is still on screen, which forces a latch in the caller — and that latch was
+    a `set-state-in-effect` lint warning on web. Quitting mid-flow therefore
+    saves nothing, which is the honest outcome: setup was not finished.
+  - **Neither commit is awaited.** Both setters apply to state and local storage
+    *before* their Firestore write, and that write does not reject when offline —
+    it never settles (same trap as the streak write; see [lessons.md](lessons.md)).
+    Awaiting it would strand a signed-in offline user behind a modal with no
+    dismiss, the one failure a blocking first run cannot afford.
+  - **A brand-new account inherits what the device already answered.** Both
+    setup modals show to signed-out visitors, so without this every sign-up is
+    asked the same two questions a second time. Gated on there being no
+    preferences document *at all* — a document that exists and omits the field
+    is a real "unset", not a gap to fill. Account deletion wipes every `amgi_`
+    key, so a fresh start stays a fresh start.
+  - Tour rows reuse `navLearn` / `navReview` / `navDecks` as their labels, so
+    what the tour names is exactly what the nav is called; only Writing carries
+    its own, being a mode on Learn rather than a tab.
+  - ⚠️ **Mobile has never been run on a device** — verified by `tsc` only. Ships
+    in the next production build.
+- **New users can end up native Korean + study Korean** — fixed by the above.
+  Mobile's signed-out path defaulted `nativeLanguage` to `'Korean'` against a
+  `studyLanguage` whose initial state was independently also `'Korean'`; it now
+  leaves `null`, which is what the first-run modal watches for. The two
+  wrinkles that rode along: `resolveStudyLanguage`'s early return on a `null`
+  previous native is now true on both platforms rather than web only, and
+  mobile settings no longer highlights English for an unset native language —
+  it was showing a preference nothing had stored.
+
 ### Demo-blocking fixes
 - **Native/study language collision + WOTD repeats + WOTD save drift**
   (PR #47, 2026-07-24) — the three "Next up" items in one batch.
@@ -688,6 +733,28 @@ Calls that are **closed**. They live here rather than in
 [backlog.md](backlog.md) so the backlog stays a list of open work — but the
 reasoning is kept, because a decision with its reasoning lost gets reopened by
 the next person to notice the symptom.
+
+- **Onboarding is not a checklist** (2026-08-02). Built and rejected, so this is
+  a measured call rather than a guess. The complaint that prompted it was fair —
+  the tour card only *names* the four surfaces and cannot teach any of them — but
+  a three-step "look up a word / save it / review it" card on the Learn empty
+  state was the wrong answer for two reasons, both worth keeping:
+  - **It occupied the Learn page permanently** until the loop was closed. Learn
+    is the surface [vision.md](vision.md) most wants out of the way ("UI never
+    drags attention away from the word"), and a progress tracker parked above
+    the search field is the opposite of that. Anything that lives on Learn has
+    to earn the space against the search box, and onboarding doesn't.
+  - **It was still telling, not showing.** Ticking a box after the fact narrates
+    what you just did; it does not teach the thing. This is the same objection
+    the checklist was *meant* to answer, which is the real lesson: the fix for
+    "onboarding is just text" is not a different widget describing the app.
+  Whatever comes next should teach inside the flow rather than alongside it, and
+  should not be a persistent resident of Learn. The derived-signal machinery was
+  the good part and is easy to rebuild if wanted (`cardCount > 0`,
+  `lastReviewDate !== null` — no new stored state); it is at `ba9a844` in the
+  reflog of `feat/onboarding-first-run`. What shipped instead: the two setup
+  questions plus a one-card tour, and that is deliberately where onboarding
+  rests for now.
 
 - **Learn-flow `packId` stamping and daily draw: both dropped** (2026-08-02).
   Removed from the backlog rather than deferred — the pack unification answered

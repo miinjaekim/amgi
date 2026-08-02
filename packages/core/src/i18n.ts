@@ -148,6 +148,17 @@ const translations = {
     setupStudyTitle: 'What are you learning?',
     setupStudySubtitle: 'Choose your study language',
     setupBack: '← Back',
+    // First-run tour — one card, shown once, right after the two language
+    // questions. Rows reuse `navLearn`/`navReview`/`navDecks` as their labels
+    // so what the tour names is exactly what the nav is called; a tour that
+    // invents its own vocabulary teaches you a map of a different app.
+    tourTitle: 'What you can do here',
+    tourLearnBody: 'Look up any word or phrase, then keep the explanation as a flashcard.',
+    tourReviewBody: 'Cards come back just before you would forget them — in both directions.',
+    tourDecksBody: 'Curated decks to draw from when no particular word is on your mind.',
+    tourWritingLabel: 'Writing',
+    tourWritingBody: 'Write a few sentences and see how a native would put it.',
+    tourStart: 'Get started',
     // Empty state / onboarding
     tagline: 'Look up any word or phrase.',
     taglineSubtitle: 'Get an instant AI-powered explanation, then save it as a flashcard to review with spaced repetition.',
@@ -434,6 +445,14 @@ const translations = {
     setupStudyTitle: '어떤 언어를 배우고 싶나요?',
     setupStudySubtitle: '학습할 언어를 선택하세요',
     setupBack: '← 뒤로',
+    // First-run tour
+    tourTitle: '이런 걸 할 수 있어요',
+    tourLearnBody: '모르는 단어나 표현을 찾아보고, 그 설명을 그대로 카드로 저장하세요.',
+    tourReviewBody: '잊어버릴 때쯤 카드가 다시 나타나요. 양방향으로 복습합니다.',
+    tourDecksBody: '딱히 찾을 단어가 없을 땐 정리된 단어팩에서 골라 담으세요.',
+    tourWritingLabel: '글쓰기',
+    tourWritingBody: '몇 문장 써 보면 원어민이라면 어떻게 쓸지 보여드려요.',
+    tourStart: '시작하기',
     // Empty state / onboarding
     tagline: '단어나 표현을 검색해보세요.',
     taglineSubtitle: 'AI로 즉각적인 설명을 받고, 플래시카드로 저장해 간격 반복 학습을 시작하세요.',

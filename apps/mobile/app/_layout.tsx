@@ -1,6 +1,21 @@
 import { Stack } from 'expo-router';
-import { UserProvider } from '../src/context/UserContext';
+import { UserProvider, useUser } from '../src/context/UserContext';
 import { ThemeProvider } from '../src/context/ThemeContext';
+import LanguageSetupModal from '../src/components/LanguageSetupModal';
+
+/**
+ * First run, mounted above the whole navigator so it covers the tabs too.
+ *
+ * `undefined` means preferences are still loading and `null` means they are
+ * loaded and unanswered — only the second opens the modal, which is why this
+ * is not a falsiness check. The modal stays up through its own third step
+ * because it commits both answers on the last tap, not as they are given.
+ */
+function FirstRun() {
+  const { authLoading, nativeLanguage } = useUser();
+  if (authLoading || nativeLanguage !== null) return null;
+  return <LanguageSetupModal />;
+}
 
 export default function RootLayout() {
   return (
@@ -15,6 +30,7 @@ export default function RootLayout() {
               would no longer give way to it. */}
           <Stack.Screen name="decks/[packId]/drill" />
         </Stack>
+        <FirstRun />
       </UserProvider>
     </ThemeProvider>
   );

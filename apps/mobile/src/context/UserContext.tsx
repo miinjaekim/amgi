@@ -111,7 +111,20 @@ export function UserProvider({ children }: { children: ReactNode }) {
         }
 
         const cachedLang = await AsyncStorage.getItem(LANG_CACHE_KEY);
-        const lang = reachedServer ? (prefs?.nativeLanguage ?? null) : cachedLang;
+        const cachedStudy = await AsyncStorage.getItem(STUDY_LANG_CACHE_KEY);
+
+        // A brand-new account inherits what this device already answered.
+        // Without this, anyone who completes first run signed out is asked the
+        // same two questions again the instant they sign up — the account is
+        // new, the person and the device are not. Gated on there being no
+        // preferences document at all: a document that exists and omits the
+        // field is a real "unset", not a gap to fill. Account deletion wipes
+        // every `amgi_` key, so a fresh start stays a fresh start.
+        const adopting = reachedServer && prefs === null && !!cachedLang;
+
+        const lang = reachedServer
+          ? (adopting ? cachedLang : (prefs?.nativeLanguage ?? null))
+          : cachedLang;
         setNativeLanguageState(lang);
         if (lang) {
           await AsyncStorage.setItem(LANG_CACHE_KEY, lang);
@@ -120,12 +133,19 @@ export function UserProvider({ children }: { children: ReactNode }) {
           await AsyncStorage.removeItem(LANG_CACHE_KEY);
         }
 
-        const study = reachedServer
-          ? prefs?.studyLanguage
-          : await AsyncStorage.getItem(STUDY_LANG_CACHE_KEY);
+        const study = reachedServer && !adopting ? prefs?.studyLanguage : cachedStudy;
         if (isStudyLanguage(study)) {
           setStudyLanguageState(study);
           await AsyncStorage.setItem(STUDY_LANG_CACHE_KEY, study);
+        }
+
+        if (adopting && cachedLang) {
+          // Not awaited: this is a convenience write, and nothing below it
+          // depends on the round trip.
+          saveUserPreferences(uid, {
+            nativeLanguage: cachedLang,
+            ...(isStudyLanguage(study) ? { studyLanguage: study } : {}),
+          }).catch(() => { /* Asked again next launch; harmless. */ });
         }
 
         const merged = mergeStreakState(
@@ -162,9 +182,13 @@ export function UserProvider({ children }: { children: ReactNode }) {
           await writeCachedStreak(uid, merged);
         }
       } else {
+        // `null`, not a default: an unanswered native language is what the
+        // first-run modal watches for. Defaulting to 'Korean' here, against a
+        // `studyLanguage` whose initial state was independently also 'Korean',
+        // is how a new user ended up natively speaking the language they were
+        // studying — the collision the setup modal exists to prevent.
         const cached = await AsyncStorage.getItem(LANG_CACHE_KEY);
-        setNativeLanguageState(cached ?? 'Korean');
-        if (!cached) await AsyncStorage.setItem(LANG_CACHE_KEY, 'Korean');
+        setNativeLanguageState(cached ?? null);
         const cachedStudy = await AsyncStorage.getItem(STUDY_LANG_CACHE_KEY);
         if (isStudyLanguage(cachedStudy)) setStudyLanguageState(cachedStudy);
         setStreak(0);

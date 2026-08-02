@@ -36,6 +36,12 @@ module was added and `expo config --type introspect` is not needed this time:
   `docs/testflight-beta-info-ko.md`, which was rewritten for this build.
   Production data was already backfilled and de-duplicated, so a Korean-native
   tester's existing kana cards should read hangul the moment the build lands.
+- **First run on both platforms** (PR #73) — mobile's blocking language setup,
+  which it never had, plus a one-card tour of the four surfaces. JS-only. The
+  setup modal was run in Expo Go and works; what wants testing on the build is
+  the state it now closes off — a genuinely new install should be *unable* to
+  reach native Korean + study Korean, and mobile settings should show no native
+  language highlighted until the modal has been answered.
 - **TOPIK 고급 pack** (PR #68) — Korean's first pack, so `/decks` is no longer
   the empty state on the app's original study language. Worth a look on the
   build specifically because it's a `lookup` pack: tapping a word has to hand
@@ -122,25 +128,22 @@ down — file references below are what was actually read, not guesses._
         (`cards/page.tsx:48-52`, `cards.tsx:48-52`). It encodes the reasoning
         being reversed, so it has to be rewritten, not deleted.
 
-- [ ] **Onboarding for new users** — there is nothing today except web's
-      `LanguageSetupModal`, which asks two questions and vanishes; mobile has no
-      first-run experience at all (see the language-defaults item below, which
-      is the same gap seen as a bug). A new user lands on Learn with an empty
-      search box and no indication that packs, review, drill or writing review
-      exist. Scope it as two separate things — they have different lifetimes and
-      conflating them is how onboarding becomes a tutorial nobody finishes:
-      - *First run*: the language setup mobile is missing, then the shortest
-        possible pass over what the app does. Lean and single-purpose per
-        [vision.md](vision.md) — resist a multi-screen carousel.
-      - *Contextual tips later on*: surfaced when a feature first becomes
-        reachable rather than up front. Needs somewhere to record "this user has
-        seen tip X" — `users/{uid}` is the obvious home, alongside the language
-        preferences.
+- [ ] **Onboarding: contextual tips** — the *first run* half of this item
+      shipped (see [status.md](status.md)); this is the other half, deliberately
+      kept separate because the two have different lifetimes and conflating them
+      is how onboarding becomes a tutorial nobody finishes.
 
-      Decide before building: does first run block the app, or is it
-      dismissible? The web modal blocks, and it is the reason the study/native
-      collision can't happen there — so a dismissible version needs the defaults
-      fixed independently.
+      Tips surface when a feature first becomes *reachable* rather than up
+      front — the point being that the first-run tour can only name the four
+      surfaces, not teach any of them. Needs somewhere to record "this user has
+      seen tip X"; `users/{uid}` is the obvious home, alongside the language
+      preferences, and note that first run deliberately stores nothing, so this
+      is the first per-user onboarding state the app will carry.
+
+      Open question inherited from first run: tips have no equivalent of the
+      blocking modal's guarantee, so each one needs a trigger that can't fire
+      before its feature exists for that user (e.g. don't offer a review tip to
+      someone with no cards).
 
 - [ ] **Skeletons instead of spinners** — mobile has 23 `ActivityIndicator`
       uses and one skeleton; the very first thing a cold launch shows is a
@@ -177,30 +180,6 @@ down — file references below are what was actually read, not guesses._
       slow on a large deck, and (3) is a bigger change than the bug justifies.
       Whichever is chosen, the disk cache in review has to be invalidated too,
       or the fix works only on the surface that doesn't cache.
-
-- [ ] **New users can end up native Korean + study Korean** — real, and
-      mobile-only. Web can't reach the state: `LanguageSetupModal` filters the
-      chosen native language out of the study options, and it blocks the app
-      until both are answered. Mobile has no equivalent, so it falls back to two
-      hardcoded defaults that were chosen independently —
-      `apps/mobile/src/context/UserContext.tsx:60` starts `studyLanguage` at
-      `'Korean'`, and line 166 defaults `nativeLanguage` to `'Korean'` when
-      signed out. That is exactly the collision `resolveStudyLanguage` and
-      `resolveNativeLanguage` exist to prevent. It then self-corrects on the
-      first touch of either setting, which matches the reported symptom, because
-      those resolvers only run on a *change*.
-      Two further wrinkles worth fixing in the same pass:
-      - `resolveStudyLanguage` returns early when the previous native is `null`
-        (`packages/core/src/types.ts:518`), deliberately leaving first-run to
-        the setup modal. That comment is true on web and false on mobile.
-      - A brand-new signed-in account has no `users/{uid}` fields at all, so
-        `nativeLanguage` is `null` while mobile's settings screen highlights
-        English (`settings.tsx:156`) — the app shows a preference that was never
-        stored. Signing in also clears the `'Korean'` the signed-out path had
-        just cached.
-      The durable fix is mobile's missing first-run setup, which is why this
-      wants doing alongside the onboarding item rather than as a patch to the
-      defaults.
 
 ## Medium
 
