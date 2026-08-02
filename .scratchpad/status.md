@@ -618,7 +618,8 @@ _Reconciled against `main` @ `da5f081` on 2026-07-30 (PR #68, the TOPIK pack)._
     stop. Chasing the second one exposed a claim that was wrong in *both*
     languages — pack words do become your cards, and what is separate is the
     review session, not the ownership. See the copy rule in [ui-ux.md](ui-ux.md).
-- **Saved cards now appear without restarting the app** (2026-08-02) — Expo
+- **Saved cards now appear without restarting the app** (PR #75, merged
+  2026-08-02) — Expo
   Router keeps tab screens mounted, so `cards.tsx` and `review.tsx`, whose loads
   are keyed on `[user, studyLanguage]`, never re-ran; only killing the process
   reloaded. Fixed as the backlog's option (1), refetch on tab focus.

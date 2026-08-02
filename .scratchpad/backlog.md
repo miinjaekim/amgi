@@ -34,6 +34,12 @@ module was added and `expo config --type introspect` is not needed this time:
   `docs/testflight-beta-info-ko.md`, which was rewritten for this build.
   Production data was already backfilled and de-duplicated, so a Korean-native
   tester's existing kana cards should read hangul the moment the build lands.
+- **Card lists reload on tab focus** (PR #75) — saving a card no longer needs
+  an app restart to show up in Cards or Review. Mobile-only, JS-only, and
+  confirmed on device. What still wants a look on the build is the guard rather
+  than the fix: leaving Review mid-session and returning should keep your place,
+  and switching study language should still open on that language's cached
+  snapshot rather than a spinner.
 - **Per-page help** (PR #74) — a "?" in the title on Learn, Packs and Review.
   Mobile-only, JS-only. Two things on it were settled by feel rather than by
   test and want a look on the build: that the help sheet scrolls reliably at
