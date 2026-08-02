@@ -621,26 +621,28 @@ _Reconciled against `main` @ `da5f081` on 2026-07-30 (PR #68, the TOPIK pack)._
 - **Saved cards now appear without restarting the app** (2026-08-02) — Expo
   Router keeps tab screens mounted, so `cards.tsx` and `review.tsx`, whose loads
   are keyed on `[user, studyLanguage]`, never re-ran; only killing the process
-  reloaded. Fixed as the backlog's option (2), a mutation counter, with two
-  departures worth keeping:
-  - **The bump lives inside `services/firestore`, not at the call sites.** The
-    backlog flagged the risk that "every write path has to remember to bump it"
-    — and one that forgets reintroduces the bug. The writes now do it
-    themselves, so callers cannot forget. `services/cardStore.ts` holds the
-    counter and nothing subscribes to it: screens read it when they regain
-    focus, so a mutation never re-renders a surface that is off screen.
+  reloaded. Fixed as the backlog's option (1), refetch on tab focus — **after
+  option (2), the mutation counter, was built and failed on the device**:
+  - **Option (2) is recorded as tried and rejected, not untried.** A
+    module-scope counter bumped by every write in `services/firestore` looked
+    right, typechecked, and did nothing on the phone. Fast Refresh
+    re-evaluates a module when anything importing it is edited, so the counter
+    reset to zero mid-session and the save's bump vanished. **Don't put
+    correctness in module-scope state** — see [lessons.md](lessons.md).
+  - The redundant read that made the backlog call option (1) "papering over"
+    is real but small: one query per visit to a tab with nothing new, on a
+    screen that already pays the same query on mount. A list that silently
+    lies is the worse trade.
   - **Review defers a refresh while a session is in progress.** Its load resets
     `collectionId`, so refreshing mid-session would drop someone eight cards
     into thirty back to the picker — a worse bug than the one being fixed. The
     refresh lands when they next return to the picker.
-  - **`updateFlashcardReview` deliberately does not bump.** A rating fires once
-    per card during a session; treating each as a collection change would
-    rebuild the queue underneath the session.
   - The disk cache needed no invalidation — `fetchAndCacheReviewCards` rewrites
     it on every load. What it needed was to stop being *displayed* on a
     mutation-driven refresh, where it predates the change by definition and
     would flash the stale list. It is still read, as the offline fallback, and
-    a cold start still opens on it.
+    a cold start still opens on it. A `reloadToken` in `useState` tells the
+    two apart, which is what removed the last reason for module-level state.
 - **New users can end up native Korean + study Korean** — fixed by the above.
   Mobile's signed-out path defaulted `nativeLanguage` to `'Korean'` against a
   `studyLanguage` whose initial state was independently also `'Korean'`; it now

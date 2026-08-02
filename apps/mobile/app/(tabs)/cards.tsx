@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, FlatList,
   StyleSheet, ActivityIndicator, Alert,
@@ -13,7 +13,6 @@ import {
   deleteFlashcard, updateFlashcardFields,
 } from '../../src/services/firestore';
 import type { Flashcard } from '../../src/services/firestore';
-import { getCardsVersion } from '../../src/services/cardStore';
 import { t, getCharacterBreakdown, getCollectionId, getStudyLanguageConfig, getBackSideConfig, getStudyLangSide, getBackSide, getExampleSides } from '@amgi/core';
 import type { CardSideField } from '@amgi/core';
 import { useTheme } from '../../src/context/ThemeContext';
@@ -45,7 +44,7 @@ export default function CardsScreen() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkWorking, setBulkWorking] = useState(false);
   const [showImport, setShowImport] = useState(false);
-  const [cardsVersion, setCardsVersion] = useState(getCardsVersion);
+  const [reloadToken, setReloadToken] = useState(0);
   const [importSuccess, setImportSuccess] = useState<string | null>(null);
 
   // Only the cards you made yourself. A pack's cards are a collection of their
@@ -60,24 +59,27 @@ export default function CardsScreen() {
       .then(cards => setAllCards(cards.filter(card => getCollectionId(card) === null)))
       .catch(() => setError('Failed to load cards.'))
       .finally(() => setLoading(false));
-  }, [user, studyLanguage, cardsVersion]);
+  }, [user, studyLanguage, reloadToken]);
 
   useEffect(loadCards, [loadCards]);
 
   /**
-   * Re-read on focus, but only when the collection actually moved.
+   * Re-read whenever this tab is focused again.
    *
    * Expo Router keeps this screen mounted, so the effect above would otherwise
-   * never run again and a card saved on Learn would not appear until the
-   * process was killed. Syncing to the same number is a no-op — React bails
-   * out of an identical state — so returning to an unchanged deck costs
-   * nothing, which is what a plain refetch-on-focus would have spent.
-   *
-   * Reads the counter live rather than subscribing: a mutation made here
-   * updates the list optimistically already, and this screen has no business
-   * re-rendering for one made while it is off screen.
+   * never run and a card saved on Learn would not appear until the process was
+   * killed. Deliberately unconditional rather than gated on the card counter:
+   * that counter lives in module scope, and Fast Refresh re-evaluates a module
+   * when anything importing it is edited, so its value cannot be trusted to
+   * survive a dev session. One query per tab visit is the honest price of a
+   * list that is never quietly wrong.
    */
-  useFocusEffect(useCallback(() => { setCardsVersion(getCardsVersion()); }, []));
+  const firstFocus = useRef(true);
+  useFocusEffect(useCallback(() => {
+    // Mount already loads; without this the first focus would fetch twice.
+    if (firstFocus.current) { firstFocus.current = false; return; }
+    setReloadToken(n => n + 1);
+  }, []));
 
   const visibleCards = useMemo(() => {
     let cards = allCards;

@@ -29,7 +29,6 @@ import type {
 import { useTheme } from '../../src/context/ThemeContext';
 import { useFloatingTabBarHeight } from '../../src/components/FloatingTabBar';
 import PageHeader from '../../src/components/PageHeader';
-import { getCardsVersion } from '../../src/services/cardStore';
 import Markdown from '../../src/components/Markdown';
 import type { Palette } from '../../src/theme';
 
@@ -110,40 +109,53 @@ export default function ReviewScreen() {
   const [editDraft, setEditDraft] = useState<Partial<Record<CardSideField, string>> | null>(null);
   const [submitting, setSubmitting] = useState<Rating | null>(null);
 
-  const [cardsVersion, setCardsVersion] = useState(getCardsVersion);
+  const [reloadToken, setReloadToken] = useState(0);
 
   /**
-   * Re-read on focus when the collection actually moved — but never mid-session.
+   * Re-read whenever this tab is focused again — but never mid-session.
    *
-   * Rebuilding the queue under someone eight cards into thirty would be a worse
-   * bug than the stale list this fixes, and the load below deliberately resets
-   * `collectionId`. So a session in progress defers the refresh; it lands when
-   * they next come back to the picker.
+   * The first attempt gated this on a module-scope counter bumped by every
+   * write. It did not work on the device, and the likely reason is that Fast
+   * Refresh re-evaluates a module when anything importing it is edited, so the
+   * counter silently reset to zero mid-session. Nothing here depends on module
+   * state now: focus is the signal, and `reloadToken` below distinguishes a
+   * focus reload from a first load without anything outliving the component.
    *
-   * `collectionId` is read from a ref so this callback stays stable. In the
-   * deps it would be rebuilt the moment a collection was picked, and because
-   * the screen is focused at that point the effect would re-run, reset the
-   * pick, and fight the user for it.
+   * The cost is one query per visit to a Review tab that has nothing new,
+   * which the backlog called papering over. That objection was about a large
+   * deck reading slowly; the screen already pays this exact query on mount,
+   * and a list that silently lies is worse than a query that repeats.
+   *
+   * Rebuilding the queue under someone eight cards into thirty would be worse
+   * than the staleness, and the load below resets `collectionId` — so a
+   * session in progress defers the refresh until they return to the picker.
+   * `collectionId` is read from a ref to keep this callback stable: in the
+   * deps it would be rebuilt the moment a collection was picked, and the
+   * screen is focused then, so the effect would re-run and fight the pick.
    */
   const collectionIdRef = useRef(collectionId);
   useEffect(() => { collectionIdRef.current = collectionId; }, [collectionId]);
+  const firstFocus = useRef(true);
   useFocusEffect(useCallback(() => {
+    // Mount already loads; without this the first focus would fetch twice.
+    if (firstFocus.current) { firstFocus.current = false; return; }
     if (collectionIdRef.current !== undefined) return;
-    setCardsVersion(getCardsVersion());
+    setReloadToken(n => n + 1);
   }, []));
 
   // Packs belong to one study language, so a deck is not a choice that survives
   // switching to another one — the pick resets with the cards.
-  const loadedVersion = useRef(cardsVersion);
+  const appliedToken = useRef(reloadToken);
   useEffect(() => {
     if (!user) return;
     const uid = user.uid;
     let active = true;
 
-    // True only when a card was saved, edited or deleted since the last load —
-    // not when the study language changed, which still wants its own snapshot.
-    const isRefresh = loadedVersion.current !== cardsVersion;
-    loadedVersion.current = cardsVersion;
+    // True when this run came from returning to the tab, false on a first load
+    // or a study-language switch — which still want the cached snapshot and a
+    // spinner. Presentation only; the reload itself already happened.
+    const isRefresh = appliedToken.current !== reloadToken;
+    appliedToken.current = reloadToken;
 
     // A refresh keeps the current list on screen while it re-reads. Blanking to
     // a full-screen spinner because a card was saved on another tab would be a
@@ -186,7 +198,7 @@ export default function ReviewScreen() {
     })();
 
     return () => { active = false; };
-  }, [user, studyLanguage, cardsVersion]);
+  }, [user, studyLanguage, reloadToken]);
 
   // Keep the other languages this device studies ready for a switch made
   // offline. Best-effort and in the background — nothing waits on it.
