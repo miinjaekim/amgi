@@ -4,6 +4,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { getStudyLanguageConfig } from '@amgi/core';
+import { notifyCardsChanged } from './cardStore';
 import type { Flashcard, ReviewTracking, StudyLanguage } from '@amgi/core';
 
 export type { Flashcard, ReviewTracking, StudyLanguage } from '@amgi/core';
@@ -73,6 +74,7 @@ export async function saveFlashcardToFirestore(
     collection(db, getCardsCollection(studyLanguage)),
     buildFlashcardDoc(flashcard, studyLanguage),
   );
+  notifyCardsChanged();
   return ref.id;
 }
 
@@ -94,6 +96,7 @@ export async function saveFlashcardsBatch(
     }
     await batch.commit();
   }
+  notifyCardsChanged();
   return flashcards.length;
 }
 
@@ -138,14 +141,17 @@ export async function fetchUserFlashcardsFromServer(
 
 export async function archiveFlashcard(cardId: string, studyLanguage?: StudyLanguage): Promise<void> {
   await updateDoc(doc(db, getCardsCollection(studyLanguage), cardId), { archived: true });
+  notifyCardsChanged();
 }
 
 export async function restoreFlashcard(cardId: string, studyLanguage?: StudyLanguage): Promise<void> {
   await updateDoc(doc(db, getCardsCollection(studyLanguage), cardId), { archived: false });
+  notifyCardsChanged();
 }
 
 export async function deleteFlashcard(cardId: string, studyLanguage?: StudyLanguage): Promise<void> {
   await deleteDoc(doc(db, getCardsCollection(studyLanguage), cardId));
+  notifyCardsChanged();
 }
 
 /**
@@ -159,8 +165,15 @@ export async function updateFlashcardFields(
   studyLanguage?: StudyLanguage,
 ): Promise<void> {
   await updateDoc(doc(db, getCardsCollection(studyLanguage), cardId), fields);
+  notifyCardsChanged();
 }
 
+/**
+ * Deliberately does *not* call `notifyCardsChanged`. A rating fires once per
+ * card during a session, and the review screen owns its queue — treating each
+ * one as a collection change would rebuild the list mid-session, which is the
+ * opposite of the problem the counter exists to solve.
+ */
 export async function updateFlashcardReview(
   cardId: string,
   direction: 'frontToBack' | 'backToFront',

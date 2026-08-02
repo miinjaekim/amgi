@@ -4,7 +4,7 @@ import {
   StyleSheet, Animated, TextInput, Alert, ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useLocalSearchParams } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useUser } from '../../src/context/UserContext';
 import { useCardEnrichment } from '../../src/hooks/useCardEnrichment';
 import {
@@ -29,6 +29,7 @@ import type {
 import { useTheme } from '../../src/context/ThemeContext';
 import { useFloatingTabBarHeight } from '../../src/components/FloatingTabBar';
 import PageHeader from '../../src/components/PageHeader';
+import { getCardsVersion } from '../../src/services/cardStore';
 import Markdown from '../../src/components/Markdown';
 import type { Palette } from '../../src/theme';
 
@@ -109,13 +110,45 @@ export default function ReviewScreen() {
   const [editDraft, setEditDraft] = useState<Partial<Record<CardSideField, string>> | null>(null);
   const [submitting, setSubmitting] = useState<Rating | null>(null);
 
+  const [cardsVersion, setCardsVersion] = useState(getCardsVersion);
+
+  /**
+   * Re-read on focus when the collection actually moved — but never mid-session.
+   *
+   * Rebuilding the queue under someone eight cards into thirty would be a worse
+   * bug than the stale list this fixes, and the load below deliberately resets
+   * `collectionId`. So a session in progress defers the refresh; it lands when
+   * they next come back to the picker.
+   *
+   * `collectionId` is read from a ref so this callback stays stable. In the
+   * deps it would be rebuilt the moment a collection was picked, and because
+   * the screen is focused at that point the effect would re-run, reset the
+   * pick, and fight the user for it.
+   */
+  const collectionIdRef = useRef(collectionId);
+  useEffect(() => { collectionIdRef.current = collectionId; }, [collectionId]);
+  useFocusEffect(useCallback(() => {
+    if (collectionIdRef.current !== undefined) return;
+    setCardsVersion(getCardsVersion());
+  }, []));
+
   // Packs belong to one study language, so a deck is not a choice that survives
   // switching to another one — the pick resets with the cards.
+  const loadedVersion = useRef(cardsVersion);
   useEffect(() => {
     if (!user) return;
     const uid = user.uid;
     let active = true;
-    setLoading(true);
+
+    // True only when a card was saved, edited or deleted since the last load —
+    // not when the study language changed, which still wants its own snapshot.
+    const isRefresh = loadedVersion.current !== cardsVersion;
+    loadedVersion.current = cardsVersion;
+
+    // A refresh keeps the current list on screen while it re-reads. Blanking to
+    // a full-screen spinner because a card was saved on another tab would be a
+    // worse flicker than the staleness being fixed.
+    if (!isRefresh) setLoading(true);
     setCollectionId(undefined);
     setUncachedLanguage(false);
     // A reload already has these folded in — the fetch replays the pending
@@ -128,7 +161,11 @@ export default function ReviewScreen() {
       // and on a good connection it just makes review open instantly.
       const cached = await readCachedReviewCards(uid, studyLanguage);
       if (!active) return;
-      if (cached) {
+      // Still read on a refresh — it is the offline fallback in the catch
+      // below — but not shown, because it predates the change that triggered
+      // this and would flash the stale list before the fetch lands. A cold
+      // start still opens on it, which is the whole offline story.
+      if (cached && !isRefresh) {
         setCards(cached);
         setLoading(false);
       }
@@ -149,7 +186,7 @@ export default function ReviewScreen() {
     })();
 
     return () => { active = false; };
-  }, [user, studyLanguage]);
+  }, [user, studyLanguage, cardsVersion]);
 
   // Keep the other languages this device studies ready for a switch made
   // offline. Best-effort and in the background — nothing waits on it.

@@ -537,9 +537,9 @@ _Reconciled against `main` @ `da5f081` on 2026-07-30 (PR #68, the TOPIK pack)._
     `buildWritingCardDraft` and the one `getWritingReview` fetch both apps call.
     It deliberately says nothing about writing, because conversation practice is
     the same job on a different capture.
-  - ⚠️ **Mobile has never been run on a device** — verified by `tsc` and a clean
-    `expo export` only. It ships in the next production build; see the
-    "Queued for the next build" list in [backlog.md](backlog.md).
+  - **Tested on a device and judged good enough for an initial release**
+    (2026-08-02). The earlier warning that mobile had only ever been `tsc`-
+    verified no longer applies.
   - The mobile panel uses `automaticallyAdjustKeyboardInsets` rather than a
     `KeyboardAvoidingView`. KAV with `padding` only shrinks the container and
     never scrolls the caret into view, so a passage past a few lines was typed
@@ -618,6 +618,29 @@ _Reconciled against `main` @ `da5f081` on 2026-07-30 (PR #68, the TOPIK pack)._
     stop. Chasing the second one exposed a claim that was wrong in *both*
     languages — pack words do become your cards, and what is separate is the
     review session, not the ownership. See the copy rule in [ui-ux.md](ui-ux.md).
+- **Saved cards now appear without restarting the app** (2026-08-02) — Expo
+  Router keeps tab screens mounted, so `cards.tsx` and `review.tsx`, whose loads
+  are keyed on `[user, studyLanguage]`, never re-ran; only killing the process
+  reloaded. Fixed as the backlog's option (2), a mutation counter, with two
+  departures worth keeping:
+  - **The bump lives inside `services/firestore`, not at the call sites.** The
+    backlog flagged the risk that "every write path has to remember to bump it"
+    — and one that forgets reintroduces the bug. The writes now do it
+    themselves, so callers cannot forget. `services/cardStore.ts` holds the
+    counter and nothing subscribes to it: screens read it when they regain
+    focus, so a mutation never re-renders a surface that is off screen.
+  - **Review defers a refresh while a session is in progress.** Its load resets
+    `collectionId`, so refreshing mid-session would drop someone eight cards
+    into thirty back to the picker — a worse bug than the one being fixed. The
+    refresh lands when they next return to the picker.
+  - **`updateFlashcardReview` deliberately does not bump.** A rating fires once
+    per card during a session; treating each as a collection change would
+    rebuild the queue underneath the session.
+  - The disk cache needed no invalidation — `fetchAndCacheReviewCards` rewrites
+    it on every load. What it needed was to stop being *displayed* on a
+    mutation-driven refresh, where it predates the change by definition and
+    would flash the stale list. It is still read, as the offline fallback, and
+    a cold start still opens on it.
 - **New users can end up native Korean + study Korean** — fixed by the above.
   Mobile's signed-out path defaulted `nativeLanguage` to `'Korean'` against a
   `studyLanguage` whose initial state was independently also `'Korean'`; it now
