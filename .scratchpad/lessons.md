@@ -85,6 +85,19 @@ Gotchas already paid for. Grouped so you can skim the relevant section.
 - **Mobile OAuth redirect** — `makeRedirectUri()` always returns `exp://...`,
   which Google rejects. Fix: explicitly pass the reversed iOS client ID scheme
   as `redirectUri`.
+- **A `ScrollView` inside a `TouchableOpacity` scrolls only sometimes.** The
+  enclosing press handler and the scroll gesture compete for the same touch, so
+  a drag is intermittently resolved as a press — which reads as "scrolling is
+  broken half the time" rather than as a layout problem, and sends you looking
+  at heights. Cost a round trip on the page-help modal, where the sheet was
+  wrapped in a Touchable for tap-to-dismiss (copied from `SaveFlashcardModal`,
+  where it is fine because that sheet holds only text inputs).
+  - **Fix:** keep the sheet a plain `View` and put tap-to-dismiss on its own
+    `Pressable` layer behind it via `StyleSheet.absoluteFill`. The ScrollView
+    is then the sole responder for anything starting inside it.
+  - `CardDetailModal`, `ImportModal` and the first-run tour never had this,
+    because all three use plain `View` sheets. The house pattern was already
+    right; the bug came from copying the one modal that isn't scrollable.
 - **`EXPO_PUBLIC_*` env vars are baked at bundle time** — restart Metro with
   `--clear` after changing `.env.local`.
 - **State set in a handler and derived in an effect leaves one render where the

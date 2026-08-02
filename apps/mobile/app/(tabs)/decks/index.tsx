@@ -9,6 +9,7 @@ import { useUser } from '../../../src/context/UserContext';
 import { useTheme } from '../../../src/context/ThemeContext';
 import { fetchAllUserFlashcards } from '../../../src/services/firestore';
 import { useFloatingTabBarHeight } from '../../../src/components/FloatingTabBar';
+import PageHeader from '../../../src/components/PageHeader';
 import type { Palette } from '../../../src/theme';
 
 export default function DecksScreen() {
@@ -30,10 +31,15 @@ export default function DecksScreen() {
 
   return (
     <SafeAreaView style={s.safe} edges={['top', 'bottom']}>
-      {/* A tab root, so no back arrow — there is nothing behind it. */}
-      <View style={s.header}>
-        <Text style={s.title}>{t(nativeLanguage, 'decksTitle')}</Text>
-      </View>
+      {/* A tab root, so no back arrow — there is nothing behind it. The help
+          button answers "what is a pack, and why is it separate from my
+          cards?", which the list itself cannot. */}
+      <PageHeader
+        titleKey="decksTitle"
+        helpTitleKey="helpPacksTitle"
+        helpLeadKey="helpPacksLead"
+        helpPointsKey="helpPacksPoints"
+      />
 
       {packs.length === 0 ? (
         // The tab is there for every language, so this state is reachable on
@@ -80,8 +86,6 @@ export default function DecksScreen() {
 function makeStyles(C: Palette, tabBarHeight: number) {
   return StyleSheet.create({
     safe: { flex: 1, backgroundColor: C.bg },
-    header: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 20, paddingVertical: 12 },
-    title: { fontSize: 21, fontWeight: '700', color: C.highlight },
     emptyWrap: { paddingHorizontal: 20, paddingTop: 8, gap: 8 },
     empty: { fontSize: 14, color: C.muted },
     emptyBody: { fontSize: 13, color: C.muted, opacity: 0.7, lineHeight: 19 },

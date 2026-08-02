@@ -26,6 +26,7 @@ import LearnModeToggle from '../../src/components/LearnModeToggle';
 import type { LearnMode } from '../../src/components/LearnModeToggle';
 import WritingReviewPanel from '../../src/components/WritingReviewPanel';
 import PronounceButton from '../../src/components/PronounceButton';
+import PageHeader from '../../src/components/PageHeader';
 import Markdown from '../../src/components/Markdown';
 import { t } from '@amgi/core';
 import { useTheme } from '../../src/context/ThemeContext';
@@ -383,6 +384,12 @@ export default function LearnScreen() {
   if (mode === 'passage') {
     return (
       <SafeAreaView style={s.root} edges={['top']}>
+        <PageHeader
+          titleKey="navLearn"
+          helpTitleKey="helpLearnTitle"
+          helpLeadKey="helpLearnLead"
+          helpPointsKey="helpLearnPoints"
+        />
         {modeToggle}
         <WritingReviewPanel />
       </SafeAreaView>
@@ -424,6 +431,12 @@ export default function LearnScreen() {
   if (isEmpty) {
     return (
       <SafeAreaView style={s.root} edges={['top']}>
+        <PageHeader
+          titleKey="navLearn"
+          helpTitleKey="helpLearnTitle"
+          helpLeadKey="helpLearnLead"
+          helpPointsKey="helpLearnPoints"
+        />
         {streakBadge}
         {modeToggle}
         {/* One big dismiss target. With the bar pinned rather than lifted,

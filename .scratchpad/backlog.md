@@ -36,6 +36,11 @@ module was added and `expo config --type introspect` is not needed this time:
   `docs/testflight-beta-info-ko.md`, which was rewritten for this build.
   Production data was already backfilled and de-duplicated, so a Korean-native
   tester's existing kana cards should read hangul the moment the build lands.
+- **Per-page help** (PR #74) — a "?" in the title on Learn, Packs and Review.
+  Mobile-only, JS-only. Two things on it were settled by feel rather than by
+  test and want a look on the build: that the help sheet scrolls reliably at
+  large system font sizes, and that dropping the passage tagline left the
+  writing input better placed rather than merely higher.
 - **First run on both platforms** (PR #73) — mobile's blocking language setup,
   which it never had, plus a one-card tour of the four surfaces. JS-only. The
   setup modal was run in Expo Go and works; what wants testing on the build is
@@ -133,17 +138,20 @@ down — file references below are what was actually read, not guesses._
       kept separate because the two have different lifetimes and conflating them
       is how onboarding becomes a tutorial nobody finishes.
 
-      Tips surface when a feature first becomes *reachable* rather than up
-      front — the point being that the first-run tour can only name the four
-      surfaces, not teach any of them. Needs somewhere to record "this user has
-      seen tip X"; `users/{uid}` is the obvious home, alongside the language
-      preferences, and note that first run deliberately stores nothing, so this
-      is the first per-user onboarding state the app will carry.
+      **Largely answered by PR #74**, which put a "?" in the page title on
+      Learn, Packs and Review. That is *pull* help, and it needs **no record of
+      who has seen what** — which was the blocker this item was written around.
+      Deriving beat storing again. Those three pages are done.
 
-      Open question inherited from first run: tips have no equivalent of the
-      blocking modal's guarantee, so each one needs a trigger that can't fire
-      before its feature exists for that user (e.g. don't offer a review tip to
-      someone with no cards).
+      Still unexplained: **drill, export, archive, and the Cards page's two
+      filter axes**. Reach for another "?" before reaching for stored state.
+
+      Only if a genuinely *pushed* tip is ever wanted does the original problem
+      return: somewhere to record "this user has seen tip X" (`users/{uid}` is
+      the obvious home), plus a trigger per tip that cannot fire before its
+      feature exists for that user — don't offer a drill tip to someone with no
+      deck enrolled. A pushed tip has no equivalent of the blocking modal's
+      guarantee, so that guard is on each trigger rather than on a framework.
 
 - [ ] **Skeletons instead of spinners** — mobile has 23 `ActivityIndicator`
       uses and one skeleton; the very first thing a cold launch shows is a
