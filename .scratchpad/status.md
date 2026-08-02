@@ -130,7 +130,14 @@ _Reconciled against `main` @ `da5f081` on 2026-07-30 (PR #68, the TOPIK pack)._
   - **293 card backs authored** — 133 Korean for TOEIC, 160 English for TOPIK.
     One side per pack, not both: `buildPackCardDraft` writes the study side last
     so it wins, so an authored back in that same slot could never be read.
-    ⚠️ **Pending approval** — see the High backlog item.
+    **Approved as drafted 2026-08-02**, with corrections to be made in place as
+    they surface rather than held for a review pass. The drafts stay in
+    `docs/packs/` as the record of what was authored and why — each leads with
+    the near-synonym collisions resolved by hand, which is the part that would
+    be expensive to reconstruct later. Three calls were flagged as open and
+    went in unchanged: TOEIC `subject` glossed as the phrase `subject to`
+    rather than the headword, TOPIK 오히려/도리어 carried as separate cards, and
+    the 사자성어 backs duplicating their own context hints.
   - **`CardDetailModal` is now the one card surface**, reached identically from
     the deck, `/cards` and review. Tapping any deck entry opens it, saved or
     not; it carries save, edit, archive, delete, and on-demand depth/examples.

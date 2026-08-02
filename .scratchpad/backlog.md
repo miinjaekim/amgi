@@ -97,23 +97,6 @@ _Added 2026-08-01. The first two are product work; the last three are defects
 found in use, and #3–#5 were each checked against the code before being written
 down — file references below are what was actually read, not guesses._
 
-- [ ] **Approve the pack card backs** — the one thing gating the pack redesign
-      from being finished rather than shipped. 293 glosses were authored and are
-      in the source already, but they went in as *my* proposal, not an approved
-      word list — which is the wrong way round per the curation principle in
-      [vision.md](vision.md). Read them and correct what's wrong:
-      - `docs/packs/toeic-backs-draft.md` — 133 Korean backs.
-      - `docs/packs/topik-backs-draft.md` — 160 English backs.
-
-      Each draft leads with the near-synonym collisions resolved by hand, which
-      are the rows most worth disagreeing with — two cards sharing a back make
-      back-to-front review unanswerable (shown 연기하다 you cannot know whether
-      it wants `defer` or `postpone`). Three specific calls are flagged in the
-      drafts as mine to defend and yours to overrule: TOEIC `subject` is glossed
-      as the phrase `subject to` rather than the headword; TOPIK 오히려/도리어
-      may be too close to justify carrying both; and the 사자성어 backs duplicate
-      their own context hints. Correcting a gloss is a one-line source edit.
-
 - [ ] **Loosen the `/cards` filter** — decided 2026-08-01, still not built, and
       now the last structural piece of the pack work. It is what makes the
       Learn-flow `packId` stamping below a pure addition rather than a

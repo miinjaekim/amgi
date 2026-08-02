@@ -20,8 +20,9 @@ Related docs outside this folder:
 - `docs/packs/topik-pack-draft.md` — source draft for the TOPIK 고급 pack
   (referenced from `packages/core/src/topik.ts`)
 - `docs/packs/toeic-backs-draft.md`, `docs/packs/topik-backs-draft.md` — the 293
-  card backs, **awaiting approval**. Both are in the source already; these are
-  the review surface for correcting a gloss.
+  card backs, approved 2026-08-02. Kept as the record of what was authored and
+  why; still the place to read before changing a gloss, since each leads with
+  the near-synonym collisions that a bare source diff would not explain.
 - `docs/testflight-beta-info-ko.md` — Korean TestFlight listing copy.
   ⚠️ **Untracked**: `.gitignore` excludes `docs/*` and only re-includes
   `docs/packs/`, so this file exists on one machine only despite the release
