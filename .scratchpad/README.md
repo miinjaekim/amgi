@@ -41,11 +41,18 @@ leaves that file:
 Backlog priority mirrors the user's Google Tasks list — `backlog.md` is the
 scoped version of it.
 
-_Last reviewed against the codebase: 2026-08-03, `main` @ `51a53e9` (1.2.0).
-Grammar was designed and recorded without any code being written — the argument
-in `vision.md`, the `GrammarPattern` type and collection call in
-`data-model.md`, ten design calls under Decisions in `status.md`, the staged
-build in `backlog.md`. Every code reference in those entries was opened and
-checked rather than recalled, and the ephemeral-submissions decision is marked
-as reopened rather than quietly contradicted. Previously 2026-08-02 @ `9a51a6e`
-(PR #71, the pack unification)._
+_Last reviewed against the codebase: 2026-08-03, `main` @ `111da4e` (PR #78).
+`npm test` 175/175, measured not assumed._
+
+_That pass did three things. **Grammar was designed** before any code — argument
+in `vision.md`, type in `data-model.md`, design calls in `status.md`, staging in
+`backlog.md` — then re-checked against the files it cites, which corrected six
+claims (12 `/api/explain` prompt templates not 6; `sm2.ts` unedited but its ease
+curve becomes a one-way ratchet without `easy`; a patterns row is a signature
+change to `buildReviewCollections`; `gloss` is optional both sides like
+`PackBack`; a review is two model calls; grading can fail mid-session) and added
+a hint tier. **`status.md` was compressed ~70%** — shipped history cut to one
+line per item and moved below Decisions, since the blow-by-blow is in git and the
+gotchas are in `lessons.md`. **`backlog.md` was reordered** to Queued → High →
+Medium → Bigger bets, with Housekeeping moved down and the lost `## Medium`
+heading restored. Previously 2026-08-02 @ `9a51a6e` (PR #71)._

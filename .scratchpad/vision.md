@@ -124,6 +124,16 @@ between near-neighbours tests discrimination, which is real, but it is
 recognition wearing production's clothes and it does not become fluency. The
 learner has to *arrive* at the form.
 
+**But an empty textbox needs a way out, and that is a hint, not a choice.**
+Refusing multiple choice leaves the learner who cannot start with nothing to do
+except be wrong, and two of those in a row is where someone closes the app. The
+answer that keeps the principle intact is a hint that *costs* — a nudge toward
+the shape, then the pattern's name, with the best available verdict falling as
+you take them. Retrieval stays the learner's; what changes is how much of the
+search space they were handed, and the schedule is told. The design calls are in
+[status.md](status.md); it is named here because "no multiple choice" without
+"but hints" is a principle with a cliff behind it.
+
 **Not a grammar syllabus either.** "Prefer adaptivity that is emergent, not
 configured" applies here with full force: an ordered grammar curriculum is the
 configured version of this and is not wanted. The patterns you practise are the

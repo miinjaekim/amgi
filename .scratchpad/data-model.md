@@ -110,8 +110,9 @@ are, and it is language-generic in the same way everything else here is. The
 warning stands unchanged: don't add `KoreanGrammarPattern` either.
 
 Proposed shape, for a new `packages/core/src/grammar.ts` (introduced the way
-`writing.ts` was — pure types, a tolerant parser, one shared fetch both apps
-call):
+`writing.ts` was — pure types, a tolerant parser, and the shared fetches both
+apps call; **two of them, not one**, for the reason under "A review is two model
+calls" below):
 
 ```ts
 export interface GrammarPattern {
@@ -120,8 +121,15 @@ export interface GrammarPattern {
   studyLanguage: StudyLanguage;
   /** Citation form — `-다가`, `passé composé`. In the study language. */
   pattern: string;
-  /** What it does, in a few words. Both backs, same rule as `PackBack`. */
-  gloss: { English: string; Korean: string };
+  /**
+   * What it does, in a few words. Same rule as `PackBack` — which means
+   * *optional on both sides*, because that type is partial on purpose. Its
+   * reason carries over unchanged: a pattern's gloss is generated at capture
+   * time in the learner's native language, so requiring both would mean
+   * generating a Korean gloss for an English native that no reader could ever
+   * see. Don't tighten these to required.
+   */
+  gloss: { English?: string; Korean?: string };
   /** One or two sentences on when to reach for it, in the native language. */
   note?: string;
   /** Provenance only, never identity — mirrors `packId`'s rule. */
@@ -142,7 +150,33 @@ schedule. Don't build a `backToFront` for patterns.
 **Exercises are not stored; patterns are.** The sentence you were asked to write
 is generated per review, the way depth and examples are generated on demand.
 Same rule as writing review's "submissions are ephemeral" — the pattern is the
-durable artifact.
+durable artifact. The generated exercise is a transient object, not a document:
+the situation in the native language, plus the two hint tiers, which ride along
+in the same response so asking for a hint costs no round trip and reveals
+nothing until asked.
+
+**A review is two model calls, not one**, and that is a correction to the line
+above about `writing.ts`'s single shared fetch. Generating the situation and
+grading the answer are separate round trips, and they cannot be collapsed: the
+exercise has to exist before the learner can respond to it. Grading reuses
+`/api/writing` unchanged; only generation is new. Consequences to design for
+rather than discover:
+
+- **A session of _n_ patterns is 2 _n_ model calls**, where a vocab session of
+  any length is zero. That is the running cost of this feature and it should be
+  stated in the same breath as the design, not found on a bill.
+- **Generation can be batched, grading cannot.** One call can produce the
+  situations for the whole due set up front, which is the obvious optimisation
+  if per-turn latency disappoints. Not v1 — it trades a slower session start
+  for faster turns, and which one the learner feels is a question for real
+  sessions, not for this document.
+- **Grading failing mid-session is the case with no obvious answer.** Offline is
+  handled (the row is disabled), but a 500 on turn 3 of 6 is not offline. The
+  learner has already spent 40 seconds producing a sentence, so losing it is the
+  one outcome to rule out. v1: keep the text on screen, offer retry, and let the
+  turn be skipped without a verdict — a skipped turn writes no `ReviewTracking`
+  at all, leaving the pattern due, which is the honest result. Never write a
+  verdict the model did not produce.
 
 **One `patterns` collection, not one per language.** Cards shard per language
 because there are hundreds of them and the collection name routes the query.
