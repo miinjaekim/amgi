@@ -1,354 +1,215 @@
 # Backlog
 
-Ordered by priority. **Only open work lives here** — shipped, cancelled and
-decided items move to [status.md](status.md), reasoning included, so a closed
-call doesn't get reopened from this file. Source of truth is the user's Google
-Tasks list; this is the scoped version. Last synced 2026-07-30.
+Open work only, ordered by priority. Shipped, cancelled and decided items move to
+[status.md](status.md) **with their reasoning**, so a closed call doesn't get
+reopened from this file. Source of truth is the user's Google Tasks list; this is
+the scoped version.
 
 **Mobile shipping model: no OTA.** Iterate in Expo Go (`npx expo start`), cut a
-production build when a batch is worth a release. See [tech-stack.md](tech-stack.md).
-
-_The 2026-07-25 focus ("ship the depth work to the phone", with its
-no-new-native-modules constraint) is spent — that batch went out in 1.1.0 / build
-6 along with `expo-network` and `expo-notifications`. The reasoning it produced
-is worth keeping though: once one native module is in a build, a second rides
-along for free rather than costing a build of its own._
+production build when a batch is worth a release. Once one native module is in a
+build, a second rides along free rather than costing a build of its own.
 
 ---
 
 ## Queued for the next build
 
-_Last build: **1.1.0 / build 8**, 2026-07-27 — **approved for external
-testing**. Builds 6 and 7 failed; 8 is the one that went out._
+**Nothing queued.** 1.2.0 carries every merged mobile change; `main` has only
+docs since. See Builds in [status.md](status.md) for its contents and for what
+remains unverified on a real binary.
 
-Merged since, waiting on the next build. All of them are JS-only, so no native
-module was added and `expo config --type introspect` is not needed this time:
+_1.2.0 status: submitted and accepted, **internal testing live**, external
+waiting on Beta App Review._
 
-- **Direction choice on mobile Review** (PR #65)
-- **A second Learn tab tap clears the search** (PR #66)
-- **Writing review, both platforms** (PR #69) — new passage mode on Learn.
-  JS-only. **Tested on a device 2026-08-02 and judged good enough for an
-  initial release**, so this one is no longer the batch's open question.
-- **Card backs follow native language** (PR #67) — the one worth testing
-  deliberately; see the What to Test block in
-  `docs/testflight-beta-info.md`, which was rewritten for this build.
-  Production data was already backfilled and de-duplicated, so a Korean-native
-  tester's existing kana cards should read hangul the moment the build lands.
-- **Card lists reload on tab focus** (PR #75) — saving a card no longer needs
-  an app restart to show up in Cards or Review. Mobile-only, JS-only, and
-  confirmed on device. What still wants a look on the build is the guard rather
-  than the fix: leaving Review mid-session and returning should keep your place,
-  and switching study language should still open on that language's cached
-  snapshot rather than a spinner.
-- **Per-page help** (PR #74) — a "?" in the title on Learn, Packs and Review.
-  Mobile-only, JS-only. Two things on it were settled by feel rather than by
-  test and want a look on the build: that the help sheet scrolls reliably at
-  large system font sizes, and that dropping the passage tagline left the
-  writing input better placed rather than merely higher.
-- **First run on both platforms** (PR #73) — mobile's blocking language setup,
-  which it never had, plus a one-card tour of the four surfaces. JS-only. The
-  setup modal was run in Expo Go and works; what wants testing on the build is
-  the state it now closes off — a genuinely new install should be *unable* to
-  reach native Korean + study Korean, and mobile settings should show no native
-  language highlighted until the modal has been answered.
-- **TOPIK 고급 pack** (PR #68) — Korean's first pack, so `/decks` is no longer
-  the empty state on the app's original study language. Worth a look on the
-  build specifically because it's a `lookup` pack: tapping a word has to hand
-  off to Learn, which is the deck → Learn round trip that only exists on mobile
-  as a stack screen above the tabs.
-
-**Pre-flight progress (2026-08-02):** Expo Go smoke pass **done** — the whole
-batch was exercised there during development. `app.json` bumped to **1.2.0**
-(`runtimeVersion` follows `appVersion`, so this is a new runtime, which is what
-a no-OTA production build wants). `docs/testflight-beta-info.md` rewritten for
-this batch and renamed off its `-ko` suffix, since it has always held both
-languages. **What remains is the on-build verification below** — the native
-things Expo Go cannot answer for, done on the build before releasing it to
-testers rather than before cutting it.
-
-**Pre-flight:** smoke-test in Expo Go → verify native-adjacent things (audio,
-files, sharing, **offline review + reconnect sync**, **account deletion**,
-**the review reminder actually firing and then disappearing once you review**)
-on the build itself → bump `version` in `app.json` → check
+**Pre-flight, for next time:** smoke-test in Expo Go → verify the native-adjacent
+things on the build itself (audio, files, sharing, offline review + reconnect,
+account deletion, the review reminder firing *and then disappearing* once you
+review) → bump `version` in `app.json` → check
 `docs/testflight-beta-info.md` is still accurate → **`expo config --type
 introspect` if any native module was added**, which is where an entitlement you
-did not ask for shows up before a cloud build finds it.
+didn't ask for shows up before a cloud build finds it.
 
-_The listing check earned its place in this list on 2026-07-27: it still
-advertised five study languages after Traditional Chinese made six, and said
-nothing about account deletion — which Apple looks for under 5.1.1(v)._
-
-
----
-
-## Housekeeping — tooling that hides signal
-
-`npm test` (148/148) and `npx eslint .` (0 errors) are both green on a clean
-checkout as of 2026-07-30 — see the Tooling entries in [status.md](status.md).
-What is left here is what those two now *show*.
-
-- [ ] **13 React Compiler warnings, then turn the rules back up** — `eslint-config-next@16`
-      brought `react-hooks/set-state-in-effect` (11) and `react-hooks/immutability`
-      (2), and they are real: a `useEffect` that calls `setState` synchronously
-      renders twice on mount. Set to `warn` in `apps/web/eslint.config.mjs` so
-      landing the lint fix didn't mean landing 13 rushed ones. Most want
-      `useSyncExternalStore` — `useOnlineStatus` reading `navigator.onLine`,
-      `review/page.tsx` setting `clientNow` to dodge a hydration mismatch — so
-      each is a small design call, not a mechanical edit. Clear them, then
-      delete the override; **don't silence them further**, which is the failure
-      mode the override exists to avoid.
-      _Still exactly 13 as of 2026-07-30 — the override is holding._
-
-- [ ] **Five other warnings have accumulated since** (2026-07-30, total 18) and
-      are *not* covered by the item above, so clearing that one won't clear the
-      lint. Two are dead bindings in `decks/[packId]/page.tsx` and
-      `decks/[packId]/drill/page.tsx` (`@typescript-eslint/no-unused-vars`), two
-      are `<img>` that should be `next/image` in `Header` and `SideNav`, one is a
-      missing dep in `cards/page.tsx`. Small, but this is exactly the drift the
-      section is named for — warnings nobody reads become warnings nobody can
-      read.
-
-- [ ] **Lint covers `apps/web` only** — `@amgi/core` and `@amgi/mobile` have no
-      `lint` script, so `turbo lint` runs one package and reports success.
-      Honest today, misleading the moment it gates CI. Mobile needs
-      `eslint-config-expo` (`npx expo lint` installs it and writes the config);
-      core needs a small flat config of its own. Do it with the CI gate, not
-      before — a lint nobody runs is the thing this section is about.
+_The listing check earned its place on 2026-07-27: it still advertised five study
+languages after Traditional Chinese made six, and said nothing about account
+deletion — which Apple looks for under 5.1.1(v)._
 
 ## High
 
-_Added 2026-08-01. The first two are product work; the last three are defects
-found in use, and #3–#5 were each checked against the code before being written
-down — file references below are what was actually read, not guesses._
-
-- [ ] **Loosen the `/cards` filter** — decided 2026-08-01, still not built, and
-      the last structural piece of the pack work. Today `/cards` filters to
-      `getCollectionId(card) === null` at load, so a card belongs to a pack *or*
-      to your list. It should belong to both.
-      - `/cards` stops filtering at load and holds every card for the study
-        language.
-      - The **default view hides grid-layout packs only** — kana today. Keyed on
-        `pack.layout === 'grid'` rather than on pack ids, so a future
-        single-character pack inherits the rule without anyone remembering to
-        update a list. A word you can look up is vocabulary and belongs in your
-        list; a 107-character drill set would swamp it.
-      - A deck dimension reaches everything: `All / Mine / <each enrolled
-        deck>`. This is a **second axis**, orthogonal to the existing
-        `FilterKey` (`active | archived | all`) — not another chip in that row,
-        and conflating them is the easy mistake here.
-      - **Export follows the visible filter**, so what you see is what you get.
-        This deliberately leaves the Export item under Medium open.
-      - **Review must not change.** It reads `buildReviewCollections` and
-        `getCollectionId(card) === collectionId` and never touches the
-        cards-page filter. Verified 2026-08-01: the coupling is one `.filter()`
-        per platform at load time and nothing else reads it.
+- [ ] **Loosen the `/cards` filter** — decided 2026-08-01, not built; the last
+      structural piece of the pack work. Today a card belongs to a pack *or* to
+      your list; it should belong to both.
+      - `/cards` stops filtering at load and holds every card for the language.
+      - **Default view hides grid-layout packs only** — kana today. Keyed on
+        `pack.layout === 'grid'`, not on pack ids, so a future single-character
+        pack inherits the rule. A word you can look up is vocabulary; a
+        107-character drill set would swamp the list.
+      - A deck dimension reaches everything: `All / Mine / <each enrolled deck>`.
+        A **second axis**, orthogonal to `FilterKey` (`active | archived | all`) —
+        not another chip in that row. Conflating them is the easy mistake.
+      - **Export follows the visible filter**, which deliberately leaves the
+        Export item under Medium open.
+      - **Review must not change.** Verified 2026-08-01: the coupling is one
+        `.filter()` per platform at load and nothing else.
       - Both platforms carry a comment asserting the *old* rule
         (`cards/page.tsx:48-52`, `cards.tsx:48-52`). It encodes the reasoning
-        being reversed, so it has to be rewritten, not deleted.
+        being reversed — rewrite it, don't delete it.
 
-- [ ] **Onboarding: contextual tips** — the *first run* half of this item
-      shipped (see [status.md](status.md)); this is the other half, deliberately
-      kept separate because the two have different lifetimes and conflating them
-      is how onboarding becomes a tutorial nobody finishes.
+- [ ] **Onboarding: contextual tips** — the other half of the item whose *first
+      run* shipped. **Largely answered by PR #74**: the "?" on Learn, Packs and
+      Review is pull help and needs **no record of who has seen what**, which was
+      the blocker. Still unexplained: **drill, export, archive, and the Cards
+      page's two filter axes** — reach for another "?" before reaching for stored
+      state. Only a genuinely *pushed* tip brings the original problem back
+      (somewhere to record "seen tip X", plus a per-tip trigger that can't fire
+      before its feature exists for that user).
 
-      **Largely answered by PR #74**, which put a "?" in the page title on
-      Learn, Packs and Review. That is *pull* help, and it needs **no record of
-      who has seen what** — which was the blocker this item was written around.
-      Deriving beat storing again. Those three pages are done.
+- [ ] **Skeletons instead of spinners** — mobile has 23 `ActivityIndicator` uses
+      and one skeleton. Worst placement is the full-screen spinner a cold launch
+      opens on (`apps/mobile/app/(tabs)/index.tsx:370`, gated on `authLoading`):
+      first impression, whole screen, nothing on it. Web already skeletons the
+      WOTD card with `animate-pulse`, so the pattern exists to copy.
+      Order: (1) the `authLoading` spinner, (2) card and review lists, which have
+      a known row shape, (3) leave in-button spinners alone — the right control
+      for a button you just pressed.
 
-      Still unexplained: **drill, export, archive, and the Cards page's two
-      filter axes**. Reach for another "?" before reaching for stored state.
+## Medium
 
-      Only if a genuinely *pushed* tip is ever wanted does the original problem
-      return: somewhere to record "this user has seen tip X" (`users/{uid}` is
-      the obvious home), plus a trigger per tip that cannot fire before its
-      feature exists for that user — don't offer a drill tip to someone with no
-      deck enrolled. A pushed tip has no equivalent of the blocking modal's
-      guarantee, so that guard is on each trigger rather than on a framework.
+- [ ] **Vocabulary packs — iterate beyond v1.** Shipped: TOEIC (133), hiragana +
+      katakana, TOPIK 고급 (160), all now one pre-authored kind.
+      *Principles:* audience is not beginners; packs unlock domains, never
+      "starter" anything; curated from real sources, not AI-generated; word lists
+      need user approval before shipping.
+      *Next:* **JLPT** is the obvious gap — Japanese has only the kana packs, so a
+      learner past the scripts has nothing — then TOEFL. Swedish, French and
+      Traditional Chinese have **no pack at all**. Section themes as `/cards`
+      filters fold into the loosening item above.
+      **A new pack now needs backs drafted alongside its word list**, since no
+      kind ships without them. Drafts live in `docs/packs/`.
 
-- [ ] **Skeletons instead of spinners** — mobile has 23 `ActivityIndicator`
-      uses and one skeleton; the very first thing a cold launch shows is a
-      full-screen spinner (`apps/mobile/app/(tabs)/index.tsx:370`, gated on
-      `authLoading`), which is the worst placement of the 23 because it is the
-      first impression and it replaces the whole screen with nothing. Web is
-      further along — `page.tsx` already skeletons the word-of-the-day card with
-      `animate-pulse` — so the pattern exists to copy.
-      Priority order: (1) the `authLoading` full-screen spinner, (2) the card
-      and review lists, which have a known row shape and so skeleton cleanly,
-      (3) leave in-button spinners alone — a spinner inside a button the user
-      just pressed is the right control and does not want a skeleton.
-
-- [ ] **Vocabulary packs — iterate beyond v1** — shipped so far: TOEIC (PR #34,
-      133 words), hiragana + katakana (PR #49), TOPIK 고급 (PR #68, 160 words).
-      All three are now one kind — pre-authored, sectioned — since the
-      unification; `lookup` and `cards` no longer exist. *Principles (2026-07-13):* audience is not
-      beginners; packs unlock domains, never "starter" anything; curated from
-      real sources, not AI-generated; word lists need user approval before
-      shipping — with the scripts exception amended into
-      [vision.md](vision.md) 2026-07-24.
-      *Next:* **pre-authored content and section enrolment both shipped** in
-      the pack unification, and section enrolment closed the daily-draw question
-      rather than deferring it. Section themes as *filters* on `/cards` are
-      still open and now fold into the `/cards` loosening. More packs — **JLPT**
-      is the obvious gap
-      now (Japanese has only the kana packs, so a Japanese learner past the
-      scripts has nothing), then TOEFL. Swedish, French and Traditional Chinese
-      still have **no pack at all**.
-      Drafts live in `docs/packs/` — `toeic-pack-draft.md` and
-      `topik-pack-draft.md` for the word lists, `toeic-backs-draft.md` and
-      `topik-backs-draft.md` for the card backs — and are referenced from the
-      pack source files. **A new pack now needs backs drafted alongside its word
-      list**, since there is no longer a kind that ships without them.
-
-- [ ] **Export covers only your own cards** — noticed in PR #51, not decided.
-      `/cards` export reads the now-scoped list, so a CSV/Anki dump omits every
-      pack card. Consistent with what that surface means, but a *backup* that
-      silently drops 107 kana is a different thing from a scoped view. Either an
-      export on the deck page, or an "include pack cards" option — small either
-      way, but pick one deliberately.
-      _Deliberately still open after the 2026-08-01 `/cards` decision under
-      High. Export follows the visible filter there, which was chosen precisely
-      so this item stays a separate call — widening the load would otherwise
-      have resolved it as a silent side effect, and "the same tap now yields 107
-      more cards" is not a change to make by accident. Note the shape has
-      shifted though: once the filter is loosened, "include pack cards" is no
-      longer a new mechanism, just a choice about which axis export reads._
+- [ ] **Export covers only your own cards** — noticed in PR #51, not decided. A
+      CSV/Anki dump omits every pack card. Consistent with what `/cards` means,
+      but a *backup* that silently drops 107 kana is a different thing. Either an
+      export on the deck page or an "include pack cards" option — pick one
+      deliberately. Kept separate from the `/cards` loosening on purpose:
+      widening the load would resolve it as a silent side effect, and "the same
+      tap now yields 107 more cards" isn't a change to make by accident. Once the
+      filter is loosened it's no longer a new mechanism, just a choice of axis.
 
 - [ ] **Offline term capture** — jot terms to look up later, queued locally and
       resolved on reconnect. No model needed, just a queue and a flush.
 
-- [ ] **Grid view for cards** — denser scanning of a large deck. Nobody's
-      blocked on it.
+- [ ] **Grid view for cards** — denser scanning of a large deck. Nobody's blocked.
+
+## Bigger bets
+
+- [ ] **Grammar patterns — exercise, don't flashcard.** _Designed 2026-08-03;
+      ready to build._ Read first: the argument in [vision.md](vision.md), the
+      design calls in [status.md](status.md), the type in
+      [data-model.md](data-model.md). What follows is only staging.
+
+      Today a grammar pattern from a writing finding becomes an ordinary
+      `Flashcard` and is reviewed like a noun. The replacement: a pattern is its
+      own object and each review is a fresh **production** turn — a situation in
+      your native language, you write the sentence, `/api/writing` grades it.
+
+      - **(1a) Web, the cheap door.** `packages/core/src/grammar.ts` — types, a
+        tolerant parser, and **two** shared fetches: generating the situation and
+        grading are separate round trips (_n_ patterns = _2n_ calls). Grading is
+        `/api/writing` unchanged. Entry via the `WritingFinding.pattern?` sibling
+        to `card?`. Exercise screen: prompt never naming the pattern, free-text
+        production, two-tier hint that clamps the verdict, rewrite shown on every
+        verdict. Own row in the Review picker — a *signature change* to
+        `buildReviewCollections` plus an identity outside the pack-id namespace,
+        not a free call. `sm2.ts` unedited, but read the ease-ratchet warning
+        before assuming that means unaffected. Grading failure must never lose the
+        learner's typed sentence. One manual Firestore step (`uid + studyLanguage`).
+      - **(1b) Web, the expensive door.** The third `ExplainResult` arm on
+        `/api/explain` — the cold-start path, and the bulk of the work: six
+        language branches × the `if (context)` split = **12 prompt templates**.
+        Gates nothing in (1a), so do it second or defer it.
+      - **(2) Mobile parity** — JS-only, rides a build rather than needing one.
+      - **(3) Later, each independently useful:** produce-offline /
+        evaluate-on-reconnect; interleaving patterns into the vocab queue;
+        the acquisition signal, which needs ephemeral-submissions reopened.
+
+      **Three things are open**, all listed as such in status.md: whether the
+      learner may override a verdict (load-bearing — also the likeliest home for
+      the `easy` the ease ratchet otherwise removes), whether patterns interleave
+      into the vocab queue, and whether a tier-1 hint is ever offered unprompted.
+      **Spoken production is deliberately not here** — see conversation practice.
+
+- [ ] **Conversation practice** — _needs design._ Transcription + per-participant
+      feedback; MVP is end-of-conversation feedback on a recording. Same "here's
+      what you meant to say" model as writing review.
+      **Reuse `packages/core/src/writing.ts`**: `WritingFinding` and
+      `WritingCardCandidate` deliberately say nothing about writing, because
+      per-utterance feedback is the same job on a different capture. A parallel
+      copy is the drift that put `reviewQueue`/`drill`/`reminders` in core.
+      Now carries a third job: **spoken** grammar-pattern practice waits on this,
+      since the app has no ASR at all and solving capture twice is the same drift.
+      Scope the three together.
+
+- [ ] **Writing review: iterate past v1.** Nothing here blocks anyone.
+      - A multi-sentence rewrite is handed to `PronounceButton` untested — far
+        longer than that button has had, and Google TTS has length limits.
+      - Card backs still occasionally arrive as two glosses where one would do.
+        The rule permits two for necessity; the model reads it generously.
+      - Findings aren't streamed — `/api/writing` is a single JSON call, so a long
+        passage sits on a spinner. The upgrade is NDJSON-per-finding, exactly
+        `examples-stream` + `parseStreamedExamples`.
+      - `/api/writing` has no `try`/`catch`, so an outage or malformed response is
+        a 500. `/api/explain` has the same exposure — fix together or not at all.
+
+- [ ] **Should `/api/explain` allow two glosses too?** Surfaced 2026-07-31 by the
+      writing-review rule. `/api/explain` still says "single best translation" in
+      six prompt branches (12 templates). The reasoning that relaxed one applies,
+      but changing the core lookup loop is a bigger blast radius than a new
+      surface. Decide deliberately; if yes, all branches move together.
 
 ## Parked — generation features
 
-Deprioritized 2026-07-24. Both generate word lists for a user who hasn't asked
-for a specific word — a different, unproven job from the core "I met a word,
-explain and remember it" loop. Revisit after the language-depth work.
+Deprioritized 2026-07-24. Both generate word lists for a user who hasn't asked for
+a specific word — a different, unproven job from the core loop.
 
-- [ ] **Goal-based vocab lists: ambiguity + placement** — (1) ambiguous terms
-      are silently skipped; add a picker or pass the goal to `/api/explain` as
-      context. (2) Move generation out of the Import button into its own home.
-      Decide placement before building.
+- [ ] **Goal-based vocab lists: ambiguity + placement** — ambiguous terms are
+      silently skipped (add a picker, or pass the goal to `/api/explain` as
+      context); move generation out of the Import button. Decide placement first.
+- [ ] **Card generation (goal-based)** — Learn has a coming-soon placeholder. Lean
+      surface: goal input → checkboxes → one free-text refine field → save.
+      `/api/vocab-list` already takes `previousWords` + `feedback`.
 
-- [ ] **Card generation (goal-based)** — the Learn page has a coming-soon
-      placeholder. Lean surface: goal input → list with checkboxes → one
-      free-text refine field → save. `/api/vocab-list` already takes
-      `previousWords` + `feedback`; deliberately no too-basic/too-advanced chips.
+## Housekeeping — tooling that hides signal
 
-## Bigger bets — need design first
+`npm test` (175/175) and `npx eslint .` (0 errors) are green. What's left is what
+those two now *show*.
 
-_Writing review shipped in PR #69 (2026-08-01) and has left this section — see
-Shipped in [status.md](status.md), and the four design calls in Decisions there.
-What remains of it is open work in its own right and is listed below._
-
-- [ ] **Writing review: iterate past v1.** Nothing here blocks anyone; the loop
-      works end to end on web.
-      - **A multi-sentence rewrite is handed to `PronounceButton` untested.**
-        That's far longer than anything that button has been given before, and
-        Google TTS has length limits — check before assuming it degrades kindly.
-      - **Card backs still occasionally arrive as two glosses where one would
-        do.** The rule permits two for necessity; the model reads that
-        generously. Prompt-level, small.
-      - Findings are not streamed. `/api/writing` is a single JSON call, so a
-        long passage sits on a spinner. The upgrade is NDJSON-per-finding, which
-        is exactly `examples-stream` + `parseStreamedExamples`.
-      - `/api/writing` has no `try`/`catch`, so a Gemini outage or a malformed
-        model response is a 500. The client shows the right error either way,
-        and `/api/explain` has the same exposure — fix them together or not at
-        all.
-
-- [ ] **Should `/api/explain` allow two glosses too?** Surfaced 2026-07-31 by
-      the writing-review card-back rule (see Decisions in
-      [status.md](status.md)). Writing review now permits up to two glosses when
-      one would genuinely mislead; `/api/explain` still says "single best
-      translation — never list synonyms with semicolons or slashes", in six
-      prompt branches. The reasoning that relaxed one applies to the other, but
-      changing the core lookup loop's output is a bigger blast radius than a new
-      surface and wasn't done blind. Decide deliberately; if yes, all six
-      branches move together.
-
-- [ ] **Grammar patterns — exercise, don't flashcard.** _Design settled
-      2026-08-03; this section's "need design first" framing no longer applies
-      to this item._ The argument is in [vision.md](vision.md) (vocabulary is a
-      lookup table, grammar is a function, and a card runs the function on zero
-      arguments), the design calls are under Decisions in
-      [status.md](status.md), and the `GrammarPattern` type and collection call
-      are in [data-model.md](data-model.md). Read those before scoping; what
-      follows is only the staging.
-
-      Today a grammar pattern from a writing finding becomes an ordinary
-      `Flashcard` with a gloss on the back and is reviewed like a noun. The
-      replacement: a pattern is its own object, and each review is a fresh
-      **production** turn — a situation in your native language, you write the
-      sentence, `/api/writing`'s machinery grades it.
-
-      - **(1a) Web, the cheap door.** `packages/core/src/grammar.ts` — types, a
-        tolerant parser, and **two** shared fetches, not one: generating the
-        situation and grading the answer are separate round trips (a session of
-        _n_ patterns is _2n_ model calls). Grading is `/api/writing` unchanged;
-        only generation is new. Entry via the `WritingFinding.pattern?` sibling
-        to the existing `card?`, which is nearly free — `/api/writing` is
-        language-generic, one branch. The exercise screen: prompt in the native
-        language never naming the pattern, free-text production, two-tier hint
-        that clamps the verdict, native rewrite shown on every verdict. Own row
-        in the Review collection picker — which is a *signature change* to
-        `buildReviewCollections` plus an identity outside the pack-id namespace,
-        not a free call. Coarse model verdict; `sm2.ts` unedited, but read the
-        ease-ratchet warning in status.md before assuming that means unaffected.
-        Grading failure must never lose the learner's typed sentence. One manual
-        Firestore step (the `uid + studyLanguage` index).
-      - **(1b) Web, the expensive door.** The third `ExplainResult` arm on
-        `/api/explain`, which is the cold-start path. Costed separately because
-        it is the bulk of the work and gates nothing in (1a): six per-language
-        branches × the `if (context)` split = **12 prompt templates**. Do it
-        second, or defer it — patterns from your own writing are the emergent
-        path and the one the design actually argues for.
-      - **(2) Mobile parity**, the shape PR #69 → the writing-review parity
-        commits already followed. JS-only, so it rides a build rather than
-        needing one.
-      - **(3) Later, each independently useful:** produce-offline /
-        evaluate-on-reconnect (same queue-and-flush as `enqueueReview`);
-        interleaving patterns into the vocab queue once the session rhythm is
-        known; the acquisition signal, which needs the ephemeral-submissions
-        decision reopened first.
-
-      **Three things are open, not decided**, and all three are listed as such
-      in status.md: whether the learner may override a verdict (load-bearing —
-      it is also the likeliest home for the `easy` that the ease ratchet
-      otherwise removes), whether patterns interleave into the vocab queue, and
-      whether a tier-1 hint is ever offered unprompted. **Spoken production is
-      deliberately not here** — it is scoped with conversation practice below,
-      since it is the same capture problem and the app has no ASR at all.
-
-- [ ] **Conversation practice** — transcription + per-participant feedback; MVP
-      is end-of-conversation feedback on a recording. Same "here's what you
-      meant to say" model as Writing review — scope the two together.
-      **Reuse `packages/core/src/writing.ts`**: `WritingFinding` and
-      `WritingCardCandidate` deliberately say nothing about writing, because
-      per-utterance feedback is the same job on a different capture. Growing a
-      parallel copy is the drift that put `reviewQueue`/`drill`/`reminders` in
-      core in the first place.
-      _Now carries a third job (2026-08-03): **spoken** grammar-pattern practice
-      waits on this item, because the app has no ASR at all and solving capture
-      twice is the same drift. Whatever answers capture here answers it for
-      patterns too — so scope the three together, not two._
+- [ ] **13 React Compiler warnings, then turn the rules back up** —
+      `react-hooks/set-state-in-effect` (11) and `react-hooks/immutability` (2),
+      and they're real: a `useEffect` calling `setState` synchronously renders
+      twice on mount. Set to `warn` so landing the lint fix didn't mean landing 13
+      rushed ones. Most want `useSyncExternalStore`, so each is a small design
+      call, not a mechanical edit. Clear them, then delete the override —
+      **don't silence them further**, which is the failure mode the override exists
+      to avoid.
+- [ ] **Five more warnings accumulated since** (total 18) and are *not* covered
+      above: two dead bindings in `decks/[packId]/{page,drill/page}.tsx`, two
+      `<img>` that should be `next/image` (`Header`, `SideNav`), one missing dep
+      in `cards/page.tsx`.
+- [ ] **Lint covers `apps/web` only** — core and mobile have no `lint` script, so
+      `turbo lint` runs one package and reports success. Honest today, misleading
+      the moment it gates CI. Mobile needs `eslint-config-expo`, core a small flat
+      config. Do it with the CI gate, not before.
 
 ## Research / exploratory
 
 - [ ] **Offline definitions/translations** — the hard phase of Offline Amgi
-      (on-device model or pre-cached content). It was never allowed to block the
-      cheap offline work, and that held: offline review shipped in PR #53 and
-      offline term capture is still queued above, both without it.
-- [ ] **Training a language-learning model / survey existing ones** — spike:
-      what exists, whether fine-tuning beats prompting, what a first step looks
-      like. Would inform offline definitions.
+      (on-device model or pre-cached content). Never allowed to block the cheap
+      offline work, and that held.
+- [ ] **Training a language-learning model / survey existing ones** — spike: what
+      exists, whether fine-tuning beats prompting, what a first step looks like.
 
 ## Needs clarification
 
 - [ ] **Personalised explanation preferences** — emphasis knobs (etymology,
-      cultural context, example-heavy). Store in `users/{uid}`, include in the
-      prompt.
+      cultural context, example-heavy). Store in `users/{uid}`, include in prompt.
 - [ ] **Shared term cache** — `terms` collection keyed by normalized term +
-      language. Defer until traffic justifies it. Overlaps with pre-authored
-      pack content.
+      language. Defer until traffic justifies it. Overlaps with pre-authored packs.

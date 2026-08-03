@@ -42,16 +42,17 @@ Backlog priority mirrors the user's Google Tasks list — `backlog.md` is the
 scoped version of it.
 
 _Last reviewed against the codebase: 2026-08-03, `main` @ `111da4e` (PR #78).
-Grammar was designed and recorded without any code being written — the argument
-in `vision.md`, the `GrammarPattern` type and collection call in
-`data-model.md`, the design calls under Decisions in `status.md`, the staged
-build in `backlog.md`. Then re-checked line by line against the files it cites,
-which corrected six things the first pass got wrong or cheap: `/api/explain` is
-12 prompt templates rather than 6; `sm2.ts` is untouched as a file but its ease
-curve becomes a one-way ratchet once `easy` is never emitted; a patterns row is
-a signature change to `buildReviewCollections`, not a free call; `gloss` follows
-`PackBack` in being optional on both sides; a review is two model calls, not
-one, and grading can fail mid-session. A hint tier was added in the same pass —
-"no multiple choice" without it is a principle with a cliff behind it. The
-ephemeral-submissions decision stays marked as reopened rather than quietly
-contradicted. Previously 2026-08-02 @ `9a51a6e` (PR #71, the pack unification)._
+`npm test` 175/175, measured not assumed._
+
+_That pass did three things. **Grammar was designed** before any code — argument
+in `vision.md`, type in `data-model.md`, design calls in `status.md`, staging in
+`backlog.md` — then re-checked against the files it cites, which corrected six
+claims (12 `/api/explain` prompt templates not 6; `sm2.ts` unedited but its ease
+curve becomes a one-way ratchet without `easy`; a patterns row is a signature
+change to `buildReviewCollections`; `gloss` is optional both sides like
+`PackBack`; a review is two model calls; grading can fail mid-session) and added
+a hint tier. **`status.md` was compressed ~70%** — shipped history cut to one
+line per item and moved below Decisions, since the blow-by-blow is in git and the
+gotchas are in `lessons.md`. **`backlog.md` was reordered** to Queued → High →
+Medium → Bigger bets, with Housekeeping moved down and the lost `## Medium`
+heading restored. Previously 2026-08-02 @ `9a51a6e` (PR #71)._
