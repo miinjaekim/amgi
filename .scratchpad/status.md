@@ -930,6 +930,93 @@ the next person to notice the symptom.
     are the durable artifact. Reopen this if a progress-over-time surface is
     ever wanted — storing writing is the only way to show a level actually
     moving — but it's purely additive, so it isn't owed now.
+    ⚠️ **Being reopened** by the grammar-pattern design below, whose acquisition
+    signal needs exactly this. Still not owed; no longer settled.
+
+- **Grammar is patterns you exercise, not cards you flip** (2026-08-03). The
+  design calls, settled before any code. The *argument* — vocabulary is a lookup
+  table, grammar is a function, and a card runs the function on zero arguments —
+  is in [vision.md](vision.md), and it is the part to read first; these are the
+  consequences. The build is scoped in [backlog.md](backlog.md), the type in
+  [data-model.md](data-model.md).
+  - **A pattern review is a one-sentence writing review with a target.** Amgi
+    already owns the grading engine: `/api/writing` takes text and returns what
+    a native would have written plus what to notice, pitched at the level the
+    writing demonstrates. So the loop is — a prompt in the native language gives
+    a *situation and a meaning* ("tell me you were on your way to work when it
+    started raining"), the learner writes the sentence, and the native phrasing,
+    a verdict and the why come back through the same `WritingFinding` shape.
+    Nothing new is invented; the machine exists.
+  - **The prompt never names the pattern.** "Use `-다가` in a sentence" teaches
+    the label rather than the reach, and the reach is the whole skill. The
+    situation is chosen so the pattern is the natural way to say it, and the
+    learner has to arrive at it.
+  - **Every exercise is production — no multiple choice.** Offering candidates
+    does the retrieval for the learner; selecting between near-neighbours is
+    recognition wearing production's clothes. This was the user's call and it is
+    the tempting shortcut, which is why it's recorded rather than assumed.
+    *On the obvious objection:* a production turn costs the learner 20–60
+    seconds of thinking and typing, so a two-second evaluation after it is
+    invisible. The spinner-between-flashcards cost applies to recognition loops,
+    not to this one.
+  - **Verdicts are coarse, and SM-2 needs no change at all.** The model returns
+    *got it* → `good`, *nearly* (meaning landed, form slipped) → `hard`, *not
+    yet* (wrong pattern, or the meaning didn't land) → `again`. `easy` is simply
+    never produced, and `getNextReviewData` already takes all four, so
+    `packages/core/src/sm2.ts` is untouched. The native phrasing shows
+    regardless of verdict — a "got it" that still differs from what a native
+    would say is worth seeing, which is the same reasoning that put
+    `rewriteNative` on screen rather than behind a tap.
+    *Risk, recorded rather than solved:* a wrong harsh verdict demoralises in a
+    way a self-graded card never does. Mitigated by coarse verdicts (never a
+    score), the rewrite always visible so the reasoning is checkable, and the
+    note in the learner's own language. **Open:** whether the learner may
+    override the verdict.
+  - **Patterns get their own row in the Review collection picker — no fifth
+    tab.** `buildReviewCollections` (`packages/core/src/collections.ts`) is
+    already the mechanism for "which cards", and the picker already exists, so
+    this costs nothing. A pattern session is a different activity with a
+    different rhythm: a 40-second production turn dropped between two 3-second
+    card flips changes what Review feels like, and doing that silently is not a
+    change to make by accident. **Open:** interleaving patterns into the vocab
+    queue, which is the more ambitious call — make it once the rhythm is known.
+  - **Two ways in, both emergent.** From a **writing finding**, where a
+    `kind === 'grammar'` finding offers "Practice this pattern" instead of "Save
+    card" — cheapest shape is a `WritingFinding.pattern?` sibling to the
+    existing `card?`, since the model already distinguishes the two ("the
+    pattern itself for a grammar point"). And from **Learn**, by detection
+    rather than a third mode toggle: `/api/explain` already returns a
+    discriminated `ExplainResult = TermCore | TermAmbiguous`, so a pattern typed
+    into Learn returns a third arm and needs no new UI. Cost named up front —
+    that touches all six per-language prompt branches, which is already on
+    record as the real expense of any `/api/explain` change.
+  - **No curated grammar pack.** [vision.md](vision.md) argues twice against
+    configured levelling and an ordered grammar curriculum is precisely that.
+    The learner's errors are the syllabus; the Learn path covers cold start,
+    which is the only thing a pack was needed for.
+  - **Spoken production is scoped with conversation practice, not ahead of it.**
+    Speaking is the right end state and was asked for directly. The app has no
+    ASR anywhere — TTS out, nothing in. Web has the Web Speech API; mobile needs
+    a native module, which the no-OTA model makes a build of its own.
+    Conversation practice is already in the backlog with "transcription +
+    per-participant feedback" and is already told to reuse `writing.ts`. Solving
+    capture twice is the drift that put `reviewQueue`/`drill`/`reminders` in
+    core. v1 is typed production — recorded so nobody rebuilds it.
+  - **Pattern review requires a connection in v1.** Model-graded production
+    cannot work offline, and offline review (PR #53) is real and shipped. Both
+    platforms already know online state (`useOnlineStatus` on web,
+    `useNetworkStatus` on mobile), so the pattern row is disabled offline rather
+    than failing. The resolution path is *produce offline, evaluate on
+    reconnect* — the same queue-and-flush shape as `enqueueReview`/`reviewSync`
+    and the backlogged offline term capture. Path recorded; not built.
+  - **The acquisition signal is the north star, and it reopens a closed call.**
+    What makes this better than a flashcard in a way you can *measure*: writing
+    review classifies findings by kind and quotes the span, so a pattern that
+    **stops appearing as a grammar finding in your own writing** is evidence of
+    acquisition rather than a review count. That needs writing stored over time,
+    which the ephemeral-submissions decision above deliberately closed off — so
+    it is reopened explicitly here rather than assumed away. Not v1.
+
 - **Decks page: drilling lives there, not in Review** (2026-07-25). The
   alternative considered was letting Review pick a deck and leaving Decks as a
   passive display. Rejected because it makes Review mean two things: if a

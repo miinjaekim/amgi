@@ -94,6 +94,64 @@ which ones it uses. Further out: letting users configure which fields appear on
 their cards for a given deck (e.g. toggling off formality, adding a custom
 grammar note field).
 
+## `GrammarPattern` — designed 2026-08-03, not built
+
+A grammar pattern is **not a card**, and the reasoning is in
+[vision.md](vision.md): a card is a lookup-table row, and a grammar point is a
+function from stem + context + intended meaning to a form. It is a separate type
+with a separate review verb — you produce a sentence, you do not flip it.
+
+**This does not reintroduce the discriminated union**, and the distinction
+matters enough to state beside the warning above. That union was *one card
+subtype per language* — it scaled with the language axis, which is exactly the
+axis the registry replaced. A pattern is not a language variant of a card; it is
+a different kind of object, the way `PackEntry` and `WritingFinding` already
+are, and it is language-generic in the same way everything else here is. The
+warning stands unchanged: don't add `KoreanGrammarPattern` either.
+
+Proposed shape, for a new `packages/core/src/grammar.ts` (introduced the way
+`writing.ts` was — pure types, a tolerant parser, one shared fetch both apps
+call):
+
+```ts
+export interface GrammarPattern {
+  id?: string;
+  uid: string;
+  studyLanguage: StudyLanguage;
+  /** Citation form — `-다가`, `passé composé`. In the study language. */
+  pattern: string;
+  /** What it does, in a few words. Both backs, same rule as `PackBack`. */
+  gloss: { English: string; Korean: string };
+  /** One or two sentences on when to reach for it, in the native language. */
+  note?: string;
+  /** Provenance only, never identity — mirrors `packId`'s rule. */
+  source?: 'writing' | 'lookup';
+  createdAt: Date;
+  archived?: boolean;
+  /** One tracking, not two — see below. */
+  production?: ReviewTracking;
+}
+```
+
+**One `ReviewTracking`, not two.** A card carries `frontToBack` and
+`backToFront` because both are real skills. A pattern has one direction that
+matters — meaning → form. Recognising `-다가` in running text is comprehension
+of the *sentence*, and it comes free from reading; there is no second rung to
+schedule. Don't build a `backToFront` for patterns.
+
+**Exercises are not stored; patterns are.** The sentence you were asked to write
+is generated per review, the way depth and examples are generated on demand.
+Same rule as writing review's "submissions are ephemeral" — the pattern is the
+durable artifact.
+
+**One `patterns` collection, not one per language.** Cards shard per language
+because there are hundreds of them and the collection name routes the query.
+Patterns will number in the tens, so six near-empty collections buy nothing. One
+collection carrying `studyLanguage` on the document — which is already what
+makes a document self-describing here — is simpler. Cost, named so it isn't a
+surprise: a composite index on `uid + studyLanguage`, i.e. one of the two manual
+console steps below rather than both. Reversible if it turns out wrong.
+
 ## Firestore collections
 
 - `cards` — Korean deck (existing, untouched)
