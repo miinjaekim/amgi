@@ -41,8 +41,11 @@ leaves that file:
 Backlog priority mirrors the user's Google Tasks list — `backlog.md` is the
 scoped version of it.
 
-_Last reviewed against the codebase: 2026-08-02, `main` @ `9a51a6e` (PR #71,
-the pack unification). `data-model.md` gained a
-Packs section and `backlog.md`'s High tier was rewritten against what the change
-actually closed. Tests were run, not assumed: 175 passing, both apps typecheck.
-Previously 2026-08-01 @ `1c4f9c0` (PR #69, writing review)._
+_Last reviewed against the codebase: 2026-08-03, `main` @ `51a53e9` (1.2.0).
+Grammar was designed and recorded without any code being written — the argument
+in `vision.md`, the `GrammarPattern` type and collection call in
+`data-model.md`, twelve design calls under Decisions in `status.md`, the staged
+build in `backlog.md`. Every code reference in those entries was opened and
+checked rather than recalled, and the ephemeral-submissions decision is marked
+as reopened rather than quietly contradicted. Previously 2026-08-02 @ `9a51a6e`
+(PR #71, the pack unification)._

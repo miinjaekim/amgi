@@ -73,7 +73,7 @@ built:
 | | comprehension | production |
 |---|---|---|
 | **word** | Learn, `frontToBack` | `backToFront` ✅ |
-| **sentence** | — | **writing review** |
+| **sentence** | — | **writing review**, grammar patterns (below) |
 | **realtime** | — | conversation practice (backlog) |
 | **extended input** | reading / listening — nothing | — |
 
@@ -82,6 +82,57 @@ Writing review is therefore the next rung on an existing ladder, not a new axis
 reading/listening gap legible: those need *long input with comprehension
 checking*, which shares almost nothing with what's built, so they are their own
 bet and shouldn't be scoped into the output work.
+
+## Grammar: a lookup table and a function are different things
+
+_Added 2026-08-03. The design calls that follow from this are in Decisions in
+[status.md](status.md); the build is in [backlog.md](backlog.md)._
+
+Grammar today is one word in the type system — `FindingKind = 'grammar'` — plus
+the flashcards a writing finding offers. A pattern like `-다가` becomes an
+ordinary card with a gloss on the back, and is then reviewed the way a noun is.
+That does not work, and the reason is worth stating precisely, because "grammar
+is too big for a flashcard" is the wrong diagnosis and leads to bigger cards.
+
+**Vocabulary is a lookup table. Grammar is a function.**
+
+A flashcard *is* a lookup-table row, which is exactly why it is the right shape
+for a word. A grammar point is not a row: it takes a stem, a context and an
+intended meaning, and returns a form. You can hold a card reading "`-다가` =
+while doing X, then Y" and still be unable to use `-다가`, because knowing the
+row does not run the function. Worse, repeating the card teaches the *card* —
+recognition of your own prompt, not the pattern.
+
+Three things have to be learned about a grammar point, and a fixed
+prompt-answer pair tests none of them:
+
+1. **When to reach for it** — meaning → form. What production needs, and what
+   recognition never exercises.
+2. **How it attaches** — generative by definition: batchim and vowel harmony in
+   Korean, agreement in French, stem class in Swedish. A card shows one
+   instance; the rule spans all of them.
+3. **Why it and not its neighbour** — 은/는 vs 이/가, imparfait vs passé
+   composé. Nearly all real difficulty lives here, and it is invisible on a card
+   showing one pattern alone.
+
+So the unit is a **pattern you exercise**, not a card you flip, and every review
+is a fresh act of production rather than a replay.
+
+**Not multiple choice**, which is the tempting shortcut and is why this is
+written down. Offering candidates does the retrieval for the learner. Selecting
+between near-neighbours tests discrimination, which is real, but it is
+recognition wearing production's clothes and it does not become fluency. The
+learner has to *arrive* at the form.
+
+**Not a grammar syllabus either.** "Prefer adaptivity that is emergent, not
+configured" applies here with full force: an ordered grammar curriculum is the
+configured version of this and is not wanted. The patterns you practise are the
+ones your own writing showed you needed, plus the ones you asked about. Your
+errors are the syllabus.
+
+This fills the ladder's **sentence × production** cell properly — writing review
+diagnoses at sentence level, and this is the drilling that follows a diagnosis —
+and opens **sentence × comprehension**, which is still empty.
 
 ## Long-term vision
 

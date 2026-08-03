@@ -268,6 +268,43 @@ What remains of it is open work in its own right and is listed below._
       surface and wasn't done blind. Decide deliberately; if yes, all six
       branches move together.
 
+- [ ] **Grammar patterns — exercise, don't flashcard.** _Design settled
+      2026-08-03; this section's "need design first" framing no longer applies
+      to this item._ The argument is in [vision.md](vision.md) (vocabulary is a
+      lookup table, grammar is a function, and a card runs the function on zero
+      arguments), the twelve design calls are under Decisions in
+      [status.md](status.md), and the `GrammarPattern` type and collection call
+      are in [data-model.md](data-model.md). Read those before scoping; what
+      follows is only the staging.
+
+      Today a grammar pattern from a writing finding becomes an ordinary
+      `Flashcard` with a gloss on the back and is reviewed like a noun. The
+      replacement: a pattern is its own object, and each review is a fresh
+      **production** turn — a situation in your native language, you write the
+      sentence, `/api/writing`'s machinery grades it.
+
+      - **(1) Web v1.** `packages/core/src/grammar.ts` (types, tolerant parser,
+        one shared fetch — the shape `writing.ts` set). Both entry paths: the
+        `WritingFinding.pattern?` sibling, and the third `ExplainResult` arm on
+        `/api/explain` — the latter touches all six prompt branches, which is
+        the bulk of the cost. Own row in the Review collection picker via
+        `buildReviewCollections`. Typed production, coarse model verdict, `sm2.ts`
+        untouched. One manual Firestore step (the `uid + studyLanguage` index).
+      - **(2) Mobile parity**, the shape PR #69 → the writing-review parity
+        commits already followed. JS-only, so it rides a build rather than
+        needing one.
+      - **(3) Later, each independently useful:** produce-offline /
+        evaluate-on-reconnect (same queue-and-flush as `enqueueReview`);
+        interleaving patterns into the vocab queue once the session rhythm is
+        known; the acquisition signal, which needs the ephemeral-submissions
+        decision reopened first.
+
+      **Two things are open, not decided**, and both are listed as such in
+      status.md: whether the learner may override a verdict, and whether
+      patterns interleave into the vocab queue. **Spoken production is
+      deliberately not here** — it is scoped with conversation practice below,
+      since it is the same capture problem and the app has no ASR at all.
+
 - [ ] **Conversation practice** — transcription + per-participant feedback; MVP
       is end-of-conversation feedback on a recording. Same "here's what you
       meant to say" model as Writing review — scope the two together.
@@ -276,6 +313,10 @@ What remains of it is open work in its own right and is listed below._
       per-utterance feedback is the same job on a different capture. Growing a
       parallel copy is the drift that put `reviewQueue`/`drill`/`reminders` in
       core in the first place.
+      _Now carries a third job (2026-08-03): **spoken** grammar-pattern practice
+      waits on this item, because the app has no ASR at all and solving capture
+      twice is the same drift. Whatever answers capture here answers it for
+      patterns too — so scope the three together, not two._
 
 ## Research / exploratory
 
