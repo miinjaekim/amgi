@@ -272,7 +272,7 @@ What remains of it is open work in its own right and is listed below._
       2026-08-03; this section's "need design first" framing no longer applies
       to this item._ The argument is in [vision.md](vision.md) (vocabulary is a
       lookup table, grammar is a function, and a card runs the function on zero
-      arguments), the twelve design calls are under Decisions in
+      arguments), the design calls are under Decisions in
       [status.md](status.md), and the `GrammarPattern` type and collection call
       are in [data-model.md](data-model.md). Read those before scoping; what
       follows is only the staging.
