@@ -947,6 +947,22 @@ the next person to notice the symptom.
     started raining"), the learner writes the sentence, and the native phrasing,
     a verdict and the why come back through the same `WritingFinding` shape.
     Nothing new is invented; the machine exists.
+  - **A review is two model calls, and the failure path is part of the design.**
+    Generate the situation, then grade the answer. They cannot be collapsed —
+    the exercise must exist before there is anything to grade — so a session of
+    _n_ patterns is _2n_ calls where a vocab session of any length is zero. That
+    is this feature's running cost and it belongs next to the design, not on a
+    bill later. Only generation is new; grading is `/api/writing` unchanged.
+    Generation *can* be batched for the whole due set in one call if per-turn
+    latency disappoints — trading a slower start for faster turns — but that is
+    a real-sessions question, not a v1 one.
+    **Grading failing mid-session is the case with no obvious answer**, and it
+    is not the offline case (that one is handled by disabling the row). The
+    learner has already spent 40 seconds producing a sentence, so losing it is
+    the single outcome to rule out. v1: keep the text on screen, offer retry,
+    allow the turn to be skipped with no verdict — a skipped turn writes no
+    `ReviewTracking`, leaving the pattern due, which is the honest result. Never
+    write a verdict the model did not produce.
   - **The prompt never names the pattern.** "Use `-다가` in a sentence" teaches
     the label rather than the reach, and the reach is the whole skill. The
     situation is chosen so the pattern is the natural way to say it, and the
@@ -959,23 +975,84 @@ the next person to notice the symptom.
     seconds of thinking and typing, so a two-second evaluation after it is
     invisible. The spinner-between-flashcards cost applies to recognition loops,
     not to this one.
-  - **Verdicts are coarse, and SM-2 needs no change at all.** The model returns
+  - **A hint tier, because the blank textbox is the real failure mode.**
+    Refusing multiple choice is right, and it leaves a learner who cannot start
+    with nothing to do but submit something wrong. Two of those in a row is
+    where people close the app — and it lands hardest on exactly the patterns
+    that need the most practice. So the exercise screen carries one **Hint**
+    control, and taking it costs credit. Two tiers, in order:
+    1. **Shape, without the name** — "this is one sentence, not two: the first
+       action gets interrupted by the second." Points at the reach without
+       handing over the form, which is the rung most stuck learners are missing.
+    2. **The citation form itself** — `-다가`. The give-up rung, and honest
+       about being one; what remains is still production, since attaching the
+       pattern correctly is rungs 2 and 3 of the three in
+       [vision.md](vision.md).
+
+    **Hints clamp the verdict**: after tier 1 the best available verdict is
+    `hard`, after tier 2 it is `again`. This is what keeps the principle intact
+    — a pattern you could only produce with the answer in front of you is not
+    one you have, and the schedule is told so. It also means hints need no
+    scheduler work whatsoever: they cap an existing verdict, they never
+    introduce a new one. Note the interaction with the ease ratchet below —
+    clamping to `hard` costs ease permanently, so a hint is genuinely expensive
+    and should stay behind a deliberate tap.
+    Cost is nil: both tiers are generated with the situation in the same call,
+    so asking for one adds no round trip and nothing is revealed until asked.
+    **Open:** whether a tier-1 hint is offered unprompted after a long idle, or
+    only ever on request. Offering rescues the learner who won't ask; it also
+    interrupts someone who was thinking, and interrupting thinking is the exact
+    thing this design is built to protect. Decide from real sessions, not now.
+  - **Verdicts are coarse. `sm2.ts` is untouched as a file — but not as
+    behaviour, and the second half is the part to read.** The model returns
     *got it* → `good`, *nearly* (meaning landed, form slipped) → `hard`, *not
     yet* (wrong pattern, or the meaning didn't land) → `again`. `easy` is simply
-    never produced, and `getNextReviewData` already takes all four, so
-    `packages/core/src/sm2.ts` is untouched. The native phrasing shows
+    never produced, and `getNextReviewData` already takes all four, so not one
+    line of `packages/core/src/sm2.ts` changes. The native phrasing shows
     regardless of verdict — a "got it" that still differs from what a native
     would say is worth seeing, which is the same reasoning that put
     `rewriteNative` on screen rather than behind a tap.
+    ⚠️ *What does change is the ease curve, and it changes silently.* In
+    `getNextReviewData` (`sm2.ts:77`) `good` is exactly ease-neutral —
+    `+0.1 − 1×(0.08 + 0.02) = 0` — and `hard` is `−0.14`. `easy` (`+0.1`) is the
+    only response that raises ease, and it is precisely the one being excluded.
+    So for patterns, **ease becomes a one-way ratchet**: it falls and never
+    climbs back, where a card recovers through `easy`. A pattern you slipped on
+    once is scheduled more slowly than a card you know equally well, forever.
+    That is a real semantic change hiding behind an unchanged file, and it is
+    recorded here so it is not discovered halfway through the build. Two exits
+    when it bites, neither taken now: let the model emit `easy` for a first-try
+    answer that needed no rewrite at all, or make the learner's override (open,
+    below) the thing that produces it. Either way the override question is
+    load-bearing, not cosmetic.
     *Risk, recorded rather than solved:* a wrong harsh verdict demoralises in a
     way a self-graded card never does. Mitigated by coarse verdicts (never a
     score), the rewrite always visible so the reasoning is checkable, and the
     note in the learner's own language. **Open:** whether the learner may
     override the verdict.
+  - **`again` keeps a pattern due now, which reads differently here.**
+    `sm2.ts:79-89` deliberately leaves an `again` card due immediately so a
+    restarted session picks up exactly what was missed — right for cards, and
+    hard-won (it was a web/mobile divergence before it moved into core). For a
+    pattern, the native rewrite was on screen seconds earlier, so an immediate
+    retry is nearer to copying than to recall. A freshly generated situation
+    blunts this but does not remove it. Not a blocker, and *not* a reason to
+    touch `sm2.ts`: if it proves to matter, the fix is a floor on how soon a
+    missed pattern may reappear, applied where patterns are queued, leaving the
+    scheduler alone.
   - **Patterns get their own row in the Review collection picker — no fifth
     tab.** `buildReviewCollections` (`packages/core/src/collections.ts`) is
     already the mechanism for "which cards", and the picker already exists, so
-    this costs nothing. A pattern session is a different activity with a
+    the *surface* is free. The **function is not**, and "costs nothing" was too
+    quick: it is `(cards: Flashcard[], …) => ReviewCollection[]`, and
+    `ReviewCollection.id` carries a documented contract — "`null` is the cards
+    you made yourself; anything else is a pack id" — with `getCollectionId`
+    being literally `packId ?? null`. A patterns row therefore needs a second
+    input and an identity outside the pack namespace. Prefer a discriminating
+    field on `ReviewCollection` over a reserved id string: a reserved string is
+    one future pack id away from a collision, and this file is the one place
+    that grouping is decided. Small work, budgeted here so nobody opens it
+    expecting none. A pattern session is a different activity with a
     different rhythm: a 40-second production turn dropped between two 3-second
     card flips changes what Review feels like, and doing that silently is not a
     change to make by accident. **Open:** interleaving patterns into the vocab
@@ -987,9 +1064,14 @@ the next person to notice the symptom.
     pattern itself for a grammar point"). And from **Learn**, by detection
     rather than a third mode toggle: `/api/explain` already returns a
     discriminated `ExplainResult = TermCore | TermAmbiguous`, so a pattern typed
-    into Learn returns a third arm and needs no new UI. Cost named up front —
-    that touches all six per-language prompt branches, which is already on
-    record as the real expense of any `/api/explain` change.
+    into Learn returns a third arm and needs no new UI. Cost named up front, and
+    it is larger than "six branches": `apps/web/src/app/api/explain/route.ts`
+    has six per-language branches, but each splits again on `if (context)` into
+    two separately written prompts — **12 prompt templates, not 6**. That is the
+    real expense of any `/api/explain` change, and it is why the writing-finding
+    path ships first: `/api/writing` is language-generic (a single
+    `studyLanguage` branch, for a script rule), so that entry costs almost
+    nothing by comparison. Ship the cheap door, then the expensive one.
   - **No curated grammar pack.** [vision.md](vision.md) argues twice against
     configured levelling and an ordered grammar curriculum is precisely that.
     The learner's errors are the syllabus; the Learn path covers cold start,

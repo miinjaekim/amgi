@@ -283,13 +283,27 @@ What remains of it is open work in its own right and is listed below._
       **production** turn — a situation in your native language, you write the
       sentence, `/api/writing`'s machinery grades it.
 
-      - **(1) Web v1.** `packages/core/src/grammar.ts` (types, tolerant parser,
-        one shared fetch — the shape `writing.ts` set). Both entry paths: the
-        `WritingFinding.pattern?` sibling, and the third `ExplainResult` arm on
-        `/api/explain` — the latter touches all six prompt branches, which is
-        the bulk of the cost. Own row in the Review collection picker via
-        `buildReviewCollections`. Typed production, coarse model verdict, `sm2.ts`
-        untouched. One manual Firestore step (the `uid + studyLanguage` index).
+      - **(1a) Web, the cheap door.** `packages/core/src/grammar.ts` — types, a
+        tolerant parser, and **two** shared fetches, not one: generating the
+        situation and grading the answer are separate round trips (a session of
+        _n_ patterns is _2n_ model calls). Grading is `/api/writing` unchanged;
+        only generation is new. Entry via the `WritingFinding.pattern?` sibling
+        to the existing `card?`, which is nearly free — `/api/writing` is
+        language-generic, one branch. The exercise screen: prompt in the native
+        language never naming the pattern, free-text production, two-tier hint
+        that clamps the verdict, native rewrite shown on every verdict. Own row
+        in the Review collection picker — which is a *signature change* to
+        `buildReviewCollections` plus an identity outside the pack-id namespace,
+        not a free call. Coarse model verdict; `sm2.ts` unedited, but read the
+        ease-ratchet warning in status.md before assuming that means unaffected.
+        Grading failure must never lose the learner's typed sentence. One manual
+        Firestore step (the `uid + studyLanguage` index).
+      - **(1b) Web, the expensive door.** The third `ExplainResult` arm on
+        `/api/explain`, which is the cold-start path. Costed separately because
+        it is the bulk of the work and gates nothing in (1a): six per-language
+        branches × the `if (context)` split = **12 prompt templates**. Do it
+        second, or defer it — patterns from your own writing are the emergent
+        path and the one the design actually argues for.
       - **(2) Mobile parity**, the shape PR #69 → the writing-review parity
         commits already followed. JS-only, so it rides a build rather than
         needing one.
@@ -299,9 +313,11 @@ What remains of it is open work in its own right and is listed below._
         known; the acquisition signal, which needs the ephemeral-submissions
         decision reopened first.
 
-      **Two things are open, not decided**, and both are listed as such in
-      status.md: whether the learner may override a verdict, and whether
-      patterns interleave into the vocab queue. **Spoken production is
+      **Three things are open, not decided**, and all three are listed as such
+      in status.md: whether the learner may override a verdict (load-bearing —
+      it is also the likeliest home for the `easy` that the ease ratchet
+      otherwise removes), whether patterns interleave into the vocab queue, and
+      whether a tier-1 hint is ever offered unprompted. **Spoken production is
       deliberately not here** — it is scoped with conversation practice below,
       since it is the same capture problem and the app has no ASR at all.
 
