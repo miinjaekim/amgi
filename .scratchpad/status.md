@@ -3,16 +3,18 @@
 Session orientation: what's live, what's broken, what's decided. Shipped history
 sits at the bottom as reference — the reasoning worth keeping is in Decisions.
 
-_Reconciled against `main` @ `111da4e`, 2026-08-03. `npm test` 175/175._
+_Reconciled against `main` @ `111da4e`, 2026-08-03. `npm test` 175/175 — 186/186
+on `feature/loosen-cards-filter-and-skeletons`._
 
 ## Now
 
 - **1.2.0 is in TestFlight.** Submitted and accepted; **internal testing is
   live**, external is waiting on Beta App Review.
-- **Nothing is queued behind it** — every merged mobile change is in this build,
-  and `main` has only docs since (#77, #78).
-- **No code is in flight.** Next thing to build comes from
-  [backlog.md](backlog.md).
+- **Mobile changes are now queued behind it.** The `/cards` loosening and the
+  first skeletons are JS-only, so they need a build to reach a tester but no
+  native pass. See Builds below for the pre-flight.
+- **In flight:** `feature/loosen-cards-filter-and-skeletons`. Next thing to build
+  comes from [backlog.md](backlog.md).
 
 TestFlight context that isn't in the repo:
 
@@ -92,11 +94,12 @@ consistent with what `/cards` means, and neither of the sketched fixes (an expor
 on the deck page, an "include pack cards" toggle) has a user behind it.
 
 Consequence to know about, since it lands without anyone choosing it: **export
-follows the visible filter**, so when the `/cards` loosening ships, an export
-taken on the default view starts including pack cards. The old item kept the two
-apart precisely so that wouldn't happen silently — that caution is now spent
-deliberately rather than by accident. If the wider dump is ever wrong, the axis
-is already there to narrow it.
+follows the visible filter**, so an export taken on the default view now includes
+pack cards. The old item kept the two apart precisely so that wouldn't happen
+silently — that caution is now spent deliberately rather than by accident. If the
+wider dump is ever wrong, the axis is already there to narrow it. _Shipped in #80
+(08-04), which also dropped the Anki export's own archived skip: with the filter
+in charge, a second one would hand you an empty file from the Archived tab._
 
 ### Grammar is patterns you exercise, not cards you flip (2026-08-03)
 
@@ -362,6 +365,20 @@ the change is in Decisions above; durable gotchas are in
   `collectionId`.
 
 **Packs, decks & collections**
+- **`/cards` holds every card, packs included** (#80, 08-04) — the last
+  structural piece of the pack work, and the reversal of the "pack cards left
+  `/cards` entirely" line below: a card belongs to a pack *and* to your list. The
+  load stopped filtering; a **second axis** narrows instead — Everything / Mine /
+  each enrolled deck, in its own row, orthogonal to active/archived. `all` leaves
+  out `layout === 'grid'` packs only, so kana is hidden but still one chip away
+  and a future single-character pack inherits the rule. `filterCardsByDeck` and
+  `buildDeckFilters` are in `collections.ts`, shared by both platforms.
+  Deck chips are built from **all** cards, not the status-filtered ones — the
+  other order retires a chip the moment its deck has nothing archived, including
+  the selected one. **Export follows the visible filter**, which is why the Anki
+  export lost its own archived skip and `cardsExportCSV` lost "(all cards)".
+  Review untouched (it filters by collection itself); `deckManageHint` deleted as
+  a dead key asserting the old rule.
 - **Packs unified into one pre-authored kind** (#71, 08-02) — `lookup`/`cards`,
   `LookupPack`, `CardPack`, `PackWord`, `PackCard` all gone. Every pack is
   `PackEntry {study, back, context?}` in named `PackSection`s, with `layout` and
@@ -373,7 +390,8 @@ the change is in Decisions above; durable gotchas are in
   collections, reviewed apart. `getCollectionId` is the one place `packId` is read
   for grouping. `isDue` moved into core with one signature (the two copies
   disagreed). Review lands on the collection picker; direction chips moved inside.
-  Pack cards left `/cards` entirely. Decks became a nav item on both platforms.
+  Pack cards left `/cards` entirely — reversed by #80 above. Decks became a nav
+  item on both platforms.
 - **Decks page** (#50, 07-25) — `PacksModal` retired; `/decks` and `/decks/[packId]`.
   `packId` on saved cards is **provenance only** — progress still matches on the
   study side. **Drill** added the same branch: shuffled prompt → reveal →
@@ -450,6 +468,15 @@ the change is in Decisions above; durable gotchas are in
   have the last word. See [lessons.md](lessons.md).
 
 **Learn screen**
+- **Skeletons for the three worst spinners** (#80, 08-04) — the full-screen one a
+  cold launch opened on (`authLoading`, first impression, nothing on it), plus
+  the card and review lists. Each is laid out as the surface that replaces it, so
+  the load resolves into position instead of swapping a centred wheel for a full
+  screen. The cold-launch one is text-free for a second reason: `nativeLanguage`
+  is still undefined there, so any label would render in English and correct
+  itself a beat later. `Skeleton.tsx` drives every bar from **one** shared
+  `Animated.Value` — per-bar loops drift apart within seconds — stops it when the
+  last bar unmounts, and honours Reduce Motion. In-button spinners left alone.
 - **Keyboard + generate link** (#60, 07-27) — the search bar now sits above a band
   held open at 46% of screen height, so the field doesn't move on focus. 46% is
   *tuned, not measured*: measuring means reacting, and reacting means movement.
