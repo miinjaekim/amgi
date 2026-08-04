@@ -243,11 +243,21 @@ const translations = {
     cardsFilterActive: 'Active',
     cardsFilterArchived: 'Archived',
     cardsFilterAll: 'All',
-    // Deck axis, a row of its own. Not "All" again: it sits directly under the
+    // Deck axis. Not "All" again: on web it sits directly under the
     // active/archived row, and two chips reading the same word doing different
     // things is the confusion the separate row exists to avoid.
     cardsDeckAll: 'Everything',
     cardsDeckMine: 'Mine',
+    // Mobile filter sheet. Group headings, not control names: the chips under
+    // each one say what they do, and a heading that repeated them would be
+    // twice the words for the same fact.
+    cardsFilterDeckGroup: 'Which cards',
+    cardsFilterStatusGroup: 'Show',
+    cardsFilterSortGroup: 'Sort',
+    cardsFilterDone: 'Done',
+    // The button that opens it reads out the current selection, so the label a
+    // screen reader needs is the verb the text is missing.
+    cardsFilterButtonLabel: 'Change filters',
     cardsEmpty: 'No cards found.',
     cardsSignInPrompt: 'Sign in to see your flashcards.',
     cardsGoLearn: 'Go to Learn →',
@@ -570,6 +580,13 @@ const translations = {
     // two chips reading alike side by side.
     cardsDeckAll: '모든 카드',
     cardsDeckMine: '내 카드',
+    // '어떤 카드' over '단어팩': the chips under it include 모든 카드 and 내 카드,
+    // which are not packs, so naming the group after packs would be wrong.
+    cardsFilterDeckGroup: '어떤 카드',
+    cardsFilterStatusGroup: '상태',
+    cardsFilterSortGroup: '정렬',
+    cardsFilterDone: '완료',
+    cardsFilterButtonLabel: '필터 변경',
     cardsEmpty: '카드가 없습니다.',
     cardsSignInPrompt: '플래시카드를 보려면 로그인하세요.',
     cardsGoLearn: '학습 페이지로 →',

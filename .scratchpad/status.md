@@ -379,6 +379,16 @@ the change is in Decisions above; durable gotchas are in
   export lost its own archived skip and `cardsExportCSV` lost "(all cards)".
   Review untouched (it filters by collection itself); `deckManageHint` deleted as
   a dead key asserting the old rule.
+  **The platforms diverge on the control, deliberately.** Web has the room for
+  two chip rows and reads well with them. Mobile did not — deck, status and sort
+  came to three rows plus search, half a screen of chrome before the first card,
+  to answer a question you ask once. All three moved behind one summary button
+  (`FilterSheet.tsx`) that states what is currently on, which a row of chips
+  never did well: it shows what is *available* and leaves you to spot which one
+  is lit. Counts went with them, since a count informs the choice and belongs
+  where the choice is made. Selections apply on tap, so there is no draft state
+  and "Done" only closes. Section themes as filters land as a fourth group here,
+  not a fourth row.
 - **Packs unified into one pre-authored kind** (#71, 08-02) — `lookup`/`cards`,
   `LookupPack`, `CardPack`, `PackWord`, `PackCard` all gone. Every pack is
   `PackEntry {study, back, context?}` in named `PackSection`s, with `layout` and

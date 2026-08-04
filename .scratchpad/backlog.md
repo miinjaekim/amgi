@@ -54,7 +54,8 @@ deletion — which Apple looks for under 5.1.1(v)._
       learner past the scripts has nothing — then TOEFL. Swedish, French and
       Traditional Chinese have **no pack at all**. Section themes as `/cards`
       filters are now a third rung on the deck axis that shipped — a chip per
-      section under the pack you picked — not a new control.
+      section under the pack you picked — not a new control: a fourth group in
+      mobile's filter sheet, a third chip row on web.
       **A new pack now needs backs drafted alongside its word list**, since no
       kind ships without them. Drafts live in `docs/packs/`.
 
