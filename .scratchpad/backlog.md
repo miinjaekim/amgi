@@ -45,22 +45,15 @@ deletion — which Apple looks for under 5.1.1(v)._
       - A deck dimension reaches everything: `All / Mine / <each enrolled deck>`.
         A **second axis**, orthogonal to `FilterKey` (`active | archived | all`) —
         not another chip in that row. Conflating them is the easy mistake.
-      - **Export follows the visible filter**, which deliberately leaves the
-        Export item under Medium open.
+      - **Export follows the visible filter** — so once the load widens, an
+        export taken on the default view carries pack cards too. That's the
+        accepted outcome, not an oversight: the separate export item was
+        cancelled 2026-08-04 (see Decisions in [status.md](status.md)).
       - **Review must not change.** Verified 2026-08-01: the coupling is one
         `.filter()` per platform at load and nothing else.
       - Both platforms carry a comment asserting the *old* rule
         (`cards/page.tsx:48-52`, `cards.tsx:48-52`). It encodes the reasoning
         being reversed — rewrite it, don't delete it.
-
-- [ ] **Onboarding: contextual tips** — the other half of the item whose *first
-      run* shipped. **Largely answered by PR #74**: the "?" on Learn, Packs and
-      Review is pull help and needs **no record of who has seen what**, which was
-      the blocker. Still unexplained: **drill, export, archive, and the Cards
-      page's two filter axes** — reach for another "?" before reaching for stored
-      state. Only a genuinely *pushed* tip brings the original problem back
-      (somewhere to record "seen tip X", plus a per-tip trigger that can't fire
-      before its feature exists for that user).
 
 - [ ] **Skeletons instead of spinners** — mobile has 23 `ActivityIndicator` uses
       and one skeleton. Worst placement is the full-screen spinner a cold launch
@@ -84,15 +77,6 @@ deletion — which Apple looks for under 5.1.1(v)._
       filters fold into the loosening item above.
       **A new pack now needs backs drafted alongside its word list**, since no
       kind ships without them. Drafts live in `docs/packs/`.
-
-- [ ] **Export covers only your own cards** — noticed in PR #51, not decided. A
-      CSV/Anki dump omits every pack card. Consistent with what `/cards` means,
-      but a *backup* that silently drops 107 kana is a different thing. Either an
-      export on the deck page or an "include pack cards" option — pick one
-      deliberately. Kept separate from the `/cards` loosening on purpose:
-      widening the load would resolve it as a silent side effect, and "the same
-      tap now yields 107 more cards" isn't a change to make by accident. Once the
-      filter is loosened it's no longer a new mechanism, just a choice of axis.
 
 - [ ] **Offline term capture** — jot terms to look up later, queued locally and
       resolved on reconnect. No model needed, just a queue and a flush.

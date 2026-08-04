@@ -69,6 +69,35 @@ the production `EXPO_PUBLIC_API_BASE_URL`.
 Closed calls, kept with their reasoning — a decision whose reasoning is lost gets
 reopened by the next person to notice the symptom. Newest first.
 
+### Contextual tips: cancelled, pull help is the answer (2026-08-04)
+
+Dropped from the backlog, not deferred. The "?" shipped in PR #74 on Learn, Packs
+and Review **is** the answer to contextual help: it's pull, so it needs no record
+of who has seen what — which was the item's only hard problem.
+
+The surfaces the old item still listed as unexplained — drill, export, archive,
+and the Cards page's two filter axes — get another "?" if they turn out to need
+one. That's a small addition to an existing pattern, not a feature to carry on a
+list. **Reopen only for a genuinely *pushed* tip**, which brings back both costs
+at once: somewhere to store "seen tip X", and a per-tip trigger that must not
+fire before that feature exists for that user. Nothing observed so far justifies
+either. Sits with *Onboarding is not a checklist* below: the fix for "onboarding
+is just text" is never another widget describing the app.
+
+### Export stays as it is — own cards only (2026-08-04)
+
+Cancelled for the plainest reason: **nobody has asked.** It was noticed in PR #51
+and written down, never requested. That a CSV/Anki dump omits pack cards is
+consistent with what `/cards` means, and neither of the sketched fixes (an export
+on the deck page, an "include pack cards" toggle) has a user behind it.
+
+Consequence to know about, since it lands without anyone choosing it: **export
+follows the visible filter**, so when the `/cards` loosening ships, an export
+taken on the default view starts including pack cards. The old item kept the two
+apart precisely so that wouldn't happen silently — that caution is now spent
+deliberately rather than by accident. If the wider dump is ever wrong, the axis
+is already there to narrow it.
+
 ### Grammar is patterns you exercise, not cards you flip (2026-08-03)
 
 Designed before any code. The *argument* is in [vision.md](vision.md) and is the

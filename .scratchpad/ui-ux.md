@@ -65,8 +65,10 @@ labels in `app/(tabs)/settings.tsx`). No System option yet — see open question
   the setup modal. A *guided first search* — running an example lookup for you
   end-to-end — was the considered alternative and was not taken; it is the most
   to build and the most to get wrong on a surface the user hasn't asked anything
-  of yet. Still open for **contextual tips**, which is the other half of the
-  backlog item and where tooltip hints would actually live.
+  of yet. **Closed entirely 2026-08-04**: contextual tips were cancelled — the
+  "?" pull help on Learn, Packs and Review is the answer, and any surface still
+  needing explanation gets another "?" rather than a pushed tip. See Decisions
+  in [status.md](status.md).
 - Packs: should section themes (verbs / familiar-words-new-meanings /
   adjectives / nouns) surface as filter chips, or stay an editorial convenience?
 - Daily-draw UX for packs: swipeable word feed, checklist, or "show me N I
