@@ -13,8 +13,10 @@ on `feature/loosen-cards-filter-and-skeletons`._
 - **Mobile changes are now queued behind it.** The `/cards` loosening and the
   first skeletons are JS-only, so they need a build to reach a tester but no
   native pass. See Builds below for the pre-flight.
-- **In flight:** `feature/loosen-cards-filter-and-skeletons`. Next thing to build
-  comes from [backlog.md](backlog.md).
+- **In flight:** PR #80, `feature/loosen-cards-filter-and-skeletons` — open, not
+  merged. Checked on web and **on a device in Expo Go** (2026-08-04): the filter
+  sheet and the skeletons both behave. Next thing to build comes from
+  [backlog.md](backlog.md).
 
 TestFlight context that isn't in the repo:
 
