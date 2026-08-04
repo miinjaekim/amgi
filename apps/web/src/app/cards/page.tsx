@@ -382,57 +382,45 @@ export default function CardsPage() {
               until a pack has produced a card, since until then it would be a
               row of chips that all select the same list.
 
-              Both rows are labelled, and only because both now hold a chip
-              called "All" — one meaning every deck, one meaning every status.
-              Adjacent and unlabelled they read as one control with two
-              selections; the headings are what make them two questions. */}
+              Neither row is labelled. They were, briefly, when both held a chip
+              called "All" and needed a heading to say which "all" was which —
+              renaming the status one to "Both" removed the ambiguity at its
+              source, and headings that only exist to disambiguate should go
+              when the ambiguity does. The fills still separate the rows: `text`
+              here, `highlight` below. */}
           {deckFilters.length > 0 && (
-            <div className="mb-3">
-              <div className="text-xs uppercase tracking-wide text-[var(--color-muted)] mb-1.5">
-                {t(nativeLanguage, 'cardsFilterDeckGroup')}
-              </div>
-              <div className="flex gap-2 flex-wrap">
-                {deckFilters.map(deck => (
-                  <button
-                    key={deck.id}
-                    onClick={() => { setDeckKey(deck.id); exitSelectMode(); }}
-                    className="px-3 py-1.5 rounded-lg text-sm font-mono border transition-colors"
-                    style={activeDeck === deck.id
-                      ? { background: 'var(--color-text)', color: 'var(--color-bg)', borderColor: 'var(--color-text)' }
-                      : { background: 'transparent', color: 'var(--color-muted)', borderColor: 'var(--color-muted)' }}
-                  >
-                    {deck.name}
-                    <span className="ml-1 opacity-60">({deck.count})</span>
-                  </button>
-                ))}
-              </div>
+            <div className="flex gap-2 mb-3 flex-wrap">
+              {deckFilters.map(deck => (
+                <button
+                  key={deck.id}
+                  onClick={() => { setDeckKey(deck.id); exitSelectMode(); }}
+                  className="px-3 py-1.5 rounded-lg text-sm font-mono border transition-colors"
+                  style={activeDeck === deck.id
+                    ? { background: 'var(--color-text)', color: 'var(--color-bg)', borderColor: 'var(--color-text)' }
+                    : { background: 'transparent', color: 'var(--color-muted)', borderColor: 'var(--color-muted)' }}
+                >
+                  {deck.name}
+                  <span className="ml-1 opacity-60">({deck.count})</span>
+                </button>
+              ))}
             </div>
           )}
 
           {/* Filter tabs */}
-          <div className="mb-4">
-            {/* Only when there is a deck row to be confused with. A heading
-                over the one chip row on screen labels nothing. */}
-            {deckFilters.length > 0 && (
-              <div className="text-xs uppercase tracking-wide text-[var(--color-muted)] mb-1.5">
-                {t(nativeLanguage, 'cardsFilterStatusGroup')}
-              </div>
-            )}
-            <div className="flex gap-2 flex-wrap">
-              {filterOptions.map(opt => (
-                <button
-                  key={opt.key}
-                  onClick={() => { setFilterKey(opt.key); exitSelectMode(); }}
-                  className="px-3 py-1.5 rounded-lg text-sm font-mono border transition-colors"
-                  style={filterKey === opt.key
-                    ? { background: 'var(--color-highlight)', color: 'var(--color-bg)', borderColor: 'var(--color-highlight)' }
-                    : { background: 'transparent', color: 'var(--color-text)', borderColor: 'var(--color-muted)' }}
-                >
-                  {opt.label}
-                  <span className="ml-1 opacity-60">({opt.count})</span>
-                </button>
-              ))}
-            </div>
+          <div className="flex gap-2 mb-4 flex-wrap">
+            {filterOptions.map(opt => (
+              <button
+                key={opt.key}
+                onClick={() => { setFilterKey(opt.key); exitSelectMode(); }}
+                className="px-3 py-1.5 rounded-lg text-sm font-mono border transition-colors"
+                style={filterKey === opt.key
+                  ? { background: 'var(--color-highlight)', color: 'var(--color-bg)', borderColor: 'var(--color-highlight)' }
+                  : { background: 'transparent', color: 'var(--color-text)', borderColor: 'var(--color-muted)' }}
+              >
+                {opt.label}
+                <span className="ml-1 opacity-60">({opt.count})</span>
+              </button>
+            ))}
           </div>
 
           {/* Sort + count + Select row */}

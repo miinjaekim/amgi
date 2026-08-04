@@ -376,11 +376,18 @@ the change is in Decisions above; durable gotchas are in
   **The default is `mine`, not `all`** (`DEFAULT_DECK_FILTER`, pinned by a test):
   the page is called My Cards, so it opens on them and widening to a pack is
   deliberate. It is also where a selection lands when the deck it pointed at
-  stops existing. Both chip rows on web carry a **group heading**, and only
-  because both hold a chip called "All" — one meaning every deck, one every
-  status; adjacent and unlabelled they read as one control with two selections.
-  Korean keeps '모든 카드' where English went to a bare "All", so 전체 isn't
-  printed twice.
+  stops existing. The status chip is **"Both" (둘 다), not "All"** — there are
+  exactly two states, so it is the more precise word, and it stops that chip
+  reading identically to the deck row's "All", which means something else.
+  Web briefly carried group headings to disambiguate the two; renaming fixed it
+  at the source, so the headings went and the rows are told apart by fill alone
+  (`text` vs `highlight`). The headings survive in mobile's sheet, where they
+  are structure rather than a patch.
+  _Considered and rejected: dropping the both-states option altogether. It is
+  what makes search state-agnostic — "did I already save this?" is asked without
+  knowing whether you archived it — and, now that export follows the filter, the
+  only way to get a complete library into one file. The CSV's Status column
+  exists for exactly that export._
   Deck chips are built from **all** cards, not the status-filtered ones — the
   other order retires a chip the moment its deck has nothing archived, including
   the selected one. **Export follows the visible filter**, which is why the Anki

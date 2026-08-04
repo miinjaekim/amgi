@@ -242,16 +242,17 @@ const translations = {
     cardsSortAZ: 'A → Z',
     cardsFilterActive: 'Active',
     cardsFilterArchived: 'Archived',
-    cardsFilterAll: 'All',
-    // Deck axis. "All" collides with the status chip of the same name, which is
-    // what the group headings below are for — on web they label the two rows,
-    // in the sheet they separate them. Without a heading the collision is real:
-    // two adjacent chips reading "All" that mean different things.
+    // "Both", not "All". There are exactly two states, so "both" is the more
+    // precise word anyway — and it keeps this chip from reading identically to
+    // the deck row's "All", which means something else entirely. Two adjacent
+    // chips with one label and two meanings is worse than a longer word.
+    cardsFilterAll: 'Both',
+    // Deck axis.
     cardsDeckAll: 'All',
     cardsDeckMine: 'My Cards',
-    // Group headings, not control names: the chips under each one say what they
-    // do, and a heading that repeated them would be twice the words for the
-    // same fact.
+    // Mobile filter sheet. Group headings, not control names: the chips under
+    // each one say what they do, and a heading that repeated them would be
+    // twice the words for the same fact.
     cardsFilterDeckGroup: 'Which cards',
     cardsFilterStatusGroup: 'Show',
     cardsFilterSortGroup: 'Sort',
@@ -576,10 +577,11 @@ const translations = {
     cardsSortAZ: '가나다순',
     cardsFilterActive: '활성',
     cardsFilterArchived: '보관됨',
-    cardsFilterAll: '전체',
-    // Left as '모든 카드' where English went to a bare "All": it already reads
-    // as "all cards", so it says the same thing without putting a second 전체
-    // next to the status chip that owns the word.
+    // '전체' → '둘 다': states the two-ness the English "Both" does, and leaves
+    // '전체' free for the deck row, where "everything" is what is meant.
+    cardsFilterAll: '둘 다',
+    // '모든 카드' rather than a bare '전체' — it reads as "all cards", which is
+    // exactly the scope this chip selects.
     cardsDeckAll: '모든 카드',
     cardsDeckMine: '내 카드',
     // '어떤 카드' over '단어팩': the chips under it include 모든 카드 and 내 카드,
