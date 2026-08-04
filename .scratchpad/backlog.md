@@ -13,9 +13,11 @@ build, a second rides along free rather than costing a build of its own.
 
 ## Queued for the next build
 
-**Nothing queued.** 1.2.0 carries every merged mobile change; `main` has only
-docs since. See Builds in [status.md](status.md) for its contents and for what
-remains unverified on a real binary.
+**One item queued: PR #80** (merged 2026-08-04) — `/cards` holds pack cards, the
+mobile filter sheet, the first skeletons. JS-only, no native module, so no
+`expo config --type introspect` pass. 1.2.0 carries everything before it. See
+Builds in [status.md](status.md) for its contents and for what remains unverified
+on a real binary.
 
 _1.2.0 status: submitted and accepted, **internal testing live**, external
 waiting on Beta App Review._
