@@ -11,7 +11,8 @@ import {
   getCardsCollection,
   Flashcard,
 } from '@/services/firestore';
-import { getBackSide, getBackSideConfig, getCharacterBreakdown, getCollectionId, getExampleSides, getStudyLanguageConfig } from '@amgi/core';
+import { buildDeckFilters, filterCardsByDeck, getBackSide, getBackSideConfig, getCharacterBreakdown, getExampleSides, getStudyLanguageConfig } from '@amgi/core';
+import type { DeckFilterId } from '@amgi/core';
 import { db } from '@/config/firebase';
 import { doc, updateDoc } from 'firebase/firestore';
 import { t } from '@/lib/i18n';
@@ -43,6 +44,7 @@ export default function CardsPage() {
   const [search, setSearch] = useState('');
   const [sortKey, setSortKey] = useState<SortKey>('newest');
   const [filterKey, setFilterKey] = useState<FilterKey>('active');
+  const [deckKey, setDeckKey] = useState<DeckFilterId>('all');
   const [editingCardId, setEditingCardId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState<{ studySide: string; backSide: string } | null>(null);
   const [detailCard, setDetailCard] = useState<Flashcard | null>(null);
@@ -61,15 +63,17 @@ export default function CardsPage() {
   const getStudySide = (card: Flashcard) =>
     card[langConfig.studyField] ?? card.term ?? '';
 
-  // Only the cards you made yourself. A pack's cards are a collection of their
-  // own — reviewed apart and managed on the deck page — and "these are mine" is
-  // what makes this surface coherent, so they are absent rather than filtered
-  // out by a chip. Everything below (counts, select-all, export) reads
-  // `allCards`, so it all follows from this one scoping.
+  // Every card for this language, packs included. A card used to belong to a
+  // pack *or* to your list, and the load dropped anything with a `packId` — but
+  // a pack word you have saved is a card you own, and hiding it here left you
+  // searching a library that was missing half of itself. What replaces the cut
+  // is the deck chips below: a dimension you can widen or narrow, rather than a
+  // decision taken before the data arrives. Review is unaffected — it filters
+  // by collection itself.
   const loadCards = (uid: string) => {
     setLoading(true);
     fetchAllUserFlashcards(uid, studyLanguage)
-      .then(cards => setAllCards(cards.filter(card => getCollectionId(card) === null)))
+      .then(setAllCards)
       .catch(() => setAllCards([]))
       .finally(() => setLoading(false));
   };
@@ -80,8 +84,22 @@ export default function CardsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, studyLanguage]);
 
+  // The chips to offer and which one is lit. `deckKey` is validated against the
+  // offered chips rather than reset by an effect: deleting the last card of a
+  // deck retires its chip, and a selection left pointing at a chip that is no
+  // longer on screen shows an empty list with no visible reason.
+  const deckFilters = useMemo(
+    () => buildDeckFilters(allCards, studyLanguage, nativeLanguage),
+    [allCards, studyLanguage, nativeLanguage]
+  );
+  const activeDeck = deckFilters.some(d => d.id === deckKey) ? deckKey : 'all';
+  const deckCards = useMemo(
+    () => filterCardsByDeck(allCards, activeDeck, studyLanguage),
+    [allCards, activeDeck, studyLanguage]
+  );
+
   const visibleCards = useMemo(() => {
-    let cards = allCards;
+    let cards = deckCards;
     if (filterKey === 'active') cards = cards.filter(c => !c.archived);
     else if (filterKey === 'archived') cards = cards.filter(c => c.archived);
     if (search.trim()) {
@@ -95,7 +113,7 @@ export default function CardsPage() {
     else if (sortKey === 'oldest') cards = [...cards].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
     else if (sortKey === 'az') cards = [...cards].sort((a, b) => getStudySide(a).localeCompare(getStudySide(b)));
     return cards;
-  }, [allCards, filterKey, search, sortKey]);
+  }, [deckCards, filterKey, search, sortKey]);
 
   const exitSelectMode = () => {
     setSelectMode(false);
@@ -206,8 +224,11 @@ export default function CardsPage() {
     }
   };
 
-  const activeCount = allCards.filter(c => !c.archived).length;
-  const archivedCount = allCards.filter(c => c.archived).length;
+  // Counted within the chosen deck, so each number is the row count that chip
+  // would produce. Search is left out, as it always was — a count that moved
+  // while you typed would be measuring the search box, not the library.
+  const activeCount = deckCards.filter(c => !c.archived).length;
+  const archivedCount = deckCards.filter(c => c.archived).length;
 
   const sortOptions: { key: SortKey; label: string }[] = [
     { key: 'newest', label: t(nativeLanguage, 'cardsSortNewest') },
@@ -218,7 +239,7 @@ export default function CardsPage() {
   const filterOptions: { key: FilterKey; label: string; count: number }[] = [
     { key: 'active', label: t(nativeLanguage, 'cardsFilterActive'), count: activeCount },
     { key: 'archived', label: t(nativeLanguage, 'cardsFilterArchived'), count: archivedCount },
-    { key: 'all', label: t(nativeLanguage, 'cardsFilterAll'), count: allCards.length },
+    { key: 'all', label: t(nativeLanguage, 'cardsFilterAll'), count: deckCards.length },
   ];
 
   const downloadFile = (content: string, filename: string, mime: string) => {
@@ -231,9 +252,13 @@ export default function CardsPage() {
     URL.revokeObjectURL(url);
   };
 
+  // Both exports take `visibleCards` — what you are looking at is what you get,
+  // filters, search and sort included. That is the whole contract, and it is
+  // why neither of them re-filters: an Anki export used to drop archived cards
+  // on its own, which now would hand you an empty file from the Archived tab.
   const exportCSV = () => {
     const rows = [[langConfig.label, backConfig.backLanguage, 'Formality', 'Definition', 'Characters', 'Notes', 'Examples', 'Saved', 'Status']];
-    for (const c of allCards) {
+    for (const c of visibleCards) {
       const studySide = getStudySide(c);
       const examples = c.examples?.map(e => {
         const sides = getExampleSides(e, studyLanguage, nativeLanguage);
@@ -259,8 +284,7 @@ export default function CardsPage() {
 
   const exportAnki = () => {
     const lines = ['#separator:Tab', '#html:false', '#notetype:Basic', '#deck:Amgi'];
-    for (const c of allCards) {
-      if (c.archived) continue;
+    for (const c of visibleCards) {
       const front = getStudySide(c);
       const backParts = [getBackSide(c, nativeLanguage)];
       if (c.briefDefinition) backParts.push(c.briefDefinition);
@@ -293,7 +317,7 @@ export default function CardsPage() {
             <div className="relative">
               <button
                 onClick={() => setShowExportMenu(v => !v)}
-                disabled={allCards.length === 0}
+                disabled={visibleCards.length === 0}
                 className="text-xs px-3 py-1.5 rounded-lg border border-[var(--color-muted)] text-[var(--color-muted)] hover:text-[var(--color-text)] hover:border-[var(--color-text)] transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
               >
                 {t(nativeLanguage, 'cardsExport')}
@@ -352,6 +376,28 @@ export default function CardsPage() {
               className="w-full p-3 rounded-lg bg-[var(--color-bg)] border border-[var(--color-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--color-highlight)] text-[var(--color-text)] placeholder-[var(--color-muted)]"
             />
           </div>
+
+          {/* Deck tabs. Its own row above the status one, never mixed in:
+              these pick which cards, those pick which state. Absent entirely
+              until a pack has produced a card, since until then it would be a
+              row of chips that all select the same list. */}
+          {deckFilters.length > 0 && (
+            <div className="flex gap-2 mb-3 flex-wrap">
+              {deckFilters.map(deck => (
+                <button
+                  key={deck.id}
+                  onClick={() => { setDeckKey(deck.id); exitSelectMode(); }}
+                  className="px-3 py-1.5 rounded-lg text-sm font-mono border transition-colors"
+                  style={activeDeck === deck.id
+                    ? { background: 'var(--color-text)', color: 'var(--color-bg)', borderColor: 'var(--color-text)' }
+                    : { background: 'transparent', color: 'var(--color-muted)', borderColor: 'var(--color-muted)' }}
+                >
+                  {deck.name}
+                  <span className="ml-1 opacity-60">({deck.count})</span>
+                </button>
+              ))}
+            </div>
+          )}
 
           {/* Filter tabs */}
           <div className="flex gap-2 mb-4">

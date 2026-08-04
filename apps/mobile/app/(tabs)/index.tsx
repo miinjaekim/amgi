@@ -28,6 +28,7 @@ import WritingReviewPanel from '../../src/components/WritingReviewPanel';
 import PronounceButton from '../../src/components/PronounceButton';
 import PageHeader from '../../src/components/PageHeader';
 import Markdown from '../../src/components/Markdown';
+import { SkeletonBar, SkeletonGroup } from '../../src/components/Skeleton';
 import { t } from '@amgi/core';
 import { useTheme } from '../../src/context/ThemeContext';
 import { useFloatingTabBarHeight } from '../../src/components/FloatingTabBar';
@@ -368,10 +369,46 @@ export default function LearnScreen() {
         : core[langConfig.studyField]) || core.translation
     : null;
 
+  // The first thing a cold launch shows, so it is the one placeholder that has
+  // to look like the app. Laid out as the empty state below — chips and search
+  // bar resting low, word of the day under them — so the launch resolves into
+  // position instead of replacing a centred spinner with a full screen.
+  //
+  // Text-free on purpose, and not only because skeletons are: `nativeLanguage`
+  // is still undefined here, so every label would render in English first and
+  // correct itself a moment later for a Korean reader.
   if (authLoading) {
     return (
-      <SafeAreaView style={s.center}>
-        <ActivityIndicator size="large" color={C.highlight} />
+      <SafeAreaView style={s.root} edges={['top']}>
+        {/* Sized from PageHeader's title, which is what lands here. */}
+        <View style={s.skelHeader}>
+          <SkeletonBar width={104} height={22} />
+        </View>
+        <SkeletonGroup label="Loading" style={s.flex}>
+          <View style={s.topSpacer} />
+          <View style={s.bottomBar}>
+            <View style={s.exampleRow}>
+              <SkeletonBar width={62} height={15} />
+              <SkeletonBar width={54} height={30} />
+              <SkeletonBar width={70} height={30} />
+              <SkeletonBar width={58} height={30} />
+            </View>
+            <View style={s.searchRow}>
+              <SkeletonBar height={44} style={s.flex} />
+              <SkeletonBar width={72} height={44} />
+            </View>
+          </View>
+          <View style={[s.keyboardReserve, { height: keyboardReserve }]}>
+            <View style={s.wotdCard}>
+              <SkeletonBar width={88} height={11} />
+              <View style={[s.wotdRow, s.skelWotdRow]}>
+                <SkeletonBar width={92} height={24} />
+                <SkeletonBar width={120} height={18} />
+              </View>
+              <SkeletonBar width="70%" height={16} style={s.skelDef} />
+            </View>
+          </View>
+        </SkeletonGroup>
       </SafeAreaView>
     );
   }
@@ -488,15 +525,17 @@ export default function LearnScreen() {
           <View style={[s.keyboardReserve, { height: keyboardReserve }]}>
             {wotdLoading && (
               // Sized from the real tile's rows so nothing shifts when the word
-              // of the day arrives.
-              <View style={[s.wotdCard, s.wotdSkeleton]}>
+              // of the day arrives. Keeps its label: unlike the cold-launch
+              // placeholder above, the rest of the screen is already here and
+              // the tile is only saying what is filling it in.
+              <SkeletonGroup label={t(nativeLanguage, 'wordOfTheDay')} style={s.wotdCard}>
                 <Text style={s.wotdLabel}>{t(nativeLanguage, 'wordOfTheDay')}</Text>
                 <View style={s.wotdRow}>
-                  <View style={[s.skelBar, s.skelTerm]} />
-                  <View style={[s.skelBar, s.skelTranslation]} />
+                  <SkeletonBar width={92} height={24} />
+                  <SkeletonBar width={120} height={18} />
                 </View>
-                <View style={[s.skelBar, s.skelDef]} />
-              </View>
+                <SkeletonBar width="70%" height={16} style={s.skelDef} />
+              </SkeletonGroup>
             )}
             {wordOfTheDay && (
               <TouchableOpacity
@@ -712,7 +751,6 @@ function makeStyles(C: Palette, tabBarHeight: number) {
   return StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
   flex: { flex: 1 },
-  center: { flex: 1, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center' },
   scroll: { padding: 16, paddingBottom: tabBarHeight, flexGrow: 1 },
 
   streakBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 16, paddingTop: 8, paddingBottom: 4 },
@@ -760,11 +798,11 @@ function makeStyles(C: Palette, tabBarHeight: number) {
 
   // Skeleton bars stand in for the term/translation/definition rows at the
   // same heights, so the card occupies its final height before the fetch lands.
-  wotdSkeleton: { opacity: 0.6 },
-  skelBar: { backgroundColor: C.border, borderRadius: 6 },
-  skelTerm: { width: 92, height: 24 },
-  skelTranslation: { width: 120, height: 18 },
-  skelDef: { width: '70%', height: 16, marginTop: 4 },
+  skelDef: { marginTop: 4 },
+  // Cold launch only, where there is no real label above the row to space it.
+  skelWotdRow: { marginTop: 6 },
+  // Matches PageHeader's own padding, since that is what replaces this.
+  skelHeader: { paddingHorizontal: 20, paddingVertical: 12 },
 
 
   successBanner: { backgroundColor: C.border, borderRadius: 10, padding: 14, marginBottom: 12 },

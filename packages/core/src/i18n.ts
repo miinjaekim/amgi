@@ -235,7 +235,7 @@ const translations = {
     reviewCompleteMessage: 'Good work. Head to Learn to keep building your vocabulary.',
     // Cards page
     cardsPageTitle: 'My Cards',
-    cardsPageDescription: 'Search, filter, and manage the cards you saved yourself. A pack\'s cards are managed on its own page.',
+    cardsPageDescription: 'Search, filter, and manage every card you have — the ones you saved yourself and the ones a pack gave you.',
     cardsSearchPlaceholder: 'Search cards...',
     cardsSortNewest: 'Newest',
     cardsSortOldest: 'Oldest',
@@ -243,6 +243,11 @@ const translations = {
     cardsFilterActive: 'Active',
     cardsFilterArchived: 'Archived',
     cardsFilterAll: 'All',
+    // Deck axis, a row of its own. Not "All" again: it sits directly under the
+    // active/archived row, and two chips reading the same word doing different
+    // things is the confusion the separate row exists to avoid.
+    cardsDeckAll: 'Everything',
+    cardsDeckMine: 'Mine',
     cardsEmpty: 'No cards found.',
     cardsSignInPrompt: 'Sign in to see your flashcards.',
     cardsGoLearn: 'Go to Learn →',
@@ -258,7 +263,9 @@ const translations = {
     // Import / export
     cardsImport: 'Import',
     cardsExport: 'Export',
-    cardsExportCSV: 'CSV (all cards)',
+    // No "(all cards)" qualifier on either: an export now carries exactly the
+    // rows the filters leave on screen, so naming a scope here would be a lie.
+    cardsExportCSV: 'CSV',
     cardsExportAnki: 'Anki (.txt)',
     importTitle: 'Import Words',
     importPastePrompt: 'Paste words below, one per line.',
@@ -295,7 +302,6 @@ const translations = {
     deckEnrolling: 'Adding the rest of the deck…',
     deckEnrollError: 'Could not add the rest of the deck. Try again.',
     deckCardsUnavailable: "Could not check which cards you already have. Reload before adding the deck, or it may be added twice.",
-    deckManageHint: 'Cards from this deck are managed here rather than on My Cards.',
     // Section enrolment — 160 words is not one decision
     deckSaveSection: 'Save this section',
     deckSectionSaving: 'Saving…',
@@ -552,7 +558,7 @@ const translations = {
     navCards: '카드',
     navDecks: '단어팩',
     cardsPageTitle: '내 카드',
-    cardsPageDescription: '직접 저장한 카드를 검색하고 관리하세요. 단어팩 카드는 각 단어팩 페이지에서 관리해요.',
+    cardsPageDescription: '가지고 있는 카드를 모두 검색하고 관리하세요. 직접 저장한 카드도, 단어팩에서 담은 카드도요.',
     cardsSearchPlaceholder: '카드 검색...',
     cardsSortNewest: '최신순',
     cardsSortOldest: '오래된순',
@@ -560,6 +566,10 @@ const translations = {
     cardsFilterActive: '활성',
     cardsFilterArchived: '보관됨',
     cardsFilterAll: '전체',
+    // '전체' is taken by the row above — '모든 카드' says the same thing without
+    // two chips reading alike side by side.
+    cardsDeckAll: '모든 카드',
+    cardsDeckMine: '내 카드',
     cardsEmpty: '카드가 없습니다.',
     cardsSignInPrompt: '플래시카드를 보려면 로그인하세요.',
     cardsGoLearn: '학습 페이지로 →',
@@ -575,7 +585,7 @@ const translations = {
     // Import / export
     cardsImport: '가져오기',
     cardsExport: '내보내기',
-    cardsExportCSV: 'CSV (전체 카드)',
+    cardsExportCSV: 'CSV',
     cardsExportAnki: 'Anki (.txt)',
     importTitle: '단어 가져오기',
     importPastePrompt: '단어를 한 줄에 하나씩 입력하세요.',
@@ -612,7 +622,6 @@ const translations = {
     deckEnrolling: '남은 카드를 추가하는 중…',
     deckEnrollError: '남은 카드를 추가하지 못했어요. 다시 시도해 주세요.',
     deckCardsUnavailable: '이미 가지고 있는 카드를 확인할 수 없어요. 덱이 중복으로 추가될 수 있으니 새로고침한 뒤 다시 시도해 주세요.',
-    deckManageHint: '이 단어팩의 카드는 내 카드가 아니라 여기에서 관리해요.',
     // Section enrolment — 160 words is not one decision
     deckSaveSection: '이 묶음 저장하기',
     deckSectionSaving: '저장하는 중…',
