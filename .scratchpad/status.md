@@ -368,11 +368,19 @@ the change is in Decisions above; durable gotchas are in
 - **`/cards` holds every card, packs included** (#80, 08-04) — the last
   structural piece of the pack work, and the reversal of the "pack cards left
   `/cards` entirely" line below: a card belongs to a pack *and* to your list. The
-  load stopped filtering; a **second axis** narrows instead — Everything / Mine /
-  each enrolled deck, in its own row, orthogonal to active/archived. `all` leaves
-  out `layout === 'grid'` packs only, so kana is hidden but still one chip away
-  and a future single-character pack inherits the rule. `filterCardsByDeck` and
+  load stopped filtering; a **second axis** narrows instead — All / My Cards /
+  each enrolled deck, orthogonal to active/archived. `all` leaves out
+  `layout === 'grid'` packs only, so kana is hidden but still one chip away and a
+  future single-character pack inherits the rule. `filterCardsByDeck` and
   `buildDeckFilters` are in `collections.ts`, shared by both platforms.
+  **The default is `mine`, not `all`** (`DEFAULT_DECK_FILTER`, pinned by a test):
+  the page is called My Cards, so it opens on them and widening to a pack is
+  deliberate. It is also where a selection lands when the deck it pointed at
+  stops existing. Both chip rows on web carry a **group heading**, and only
+  because both hold a chip called "All" — one meaning every deck, one every
+  status; adjacent and unlabelled they read as one control with two selections.
+  Korean keeps '모든 카드' where English went to a bare "All", so 전체 isn't
+  printed twice.
   Deck chips are built from **all** cards, not the status-filtered ones — the
   other order retires a chip the moment its deck has nothing archived, including
   the selected one. **Export follows the visible filter**, which is why the Anki

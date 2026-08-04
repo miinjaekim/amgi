@@ -57,6 +57,17 @@ function byRegistryOrder(studyLanguage: StudyLanguage) {
  */
 export type DeckFilterId = 'all' | 'mine' | (string & {});
 
+/**
+ * What the card list opens on, and where a selection falls back to when the
+ * deck it pointed at stops existing.
+ *
+ * Your own cards, not everything: the page is called My Cards, so it opens
+ * showing what it is named and widening to a pack is a thing you do on purpose.
+ * The reverse default made every account's first view of the list a mix it had
+ * not asked for.
+ */
+export const DEFAULT_DECK_FILTER: DeckFilterId = 'mine';
+
 export interface DeckFilter {
   id: DeckFilterId;
   /** Chip label, already resolved for the reader's language. */
@@ -96,7 +107,7 @@ export function filterCardsByDeck(
  * The deck chips worth offering, or `[]` when there is nothing to choose
  * between — which is what the caller hides the row on.
  *
- * Empty on an account with no pack cards, because there "Everything" and "Mine"
+ * Empty on an account with no pack cards, because there "All" and "My Cards"
  * select the same rows and two chips that do the same thing are worse than
  * none. Only decks holding cards appear, for the same reason the review picker
  * omits them: a pack you have not enrolled in is on Decks, which is where you

@@ -11,7 +11,7 @@ import {
   getCardsCollection,
   Flashcard,
 } from '@/services/firestore';
-import { buildDeckFilters, filterCardsByDeck, getBackSide, getBackSideConfig, getCharacterBreakdown, getExampleSides, getStudyLanguageConfig } from '@amgi/core';
+import { DEFAULT_DECK_FILTER, buildDeckFilters, filterCardsByDeck, getBackSide, getBackSideConfig, getCharacterBreakdown, getExampleSides, getStudyLanguageConfig } from '@amgi/core';
 import type { DeckFilterId } from '@amgi/core';
 import { db } from '@/config/firebase';
 import { doc, updateDoc } from 'firebase/firestore';
@@ -44,7 +44,7 @@ export default function CardsPage() {
   const [search, setSearch] = useState('');
   const [sortKey, setSortKey] = useState<SortKey>('newest');
   const [filterKey, setFilterKey] = useState<FilterKey>('active');
-  const [deckKey, setDeckKey] = useState<DeckFilterId>('all');
+  const [deckKey, setDeckKey] = useState<DeckFilterId>(DEFAULT_DECK_FILTER);
   const [editingCardId, setEditingCardId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState<{ studySide: string; backSide: string } | null>(null);
   const [detailCard, setDetailCard] = useState<Flashcard | null>(null);
@@ -92,7 +92,7 @@ export default function CardsPage() {
     () => buildDeckFilters(allCards, studyLanguage, nativeLanguage),
     [allCards, studyLanguage, nativeLanguage]
   );
-  const activeDeck = deckFilters.some(d => d.id === deckKey) ? deckKey : 'all';
+  const activeDeck = deckFilters.some(d => d.id === deckKey) ? deckKey : DEFAULT_DECK_FILTER;
   const deckCards = useMemo(
     () => filterCardsByDeck(allCards, activeDeck, studyLanguage),
     [allCards, activeDeck, studyLanguage]
@@ -380,40 +380,59 @@ export default function CardsPage() {
           {/* Deck tabs. Its own row above the status one, never mixed in:
               these pick which cards, those pick which state. Absent entirely
               until a pack has produced a card, since until then it would be a
-              row of chips that all select the same list. */}
+              row of chips that all select the same list.
+
+              Both rows are labelled, and only because both now hold a chip
+              called "All" — one meaning every deck, one meaning every status.
+              Adjacent and unlabelled they read as one control with two
+              selections; the headings are what make them two questions. */}
           {deckFilters.length > 0 && (
-            <div className="flex gap-2 mb-3 flex-wrap">
-              {deckFilters.map(deck => (
-                <button
-                  key={deck.id}
-                  onClick={() => { setDeckKey(deck.id); exitSelectMode(); }}
-                  className="px-3 py-1.5 rounded-lg text-sm font-mono border transition-colors"
-                  style={activeDeck === deck.id
-                    ? { background: 'var(--color-text)', color: 'var(--color-bg)', borderColor: 'var(--color-text)' }
-                    : { background: 'transparent', color: 'var(--color-muted)', borderColor: 'var(--color-muted)' }}
-                >
-                  {deck.name}
-                  <span className="ml-1 opacity-60">({deck.count})</span>
-                </button>
-              ))}
+            <div className="mb-3">
+              <div className="text-xs uppercase tracking-wide text-[var(--color-muted)] mb-1.5">
+                {t(nativeLanguage, 'cardsFilterDeckGroup')}
+              </div>
+              <div className="flex gap-2 flex-wrap">
+                {deckFilters.map(deck => (
+                  <button
+                    key={deck.id}
+                    onClick={() => { setDeckKey(deck.id); exitSelectMode(); }}
+                    className="px-3 py-1.5 rounded-lg text-sm font-mono border transition-colors"
+                    style={activeDeck === deck.id
+                      ? { background: 'var(--color-text)', color: 'var(--color-bg)', borderColor: 'var(--color-text)' }
+                      : { background: 'transparent', color: 'var(--color-muted)', borderColor: 'var(--color-muted)' }}
+                  >
+                    {deck.name}
+                    <span className="ml-1 opacity-60">({deck.count})</span>
+                  </button>
+                ))}
+              </div>
             </div>
           )}
 
           {/* Filter tabs */}
-          <div className="flex gap-2 mb-4">
-            {filterOptions.map(opt => (
-              <button
-                key={opt.key}
-                onClick={() => { setFilterKey(opt.key); exitSelectMode(); }}
-                className="px-3 py-1.5 rounded-lg text-sm font-mono border transition-colors"
-                style={filterKey === opt.key
-                  ? { background: 'var(--color-highlight)', color: 'var(--color-bg)', borderColor: 'var(--color-highlight)' }
-                  : { background: 'transparent', color: 'var(--color-text)', borderColor: 'var(--color-muted)' }}
-              >
-                {opt.label}
-                <span className="ml-1 opacity-60">({opt.count})</span>
-              </button>
-            ))}
+          <div className="mb-4">
+            {/* Only when there is a deck row to be confused with. A heading
+                over the one chip row on screen labels nothing. */}
+            {deckFilters.length > 0 && (
+              <div className="text-xs uppercase tracking-wide text-[var(--color-muted)] mb-1.5">
+                {t(nativeLanguage, 'cardsFilterStatusGroup')}
+              </div>
+            )}
+            <div className="flex gap-2 flex-wrap">
+              {filterOptions.map(opt => (
+                <button
+                  key={opt.key}
+                  onClick={() => { setFilterKey(opt.key); exitSelectMode(); }}
+                  className="px-3 py-1.5 rounded-lg text-sm font-mono border transition-colors"
+                  style={filterKey === opt.key
+                    ? { background: 'var(--color-highlight)', color: 'var(--color-bg)', borderColor: 'var(--color-highlight)' }
+                    : { background: 'transparent', color: 'var(--color-text)', borderColor: 'var(--color-muted)' }}
+                >
+                  {opt.label}
+                  <span className="ml-1 opacity-60">({opt.count})</span>
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Sort + count + Select row */}

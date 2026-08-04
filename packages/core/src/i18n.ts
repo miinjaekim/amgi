@@ -243,14 +243,15 @@ const translations = {
     cardsFilterActive: 'Active',
     cardsFilterArchived: 'Archived',
     cardsFilterAll: 'All',
-    // Deck axis. Not "All" again: on web it sits directly under the
-    // active/archived row, and two chips reading the same word doing different
-    // things is the confusion the separate row exists to avoid.
-    cardsDeckAll: 'Everything',
-    cardsDeckMine: 'Mine',
-    // Mobile filter sheet. Group headings, not control names: the chips under
-    // each one say what they do, and a heading that repeated them would be
-    // twice the words for the same fact.
+    // Deck axis. "All" collides with the status chip of the same name, which is
+    // what the group headings below are for — on web they label the two rows,
+    // in the sheet they separate them. Without a heading the collision is real:
+    // two adjacent chips reading "All" that mean different things.
+    cardsDeckAll: 'All',
+    cardsDeckMine: 'My Cards',
+    // Group headings, not control names: the chips under each one say what they
+    // do, and a heading that repeated them would be twice the words for the
+    // same fact.
     cardsFilterDeckGroup: 'Which cards',
     cardsFilterStatusGroup: 'Show',
     cardsFilterSortGroup: 'Sort',
@@ -576,8 +577,9 @@ const translations = {
     cardsFilterActive: '활성',
     cardsFilterArchived: '보관됨',
     cardsFilterAll: '전체',
-    // '전체' is taken by the row above — '모든 카드' says the same thing without
-    // two chips reading alike side by side.
+    // Left as '모든 카드' where English went to a bare "All": it already reads
+    // as "all cards", so it says the same thing without putting a second 전체
+    // next to the status chip that owns the word.
     cardsDeckAll: '모든 카드',
     cardsDeckMine: '내 카드',
     // '어떤 카드' over '단어팩': the chips under it include 모든 카드 and 내 카드,

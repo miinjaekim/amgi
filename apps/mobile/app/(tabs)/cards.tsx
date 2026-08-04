@@ -13,7 +13,7 @@ import {
   deleteFlashcard, updateFlashcardFields,
 } from '../../src/services/firestore';
 import type { Flashcard } from '../../src/services/firestore';
-import { t, buildDeckFilters, filterCardsByDeck, getCharacterBreakdown, getStudyLanguageConfig, getBackSideConfig, getStudyLangSide, getBackSide, getExampleSides } from '@amgi/core';
+import { t, DEFAULT_DECK_FILTER, buildDeckFilters, filterCardsByDeck, getCharacterBreakdown, getStudyLanguageConfig, getBackSideConfig, getStudyLangSide, getBackSide, getExampleSides } from '@amgi/core';
 import type { CardSideField, DeckFilterId } from '@amgi/core';
 import { useTheme } from '../../src/context/ThemeContext';
 import { useFloatingTabBarHeight } from '../../src/components/FloatingTabBar';
@@ -39,7 +39,7 @@ export default function CardsScreen() {
   const [search, setSearch] = useState('');
   const [sortKey, setSortKey] = useState<SortKey>('newest');
   const [filterKey, setFilterKey] = useState<FilterKey>('active');
-  const [deckKey, setDeckKey] = useState<DeckFilterId>('all');
+  const [deckKey, setDeckKey] = useState<DeckFilterId>(DEFAULT_DECK_FILTER);
   const [editingCardId, setEditingCardId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState<Partial<Record<CardSideField, string>> | null>(null);
   const [detailCard, setDetailCard] = useState<Flashcard | null>(null);
@@ -96,7 +96,7 @@ export default function CardsScreen() {
     () => buildDeckFilters(allCards, studyLanguage, nativeLanguage),
     [allCards, studyLanguage, nativeLanguage]
   );
-  const activeDeck = deckFilters.some(d => d.id === deckKey) ? deckKey : 'all';
+  const activeDeck = deckFilters.some(d => d.id === deckKey) ? deckKey : DEFAULT_DECK_FILTER;
   const deckCards = useMemo(
     () => filterCardsByDeck(allCards, activeDeck, studyLanguage),
     [allCards, activeDeck, studyLanguage]
