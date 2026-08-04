@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, FlatList,
-  StyleSheet, ActivityIndicator, Alert,
+  StyleSheet, Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from 'expo-router';
@@ -13,12 +13,15 @@ import {
   deleteFlashcard, updateFlashcardFields,
 } from '../../src/services/firestore';
 import type { Flashcard } from '../../src/services/firestore';
-import { t, getCharacterBreakdown, getCollectionId, getStudyLanguageConfig, getBackSideConfig, getStudyLangSide, getBackSide, getExampleSides } from '@amgi/core';
-import type { CardSideField } from '@amgi/core';
+import { t, DEFAULT_DECK_FILTER, buildDeckFilters, filterCardsByDeck, getCharacterBreakdown, getStudyLanguageConfig, getBackSideConfig, getStudyLangSide, getBackSide, getExampleSides } from '@amgi/core';
+import type { CardSideField, DeckFilterId } from '@amgi/core';
 import { useTheme } from '../../src/context/ThemeContext';
 import { useFloatingTabBarHeight } from '../../src/components/FloatingTabBar';
 import CardDetailModal from '../../src/components/CardDetailModal';
 import ImportModal from '../../src/components/ImportModal';
+import FilterSheet from '../../src/components/FilterSheet';
+import type { FilterGroup } from '../../src/components/FilterSheet';
+import { SkeletonBar, SkeletonGroup, SkeletonRows } from '../../src/components/Skeleton';
 import type { Palette } from '../../src/theme';
 
 type SortKey = 'newest' | 'oldest' | 'az';
@@ -36,6 +39,7 @@ export default function CardsScreen() {
   const [search, setSearch] = useState('');
   const [sortKey, setSortKey] = useState<SortKey>('newest');
   const [filterKey, setFilterKey] = useState<FilterKey>('active');
+  const [deckKey, setDeckKey] = useState<DeckFilterId>(DEFAULT_DECK_FILTER);
   const [editingCardId, setEditingCardId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState<Partial<Record<CardSideField, string>> | null>(null);
   const [detailCard, setDetailCard] = useState<Flashcard | null>(null);
@@ -44,19 +48,22 @@ export default function CardsScreen() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkWorking, setBulkWorking] = useState(false);
   const [showImport, setShowImport] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
   const [reloadToken, setReloadToken] = useState(0);
   const [importSuccess, setImportSuccess] = useState<string | null>(null);
 
-  // Only the cards you made yourself. A pack's cards are a collection of their
-  // own — reviewed apart and managed on the deck screen — and "these are mine"
-  // is what makes this surface coherent, so they are absent rather than
-  // filtered out by a chip. Everything below (counts, select-all, export)
-  // reads `allCards`, so it all follows from this one scoping.
+  // Every card for this language, packs included. A card used to belong to a
+  // pack *or* to your list, and the load dropped anything with a `packId` — but
+  // a pack word you have saved is a card you own, and hiding it here left you
+  // searching a library that was missing half of itself. What replaces the cut
+  // is the deck group in the filter sheet: a dimension you can widen or narrow,
+  // rather than a decision taken before the data arrives. Review is unaffected
+  // — it filters by collection itself.
   const loadCards = useCallback(() => {
     if (!user) { setAllCards([]); return; }
     setLoading(true);
     fetchAllUserFlashcards(user.uid, studyLanguage)
-      .then(cards => setAllCards(cards.filter(card => getCollectionId(card) === null)))
+      .then(setAllCards)
       .catch(() => setError('Failed to load cards.'))
       .finally(() => setLoading(false));
   }, [user, studyLanguage, reloadToken]);
@@ -81,8 +88,22 @@ export default function CardsScreen() {
     setReloadToken(n => n + 1);
   }, []));
 
+  // The chips to offer and which one is lit. `deckKey` is validated against the
+  // offered chips rather than reset by an effect: deleting the last card of a
+  // deck retires its chip, and a selection left pointing at a chip that is no
+  // longer on screen shows an empty list with no visible reason.
+  const deckFilters = useMemo(
+    () => buildDeckFilters(allCards, studyLanguage, nativeLanguage),
+    [allCards, studyLanguage, nativeLanguage]
+  );
+  const activeDeck = deckFilters.some(d => d.id === deckKey) ? deckKey : DEFAULT_DECK_FILTER;
+  const deckCards = useMemo(
+    () => filterCardsByDeck(allCards, activeDeck, studyLanguage),
+    [allCards, activeDeck, studyLanguage]
+  );
+
   const visibleCards = useMemo(() => {
-    let cards = allCards;
+    let cards = deckCards;
     if (filterKey === 'active') cards = cards.filter(c => !c.archived);
     else if (filterKey === 'archived') cards = cards.filter(c => c.archived);
     if (search.trim()) {
@@ -95,10 +116,13 @@ export default function CardsScreen() {
     if (sortKey === 'newest') return [...cards].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     if (sortKey === 'oldest') return [...cards].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
     return [...cards].sort((a, b) => getStudyLangSide(a).localeCompare(getStudyLangSide(b)));
-  }, [allCards, filterKey, search, sortKey]);
+  }, [deckCards, filterKey, search, sortKey]);
 
-  const activeCount = allCards.filter(c => !c.archived).length;
-  const archivedCount = allCards.filter(c => c.archived).length;
+  // Counted within the chosen deck, so each number is the row count that chip
+  // would produce. Search is left out, as it always was — a count that moved
+  // while you typed would be measuring the search box, not the library.
+  const activeCount = deckCards.filter(c => !c.archived).length;
+  const archivedCount = deckCards.filter(c => c.archived).length;
 
   // ── Select mode ──
   const exitSelectMode = () => { setSelectMode(false); setSelectedIds(new Set()); };
@@ -167,9 +191,13 @@ export default function CardsScreen() {
     }
   };
 
+  // Both exports take `visibleCards` — what you are looking at is what you get,
+  // filters, search and sort included. That is the whole contract, and it is
+  // why neither of them re-filters: an Anki export used to drop archived cards
+  // on its own, which now would hand you an empty file from the Archived tab.
   const exportCSV = () => {
     const rows = [[config.label, backConfig.backLanguage, 'Formality', 'Definition', 'Characters', 'Notes', 'Examples', 'Saved', 'Status']];
-    for (const c of allCards) {
+    for (const c of visibleCards) {
       const examples = c.examples?.map(e => {
         const sides = getExampleSides(e, studyLanguage, nativeLanguage);
         return `${sides.study} / ${sides.back}`;
@@ -186,8 +214,7 @@ export default function CardsScreen() {
 
   const exportAnki = () => {
     const lines = ['#separator:Tab', '#html:false', '#notetype:Basic', '#deck:Amgi'];
-    for (const c of allCards) {
-      if (c.archived) continue;
+    for (const c of visibleCards) {
       const backParts = [getBackSide(c, nativeLanguage)];
       if (c.briefDefinition) backParts.push(c.briefDefinition);
       else if (c.definition) backParts.push(c.definition);
@@ -197,7 +224,7 @@ export default function CardsScreen() {
   };
 
   const promptExport = () => {
-    if (allCards.length === 0) return;
+    if (visibleCards.length === 0) return;
     Alert.alert(t(nativeLanguage, 'cardsExport'), undefined, [
       { text: t(nativeLanguage, 'cardsExportCSV'), onPress: exportCSV },
       { text: t(nativeLanguage, 'cardsExportAnki'), onPress: exportAnki },
@@ -207,7 +234,7 @@ export default function CardsScreen() {
 
   const handleImportSaved = (count: number) => {
     setShowImport(false);
-    if (user) fetchAllUserFlashcards(user.uid, studyLanguage).then(setAllCards).catch(() => {});
+    loadCards();
     setImportSuccess(t(nativeLanguage, count === 1 ? 'importSavedToastOne' : 'importSavedToast', { count }));
     setTimeout(() => setImportSuccess(null), 4000);
   };
@@ -263,7 +290,7 @@ export default function CardsScreen() {
   const FILTERS: { key: FilterKey; label: string; count: number }[] = [
     { key: 'active', label: t(nativeLanguage, 'cardsFilterActive'), count: activeCount },
     { key: 'archived', label: t(nativeLanguage, 'cardsFilterArchived'), count: archivedCount },
-    { key: 'all', label: t(nativeLanguage, 'cardsFilterAll'), count: allCards.length },
+    { key: 'all', label: t(nativeLanguage, 'cardsFilterAll'), count: deckCards.length },
   ];
 
   const SORTS: { key: SortKey; label: string }[] = [
@@ -271,6 +298,39 @@ export default function CardsScreen() {
     { key: 'oldest', label: t(nativeLanguage, 'cardsSortOldest') },
     { key: 'az', label: t(nativeLanguage, 'cardsSortAZ') },
   ];
+
+  // Three groups behind one button. The deck group is left out entirely when
+  // there are no pack cards — `buildDeckFilters` already returns nothing there,
+  // and a group holding two chips that select the same list is noise.
+  const filterGroups: FilterGroup[] = [
+    ...(deckFilters.length > 0 ? [{
+      title: t(nativeLanguage, 'cardsFilterDeckGroup'),
+      options: deckFilters.map(d => ({ key: d.id, label: d.name, count: d.count })),
+      selected: activeDeck,
+      onSelect: (key: string) => { setDeckKey(key); exitSelectMode(); },
+    }] : []),
+    {
+      title: t(nativeLanguage, 'cardsFilterStatusGroup'),
+      options: FILTERS.map(f => ({ key: f.key, label: f.label, count: f.count })),
+      selected: filterKey,
+      onSelect: (key: string) => { setFilterKey(key as FilterKey); exitSelectMode(); },
+    },
+    {
+      // No counts: sorting reorders the same rows, so every count would be the
+      // same number three times.
+      title: t(nativeLanguage, 'cardsFilterSortGroup'),
+      options: SORTS,
+      selected: sortKey,
+      onSelect: (key: string) => setSortKey(key as SortKey),
+    },
+  ];
+
+  // What the button says: the lit chip from each group, in the order the sheet
+  // lists them. Reads as a sentence about the list you are looking at.
+  const filterSummary = filterGroups
+    .map(group => group.options.find(o => o.key === group.selected)?.label)
+    .filter(Boolean)
+    .join(' · ');
 
   const renderCard = ({ item: card }: { item: Flashcard }) => {
     const editing = editingCardId === card.id;
@@ -365,9 +425,9 @@ export default function CardsScreen() {
                 <Text style={s.headerBtnText}>{t(nativeLanguage, 'cardsImport')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[s.headerBtn, allCards.length === 0 && s.headerBtnDisabled]}
+                style={[s.headerBtn, visibleCards.length === 0 && s.headerBtnDisabled]}
                 onPress={promptExport}
-                disabled={allCards.length === 0}
+                disabled={visibleCards.length === 0}
               >
                 <Text style={s.headerBtnText}>{t(nativeLanguage, 'cardsExport')}</Text>
               </TouchableOpacity>
@@ -398,29 +458,34 @@ export default function CardsScreen() {
               placeholderTextColor={C.muted}
             />
 
-            <View style={s.filterRow}>
-              {FILTERS.map(f => (
-                <TouchableOpacity
-                  key={f.key}
-                  style={[s.filterTab, filterKey === f.key && s.filterTabActive]}
-                  onPress={() => { setFilterKey(f.key); exitSelectMode(); }}
-                >
-                  <Text style={[s.filterTabText, filterKey === f.key && s.filterTabTextActive]}>
-                    {f.label} ({f.count})
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-
+            {/* One row for all three choosing controls. Three rows of chips —
+                deck, status, sort — put half a screen of chrome between you and
+                the first card, to answer a question you asked once. The button
+                says what is currently on, which the chips never did well: they
+                show what is available and leave you to spot which one is lit.
+                In select mode it steps aside for the selection controls, since
+                changing a filter drops the selection anyway. */}
             <View style={s.actionRow}>
               {!selectMode ? (
-                <TouchableOpacity
-                  style={[s.selectBtn, visibleCards.length === 0 && s.headerBtnDisabled]}
-                  onPress={() => setSelectMode(true)}
-                  disabled={visibleCards.length === 0}
-                >
-                  <Text style={s.selectBtnText}>{t(nativeLanguage, 'bulkSelect')}</Text>
-                </TouchableOpacity>
+                <>
+                  <TouchableOpacity
+                    style={s.filterBtn}
+                    onPress={() => setShowFilters(true)}
+                    accessibilityRole="button"
+                    accessibilityLabel={t(nativeLanguage, 'cardsFilterButtonLabel')}
+                    accessibilityValue={{ text: filterSummary }}
+                  >
+                    <Text style={s.filterBtnText} numberOfLines={1}>{filterSummary}</Text>
+                    <Text style={s.filterBtnCaret}>▾</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[s.selectBtn, visibleCards.length === 0 && s.headerBtnDisabled]}
+                    onPress={() => setSelectMode(true)}
+                    disabled={visibleCards.length === 0}
+                  >
+                    <Text style={s.selectBtnText}>{t(nativeLanguage, 'bulkSelect')}</Text>
+                  </TouchableOpacity>
+                </>
               ) : (
                 <View style={s.selectControls}>
                   <TouchableOpacity style={s.selectBtn} onPress={toggleSelectAll}>
@@ -433,17 +498,6 @@ export default function CardsScreen() {
                   </TouchableOpacity>
                 </View>
               )}
-              <View style={s.sortRow}>
-                {SORTS.map(sort => (
-                  <TouchableOpacity
-                    key={sort.key}
-                    style={[s.sortChip, sortKey === sort.key && s.sortChipActive]}
-                    onPress={() => setSortKey(sort.key)}
-                  >
-                    <Text style={[s.sortChipText, sortKey === sort.key && s.sortChipTextActive]}>{sort.label}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
             </View>
           </View>
 
@@ -454,10 +508,24 @@ export default function CardsScreen() {
           )}
 
           {loading ? (
-            <View style={s.loadingWrap}>
-              <ActivityIndicator color={C.highlight} />
-              <Text style={s.loadingText}>{t(nativeLanguage, 'loadingFlashcards')}</Text>
-            </View>
+            // The row shape you are about to get, at its real height, so the
+            // list does not jump when the query lands. Six is roughly a screen.
+            <SkeletonGroup label={t(nativeLanguage, 'loadingFlashcards')} style={s.list}>
+              <SkeletonRows count={6} render={() => (
+                <View style={s.cardRow}>
+                  <SkeletonBar width={140} height={19} />
+                  <SkeletonBar width={190} height={16} style={s.skelGap} />
+                  <SkeletonBar width={110} height={11} style={s.skelGap} />
+                  {/* The Edit / Archive / Delete row, which is most of the
+                      height a card row actually takes. */}
+                  <View style={s.skelActions}>
+                    <SkeletonBar width={52} height={28} />
+                    <SkeletonBar width={68} height={28} />
+                    <SkeletonBar width={60} height={28} />
+                  </View>
+                </View>
+              )} />
+            </SkeletonGroup>
           ) : visibleCards.length === 0 ? (
             <View style={s.emptyState}>
               <Text style={s.emptyText}>{t(nativeLanguage, 'cardsEmpty')}</Text>
@@ -500,6 +568,13 @@ export default function CardsScreen() {
         </View>
       )}
 
+      {showFilters && (
+        <FilterSheet
+          groups={filterGroups}
+          nativeLanguage={nativeLanguage}
+          onClose={() => setShowFilters(false)}
+        />
+      )}
       {showImport && (
         <ImportModal
           studyLanguage={studyLanguage}
@@ -542,31 +617,26 @@ function makeStyles(C: Palette, tabBarHeight: number) {
     borderWidth: 1, borderColor: C.border, borderRadius: 12, backgroundColor: C.surface,
     paddingHorizontal: 14, paddingVertical: 10, fontSize: 15, color: C.text, marginTop: 8,
   },
-  filterRow: { flexDirection: 'row', gap: 8 },
-  filterTab: {
+  // No wrap: the summary takes the slack and ellipsizes, so a long pack name
+  // cannot push Select onto a second line and undo the row this replaced.
+  actionRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 },
+  filterBtn: {
+    flexShrink: 1, flexDirection: 'row', alignItems: 'center', gap: 6,
     borderWidth: 1, borderColor: C.border, borderRadius: 10,
-    paddingHorizontal: 12, paddingVertical: 6,
+    paddingHorizontal: 12, paddingVertical: 7,
   },
-  filterTabActive: { backgroundColor: C.highlight, borderColor: C.highlight },
-  filterTabText: { fontSize: 13, color: C.text },
-  filterTabTextActive: { color: C.bg, fontWeight: '600' },
+  filterBtnText: { flexShrink: 1, fontSize: 13, color: C.text },
+  filterBtnCaret: { fontSize: 11, color: C.muted },
 
-  actionRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 },
   selectControls: { flexDirection: 'row', gap: 6 },
   selectBtn: { borderWidth: 1, borderColor: C.border, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 },
   selectBtnText: { fontSize: 12, color: C.muted },
 
-  sortRow: { flexDirection: 'row', gap: 6 },
-  sortChip: { borderWidth: 1, borderColor: C.border, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 },
-  sortChipActive: { backgroundColor: C.border },
-  sortChipText: { fontSize: 12, color: C.muted },
-  sortChipTextActive: { color: C.text },
-
   errorBanner: { marginHorizontal: 16, backgroundColor: '#fde8e8', borderRadius: 10, padding: 12, marginBottom: 8 },
   errorText: { color: C.error, fontSize: 13, fontWeight: '600' },
 
-  loadingWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
-  loadingText: { color: C.muted, fontSize: 14 },
+  skelGap: { marginTop: 6 },
+  skelActions: { flexDirection: 'row', gap: 8, marginTop: 12 },
 
   emptyState: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 },
   emptyText: { color: C.muted, fontSize: 15, textAlign: 'center' },

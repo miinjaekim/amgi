@@ -30,6 +30,7 @@ import { useTheme } from '../../src/context/ThemeContext';
 import { useFloatingTabBarHeight } from '../../src/components/FloatingTabBar';
 import PageHeader from '../../src/components/PageHeader';
 import Markdown from '../../src/components/Markdown';
+import { SkeletonBar, SkeletonGroup, SkeletonRows } from '../../src/components/Skeleton';
 import type { Palette } from '../../src/theme';
 
 type Rating = 'again' | 'hard' | 'good' | 'easy';
@@ -447,9 +448,30 @@ export default function ReviewScreen() {
   }
 
   if (loading) {
+    // Shaped as the collection picker, which is where a signed-in account with
+    // cards always lands. The two other outcomes — no cards at all, or straight
+    // into a session — are rarer than this one and cost only a redraw when they
+    // do happen, which is what a spinner cost every time.
     return (
-      <SafeAreaView style={s.center}>
-        <ActivityIndicator color={C.highlight} size="large" />
+      <SafeAreaView style={s.root} edges={['top']}>
+        <PageHeader
+          titleKey="reviewPageTitle"
+          helpTitleKey="helpReviewTitle"
+          helpLeadKey="helpReviewLead"
+          helpPointsKey="helpReviewPoints"
+        />
+        <SkeletonGroup label={t(nativeLanguage, 'loadingFlashcards')} style={s.pickerScroll}>
+          <SkeletonBar width={150} height={15} />
+          <SkeletonRows count={3} render={() => (
+            <View style={s.pickerRow}>
+              <View style={s.pickerRowTop}>
+                <SkeletonBar width={120} height={16} />
+                <SkeletonBar width={54} height={12} />
+              </View>
+              <SkeletonBar width={64} height={12} style={s.skelCount} />
+            </View>
+          )} />
+        </SkeletonGroup>
       </SafeAreaView>
     );
   }
@@ -1068,6 +1090,7 @@ function makeStyles(C: Palette, tabBarHeight: number) {
   pickerName: { fontSize: 16, fontWeight: '700', color: C.text, flexShrink: 1 },
   pickerDue: { fontSize: 12, color: C.muted },
   pickerCount: { fontSize: 12, color: C.muted, marginTop: 4 },
+  skelCount: { marginTop: 8 },
   collectionLabel: { fontSize: 13, color: C.muted, marginBottom: 8 },
 
   // Start screen — same pill vocabulary as the deck drill's start screen, so

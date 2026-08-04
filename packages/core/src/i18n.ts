@@ -235,14 +235,31 @@ const translations = {
     reviewCompleteMessage: 'Good work. Head to Learn to keep building your vocabulary.',
     // Cards page
     cardsPageTitle: 'My Cards',
-    cardsPageDescription: 'Search, filter, and manage the cards you saved yourself. A pack\'s cards are managed on its own page.',
+    cardsPageDescription: 'Search, filter, and manage every card you have — the ones you saved yourself and the ones a pack gave you.',
     cardsSearchPlaceholder: 'Search cards...',
     cardsSortNewest: 'Newest',
     cardsSortOldest: 'Oldest',
     cardsSortAZ: 'A → Z',
     cardsFilterActive: 'Active',
     cardsFilterArchived: 'Archived',
-    cardsFilterAll: 'All',
+    // "Both", not "All". There are exactly two states, so "both" is the more
+    // precise word anyway — and it keeps this chip from reading identically to
+    // the deck row's "All", which means something else entirely. Two adjacent
+    // chips with one label and two meanings is worse than a longer word.
+    cardsFilterAll: 'Both',
+    // Deck axis.
+    cardsDeckAll: 'All',
+    cardsDeckMine: 'My Cards',
+    // Mobile filter sheet. Group headings, not control names: the chips under
+    // each one say what they do, and a heading that repeated them would be
+    // twice the words for the same fact.
+    cardsFilterDeckGroup: 'Which cards',
+    cardsFilterStatusGroup: 'Show',
+    cardsFilterSortGroup: 'Sort',
+    cardsFilterDone: 'Done',
+    // The button that opens it reads out the current selection, so the label a
+    // screen reader needs is the verb the text is missing.
+    cardsFilterButtonLabel: 'Change filters',
     cardsEmpty: 'No cards found.',
     cardsSignInPrompt: 'Sign in to see your flashcards.',
     cardsGoLearn: 'Go to Learn →',
@@ -258,7 +275,9 @@ const translations = {
     // Import / export
     cardsImport: 'Import',
     cardsExport: 'Export',
-    cardsExportCSV: 'CSV (all cards)',
+    // No "(all cards)" qualifier on either: an export now carries exactly the
+    // rows the filters leave on screen, so naming a scope here would be a lie.
+    cardsExportCSV: 'CSV',
     cardsExportAnki: 'Anki (.txt)',
     importTitle: 'Import Words',
     importPastePrompt: 'Paste words below, one per line.',
@@ -295,7 +314,6 @@ const translations = {
     deckEnrolling: 'Adding the rest of the deck…',
     deckEnrollError: 'Could not add the rest of the deck. Try again.',
     deckCardsUnavailable: "Could not check which cards you already have. Reload before adding the deck, or it may be added twice.",
-    deckManageHint: 'Cards from this deck are managed here rather than on My Cards.',
     // Section enrolment — 160 words is not one decision
     deckSaveSection: 'Save this section',
     deckSectionSaving: 'Saving…',
@@ -552,14 +570,27 @@ const translations = {
     navCards: '카드',
     navDecks: '단어팩',
     cardsPageTitle: '내 카드',
-    cardsPageDescription: '직접 저장한 카드를 검색하고 관리하세요. 단어팩 카드는 각 단어팩 페이지에서 관리해요.',
+    cardsPageDescription: '가지고 있는 카드를 모두 검색하고 관리하세요. 직접 저장한 카드도, 단어팩에서 담은 카드도요.',
     cardsSearchPlaceholder: '카드 검색...',
     cardsSortNewest: '최신순',
     cardsSortOldest: '오래된순',
     cardsSortAZ: '가나다순',
     cardsFilterActive: '활성',
     cardsFilterArchived: '보관됨',
-    cardsFilterAll: '전체',
+    // '전체' → '둘 다': states the two-ness the English "Both" does, and leaves
+    // '전체' free for the deck row, where "everything" is what is meant.
+    cardsFilterAll: '둘 다',
+    // '모든 카드' rather than a bare '전체' — it reads as "all cards", which is
+    // exactly the scope this chip selects.
+    cardsDeckAll: '모든 카드',
+    cardsDeckMine: '내 카드',
+    // '어떤 카드' over '단어팩': the chips under it include 모든 카드 and 내 카드,
+    // which are not packs, so naming the group after packs would be wrong.
+    cardsFilterDeckGroup: '어떤 카드',
+    cardsFilterStatusGroup: '상태',
+    cardsFilterSortGroup: '정렬',
+    cardsFilterDone: '완료',
+    cardsFilterButtonLabel: '필터 변경',
     cardsEmpty: '카드가 없습니다.',
     cardsSignInPrompt: '플래시카드를 보려면 로그인하세요.',
     cardsGoLearn: '학습 페이지로 →',
@@ -575,7 +606,7 @@ const translations = {
     // Import / export
     cardsImport: '가져오기',
     cardsExport: '내보내기',
-    cardsExportCSV: 'CSV (전체 카드)',
+    cardsExportCSV: 'CSV',
     cardsExportAnki: 'Anki (.txt)',
     importTitle: '단어 가져오기',
     importPastePrompt: '단어를 한 줄에 하나씩 입력하세요.',
@@ -612,7 +643,6 @@ const translations = {
     deckEnrolling: '남은 카드를 추가하는 중…',
     deckEnrollError: '남은 카드를 추가하지 못했어요. 다시 시도해 주세요.',
     deckCardsUnavailable: '이미 가지고 있는 카드를 확인할 수 없어요. 덱이 중복으로 추가될 수 있으니 새로고침한 뒤 다시 시도해 주세요.',
-    deckManageHint: '이 단어팩의 카드는 내 카드가 아니라 여기에서 관리해요.',
     // Section enrolment — 160 words is not one decision
     deckSaveSection: '이 묶음 저장하기',
     deckSectionSaving: '저장하는 중…',

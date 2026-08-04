@@ -34,35 +34,14 @@ deletion — which Apple looks for under 5.1.1(v)._
 
 ## High
 
-- [ ] **Loosen the `/cards` filter** — decided 2026-08-01, not built; the last
-      structural piece of the pack work. Today a card belongs to a pack *or* to
-      your list; it should belong to both.
-      - `/cards` stops filtering at load and holds every card for the language.
-      - **Default view hides grid-layout packs only** — kana today. Keyed on
-        `pack.layout === 'grid'`, not on pack ids, so a future single-character
-        pack inherits the rule. A word you can look up is vocabulary; a
-        107-character drill set would swamp the list.
-      - A deck dimension reaches everything: `All / Mine / <each enrolled deck>`.
-        A **second axis**, orthogonal to `FilterKey` (`active | archived | all`) —
-        not another chip in that row. Conflating them is the easy mistake.
-      - **Export follows the visible filter** — so once the load widens, an
-        export taken on the default view carries pack cards too. That's the
-        accepted outcome, not an oversight: the separate export item was
-        cancelled 2026-08-04 (see Decisions in [status.md](status.md)).
-      - **Review must not change.** Verified 2026-08-01: the coupling is one
-        `.filter()` per platform at load and nothing else.
-      - Both platforms carry a comment asserting the *old* rule
-        (`cards/page.tsx:48-52`, `cards.tsx:48-52`). It encodes the reasoning
-        being reversed — rewrite it, don't delete it.
-
-- [ ] **Skeletons instead of spinners** — mobile has 23 `ActivityIndicator` uses
-      and one skeleton. Worst placement is the full-screen spinner a cold launch
-      opens on (`apps/mobile/app/(tabs)/index.tsx:370`, gated on `authLoading`):
-      first impression, whole screen, nothing on it. Web already skeletons the
-      WOTD card with `animate-pulse`, so the pattern exists to copy.
-      Order: (1) the `authLoading` spinner, (2) card and review lists, which have
-      a known row shape, (3) leave in-button spinners alone — the right control
-      for a button you just pressed.
+- [ ] **Skeletons — the rest of them.** The three that mattered are done (see
+      Shipped in [status.md](status.md)); `SkeletonBar` / `SkeletonGroup` /
+      `SkeletonRows` live in `apps/mobile/src/components/Skeleton.tsx` and every
+      remaining case is a composition, not a design. What's left is the long
+      tail: deck and drill screens, the writing panel. **In-button spinners stay
+      spinners** — there the question is whether the press registered.
+      Web has no skeleton component at all: its `/cards` and `/review` loads are
+      still a line of text, and parity says it should get the same treatment.
 
 ## Medium
 
@@ -74,7 +53,9 @@ deletion — which Apple looks for under 5.1.1(v)._
       *Next:* **JLPT** is the obvious gap — Japanese has only the kana packs, so a
       learner past the scripts has nothing — then TOEFL. Swedish, French and
       Traditional Chinese have **no pack at all**. Section themes as `/cards`
-      filters fold into the loosening item above.
+      filters are now a third rung on the deck axis that shipped — a chip per
+      section under the pack you picked — not a new control: a fourth group in
+      mobile's filter sheet, a third chip row on web.
       **A new pack now needs backs drafted alongside its word list**, since no
       kind ships without them. Drafts live in `docs/packs/`.
 
