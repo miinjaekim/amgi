@@ -52,6 +52,19 @@ The three starred items in Google Tasks, in that order.
       most of this: **no OTA**, so anything shipping a model ships in a build, and
       a model file is not a small one.
 
+      **A first written pass is in `docs/local-model.md`** (2026-08-06). Its
+      answer: don't ship a model yet — the hot path is one route
+      (`/api/explain`'s core arm), the size band that fits a 4 GB phone is the
+      band that fails the quality bar, and Expo Go can't load a native inference
+      module, so the whole build would run without the normal dev loop. It also
+      corrects the framing above: **weights are data, downloadable at runtime
+      with `expo-file-system`** — only the *runtime* is a native module, so one
+      build gets it in and models are swappable after. Named first step is a
+      **shared term cache** (already in this file under Needs clarification),
+      then precomputing pack depth/examples, then an eval harness — which
+      nothing here can be judged without. Close this item or scope those three
+      out of it.
+
 - [ ] **Grammar patterns — start building.** ⭐ _Designed 2026-08-03; the design is
       done and this is now the build._ Read first: the argument in
       [vision.md](vision.md), the design calls in [status.md](status.md), the type

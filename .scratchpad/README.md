@@ -23,6 +23,11 @@ Related docs outside this folder:
   card backs, approved 2026-08-02. Kept as the record of what was authored and
   why; still the place to read before changing a gloss, since each leads with
   the near-synonym collisions that a bare source diff would not explain.
+- `docs/local-model.md` — the written answer to the "Local model spike" backlog
+  item: the three meanings of "local", what a local model could and couldn't
+  replace route by route, size/RAM limits, fine-tuning vs prompting, and the
+  recommended first step (a shared term cache, not a model). Read it before
+  reopening the on-device question.
 - `docs/testflight-beta-info.md` — TestFlight listing copy, Korean *and*
   English in one file (the `-ko` suffix was dropped 2026-08-02 for that
   reason). Tracked, despite `.gitignore` excluding `docs/*`, via an explicit
