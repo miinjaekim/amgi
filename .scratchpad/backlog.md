@@ -36,42 +36,26 @@ deletion — which Apple looks for under 5.1.1(v)._
 
 ## High
 
-- [ ] **Skeletons — the rest of them.** The three that mattered are done (see
-      Shipped in [status.md](status.md)); `SkeletonBar` / `SkeletonGroup` /
-      `SkeletonRows` live in `apps/mobile/src/components/Skeleton.tsx` and every
-      remaining case is a composition, not a design. What's left is the long
-      tail: deck and drill screens, the writing panel. **In-button spinners stay
-      spinners** — there the question is whether the press registered.
-      Web has no skeleton component at all: its `/cards` and `/review` loads are
-      still a line of text, and parity says it should get the same treatment.
+The three starred items in Google Tasks, in that order.
 
-## Medium
+- [ ] **Local model spike — can Amgi run a model on-device?** ⭐ _Absorbs the two
+      research entries that used to sit at the bottom of this file: on-device
+      definitions/translations, and the survey of existing language-learning
+      models. They were the same question asked twice._
+      Output is a written answer, not a feature: what open models can do
+      definition + translation at Amgi's quality bar, whether they fit on a phone,
+      what a first integration would actually replace, and whether fine-tuning
+      beats prompting. **Name the cheapest useful first step** — pre-cached
+      content for a pack may beat inference on-device and is a fraction of the
+      work.
+      Read [tech-stack.md](tech-stack.md) first for the constraint that decides
+      most of this: **no OTA**, so anything shipping a model ships in a build, and
+      a model file is not a small one.
 
-- [ ] **Vocabulary packs — iterate beyond v1.** Shipped: TOEIC (133), hiragana +
-      katakana, TOPIK 고급 (160), all now one pre-authored kind.
-      *Principles:* audience is not beginners; packs unlock domains, never
-      "starter" anything; curated from real sources, not AI-generated; word lists
-      need user approval before shipping.
-      *Next:* **JLPT** is the obvious gap — Japanese has only the kana packs, so a
-      learner past the scripts has nothing — then TOEFL. Swedish, French and
-      Traditional Chinese have **no pack at all**. Section themes as `/cards`
-      filters are now a third rung on the deck axis that shipped — a chip per
-      section under the pack you picked — not a new control: a fourth group in
-      mobile's filter sheet, a third chip row on web.
-      **A new pack now needs backs drafted alongside its word list**, since no
-      kind ships without them. Drafts live in `docs/packs/`.
-
-- [ ] **Offline term capture** — jot terms to look up later, queued locally and
-      resolved on reconnect. No model needed, just a queue and a flush.
-
-- [ ] **Grid view for cards** — denser scanning of a large deck. Nobody's blocked.
-
-## Bigger bets
-
-- [ ] **Grammar patterns — exercise, don't flashcard.** _Designed 2026-08-03;
-      ready to build._ Read first: the argument in [vision.md](vision.md), the
-      design calls in [status.md](status.md), the type in
-      [data-model.md](data-model.md). What follows is only staging.
+- [ ] **Grammar patterns — start building.** ⭐ _Designed 2026-08-03; the design is
+      done and this is now the build._ Read first: the argument in
+      [vision.md](vision.md), the design calls in [status.md](status.md), the type
+      in [data-model.md](data-model.md). What follows is only staging.
 
       Today a grammar pattern from a writing finding becomes an ordinary
       `Flashcard` and is reviewed like a noun. The replacement: a pattern is its
@@ -103,6 +87,76 @@ deletion — which Apple looks for under 5.1.1(v)._
       the `easy` the ease ratchet otherwise removes), whether patterns interleave
       into the vocab queue, and whether a tier-1 hint is ever offered unprompted.
       **Spoken production is deliberately not here** — see conversation practice.
+
+- [ ] **Military terms pack.** ⭐ The next pack to author, ahead of the JLPT/TOEFL
+      gaps listed under packs below. Same rules as every pack: **curated from real
+      sources, not AI-generated**, the word list needs user approval before it
+      ships, and **backs are drafted alongside the list** — no kind ships without
+      them. Draft goes in `docs/packs/`, sourced like the TOEIC and TOPIK drafts.
+      Study language is the first thing to settle — Korean is the obvious one
+      given the source material, but say so rather than assume it. Section themes
+      (rank, equipment, orders, …) are the natural `/cards` filter rung the deck
+      axis already supports.
+
+## Medium
+
+- [ ] **Spellcheck on lookup — "showing results for…".** Type a misspelled term on
+      Learn today and it goes straight to `/api/explain`, which will confidently
+      explain a non-word; save it and the typo is now a card. Handle it the way
+      Google does: search the corrected spelling, say **"showing results for X"**,
+      and offer **"search for _what you typed_ instead"** so the user can override.
+      The override matters more here than on a web search — a learner typing an
+      unfamiliar word is exactly who a correction will overrule wrongly, and a
+      real word Amgi doesn't recognise must stay reachable.
+      Open: where the correction comes from. `/api/explain` returning a `corrected`
+      field is one round trip and reuses the model already in the loop
+      (see the reuse-the-endpoint rule); a separate check is a second call before
+      the first. Decide that before building.
+
+- [ ] **Word learning surface — meet a word before it's due.** A new card is
+      immediately due in *both* directions (`isDue` returns both when neither is
+      tracked, `sm2.ts:23`), so a word goes from saved to graded review with no
+      first encounter in between. This is the surface for that first encounter:
+      see it, hear it, use it once, *then* let SM-2 have it.
+      Open before building: whether this writes scheduling at all or is purely a
+      presentation step; if it writes, it is an `sm2.ts` change and the ease
+      ratchet warning in the grammar item applies here too.
+
+- [ ] **Term archiving covers both sides during review.** Archiving from the review
+      manage panel writes the card-level `archived` flag, but
+      `advanceAfterManage` (`apps/web/src/app/review/page.tsx:301`) drops only the
+      *current index* from the in-session queue. The queue holds one entry per due
+      **direction**, so in a `both` session the same card comes back the other way
+      round after you archived it. **Delete has the identical bug** on the line
+      below — worse, since that entry points at a document that no longer exists.
+      Fix both: filter the queue by `card.id`, not by index.
+      Mobile has the bug's mirror image — its review screen has **no** manage
+      panel at all, so archiving mid-review isn't possible there. Parity work,
+      cheap to do at the same time.
+
+
+
+- [ ] **Vocabulary packs — iterate beyond v1.** Shipped: TOEIC (133), hiragana +
+      katakana, TOPIK 고급 (160), all now one pre-authored kind.
+      *Principles:* audience is not beginners; packs unlock domains, never
+      "starter" anything; curated from real sources, not AI-generated; word lists
+      need user approval before shipping.
+      *Next:* the **military terms pack** is queued above this, under High. After
+      it, **JLPT** is the obvious gap — Japanese has only the kana packs, so a
+      learner past the scripts has nothing — then TOEFL. Swedish, French and
+      Traditional Chinese have **no pack at all**. Section themes as `/cards`
+      filters are now a third rung on the deck axis that shipped — a chip per
+      section under the pack you picked — not a new control: a fourth group in
+      mobile's filter sheet, a third chip row on web.
+      **A new pack now needs backs drafted alongside its word list**, since no
+      kind ships without them. Drafts live in `docs/packs/`.
+
+- [ ] **Offline term capture** — jot terms to look up later, queued locally and
+      resolved on reconnect. No model needed, just a queue and a flush.
+
+- [ ] **Grid view for cards** — denser scanning of a large deck. Nobody's blocked.
+
+## Bigger bets
 
 - [ ] **Conversation practice** — _needs design._ Transcription + per-participant
       feedback; MVP is end-of-conversation feedback on a recording. Same "here's
@@ -165,14 +219,6 @@ those two now *show*.
       `turbo lint` runs one package and reports success. Honest today, misleading
       the moment it gates CI. Mobile needs `eslint-config-expo`, core a small flat
       config. Do it with the CI gate, not before.
-
-## Research / exploratory
-
-- [ ] **Offline definitions/translations** — the hard phase of Offline Amgi
-      (on-device model or pre-cached content). Never allowed to block the cheap
-      offline work, and that held.
-- [ ] **Training a language-learning model / survey existing ones** — spike: what
-      exists, whether fine-tuning beats prompting, what a first step looks like.
 
 ## Needs clarification
 

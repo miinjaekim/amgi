@@ -71,6 +71,27 @@ the production `EXPO_PUBLIC_API_BASE_URL`.
 Closed calls, kept with their reasoning — a decision whose reasoning is lost gets
 reopened by the next person to notice the symptom. Newest first.
 
+### Skeletons stop at the three that shipped (2026-08-06)
+
+The long tail is **cancelled, not deferred** — deck and drill screens, the writing
+panel, and the web port that parity argued for. The three in PR #80 were picked
+because they were the worst: a cold launch opening on a full-screen spinner with
+nothing on it, and the two longest lists. Those are fixed. What was left is the
+tail where the wait is already short enough that a shaped placeholder and a
+spinner are the same experience, and each one is still a real diff to write and
+maintain against a layout that changes.
+
+`SkeletonBar` / `SkeletonGroup` / `SkeletonRows` **stay** in
+`apps/mobile/src/components/Skeleton.tsx` — they're in use, and a fourth case is a
+composition away if some screen turns out to load slowly enough to earn one. That
+is the reopen condition: **a measured slow load on a specific screen**, not
+coverage for its own sake. "Web has no skeleton component" is not by itself a
+reason to build one; parity is about what a user can do, not about which
+primitives each platform owns.
+
+_In-button spinners were already excluded and remain so — there the question is
+whether the press registered, which a spinner answers and a skeleton doesn't._
+
 ### Contextual tips: cancelled, pull help is the answer (2026-08-04)
 
 Dropped from the backlog, not deferred. The "?" shipped in PR #74 on Learn, Packs
