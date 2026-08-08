@@ -6,8 +6,10 @@ import {
   getWordOfTheDay as _wotd,
   getPronunciationUrl as _pronounce,
   getWritingReview as _writingReview,
+  getPatternExercise as _patternExercise,
+  gradePatternAnswer as _gradePattern,
 } from '@amgi/core';
-import type { StudyLanguage } from '@amgi/core';
+import type { GrammarPattern, StudyLanguage } from '@amgi/core';
 
 export type { ExplainResult, TermCore, TermDepth, TermAmbiguous, ExamplePair } from '@amgi/core';
 export type { WordOfTheDay } from '@amgi/core';
@@ -53,6 +55,23 @@ export const getWritingReview = (
   nativeLanguage?: string,
   studyLanguage: StudyLanguage = 'Korean',
 ) => _writingReview(text, nativeLanguage, studyLanguage, BASE_URL);
+
+/**
+ * Which rung the pattern is on is decided inside `getPatternExercise` from the
+ * pattern's own `kind` and `repetitions`, so the caller passes the pattern and
+ * not a format — the same on both platforms.
+ */
+export const getPatternExercise = (
+  pattern: Pick<GrammarPattern, 'pattern' | 'kind' | 'gloss' | 'note' | 'studyLanguage' | 'production'>,
+  nativeLanguage = 'English',
+) => _patternExercise(pattern, nativeLanguage, BASE_URL);
+
+/** Grading a production turn is `/api/writing`, unchanged. Cloze grades locally. */
+export const gradePatternAnswer = (
+  answer: string,
+  nativeLanguage = 'English',
+  studyLanguage: StudyLanguage = 'Korean',
+) => _gradePattern(answer, nativeLanguage, studyLanguage, BASE_URL);
 
 // Streaming variants — expo/fetch exposes a WHATWG ReadableStream body so the
 // Learn screen can reveal depth/examples as they arrive, like web does.

@@ -20,6 +20,7 @@ import { useFloatingTabBarHeight } from '../../src/components/FloatingTabBar';
 import CardDetailModal from '../../src/components/CardDetailModal';
 import ImportModal from '../../src/components/ImportModal';
 import FilterSheet from '../../src/components/FilterSheet';
+import PatternsPanel from '../../src/components/PatternsPanel';
 import type { FilterGroup } from '../../src/components/FilterSheet';
 import { SkeletonBar, SkeletonGroup, SkeletonRows } from '../../src/components/Skeleton';
 import type { Palette } from '../../src/theme';
@@ -51,6 +52,14 @@ export default function CardsScreen() {
   const [showFilters, setShowFilters] = useState(false);
   const [reloadToken, setReloadToken] = useState(0);
   const [importSuccess, setImportSuccess] = useState<string | null>(null);
+  /**
+   * Cards and grammar patterns are different objects with different review
+   * verbs, so this is a mode switch rather than another deck chip — the deck
+   * axis filters `Flashcard[]`, and a pattern is not one. They share this tab
+   * because it is already "the things you have saved", and a fifth tab for a
+   * list of ten items would cost more than it returned.
+   */
+  const [mode, setMode] = useState<'cards' | 'patterns'>('cards');
 
   // Every card for this language, packs included. A card used to belong to a
   // pack *or* to your list, and the load dropped anything with a `packId` — but
@@ -419,7 +428,7 @@ export default function CardsScreen() {
       <View style={s.header}>
         <View style={s.headerTop}>
           <Text style={s.title}>{t(nativeLanguage, 'cardsPageTitle')}</Text>
-          {user && (
+          {user && mode === 'cards' && (
             <View style={s.headerActions}>
               <TouchableOpacity style={s.headerBtn} onPress={() => setShowImport(true)}>
                 <Text style={s.headerBtnText}>{t(nativeLanguage, 'cardsImport')}</Text>
@@ -449,6 +458,30 @@ export default function CardsScreen() {
         </View>
       ) : (
         <>
+          {/* Above everything, and outside the filter row on purpose: those all
+              narrow one list, and this changes which list you are looking at. */}
+          <View style={s.modeRow}>
+            {(['cards', 'patterns'] as const).map(m => (
+              <TouchableOpacity
+                key={m}
+                style={[s.modeBtn, mode === m && s.modeBtnOn]}
+                onPress={() => setMode(m)}
+              >
+                <Text style={[s.modeText, mode === m && s.modeTextOn]}>
+                  {t(nativeLanguage, m === 'cards' ? 'libraryModeCards' : 'libraryModePatterns')}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {mode === 'patterns' ? (
+            <PatternsPanel
+              uid={user.uid}
+              studyLanguage={studyLanguage}
+              nativeLanguage={nativeLanguage}
+            />
+          ) : (
+          <>
           <View style={s.controls}>
             <TextInput
               style={s.searchInput}
@@ -539,10 +572,15 @@ export default function CardsScreen() {
             />
           )}
         </>
+          )}
+        </>
       )}
 
-      {/* Bulk action bar */}
-      {selectMode && (
+      {/* Bulk action bar. Card-shaped, like import and export — select mode
+          cannot be entered from the patterns list, but a stale `selectMode`
+          from before the toggle was flipped would otherwise leave the bar
+          floating over a list it cannot act on. */}
+      {selectMode && mode === 'cards' && (
         <View style={s.bulkBar}>
           <Text style={s.bulkCount}>
             {nativeLanguage === 'Korean' ? `${selectedIds.size}개 선택됨` : `${selectedIds.size} selected`}
@@ -607,6 +645,12 @@ function makeStyles(C: Palette, tabBarHeight: number) {
   headerActions: { flexDirection: 'row', gap: 8 },
   headerBtn: { borderWidth: 1, borderColor: C.border, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5 },
   headerBtnDisabled: { opacity: 0.3 },
+
+  modeRow: { flexDirection: 'row', gap: 8, paddingHorizontal: 16, paddingTop: 4, paddingBottom: 10 },
+  modeBtn: { borderWidth: 1, borderColor: C.border, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 8 },
+  modeBtnOn: { backgroundColor: C.highlight, borderColor: C.highlight },
+  modeText: { fontSize: 14, fontWeight: '700', color: C.text },
+  modeTextOn: { color: C.bg },
   headerBtnText: { fontSize: 12, color: C.muted },
 
   successBanner: { marginHorizontal: 16, marginTop: 8, backgroundColor: C.border, borderRadius: 10, padding: 12 },

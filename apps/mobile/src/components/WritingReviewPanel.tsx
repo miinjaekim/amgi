@@ -4,16 +4,21 @@ import {
   ScrollView, StyleSheet, Keyboard,
 } from 'react-native';
 import {
-  buildWritingCardDraft, getStudyLanguageConfig, t, WRITING_MAX_CHARS,
+  buildPatternDraft, buildWritingCardDraft, getStudyLanguageConfig, patternGloss, t, WRITING_MAX_CHARS,
 } from '@amgi/core';
-import type { FindingKind, TranslationKey, WritingCardCandidate, WritingReview } from '@amgi/core';
+import type {
+  FindingKind, TranslationKey, WritingCardCandidate, WritingPatternCandidate, WritingReview,
+} from '@amgi/core';
 import { getWritingReview } from '../services/gemini';
 import { saveFlashcardToFirestore } from '../services/firestore';
+import { savePattern } from '../services/patterns';
 import type { Flashcard } from '../services/firestore';
 import { useUser } from '../context/UserContext';
 import { useTheme } from '../context/ThemeContext';
 import { useFloatingTabBarHeight } from './FloatingTabBar';
 import PronounceButton from './PronounceButton';
+import CopyButton from './CopyButton';
+import TextDiff from './TextDiff';
 import type { Palette } from '../theme';
 
 const KIND_LABEL_KEY: Record<FindingKind, TranslationKey> = {
@@ -44,6 +49,18 @@ export default function WritingReviewPanel() {
   const [error, setError] = useState<string | null>(null);
   const [savedCards, setSavedCards] = useState<Set<string>>(new Set());
   const [savingCard, setSavingCard] = useState<string | null>(null);
+  // Patterns keep their own pair, keyed by citation form. Kept apart from the
+  // card sets rather than pooled: one finding can offer both, and one being
+  // saved says nothing about the other.
+  const [savedPatterns, setSavedPatterns] = useState<Set<string>>(new Set());
+  const [savingPattern, setSavingPattern] = useState<string | null>(null);
+  /**
+   * The passage as submitted, which is what the diff is against — not `text`,
+   * which stays editable after a review returns. Diffing the rewrite against a
+   * passage the user has since changed would invent edits nobody made.
+   */
+  const [submitted, setSubmitted] = useState('');
+  const [showClean, setShowClean] = useState(false);
 
   const languageLabel = t(nativeLanguage, getStudyLanguageConfig(studyLanguage).studyLabelKey);
   const overLimit = text.length > WRITING_MAX_CHARS;
@@ -55,8 +72,13 @@ export default function WritingReviewPanel() {
     setError(null);
     setReview(null);
     setSavedCards(new Set());
+    setSavedPatterns(new Set());
+    setShowClean(false);
     try {
-      setReview(await getWritingReview(text.trim(), nativeLanguage ?? 'English', studyLanguage));
+      const passage = text.trim();
+      const result = await getWritingReview(passage, nativeLanguage ?? 'English', studyLanguage);
+      setSubmitted(passage);
+      setReview(result);
     } catch (err) {
       setError(t(nativeLanguage, 'errorWritingReview'));
       console.error(err);
@@ -80,6 +102,28 @@ export default function WritingReviewPanel() {
       setError(t(nativeLanguage, 'errorSaveFlashcard'));
     } finally {
       setSavingCard(null);
+    }
+  };
+
+  /**
+   * Takes a pattern into practice rather than saving it as a card — the
+   * emergent door the design wanted. Nothing here enrols you in anything: one
+   * finding, one pattern, chosen because your own writing showed you needed it.
+   */
+  const handleAddPattern = async (candidate: WritingPatternCandidate) => {
+    if (!user) {
+      handleSignIn();
+      return;
+    }
+    setSavingPattern(candidate.pattern);
+    setError(null);
+    try {
+      await savePattern(buildPatternDraft(candidate, user.uid, studyLanguage));
+      setSavedPatterns(prev => new Set(prev).add(candidate.pattern));
+    } catch {
+      setError(t(nativeLanguage, 'errorSavePattern'));
+    } finally {
+      setSavingPattern(null);
     }
   };
 
@@ -135,10 +179,25 @@ export default function WritingReviewPanel() {
         <>
           <View style={s.card}>
             <View style={s.rewriteHeaderRow}>
-              <Text style={s.sectionLabel}>{t(nativeLanguage, 'writingRewriteHeading')}</Text>
+              <Text style={[s.sectionLabel, s.sectionLabelShrink]}>{t(nativeLanguage, 'writingRewriteHeading')}</Text>
               <PronounceButton text={review.rewrite} studyLanguage={studyLanguage} />
+              {/* Always the clean rewrite, never the diff — copying text with
+                  the deletions in it would paste the mistakes back. */}
+              <CopyButton text={review.rewrite} nativeLanguage={nativeLanguage} />
+              {/* The clean rewrite stays reachable — it is the version you
+                  would read aloud, and a heavily edited passage is hard to read
+                  as a sentence through its own diff. */}
+              <TouchableOpacity style={s.viewToggle} onPress={() => setShowClean(v => !v)}>
+                <Text style={s.viewToggleText}>
+                  {t(nativeLanguage, showClean ? 'writingViewChanges' : 'writingViewFinal')}
+                </Text>
+              </TouchableOpacity>
             </View>
-            <Text style={s.rewriteText}>{review.rewrite}</Text>
+            {showClean ? (
+              <Text style={s.rewriteText}>{review.rewrite}</Text>
+            ) : (
+              <TextDiff before={submitted} after={review.rewrite} studyLanguage={studyLanguage} />
+            )}
 
             {/* The check that a correction didn't change what they meant.
                 Subordinate to the rewrite, but never behind a tap — a check
@@ -162,6 +221,19 @@ export default function WritingReviewPanel() {
             review.findings.map((finding, i) => {
               const saved = finding.card ? savedCards.has(finding.card.study) : false;
               const savingThis = finding.card ? savingCard === finding.card.study : false;
+              const patternSaved = finding.pattern ? savedPatterns.has(finding.pattern.pattern) : false;
+              const savingThisPattern = finding.pattern ? savingPattern === finding.pattern.pattern : false;
+              // A pattern offer normally stands alone: where both are present
+              // the card is a fallback, and on a grammar finding it is often a
+              // *description* rather than a card front — "accord du participe
+              // passé avec être" is a heading, not a deck entry.
+              //
+              // A gap card is the exception. A word the learner reached for and
+              // did not have is a different object from the pattern the same
+              // sentence happened to illustrate, and wanting both is not a
+              // choice the app should make for them. This rule replaces the
+              // pre-parity crutch of always showing the card here.
+              const showCard = !!finding.card && (!finding.pattern || finding.card.gap === true);
               return (
                 <View key={i} style={s.finding}>
                   <View style={s.kindBadge}>
@@ -178,8 +250,37 @@ export default function WritingReviewPanel() {
 
                   <Text style={s.note}>{finding.note}</Text>
 
-                  {finding.card && (
+                  {finding.pattern && (
                     <View style={s.cardRow}>
+                      <Text style={s.cardStudy}>{finding.pattern.pattern}</Text>
+                      {!!patternGloss(finding.pattern, nativeLanguage) && (
+                        <Text style={s.cardBack} numberOfLines={2}>
+                          {patternGloss(finding.pattern, nativeLanguage)}
+                        </Text>
+                      )}
+                      <TouchableOpacity
+                        style={[s.addBtn, (patternSaved || savingThisPattern) && s.addBtnDisabled]}
+                        onPress={() => finding.pattern && handleAddPattern(finding.pattern)}
+                        disabled={patternSaved || savingThisPattern}
+                      >
+                        {savingThisPattern
+                          ? <ActivityIndicator color={C.text} size="small" />
+                          : <Text style={s.addBtnText}>{t(nativeLanguage, patternSaved ? 'patternAdded' : 'patternPractise')}</Text>}
+                      </TouchableOpacity>
+                    </View>
+                  )}
+
+                  {showCard && finding.card && (
+                    <View style={s.cardRow}>
+                      {/* A word they demonstrably reached for and did not have.
+                          Marked, because it is different evidence from every
+                          other suggestion: not "this would be worth knowing"
+                          but "you needed this and it wasn't there." */}
+                      {finding.card.gap && (
+                        <View style={s.gapBadge}>
+                          <Text style={s.gapBadgeText}>{t(nativeLanguage, 'writingWordYouNeeded')}</Text>
+                        </View>
+                      )}
                       <Text style={s.cardStudy}>{finding.card.study}</Text>
                       <PronounceButton text={finding.card.study} studyLanguage={studyLanguage} />
                       <Text style={s.cardBack} numberOfLines={2}>
@@ -235,8 +336,18 @@ function makeStyles(C: Palette, tabBarHeight: number) {
     errorText: { color: C.error, fontWeight: '600' },
 
     card: { backgroundColor: C.surface, borderRadius: 16, padding: 18, borderWidth: 1, borderColor: C.border, marginBottom: 20 },
-    rewriteHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 },
+    // Wraps, because the heading is a full sentence in uppercase and the row
+    // also carries a pronounce button and the Changes/Final toggle — on a
+    // narrow phone the toggle ran off the edge. Wrapping drops it to its own
+    // line rather than truncating a label or shrinking a tap target.
+    rewriteHeaderRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6, marginBottom: 8 },
+    viewToggle: {
+      marginLeft: 'auto', borderWidth: 1, borderColor: C.border, borderRadius: 12,
+      paddingHorizontal: 10, paddingVertical: 3,
+    },
+    viewToggleText: { fontSize: 11, color: C.muted },
     sectionLabel: { fontSize: 11, fontWeight: '700', color: C.muted, textTransform: 'uppercase', letterSpacing: 0.8 },
+    sectionLabelShrink: { flexShrink: 1 },
     rewriteText: { fontSize: 17, color: C.text, lineHeight: 26 },
     nativeBlock: { marginTop: 14, paddingTop: 14, borderTopWidth: 1, borderTopColor: C.border, gap: 4 },
     nativeText: { fontSize: 14, color: C.text, opacity: 0.7, lineHeight: 21 },
@@ -257,6 +368,8 @@ function makeStyles(C: Palette, tabBarHeight: number) {
       flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8,
       marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: C.border,
     },
+    gapBadge: { backgroundColor: C.highlight, borderRadius: 10, paddingHorizontal: 7, paddingVertical: 2 },
+    gapBadgeText: { fontSize: 9, color: C.bg, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.6 },
     cardStudy: { fontSize: 15, fontWeight: '700', color: C.text },
     cardBack: { fontSize: 13, color: C.muted, flexShrink: 1 },
     addBtn: {

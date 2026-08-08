@@ -1,10 +1,6 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { NextRequest, NextResponse } from 'next/server';
-import { getStudyLanguageConfig } from '@amgi/core';
-
-function stripMarkdownCodeBlock(text: string): string {
-  return text.replace(/```[a-zA-Z]*\n?|```/g, '').trim();
-}
+import { getStudyLanguageConfig, parseModelJson } from '@amgi/core';
 
 export async function POST(req: NextRequest) {
   const { goal, studyLanguage = 'Korean', count = 15, previousWords, feedback } = await req.json();
@@ -57,7 +53,10 @@ Respond with only this JSON:
 
   const result = await model.generateContent(prompt);
   const text = result.response.text();
-  const parsed = JSON.parse(stripMarkdownCodeBlock(text));
+  // `parseModelJson` returns `unknown` where `JSON.parse` returned `any`, so
+  // the shape has to be stated. Narrow rather than asserted, because the guard
+  // below is already doing the checking.
+  const parsed = parseModelJson(text) as { words?: unknown };
 
   if (!Array.isArray(parsed.words)) {
     return NextResponse.json({ error: 'Failed to generate vocabulary list' }, { status: 502 });

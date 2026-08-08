@@ -1,4 +1,95 @@
-# Lessons Learned
+# Lessons
+
+## Hermes has `Intl`, but not `Intl.Segmenter` (2026-08-09)
+
+Measured, not assumed — and measurable without a device:
+
+```
+$ node_modules/react-native/sdks/hermesc/osx-bin/hermes some.js
+Intl: object
+Intl.Segmenter: undefined
+unicode prop escapes: yes
+```
+
+`typeof Intl === 'object'` makes it *look* supported, so a feature check on
+`Intl` alone passes and then the specific API is missing. Anything relying on
+segmentation — word diffing, word counts, truncating at a word boundary — needs
+a real fallback on mobile, not a polite `try`.
+
+**The fallback has to be script-aware, not a whitespace split.** Half the study
+languages put no spaces between words, so splitting 私は昨日映画を見ました on
+whitespace yields one token and any diff over it can only say "all of this
+changed". Splitting spaceless scripts per character instead lands well: the LCS
+still finds the common run and coalescing merges it back, so 見 → 観 comes out
+as a one-character edit. Verified by running the bundled diff through that same
+`hermes` binary:
+
+```
+[ko] 어제 학교에 가고 있었[-어요. 그런-]{+는+}데 비가 왔어요.
+[ja] 私は昨日映画を[-見-]{+観+}ました。
+```
+
+Two things worth keeping from how this was checked:
+
+- **That `hermes` binary ships in `node_modules` and runs plain JS.** Bundle a
+  core module with esbuild (`--format=iife --target=es2020`) and you can test
+  engine behaviour without a simulator, a build, or a device.
+- **`expo export --platform ios` compiles the whole app to Hermes bytecode**, so
+  it catches broken imports and JSX that `tsc` passes over. Cheaper than a build
+  and worth running before claiming a mobile change works.
+
+## A generated exercise must be checkable, not just well-prompted (2026-08-08)
+
+A grammar cloze came back reading `Mon frère adore ___ football chaque
+week-end.` with `expected: "au"` — the model had deleted "jouer" along with the
+gap but left it out of the answer too. Filling in the "correct" answer gave
+**"Mon frère adore au football"**, which is not French, and the learner who
+wrote the correct `jouer au` was marked wrong by their own app. The prompt
+already said "everything else in the sentence stays intact"; it was simply not
+obeyed.
+
+**The fix was not better wording — it was a redundant field.** Generation now
+returns the complete sentence as well, and the exercise is discarded unless
+filling the gap reproduces it exactly. A model that silently drops a word now
+fails a string comparison instead of reaching a learner.
+
+The general shape, worth reaching for whenever a model generates something the
+app will assert is correct: **ask for the same fact twice in two forms, and
+check them against each other.** Prompt instructions are requests; a round trip
+between two returned fields is enforcement. And when the content is something
+the user will *learn*, fail visibly into a retry rather than tolerantly into a
+display — the tolerant-parser instinct that is right for a writing finding is
+wrong here, because the cost of showing it is teaching the wrong thing.
+
+Two follow-on details, both found by the check's own first run:
+
+- **Compare whitespace-insensitively.** An elision attaches with no space, so
+  `J'ai besoin ___ eau.` + `d'` rebuilds to `d' eau` where the full sentence has
+  `d'eau`. Strict comparison threw away a correct exercise. Ignoring spacing
+  still catches the real failure — a missing word is not a missing space.
+- **Fold typographic marks.** The same generator returns `d’` with a curly
+  apostrophe, which no learner types and which no ASCII comparison matches.
+
+### …and the check then broke every turn, which is its own lesson
+
+The redundant field was added to the parser as **required**, the route was
+tested with `curl`, the JSON looked right, and it shipped broken: the route
+parses the model's response and returns the *parsed* object, so it had stripped
+`full` — and `getPatternExercise` parses the route's response a **second** time
+(mobile can point at a deployed route of a different vintage). Every cloze
+failed that second parse.
+
+Two things to carry forward:
+
+- **A field a parser requires must survive the parse**, or a double-parsed
+  pipeline rejects everything. `full` is now part of `ClozeExercise` rather than
+  an input-only field — which also let the graded view stop reassembling a
+  string it can be handed.
+- **Curl against a route is not a test of the client path.** The route was
+  verified three times over and the bug was in the layer after it. Anything with
+  a shared-core fetch wrapper needs exercising *through the wrapper* — a
+  throwaway vitest file that calls `getPatternExercise` against the dev server
+  found it in one run, and would have found it before shipping. Learned
 
 Gotchas already paid for. Grouped so you can skim the relevant section.
 

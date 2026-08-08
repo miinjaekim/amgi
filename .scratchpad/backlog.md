@@ -13,13 +13,20 @@ build, a second rides along free rather than costing a build of its own.
 
 ## Queued for the next build
 
-**Two items queued, both JS-only** — no native module between them, so no
-`expo config --type introspect` pass. 1.2.0 carries everything before them. See
-Builds in [status.md](status.md) for its contents and for what remains unverified
-on a real binary.
+**Three items queued, and one adds a native module.** Grammar patterns brought
+`expo-clipboard` in for copy-to-clipboard on the writing rewrite, so the next
+build is a native-module build — the `expo config --type introspect` pass is
+required rather than skippable. ⚠️ **It has already been run and came back
+clean**: no entitlements, no usage descriptions, plugin list unchanged. Re-run it
+only if another native module lands first. 1.2.0 carries everything before these.
+See Builds in [status.md](status.md) for its contents and for what remains
+unverified on a real binary.
 
 - **PR #80** (merged 2026-08-04) — `/cards` holds pack cards, the mobile filter
   sheet, the first skeletons.
+- **PR #84** (grammar patterns) — the whole feature on both platforms, plus
+  `expo-clipboard`. The one native module in this batch; everything else in it
+  is JS.
 - **PR #81** (merged 2026-08-08) — the two military packs reach mobile through
   the shared registry, and the packs list drops the per-pack description. ⚠️ The
   description change was **typechecked but never seen rendered** — the list went
@@ -48,41 +55,32 @@ the local model spike was the third and is **closed** — the written answer is
 `docs/local-model.md`, the reasoning and the reopen condition are in
 [status.md](status.md), and the two pieces of it worth doing are under Medium.
 
-- [ ] **Grammar patterns — start building.** ⭐ _Designed 2026-08-03; the design is
-      done and this is now the build._ Read first: the argument in
-      [vision.md](vision.md), the design calls in [status.md](status.md), the type
-      in [data-model.md](data-model.md). What follows is only staging.
+- [ ] **Grammar patterns — built on both platforms, needs a device pass.** ⭐
+      _PR #84, 2026-08-08 → 09._ Read `docs/grammar-research.md` and the grammar
+      Decisions entries in [status.md](status.md) before changing the design.
 
-      Today a grammar pattern from a writing finding becomes an ordinary
-      `Flashcard` and is reviewed like a noun. The replacement: a pattern is its
-      own object and each review is a fresh **production** turn — a situation in
-      your native language, you write the sentence, `/api/writing` grades it.
+      Web is done and trialled. Mobile is ported — the patterns row, both rungs
+      of `PatternSession`, `PatternsPanel` behind a Cards/Grammar toggle, manual
+      add, the writing panel's pattern offer and gap cards, and
+      copy-to-clipboard via `expo-clipboard`.
 
-      - **(1a) Web, the cheap door.** `packages/core/src/grammar.ts` — types, a
-        tolerant parser, and **two** shared fetches: generating the situation and
-        grading are separate round trips (_n_ patterns = _2n_ calls). Grading is
-        `/api/writing` unchanged. Entry via the `WritingFinding.pattern?` sibling
-        to `card?`. Exercise screen: prompt never naming the pattern, free-text
-        production, two-tier hint that clamps the verdict, rewrite shown on every
-        verdict. Own row in the Review picker — a *signature change* to
-        `buildReviewCollections` plus an identity outside the pack-id namespace,
-        not a free call. `sm2.ts` unedited, but read the ease-ratchet warning
-        before assuming that means unaffected. Grading failure must never lose the
-        learner's typed sentence. One manual Firestore step (`uid + studyLanguage`).
-      - **(1b) Web, the expensive door.** The third `ExplainResult` arm on
-        `/api/explain` — the cold-start path, and the bulk of the work: six
-        language branches × the `if (context)` split = **12 prompt templates**.
-        Gates nothing in (1a), so do it second or defer it.
-      - **(2) Mobile parity** — JS-only, rides a build rather than needing one.
-      - **(3) Later, each independently useful:** produce-offline /
-        evaluate-on-reconnect; interleaving patterns into the vocab queue;
-        the acquisition signal, which needs ephemeral-submissions reopened.
+      - [ ] **Try the mobile side against a deployed API.** ⚠️ Mobile calls
+            `EXPO_PUBLIC_API_BASE_URL`, not localhost — so in Expo Go against
+            production there are **no pattern offers on a writing review** (the
+            deployed `/api/writing` doesn't emit `pattern` yet) and pattern
+            practice would 404 (`/api/grammar/exercise` doesn't exist there).
+            Nothing is wrong with the app; the API half of this branch has to
+            ship, or the base URL has to point at a preview or a LAN dev server,
+            before any of it can be exercised on a phone.
+      - [ ] **Then the ordinary device pass**: the cloze gap renders as a drawn
+            blank rather than a literal `___`, and the patterns row is disabled
+            offline.
 
-      **Three things are open**, all listed as such in status.md: whether the
-      learner may override a verdict (load-bearing — also the likeliest home for
-      the `easy` the ease ratchet otherwise removes), whether patterns interleave
-      into the vocab queue, and whether a tier-1 hint is ever offered unprompted.
-      **Spoken production is deliberately not here** — see conversation practice.
+      **Don't remove the "+ card" fallback from `/api/writing` yet.** It emits
+      `card` alongside `pattern` so a *shipped* build — which reads `card` and
+      ignores `pattern` — still gets the take-away. Both platforms now apply the
+      gap-card rule, so the duplicate is inert in current code; it stays until no
+      old build is in the wild, and with no OTA that is a while.
 
 ## Medium
 

@@ -1,10 +1,6 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { NextRequest, NextResponse } from 'next/server';
-import { getStudyLanguageConfig, getBackSideConfig } from '@amgi/core';
-
-function stripMarkdownCodeBlock(text: string): string {
-  return text.replace(/```[a-zA-Z]*\n?|```/g, '').trim();
-}
+import { getStudyLanguageConfig, getBackSideConfig, parseModelJson } from '@amgi/core';
 
 export async function POST(req: NextRequest) {
   const { term, termLanguage, nativeLanguage = 'English', studyLanguage = 'Korean', translation, briefDefinition } = await req.json();
@@ -49,7 +45,7 @@ Respond with only this JSON:
 
   const result = await model.generateContent(prompt);
   const text = result.response.text();
-  const data = JSON.parse(stripMarkdownCodeBlock(text));
+  const data = parseModelJson(text);
 
   return NextResponse.json(data);
 }

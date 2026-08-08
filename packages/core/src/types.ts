@@ -45,6 +45,15 @@ export interface StudyLanguageConfig {
   labelNative: string;
   /** Firestore collection holding this language's cards */
   collection: string;
+  /**
+   * BCP-47 tag for `Intl` APIs — word segmentation in `diff.ts` today.
+   *
+   * Separate from `ttsLanguageCode` rather than reusing it, because that field
+   * answers a different question and gives a wrong answer here: Traditional
+   * Chinese TTS is `cmn-TW`, which names the spoken variety, where `Intl` wants
+   * `zh-TW`. Keeping them apart means neither has to compromise for the other.
+   */
+  locale: string;
   /** Field on cards/TermCore/ExamplePair holding the study-language text */
   studyField: CardSideField;
   /** i18n key for the study-side label */
@@ -86,6 +95,7 @@ export const STUDY_LANGUAGE_CONFIGS: Record<StudyLanguage, StudyLanguageConfig> 
     label: 'Korean',
     labelNative: '한국어',
     collection: 'cards',
+    locale: 'ko',
     studyField: 'korean',
     studyLabelKey: 'labelKorean',
     characterSectionKey: 'sectionHanja',
@@ -98,6 +108,7 @@ export const STUDY_LANGUAGE_CONFIGS: Record<StudyLanguage, StudyLanguageConfig> 
     label: 'Swedish',
     labelNative: 'Svenska',
     collection: 'cards_swedish',
+    locale: 'sv',
     studyField: 'swedish',
     studyLabelKey: 'labelSwedish',
     ttsLanguageCode: 'sv-SE',
@@ -108,6 +119,7 @@ export const STUDY_LANGUAGE_CONFIGS: Record<StudyLanguage, StudyLanguageConfig> 
     label: 'French',
     labelNative: 'Français',
     collection: 'cards_french',
+    locale: 'fr',
     studyField: 'french',
     studyLabelKey: 'labelFrench',
     ttsLanguageCode: 'fr-FR',
@@ -118,6 +130,7 @@ export const STUDY_LANGUAGE_CONFIGS: Record<StudyLanguage, StudyLanguageConfig> 
     label: 'Japanese',
     labelNative: '日本語',
     collection: 'cards_japanese',
+    locale: 'ja',
     studyField: 'japanese',
     studyLabelKey: 'labelJapanese',
     characterSectionKey: 'sectionKanji',
@@ -130,6 +143,7 @@ export const STUDY_LANGUAGE_CONFIGS: Record<StudyLanguage, StudyLanguageConfig> 
     label: 'Chinese (Traditional)',
     labelNative: '繁體中文',
     collection: 'cards_chinese_traditional',
+    locale: 'zh-TW',
     studyField: 'traditionalChinese',
     studyLabelKey: 'labelTraditionalChinese',
     characterSectionKey: 'sectionHanzi',
@@ -148,6 +162,7 @@ export const STUDY_LANGUAGE_CONFIGS: Record<StudyLanguage, StudyLanguageConfig> 
     label: 'English',
     labelNative: 'English',
     collection: 'cards_english',
+    locale: 'en',
     studyField: 'english',
     studyLabelKey: 'labelEnglish',
     ttsLanguageCode: 'en-US',

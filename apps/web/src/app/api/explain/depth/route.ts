@@ -1,11 +1,8 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { NextRequest, NextResponse } from 'next/server';
-import { getStudyLanguageConfig } from '@amgi/core';
+import { getStudyLanguageConfig, parseModelJson } from '@amgi/core';
 import { characterBreakdownInstruction } from '@/lib/characterBreakdown';
 
-function stripMarkdownCodeBlock(text: string): string {
-  return text.replace(/```[a-zA-Z]*\n?|```/g, '').trim();
-}
 
 export async function POST(req: NextRequest) {
   const { term, termLanguage, nativeLanguage = 'English', studyLanguage = 'Korean', translation, briefDefinition } = await req.json();
@@ -51,7 +48,7 @@ ${characters ? '  "characterBreakdown": "character breakdown or empty string",\n
 
   const result = await model.generateContent(prompt);
   const text = result.response.text();
-  const depth = JSON.parse(stripMarkdownCodeBlock(text));
+  const depth = parseModelJson(text);
 
   return NextResponse.json(depth);
 }

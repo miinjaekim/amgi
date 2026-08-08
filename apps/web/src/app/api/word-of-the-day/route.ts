@@ -1,11 +1,7 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/firebaseAdmin';
-import { getStudyLanguageConfig, getBackSideConfig, isStudyLanguage, wordOfTheDayCore, type WordOfTheDay } from '@amgi/core';
-
-function stripMarkdownCodeBlock(text: string): string {
-  return text.replace(/```[a-zA-Z]*\n?|```/g, '').trim();
-}
+import { getStudyLanguageConfig, getBackSideConfig, isStudyLanguage, parseModelJson, wordOfTheDayCore, type WordOfTheDay } from '@amgi/core';
 
 /** How far back to look when keeping the daily word from repeating. */
 const EXCLUSION_DAYS = 60;
@@ -178,7 +174,12 @@ Respond with only this JSON:
 
   const generate = async (insist: boolean) => {
     const result = await model.generateContent(buildPrompt(insist));
-    return JSON.parse(stripMarkdownCodeBlock(result.response.text()));
+    // Asserted, not validated — which is exactly what `JSON.parse`'s `any` was
+    // doing here before, just silently. Nothing downstream checks that the
+    // model returned a `term` or an `english`. Preserved as-is because a sweep
+    // is the wrong place to start validating an unrelated route; noted so the
+    // gap is visible rather than implied.
+    return parseModelJson(result.response.text()) as WordOfTheDay;
   };
 
   let parsed = await generate(false);
