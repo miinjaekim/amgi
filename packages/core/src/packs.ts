@@ -1,6 +1,12 @@
 import type { CardSides, StudyLanguage } from './types';
 import { getBackSideConfig, getStudyLanguageConfig } from './types';
 import { HIRAGANA_PACK, KATAKANA_PACK } from './kana';
+import {
+  MILITARY_AFFAIRS_PACK_EN,
+  MILITARY_AFFAIRS_PACK_KO,
+  MILITARY_UNIT_PACK_EN,
+  MILITARY_UNIT_PACK_KO,
+} from './military';
 import { TOPIK_ADVANCED_PACK } from './topik';
 
 /**
@@ -413,10 +419,21 @@ const TOEIC_PACK: VocabPack = {
   ],
 };
 
+/**
+ * The packs offered per study language, in the order the deck page lists them.
+ *
+ * The two military packs appear under both English and Korean, which is a first
+ * — one authored source of Korean–English pairs, registered once per direction
+ * (see `military.ts`). They are not a sequence and the order here is not a
+ * recommendation: a 통역병 in a line unit wants 부대·참모 first, a 통역장교
+ * headed for public affairs wants 안보·정세 first, and the deck page has no way
+ * to say "either, depending". Listed after the exam packs because those are
+ * what most of each language's users came for.
+ */
 export const VOCAB_PACKS: Partial<Record<StudyLanguage, VocabPack[]>> = {
-  English: [TOEIC_PACK],
+  English: [TOEIC_PACK, MILITARY_UNIT_PACK_EN, MILITARY_AFFAIRS_PACK_EN],
   Japanese: [HIRAGANA_PACK, KATAKANA_PACK],
-  Korean: [TOPIK_ADVANCED_PACK],
+  Korean: [TOPIK_ADVANCED_PACK, MILITARY_UNIT_PACK_KO, MILITARY_AFFAIRS_PACK_KO],
 };
 
 export function getVocabPacks(studyLanguage: StudyLanguage): VocabPack[] {

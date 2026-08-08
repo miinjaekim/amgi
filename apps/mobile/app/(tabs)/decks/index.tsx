@@ -68,7 +68,10 @@ export default function DecksScreen() {
                       : t(nativeLanguage, 'deckEntryCount', { count: total })}
                   </Text>
                 </View>
-                <Text style={s.packDesc}>{getPackText(pack.description, nativeLanguage)}</Text>
+                {/* Title and count only. The description is a paragraph, and
+                    six of them stacked is a page to read rather than a list to
+                    choose from — it belongs on the deck itself, one tap away,
+                    where there is room for it. */}
                 {saved !== null && total > 0 && (
                   <View style={s.progressTrack}>
                     <View style={[s.progressFill, { width: `${(saved / total) * 100}%` }]} />
@@ -94,7 +97,6 @@ function makeStyles(C: Palette, tabBarHeight: number) {
     packTitleRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 },
     packName: { fontSize: 16, fontWeight: '700', color: C.text, flexShrink: 1 },
     packCount: { fontSize: 12, color: C.muted },
-    packDesc: { fontSize: 13, color: C.muted, marginTop: 4 },
     progressTrack: { height: 4, borderRadius: 2, backgroundColor: C.border, marginTop: 12, overflow: 'hidden' },
     progressFill: { height: '100%', backgroundColor: C.highlight },
   });

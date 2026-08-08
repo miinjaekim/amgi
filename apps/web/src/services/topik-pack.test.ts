@@ -4,9 +4,15 @@ import { TOPIK_ADVANCED_PACK, getPackEntries, getPackTerms, getVocabPack, getVoc
 const entries = getPackEntries(TOPIK_ADVANCED_PACK);
 
 describe('TOPIK pack', () => {
-  it('is the Korean deck, laid out as a list', () => {
+  it('leads the Korean registry, laid out as a list', () => {
     const packs = getVocabPacks('Korean');
-    expect(packs.map(p => p.id)).toEqual(['topik-advanced']);
+    // The military packs joined this registry and are listed after it — TOPIK is
+    // what most Korean learners came for, so it stays first.
+    expect(packs.map(p => p.id)).toEqual([
+      'topik-advanced',
+      'military-unit-ko',
+      'military-affairs-ko',
+    ]);
     // Words, not glyphs — 뒷받침하다 does not fit in a kana tile.
     expect(getVocabPack('Korean', 'topik-advanced')?.layout).toBe('list');
     // Korean words don't belong to another language's deck, and the deck route
