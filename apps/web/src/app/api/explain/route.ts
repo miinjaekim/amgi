@@ -1,10 +1,6 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { NextRequest, NextResponse } from 'next/server';
-import { getBackSideConfig } from '@amgi/core';
-
-function stripMarkdownCodeBlock(text: string): string {
-  return text.replace(/```[a-zA-Z]*\n?|```/g, '').trim();
-}
+import { getBackSideConfig, parseModelJson } from '@amgi/core';
 
 function detectKorean(term: string): boolean {
   return /[가-힣ᄀ-ᇿ㄰-㆏]/.test(term);
@@ -445,7 +441,7 @@ IMPORTANT for the non-ambiguous case:
 
   const result = await model.generateContent(prompt);
   const text = result.response.text();
-  const parsed = JSON.parse(stripMarkdownCodeBlock(text));
+  const parsed = parseModelJson(text);
 
   return NextResponse.json(parsed);
 }
