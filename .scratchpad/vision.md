@@ -200,6 +200,66 @@ against twice, and adopting the first does not smuggle in the second. Errors are
 still the syllabus; what changes is only the shape of the exercise an error
 earns you.
 
+### The bigger miss: production is the last rung, not the first
+
+_Added after reading the research — `docs/grammar-research.md`, which is the
+thing to read before changing any of this. The choice/form argument above
+survives; its conclusion does not, and this is why._
+
+The section above concluded that the two kinds of grammar point want two
+different exercises. That is true and too small. The research points at a
+different axis, and it is the one that explains the failed trial:
+
+**Practice runs controlled → meaningful → free, and the first cut opened at
+free.** This is the oldest finding in the area and one of the least contested.
+[Paulston's sequence](https://www.researchgate.net/publication/229564020_Structural_Pattern_Drills_A_Classification)
+puts it in those three words; DeKeyser and Suzuki's skill acquisition theory
+supplies the mechanism — declarative knowledge proceduralizes, then automatizes,
+and each stage is practised differently. A learner handed free production on
+first contact is being asked to run a skill they have not yet built.
+
+Every complaint from the trial follows from that one mistake. A situation is the
+*least* constrained prompt that exists, so of course it was ambiguous. Free text
+has unbounded correct answers, so of course grading varied. And when there is
+only one exercise, everything has to be squeezed into it, so of course it was
+unclear what counted as a pattern.
+
+**The rung below free production is a cloze**, and this is the part that reads
+as a concession but is not. A sentence with the pattern blanked, which you type
+into. The learner still *produces* the form — nothing is offered to pick from —
+but the sentence constrains what is being asked, which is exactly the constraint
+free production lacks.
+
+**Cloze does not violate "no multiple choice", and the distinction is the whole
+reason this is allowed.** That principle exists because offering candidates does
+the retrieval for the learner. A cloze offers nothing; it is *cued recall*, and
+cued recall is [measurably better for long-term retention than
+recognition](https://www.tofugu.com/reviews/bunpro/). The learner still has to
+arrive at the form. What changes is how much of the search space the sentence
+has already fenced off — which is the same trade the hint tiers already make
+deliberately.
+
+**But cloze cannot be the terminal state**, and this is where the earlier
+argument still bites. [Swain](https://files.eric.ed.gov/fulltext/EJ1095572.pdf)
+is clear that production forces syntactic processing that comprehension and
+gap-filling do not, and the cautionary case is a real product: Bunpro is a
+Japanese grammar SRS built entirely on cloze, and its own community's most
+frequent question is *how do I practise speaking*. Knowing a pattern and using
+one are different skills. Stopping at cloze buys a learner who is excellent at
+grammar exercises, which is precisely the thing the research is weakest at
+showing transfers.
+
+So the shape is: **cloze until it sticks, then free production** — and the
+choice/form distinction is demoted to deciding *whether a pattern ever
+graduates*. A form rule has no meaning to choose, so free production has nothing
+to add and it can live at cloze forever. A choice pattern has to graduate, or
+Amgi has bought Bunpro's ceiling along with its format.
+
+One consequence worth stating because it is easy to lose: **the learner's stage
+is already tracked.** SM-2 counts consecutive successes, so which rung a pattern
+is on is a *derived* property, not a stored one — and a lapse demotes it back to
+controlled practice for free, which is exactly what the sequence prescribes.
+
 ## Long-term vision
 
 Multi-media prompts (image/audio → card), social layer (shared decks,

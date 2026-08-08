@@ -211,28 +211,32 @@ Two equality filters with no `orderBy` are served by merging single-field
 indexes, and `archived` and the sort are handled in JS because this is tens of
 documents. The console step this collection *does* need is a security rule.
 
-### Revision, 2026-08-08: the pattern carries its kind
+### Revision, 2026-08-08: stage picks the format, kind picks the ceiling
 
-A grammar point is chosen or it is applied, and the two want different
-exercises — the argument is in [vision.md](vision.md). That distinction has to
-live on the pattern, because it is decided once at capture and read at every
-review.
+_This replaces an earlier same-day revision that had `kind` selecting between
+two exercise formats. The research (`docs/grammar-research.md`) moved the
+primary axis: the format follows the learner's **stage** with a pattern, and
+`kind` only decides whether that pattern ever reaches the top rung. The earlier
+version's bare transformation drill is gone entirely — mechanical drills are the
+one practice type the literature is close to unanimous against._
+
+Two exercise formats, not three, and the pattern carries one new field.
 
 ```ts
 /**
- * Which exercise this pattern earns.
+ * Whether a pattern ever graduates from cloze to free production.
  *
- * - `choice` — a meaning maps to a form and the skill is picking it. Situation
- *   in the native language, free production, **pattern never named**, graded by
- *   `/api/writing`. This is what (1a) built for everything.
- * - `form` — a mechanical transformation of something the learner was going to
- *   write anyway. **The rule IS named**, a gap is posed, and the answer is
- *   compared locally against what generation supplied. No grading call.
+ * - `choice` — a meaning maps to a form and the skill is picking it (`-다가`,
+ *   `-는데`, passé composé). Free production has something to test, so these
+ *   graduate.
+ * - `form` — a rule that applies to something the learner was going to write
+ *   anyway (`de` → `d'`, 을/를 by batchim). There is no meaning being chosen, so
+ *   free production adds nothing and these stay at cloze permanently.
  *
  * Not a third `construction` kind, however tempting: `il faut que` + subjunctive
- * looks like one, but its exercise is the `choice` exercise, and an axis whose
- * members share a format is not an axis. The warning at the top of this file
- * about speculative subtypes applies to this type too.
+ * looks like one, but it graduates like any other choice pattern, and an axis
+ * whose members behave identically is not an axis. The warning at the top of
+ * this file about speculative subtypes applies to this type too.
  */
 export type PatternKind = 'choice' | 'form';
 ```
@@ -248,13 +252,66 @@ writing finding already knows — a learner who wrote `de eau` failed the form
 rule, and one who wrote something correct but unnatural failed the choice. So
 the classifier reads the finding, not a grammar reference, and the same pattern
 can legitimately be saved as `form` by one learner and `choice` by another.
-That keeps it emergent rather than configured, which is the whole rule here.
 
-**`PatternExercise` becomes a union**, discriminated on the same field:
+#### Stage is derived, never stored
 
 ```ts
-interface ChoiceExercise {
-  kind: 'choice';
+/** Reviews at cloze before a choice pattern is offered free production. */
+export const CLOZE_REPETITIONS = 2;
+
+export type ExerciseFormat = 'cloze' | 'production';
+
+export function exerciseFormat(
+  pattern: Pick<GrammarPattern, 'kind' | 'production'>,
+): ExerciseFormat {
+  if (pattern.kind === 'form') return 'cloze';
+  return (pattern.production?.repetitions ?? 0) >= CLOZE_REPETITIONS
+    ? 'production'
+    : 'cloze';
+}
+```
+
+Derived rather than stored, and it is worth being explicit about what that buys,
+because it is more than tidiness:
+
+- **No field, no migration, no way for stage and schedule to disagree.**
+- **A lapse demotes you for free.** `getNextReviewData` resets `repetitions` to
+  0 on `again` (`sm2.ts:68`), so failing a production turn drops the pattern
+  back to cloze on its own — which is exactly what controlled → free prescribes
+  and would otherwise have been a rule someone had to remember to write.
+- **`CLOZE_REPETITIONS = 2` is not arbitrary.** Read at the top of a turn, a
+  stored `repetitions` of 2 means the *next* success is the first that stops
+  setting a fixed interval (1 day, then 6) and starts multiplying by ease
+  (`sm2.ts:71-75`). So production begins exactly where the scheduler itself
+  starts treating the item as known — two clean cloze passes, then the rung
+  changes. Borrowing that boundary rather than inventing a second one keeps one
+  definition of "learned" in the codebase.
+- **Consequence, recorded not solved:** `hard` is quality 3, so it *increments*
+  repetitions and does not demote. A shaky production turn keeps you at
+  production. That reads right — `hard` means the skill is there and wobbling,
+  not that controlled practice is needed again — but it is a reading, and if
+  demotion turns out to want a wider trigger this is the line to change.
+
+#### The two exercises
+
+```ts
+interface ClozeExercise {
+  format: 'cloze';
+  /** One sentence with a gap where the pattern goes. */
+  sentence: string;
+  /**
+   * The base form to put into the gap, when the gap needs one — `가다` for a
+   * `-다가` cloze, `de` for an elision cloze. Absent where the slot is bare, as
+   * for a particle choice, and there the sentence and the hint carry it alone.
+   */
+  input?: string;
+  /** What the gap should become, plus anything else acceptable. */
+  expected: string;
+  alternates: string[];
+}
+
+interface ProductionExercise {
+  format: 'production';
   /** The meaning to express, in the native language. Never names the pattern. */
   situation: string;
   hintShape: string;
@@ -262,36 +319,44 @@ interface ChoiceExercise {
   targetForms: string[];
 }
 
-interface FormExercise {
-  kind: 'form';
-  /** The rule, named outright — hiding it would hide nothing worth hiding. */
-  rule: string;
-  /** The sentence with a gap, and what goes into it in its base form. */
-  sentence: string;
-  input: string;
-  /** What the gap should become, plus anything else acceptable. */
-  expected: string;
-  alternates: string[];
-}
-
-export type PatternExercise = ChoiceExercise | FormExercise;
+export type PatternExercise = ClozeExercise | ProductionExercise;
 ```
 
-Three consequences to design for rather than discover:
+Four consequences to design for rather than discover:
 
-- **A form drill has no hint tier.** The rule is already named, so tier 1 has
-  nothing left to nudge toward and tier 2 *is* the answer. `HintTier` becomes
-  meaningful only for `choice`. This is not a gap: `drill.ts` grades on knew /
-  missed with no hint at all, and a five-second turn is the shape it is.
-- **A form drill is one model call, not two.** Generation supplies `expected`
-  and `alternates`, so grading is a local comparison. The running cost stops
-  being *2n* and becomes `2·n_choice + n_form`, and the grading variance
-  disappears for exactly the patterns where it was worst.
-- **The false-negative risk moves but does not go away.** `alternates` plays the
-  role `targetForms` plays for choice: a legitimate answer the generator failed
-  to list is scored wrong. A gap fill has far fewer plausible answers than a
-  free sentence, which is why the risk shrinks — but the honest mitigation is
-  still the learner override, which remains open.
+- **The cloze hints cost nothing to generate, because they are already stored.**
+  Tier 1 is the pattern's `gloss` — the meaning of the point being asked for,
+  which is exactly what Bunpro's first hint tier is — and tier 2 is
+  `pattern.pattern`, the citation form. Neither comes from the model, so
+  `ClozeExercise` carries no hint fields. The gloss being optional on both sides
+  is handled the way it already is: tier 1 falls back to tier 2.
+- **A cloze turn is one model call; a production turn is two.** Generation
+  supplies `expected` and `alternates`, so cloze grading is a local comparison
+  with no `/api/writing` round trip and no grading variance at all. Session cost
+  drops from a flat *2n* to `n_cloze + 2·n_production`, weighted toward the
+  cheap end because every pattern starts at cloze.
+- **The pattern is still never named during a production turn** — that rule is
+  unchanged and is the reason `ProductionExercise` keeps its two generated hint
+  tiers. During a *cloze* the pattern is not named either; the sentence is what
+  disambiguates, with the gloss one keypress away.
+- **The false-negative risk shrinks but does not vanish.** `alternates` plays
+  the role `targetForms` plays for production: an acceptable answer the
+  generator failed to list is scored wrong. A gap with a supplied base form has
+  far fewer plausible fillers than a free sentence, so the exposure is much
+  smaller — but the honest mitigation is still the learner override, and cloze
+  makes that override cheap and obviously correct to offer, because the expected
+  answer is on screen and the learner can see whether theirs was also right.
+
+#### Grading and verdicts
+
+Cloze grades locally to `good` on a match and `again` otherwise, then the
+existing hint clamp applies — so `hard` is reachable on a cloze only by having
+taken one hint. Binary-plus-clamp is the same shape `drill.ts` uses (knew /
+missed) and needs no new machinery. Production grading is unchanged from (1a):
+`/api/writing`, `targetForms` for the reach check, findings for the form check.
+
+`easy` is still never emitted, so the **ease ratchet warning stands unchanged**
+and is now the strongest remaining argument for resolving the override question.
 
 ## Firestore collections
 

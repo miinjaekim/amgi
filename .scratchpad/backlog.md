@@ -49,18 +49,20 @@ the local model spike was the third and is **closed** — the written answer is
 [status.md](status.md), and the two pieces of it worth doing are under Medium.
 
 - [ ] **Grammar patterns — first cut tried, redesigned, rebuild pending.** ⭐
-      _Designed 2026-08-03, web built 2026-08-08 on `grammar-patterns`, tried the
-      same day, redesigned off what the trial showed._ Read in this order: the
-      argument and **"A grammar point is not one kind of thing"** in
-      [vision.md](vision.md); the two Decisions entries in
-      [status.md](status.md) — "the exercise follows the kind" first, then the
-      older design calls it scopes; the type and its 2026-08-08 revision in
+      _Designed 2026-08-03, web built 2026-08-08 on `grammar-patterns`, tried
+      the same day, then redesigned off the research the trial prompted._ Read
+      in this order: **`docs/grammar-research.md`**, which the design is derived
+      from; the argument in [vision.md](vision.md), ending at "production is the
+      last rung"; the two Decisions entries in [status.md](status.md) — "cloze
+      first, production when it sticks" first, then the older design calls it
+      scopes; the type and its 2026-08-08 revision in
       [data-model.md](data-model.md).
 
-      A pattern is its own object with its own review verb. **Which verb depends
-      on the pattern's kind**: a `choice` pattern is produced from a situation
-      that never names it, and a `form` rule is a named, gap-filling drill graded
-      without a model call.
+      A pattern is its own object with its own review verb, and **which verb
+      depends on how well you already know it**: a cloze — one sentence with the
+      pattern blanked, typed into, graded exactly and locally — until it sticks,
+      then free production from a situation that never names it. `kind` decides
+      only whether a pattern ever makes that second step.
 
       - **(1a) Web, first cut — built, tried, and superseded in part.**
         `packages/core/src/grammar.ts`, `/api/grammar/exercise`,
@@ -69,20 +71,30 @@ the local model spike was the third and is **closed** — the written answer is
         `WritingFinding.pattern?`. The Firestore rule is in place. What it built
         survives as the **`choice`** half of the redesign; nothing here is thrown
         away.
-      - **(1a′) The redesign — next.** _Designed 2026-08-08 after the trial; read
-        vision.md then the Decisions entry before starting._ Four pieces, in the
-        order they pay off:
+      - **(1a′) The redesign — next.** _Designed 2026-08-08 from
+        `docs/grammar-research.md`; read that, then vision.md, then the
+        Decisions entry, before starting._ Five pieces, in the order they pay
+        off. **Everything (1a) built survives as the production rung** — this is
+        additive, not a rewrite.
         1. **Management surface** — a Cards/Patterns mode toggle on `/cards`,
            with list, edit, archive, delete. Answers the loudest complaint and
            gates nothing. Do it first.
         2. **Manual add** — pattern, optional gloss, and the kind picked by the
            user from two labelled options. Pure UI, no endpoint, no model call.
-        3. **`PatternKind` and the form drill** — `kind` on the pattern, a
-           `PatternExercise` union, a named rule and a gap fill, graded locally
-           against generation's `expected`/`alternates`. This is the bulk.
-        4. **Choice situations state the meaning, not a scene** — a prompt change
-           to `/api/grammar/exercise`, plus classification in `/api/writing`'s
-           pattern offer.
+        3. **`PatternKind` + derived stage** — `kind` on the pattern,
+           `CLOZE_REPETITIONS`, `exerciseFormat()`. Small, and gates (4).
+        4. **The cloze rung** — the bulk. `ClozeExercise`, a second arm on
+           `/api/grammar/exercise`, local exact grading with no `/api/writing`
+           call, and hint tiers read from the pattern's own `gloss` and citation
+           form rather than generated. Shuffle the session queue while here.
+        5. **Classification in the writing-finding offer** — `/api/writing`
+           returns `kind` alongside the pattern, judged from what the learner
+           got wrong rather than from what the pattern is.
+        **Not doing:** the bare transformation drill from the superseded design
+        (mechanical drills are the one format the literature is near-unanimous
+        against), and "situations state the meaning rather than a scene" — the
+        cloze rung solves the ambiguity that fix was aimed at, and by the time a
+        learner reaches production an under-specified situation is the *point*.
       - **(1b) Web, the expensive door.** The third `ExplainResult` arm on
         `/api/explain` — six language branches × the `if (context)` split =
         **12 prompt templates**. Manual add (2 above) covers most of what this
@@ -96,17 +108,25 @@ the local model spike was the third and is **closed** — the written answer is
         parity. **Don't start this until (1a′) settles** — porting the format
         that just failed a trial is the expensive mistake available here.
       - **(3) Later, each independently useful:** produce-offline /
-        evaluate-on-reconnect; interleaving patterns into the vocab queue;
-        contrast turns (paired situations, both *produced* — not a picker, which
-        vision.md rules out); the acquisition signal, which needs
-        ephemeral-submissions reopened.
+        evaluate-on-reconnect — note this gets *easier*, since a cloze turn
+        needs no grading call and so works offline once generated; interleaving
+        patterns into the vocab queue, which is more attractive now that most
+        turns are ten seconds rather than forty; contrast turns (paired
+        situations, both *produced* — not a picker, which vision.md rules out);
+        a structured-input comprehension rung, which the research says is
+        effective but which is forced-choice and sits awkwardly beside
+        no-multiple-choice; the acquisition signal, which needs
+        ephemeral-submissions reopened and which the research promotes — it is a
+        better answer to "does any of this transfer" than anything in the
+        literature.
 
-      **Three things are open**, all listed as such in status.md. The learner
-      override is now the sharpest: two separate trials have pointed at it, it
-      is the home for the `easy` the ease ratchet otherwise removes, *and* it is
-      the only honest mitigation for a wrong verdict off a thin `targetForms` or
-      `alternates` list. Then: whether patterns interleave into the vocab queue,
-      and whether a tier-1 hint is ever offered unprompted (`choice` only now).
+      **Three things are open**, all in status.md. The learner override is now
+      the sharpest by a distance: two trials *and* the research point at it, it
+      is the home for the `easy` the ease ratchet otherwise removes, and cloze
+      makes it cheap and obviously right — the expected answer is on screen, so
+      the learner can see whether theirs was also correct. Then: folding into
+      the vocab queue, and an unprompted tier-1 hint after an idle (production
+      turns only now).
       **Spoken production is deliberately not here** — see conversation practice.
 
 ## Medium

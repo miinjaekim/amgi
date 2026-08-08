@@ -65,6 +65,18 @@ _Last reviewed against the codebase: 2026-08-08, branch `grammar-patterns` @
 `aa52147`. `npm test` 232/232, web and mobile both typecheck, measured not
 assumed._
 
+_A follow-on pass **redesigned grammar patterns off the research**, replacing
+the same-day design below rather than sitting beside it. The move: the primary
+axis is not the pattern's kind but the learner's **stage** with it — a cloze
+until it sticks, then free production — because practice runs controlled → free
+and the first cut opened at free, which is where the trial's ambiguity and
+variance both came from. Stage is derived from `repetitions`, so a lapse demotes
+for free. `kind` survives, demoted to deciding whether a pattern ever graduates.
+The bare transformation drill is dropped outright. `vision.md` gained "production
+is the last rung", `data-model.md`'s revision was rewritten, the `status.md`
+entry was replaced with its trail kept, and `backlog.md` restaged (1a′) into five
+pieces with an explicit **not doing** list._
+
 _This pass **built grammar patterns, tried them, and redesigned off the trial**
 — which is the order the previous pass's design could not have produced on its
 own. (1a) shipped to a branch and three things did not survive contact: a

@@ -76,12 +76,19 @@ the production `EXPO_PUBLIC_API_BASE_URL`.
 Closed calls, kept with their reasoning — a decision whose reasoning is lost gets
 reopened by the next person to notice the symptom. Newest first.
 
-### Grammar patterns: the exercise follows the kind (2026-08-08)
+### Grammar patterns: cloze first, production when it sticks (2026-08-08)
 
-Written after (1a) was built, tried once, and did not feel good. The trial is
-the evidence and it is worth keeping: **one exercise format was serving two
-different kinds of grammar point.** The argument is in [vision.md](vision.md)
-and is the part to read first; the type is in [data-model.md](data-model.md).
+Written after (1a) was built, tried once, did not feel good, and the research
+was then read properly. **Read `docs/grammar-research.md` before changing any of
+this** — the design is derived from it rather than merely informed by it. The
+argument is in [vision.md](vision.md), the type in
+[data-model.md](data-model.md).
+
+_This entry replaces an earlier same-day version that had the pattern's **kind**
+select between two exercise formats. That was a real distinction aimed at the
+wrong axis, and its bare transformation drill is dropped outright: mechanical
+drills are close to the one practice type the literature is unanimous against.
+The trail is kept because the choice/form distinction survives — demoted._
 
 What the trial reported, in the user's order:
 
@@ -90,59 +97,85 @@ What the trial reported, in the user's order:
 3. during practice it is ambiguous which pattern is being asked for;
 4. too much variance everywhere — saving, generation, grading.
 
-(3) is the root and the other three are largely downstream of it. The clean case
-was a saved French pattern, `de` → `d'` before a vowel: a rule with no meaning
-to choose, handed a situational production exercise that had nothing to build a
-situation out of.
+**One mistake produced (2), (3) and (4): free production was made rung one when
+it is rung three.** Practice runs controlled → meaningful → free. A situation is
+the least constrained prompt there is, which is (3); free text has unbounded
+correct answers, which is (4); and with only one exercise available everything
+had to be squeezed into it, which is (2). (1) is an independent gap.
 
-- **Two kinds, `choice` and `form`, and the format follows the kind.** A choice
-  pattern keeps everything (1a) built: situation, free production, pattern never
-  named, `/api/writing` grading. A form rule gets a named rule and a gap to
-  fill. Not a third `construction` kind — see the note in data-model.md; an axis
-  whose members share a format is not an axis.
-- **Name a form rule, hide a choice pattern.** "Never name the pattern" was
-  written for the case where reaching for it is the skill, and it is right
-  there. For a mechanical rule the name was never the hard part, so hiding it
-  hides nothing and costs the learner all knowledge of what is being asked.
-  This is a scoping of the old rule, not a reversal of it.
-- **The kind describes the error, not the pattern**, and the writing finding
-  already knows which. 은/는 is both a choice and a form rule; "which kind is
-  it" has no answer, "which did this writer just get wrong" always does. Keeps
-  the syllabus emergent, and means the same pattern can be `form` for one
-  learner and `choice` for another.
-- **A form drill needs no grading call.** Generation supplies the expected
-  answer, comparison is local. Cost drops from *2n* to `2·n_choice + n_form`,
-  and the grading variance — complaint (4) — disappears for the patterns where
-  it was worst. It has no hint tier either: the rule is named, so tier 1 nudges
-  toward nothing and tier 2 is the answer.
-- **Choice situations state the meaning, not just a scene.** The narrower fix
-  for (3), and it costs nothing. Today the generator writes "you were walking,
-  suddenly you saw a celebrity" and the learner cannot tell whether the target
-  is the interruption, the surprise or the tense. Textbooks state the meaning to
-  express and withhold only the form — "say that you were walking home and,
-  part-way, it started raining". The pattern still isn't named.
+- **Two formats, and the learner's *stage* picks between them.** A cloze — one
+  sentence with the pattern blanked, typed into — until the pattern sticks, then
+  free production. Everything (1a) built survives as the second rung; nothing is
+  thrown away.
+- **Cloze does not break "no multiple choice."** That principle exists because
+  offering candidates does the retrieval for the learner. A cloze offers
+  nothing: it is cued recall, which measurably beats recognition for retention.
+  The learner still arrives at the form; the sentence only fences off part of
+  the search space, which is the same trade the hint tiers already make.
+- **Cloze cannot be the terminal state either.** Production forces syntactic
+  processing that gap-filling does not, and the cautionary case is a shipped
+  product: Bunpro is a Japanese grammar SRS built entirely on cloze, and its own
+  community's most-asked question is how to practise speaking. Stopping there
+  buys a learner who is excellent at grammar exercises — the exact thing the
+  research is weakest at showing transfers.
+- **`kind` is demoted to deciding whether a pattern graduates.** `form` rules
+  (`de` → `d'`) stay at cloze permanently, because there is no meaning to choose
+  and production has nothing to add. `choice` patterns must graduate. Still read
+  off the learner's error rather than off a grammar reference — see
+  data-model.md.
+- **Stage is derived from `repetitions`, never stored.** No field, no migration,
+  no way for stage and schedule to disagree — and a lapse demotes a pattern back
+  to cloze for free, because `getNextReviewData` already resets `repetitions` on
+  `again` (`sm2.ts:68`). The threshold borrows SM-2's own boundary rather than
+  inventing a second definition of "learned".
+- **The cloze hints are free.** Tier 1 is the pattern's stored `gloss` — the
+  meaning of the point being asked for, which is exactly Bunpro's first tier —
+  and tier 2 is the citation form. Neither is generated. This is the direct fix
+  for (3): the sentence disambiguates, and the meaning is one keypress away
+  without being given up front.
+- **A cloze turn is one model call and grades locally.** Session cost drops from
+  a flat *2n* to `n_cloze + 2·n_production`, weighted cheap because everything
+  starts at cloze — and (4) disappears entirely for cloze turns, since exact
+  comparison has no variance at all.
+- **Interleave within a session, keep the separate row for now.** Interleaving
+  beats blocking for grammar on delayed tests, so the session queue shuffles.
+  Folding patterns into the *vocab* queue stays open: the measured comparison is
+  grammar points against each other, not grammar against vocabulary. ⚠️ **Do not
+  judge this by feel** — blocked practice reliably *feels* smoother during a
+  session and is worse a week later, so "that flowed better" is evidence of
+  nothing here.
 - **Patterns get a management surface: a mode toggle on Cards.** _User's call._
   Not a fifth nav entry for ten items, and not the deck-filter row either —
   `filterCardsByDeck` returns `Flashcard[]` and a pattern is not one. A
-  Cards/Patterns switch above the existing list, with its own simpler list
-  beneath: pattern, gloss, kind, next practice, and edit / archive / delete.
-  This is complaint (1) and it is the cheapest of the four to answer.
-- **Patterns can be added by hand.** _User's call._ The manual form asks for the
-  pattern, an optional gloss, and **the kind, chosen by the user from two
-  labelled options**. No model call, so no new endpoint — and making the learner
-  answer "is this a choice or a rule?" is the most direct statement the app can
-  make about what counts as a pattern, which is complaint (2). It is also a far
-  cheaper cold-start door than the Learn arm's 12 prompt templates, which stays
-  deferred.
-- **The curated grammar pack stays closed.** Textbooks supply exercise formats
-  *and* an ordered curriculum; only the formats are being adopted. The
-  no-curriculum call below is untouched and was not reopened by this.
-- **Still open, and now sharper:** the learner override. It was already the home
-  for the `easy` the ease ratchet removes; it is now also the only honest
-  mitigation for a wrong verdict from a thin `targetForms` or `alternates` list.
-  Two trials have pointed at it. The other two opens — interleaving into the
-  vocab queue, and an unprompted tier-1 hint — are untouched, and the second now
-  applies to `choice` only.
+  Cards/Patterns switch above the existing list: pattern, gloss, kind, next
+  practice, and edit / archive / delete. Answers (1).
+- **Patterns can be added by hand.** _User's call._ Pattern, optional gloss, and
+  **the kind, chosen by the user from two labelled options**. No model call, so
+  no new endpoint — and making the learner answer "is this a rule that always
+  applies, or a choice about how to say something?" is the most direct statement
+  the app can make about what counts, which is (2). Far cheaper than the Learn
+  arm's 12 prompt templates, which is now weaker rather than merely later.
+- **The curated grammar pack stays closed, and is now better argued.** It was
+  rejected on the aesthetic ground that adaptivity should be emergent.
+  Pienemann's teachability hypothesis supplies a mechanism: instruction changes
+  the *rate* of acquisition but not the *route*, so an ordered syllabus is
+  fighting a constraint rather than merely being un-Amgi. Errors-as-syllabus is
+  well-founded — the patterns you get wrong are by construction the ones at your
+  developmental edge.
+- **Still open, and now the sharpest of the three:** the learner override. It
+  was already the home for the `easy` the ease ratchet removes; it is now also
+  the only honest mitigation for a wrong verdict off a thin `alternates` or
+  `targetForms` list — and cloze makes it *cheap and obviously right* to offer,
+  because the expected answer is on screen and the learner can see whether
+  theirs was also correct. Two trials and the research now point at it. The
+  other two: folding into the vocab queue (above), and an unprompted tier-1 hint
+  after an idle, which now applies to production turns only.
+- **Recorded, not solved:** the meta-analyses behind all of this largely
+  measured *explicit* knowledge — being good at grammar exercises. The claim
+  that any of it transfers to writing Korean rests on the production rung and on
+  the sequence argument, not on the effect sizes. Amgi's own acquisition signal
+  (a pattern that stops appearing as a finding in your writing) remains the best
+  available answer and is still not v1.
 
 ### No local model yet — and the first step isn't a model (2026-08-08)
 
