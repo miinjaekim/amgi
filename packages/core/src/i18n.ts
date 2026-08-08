@@ -199,7 +199,7 @@ const translations = {
     writingButton: 'Review',
     writingTagline: 'Write something. See how a native would say it.',
     writingTaglineSubtitle: 'Grammar where you need it, natural phrasing where you don\'t — pitched at whatever you wrote. Keep the phrases you were reaching for as flashcards.',
-    writingRewriteHeading: 'How a native would put it',
+    writingRewriteHeading: 'Native version',
     // Toggle between the correction shown as edits in place and the clean
     // rewritten text. Defaults to the edits — reading two blocks and looking
     // between them is what the diff exists to remove.
@@ -636,7 +636,7 @@ const translations = {
     writingButton: '첨삭',
     writingTagline: '직접 써보세요. 원어민이라면 이렇게 씁니다.',
     writingTaglineSubtitle: '문법이 필요하면 문법을, 아니면 더 자연스러운 표현을 — 쓴 글에 맞춰 짚어드려요. 떠올리지 못했던 표현은 카드로 저장하세요.',
-    writingRewriteHeading: '원어민이라면 이렇게',
+    writingRewriteHeading: '원어민 표현',
     writingViewChanges: '고친 부분',
     writingViewFinal: '완성문',
     copy: '복사',

@@ -13,13 +13,20 @@ build, a second rides along free rather than costing a build of its own.
 
 ## Queued for the next build
 
-**Two items queued, both JS-only** — no native module between them, so no
-`expo config --type introspect` pass. 1.2.0 carries everything before them. See
-Builds in [status.md](status.md) for its contents and for what remains unverified
-on a real binary.
+**Three items queued, and one adds a native module.** Grammar patterns brought
+`expo-clipboard` in for copy-to-clipboard on the writing rewrite, so the next
+build is a native-module build — the `expo config --type introspect` pass is
+required rather than skippable. ⚠️ **It has already been run and came back
+clean**: no entitlements, no usage descriptions, plugin list unchanged. Re-run it
+only if another native module lands first. 1.2.0 carries everything before these.
+See Builds in [status.md](status.md) for its contents and for what remains
+unverified on a real binary.
 
 - **PR #80** (merged 2026-08-04) — `/cards` holds pack cards, the mobile filter
   sheet, the first skeletons.
+- **PR #84** (grammar patterns) — the whole feature on both platforms, plus
+  `expo-clipboard`. The one native module in this batch; everything else in it
+  is JS.
 - **PR #81** (merged 2026-08-08) — the two military packs reach mobile through
   the shared registry, and the packs list drops the per-pack description. ⚠️ The
   description change was **typechecked but never seen rendered** — the list went
@@ -48,33 +55,32 @@ the local model spike was the third and is **closed** — the written answer is
 `docs/local-model.md`, the reasoning and the reopen condition are in
 [status.md](status.md), and the two pieces of it worth doing are under Medium.
 
-- [ ] **Grammar patterns — mobile built, awaiting a trial and a build.** ⭐
-      _Web: PR #84, 2026-08-08 → 09. Mobile parity built 2026-08-09 on the same
-      branch._ Read `docs/grammar-research.md` and the grammar Decisions entries
-      in [status.md](status.md) before changing the design.
+- [ ] **Grammar patterns — built on both platforms, needs a device pass.** ⭐
+      _PR #84, 2026-08-08 → 09._ Read `docs/grammar-research.md` and the grammar
+      Decisions entries in [status.md](status.md) before changing the design.
 
-      **JS-only, so it rides a build rather than needing one.** Ported: the
-      patterns row in the review picker, `PatternSession` with both rungs, the
-      `PatternsPanel` management surface behind a Cards/Grammar toggle, manual
-      add, and the writing panel's pattern offer and gap cards. Verified by
-      `npx expo export --platform ios` (bundles clean to Hermes bytecode) and by
-      running the diff through the bundled `hermes` binary — but **not yet on a
-      device or in Expo Go.**
+      Web is done and trialled. Mobile is ported — the patterns row, both rungs
+      of `PatternSession`, `PatternsPanel` behind a Cards/Grammar toggle, manual
+      add, the writing panel's pattern offer and gap cards, and
+      copy-to-clipboard via `expo-clipboard`.
 
-      - [ ] **Try it in Expo Go**, which is the first time any of this will have
-            been touched on a phone. Worth watching: the cloze gap renders as a
-            drawn blank rather than the literal `___`, and the patterns row is
-            disabled offline.
-      - [ ] **Copy-to-clipboard is still web-only.** Mobile needs
-            `expo-clipboard`, which is **native** — free if it rides a build
-            already queued, a build of its own otherwise. Decide when one is
-            next cut rather than now.
+      - [ ] **Try the mobile side against a deployed API.** ⚠️ Mobile calls
+            `EXPO_PUBLIC_API_BASE_URL`, not localhost — so in Expo Go against
+            production there are **no pattern offers on a writing review** (the
+            deployed `/api/writing` doesn't emit `pattern` yet) and pattern
+            practice would 404 (`/api/grammar/exercise` doesn't exist there).
+            Nothing is wrong with the app; the API half of this branch has to
+            ship, or the base URL has to point at a preview or a LAN dev server,
+            before any of it can be exercised on a phone.
+      - [ ] **Then the ordinary device pass**: the cloze gap renders as a drawn
+            blank rather than a literal `___`, and the patterns row is disabled
+            offline.
 
       **Don't remove the "+ card" fallback from `/api/writing` yet.** It emits
       `card` alongside `pattern` so a *shipped* build — which reads `card` and
-      ignores `pattern` — still gets the take-away. Mobile now applies the same
-      gap-card rule as web, so the duplicate is inert in the new code; it stays
-      until no old build is in the wild, and with no OTA that is a while.
+      ignores `pattern` — still gets the take-away. Both platforms now apply the
+      gap-card rule, so the duplicate is inert in current code; it stays until no
+      old build is in the wild, and with no OTA that is a while.
 
 ## Medium
 

@@ -17,6 +17,7 @@ import { useUser } from '../context/UserContext';
 import { useTheme } from '../context/ThemeContext';
 import { useFloatingTabBarHeight } from './FloatingTabBar';
 import PronounceButton from './PronounceButton';
+import CopyButton from './CopyButton';
 import TextDiff from './TextDiff';
 import type { Palette } from '../theme';
 
@@ -180,6 +181,9 @@ export default function WritingReviewPanel() {
             <View style={s.rewriteHeaderRow}>
               <Text style={[s.sectionLabel, s.sectionLabelShrink]}>{t(nativeLanguage, 'writingRewriteHeading')}</Text>
               <PronounceButton text={review.rewrite} studyLanguage={studyLanguage} />
+              {/* Always the clean rewrite, never the diff — copying text with
+                  the deletions in it would paste the mistakes back. */}
+              <CopyButton text={review.rewrite} nativeLanguage={nativeLanguage} />
               {/* The clean rewrite stays reachable — it is the version you
                   would read aloud, and a heavily edited passage is hard to read
                   as a sentence through its own diff. */}
