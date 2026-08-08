@@ -1,5 +1,43 @@
 # Lessons
 
+## Hermes has `Intl`, but not `Intl.Segmenter` (2026-08-09)
+
+Measured, not assumed — and measurable without a device:
+
+```
+$ node_modules/react-native/sdks/hermesc/osx-bin/hermes some.js
+Intl: object
+Intl.Segmenter: undefined
+unicode prop escapes: yes
+```
+
+`typeof Intl === 'object'` makes it *look* supported, so a feature check on
+`Intl` alone passes and then the specific API is missing. Anything relying on
+segmentation — word diffing, word counts, truncating at a word boundary — needs
+a real fallback on mobile, not a polite `try`.
+
+**The fallback has to be script-aware, not a whitespace split.** Half the study
+languages put no spaces between words, so splitting 私は昨日映画を見ました on
+whitespace yields one token and any diff over it can only say "all of this
+changed". Splitting spaceless scripts per character instead lands well: the LCS
+still finds the common run and coalescing merges it back, so 見 → 観 comes out
+as a one-character edit. Verified by running the bundled diff through that same
+`hermes` binary:
+
+```
+[ko] 어제 학교에 가고 있었[-어요. 그런-]{+는+}데 비가 왔어요.
+[ja] 私は昨日映画を[-見-]{+観+}ました。
+```
+
+Two things worth keeping from how this was checked:
+
+- **That `hermes` binary ships in `node_modules` and runs plain JS.** Bundle a
+  core module with esbuild (`--format=iife --target=es2020`) and you can test
+  engine behaviour without a simulator, a build, or a device.
+- **`expo export --platform ios` compiles the whole app to Hermes bytecode**, so
+  it catches broken imports and JSX that `tsc` passes over. Cheaper than a build
+  and worth running before claiming a mobile change works.
+
 ## A generated exercise must be checkable, not just well-prompted (2026-08-08)
 
 A grammar cloze came back reading `Mon frère adore ___ football chaque

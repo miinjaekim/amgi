@@ -31,18 +31,81 @@ export interface DiffSegment {
 const MAX_CELLS = 4_000_000;
 
 /**
+ * Whether a character belongs to a script written without spaces between
+ * words — Hangul, kana, and Han characters, plus the CJK punctuation block.
+ *
+ * Code-point ranges rather than `\p{Script=...}` regex escapes: Unicode
+ * property escapes are the sort of thing Hermes has historically shipped late,
+ * and this function exists precisely for the runtime where the good API is
+ * missing. Falling back to a fallback that also does not run would be a poor
+ * trade for some elegance.
+ */
+function isSpacelessScript(char: string): boolean {
+  const code = char.codePointAt(0) ?? 0;
+  return (
+    (code >= 0x1100 && code <= 0x11ff) || // Hangul Jamo
+    (code >= 0x3000 && code <= 0x303f) || // CJK punctuation
+    (code >= 0x3040 && code <= 0x30ff) || // Hiragana + Katakana
+    (code >= 0x3130 && code <= 0x318f) || // Hangul compatibility Jamo
+    (code >= 0x3400 && code <= 0x4dbf) || // CJK Ext A
+    (code >= 0x4e00 && code <= 0x9fff) || // CJK Unified
+    (code >= 0xac00 && code <= 0xd7af) || // Hangul syllables
+    (code >= 0xf900 && code <= 0xfaff)    // CJK compatibility
+  );
+}
+
+/**
+ * Tokenizes without `Intl.Segmenter`, one character at a time for the scripts
+ * that need it.
+ *
+ * A plain whitespace split would hand back 私は昨日映画を見ました as a single
+ * token, and a diff whose only possible statement is "all of this changed" —
+ * exactly the useless output this feature exists to replace. Splitting those
+ * scripts per character is coarser than real word segmentation but lands in a
+ * good place: the LCS still finds the common run, and `coalesce` merges the
+ * matched characters back into one segment, so 見 → 観 comes out as a
+ * one-character edit rather than a rewritten sentence.
+ *
+ * Latin runs stay whole, so French and Swedish are unaffected.
+ */
+function fallbackTokenize(text: string): string[] {
+  const tokens: string[] = [];
+  let buffer = '';
+  const flush = () => {
+    if (buffer) tokens.push(buffer);
+    buffer = '';
+  };
+  let inWhitespace = false;
+
+  // `for…of` iterates by code point, so astral characters survive intact.
+  for (const char of text) {
+    if (isSpacelessScript(char)) {
+      flush();
+      tokens.push(char);
+      inWhitespace = false;
+      continue;
+    }
+    const isSpace = /\s/.test(char);
+    if (isSpace !== inWhitespace) {
+      flush();
+      inWhitespace = isSpace;
+    }
+    buffer += char;
+  }
+  flush();
+  return tokens;
+}
+
+/**
  * Splits text into words, punctuation and whitespace, preserving everything —
  * the concatenation of the result is always the input.
  *
- * `Intl.Segmenter` rather than a whitespace split, because half the study
- * languages do not put spaces between words. Splitting 私は昨日映画を見ました on
- * whitespace yields one token and a diff that can only say "all of this
- * changed", which is exactly the useless output this feature exists to replace.
- * Segmenter knows the word boundaries.
+ * `Intl.Segmenter` where it exists, because half the study languages do not put
+ * spaces between words and Segmenter knows where the boundaries are.
  *
- * Falls back to a whitespace split where `Intl.Segmenter` is missing. That
- * still serves French, Swedish and English correctly and degrades the CJK
- * languages to what they would have had anyway.
+ * It does not exist everywhere. Hermes ships a partial `Intl`, so the mobile
+ * app may well take the fallback path — which is why that path is script-aware
+ * rather than a whitespace split.
  */
 export function tokenize(text: string, locale?: string): string[] {
   const Segmenter = (Intl as unknown as { Segmenter?: new (
@@ -58,7 +121,7 @@ export function tokenize(text: string, locale?: string): string[] {
       // An unusable locale should cost the segmentation, not the diff.
     }
   }
-  return text.split(/(\s+)/).filter(Boolean);
+  return fallbackTokenize(text);
 }
 
 /**

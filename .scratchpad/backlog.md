@@ -48,30 +48,33 @@ the local model spike was the third and is **closed** — the written answer is
 `docs/local-model.md`, the reasoning and the reopen condition are in
 [status.md](status.md), and the two pieces of it worth doing are under Medium.
 
-- [ ] **Grammar patterns — mobile parity.** ⭐ _Built, trialled and scoped closed
-      on web: PR #84, 2026-08-08 → 09._ Web is done and every design question is
-      settled or recorded; only the port is left.
+- [ ] **Grammar patterns — mobile built, awaiting a trial and a build.** ⭐
+      _Web: PR #84, 2026-08-08 → 09. Mobile parity built 2026-08-09 on the same
+      branch._ Read `docs/grammar-research.md` and the grammar Decisions entries
+      in [status.md](status.md) before changing the design.
 
-      Read before starting: **`docs/grammar-research.md`**, which the design is
-      derived from, then the grammar Decisions entries in
-      [status.md](status.md), newest first — including what was cancelled and
-      why. A pattern is its own object with its own review verb: a cloze until
-      it sticks, then free production. `kind` decides only whether it ever makes
-      that second step.
+      **JS-only, so it rides a build rather than needing one.** Ported: the
+      patterns row in the review picker, `PatternSession` with both rungs, the
+      `PatternsPanel` management surface behind a Cards/Grammar toggle, manual
+      add, and the writing panel's pattern offer and gap cards. Verified by
+      `npx expo export --platform ios` (bundles clean to Hermes bytecode) and by
+      running the diff through the bundled `hermes` binary — but **not yet on a
+      device or in Expo Go.**
 
-      **JS-only, so it rides a build rather than needing one.**
-      `buildReviewCollections` on mobile already passes `[]`. Two things to carry
-      across that are easy to miss:
+      - [ ] **Try it in Expo Go**, which is the first time any of this will have
+            been touched on a phone. Worth watching: the cloze gap renders as a
+            drawn blank rather than the literal `___`, and the patterns row is
+            disabled offline.
+      - [ ] **Copy-to-clipboard is still web-only.** Mobile needs
+            `expo-clipboard`, which is **native** — free if it rides a build
+            already queued, a build of its own otherwise. Decide when one is
+            next cut rather than now.
 
-      - Mobile still offers "+ card" on a pattern finding, because
-        `/api/writing` emits `card` alongside `pattern` precisely so the shipped
-        build doesn't lose the take-away to a field it can't read. **That crutch
-        comes out with parity**, replaced by the rule in web's
-        `WritingReviewPanel`: a card shows beside a pattern only when it is a
-        `gap` card.
-      - Copy-to-clipboard on the writing rewrite is web-only. Mobile needs
-        `expo-clipboard`, which is **native** and so a build — free if it rides
-        one already queued, a build of its own otherwise.
+      **Don't remove the "+ card" fallback from `/api/writing` yet.** It emits
+      `card` alongside `pattern` so a *shipped* build — which reads `card` and
+      ignores `pattern` — still gets the take-away. Mobile now applies the same
+      gap-card rule as web, so the duplicate is inert in the new code; it stays
+      until no old build is in the wild, and with no OTA that is a while.
 
 ## Medium
 

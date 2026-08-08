@@ -33,6 +33,54 @@ describe('tokenize', () => {
   });
 });
 
+// Hermes ships a partial `Intl`, so the mobile app may well take this path.
+// Exercised by removing the API rather than by exporting the fallback, so the
+// branch itself is under test and not just the function behind it.
+describe('tokenize without Intl.Segmenter', () => {
+  const withoutSegmenter = <T>(run: () => T): T => {
+    const original = (Intl as Record<string, unknown>).Segmenter;
+    delete (Intl as Record<string, unknown>).Segmenter;
+    try {
+      return run();
+    } finally {
+      (Intl as Record<string, unknown>).Segmenter = original;
+    }
+  };
+
+  it('still splits Korean and Japanese into usable units', () => {
+    withoutSegmenter(() => {
+      const tokens = tokenize('私は昨日映画を見ました', 'ja');
+      // Per character for spaceless scripts. Coarser than real segmentation,
+      // but a whitespace split would give one token and a diff that can only
+      // say "all of this changed".
+      expect(tokens.length).toBe(11);
+      expect(tokens.join('')).toBe('私は昨日映画を見ました');
+    });
+  });
+
+  it('leaves Latin words whole, so French is unaffected', () => {
+    withoutSegmenter(() => {
+      expect(tokenize('je ai mangé', 'fr').join('|')).toBe('je| |ai| |mangé');
+    });
+  });
+
+  it('is still lossless', () => {
+    withoutSegmenter(() => {
+      for (const text of ['어제 친구하고 밥을 먹었어요.', '  spaced  out  ', 'mixed 한국어 and English']) {
+        expect(tokenize(text).join('')).toBe(text);
+      }
+    });
+  });
+
+  it('finds a one-character edit rather than rewriting the sentence', () => {
+    withoutSegmenter(() => {
+      const segments = diffText('私は映画を見ました', '私は映画を観ました', 'ja');
+      expect(segments.filter(s => s.op === 'remove').map(s => s.text)).toEqual(['見']);
+      expect(segments.filter(s => s.op === 'add').map(s => s.text)).toEqual(['観']);
+    });
+  });
+});
+
 describe('diffText', () => {
   it('marks a single replaced word and leaves the rest alone', () => {
     const segments = diffText('je veux du pain', 'je veux du gâteau', 'fr');
