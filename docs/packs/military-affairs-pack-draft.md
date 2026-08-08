@@ -325,7 +325,7 @@ violation is a claim the ROK government has not made.
 
 | 한국어 | English | context hint |
 |---|---|---|
-| 전역(戰役) | campaign | a series of operations toward one objective — a different word from 전역 "discharge" in 부대·참모 §7, written identically |
+| 전역(戰役) | campaign | a series of operations toward one objective — written identically to the 전역 that means discharge, and unrelated to it |
 | 전구 | theater | the geographic area of a war; 전역(戰域) is the same thing |
 | 전선 | front | as in the eastern front |
 | 전장 | battlefield | |
@@ -346,7 +346,7 @@ violation is a claim the ROK government has not made.
 | 지휘통제 | command and control (C2) | said "C-two" |
 | 감시정찰 | intelligence, surveillance and reconnaissance (ISR) | said as the letters, "I-S-R" |
 | 무력화 | neutralization | putting a capability out of action without destroying it |
-| 제병협동 | combined arms | infantry, armor and artillery together — this "combined" is neither 연합 nor 합동, and 부대·참모 §10 is about why that matters |
+| 제병협동 | combined arms | infantry, armor and artillery operating together — this "combined" is neither 연합 nor 합동 |
 | 기동 | maneuver | |
 | 도하 | river crossing | as in 도하훈련 |
 | 화생방 | chemical, biological and radiological (CBR) | the US term adds nuclear and says CBRN |
@@ -412,7 +412,7 @@ purest — no amount of Korean tells you the Cheonghae Unit is not translated.
 | 아크부대 | the Akh Unit | the special-forces training contingent in the UAE |
 | 평화유지활동 | peacekeeping operations (PKO) | |
 | 평화유지군 | peacekeeping forces | |
-| 다국적군 | multinational force | the third member of the 연합 / 합동 / 다국적 family — see 부대·참모 §10 |
+| 다국적군 | multinational force | the third member of the family: 연합 combined, 합동 joint, 다국적 multinational |
 | 해적행위 | piracy | |
 | 국제사회 | the international community | never "international society", which is the standard Korean-English error |
 | 인도적 지원 | humanitarian assistance | |

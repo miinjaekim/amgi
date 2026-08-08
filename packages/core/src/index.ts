@@ -7,6 +7,7 @@ export * from './collections';
 export * from './reviewQueue';
 export * from './kana';
 export * from './topik';
+export * from './military';
 export * from './drill';
 export * from './tts';
 export * from './offlineReview';

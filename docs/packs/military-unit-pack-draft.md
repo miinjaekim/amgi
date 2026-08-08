@@ -220,7 +220,7 @@ has told the room they have not worked with it.
 | 주한미군지위협정 | Status of Forces Agreement (SOFA) | |
 | 한미상호방위조약 | ROK–US Mutual Defense Treaty | the 1953 treaty underlying the alliance |
 | 한미안보협의회의 | Security Consultative Meeting (SCM) | the annual defense ministers' meeting |
-| 연합연습 | combined exercise | combined = multinational — see §10 |
+| 연합연습 | combined exercise | combined = multinational, as against 합동 joint, which is multi-service within one nation |
 | 을지 자유의 방패 | Ulchi Freedom Shield (UFS) | the annual summer combined exercise |
 | 자유의 방패 | Freedom Shield (FS) | the annual spring combined exercise |
 | 도상연습 | command post exercise (CPX) | staff practice, no troops in the field |
@@ -292,7 +292,7 @@ point of this section is the fixed form on each side.
 | 외박 | overnight pass | |
 | 외출 | pass | off post, back the same day |
 | 입대 | enlistment | entering service |
-| 전역 | discharge | completing service and leaving — 만기전역 is at full term. Two unrelated words are written the same: 전역(戰役) is a campaign and 전역(戰域) a theater, both in 안보·정세 §8 |
+| 전역 | discharge | completing service and leaving — 만기전역 is at full term. Two unrelated words are written the same: 전역(戰役) is a campaign and 전역(戰域) a theater |
 | 병역 | military service obligation | conscription as a legal duty |
 | 동원 | mobilization | calling up reserves |
 
