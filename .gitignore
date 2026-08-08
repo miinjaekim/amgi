@@ -62,6 +62,8 @@ docs/*
 # .scratchpad/backlog.md says to verify before every build. Untracked, it
 # existed on one machine only.
 !docs/testflight-beta-info.md
+# ...and the local-model research answer, which the backlog item points at.
+!docs/local-model.md
 
 # pronunciation audio test output (throwaway)
 /audio-test/

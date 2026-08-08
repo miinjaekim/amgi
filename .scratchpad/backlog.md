@@ -13,11 +13,18 @@ build, a second rides along free rather than costing a build of its own.
 
 ## Queued for the next build
 
-**One item queued: PR #80** (merged 2026-08-04) — `/cards` holds pack cards, the
-mobile filter sheet, the first skeletons. JS-only, no native module, so no
-`expo config --type introspect` pass. 1.2.0 carries everything before it. See
+**Two items queued, both JS-only** — no native module between them, so no
+`expo config --type introspect` pass. 1.2.0 carries everything before them. See
 Builds in [status.md](status.md) for its contents and for what remains unverified
 on a real binary.
+
+- **PR #80** (merged 2026-08-04) — `/cards` holds pack cards, the mobile filter
+  sheet, the first skeletons.
+- **PR #81** (merged 2026-08-08) — the two military packs reach mobile through
+  the shared registry, and the packs list drops the per-pack description. ⚠️ The
+  description change was **typechecked but never seen rendered** — the list went
+  from one deck per language to three, and the row spacing under a title with no
+  paragraph beneath it is unverified. Cheapest thing to check first in Expo Go.
 
 _1.2.0 status: submitted and accepted, **internal testing live**, external
 waiting on Beta App Review._
@@ -36,21 +43,10 @@ deletion — which Apple looks for under 5.1.1(v)._
 
 ## High
 
-The three starred items in Google Tasks, in that order.
-
-- [ ] **Local model spike — can Amgi run a model on-device?** ⭐ _Absorbs the two
-      research entries that used to sit at the bottom of this file: on-device
-      definitions/translations, and the survey of existing language-learning
-      models. They were the same question asked twice._
-      Output is a written answer, not a feature: what open models can do
-      definition + translation at Amgi's quality bar, whether they fit on a phone,
-      what a first integration would actually replace, and whether fine-tuning
-      beats prompting. **Name the cheapest useful first step** — pre-cached
-      content for a pack may beat inference on-device and is a fraction of the
-      work.
-      Read [tech-stack.md](tech-stack.md) first for the constraint that decides
-      most of this: **no OTA**, so anything shipping a model ships in a build, and
-      a model file is not a small one.
+One starred item left. The military terms pack was another and shipped in #81;
+the local model spike was the third and is **closed** — the written answer is
+`docs/local-model.md`, the reasoning and the reopen condition are in
+[status.md](status.md), and the two pieces of it worth doing are under Medium.
 
 - [ ] **Grammar patterns — start building.** ⭐ _Designed 2026-08-03; the design is
       done and this is now the build._ Read first: the argument in
@@ -87,16 +83,6 @@ The three starred items in Google Tasks, in that order.
       the `easy` the ease ratchet otherwise removes), whether patterns interleave
       into the vocab queue, and whether a tier-1 hint is ever offered unprompted.
       **Spoken production is deliberately not here** — see conversation practice.
-
-- [ ] **Military terms pack.** ⭐ The next pack to author, ahead of the JLPT/TOEFL
-      gaps listed under packs below. Same rules as every pack: **curated from real
-      sources, not AI-generated**, the word list needs user approval before it
-      ships, and **backs are drafted alongside the list** — no kind ships without
-      them. Draft goes in `docs/packs/`, sourced like the TOEIC and TOPIK drafts.
-      Study language is the first thing to settle — Korean is the obvious one
-      given the source material, but say so rather than assume it. Section themes
-      (rank, equipment, orders, …) are the natural `/cards` filter rung the deck
-      axis already supports.
 
 ## Medium
 
@@ -137,12 +123,12 @@ The three starred items in Google Tasks, in that order.
 
 
 - [ ] **Vocabulary packs — iterate beyond v1.** Shipped: TOEIC (133), hiragana +
-      katakana, TOPIK 고급 (160), all now one pre-authored kind.
+      katakana, TOPIK 고급 (160), and the two military packs (220 + 254, #81),
+      all one pre-authored kind.
       *Principles:* audience is not beginners; packs unlock domains, never
       "starter" anything; curated from real sources, not AI-generated; word lists
       need user approval before shipping.
-      *Next:* the **military terms pack** is queued above this, under High. After
-      it, **JLPT** is the obvious gap — Japanese has only the kana packs, so a
+      *Next:* **JLPT** is the obvious gap — Japanese has only the kana packs, so a
       learner past the scripts has nothing — then TOEFL. Swedish, French and
       Traditional Chinese have **no pack at all**. Section themes as `/cards`
       filters are now a third rung on the deck axis that shipped — a chip per
@@ -150,6 +136,24 @@ The three starred items in Google Tasks, in that order.
       mobile's filter sheet, a third chip row on web.
       **A new pack now needs backs drafted alongside its word list**, since no
       kind ships without them. Drafts live in `docs/packs/`.
+
+- [ ] **Shared term cache** — a `terms` collection keyed by normalized term +
+      language, so a word looked up once is free for everyone after.
+      _Promoted from Needs clarification 2026-08-08: `docs/local-model.md` §8
+      names it the cheapest useful first step, ahead of any model work._ It buys
+      most of what "local" was wanted for — instant lookups, an offline story,
+      near-zero marginal cost — with **no build, no native module and no quality
+      risk**, and unlike on-device it works on web too. Copies
+      `/api/pronounce`'s content-hash pattern, **including its lesson that a bad
+      generation becomes permanent**, so decide the invalidation story before
+      writing the first document. Produces the corpus any later fine-tune would
+      need as a byproduct.
+
+- [ ] **Precompute depth and examples for the packs** — ~600 model calls, an
+      afternoon, one throwaway script. The hypothesis the local-model item
+      carried all along ("pre-cached content for a pack may beat inference
+      on-device"), and `docs/local-model.md` §8 confirms it holds. Best done
+      *after* the term cache, which is where the results would live.
 
 - [ ] **Offline term capture** — jot terms to look up later, queued locally and
       resolved on reconnect. No model needed, just a queue and a flush.
@@ -200,7 +204,7 @@ a specific word — a different, unproven job from the core loop.
 
 ## Housekeeping — tooling that hides signal
 
-`npm test` (175/175) and `npx eslint .` (0 errors) are green. What's left is what
+`npm test` (200/200) and `npx eslint .` (0 errors) are green. What's left is what
 those two now *show*.
 
 - [ ] **13 React Compiler warnings, then turn the rules back up** —
@@ -224,5 +228,3 @@ those two now *show*.
 
 - [ ] **Personalised explanation preferences** — emphasis knobs (etymology,
       cultural context, example-heavy). Store in `users/{uid}`, include in prompt.
-- [ ] **Shared term cache** — `terms` collection keyed by normalized term +
-      language. Defer until traffic justifies it. Overlaps with pre-authored packs.

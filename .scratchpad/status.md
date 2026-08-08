@@ -3,16 +3,21 @@
 Session orientation: what's live, what's broken, what's decided. Shipped history
 sits at the bottom as reference — the reasoning worth keeping is in Decisions.
 
-_Reconciled against `main` @ `2cdf6c0`, 2026-08-04. `npm test` 188/188._
+_Reconciled against `main` @ `f722774`, 2026-08-08. `npm test` 200/200._
 
 ## Now
 
 - **1.2.0 is in TestFlight.** Submitted and accepted; **internal testing is
   live**, external is waiting on Beta App Review.
-- **One mobile change is queued behind it** — PR #80, merged 2026-08-04: the
-  `/cards` loosening, the filter sheet, the first skeletons. JS-only, so it needs
-  a build to reach a tester but no native pass. Checked on web and **on a device
-  in Expo Go** before merge. See Builds below for the pre-flight.
+- **Two mobile changes are queued behind it**, both JS-only — a build to reach a
+  tester, no native pass. See Builds below for the pre-flight.
+  - PR #80 (08-04): the `/cards` loosening, the filter sheet, the first
+    skeletons. Checked on web and **on a device in Expo Go** before merge.
+  - PR #81 (08-08): the two military packs reach mobile through the shared
+    registry, and the packs list drops the per-pack description. ⚠️ The
+    description change was **typechecked but never seen rendered** — the list
+    went from one deck per language to three, and the row spacing under a title
+    with nothing beneath it is unverified.
 - **No code is in flight.** Next thing to build comes from
   [backlog.md](backlog.md).
 
@@ -70,6 +75,86 @@ the production `EXPO_PUBLIC_API_BASE_URL`.
 
 Closed calls, kept with their reasoning — a decision whose reasoning is lost gets
 reopened by the next person to notice the symptom. Newest first.
+
+### No local model yet — and the first step isn't a model (2026-08-08)
+
+The spike ran and produced what it was supposed to: a written answer, not a
+feature. **`docs/local-model.md` is that answer** and is the thing to read
+before this reopens. The backlog item is closed rather than deferred; the two
+pieces worth doing were scoped out of it into Medium.
+
+Why closed:
+
+- **The hot path is one route.** Only `/api/explain`'s core arm is worth
+  replacing, and 293 pack entries already bypass it — now many more, with #81.
+  Depth, examples and writing review carry the actual differentiation and are
+  exactly what small models fail.
+- **The size band that fits a 4 GB phone is the band that fails the quality
+  bar.** RAM binds before disk (~1.5 GB of weights on beta devices). Ambiguity
+  judgment, Korean register and Traditional Chinese script fidelity all sit
+  below that line — and a 简体字 leak is invisible to anyone who can't read the
+  difference, which is the worst kind of failure to ship.
+- **Latency was never the win people assume.** ~60–100 tokens of JSON on-device
+  is 2–5 s, the same band as a Flash round trip. A *cache hit* is two orders of
+  magnitude faster. Cost isn't a problem at a single-digit beta either.
+- **Expo Go can't load a native inference module**, so the whole app would run
+  without the dev loop the no-OTA shipping model is built around — and web can't
+  follow at all, which forks the mobile↔web parity reached in July.
+
+**One correction worth keeping**, because it was assumed the other way for
+months: **weights are data, not code.** `expo-file-system` is already a
+dependency, so model files download at runtime like any other asset. Only the
+*runtime* is a native module — one build gets it in and models are swappable
+after. The no-OTA constraint is real but narrower than the backlog claimed.
+
+**Reopen condition, and it is specific: an eval harness first.** `npm test` is
+unit tests; nothing measures model output, so no candidate can be judged today
+and any comparison would be vibes. Reopen when the term cache is live and has a
+measured hit rate, *and* there is an eval set to score a candidate on — at which
+point the question is answerable instead of speculative. Apple Foundation Models
+is the one path that dodges the size problem entirely (zero download, guided
+generation would kill the JSON-parsing fragility), and is worth re-checking when
+the floor is no longer iOS 26 / iPhone 15 Pro.
+
+### A pack may be authored as pairs, and register twice (2026-08-08)
+
+The military packs are the first content where **both sides are terms a
+professional has to produce**, not a study side and a gloss. So the source in
+`packages/core/src/military.ts` is `BilingualSection[]` with neither side
+privileged, and `derivePack` reads it once per direction.
+
+- **No new pack shape was needed**, which was the bet the draft made and it held.
+  `buildPackCardDraft` already writes the study side last, so it wins over
+  whichever authored side lands in the same slot. Only the *opposite* side is
+  authored: a Korean back on a Korean deck could never be read, and its only
+  effect would be to look authored.
+- **Four ids, not two.** `getCollectionId` returns `card.packId` unqualified, so
+  two directions sharing an id collapse cards saved from the Korean deck and the
+  English deck into one collection on `/cards`. Producing `battalion` from 대대
+  is not the same skill as the reverse and drilling both is the premise, so the
+  id carries the direction (`-ko` / `-en`) and the display name does not.
+- **The name has to be direction-neutral on both sides.** "Military English" is
+  wrong for the English native studying Korean; 군사용어 is what the field calls
+  the material anyway. A test pins this, because it is the kind of thing a later
+  rename undoes without noticing.
+- **The split is by register, not difficulty** — neither pack is the beginner
+  one. 부대·참모 is a unit and a combined staff, where the failure mode is
+  stumbling. 안보·정세 is a briefing and a press statement, where it is saying
+  "joint" for 연합 in front of people who will quote it. They are also **not a
+  sequence**: a 통역병 in a line unit wants one first, a 통역장교 headed for
+  public affairs the other, and the deck page cannot say "either, depending" —
+  so the order in `VOCAB_PACKS` is not a recommendation and says so in a comment.
+- **No term appears twice and no two terms share a back, across both packs and in
+  both directions.** Same constraint that forced the 초래하다/야기하다 splits on
+  TOPIK, now enforced across two packs rather than within one — which is why
+  three traps (취역식/임관식, the 전역 homograph, 제병협동) sit in 안보·정세
+  despite belonging to 부대·참모's traps section by nature.
+- **Hints stay out of the drafts' own numbering.** Five `context` strings pointed
+  at draft sections ("see §10"). A hint survives onto the card as
+  `briefDefinition` and is read by the depth and examples calls, so a pointer to
+  a document neither the learner nor the model can see is worse than useless.
+  They state the point directly now, in the drafts too, so what a reviewer reads
+  is what ships.
 
 ### Skeletons stop at the three that shipped (2026-08-06)
 
@@ -386,6 +471,24 @@ the change is in Decisions above; durable gotchas are in
   `collectionId`.
 
 **Packs, decks & collections**
+- **Two military terminology packs, in both directions** (#81, 08-08) — 474
+  Korean–English pairs from one authored source, registered four ways:
+  `military-unit-{ko,en}` (220, 부대·참모 — a unit and a combined staff) and
+  `military-affairs-{ko,en}` (254, 안보·정세 — a briefing and a press statement).
+  Design calls in Decisions above. The second pack exists because the first draft
+  was reconciled against a 어학병/통역장교 선발 prep glossary built for the
+  selection exam's news-interpretation task: **the overlap was about fifty
+  concepts, under a quarter of either list**, so nearly everything it covered
+  and the draft did not became 안보·정세. That comparison also caught a real
+  error — §1 gave Army rank equivalents with no note they are service-specific,
+  and a ROK Navy 대위 introduced as "Captain" sounds four grades senior than they
+  are. Mobile's packs list dropped the per-pack description in the same PR: one
+  deck per language became three, and three paragraphs stacked is a page to read
+  rather than a list to choose from. Drafts stay in `docs/packs/` as the review
+  artifacts and still hold the open questions — the acronym convention (nobody
+  says "Korea Massive Punishment and Retaliation" aloud), ten section rows
+  against a deck page laid out for four and six, and the contested renderings
+  (동해, 독도, 위안부) that deliberately use the ROK government's English.
 - **`/cards` holds every card, packs included** (#80, 08-04) — the last
   structural piece of the pack work, and the reversal of the "pack cards left
   `/cards` entirely" line below: a card belongs to a pack *and* to your list. The
