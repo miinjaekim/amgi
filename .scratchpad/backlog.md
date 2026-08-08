@@ -48,40 +48,45 @@ the local model spike was the third and is **closed** — the written answer is
 `docs/local-model.md`, the reasoning and the reopen condition are in
 [status.md](status.md), and the two pieces of it worth doing are under Medium.
 
-- [ ] **Grammar patterns — start building.** ⭐ _Designed 2026-08-03; the design is
-      done and this is now the build._ Read first: the argument in
-      [vision.md](vision.md), the design calls in [status.md](status.md), the type
-      in [data-model.md](data-model.md). What follows is only staging.
+- [ ] **Grammar patterns — (1a) built on web, awaiting a trial.** ⭐ _Designed
+      2026-08-03, web built 2026-08-08 on `grammar-patterns`._ Read first: the
+      argument in [vision.md](vision.md), the design calls **and the three things
+      building corrected** in [status.md](status.md), the type in
+      [data-model.md](data-model.md).
 
-      Today a grammar pattern from a writing finding becomes an ordinary
-      `Flashcard` and is reviewed like a noun. The replacement: a pattern is its
-      own object and each review is a fresh **production** turn — a situation in
-      your native language, you write the sentence, `/api/writing` grades it.
+      A pattern is its own object and each review is a fresh **production** turn
+      — a situation in your native language, you write the sentence,
+      `/api/writing` grades it.
 
-      - **(1a) Web, the cheap door.** `packages/core/src/grammar.ts` — types, a
-        tolerant parser, and **two** shared fetches: generating the situation and
-        grading are separate round trips (_n_ patterns = _2n_ calls). Grading is
-        `/api/writing` unchanged. Entry via the `WritingFinding.pattern?` sibling
-        to `card?`. Exercise screen: prompt never naming the pattern, free-text
-        production, two-tier hint that clamps the verdict, rewrite shown on every
-        verdict. Own row in the Review picker — a *signature change* to
-        `buildReviewCollections` plus an identity outside the pack-id namespace,
-        not a free call. `sm2.ts` unedited, but read the ease-ratchet warning
-        before assuming that means unaffected. Grading failure must never lose the
-        learner's typed sentence. One manual Firestore step (`uid + studyLanguage`).
+      - ⚠️ **Blocked on one console step.** The `patterns` collection has no
+        Firestore security rule, so every read fails and the row never appears.
+        Nothing else stands between the branch and a usable feature.
+      - **(1a) Web, the cheap door — built.** `packages/core/src/grammar.ts`,
+        `/api/grammar/exercise` (generation only, language-generic),
+        `services/patterns.ts`, `PatternSession`, the patterns row via a
+        `kind` field on `ReviewCollection` and a `collectionKey` identity, entry
+        through `WritingFinding.pattern?`. `sm2.ts` untouched — the ease ratchet
+        is live and unmitigated, which is what makes the override question below
+        load-bearing. Awaiting a real session before anything else is added.
       - **(1b) Web, the expensive door.** The third `ExplainResult` arm on
         `/api/explain` — the cold-start path, and the bulk of the work: six
         language branches × the `if (context)` split = **12 prompt templates**.
         Gates nothing in (1a), so do it second or defer it.
       - **(2) Mobile parity** — JS-only, rides a build rather than needing one.
+        Its `buildReviewCollections` call already passes `[]`. Note that mobile
+        still offers "+ card" on a pattern finding, because the writing route
+        emits `card` alongside `pattern` precisely so the shipped build does not
+        lose the take-away to a field it cannot read. That crutch comes out with
+        parity.
       - **(3) Later, each independently useful:** produce-offline /
         evaluate-on-reconnect; interleaving patterns into the vocab queue;
         the acquisition signal, which needs ephemeral-submissions reopened.
 
       **Three things are open**, all listed as such in status.md: whether the
       learner may override a verdict (load-bearing — also the likeliest home for
-      the `easy` the ease ratchet otherwise removes), whether patterns interleave
-      into the vocab queue, and whether a tier-1 hint is ever offered unprompted.
+      the `easy` the ease ratchet otherwise removes, *and* the natural escape
+      hatch for a wrong "did not reach"), whether patterns interleave into the
+      vocab queue, and whether a tier-1 hint is ever offered unprompted.
       **Spoken production is deliberately not here** — see conversation practice.
 
 ## Medium

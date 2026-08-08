@@ -98,7 +98,24 @@ Each finding is an object:
   Prefer a single gloss, and give a second one only when a single gloss would
   genuinely mislead — words used interchangeably, or a term no one word in the
   other language covers. Separate the two with a comma. Never more than two,
-  and never a second one added just for completeness.${scriptRule}
+  and never a second one added just for completeness.
+- "pattern": include when the finding's take-away is a reusable grammar
+  pattern — something that takes a stem and a context and produces a FORM, and
+  that this learner will meet again. A connective ending, a tense construction,
+  a case or agreement rule are patterns. A word, a set phrase, a collocation, a
+  one-off slip and a typo are not.
+  This does NOT depend on "kind". A finding can be "naturalness" — no rule was
+  broken, but no native would phrase it that way — and still be about a pattern
+  the learner should be able to produce; those are often the most valuable ones
+  here. Judge the take-away, not the kind. Shape:
+    { "pattern": "the citation form, in ${language}",
+      "gloss": { "English": "…", "Korean": "…" },
+      "note": "one or two sentences in ${nativeLanguage} on when to reach for it" }
+  "pattern" is the citation form — the pattern itself, not as it happened to be
+  inflected in the passage. Each gloss is a few words on what the pattern does,
+  in the same shortest-natural-phrasing style as a card back.
+  A finding may carry BOTH "card" and "pattern" for the same point; include
+  both when the take-away is a pattern.${scriptRule}
 
 Every "note", and both "back" values, must be written so the learner can read
 them: notes in ${nativeLanguage}, backs in English and Korean respectively.
@@ -109,7 +126,9 @@ Respond with only this JSON:
   "rewriteNative": "that same text in ${nativeLanguage}",
   "findings": [
     { "kind": "…", "original": "…", "suggested": "…", "note": "…",
-      "card": { "study": "…", "back": { "English": "…", "Korean": "…" } } }
+      "card": { "study": "…", "back": { "English": "…", "Korean": "…" } },
+      "pattern": { "pattern": "…", "gloss": { "English": "…", "Korean": "…" },
+                   "note": "…" } }
   ]
 }`;
 

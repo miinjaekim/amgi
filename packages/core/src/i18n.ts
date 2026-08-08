@@ -216,6 +216,56 @@ const translations = {
     writingCardSaved: 'Saved',
     writingStartOver: 'Write something else',
     errorWritingReview: 'Could not review this. Please try again.',
+    // Grammar patterns — the thing you exercise, not the card you flip. A
+    // pattern review is a production turn: a situation in your own language,
+    // one sentence from you, a verdict on what came back. Copy here never
+    // says "card" for a pattern, and never names the pattern in a prompt.
+    patternPractise: 'Practice this pattern',
+    patternAdded: 'In practice',
+    errorSavePattern: 'Could not add this pattern. Please try again.',
+    reviewCollectionPatterns: 'Grammar patterns',
+    patternCollectionCount: '{count} patterns',
+    patternSessionProgress: 'Pattern {index} of {total}',
+    patternGenerating: 'Writing you a situation...',
+    patternSituationHeading: 'Say this',
+    patternYourSentence: 'What you wrote',
+    patternAnswerPlaceholder: 'Write it in {language}...',
+    patternCheck: 'Check',
+    patternChecking: 'Checking...',
+    // One control, two tiers. Taking a hint costs — the ceiling drops to Hard
+    // after the first and Again after the second — because retrieval has to
+    // stay the learner's, and the scheduler has to be told the truth about how
+    // much of the search space was handed over.
+    patternHint: 'Hint',
+    patternHintAgain: 'Still stuck',
+    patternHintCostHard: 'Hint taken — this one counts as Hard at best.',
+    patternHintCostAgain: 'Pattern shown — this one counts as Again.',
+    // Shown when the sentence was fine but sidestepped the pattern entirely.
+    // Knowing when to reach for it is the skill, so this is not a pass.
+    patternNotReached: 'That works, but it goes around the pattern rather than using it.',
+    patternVerdictGood: 'Got it',
+    patternVerdictHard: 'Close — the form slipped',
+    patternVerdictAgain: 'Not yet',
+    patternNext: 'Next',
+    patternFinish: 'Finish',
+    patternSessionDone: 'Practice complete',
+    patternSessionDoneCount: 'You practised {count} patterns.',
+    patternSessionCaughtUp: 'Nothing to practise right now.',
+    patternStart: 'Practice {count} patterns',
+    // Says what the turn will be, because it is not what the Review page has
+    // trained anyone to expect: a production turn between two three-second
+    // flips is a change worth naming before it happens rather than after.
+    patternSessionBlurb: 'You will be given a situation and write one sentence. No multiple choice — a hint is there if you get stuck.',
+    // A 500 on turn 3 of 6 is not the offline case: 40 seconds of the
+    // learner's writing is on screen and losing it is the one outcome ruled
+    // out. The text stays, retry is offered, and a skip writes no verdict at
+    // all — leaving the pattern due, which is the honest result.
+    patternGradeFailed: 'Could not grade that — your sentence is still here.',
+    patternExerciseFailed: 'Could not write an exercise for this one.',
+    patternRetry: 'Try again',
+    patternSkip: 'Skip this one',
+    patternSkipped: 'Skipped — this pattern is still due.',
+    patternOffline: 'Pattern practice needs a connection.',
     // Depth / examples errors
     errorLoadDepth: 'Failed to load definition. Please try again.',
     errorLoadExamples: 'Failed to load examples. Please try again.',
@@ -549,6 +599,41 @@ const translations = {
     writingCardSaved: '저장됨',
     writingStartOver: '다른 글 써보기',
     errorWritingReview: '첨삭에 실패했어요. 다시 시도해주세요.',
+    // Grammar patterns. 패턴 rather than 문형 — 문형 is textbook vocabulary and
+    // this is not a syllabus. Nothing here calls a pattern a 카드.
+    patternPractise: '이 패턴 연습하기',
+    patternAdded: '연습 중',
+    errorSavePattern: '패턴을 추가하지 못했어요. 다시 시도해주세요.',
+    reviewCollectionPatterns: '문법 패턴',
+    patternCollectionCount: '패턴 {count}개',
+    patternSessionProgress: '패턴 {index} / {total}',
+    patternGenerating: '상황을 만드는 중...',
+    patternSituationHeading: '이렇게 말해보세요',
+    patternYourSentence: '내가 쓴 문장',
+    patternAnswerPlaceholder: '{language}로 한 문장 써보세요...',
+    patternCheck: '확인',
+    patternChecking: '확인하는 중...',
+    patternHint: '힌트',
+    patternHintAgain: '아직 모르겠어요',
+    patternHintCostHard: '힌트를 봤으니 잘해야 "어려움"으로 기록돼요.',
+    patternHintCostAgain: '패턴을 봤으니 "다시"로 기록돼요.',
+    patternNotReached: '문장은 괜찮지만, 이 패턴을 쓰지 않고 돌아갔어요.',
+    patternVerdictGood: '맞혔어요',
+    patternVerdictHard: '거의 다 왔어요 — 형태가 어긋났어요',
+    patternVerdictAgain: '아직이에요',
+    patternNext: '다음',
+    patternFinish: '끝내기',
+    patternSessionDone: '연습 완료',
+    patternSessionDoneCount: '패턴 {count}개를 연습했어요.',
+    patternSessionCaughtUp: '지금 연습할 패턴이 없어요.',
+    patternStart: '패턴 {count}개 연습하기',
+    patternSessionBlurb: '상황을 드리면 한 문장으로 표현해보세요. 객관식은 없고, 막히면 힌트를 볼 수 있어요.',
+    patternGradeFailed: '채점하지 못했어요. 쓴 문장은 그대로 있어요.',
+    patternExerciseFailed: '이 패턴으로 문제를 만들지 못했어요.',
+    patternRetry: '다시 시도',
+    patternSkip: '이건 건너뛰기',
+    patternSkipped: '건너뛰었어요. 이 패턴은 그대로 남아 있어요.',
+    patternOffline: '문법 패턴 연습은 인터넷 연결이 필요해요.',
     // Depth / examples errors
     errorLoadDepth: '정의를 불러오지 못했습니다. 다시 시도해주세요.',
     errorLoadExamples: '예문을 불러오지 못했습니다. 다시 시도해주세요.',

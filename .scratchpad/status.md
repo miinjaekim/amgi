@@ -305,6 +305,46 @@ card runs the function on zero arguments. The type is in
   writing stored over time, which the ephemeral-submissions call below closed off
   — reopened explicitly rather than assumed away. Not v1.
 
+#### What building (1a) corrected (2026-08-08)
+
+Three things the design did not survive contact with. The first two are settled;
+the third is a step nobody has taken yet.
+
+- **A verdict cannot be derived from `/api/writing` alone.** The design has
+  grading reuse the route unchanged, and it does — but that route grades prose
+  without knowing which pattern was being practised. A learner who sidesteps
+  `-다가` entirely and writes something correct gets a clean review and a `good`,
+  which schedules out the very pattern they avoided. Since "when to reach for
+  it" is the *first* of the three things this feature exists to teach, that is
+  the feature failing at its own premise, not an edge case. Fix:
+  `PatternExercise.targetForms`, the surface fragments that count as having
+  reached — generation knows the pattern and is a call already being paid for,
+  so it lists them for free. Grading stays `/api/writing` unchanged; the check
+  is local. **Cost, named:** it is a substring match, so it is exact for
+  suffixal patterns and approximate elsewhere, and a thin form list scores a
+  correct answer as a miss. An unmeasurable reach is therefore scored as
+  *reached* — a wrong `again` on a good sentence is the outcome this design
+  least wants. Measured over three answers against a generated `-다가` exercise:
+  correct use → `good`, sidestep → `again`, botched form → `hard`.
+- **The entry door is not `kind === 'grammar'`.** The design says a grammar
+  finding offers "Practice this pattern". Measured on a passage using
+  `-고 있었어요` where a native would use `-는데`, the model returns `naturalness`
+  — correctly, since no rule was broken — and `-는데` is exactly the pattern
+  worth practising. Gating on `grammar` hid the best offers behind the one kind
+  that means "you made an error". The gate is gone; what a pattern *is* lives in
+  the prompt, which defines it. The kind describes the finding, not the
+  take-away.
+- ⚠️ **The `patterns` collection has no Firestore security rule, so nothing
+  works yet.** Reads fail with `Missing or insufficient permissions` and the
+  patterns row silently doesn't appear — which is the isolation working as
+  designed (a patterns read that throws must not cost the user their cards), and
+  is also why this will not announce itself. There is no `firestore.rules` in
+  the repo, so it is a console step, and it is the *only* thing standing between
+  this branch and a usable feature. The composite index the design budgeted for
+  turned out not to be needed: two equality filters with no `orderBy` are served
+  by merging single-field indexes, and `archived`/sort are handled in JS because
+  patterns number in the tens.
+
 ### Onboarding is not a checklist (2026-08-02)
 
 Built, then rejected — measured, not guessed. The complaint was fair (the tour

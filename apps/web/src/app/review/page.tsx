@@ -7,7 +7,9 @@ import {
   DIRECTION_FILTERS,
   buildReviewCollections,
   buildReviewQueue,
+  collectionKey,
   dueReviewItems,
+  duePatterns,
   filterByDirection,
   getBackSide,
   getCollectionId,
@@ -18,7 +20,15 @@ import {
   directionLabel,
   directionPrompt,
 } from '@amgi/core';
-import type { DirectionFilter, ReviewCollection, ReviewQueueItem } from '@amgi/core';
+import type {
+  DirectionFilter,
+  GrammarPattern,
+  ReviewCollection,
+  ReviewQueueItem,
+  ReviewTracking,
+} from '@amgi/core';
+import { fetchUserPatterns } from '@/services/patterns';
+import PatternSession from '@/components/PatternSession';
 import { db } from '@/config/firebase';
 import { doc, updateDoc } from 'firebase/firestore';
 import { getNextReviewData } from '@/services/sm2';
@@ -43,11 +53,19 @@ export default function ReviewPage() {
   const langConfig = getStudyLanguageConfig(studyLanguage);
   const backConfig = getBackSideConfig(studyLanguage, nativeLanguage);
   const [userFlashcards, setUserFlashcards] = useState<Flashcard[]>([]);
+  const [patterns, setPatterns] = useState<GrammarPattern[]>([]);
   const [flashcardsLoading, setFlashcardsLoading] = useState(false);
   const [migrationComplete, setMigrationComplete] = useState(false);
-  // `undefined` is "hasn't picked yet"; `null` is the cards you made yourself,
-  // which is a real choice and not the absence of one.
-  const [collectionId, setCollectionId] = useState<string | null | undefined>(undefined);
+  /**
+   * The chosen row, as a `collectionKey` — `undefined` is "hasn't picked yet".
+   *
+   * A key rather than an id, because an id stopped identifying a row when
+   * patterns arrived: your own cards and your grammar patterns are both
+   * `id: null`, and only `kind` separates them.
+   */
+  const [selectedKey, setSelectedKey] = useState<string | undefined>(undefined);
+  /** Non-null while a pattern practice session is running; the session queue. */
+  const [patternQueue, setPatternQueue] = useState<GrammarPattern[] | null>(null);
   const [directionFilter, setDirectionFilter] = useState<DirectionFilter>('both');
   const [activeQueue, setActiveQueue] = useState<ReviewQueueItem[]>([]);
   const [reviewMode, setReviewMode] = useState(false);
@@ -79,19 +97,23 @@ export default function ReviewPage() {
   // collection resets too: packs belong to one language, so a Japanese deck is
   // not a choice that survives switching to Korean.
   useEffect(() => {
-    setCollectionId(undefined);
+    setSelectedKey(undefined);
     if (user) {
       handleExitReview();
     } else {
       setUserFlashcards([]);
+      setPatterns([]);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, studyLanguage]);
 
   const collections = useMemo(
-    () => buildReviewCollections(userFlashcards, studyLanguage, nativeLanguage),
-    [userFlashcards, studyLanguage, nativeLanguage]
+    () => buildReviewCollections(userFlashcards, patterns, studyLanguage, nativeLanguage),
+    [userFlashcards, patterns, studyLanguage, nativeLanguage]
   );
+
+  const selected = collections.find(c => collectionKey(c) === selectedKey);
+  const isPatternCollection = selected?.kind === 'patterns';
 
   // One collection means there is no choice to make — every Korean-only session
   // — so nobody pays a tap for it. Coming from a deck's "Review this deck", the
@@ -100,7 +122,7 @@ export default function ReviewPage() {
   // a handoff the user has already moved past.
   const requestedCollection = React.useRef<string | null | undefined>(undefined);
   useEffect(() => {
-    if (collectionId !== undefined || collections.length === 0) return;
+    if (selectedKey !== undefined || collections.length === 0) return;
     if (requestedCollection.current === undefined) {
       requestedCollection.current = new URLSearchParams(window.location.search).get('collection');
       if (requestedCollection.current !== null) {
@@ -108,16 +130,21 @@ export default function ReviewPage() {
       }
     }
     const requested = requestedCollection.current;
-    if (requested && collections.some(c => c.id === requested)) setCollectionId(requested);
-    else if (collections.length === 1) setCollectionId(collections[0].id);
+    // `?collection=` still carries a pack id, which is what "Review this deck"
+    // hands over — so it only ever selects a cards row.
+    const handoff = requested
+      ? collections.find(c => c.kind === 'cards' && c.id === requested)
+      : undefined;
+    if (handoff) setSelectedKey(collectionKey(handoff));
+    else if (collections.length === 1) setSelectedKey(collectionKey(collections[0]));
     requestedCollection.current = null;
-  }, [collections, collectionId]);
+  }, [collections, selectedKey]);
 
   const collectionCards = useMemo(
-    () => collectionId === undefined
+    () => !selected || selected.kind !== 'cards'
       ? []
-      : userFlashcards.filter(card => getCollectionId(card) === collectionId),
-    [userFlashcards, collectionId]
+      : userFlashcards.filter(card => getCollectionId(card) === selected.id),
+    [userFlashcards, selected]
   );
 
   const dueCards = useMemo(() => dueReviewItems(collectionCards), [collectionCards]);
@@ -138,6 +165,16 @@ export default function ReviewPage() {
       }
 
       setUserFlashcards(await fetchUserFlashcards(user.uid, studyLanguage));
+      // Patterns are their own collection and their own failure. A patterns
+      // read that throws must not cost the user their cards — the patterns row
+      // simply doesn't appear, which is also what an account with no patterns
+      // sees.
+      try {
+        setPatterns(await fetchUserPatterns(user.uid, studyLanguage));
+      } catch (error) {
+        console.error('Error fetching grammar patterns:', error);
+        setPatterns([]);
+      }
     } catch (error) {
       console.error('Error during migration or fetching cards:', error);
       setUserFlashcards([]);
@@ -161,6 +198,30 @@ export default function ReviewPage() {
     setReviewedCount(0);
     setShowAnswer(false);
     setShowDetails(false);
+  };
+
+  const duePatternList = useMemo(
+    () => (isPatternCollection ? duePatterns(patterns) : []),
+    [isPatternCollection, patterns]
+  );
+
+  /**
+   * Fixed at session start and held in state, like `activeQueue`.
+   *
+   * Not derived from `patterns`, because scheduling written mid-session flows
+   * back into `patterns` to keep the picker's counts honest — and a derived
+   * queue would shrink out from under the learner as they answered.
+   */
+  const handleStartPatterns = () => {
+    setPatternQueue([...duePatternList]);
+  };
+
+  const handlePatternScheduled = (patternId: string, production: ReviewTracking) => {
+    setPatterns(prev => prev.map(p => (p.id === patternId ? { ...p, production } : p)));
+  };
+
+  const handleExitPatterns = () => {
+    setPatternQueue(null);
   };
 
   const handleShowAnswer = () => {
@@ -225,6 +286,7 @@ export default function ReviewPage() {
   };
 
   const handleExitReview = () => {
+    setPatternQueue(null);
     setReviewMode(false);
     setReviewComplete(false);
     setReviewStopped(false);
@@ -333,45 +395,111 @@ export default function ReviewPage() {
   const canChangeCollection = collections.length > 1;
   const changeCollectionButton = canChangeCollection && (
     <button
-      onClick={() => { setCollectionId(undefined); setDirectionFilter('both'); }}
+      onClick={() => { setSelectedKey(undefined); setPatternQueue(null); setDirectionFilter('both'); }}
       className="mt-4 text-sm px-3 py-1.5 rounded-lg border border-[var(--color-muted)] text-[var(--color-muted)] hover:text-[var(--color-text)] hover:border-[var(--color-text)] transition-colors"
     >
       {t(nativeLanguage, 'reviewChangeCollection')}
     </button>
   );
 
-  const collectionName = collections.find(c => c.id === collectionId)?.name;
+  const collectionName = selected?.name;
 
   const renderCollectionPicker = (list: ReviewCollection[]) => (
     <div>
       <p className="text-sm text-[var(--color-muted)] mb-4">{t(nativeLanguage, 'reviewPickCollection')}</p>
       <ul className="flex flex-col gap-3">
-        {list.map(collection => (
-          <li key={collection.id ?? 'mine'}>
-            <button
-              onClick={() => setCollectionId(collection.id)}
-              className="w-full text-left p-4 rounded-xl border border-[var(--color-muted)] hover:bg-[var(--color-muted)]/20 transition-colors"
-            >
-              <div className="flex items-baseline justify-between gap-3 flex-wrap">
-                <span className="font-bold text-[var(--color-text)]">{collection.name}</span>
-                <span
-                  className="text-xs shrink-0"
-                  style={{ color: collection.dueCount > 0 ? 'var(--color-highlight)' : 'var(--color-muted)' }}
-                >
-                  {collection.dueCount > 0
-                    ? t(nativeLanguage, 'reviewCollectionDue', { count: collection.dueCount })
-                    : t(nativeLanguage, 'reviewCollectionCaughtUp')}
-                </span>
-              </div>
-              <p className="text-xs text-[var(--color-muted)] mt-1">
-                {t(nativeLanguage, 'deckEntryCount', { count: collection.cardCount })}
-              </p>
-            </button>
-          </li>
-        ))}
+        {list.map(collection => {
+          // Model-graded production cannot work offline, and offline review is
+          // shipped — so the row is disabled rather than left to fail on the
+          // first turn. The resolution path is produce-offline /
+          // evaluate-on-reconnect, which is recorded and not built.
+          const disabled = collection.kind === 'patterns' && !isOnline;
+          return (
+            <li key={collectionKey(collection)}>
+              <button
+                onClick={() => setSelectedKey(collectionKey(collection))}
+                disabled={disabled}
+                className="w-full text-left p-4 rounded-xl border border-[var(--color-muted)] hover:bg-[var(--color-muted)]/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+              >
+                <div className="flex items-baseline justify-between gap-3 flex-wrap">
+                  <span className="font-bold text-[var(--color-text)]">{collection.name}</span>
+                  <span
+                    className="text-xs shrink-0"
+                    style={{ color: collection.dueCount > 0 ? 'var(--color-highlight)' : 'var(--color-muted)' }}
+                  >
+                    {collection.dueCount > 0
+                      ? t(nativeLanguage, 'reviewCollectionDue', { count: collection.dueCount })
+                      : t(nativeLanguage, 'reviewCollectionCaughtUp')}
+                  </span>
+                </div>
+                <p className="text-xs text-[var(--color-muted)] mt-1">
+                  {collection.kind === 'patterns'
+                    ? t(nativeLanguage, 'patternCollectionCount', { count: collection.cardCount })
+                    : t(nativeLanguage, 'deckEntryCount', { count: collection.cardCount })}
+                </p>
+                {disabled && (
+                  <p className="text-xs mt-1" style={{ color: 'var(--color-muted)' }}>
+                    {t(nativeLanguage, 'patternOffline')}
+                  </p>
+                )}
+              </button>
+            </li>
+          );
+        })}
       </ul>
     </div>
   );
+
+  /**
+   * The patterns branch: a start screen, then the session.
+   *
+   * Kept whole here rather than threaded through the card branches below,
+   * because almost nothing is shared — no direction filter, no show-answer, no
+   * four-way self-rating. What they share is the picker that got you here.
+   */
+  const renderPatterns = () => {
+    if (patternQueue) {
+      return (
+        <PatternSession
+          patterns={patternQueue}
+          studyLanguage={studyLanguage}
+          nativeLanguage={nativeLanguage}
+          onReviewed={recordReview}
+          onScheduled={handlePatternScheduled}
+          onExit={handleExitPatterns}
+        />
+      );
+    }
+    return (
+      <div className="flex flex-col items-center text-center py-4">
+        {canChangeCollection && (
+          <p className="text-sm font-bold text-[var(--color-text)] mb-4">{collectionName}</p>
+        )}
+        {duePatternList.length === 0 ? (
+          <p className="text-[var(--color-muted)] mb-2">{t(nativeLanguage, 'patternSessionCaughtUp')}</p>
+        ) : (
+          <>
+            <p className="text-sm text-[var(--color-muted)] mb-6 max-w-sm">
+              {t(nativeLanguage, 'patternSessionBlurb')}
+            </p>
+            <button
+              className="px-6 py-3 rounded-lg text-lg font-semibold mb-4 bg-[var(--color-highlight)] text-[var(--color-bg)] hover:bg-[var(--color-text)] disabled:opacity-40 disabled:cursor-not-allowed"
+              onClick={handleStartPatterns}
+              disabled={!isOnline}
+            >
+              {t(nativeLanguage, 'patternStart', { count: duePatternList.length })}
+            </button>
+            {!isOnline && (
+              <p className="text-xs mb-2" style={{ color: 'var(--color-muted)' }}>
+                {t(nativeLanguage, 'patternOffline')}
+              </p>
+            )}
+          </>
+        )}
+        {changeCollectionButton}
+      </div>
+    );
+  };
 
   const filteredCount = filterByDirection(dueCards, directionFilter).length;
 
@@ -396,7 +524,11 @@ export default function ReviewPage() {
         {user ? (
           flashcardsLoading ? (
             <div className="text-[var(--color-muted)]">{t(nativeLanguage, 'loadingFlashcards')}</div>
-          ) : userFlashcards.length === 0 ? (
+          ) : /* `collections`, not `userFlashcards`: an account with no cards
+                 but some grammar patterns has something to review, and telling
+                 it to go make a flashcard first would hide the row it does
+                 have. */
+          collections.length === 0 ? (
             <div className="text-center py-4">
               <p className="text-[var(--color-muted)] mb-6">{t(nativeLanguage, 'noFlashcardsForReview')}</p>
               <Link
@@ -407,8 +539,10 @@ export default function ReviewPage() {
                 {t(nativeLanguage, 'goToLearnPage')}
               </Link>
             </div>
-          ) : collectionId === undefined ? (
+          ) : selectedKey === undefined || !selected ? (
             renderCollectionPicker(collections)
+          ) : isPatternCollection ? (
+            renderPatterns()
           ) : /* A session in progress outranks the due count. Ratings now feed
                  straight back into `dueCards`, so finishing one cleanly drops
                  it to zero — and if that were checked first, the last answer

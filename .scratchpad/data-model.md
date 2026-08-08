@@ -94,7 +94,23 @@ which ones it uses. Further out: letting users configure which fields appear on
 their cards for a given deck (e.g. toggling off formality, adding a custom
 grammar note field).
 
-## `GrammarPattern` — designed 2026-08-03, not built
+## `GrammarPattern` — designed 2026-08-03, web built 2026-08-08
+
+_Built as designed, in `packages/core/src/grammar.ts`, with three changes worth
+knowing before reading the shape below as authoritative. All three are recorded
+in the Decisions entry in [status.md](status.md); the third is a live blocker._
+
+1. **`PatternExercise` gained `targetForms`** — the surface fragments that count
+   as having reached for the pattern. Without it a learner who sidesteps the
+   pattern and writes correct prose scores `good`, which schedules out the exact
+   thing they avoided. Generation supplies them; grading stays `/api/writing`
+   unchanged and the check stays local.
+2. **The writing-finding door is not gated on `kind === 'grammar'`** — measured,
+   the most valuable patterns come back as `naturalness` findings.
+3. **The `patterns` collection needs a Firestore security rule** before any of
+   this works. There is no rules file in the repo, so this is a console step.
+
+
 
 A grammar pattern is **not a card**, and the reasoning is in
 [vision.md](vision.md): a card is a lookup-table row, and a grammar point is a
