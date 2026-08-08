@@ -218,7 +218,7 @@ export default function PatternsPanel({
   };
 
   return (
-    <ScrollView contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled">
+    <ScrollView style={s.flex} contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled">
       <View style={s.tabRow}>
         <TouchableOpacity
           style={[s.tab, !showArchived && s.tabOn]}
@@ -330,6 +330,11 @@ export default function PatternsPanel({
 
 function makeStyles(C: Palette, tabBarHeight: number) {
   return StyleSheet.create({
+    // `flex: 1` on the ScrollView itself, not just the content container. In a
+    // flex column parent a ScrollView without it sizes to its content and
+    // stops scrolling, which is how the panel's own controls end up off the
+    // bottom of the screen. Same pairing `WritingReviewPanel` uses.
+    flex: { flex: 1 },
     scroll: { padding: 16, paddingBottom: tabBarHeight + 24 },
 
     tabRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14, flexWrap: 'wrap' },

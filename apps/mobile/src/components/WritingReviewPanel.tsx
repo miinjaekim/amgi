@@ -178,7 +178,7 @@ export default function WritingReviewPanel() {
         <>
           <View style={s.card}>
             <View style={s.rewriteHeaderRow}>
-              <Text style={s.sectionLabel}>{t(nativeLanguage, 'writingRewriteHeading')}</Text>
+              <Text style={[s.sectionLabel, s.sectionLabelShrink]}>{t(nativeLanguage, 'writingRewriteHeading')}</Text>
               <PronounceButton text={review.rewrite} studyLanguage={studyLanguage} />
               {/* The clean rewrite stays reachable — it is the version you
                   would read aloud, and a heavily edited passage is hard to read
@@ -332,13 +332,18 @@ function makeStyles(C: Palette, tabBarHeight: number) {
     errorText: { color: C.error, fontWeight: '600' },
 
     card: { backgroundColor: C.surface, borderRadius: 16, padding: 18, borderWidth: 1, borderColor: C.border, marginBottom: 20 },
-    rewriteHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 },
+    // Wraps, because the heading is a full sentence in uppercase and the row
+    // also carries a pronounce button and the Changes/Final toggle — on a
+    // narrow phone the toggle ran off the edge. Wrapping drops it to its own
+    // line rather than truncating a label or shrinking a tap target.
+    rewriteHeaderRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6, marginBottom: 8 },
     viewToggle: {
       marginLeft: 'auto', borderWidth: 1, borderColor: C.border, borderRadius: 12,
       paddingHorizontal: 10, paddingVertical: 3,
     },
     viewToggleText: { fontSize: 11, color: C.muted },
     sectionLabel: { fontSize: 11, fontWeight: '700', color: C.muted, textTransform: 'uppercase', letterSpacing: 0.8 },
+    sectionLabelShrink: { flexShrink: 1 },
     rewriteText: { fontSize: 17, color: C.text, lineHeight: 26 },
     nativeBlock: { marginTop: 14, paddingTop: 14, borderTopWidth: 1, borderTopColor: C.border, gap: 4 },
     nativeText: { fontSize: 14, color: C.text, opacity: 0.7, lineHeight: 21 },

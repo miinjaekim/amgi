@@ -183,8 +183,12 @@ export default function WritingReviewPanel() {
       {review && (
         <div className="mt-8 space-y-6">
           <section className="p-6 rounded-xl bg-[var(--color-surface)] shadow-lg border border-[var(--color-muted)]">
-            <div className="flex items-center gap-2 mb-3">
-              <h2 className="text-xs font-semibold uppercase tracking-widest" style={{ color: 'var(--color-muted)' }}>
+            {/* Wraps: the heading is a full sentence in uppercase and the row
+                also carries a pronounce button, a copy control and the
+                Changes/Final toggle. Narrow enough and they ran off the edge —
+                found on a phone, and the same row on mobile had it too. */}
+            <div className="flex items-center gap-2 mb-3 flex-wrap">
+              <h2 className="text-xs font-semibold uppercase tracking-widest shrink" style={{ color: 'var(--color-muted)' }}>
                 {t(nativeLanguage, 'writingRewriteHeading')}
               </h2>
               <PronounceButton text={review.rewrite} studyLanguage={studyLanguage} />
