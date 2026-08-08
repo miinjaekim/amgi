@@ -50,6 +50,19 @@ export interface WritingCardCandidate {
   /** The study-language text — the card front. A word, a phrase, or a pattern. */
   study: string;
   back: { English: string; Korean: string };
+  /**
+   * True when this card fills a word the learner **did not have** — they wrote
+   * it in their native language, or talked around it, because they could not
+   * reach the study-language word.
+   *
+   * Worth a flag rather than being folded in with every other card offer,
+   * because it is a different kind of evidence. Most cards are "this is worth
+   * remembering", which is a judgement. This one is a *demonstrated* gap: the
+   * learner tried to say something and the word was not there. That is the
+   * highest-confidence signal a passage can produce about what to learn next,
+   * and the UI says so rather than letting it look like any other suggestion.
+   */
+  gap?: boolean;
 }
 
 /**
@@ -196,6 +209,7 @@ function parseCandidate(raw: unknown): WritingCardCandidate | undefined {
   return {
     study: r.study.trim(),
     back: { English: back.English.trim(), Korean: back.Korean.trim() },
+    ...(r.gap === true ? { gap: true } : {}),
   };
 }
 

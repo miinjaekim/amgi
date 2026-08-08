@@ -214,6 +214,10 @@ const translations = {
     writingKindVocabulary: 'vocabulary',
     writingAddCard: '+ card',
     writingCardSaved: 'Saved',
+    // A word the passage proves they needed and did not have — they wrote it in
+    // their own language, or talked around it. Distinct from every other card
+    // offer, which is a judgement rather than evidence.
+    writingWordYouNeeded: 'word you needed',
     writingStartOver: 'Write something else',
     errorWritingReview: 'Could not review this. Please try again.',
     // Grammar patterns — the thing you exercise, not the card you flip. A
@@ -634,6 +638,7 @@ const translations = {
     writingKindVocabulary: '어휘',
     writingAddCard: '+ 카드',
     writingCardSaved: '저장됨',
+    writingWordYouNeeded: '필요했던 단어',
     writingStartOver: '다른 글 써보기',
     errorWritingReview: '첨삭에 실패했어요. 다시 시도해주세요.',
     // Grammar patterns. 패턴 rather than 문형 — 문형 is textbook vocabulary and

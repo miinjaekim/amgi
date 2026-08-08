@@ -409,6 +409,41 @@ describe('the writing-finding door', () => {
     expect(parsed?.findings[0].pattern).toBeUndefined();
   });
 
+  // A word the learner reached for and did not have — written in their own
+  // language, or talked around. Different evidence from every other card
+  // offer: not "worth knowing" but "you needed this and it wasn't there".
+  it('marks a card that fills a word the learner did not have', () => {
+    const parsed = parseWritingReview({
+      rewrite: 'r',
+      findings: [{
+        kind: 'vocabulary',
+        note: 'You wrote "corkscrew".',
+        card: { study: 'un tire-bouchon', back: { English: 'a corkscrew', Korean: '코르크 마개뽑이' }, gap: true },
+      }],
+    });
+    expect(parsed?.findings[0].card?.gap).toBe(true);
+  });
+
+  const plainCard = { study: '들르다', back: { English: 'to stop by', Korean: '잠시 방문하다' } };
+
+  it('leaves an ordinary card unmarked rather than storing false', () => {
+    // Firestore rejects undefined and the flag is meaningful by its presence;
+    // a card carrying `gap: false` would read as "checked and not a gap".
+    const parsed = parseWritingReview({
+      rewrite: 'r',
+      findings: [{ kind: 'vocabulary', note: 'n', card: plainCard }],
+    });
+    expect(parsed?.findings[0].card).not.toHaveProperty('gap');
+  });
+
+  it('ignores a non-boolean gap rather than trusting it', () => {
+    const parsed = parseWritingReview({
+      rewrite: 'r',
+      findings: [{ kind: 'vocabulary', note: 'n', card: { ...plainCard, gap: 'yes' } }],
+    });
+    expect(parsed?.findings[0].card).not.toHaveProperty('gap');
+  });
+
   it('lets a finding offer both a card and a pattern', () => {
     // The card is what mobile reads until pattern parity ships; web prefers
     // the pattern. Neither should cost the other.

@@ -214,6 +214,20 @@ export default function WritingReviewPanel() {
                   const savingThisPattern = finding.pattern
                     ? savingPattern === finding.pattern.pattern
                     : false;
+                  // A pattern offer normally stands alone: where both are
+                  // present the card is a fallback for clients that cannot
+                  // practise patterns, and on a grammar finding it is often a
+                  // *description* rather than a card front — "accord du
+                  // participe passé avec être" is a heading, not something you
+                  // want in your deck. Measured, not feared.
+                  //
+                  // A gap card is the exception, and it is the whole point of
+                  // the flag. A word the learner reached for and did not have
+                  // is a different object from the pattern the same sentence
+                  // happened to illustrate, and wanting both is not a choice
+                  // the app should make for them.
+                  const showCard =
+                    !!finding.card && (!finding.pattern || finding.card.gap === true);
                   return (
                     <li
                       key={i}
@@ -244,16 +258,7 @@ export default function WritingReviewPanel() {
 
                       <p className="mt-2 text-sm leading-relaxed text-[var(--color-text)] opacity-80">{finding.note}</p>
 
-                      {/* A pattern offer replaces the card offer rather than
-                          sitting beside it. The finding may carry both — the
-                          card is there for mobile, which has no pattern
-                          practice yet — but a learner shown "save this as a
-                          card" and "practise this pattern" for one grammar
-                          point is being asked to choose between two things
-                          whose difference the app has not explained. Practice
-                          is the better answer for a pattern, so it is the one
-                          offered. */}
-                      {finding.pattern ? (
+                      {finding.pattern && (
                         <div className="mt-3 flex flex-wrap items-center gap-3 pt-3 border-t" style={{ borderColor: 'var(--color-muted)' }}>
                           <span className="font-bold text-[var(--color-text)]">{finding.pattern.pattern}</span>
                           {patternGloss(finding.pattern, nativeLanguage) && (
@@ -272,8 +277,23 @@ export default function WritingReviewPanel() {
                               : t(nativeLanguage, patternSaved ? 'patternAdded' : 'patternPractise')}
                           </button>
                         </div>
-                      ) : finding.card && (
+                      )}
+
+                      {showCard && finding.card && (
                         <div className="mt-3 flex flex-wrap items-center gap-3 pt-3 border-t" style={{ borderColor: 'var(--color-muted)' }}>
+                          {/* A word they demonstrably reached for and did not
+                              have. Marked, because it is different evidence
+                              from every other suggestion on the page: not "this
+                              would be worth knowing" but "you needed this and
+                              it wasn't there." */}
+                          {finding.card.gap && (
+                            <span
+                              className="px-2 py-0.5 rounded-full text-[10px] uppercase tracking-widest"
+                              style={{ background: 'var(--color-highlight)', color: 'var(--color-bg)' }}
+                            >
+                              {t(nativeLanguage, 'writingWordYouNeeded')}
+                            </span>
+                          )}
                           <span className="font-bold text-[var(--color-text)]">{finding.card.study}</span>
                           <PronounceButton text={finding.card.study} studyLanguage={studyLanguage} />
                           <span className="text-sm opacity-60 text-[var(--color-text)]">

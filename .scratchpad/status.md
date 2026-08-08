@@ -76,6 +76,42 @@ the production `EXPO_PUBLIC_API_BASE_URL`.
 Closed calls, kept with their reasoning — a decision whose reasoning is lost gets
 reopened by the next person to notice the symptom. Newest first.
 
+### A word you reached for and didn't have is the best card a passage yields (2026-08-08)
+
+From a trial: writing in French, the user hit a word they didn't know, wrote the
+English one inline, and got a *pattern* offer back but no vocabulary card.
+
+- **Two marks tell you a word was missing**, and both are easy to read past
+  because the rest of the sentence often looks fine: the word appears in the
+  native language mid-sentence, or the learner talks around it — "the thing for
+  cutting bread" where a native says `un couteau à pain`. The prompt now hunts
+  for both by name, gives each its own finding, and ranks them high.
+- **`WritingCardCandidate.gap` marks them**, and the flag earns its place by
+  being *different evidence*. Every other card offer is a judgement — this would
+  be worth knowing. A gap card is a demonstration: the learner tried to say
+  something and the word was not there. That is the highest-confidence signal a
+  passage can produce about what to learn next, so the UI labels it rather than
+  letting it look like any other suggestion.
+- **⚠️ This corrects a call in the grammar entry below.** That entry had a
+  pattern offer *replace* the card offer, reasoning that showing both for one
+  grammar point asks the learner to choose between two things the app has not
+  explained. That reasoning holds for one point and was wrong as a blanket rule:
+  a word you didn't have and a pattern the same sentence illustrates are two
+  objects, and hiding the first behind the second is what the trial hit. Now a
+  card shows alongside a pattern **when it is a gap card**, and otherwise still
+  gives way.
+- **Why gap and not "whenever they differ"**, which was the first fix and was
+  measured to be worse: on a grammar finding the model often emits a card whose
+  front is a *description* — `accord du participé passé avec être` is a heading,
+  not something anyone wants in a deck. Those differ from the pattern text and
+  would have come back. Keying on `gap` admits exactly the case that prompted
+  this and nothing else.
+- Verified live in both directions: `corkscrew` → `un tire-bouchon` and the
+  circumlocution → `un couteau à pain`, both ranked first; and in Korean,
+  `crowded` → 붐비다 shown alongside a separate `-아/어서` pattern offer.
+- Mobile gets the new cards for free — its panel reads `finding.card` and does
+  not branch on patterns — though not the `gap` label until parity.
+
 ### Grammar patterns: cloze first, production when it sticks (2026-08-08)
 
 Written after (1a) was built, tried once, did not feel good, and the research

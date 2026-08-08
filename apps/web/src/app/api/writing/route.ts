@@ -87,7 +87,8 @@ Each finding is an object:
   pattern IS a valid card, and for a beginner it is often the most valuable
   one. Shape:
     { "study": "the ${language} word, phrase or pattern",
-      "back": { "English": "…", "Korean": "…" } }
+      "back": { "English": "…", "Korean": "…" },
+      "gap": true }
   Both backs are always required. "study" must be written in ${language}, and
   in its citation form — the dictionary form of a verb, the pattern itself for
   a grammar point — not inflected as it happened to appear in the passage.
@@ -99,6 +100,24 @@ Each finding is an object:
   genuinely mislead — words used interchangeably, or a term no one word in the
   other language covers. Separate the two with a comma. Never more than two,
   and never a second one added just for completeness.
+  "gap": set this to true ONLY in the case described immediately below, and
+  omit the field entirely otherwise.
+
+WORDS THEY DID NOT HAVE — do not miss these:
+When a learner cannot reach a ${language} word, they leave a mark in the
+passage. Two marks, and both are easy to read past because the rest of the
+sentence often looks fine:
+  1. They write the word in ${nativeLanguage} in the middle of their
+     ${language} sentence.
+  2. They talk around it — a whole phrase describing the thing, where a native
+     would use one word. "the thing you open bottles with" for a corkscrew.
+EVERY one of these gets its own finding, with "kind": "vocabulary", and that
+finding MUST carry a "card" with "gap": true whose "study" is the ${language}
+word they were missing. Never merge two missing words into one finding, and
+never let a missing word pass with only a mention in the rewrite.
+Rank these HIGH in the list. Everything else you report is a judgement about
+what would be better; this is the one thing the passage *proves* they needed and
+did not have. It is the single most valuable card a piece of writing can yield.
 - "pattern": include when the finding's take-away is a reusable grammar
   pattern — something that takes a stem and a context and produces a FORM, and
   that this learner will meet again. A connective ending, a tense construction,
@@ -129,8 +148,14 @@ Each finding is an object:
   "pattern" is the citation form — the pattern itself, not as it happened to be
   inflected in the passage. Each gloss is a few words on what the pattern does,
   in the same shortest-natural-phrasing style as a card back.
-  A finding may carry BOTH "card" and "pattern" for the same point; include
-  both when the take-away is a pattern.${scriptRule}
+  A finding may carry BOTH "card" and "pattern". Two cases, and they are
+  different:
+  - The take-away IS the pattern. Give both, with the same text in each — the
+    card is a fallback for clients that cannot practise patterns.
+  - The finding is about a missing word that ALSO illustrates a pattern. Then
+    the card is the vocabulary they lacked and the pattern is the grammar
+    point, they are different strings, and both are wanted. Do not drop the
+    vocabulary card because a pattern was worth mentioning too.${scriptRule}
 
 Every "note", and both "back" values, must be written so the learner can read
 them: notes in ${nativeLanguage}, backs in English and Korean respectively.
@@ -141,7 +166,8 @@ Respond with only this JSON:
   "rewriteNative": "that same text in ${nativeLanguage}",
   "findings": [
     { "kind": "…", "original": "…", "suggested": "…", "note": "…",
-      "card": { "study": "…", "back": { "English": "…", "Korean": "…" } },
+      "card": { "study": "…", "back": { "English": "…", "Korean": "…" },
+                "gap": true },
       "pattern": { "pattern": "…", "kind": "choice",
                    "gloss": { "English": "…", "Korean": "…" }, "note": "…" } }
   ]
