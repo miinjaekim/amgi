@@ -200,6 +200,11 @@ const translations = {
     writingTagline: 'Write something. See how a native would say it.',
     writingTaglineSubtitle: 'Grammar where you need it, natural phrasing where you don\'t — pitched at whatever you wrote. Keep the phrases you were reaching for as flashcards.',
     writingRewriteHeading: 'How a native would put it',
+    // Toggle between the correction shown as edits in place and the clean
+    // rewritten text. Defaults to the edits — reading two blocks and looking
+    // between them is what the diff exists to remove.
+    writingViewChanges: 'Changes',
+    writingViewFinal: 'Final',
     // The rewrite is the one text on screen the user didn't write, so it's the
     // one whose meaning they can't check. This is that check.
     writingRewriteMeaning: 'What that says',
@@ -629,6 +634,8 @@ const translations = {
     writingTagline: '직접 써보세요. 원어민이라면 이렇게 씁니다.',
     writingTaglineSubtitle: '문법이 필요하면 문법을, 아니면 더 자연스러운 표현을 — 쓴 글에 맞춰 짚어드려요. 떠올리지 못했던 표현은 카드로 저장하세요.',
     writingRewriteHeading: '원어민이라면 이렇게',
+    writingViewChanges: '고친 부분',
+    writingViewFinal: '완성문',
     writingRewriteMeaning: '이런 뜻이에요',
     writingFindingsHeading: '눈여겨볼 점',
     writingNoFindings: '자연스럽게 읽혀요. 따로 짚을 부분이 없네요.',

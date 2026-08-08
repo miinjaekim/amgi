@@ -22,6 +22,7 @@ import { useUser } from '@/components/UserContext';
 import { t } from '@/lib/i18n';
 import Spinner from '@/components/Spinner';
 import PronounceButton from '@/components/PronounceButton';
+import TextDiff from '@/components/TextDiff';
 
 const KIND_LABEL_KEY: Record<FindingKind, TranslationKey> = {
   grammar: 'writingKindGrammar',
@@ -55,6 +56,14 @@ export default function WritingReviewPanel() {
   // being saved says nothing about the other.
   const [savedPatterns, setSavedPatterns] = useState<Set<string>>(new Set());
   const [savingPattern, setSavingPattern] = useState<string | null>(null);
+  /**
+   * The passage as it was when it was submitted, which is what the diff is
+   * against. Not `text`: the textarea stays editable after a review comes back,
+   * and diffing the rewrite against a passage the user has since changed would
+   * invent edits nobody made.
+   */
+  const [submitted, setSubmitted] = useState('');
+  const [showClean, setShowClean] = useState(false);
 
   const langConfig = getStudyLanguageConfig(studyLanguage);
   const languageLabel = t(nativeLanguage, langConfig.studyLabelKey);
@@ -68,8 +77,12 @@ export default function WritingReviewPanel() {
     setReview(null);
     setSavedCards(new Set());
     setSavedPatterns(new Set());
+    setShowClean(false);
     try {
-      setReview(await getWritingReview(text.trim(), nativeLanguage ?? 'English', studyLanguage));
+      const passage = text.trim();
+      const result = await getWritingReview(passage, nativeLanguage ?? 'English', studyLanguage);
+      setSubmitted(passage);
+      setReview(result);
     } catch (err) {
       setError(t(nativeLanguage, 'errorWritingReview'));
       console.error(err);
@@ -174,8 +187,26 @@ export default function WritingReviewPanel() {
                 {t(nativeLanguage, 'writingRewriteHeading')}
               </h2>
               <PronounceButton text={review.rewrite} studyLanguage={studyLanguage} />
+              {/* The clean rewrite is still worth reaching — it is the version
+                  you would read aloud or copy out, and a heavily edited passage
+                  is hard to read as a sentence through its own diff. */}
+              <button
+                onClick={() => setShowClean(v => !v)}
+                className="ml-auto text-xs px-2.5 py-1 rounded-lg border border-[var(--color-muted)] text-[var(--color-muted)] hover:text-[var(--color-text)] hover:border-[var(--color-text)] transition-colors"
+              >
+                {t(nativeLanguage, showClean ? 'writingViewChanges' : 'writingViewFinal')}
+              </button>
             </div>
-            <p className="text-lg leading-relaxed whitespace-pre-wrap text-[var(--color-text)]">{review.rewrite}</p>
+            {showClean ? (
+              <p className="text-lg leading-relaxed whitespace-pre-wrap text-[var(--color-text)]">{review.rewrite}</p>
+            ) : (
+              <TextDiff
+                before={submitted}
+                after={review.rewrite}
+                studyLanguage={studyLanguage}
+                className="text-lg"
+              />
+            )}
 
             {/* Subordinate to the rewrite, not hidden behind a tap: it is how
                 the user verifies a correction didn't change what they meant,

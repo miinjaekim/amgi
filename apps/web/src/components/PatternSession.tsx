@@ -28,6 +28,7 @@ import { updatePatternTracking } from '@/services/patterns';
 import { t } from '@/lib/i18n';
 import Spinner from '@/components/Spinner';
 import PronounceButton from '@/components/PronounceButton';
+import TextDiff from '@/components/TextDiff';
 
 /**
  * A grammar-pattern practice session.
@@ -471,17 +472,13 @@ export default function PatternSession({
                       </p>
                     )}
 
-                    <div>
-                      <h4 className="text-xs font-semibold uppercase tracking-widest mb-1" style={{ color: 'var(--color-muted)' }}>
-                        {t(nativeLanguage, 'patternYourSentence')}
-                      </h4>
-                      <p className="leading-relaxed text-[var(--color-text)] opacity-70">{answer.trim()}</p>
-                    </div>
-
                     {/* The rewrite shows on every verdict, including `good`. A
                         sentence that got the pattern right and still differs
                         from how a native would put it is worth seeing — the
-                        same reasoning `rewriteNative` exists for. */}
+                        same reasoning `rewriteNative` exists for.
+                        Shown as a diff against what the learner wrote, because
+                        two blocks means reading one while holding the other in
+                        your head, and the edits are the part worth learning. */}
                     {review && (
                       <>
                         <div>
@@ -491,7 +488,12 @@ export default function PatternSession({
                             </h4>
                             <PronounceButton text={review.rewrite} studyLanguage={studyLanguage} />
                           </div>
-                          <p className="text-lg leading-relaxed text-[var(--color-text)]">{review.rewrite}</p>
+                          <TextDiff
+                            before={answer.trim()}
+                            after={review.rewrite}
+                            studyLanguage={studyLanguage}
+                            className="text-lg"
+                          />
                           {review.rewriteNative && (
                             <p className="mt-1 text-sm leading-relaxed text-[var(--color-text)] opacity-70">
                               {review.rewriteNative}
