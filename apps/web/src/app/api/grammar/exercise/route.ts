@@ -1,10 +1,6 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { NextRequest, NextResponse } from 'next/server';
-import { getStudyLanguageConfig, parsePatternExercise } from '@amgi/core';
-
-function stripMarkdownCodeBlock(text: string): string {
-  return text.replace(/```[a-zA-Z]*\n?|```/g, '').trim();
-}
+import { getStudyLanguageConfig, parseModelJson, parsePatternExercise } from '@amgi/core';
 
 /**
  * Generates one exercise for one grammar pattern, at whichever rung it is on.
@@ -220,7 +216,7 @@ Respond with only this JSON:
   try {
     const result = await model.generateContent(isCloze ? clozePrompt : productionPrompt);
     const parsed = parsePatternExercise(
-      JSON.parse(stripMarkdownCodeBlock(result.response.text())),
+      parseModelJson(result.response.text()),
       { pattern },
       isCloze ? 'cloze' : 'production',
     );

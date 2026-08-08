@@ -15,3 +15,4 @@ export * from './reminders';
 export * from './writing';
 export * from './grammar';
 export * from './diff';
+export * from './modelJson';

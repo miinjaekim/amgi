@@ -1,10 +1,6 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { NextRequest, NextResponse } from 'next/server';
-import { getStudyLanguageConfig, parseWritingReview, WRITING_MAX_CHARS } from '@amgi/core';
-
-function stripMarkdownCodeBlock(text: string): string {
-  return text.replace(/```[a-zA-Z]*\n?|```/g, '').trim();
-}
+import { getStudyLanguageConfig, parseModelJson, parseWritingReview, WRITING_MAX_CHARS } from '@amgi/core';
 
 export async function POST(req: NextRequest) {
   const { text, nativeLanguage = 'English', studyLanguage = 'Korean' } = await req.json();
@@ -173,12 +169,21 @@ Respond with only this JSON:
   ]
 }`;
 
-  const result = await model.generateContent(prompt);
-  const parsed = parseWritingReview(JSON.parse(stripMarkdownCodeBlock(result.response.text())));
+  // Wrapped, where it used to throw straight out of the handler. An
+  // unparseable response is a thing the model does — it returned a valid review
+  // followed by trailing commentary once — and that surfaced as an unhandled
+  // 500 rather than the 502 the client already knows how to show.
+  try {
+    const result = await model.generateContent(prompt);
+    const parsed = parseWritingReview(parseModelJson(result.response.text()));
 
-  if (!parsed) {
+    if (!parsed) {
+      return NextResponse.json({ error: 'Could not review this passage' }, { status: 502 });
+    }
+
+    return NextResponse.json(parsed);
+  } catch (error) {
+    console.error('[writing] review failed:', error);
     return NextResponse.json({ error: 'Could not review this passage' }, { status: 502 });
   }
-
-  return NextResponse.json(parsed);
 }
