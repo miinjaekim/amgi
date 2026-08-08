@@ -48,93 +48,46 @@ the local model spike was the third and is **closed** — the written answer is
 `docs/local-model.md`, the reasoning and the reopen condition are in
 [status.md](status.md), and the two pieces of it worth doing are under Medium.
 
-- [ ] **Grammar patterns — first cut tried, redesigned, rebuild pending.** ⭐
-      _Designed 2026-08-03, web built 2026-08-08 on `grammar-patterns`, tried
-      the same day, then redesigned off the research the trial prompted._ Read
-      in this order: **`docs/grammar-research.md`**, which the design is derived
-      from; the argument in [vision.md](vision.md), ending at "production is the
-      last rung"; the two Decisions entries in [status.md](status.md) — "cloze
-      first, production when it sticks" first, then the older design calls it
-      scopes; the type and its 2026-08-08 revision in
-      [data-model.md](data-model.md).
+- [ ] **Grammar patterns — mobile parity.** ⭐ _Built, trialled and scoped closed
+      on web: PR #84, 2026-08-08 → 09._ Web is done and the design questions are
+      settled; only the port is left.
 
-      A pattern is its own object with its own review verb, and **which verb
-      depends on how well you already know it**: a cloze — one sentence with the
-      pattern blanked, typed into, graded exactly and locally — until it sticks,
-      then free production from a situation that never names it. `kind` decides
-      only whether a pattern ever makes that second step.
+      Read before starting: **`docs/grammar-research.md`**, which the design is
+      derived from, then the Decisions entries in [status.md](status.md), newest
+      first. A pattern is its own object with its own review verb — a cloze until
+      it sticks, then free production — and `kind` decides only whether it ever
+      makes that second step.
 
-      - **(1a) Web, first cut — built, tried, and superseded in part.**
-        `packages/core/src/grammar.ts`, `/api/grammar/exercise`,
-        `services/patterns.ts`, `PatternSession`, the patterns row via a `kind`
-        field on `ReviewCollection` and a `collectionKey` identity, entry through
-        `WritingFinding.pattern?`. The Firestore rule is in place. What it built
-        survives as the **`choice`** half of the redesign; nothing here is thrown
-        away.
-      - **(1a′) The redesign — built 2026-08-08, awaiting a trial.** _Designed
-        from `docs/grammar-research.md`; read that, then vision.md, then the
-        Decisions entry._ All five pieces shipped to the branch, and everything
-        (1a) built survives as the production rung:
-        1. **Management surface** — Cards/Patterns mode toggle on `/cards`,
-           `PatternsPanel` with active/archived, edit, archive, restore, delete.
-        2. **Manual add** — pattern, optional gloss, kind picked from two
-           labelled options. No endpoint, no model call.
-        3. **`PatternKind` + derived stage** — `exerciseFormat()` off
-           `repetitions`; a lapse demotes for free.
-        4. **The cloze rung** — `ClozeExercise`, the second arm on
-           `/api/grammar/exercise`, local exact grading, hints from the
-           pattern's own gloss and citation form.
-        5. **Classification** — `/api/writing` returns `kind`, verified live.
-        Plus `buildPatternQueue` (interleaving), and the override and `easy`,
-        folded in on the same pass.
-        **Deliberately not done:** the bare transformation drill from the
-        superseded design (mechanical drills are the one format the literature
-        is near-unanimous against), and "situations state the meaning rather
-        than a scene" — the cloze rung solves the ambiguity that fix was aimed
-        at, and by the time a learner reaches production an under-specified
-        situation is the *point*.
-      - **(1b) Web, the expensive door.** The third `ExplainResult` arm on
-        `/api/explain` — six language branches × the `if (context)` split =
-        **12 prompt templates**. Manual add (2 above) covers most of what this
-        was for at a fraction of the cost, so this is now weaker, not just
-        later.
-      - **(2) Mobile parity** — JS-only, rides a build rather than needing one.
-        Its `buildReviewCollections` call already passes `[]`. Note that mobile
-        still offers "+ card" on a pattern finding, because the writing route
-        emits `card` alongside `pattern` precisely so the shipped build does not
-        lose the take-away to a field it cannot read. That crutch comes out with
-        parity. **Don't start this until (1a′) settles** — porting the format
-        that just failed a trial is the expensive mistake available here.
-      - **(3) Later, each independently useful:** produce-offline /
-        evaluate-on-reconnect — note this gets *easier*, since a cloze turn
-        needs no grading call and so works offline once generated; interleaving
-        patterns into the vocab queue, which is more attractive now that most
-        turns are ten seconds rather than forty; contrast turns (paired
-        situations, both *produced* — not a picker, which vision.md rules out);
-        a structured-input comprehension rung, which the research says is
-        effective but which is forced-choice and sits awkwardly beside
-        no-multiple-choice; the acquisition signal, which needs
-        ephemeral-submissions reopened and which the research promotes — it is a
-        better answer to "does any of this transfer" than anything in the
-        literature.
+      **The port is JS-only**, so it rides a build rather than needing one.
+      `buildReviewCollections` on mobile already passes `[]`. Two things to
+      carry across that are easy to miss:
 
-      **Two things are open**, both in status.md: folding patterns into the
-      vocab queue, and an unprompted tier-1 hint after an idle (production turns
-      only now). The third — the learner override — **closed and shipped** on
-      the same pass, along with `easy` on a hint-free cloze, which is what
-      actually un-sticks the ease ratchet.
+      - Mobile still offers "+ card" on a pattern finding, because
+        `/api/writing` emits `card` alongside `pattern` precisely so the shipped
+        build doesn't lose the take-away to a field it can't read. **That crutch
+        comes out with parity**, and the rule that replaces it is in
+        `WritingReviewPanel` on web: a card shows beside a pattern only when it
+        is a `gap` card.
+      - Copy-to-clipboard on the writing rewrite is web-only. Mobile needs
+        `expo-clipboard`, which is a **native** dependency and so a build — free
+        if it rides one already queued, a build of its own otherwise.
 
-      **Unverified by anyone, and it is the central claim:** graduation from
-      cloze to production. A correct cloze schedules a day out and the next one
-      six, so rung two is about a week of real intervals away and cannot be
-      reached in a sitting. Only tested with a synthetic `repetitions: 3`. A
-      dev-only "make due now / advance stage" control on the Patterns list would
-      fix that and is the cheapest useful next thing here.
+      **Known weak spot, undecided on purpose:** `alternates` has come back empty
+      on every live cloze so far, leaving the learner override to absorb every
+      legitimate variant answer. If that turns out to bite in use, the generation
+      prompt needs work rather than the override. Waiting on real sessions rather
+      than guessing.
 
-      **Watch on the next trial:** `alternates` came back empty on every live
-      cloze generated so far, which leaves the override absorbing every
-      legitimate variant answer. If that bites, the generation prompt needs work
-      rather than the override.
+      **One question still open:** whether a tier-1 hint is ever offered
+      unprompted after an idle (production turns only). Offering rescues the
+      learner who won't ask; it also interrupts thinking, which is what the
+      design exists to protect.
+
+      **Settled — see status.md before reopening any of it:** no vocab-queue
+      interleaving, the Learn door cancelled, the learner override shipped,
+      graduation deliberately unverified, and the speculative tail (produce-
+      offline, contrast turns, structured input, the acquisition signal) off
+      this list with its reasoning preserved.
       **Spoken production is deliberately not here** — see conversation practice.
 
 ## Medium

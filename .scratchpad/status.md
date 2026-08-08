@@ -112,6 +112,46 @@ English one inline, and got a *pattern* offer back but no vocabulary card.
 - Mobile gets the new cards for free — its panel reads `finding.card` and does
   not branch on patterns — though not the `gap` label until parity.
 
+### Grammar patterns stay their own row, and the tail is cancelled (2026-08-09)
+
+_User's calls, after trialling the built feature. Closes the last of the design
+questions and cuts the backlog item down to what is actually left to do._
+
+- **Patterns do NOT interleave into the vocab queue.** This was one of the two
+  remaining opens and it closes as **no, for now**. The research argument for
+  interleaving was always narrower than it looked: the studies measured grammar
+  points against *each other*, which the session queue already does via
+  `buildPatternQueue`, not grammar against vocabulary — that was always an
+  extrapolation. And the original objection stands on its own: sitting down to
+  flip cards and sitting down to produce sentences are different acts, and
+  mixing them changes what Review feels like without anyone choosing it.
+  Reversible; nothing was built to prevent it.
+- **The Learn door (1b) is cancelled, not deferred.** It was the cold-start path
+  — a third `ExplainResult` arm on `/api/explain`, costing **12 prompt
+  templates** across six language branches each splitting on `if (context)`.
+  Manual add now covers what it was for: you type the pattern, pick its kind,
+  done — no endpoint, no model call, and more control over what counts than the
+  detector would have given. A twelve-template feature that duplicates a
+  free-form one is not worth carrying on a list.
+- **No dev-only "make due now" control, and graduation ships unverified.** The
+  cloze → production step cannot be reached in a sitting — a correct cloze
+  schedules a day out and the next six — so seeing it happen would have needed
+  either a week or a scheduling override built for testing. Neither is worth it:
+  the step is derived from `repetitions` in four lines, it is unit-tested both
+  directions including the lapse-demotes case, and the remaining risk is one a
+  real session surfaces on its own. **Deliberate**, so don't read "unverified"
+  as an oversight and add the tool.
+- **The speculative tail is off the backlog**, and none of the reasoning is lost
+  because all of it already lives elsewhere: produce-offline /
+  evaluate-on-reconnect and the acquisition signal are both in the older design
+  calls below; the acquisition signal and the structured-input comprehension
+  rung are both argued in `docs/grammar-research.md` §4, which is also honest
+  that structured input is forced-choice and sits awkwardly beside
+  no-multiple-choice. Contrast turns — paired situations, both *produced* — stay
+  a live idea in `vision.md`'s "why it and not its neighbour", and would be a
+  refinement of the production rung rather than a new one. Any of these can come
+  back as its own item when there is a reason; none of them are next.
+
 ### Grammar patterns: cloze first, production when it sticks (2026-08-08)
 
 Written after (1a) was built, tried once, did not feel good, and the research
