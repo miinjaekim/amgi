@@ -30,7 +30,28 @@ Two follow-on details, both found by the check's own first run:
   `d'eau`. Strict comparison threw away a correct exercise. Ignoring spacing
   still catches the real failure — a missing word is not a missing space.
 - **Fold typographic marks.** The same generator returns `d’` with a curly
-  apostrophe, which no learner types and which no ASCII comparison matches. Learned
+  apostrophe, which no learner types and which no ASCII comparison matches.
+
+### …and the check then broke every turn, which is its own lesson
+
+The redundant field was added to the parser as **required**, the route was
+tested with `curl`, the JSON looked right, and it shipped broken: the route
+parses the model's response and returns the *parsed* object, so it had stripped
+`full` — and `getPatternExercise` parses the route's response a **second** time
+(mobile can point at a deployed route of a different vintage). Every cloze
+failed that second parse.
+
+Two things to carry forward:
+
+- **A field a parser requires must survive the parse**, or a double-parsed
+  pipeline rejects everything. `full` is now part of `ClozeExercise` rather than
+  an input-only field — which also let the graded view stop reassembling a
+  string it can be handed.
+- **Curl against a route is not a test of the client path.** The route was
+  verified three times over and the bug was in the layer after it. Anything with
+  a shared-core fetch wrapper needs exercising *through the wrapper* — a
+  throwaway vitest file that calls `getPatternExercise` against the dev server
+  found it in one run, and would have found it before shipping. Learned
 
 Gotchas already paid for. Grouped so you can skim the relevant section.
 

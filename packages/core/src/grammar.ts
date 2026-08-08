@@ -149,6 +149,17 @@ export interface ClozeExercise {
   /** One sentence in the study language, containing exactly one `CLOZE_GAP`. */
   sentence: string;
   /**
+   * The same sentence complete, with nothing removed.
+   *
+   * Carried rather than derived, for two reasons. It is what the round-trip
+   * check below validates against — and because `getPatternExercise` parses the
+   * *route's* response a second time (mobile can point at a deployed route of a
+   * different vintage), a field the route dropped would fail that second parse
+   * on every turn. It also saves the graded view reassembling a string it can
+   * simply be handed.
+   */
+  full: string;
+  /**
    * The whole sentence in the learner's native language — **always shown, and
    * not a hint.**
    *
@@ -326,6 +337,7 @@ export function parsePatternExercise(
     return {
       format: 'cloze',
       sentence,
+      full: r.full.trim(),
       // An absent meaning costs the scaffolding, not the turn — but it does
       // make this turn mechanical rather than meaningful, which is worth
       // knowing if these start showing up.

@@ -85,6 +85,14 @@ describe('parsePatternExercise', () => {
     );
     expect(parsed).toMatchObject({ targetForms: ['가다가', '먹다가'] });
   });
+
+  it('survives being parsed a second time, as the client does', () => {
+    const once = parsePatternExercise(
+      { situation: 's', hintShape: 'h1', hintName: 'h2', targetForms: ['가다가'] },
+      { pattern: '-다가' },
+    );
+    expect(parsePatternExercise(once, { pattern: '-다가' })).toEqual(once);
+  });
 });
 
 describe('parsePatternExercise — cloze', () => {
@@ -150,11 +158,22 @@ describe('parsePatternExercise — cloze', () => {
     expect(parsePatternExercise(raw, { pattern: '-다가' }, 'cloze')).toEqual({
       format: 'cloze',
       sentence: '집에 ___ 편의점에 들렀어요.',
+      full: '집에 가다가 편의점에 들렀어요.',
       meaning: 'On my way home I stopped at a convenience store.',
       input: '가다',
       expected: '가다가',
       alternates: ['가다가요'],
     });
+  });
+
+  // `getPatternExercise` parses the *route's* response, not the model's, so a
+  // field the route drops fails the second parse on every single turn. This
+  // shipped broken once exactly that way — the route returned a parsed cloze
+  // with `full` stripped and the client rejected all of them.
+  it('survives being parsed a second time, as the client does', () => {
+    const once = parsePatternExercise(raw, { pattern: '-다가' }, 'cloze');
+    expect(once).not.toBeNull();
+    expect(parsePatternExercise(once, { pattern: '-다가' }, 'cloze')).toEqual(once);
   });
 
   // A sentence the UI cannot find a gap in is a turn the learner cannot

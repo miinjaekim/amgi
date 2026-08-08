@@ -459,13 +459,8 @@ export default function PatternSession({
                     {/* The whole sentence, filled in, so the turn ends on the
                         thing being learned rather than on a fragment. */}
                     <div className="flex items-center gap-2">
-                      <p className="text-lg text-[var(--color-text)]">
-                        {exercise.sentence.split(CLOZE_GAP).join(exercise.expected)}
-                      </p>
-                      <PronounceButton
-                        text={exercise.sentence.split(CLOZE_GAP).join(exercise.expected)}
-                        studyLanguage={studyLanguage}
-                      />
+                      <p className="text-lg text-[var(--color-text)]">{exercise.full}</p>
+                      <PronounceButton text={exercise.full} studyLanguage={studyLanguage} />
                     </div>
                   </>
                 ) : (
