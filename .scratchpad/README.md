@@ -62,8 +62,23 @@ Backlog priority mirrors the user's Google Tasks list — `backlog.md` is the
 scoped version of it.
 
 _Last reviewed against the codebase: 2026-08-08, branch `grammar-patterns` @
-`aa52147`. `npm test` 232/232, web and mobile both typecheck, measured not
-assumed._
+`04c4473`. `npm test` 265/265, web and mobile both typecheck, build clean,
+measured not assumed._
+
+_The last pass on that branch **built the redesign and then fixed what testing
+it found**. Shipped: the cloze rung, `PatternKind`, derived stage, the
+Cards/Patterns management surface, manual add, the learner override, `easy` on a
+clean cloze, and interleaving. Two corrections came from real use rather than
+reasoning, and both are in [lessons.md](lessons.md) as one entry: a generated
+exercise has to be **checkable, not just well-prompted** (a cloze rebuilt itself
+into "Mon frère adore au football" and marked the learner wrong for writing
+correct French), and the redundant field added to catch that then broke every
+turn because it did not survive the client's second parse. A third correction
+came from the trial before it: the writing review now offers a **card for a word
+the learner reached for and did not have**, and a pattern offer no longer hides
+it. Two opens remain (vocab-queue interleaving, unprompted tier-1 hint); the
+override closed. **Not verified by anyone yet:** graduation to the production
+rung, which needs about a week of real intervals to reach._
 
 _A follow-on pass **redesigned grammar patterns off the research**, replacing
 the same-day design below rather than sitting beside it. The move: the primary
