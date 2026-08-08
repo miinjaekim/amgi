@@ -118,13 +118,23 @@ the local model spike was the third and is **closed** — the written answer is
         better answer to "does any of this transfer" than anything in the
         literature.
 
-      **Three things are open**, all in status.md. The learner override is now
-      the sharpest by a distance: two trials *and* the research point at it, it
-      is the home for the `easy` the ease ratchet otherwise removes, and cloze
-      makes it cheap and obviously right — the expected answer is on screen, so
-      the learner can see whether theirs was also correct. Then: folding into
-      the vocab queue, and an unprompted tier-1 hint after an idle (production
-      turns only now).
+      **Two things are open**, both in status.md: folding patterns into the
+      vocab queue, and an unprompted tier-1 hint after an idle (production turns
+      only now). The third — the learner override — **closed and shipped** on
+      the same pass, along with `easy` on a hint-free cloze, which is what
+      actually un-sticks the ease ratchet.
+
+      **Unverified by anyone, and it is the central claim:** graduation from
+      cloze to production. A correct cloze schedules a day out and the next one
+      six, so rung two is about a week of real intervals away and cannot be
+      reached in a sitting. Only tested with a synthetic `repetitions: 3`. A
+      dev-only "make due now / advance stage" control on the Patterns list would
+      fix that and is the cheapest useful next thing here.
+
+      **Watch on the next trial:** `alternates` came back empty on every live
+      cloze generated so far, which leaves the override absorbing every
+      legitimate variant answer. If that bites, the generation prompt needs work
+      rather than the override.
       **Spoken production is deliberately not here** — see conversation practice.
 
 ## Medium
