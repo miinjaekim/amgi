@@ -1,4 +1,57 @@
-# Lessons Learned
+# Lessons
+
+## A generated exercise must be checkable, not just well-prompted (2026-08-08)
+
+A grammar cloze came back reading `Mon frère adore ___ football chaque
+week-end.` with `expected: "au"` — the model had deleted "jouer" along with the
+gap but left it out of the answer too. Filling in the "correct" answer gave
+**"Mon frère adore au football"**, which is not French, and the learner who
+wrote the correct `jouer au` was marked wrong by their own app. The prompt
+already said "everything else in the sentence stays intact"; it was simply not
+obeyed.
+
+**The fix was not better wording — it was a redundant field.** Generation now
+returns the complete sentence as well, and the exercise is discarded unless
+filling the gap reproduces it exactly. A model that silently drops a word now
+fails a string comparison instead of reaching a learner.
+
+The general shape, worth reaching for whenever a model generates something the
+app will assert is correct: **ask for the same fact twice in two forms, and
+check them against each other.** Prompt instructions are requests; a round trip
+between two returned fields is enforcement. And when the content is something
+the user will *learn*, fail visibly into a retry rather than tolerantly into a
+display — the tolerant-parser instinct that is right for a writing finding is
+wrong here, because the cost of showing it is teaching the wrong thing.
+
+Two follow-on details, both found by the check's own first run:
+
+- **Compare whitespace-insensitively.** An elision attaches with no space, so
+  `J'ai besoin ___ eau.` + `d'` rebuilds to `d' eau` where the full sentence has
+  `d'eau`. Strict comparison threw away a correct exercise. Ignoring spacing
+  still catches the real failure — a missing word is not a missing space.
+- **Fold typographic marks.** The same generator returns `d’` with a curly
+  apostrophe, which no learner types and which no ASCII comparison matches.
+
+### …and the check then broke every turn, which is its own lesson
+
+The redundant field was added to the parser as **required**, the route was
+tested with `curl`, the JSON looked right, and it shipped broken: the route
+parses the model's response and returns the *parsed* object, so it had stripped
+`full` — and `getPatternExercise` parses the route's response a **second** time
+(mobile can point at a deployed route of a different vintage). Every cloze
+failed that second parse.
+
+Two things to carry forward:
+
+- **A field a parser requires must survive the parse**, or a double-parsed
+  pipeline rejects everything. `full` is now part of `ClozeExercise` rather than
+  an input-only field — which also let the graded view stop reassembling a
+  string it can be handed.
+- **Curl against a route is not a test of the client path.** The route was
+  verified three times over and the bug was in the layer after it. Anything with
+  a shared-core fetch wrapper needs exercising *through the wrapper* — a
+  throwaway vitest file that calls `getPatternExercise` against the dev server
+  found it in one run, and would have found it before shipping. Learned
 
 Gotchas already paid for. Grouped so you can skim the relevant section.
 

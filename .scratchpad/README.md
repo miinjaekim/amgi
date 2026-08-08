@@ -35,6 +35,14 @@ Related docs outside this folder:
   first step (a shared term cache, not a model). **The item is closed** — read
   this and the Decisions entry in `status.md` before reopening the on-device
   question.
+- `docs/grammar-research.md` — what SLA research says about how grammar is
+  learned and practised, written 2026-08-08 after the first grammar-patterns
+  trial failed. **Read it before touching the grammar design**: it confirms
+  three decisions already made (no curriculum, no multiple choice, spacing),
+  contradicts one (free production was made rung one when the evidence puts it
+  third), settles the interleaving question, and documents Bunpro as the closest
+  prior art — including the failure mode Amgi would inherit by copying it.
+  Tracked via an explicit `!docs/grammar-research.md` re-include.
 - `docs/testflight-beta-info.md` — TestFlight listing copy, Korean *and*
   English in one file (the `-ko` suffix was dropped 2026-08-02 for that
   reason). Tracked, despite `.gitignore` excluding `docs/*`, via an explicit
@@ -53,8 +61,50 @@ leaves that file:
 Backlog priority mirrors the user's Google Tasks list — `backlog.md` is the
 scoped version of it.
 
-_Last reviewed against the codebase: 2026-08-08, `main` @ `f722774` (PR #81).
-`npm test` 200/200, measured not assumed._
+_Last reviewed against the codebase: 2026-08-08, branch `grammar-patterns` @
+`04c4473`. `npm test` 265/265, web and mobile both typecheck, build clean,
+measured not assumed._
+
+_The last pass on that branch **built the redesign and then fixed what testing
+it found**. Shipped: the cloze rung, `PatternKind`, derived stage, the
+Cards/Patterns management surface, manual add, the learner override, `easy` on a
+clean cloze, and interleaving. Two corrections came from real use rather than
+reasoning, and both are in [lessons.md](lessons.md) as one entry: a generated
+exercise has to be **checkable, not just well-prompted** (a cloze rebuilt itself
+into "Mon frère adore au football" and marked the learner wrong for writing
+correct French), and the redundant field added to catch that then broke every
+turn because it did not survive the client's second parse. A third correction
+came from the trial before it: the writing review now offers a **card for a word
+the learner reached for and did not have**, and a pattern offer no longer hides
+it. Two opens remain (vocab-queue interleaving, unprompted tier-1 hint); the
+override closed. **Not verified by anyone yet:** graduation to the production
+rung, which needs about a week of real intervals to reach._
+
+_A follow-on pass **redesigned grammar patterns off the research**, replacing
+the same-day design below rather than sitting beside it. The move: the primary
+axis is not the pattern's kind but the learner's **stage** with it — a cloze
+until it sticks, then free production — because practice runs controlled → free
+and the first cut opened at free, which is where the trial's ambiguity and
+variance both came from. Stage is derived from `repetitions`, so a lapse demotes
+for free. `kind` survives, demoted to deciding whether a pattern ever graduates.
+The bare transformation drill is dropped outright. `vision.md` gained "production
+is the last rung", `data-model.md`'s revision was rewritten, the `status.md`
+entry was replaced with its trail kept, and `backlog.md` restaged (1a′) into five
+pieces with an explicit **not doing** list._
+
+_This pass **built grammar patterns, tried them, and redesigned off the trial**
+— which is the order the previous pass's design could not have produced on its
+own. (1a) shipped to a branch and three things did not survive contact: a
+verdict cannot be derived from `/api/writing` alone (it grades prose without
+knowing the target, so a clean sidestep scored `good`), the entry door is not
+`kind === 'grammar'` (the best patterns arrive as `naturalness` findings), and
+the budgeted composite index was never needed. Then the trial itself found the
+deeper thing: **one exercise format was serving two kinds of grammar point**,
+which is now argued in `vision.md`, typed in `data-model.md` and called in
+`status.md`. `backlog.md` restaged the item as (1a′) in four ordered pieces and
+downgraded (1b) — manual add covers most of what the 12-template Learn door was
+for. Two user calls are recorded: patterns are managed from a Cards/Patterns
+toggle, and can be added by hand. Previously 2026-08-08 @ `f722774` (PR #81)._
 
 _That pass closed **two** of the three starred items. The military terms pack
 grew from a 219-term draft into two registered packs of 474 pairs (#81), and the

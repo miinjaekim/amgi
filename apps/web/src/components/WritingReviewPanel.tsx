@@ -2,13 +2,22 @@
 
 import { useState } from 'react';
 import {
+  buildPatternDraft,
   buildWritingCardDraft,
   getStudyLanguageConfig,
   getWritingReview,
+  patternGloss,
   WRITING_MAX_CHARS,
 } from '@amgi/core';
-import type { FindingKind, TranslationKey, WritingCardCandidate, WritingReview } from '@amgi/core';
+import type {
+  FindingKind,
+  TranslationKey,
+  WritingCardCandidate,
+  WritingPatternCandidate,
+  WritingReview,
+} from '@amgi/core';
 import { saveFlashcardToFirestore, Flashcard } from '@/services/firestore';
+import { savePattern } from '@/services/patterns';
 import { useUser } from '@/components/UserContext';
 import { t } from '@/lib/i18n';
 import Spinner from '@/components/Spinner';
@@ -41,6 +50,11 @@ export default function WritingReviewPanel() {
   // saved, and they do.
   const [savedCards, setSavedCards] = useState<Set<string>>(new Set());
   const [savingCard, setSavingCard] = useState<string | null>(null);
+  // Patterns keep their own two, keyed by citation form. Kept apart from the
+  // card sets rather than pooled: a finding can offer both, and one of them
+  // being saved says nothing about the other.
+  const [savedPatterns, setSavedPatterns] = useState<Set<string>>(new Set());
+  const [savingPattern, setSavingPattern] = useState<string | null>(null);
 
   const langConfig = getStudyLanguageConfig(studyLanguage);
   const languageLabel = t(nativeLanguage, langConfig.studyLabelKey);
@@ -53,6 +67,7 @@ export default function WritingReviewPanel() {
     setError(null);
     setReview(null);
     setSavedCards(new Set());
+    setSavedPatterns(new Set());
     try {
       setReview(await getWritingReview(text.trim(), nativeLanguage ?? 'English', studyLanguage));
     } catch (err) {
@@ -78,6 +93,31 @@ export default function WritingReviewPanel() {
       setError(t(nativeLanguage, 'errorSaveFlashcard'));
     } finally {
       setSavingCard(null);
+    }
+  };
+
+  /**
+   * Takes a pattern into practice rather than saving it as a card.
+   *
+   * This is the emergent door the design wanted: the patterns you practise are
+   * the ones your own writing showed you needed, not an ordered curriculum
+   * somebody configured. Nothing here enrols you in anything — one finding, one
+   * pattern, chosen because you just got it wrong.
+   */
+  const handleAddPattern = async (candidate: WritingPatternCandidate) => {
+    if (!user) {
+      handleSignIn();
+      return;
+    }
+    setSavingPattern(candidate.pattern);
+    setError(null);
+    try {
+      await savePattern(buildPatternDraft(candidate, user.uid, studyLanguage));
+      setSavedPatterns(prev => new Set(prev).add(candidate.pattern));
+    } catch {
+      setError(t(nativeLanguage, 'errorSavePattern'));
+    } finally {
+      setSavingPattern(null);
     }
   };
 
@@ -170,6 +210,24 @@ export default function WritingReviewPanel() {
                 {review.findings.map((finding, i) => {
                   const saved = finding.card ? savedCards.has(finding.card.study) : false;
                   const savingThis = finding.card ? savingCard === finding.card.study : false;
+                  const patternSaved = finding.pattern ? savedPatterns.has(finding.pattern.pattern) : false;
+                  const savingThisPattern = finding.pattern
+                    ? savingPattern === finding.pattern.pattern
+                    : false;
+                  // A pattern offer normally stands alone: where both are
+                  // present the card is a fallback for clients that cannot
+                  // practise patterns, and on a grammar finding it is often a
+                  // *description* rather than a card front — "accord du
+                  // participe passé avec être" is a heading, not something you
+                  // want in your deck. Measured, not feared.
+                  //
+                  // A gap card is the exception, and it is the whole point of
+                  // the flag. A word the learner reached for and did not have
+                  // is a different object from the pattern the same sentence
+                  // happened to illustrate, and wanting both is not a choice
+                  // the app should make for them.
+                  const showCard =
+                    !!finding.card && (!finding.pattern || finding.card.gap === true);
                   return (
                     <li
                       key={i}
@@ -200,8 +258,42 @@ export default function WritingReviewPanel() {
 
                       <p className="mt-2 text-sm leading-relaxed text-[var(--color-text)] opacity-80">{finding.note}</p>
 
-                      {finding.card && (
+                      {finding.pattern && (
                         <div className="mt-3 flex flex-wrap items-center gap-3 pt-3 border-t" style={{ borderColor: 'var(--color-muted)' }}>
+                          <span className="font-bold text-[var(--color-text)]">{finding.pattern.pattern}</span>
+                          {patternGloss(finding.pattern, nativeLanguage) && (
+                            <span className="text-sm opacity-60 text-[var(--color-text)]">
+                              {patternGloss(finding.pattern, nativeLanguage)}
+                            </span>
+                          )}
+                          <button
+                            onClick={() => handleAddPattern(finding.pattern!)}
+                            disabled={patternSaved || savingThisPattern}
+                            className="ml-auto px-3 py-1 rounded-full border text-sm transition-colors disabled:opacity-60 disabled:cursor-default hover:bg-[var(--color-muted)]/30"
+                            style={{ borderColor: 'var(--color-muted)', color: 'var(--color-text)' }}
+                          >
+                            {savingThisPattern
+                              ? <Spinner className="w-4 h-4" />
+                              : t(nativeLanguage, patternSaved ? 'patternAdded' : 'patternPractise')}
+                          </button>
+                        </div>
+                      )}
+
+                      {showCard && finding.card && (
+                        <div className="mt-3 flex flex-wrap items-center gap-3 pt-3 border-t" style={{ borderColor: 'var(--color-muted)' }}>
+                          {/* A word they demonstrably reached for and did not
+                              have. Marked, because it is different evidence
+                              from every other suggestion on the page: not "this
+                              would be worth knowing" but "you needed this and
+                              it wasn't there." */}
+                          {finding.card.gap && (
+                            <span
+                              className="px-2 py-0.5 rounded-full text-[10px] uppercase tracking-widest"
+                              style={{ background: 'var(--color-highlight)', color: 'var(--color-bg)' }}
+                            >
+                              {t(nativeLanguage, 'writingWordYouNeeded')}
+                            </span>
+                          )}
                           <span className="font-bold text-[var(--color-text)]">{finding.card.study}</span>
                           <PronounceButton text={finding.card.study} studyLanguage={studyLanguage} />
                           <span className="text-sm opacity-60 text-[var(--color-text)]">

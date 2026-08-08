@@ -50,6 +50,52 @@ export interface WritingCardCandidate {
   /** The study-language text — the card front. A word, a phrase, or a pattern. */
   study: string;
   back: { English: string; Korean: string };
+  /**
+   * True when this card fills a word the learner **did not have** — they wrote
+   * it in their native language, or talked around it, because they could not
+   * reach the study-language word.
+   *
+   * Worth a flag rather than being folded in with every other card offer,
+   * because it is a different kind of evidence. Most cards are "this is worth
+   * remembering", which is a judgement. This one is a *demonstrated* gap: the
+   * learner tried to say something and the word was not there. That is the
+   * highest-confidence signal a passage can produce about what to learn next,
+   * and the UI says so rather than letting it look like any other suggestion.
+   */
+  gap?: boolean;
+}
+
+/**
+ * A grammar pattern lifted out of a finding, ready to be practised.
+ *
+ * Sibling to `card`, not a variant of it, because a pattern is not a card: a
+ * card is a lookup-table row and a pattern is a function from stem + context +
+ * meaning to a form. The full argument is in `.scratchpad/vision.md`; the type
+ * it becomes once saved is `GrammarPattern` in `grammar.ts`.
+ *
+ * `gloss` is optional on both sides where `WritingCardCandidate.back` is
+ * required on both, and the difference is deliberate. A card's back is *shown*
+ * — a card missing one side goes blank the day its owner switches native
+ * language. A pattern's gloss is a label beside an exercise whose substance is
+ * generated fresh in the reader's language every time, so a missing side costs
+ * a caption rather than the object. Don't tighten these to required.
+ */
+export interface WritingPatternCandidate {
+  /** Citation form, in the study language — `-다가`, `passé composé`. */
+  pattern: string;
+  /**
+   * Whether the learner's error was about *choosing* this pattern or about
+   * *applying* it — which decides whether practice ever graduates from a cloze
+   * to free production. `PatternKind` in `grammar.ts` carries the full
+   * reasoning, including why this describes the error and not the pattern.
+   *
+   * Optional here because the model may omit it and a missing classification
+   * must not cost the offer; `buildPatternDraft` defaults it.
+   */
+  kind?: 'choice' | 'form';
+  gloss: { English?: string; Korean?: string };
+  /** One or two sentences on when to reach for it, in the native language. */
+  note?: string;
 }
 
 export interface WritingFinding {
@@ -67,6 +113,25 @@ export interface WritingFinding {
    * card, and for a beginner it is the *most* valuable one on the page.
    */
   card?: WritingCardCandidate;
+  /**
+   * Present when the finding's take-away is a reusable pattern, which is the
+   * door into pattern practice.
+   *
+   * **Not gated on `kind`, and that is a correction to the design rather than
+   * an oversight.** The design said a `kind === 'grammar'` finding offers this,
+   * and measurement said otherwise: asked to review a passage using `-고 있었어요`
+   * where a native would use `-는데`, the model returns `naturalness` — quite
+   * correctly, since no rule was broken — and `-는데` is exactly the pattern
+   * worth practising. Gating on `grammar` would have hidden the most valuable
+   * offers behind the one kind that means "you made an error". What a pattern
+   * *is* belongs in the prompt, which defines it; the kind describes the
+   * finding, not the take-away.
+   *
+   * A finding may carry both this and `card`: web prefers this one, and mobile
+   * — which has no pattern practice until parity ships — keeps offering the
+   * card rather than losing the take-away to a field it cannot read.
+   */
+  pattern?: WritingPatternCandidate;
 }
 
 export interface WritingReview {
@@ -144,7 +209,29 @@ function parseCandidate(raw: unknown): WritingCardCandidate | undefined {
   return {
     study: r.study.trim(),
     back: { English: back.English.trim(), Korean: back.Korean.trim() },
+    ...(r.gap === true ? { gap: true } : {}),
   };
+}
+
+/**
+ * A pattern offer survives a missing gloss where a card offer does not.
+ *
+ * The asymmetry is the one documented on `WritingPatternCandidate`: a card with
+ * one back renders blank on a native-language switch, so the offer is dropped;
+ * a pattern with one gloss loses a caption beside an exercise that is generated
+ * in the reader's language anyway. Only the citation form is load-bearing.
+ */
+function parsePatternCandidate(raw: unknown): WritingPatternCandidate | undefined {
+  if (!raw || typeof raw !== 'object') return undefined;
+  const r = raw as Record<string, unknown>;
+  if (!isNonEmptyString(r.pattern)) return undefined;
+  const gloss = (r.gloss ?? {}) as Record<string, unknown>;
+  const candidate: WritingPatternCandidate = { pattern: r.pattern.trim(), gloss: {} };
+  if (r.kind === 'choice' || r.kind === 'form') candidate.kind = r.kind;
+  if (isNonEmptyString(gloss.English)) candidate.gloss.English = gloss.English.trim();
+  if (isNonEmptyString(gloss.Korean)) candidate.gloss.Korean = gloss.Korean.trim();
+  if (isNonEmptyString(r.note)) candidate.note = r.note.trim();
+  return candidate;
 }
 
 /**
@@ -179,6 +266,8 @@ export function parseWritingReview(raw: unknown): WritingReview | null {
       if (isNonEmptyString(f.suggested)) finding.suggested = f.suggested.trim();
       const card = parseCandidate(f.card);
       if (card) finding.card = card;
+      const pattern = parsePatternCandidate(f.pattern);
+      if (pattern) finding.pattern = pattern;
       return [finding];
     }),
   };

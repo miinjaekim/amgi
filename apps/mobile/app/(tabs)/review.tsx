@@ -236,8 +236,12 @@ export default function ReviewScreen() {
     [cards, sessionRatings, studyLanguage]
   );
 
+  // No patterns on mobile yet — grammar-pattern practice shipped on web first
+  // and mobile parity is its own (JS-only) piece of work. Passing an empty list
+  // means no patterns row appears here, which is the honest state: the practice
+  // screen this row leads to does not exist on this platform.
   const collections = useMemo(
-    () => buildReviewCollections(reviewedCards, studyLanguage, nativeLanguage),
+    () => buildReviewCollections(reviewedCards, [], studyLanguage, nativeLanguage),
     [reviewedCards, studyLanguage, nativeLanguage]
   );
 

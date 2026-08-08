@@ -76,6 +76,162 @@ the production `EXPO_PUBLIC_API_BASE_URL`.
 Closed calls, kept with their reasoning — a decision whose reasoning is lost gets
 reopened by the next person to notice the symptom. Newest first.
 
+### A word you reached for and didn't have is the best card a passage yields (2026-08-08)
+
+From a trial: writing in French, the user hit a word they didn't know, wrote the
+English one inline, and got a *pattern* offer back but no vocabulary card.
+
+- **Two marks tell you a word was missing**, and both are easy to read past
+  because the rest of the sentence often looks fine: the word appears in the
+  native language mid-sentence, or the learner talks around it — "the thing for
+  cutting bread" where a native says `un couteau à pain`. The prompt now hunts
+  for both by name, gives each its own finding, and ranks them high.
+- **`WritingCardCandidate.gap` marks them**, and the flag earns its place by
+  being *different evidence*. Every other card offer is a judgement — this would
+  be worth knowing. A gap card is a demonstration: the learner tried to say
+  something and the word was not there. That is the highest-confidence signal a
+  passage can produce about what to learn next, so the UI labels it rather than
+  letting it look like any other suggestion.
+- **⚠️ This corrects a call in the grammar entry below.** That entry had a
+  pattern offer *replace* the card offer, reasoning that showing both for one
+  grammar point asks the learner to choose between two things the app has not
+  explained. That reasoning holds for one point and was wrong as a blanket rule:
+  a word you didn't have and a pattern the same sentence illustrates are two
+  objects, and hiding the first behind the second is what the trial hit. Now a
+  card shows alongside a pattern **when it is a gap card**, and otherwise still
+  gives way.
+- **Why gap and not "whenever they differ"**, which was the first fix and was
+  measured to be worse: on a grammar finding the model often emits a card whose
+  front is a *description* — `accord du participé passé avec être` is a heading,
+  not something anyone wants in a deck. Those differ from the pattern text and
+  would have come back. Keying on `gap` admits exactly the case that prompted
+  this and nothing else.
+- Verified live in both directions: `corkscrew` → `un tire-bouchon` and the
+  circumlocution → `un couteau à pain`, both ranked first; and in Korean,
+  `crowded` → 붐비다 shown alongside a separate `-아/어서` pattern offer.
+- Mobile gets the new cards for free — its panel reads `finding.card` and does
+  not branch on patterns — though not the `gap` label until parity.
+
+### Grammar patterns: cloze first, production when it sticks (2026-08-08)
+
+Written after (1a) was built, tried once, did not feel good, and the research
+was then read properly. **Read `docs/grammar-research.md` before changing any of
+this** — the design is derived from it rather than merely informed by it. The
+argument is in [vision.md](vision.md), the type in
+[data-model.md](data-model.md).
+
+_This entry replaces an earlier same-day version that had the pattern's **kind**
+select between two exercise formats. That was a real distinction aimed at the
+wrong axis, and its bare transformation drill is dropped outright: mechanical
+drills are close to the one practice type the literature is unanimous against.
+The trail is kept because the choice/form distinction survives — demoted._
+
+What the trial reported, in the user's order:
+
+1. no way to manage saved patterns;
+2. saving one feels too vague — unclear what should and shouldn't count;
+3. during practice it is ambiguous which pattern is being asked for;
+4. too much variance everywhere — saving, generation, grading.
+
+**One mistake produced (2), (3) and (4): free production was made rung one when
+it is rung three.** Practice runs controlled → meaningful → free. A situation is
+the least constrained prompt there is, which is (3); free text has unbounded
+correct answers, which is (4); and with only one exercise available everything
+had to be squeezed into it, which is (2). (1) is an independent gap.
+
+- **Two formats, and the learner's *stage* picks between them.** A cloze — one
+  sentence with the pattern blanked, typed into — until the pattern sticks, then
+  free production. Everything (1a) built survives as the second rung; nothing is
+  thrown away.
+- **Cloze does not break "no multiple choice."** That principle exists because
+  offering candidates does the retrieval for the learner. A cloze offers
+  nothing: it is cued recall, which measurably beats recognition for retention.
+  The learner still arrives at the form; the sentence only fences off part of
+  the search space, which is the same trade the hint tiers already make.
+- **Cloze cannot be the terminal state either.** Production forces syntactic
+  processing that gap-filling does not, and the cautionary case is a shipped
+  product: Bunpro is a Japanese grammar SRS built entirely on cloze, and its own
+  community's most-asked question is how to practise speaking. Stopping there
+  buys a learner who is excellent at grammar exercises — the exact thing the
+  research is weakest at showing transfers.
+- **`kind` is demoted to deciding whether a pattern graduates.** `form` rules
+  (`de` → `d'`) stay at cloze permanently, because there is no meaning to choose
+  and production has nothing to add. `choice` patterns must graduate. Still read
+  off the learner's error rather than off a grammar reference — see
+  data-model.md.
+- **Stage is derived from `repetitions`, never stored.** No field, no migration,
+  no way for stage and schedule to disagree — and a lapse demotes a pattern back
+  to cloze for free, because `getNextReviewData` already resets `repetitions` on
+  `again` (`sm2.ts:68`). The threshold borrows SM-2's own boundary rather than
+  inventing a second definition of "learned".
+- **The cloze hints are free.** Tier 1 is the pattern's stored `gloss` — the
+  meaning of the point being asked for, which is exactly Bunpro's first tier —
+  and tier 2 is the citation form. Neither is generated. This is the direct fix
+  for (3): the sentence disambiguates, and the meaning is one keypress away
+  without being given up front.
+- **A cloze turn is one model call and grades locally.** Session cost drops from
+  a flat *2n* to `n_cloze + 2·n_production`, weighted cheap because everything
+  starts at cloze — and (4) disappears entirely for cloze turns, since exact
+  comparison has no variance at all.
+- **Interleave within a session, keep the separate row for now.** Interleaving
+  beats blocking for grammar on delayed tests, so the session queue shuffles.
+  Folding patterns into the *vocab* queue stays open: the measured comparison is
+  grammar points against each other, not grammar against vocabulary. ⚠️ **Do not
+  judge this by feel** — blocked practice reliably *feels* smoother during a
+  session and is worse a week later, so "that flowed better" is evidence of
+  nothing here.
+- **Patterns get a management surface: a mode toggle on Cards.** _User's call._
+  Not a fifth nav entry for ten items, and not the deck-filter row either —
+  `filterCardsByDeck` returns `Flashcard[]` and a pattern is not one. A
+  Cards/Patterns switch above the existing list: pattern, gloss, kind, next
+  practice, and edit / archive / delete. Answers (1).
+- **Patterns can be added by hand.** _User's call._ Pattern, optional gloss, and
+  **the kind, chosen by the user from two labelled options**. No model call, so
+  no new endpoint — and making the learner answer "is this a rule that always
+  applies, or a choice about how to say something?" is the most direct statement
+  the app can make about what counts, which is (2). Far cheaper than the Learn
+  arm's 12 prompt templates, which is now weaker rather than merely later.
+- **The curated grammar pack stays closed, and is now better argued.** It was
+  rejected on the aesthetic ground that adaptivity should be emergent.
+  Pienemann's teachability hypothesis supplies a mechanism: instruction changes
+  the *rate* of acquisition but not the *route*, so an ordered syllabus is
+  fighting a constraint rather than merely being un-Amgi. Errors-as-syllabus is
+  well-founded — the patterns you get wrong are by construction the ones at your
+  developmental edge.
+- **The learner override is in, and the ease ratchet closes with it.** _User's
+  call, 2026-08-08 — this was the last of the three opens._ On any verdict below
+  `good`, one control re-grades as if the answer had been right. Cloze is what
+  made it obviously correct rather than merely tempting: the expected answer sits
+  on screen beside what the learner typed, so they are not appealing a
+  judgement, they are reading two strings and reporting that `alternates` was
+  short. It re-grades correctness, not effort — the hint clamp still applies, so
+  at tier 2 it does nothing, which is right.
+  Separately, **a hint-free exact cloze match now emits `easy`**, which is what
+  actually un-sticks the ratchet. That reasoning is cloze-specific: a string
+  comparison is not a judgement that can be wrong, so a clean hit is exactly the
+  signal `easy` is for. Production stays capped at `good`. `sm2.ts` is still
+  untouched — `getNextReviewData` already takes all four responses.
+  **Two opens remain:** folding into the vocab queue (above), and an unprompted
+  tier-1 hint after an idle, which now applies to production turns only.
+- **What building it corrected** (2026-08-08, same day): only one thing, and it
+  was found by running the real model rather than by reasoning. Asked for a
+  French elision cloze, Gemini returns `d’` with a **curly** apostrophe — which
+  no learner types, so the single rule that prompted this entire redesign would
+  have been ungradeable on every attempt. Cloze comparison now folds
+  typographic apostrophes, quotes and dashes to their ASCII forms. Worth
+  remembering as a class of bug rather than an instance: the cloze grader is
+  exact by design, so *every* character the model and the keyboard disagree
+  about is a false negative.
+  Classification was verified live at the same time and needed no change —
+  `-는데` came back `choice` off a naturalness finding, and both French elisions
+  came back `form` off grammar findings.
+- **Recorded, not solved:** the meta-analyses behind all of this largely
+  measured *explicit* knowledge — being good at grammar exercises. The claim
+  that any of it transfers to writing Korean rests on the production rung and on
+  the sequence argument, not on the effect sizes. Amgi's own acquisition signal
+  (a pattern that stops appearing as a finding in your writing) remains the best
+  available answer and is still not v1.
+
 ### No local model yet — and the first step isn't a model (2026-08-08)
 
 The spike ran and produced what it was supposed to: a written answer, not a
@@ -304,6 +460,46 @@ card runs the function on zero arguments. The type is in
   measurable evidence of acquisition, where a review count isn't. That needs
   writing stored over time, which the ephemeral-submissions call below closed off
   — reopened explicitly rather than assumed away. Not v1.
+
+#### What building (1a) corrected (2026-08-08)
+
+Three things the design did not survive contact with. The first two are settled;
+the third is a step nobody has taken yet.
+
+- **A verdict cannot be derived from `/api/writing` alone.** The design has
+  grading reuse the route unchanged, and it does — but that route grades prose
+  without knowing which pattern was being practised. A learner who sidesteps
+  `-다가` entirely and writes something correct gets a clean review and a `good`,
+  which schedules out the very pattern they avoided. Since "when to reach for
+  it" is the *first* of the three things this feature exists to teach, that is
+  the feature failing at its own premise, not an edge case. Fix:
+  `PatternExercise.targetForms`, the surface fragments that count as having
+  reached — generation knows the pattern and is a call already being paid for,
+  so it lists them for free. Grading stays `/api/writing` unchanged; the check
+  is local. **Cost, named:** it is a substring match, so it is exact for
+  suffixal patterns and approximate elsewhere, and a thin form list scores a
+  correct answer as a miss. An unmeasurable reach is therefore scored as
+  *reached* — a wrong `again` on a good sentence is the outcome this design
+  least wants. Measured over three answers against a generated `-다가` exercise:
+  correct use → `good`, sidestep → `again`, botched form → `hard`.
+- **The entry door is not `kind === 'grammar'`.** The design says a grammar
+  finding offers "Practice this pattern". Measured on a passage using
+  `-고 있었어요` where a native would use `-는데`, the model returns `naturalness`
+  — correctly, since no rule was broken — and `-는데` is exactly the pattern
+  worth practising. Gating on `grammar` hid the best offers behind the one kind
+  that means "you made an error". The gate is gone; what a pattern *is* lives in
+  the prompt, which defines it. The kind describes the finding, not the
+  take-away.
+- ⚠️ **The `patterns` collection has no Firestore security rule, so nothing
+  works yet.** Reads fail with `Missing or insufficient permissions` and the
+  patterns row silently doesn't appear — which is the isolation working as
+  designed (a patterns read that throws must not cost the user their cards), and
+  is also why this will not announce itself. There is no `firestore.rules` in
+  the repo, so it is a console step, and it is the *only* thing standing between
+  this branch and a usable feature. The composite index the design budgeted for
+  turned out not to be needed: two equality filters with no `orderBy` are served
+  by merging single-field indexes, and `archived`/sort are handled in JS because
+  patterns number in the tens.
 
 ### Onboarding is not a checklist (2026-08-02)
 

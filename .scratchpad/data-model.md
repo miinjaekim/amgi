@@ -94,7 +94,30 @@ which ones it uses. Further out: letting users configure which fields appear on
 their cards for a given deck (e.g. toggling off formality, adding a custom
 grammar note field).
 
-## `GrammarPattern` — designed 2026-08-03, not built
+## `GrammarPattern` — designed 2026-08-03, web built 2026-08-08
+
+_Built as designed, in `packages/core/src/grammar.ts`, with three changes worth
+knowing before reading the shape below as authoritative. All three are recorded
+in the Decisions entry in [status.md](status.md); the third is a live blocker._
+
+1. **`PatternExercise` gained `targetForms`** — the surface fragments that count
+   as having reached for the pattern. Without it a learner who sidesteps the
+   pattern and writes correct prose scores `good`, which schedules out the exact
+   thing they avoided. Generation supplies them; grading stays `/api/writing`
+   unchanged and the check stays local.
+2. **The writing-finding door is not gated on `kind === 'grammar'`** — measured,
+   the most valuable patterns come back as `naturalness` findings.
+3. **The `patterns` collection needs a Firestore security rule** before any of
+   this works. There is no rules file in the repo, so this is a console step.
+   _Added by the user 2026-08-08._
+
+**⚠️ The shape below is superseded in one respect by the redesign of 2026-08-08**
+(trial → [vision.md](vision.md) → design calls in [status.md](status.md)):
+`GrammarPattern` gains a `kind`, and `PatternExercise` becomes a union of two
+exercise shapes rather than one. The revision is at the end of this section; the
+original shape is kept because everything else in it still stands and the
+reasoning attached to each field is still the reasoning.
+
 
 A grammar pattern is **not a card**, and the reasoning is in
 [vision.md](vision.md): a card is a lookup-table row, and a grammar point is a
@@ -182,9 +205,205 @@ rather than discover:
 because there are hundreds of them and the collection name routes the query.
 Patterns will number in the tens, so six near-empty collections buy nothing. One
 collection carrying `studyLanguage` on the document — which is already what
-makes a document self-describing here — is simpler. Cost, named so it isn't a
-surprise: a composite index on `uid + studyLanguage`, i.e. one of the two manual
-console steps below rather than both. Reversible if it turns out wrong.
+makes a document self-describing here — is simpler. ~~Cost, named so it isn't a
+surprise: a composite index on `uid + studyLanguage`~~ — **no index was needed.**
+Two equality filters with no `orderBy` are served by merging single-field
+indexes, and `archived` and the sort are handled in JS because this is tens of
+documents. The console step this collection *does* need is a security rule.
+
+### Revision, 2026-08-08: stage picks the format, kind picks the ceiling
+
+_This replaces an earlier same-day revision that had `kind` selecting between
+two exercise formats. The research (`docs/grammar-research.md`) moved the
+primary axis: the format follows the learner's **stage** with a pattern, and
+`kind` only decides whether that pattern ever reaches the top rung. The earlier
+version's bare transformation drill is gone entirely — mechanical drills are the
+one practice type the literature is close to unanimous against._
+
+Two exercise formats, not three, and the pattern carries one new field.
+
+```ts
+/**
+ * Whether a pattern ever graduates from cloze to free production.
+ *
+ * - `choice` — a meaning maps to a form and the skill is picking it (`-다가`,
+ *   `-는데`, passé composé). Free production has something to test, so these
+ *   graduate.
+ * - `form` — a rule that applies to something the learner was going to write
+ *   anyway (`de` → `d'`, 을/를 by batchim). There is no meaning being chosen, so
+ *   free production adds nothing and these stay at cloze permanently.
+ *
+ * Not a third `construction` kind, however tempting: `il faut que` + subjunctive
+ * looks like one, but it graduates like any other choice pattern, and an axis
+ * whose members behave identically is not an axis. The warning at the top of
+ * this file about speculative subtypes applies to this type too.
+ */
+export type PatternKind = 'choice' | 'form';
+```
+
+`GrammarPattern` gains `kind: PatternKind`, and `source` gains `'manual'`.
+
+**The kind describes the learner's error, not the pattern.** This is the part
+most easily got wrong, and getting it wrong rebuilds the taxonomy the vision
+rejects. 은/는 has both aspects: choosing topic over subject, and picking the
+right allomorph by batchim. Asking "which kind of point is 은/는" has no answer.
+Asking "which of the two did *this writer* just get wrong" always does, and the
+writing finding already knows — a learner who wrote `de eau` failed the form
+rule, and one who wrote something correct but unnatural failed the choice. So
+the classifier reads the finding, not a grammar reference, and the same pattern
+can legitimately be saved as `form` by one learner and `choice` by another.
+
+#### Stage is derived, never stored
+
+```ts
+/** Reviews at cloze before a choice pattern is offered free production. */
+export const CLOZE_REPETITIONS = 2;
+
+export type ExerciseFormat = 'cloze' | 'production';
+
+export function exerciseFormat(
+  pattern: Pick<GrammarPattern, 'kind' | 'production'>,
+): ExerciseFormat {
+  if (pattern.kind === 'form') return 'cloze';
+  return (pattern.production?.repetitions ?? 0) >= CLOZE_REPETITIONS
+    ? 'production'
+    : 'cloze';
+}
+```
+
+Derived rather than stored, and it is worth being explicit about what that buys,
+because it is more than tidiness:
+
+- **No field, no migration, no way for stage and schedule to disagree.**
+- **A lapse demotes you for free.** `getNextReviewData` resets `repetitions` to
+  0 on `again` (`sm2.ts:68`), so failing a production turn drops the pattern
+  back to cloze on its own — which is exactly what controlled → free prescribes
+  and would otherwise have been a rule someone had to remember to write.
+- **`CLOZE_REPETITIONS = 2` is not arbitrary.** Read at the top of a turn, a
+  stored `repetitions` of 2 means the *next* success is the first that stops
+  setting a fixed interval (1 day, then 6) and starts multiplying by ease
+  (`sm2.ts:71-75`). So production begins exactly where the scheduler itself
+  starts treating the item as known — two clean cloze passes, then the rung
+  changes. Borrowing that boundary rather than inventing a second one keeps one
+  definition of "learned" in the codebase.
+- **Consequence, recorded not solved:** `hard` is quality 3, so it *increments*
+  repetitions and does not demote. A shaky production turn keeps you at
+  production. That reads right — `hard` means the skill is there and wobbling,
+  not that controlled practice is needed again — but it is a reading, and if
+  demotion turns out to want a wider trigger this is the line to change.
+
+#### The two exercises
+
+```ts
+interface ClozeExercise {
+  format: 'cloze';
+  /** One sentence with a gap where the pattern goes. */
+  sentence: string;
+  /**
+   * The whole sentence in the learner's native language — **always shown, not a
+   * hint.**
+   *
+   * This is what makes the cloze *meaningful* practice rather than mechanical,
+   * and that distinction is the one the literature is sharpest about: a gap
+   * filled without understanding the sentence is the drill type nothing
+   * supports. It also mirrors what a production turn already does — there the
+   * meaning is handed over as a situation and the learner supplies the form.
+   * A cloze gives the meaning *and* most of the sentence, which is precisely
+   * what "one rung more scaffolded" means.
+   *
+   * So yes, it gives away the relation being expressed. That was never the part
+   * being tested.
+   */
+  meaning: string;
+  /**
+   * The base form to put into the gap, when the gap needs one — `가다` for a
+   * `-다가` cloze, `de` for an elision cloze. Absent where the slot is bare, as
+   * for a particle choice, and there the sentence and the hint carry it alone.
+   */
+  input?: string;
+  /** What the gap should become, plus anything else acceptable. */
+  expected: string;
+  alternates: string[];
+}
+
+interface ProductionExercise {
+  format: 'production';
+  /** The meaning to express, in the native language. Never names the pattern. */
+  situation: string;
+  hintShape: string;
+  hintName: string;
+  targetForms: string[];
+}
+
+export type PatternExercise = ClozeExercise | ProductionExercise;
+```
+
+Four consequences to design for rather than discover:
+
+- **The cloze hints cost nothing to generate, because they are already stored.**
+  Tier 1 is the pattern's `gloss` — the meaning of the point being asked for,
+  which is exactly what Bunpro's first hint tier is — and tier 2 is
+  `pattern.pattern`, the citation form. Neither comes from the model, so
+  `ClozeExercise` carries no hint fields. The gloss being optional on both sides
+  is handled the way it already is: tier 1 falls back to tier 2.
+- **A cloze turn is one model call; a production turn is two.** Generation
+  supplies `expected` and `alternates`, so cloze grading is a local comparison
+  with no `/api/writing` round trip and no grading variance at all. Session cost
+  drops from a flat *2n* to `n_cloze + 2·n_production`, weighted toward the
+  cheap end because every pattern starts at cloze.
+- **The pattern is still never named during a production turn** — that rule is
+  unchanged and is the reason `ProductionExercise` keeps its two generated hint
+  tiers. During a *cloze* the pattern is not named either; the sentence is what
+  disambiguates, with the gloss one keypress away.
+- **The false-negative risk shrinks but does not vanish.** `alternates` plays
+  the role `targetForms` plays for production: an acceptable answer the
+  generator failed to list is scored wrong. A gap with a supplied base form has
+  far fewer plausible fillers than a free sentence, so the exposure is much
+  smaller — but the honest mitigation is still the learner override, and cloze
+  makes that override cheap and obviously correct to offer, because the expected
+  answer is on screen and the learner can see whether theirs was also right.
+
+#### Grading, verdicts, and the override — decided 2026-08-08
+
+Cloze grades locally: an exact match against `expected` or one of `alternates`,
+then the hint clamp. Production grading is unchanged from (1a): `/api/writing`,
+`targetForms` for the reach check, findings for the form check.
+
+**The learner may override a wrong verdict.** This was the last of the three
+open questions and it closes here. On any verdict below `good`, one control —
+"my answer was right too" — re-grades as if the answer had been correct.
+
+Why it closes now rather than staying open: cloze makes it *cheap and obviously
+correct*. The expected answer is on screen next to what the learner typed, so
+they are not appealing a judgement, they are reading two strings and telling us
+the generator's `alternates` list was short. That is a question they can answer
+better than the model can, which is exactly when an override is legitimate.
+
+- **The override changes the correctness judgement, not the effort judgement.**
+  It re-grades to `good` and then applies the same hint clamp, so at tier 1 it
+  yields `hard` and at tier 2 it yields `again` — i.e. it does nothing at tier
+  2, where the answer had already been shown. That is the honest result, not a
+  gap.
+- **It never writes anything the learner did not assert.** A skipped turn and a
+  failed grading still write no `ReviewTracking` at all.
+
+**`easy` is emitted, and the ease ratchet closes.** A cloze answered correctly
+with **no hints taken** grades `easy`, not `good`. The reasoning is specific to
+cloze and does not extend to production: an exact string match is not a
+judgement that could be wrong, so a clean hit is precisely the signal `easy`
+exists for. Production stays capped at `good`, because there the verdict is
+derived from a model's reading and a false `easy` inflates the interval on the
+strength of a guess.
+
+That makes `easy` reachable on exactly one path, and it is enough to un-stick
+the ratchet: ease can now climb for a pattern the learner reliably knows, where
+before it could only fall. The trivial-rule case this most helps is the one that
+prompted the redesign — `de` → `d'` climbs out to long intervals fast, which is
+the scheduler answering "does this really need practising" on its own.
+
+`PatternVerdict` therefore becomes `'again' | 'hard' | 'good' | 'easy'`, which
+is `getNextReviewData`'s existing signature — no scheduler change, and `sm2.ts`
+stays untouched in fact as well as in file.
 
 ## Firestore collections
 
