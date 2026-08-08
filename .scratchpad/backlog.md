@@ -48,45 +48,65 @@ the local model spike was the third and is **closed** — the written answer is
 `docs/local-model.md`, the reasoning and the reopen condition are in
 [status.md](status.md), and the two pieces of it worth doing are under Medium.
 
-- [ ] **Grammar patterns — (1a) built on web, awaiting a trial.** ⭐ _Designed
-      2026-08-03, web built 2026-08-08 on `grammar-patterns`._ Read first: the
-      argument in [vision.md](vision.md), the design calls **and the three things
-      building corrected** in [status.md](status.md), the type in
+- [ ] **Grammar patterns — first cut tried, redesigned, rebuild pending.** ⭐
+      _Designed 2026-08-03, web built 2026-08-08 on `grammar-patterns`, tried the
+      same day, redesigned off what the trial showed._ Read in this order: the
+      argument and **"A grammar point is not one kind of thing"** in
+      [vision.md](vision.md); the two Decisions entries in
+      [status.md](status.md) — "the exercise follows the kind" first, then the
+      older design calls it scopes; the type and its 2026-08-08 revision in
       [data-model.md](data-model.md).
 
-      A pattern is its own object and each review is a fresh **production** turn
-      — a situation in your native language, you write the sentence,
-      `/api/writing` grades it.
+      A pattern is its own object with its own review verb. **Which verb depends
+      on the pattern's kind**: a `choice` pattern is produced from a situation
+      that never names it, and a `form` rule is a named, gap-filling drill graded
+      without a model call.
 
-      - ⚠️ **Blocked on one console step.** The `patterns` collection has no
-        Firestore security rule, so every read fails and the row never appears.
-        Nothing else stands between the branch and a usable feature.
-      - **(1a) Web, the cheap door — built.** `packages/core/src/grammar.ts`,
-        `/api/grammar/exercise` (generation only, language-generic),
-        `services/patterns.ts`, `PatternSession`, the patterns row via a
-        `kind` field on `ReviewCollection` and a `collectionKey` identity, entry
-        through `WritingFinding.pattern?`. `sm2.ts` untouched — the ease ratchet
-        is live and unmitigated, which is what makes the override question below
-        load-bearing. Awaiting a real session before anything else is added.
+      - **(1a) Web, first cut — built, tried, and superseded in part.**
+        `packages/core/src/grammar.ts`, `/api/grammar/exercise`,
+        `services/patterns.ts`, `PatternSession`, the patterns row via a `kind`
+        field on `ReviewCollection` and a `collectionKey` identity, entry through
+        `WritingFinding.pattern?`. The Firestore rule is in place. What it built
+        survives as the **`choice`** half of the redesign; nothing here is thrown
+        away.
+      - **(1a′) The redesign — next.** _Designed 2026-08-08 after the trial; read
+        vision.md then the Decisions entry before starting._ Four pieces, in the
+        order they pay off:
+        1. **Management surface** — a Cards/Patterns mode toggle on `/cards`,
+           with list, edit, archive, delete. Answers the loudest complaint and
+           gates nothing. Do it first.
+        2. **Manual add** — pattern, optional gloss, and the kind picked by the
+           user from two labelled options. Pure UI, no endpoint, no model call.
+        3. **`PatternKind` and the form drill** — `kind` on the pattern, a
+           `PatternExercise` union, a named rule and a gap fill, graded locally
+           against generation's `expected`/`alternates`. This is the bulk.
+        4. **Choice situations state the meaning, not a scene** — a prompt change
+           to `/api/grammar/exercise`, plus classification in `/api/writing`'s
+           pattern offer.
       - **(1b) Web, the expensive door.** The third `ExplainResult` arm on
-        `/api/explain` — the cold-start path, and the bulk of the work: six
-        language branches × the `if (context)` split = **12 prompt templates**.
-        Gates nothing in (1a), so do it second or defer it.
+        `/api/explain` — six language branches × the `if (context)` split =
+        **12 prompt templates**. Manual add (2 above) covers most of what this
+        was for at a fraction of the cost, so this is now weaker, not just
+        later.
       - **(2) Mobile parity** — JS-only, rides a build rather than needing one.
         Its `buildReviewCollections` call already passes `[]`. Note that mobile
         still offers "+ card" on a pattern finding, because the writing route
         emits `card` alongside `pattern` precisely so the shipped build does not
         lose the take-away to a field it cannot read. That crutch comes out with
-        parity.
+        parity. **Don't start this until (1a′) settles** — porting the format
+        that just failed a trial is the expensive mistake available here.
       - **(3) Later, each independently useful:** produce-offline /
         evaluate-on-reconnect; interleaving patterns into the vocab queue;
-        the acquisition signal, which needs ephemeral-submissions reopened.
+        contrast turns (paired situations, both *produced* — not a picker, which
+        vision.md rules out); the acquisition signal, which needs
+        ephemeral-submissions reopened.
 
-      **Three things are open**, all listed as such in status.md: whether the
-      learner may override a verdict (load-bearing — also the likeliest home for
-      the `easy` the ease ratchet otherwise removes, *and* the natural escape
-      hatch for a wrong "did not reach"), whether patterns interleave into the
-      vocab queue, and whether a tier-1 hint is ever offered unprompted.
+      **Three things are open**, all listed as such in status.md. The learner
+      override is now the sharpest: two separate trials have pointed at it, it
+      is the home for the `easy` the ease ratchet otherwise removes, *and* it is
+      the only honest mitigation for a wrong verdict off a thin `targetForms` or
+      `alternates` list. Then: whether patterns interleave into the vocab queue,
+      and whether a tier-1 hint is ever offered unprompted (`choice` only now).
       **Spoken production is deliberately not here** — see conversation practice.
 
 ## Medium

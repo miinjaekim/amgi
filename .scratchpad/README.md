@@ -53,8 +53,23 @@ leaves that file:
 Backlog priority mirrors the user's Google Tasks list — `backlog.md` is the
 scoped version of it.
 
-_Last reviewed against the codebase: 2026-08-08, `main` @ `f722774` (PR #81).
-`npm test` 200/200, measured not assumed._
+_Last reviewed against the codebase: 2026-08-08, branch `grammar-patterns` @
+`aa52147`. `npm test` 232/232, web and mobile both typecheck, measured not
+assumed._
+
+_This pass **built grammar patterns, tried them, and redesigned off the trial**
+— which is the order the previous pass's design could not have produced on its
+own. (1a) shipped to a branch and three things did not survive contact: a
+verdict cannot be derived from `/api/writing` alone (it grades prose without
+knowing the target, so a clean sidestep scored `good`), the entry door is not
+`kind === 'grammar'` (the best patterns arrive as `naturalness` findings), and
+the budgeted composite index was never needed. Then the trial itself found the
+deeper thing: **one exercise format was serving two kinds of grammar point**,
+which is now argued in `vision.md`, typed in `data-model.md` and called in
+`status.md`. `backlog.md` restaged the item as (1a′) in four ordered pieces and
+downgraded (1b) — manual add covers most of what the 12-template Learn door was
+for. Two user calls are recorded: patterns are managed from a Cards/Patterns
+toggle, and can be added by hand. Previously 2026-08-08 @ `f722774` (PR #81)._
 
 _That pass closed **two** of the three starred items. The military terms pack
 grew from a 219-term draft into two registered packs of 474 pairs (#81), and the

@@ -76,6 +76,74 @@ the production `EXPO_PUBLIC_API_BASE_URL`.
 Closed calls, kept with their reasoning — a decision whose reasoning is lost gets
 reopened by the next person to notice the symptom. Newest first.
 
+### Grammar patterns: the exercise follows the kind (2026-08-08)
+
+Written after (1a) was built, tried once, and did not feel good. The trial is
+the evidence and it is worth keeping: **one exercise format was serving two
+different kinds of grammar point.** The argument is in [vision.md](vision.md)
+and is the part to read first; the type is in [data-model.md](data-model.md).
+
+What the trial reported, in the user's order:
+
+1. no way to manage saved patterns;
+2. saving one feels too vague — unclear what should and shouldn't count;
+3. during practice it is ambiguous which pattern is being asked for;
+4. too much variance everywhere — saving, generation, grading.
+
+(3) is the root and the other three are largely downstream of it. The clean case
+was a saved French pattern, `de` → `d'` before a vowel: a rule with no meaning
+to choose, handed a situational production exercise that had nothing to build a
+situation out of.
+
+- **Two kinds, `choice` and `form`, and the format follows the kind.** A choice
+  pattern keeps everything (1a) built: situation, free production, pattern never
+  named, `/api/writing` grading. A form rule gets a named rule and a gap to
+  fill. Not a third `construction` kind — see the note in data-model.md; an axis
+  whose members share a format is not an axis.
+- **Name a form rule, hide a choice pattern.** "Never name the pattern" was
+  written for the case where reaching for it is the skill, and it is right
+  there. For a mechanical rule the name was never the hard part, so hiding it
+  hides nothing and costs the learner all knowledge of what is being asked.
+  This is a scoping of the old rule, not a reversal of it.
+- **The kind describes the error, not the pattern**, and the writing finding
+  already knows which. 은/는 is both a choice and a form rule; "which kind is
+  it" has no answer, "which did this writer just get wrong" always does. Keeps
+  the syllabus emergent, and means the same pattern can be `form` for one
+  learner and `choice` for another.
+- **A form drill needs no grading call.** Generation supplies the expected
+  answer, comparison is local. Cost drops from *2n* to `2·n_choice + n_form`,
+  and the grading variance — complaint (4) — disappears for the patterns where
+  it was worst. It has no hint tier either: the rule is named, so tier 1 nudges
+  toward nothing and tier 2 is the answer.
+- **Choice situations state the meaning, not just a scene.** The narrower fix
+  for (3), and it costs nothing. Today the generator writes "you were walking,
+  suddenly you saw a celebrity" and the learner cannot tell whether the target
+  is the interruption, the surprise or the tense. Textbooks state the meaning to
+  express and withhold only the form — "say that you were walking home and,
+  part-way, it started raining". The pattern still isn't named.
+- **Patterns get a management surface: a mode toggle on Cards.** _User's call._
+  Not a fifth nav entry for ten items, and not the deck-filter row either —
+  `filterCardsByDeck` returns `Flashcard[]` and a pattern is not one. A
+  Cards/Patterns switch above the existing list, with its own simpler list
+  beneath: pattern, gloss, kind, next practice, and edit / archive / delete.
+  This is complaint (1) and it is the cheapest of the four to answer.
+- **Patterns can be added by hand.** _User's call._ The manual form asks for the
+  pattern, an optional gloss, and **the kind, chosen by the user from two
+  labelled options**. No model call, so no new endpoint — and making the learner
+  answer "is this a choice or a rule?" is the most direct statement the app can
+  make about what counts as a pattern, which is complaint (2). It is also a far
+  cheaper cold-start door than the Learn arm's 12 prompt templates, which stays
+  deferred.
+- **The curated grammar pack stays closed.** Textbooks supply exercise formats
+  *and* an ordered curriculum; only the formats are being adopted. The
+  no-curriculum call below is untouched and was not reopened by this.
+- **Still open, and now sharper:** the learner override. It was already the home
+  for the `easy` the ease ratchet removes; it is now also the only honest
+  mitigation for a wrong verdict from a thin `targetForms` or `alternates` list.
+  Two trials have pointed at it. The other two opens — interleaving into the
+  vocab queue, and an unprompted tier-1 hint — are untouched, and the second now
+  applies to `choice` only.
+
 ### No local model yet — and the first step isn't a model (2026-08-08)
 
 The spike ran and produced what it was supposed to: a written answer, not a

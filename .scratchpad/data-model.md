@@ -109,7 +109,14 @@ in the Decisions entry in [status.md](status.md); the third is a live blocker._
    the most valuable patterns come back as `naturalness` findings.
 3. **The `patterns` collection needs a Firestore security rule** before any of
    this works. There is no rules file in the repo, so this is a console step.
+   _Added by the user 2026-08-08._
 
+**⚠️ The shape below is superseded in one respect by the redesign of 2026-08-08**
+(trial → [vision.md](vision.md) → design calls in [status.md](status.md)):
+`GrammarPattern` gains a `kind`, and `PatternExercise` becomes a union of two
+exercise shapes rather than one. The revision is at the end of this section; the
+original shape is kept because everything else in it still stands and the
+reasoning attached to each field is still the reasoning.
 
 
 A grammar pattern is **not a card**, and the reasoning is in
@@ -198,9 +205,93 @@ rather than discover:
 because there are hundreds of them and the collection name routes the query.
 Patterns will number in the tens, so six near-empty collections buy nothing. One
 collection carrying `studyLanguage` on the document — which is already what
-makes a document self-describing here — is simpler. Cost, named so it isn't a
-surprise: a composite index on `uid + studyLanguage`, i.e. one of the two manual
-console steps below rather than both. Reversible if it turns out wrong.
+makes a document self-describing here — is simpler. ~~Cost, named so it isn't a
+surprise: a composite index on `uid + studyLanguage`~~ — **no index was needed.**
+Two equality filters with no `orderBy` are served by merging single-field
+indexes, and `archived` and the sort are handled in JS because this is tens of
+documents. The console step this collection *does* need is a security rule.
+
+### Revision, 2026-08-08: the pattern carries its kind
+
+A grammar point is chosen or it is applied, and the two want different
+exercises — the argument is in [vision.md](vision.md). That distinction has to
+live on the pattern, because it is decided once at capture and read at every
+review.
+
+```ts
+/**
+ * Which exercise this pattern earns.
+ *
+ * - `choice` — a meaning maps to a form and the skill is picking it. Situation
+ *   in the native language, free production, **pattern never named**, graded by
+ *   `/api/writing`. This is what (1a) built for everything.
+ * - `form` — a mechanical transformation of something the learner was going to
+ *   write anyway. **The rule IS named**, a gap is posed, and the answer is
+ *   compared locally against what generation supplied. No grading call.
+ *
+ * Not a third `construction` kind, however tempting: `il faut que` + subjunctive
+ * looks like one, but its exercise is the `choice` exercise, and an axis whose
+ * members share a format is not an axis. The warning at the top of this file
+ * about speculative subtypes applies to this type too.
+ */
+export type PatternKind = 'choice' | 'form';
+```
+
+`GrammarPattern` gains `kind: PatternKind`, and `source` gains `'manual'`.
+
+**The kind describes the learner's error, not the pattern.** This is the part
+most easily got wrong, and getting it wrong rebuilds the taxonomy the vision
+rejects. 은/는 has both aspects: choosing topic over subject, and picking the
+right allomorph by batchim. Asking "which kind of point is 은/는" has no answer.
+Asking "which of the two did *this writer* just get wrong" always does, and the
+writing finding already knows — a learner who wrote `de eau` failed the form
+rule, and one who wrote something correct but unnatural failed the choice. So
+the classifier reads the finding, not a grammar reference, and the same pattern
+can legitimately be saved as `form` by one learner and `choice` by another.
+That keeps it emergent rather than configured, which is the whole rule here.
+
+**`PatternExercise` becomes a union**, discriminated on the same field:
+
+```ts
+interface ChoiceExercise {
+  kind: 'choice';
+  /** The meaning to express, in the native language. Never names the pattern. */
+  situation: string;
+  hintShape: string;
+  hintName: string;
+  targetForms: string[];
+}
+
+interface FormExercise {
+  kind: 'form';
+  /** The rule, named outright — hiding it would hide nothing worth hiding. */
+  rule: string;
+  /** The sentence with a gap, and what goes into it in its base form. */
+  sentence: string;
+  input: string;
+  /** What the gap should become, plus anything else acceptable. */
+  expected: string;
+  alternates: string[];
+}
+
+export type PatternExercise = ChoiceExercise | FormExercise;
+```
+
+Three consequences to design for rather than discover:
+
+- **A form drill has no hint tier.** The rule is already named, so tier 1 has
+  nothing left to nudge toward and tier 2 *is* the answer. `HintTier` becomes
+  meaningful only for `choice`. This is not a gap: `drill.ts` grades on knew /
+  missed with no hint at all, and a five-second turn is the shape it is.
+- **A form drill is one model call, not two.** Generation supplies `expected`
+  and `alternates`, so grading is a local comparison. The running cost stops
+  being *2n* and becomes `2·n_choice + n_form`, and the grading variance
+  disappears for exactly the patterns where it was worst.
+- **The false-negative risk moves but does not go away.** `alternates` plays the
+  role `targetForms` plays for choice: a legitimate answer the generator failed
+  to list is scored wrong. A gap fill has far fewer plausible answers than a
+  free sentence, which is why the risk shrinks — but the honest mitigation is
+  still the learner override, which remains open.
 
 ## Firestore collections
 

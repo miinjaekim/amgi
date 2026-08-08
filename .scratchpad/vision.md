@@ -144,6 +144,62 @@ This fills the ladder's **sentence × production** cell properly — writing rev
 diagnoses at sentence level, and this is the drilling that follows a diagnosis —
 and opens **sentence × comprehension**, which is still empty.
 
+### A grammar point is not one kind of thing (2026-08-08, after the first trial)
+
+_Written after (1a) was built and tried. The trial is the evidence; the design
+calls are in [status.md](status.md)._
+
+The argument above is right about what grammar *is* — a function, not a row —
+and then quietly assumes every grammar point is the same kind of function, with
+one exercise shape serving all of them. Trying it showed that it isn't. The
+tell was a saved French pattern: **`de` → `d'` before a vowel.** The exercise
+generator dutifully invented a scene, the learner had no idea what was being
+asked, and the verdict felt arbitrary.
+
+The reason is worth stating precisely, because "the generator needs a better
+prompt" is the wrong diagnosis and leads to a better prompt for the wrong
+exercise.
+
+**Some grammar points are chosen. Others are applied.**
+
+- A **choice** point maps a meaning to a form, and the skill is picking it over
+  the alternatives. `-다가`, `-는데`, passé composé against imparfait. Here a
+  situation genuinely elicits the pattern, and *not naming it* is exactly right,
+  because reaching for it is the whole skill.
+- A **form** rule is a mechanical transformation of something you were going to
+  write anyway. `de` → `d'`. 을/를 by batchim. French adjective agreement. There
+  is no meaning being chosen: the learner does not reach for `d'`, they reach
+  for `de` and a rule rewrites it.
+
+For a form rule the situational exercise fails twice over. There is no situation
+that elicits it, so the scene is doing no work and the learner is guessing what
+is being tested. And hiding the name — the rule that makes the choice exercise
+honest — becomes actively harmful, because the name was never the hard part.
+Knowing "elision before a vowel" costs nothing; applying it every time is the
+skill. **Name a form rule, hide a choice pattern.**
+
+This is a refinement of the three things listed above rather than a correction
+to them. The second, "how it attaches — generative by definition", *is* the form
+rule, and it was named there from the start; what was missing was any exercise
+that tests it directly rather than incidentally. One target had one format, and
+the other two were left to be hit by accident.
+
+**The cost of an exercise sets the bar for what is worth practising.** This is
+the second thing the trial made obvious, and it dissolves a question that had
+looked like a matter of taste. Part of why `d'` felt absurd to save was that the
+only thing on offer was a forty-second production turn, which is wildly
+disproportionate to a contraction. At five seconds it is simply fine to have.
+So "does this deserve to be practised" is partly answered by "practised *how*",
+and a taxonomy of worthy grammar points is not needed to answer it.
+
+**None of this reopens the curated pack.** Textbooks supply two separable
+things: exercise *formats* — transformation drills, gap fills, contrast pairs,
+guided production — and an ordered *curriculum*. The formats are what was
+missing here. The curriculum is the configured levelling this document argues
+against twice, and adopting the first does not smuggle in the second. Errors are
+still the syllabus; what changes is only the shape of the exercise an error
+earns you.
+
 ## Long-term vision
 
 Multi-media prompts (image/audio → card), social layer (shared decks,
