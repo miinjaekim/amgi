@@ -19,10 +19,22 @@ Related docs outside this folder:
   (referenced from `packages/core/src/packs.ts`)
 - `docs/packs/topik-pack-draft.md` — source draft for the TOPIK 고급 pack
   (referenced from `packages/core/src/topik.ts`)
+- `docs/packs/military-unit-pack-draft.md`,
+  `docs/packs/military-affairs-pack-draft.md` — the two military packs, 474
+  pairs (referenced from `packages/core/src/military.ts`). Unlike the drafts
+  above these are **bilingual pair lists**, not a study side plus glosses, and
+  they still carry live open questions — read them before changing a term or a
+  hint, and hand *these* to a reviewer rather than the TS.
 - `docs/packs/toeic-backs-draft.md`, `docs/packs/topik-backs-draft.md` — the 293
   card backs, approved 2026-08-02. Kept as the record of what was authored and
   why; still the place to read before changing a gloss, since each leads with
   the near-synonym collisions that a bare source diff would not explain.
+- `docs/local-model.md` — the written answer to the "Local model spike" item:
+  the three meanings of "local", what a local model could and couldn't replace
+  route by route, size/RAM limits, fine-tuning vs prompting, and the recommended
+  first step (a shared term cache, not a model). **The item is closed** — read
+  this and the Decisions entry in `status.md` before reopening the on-device
+  question.
 - `docs/testflight-beta-info.md` — TestFlight listing copy, Korean *and*
   English in one file (the `-ko` suffix was dropped 2026-08-02 for that
   reason). Tracked, despite `.gitignore` excluding `docs/*`, via an explicit
@@ -41,8 +53,18 @@ leaves that file:
 Backlog priority mirrors the user's Google Tasks list — `backlog.md` is the
 scoped version of it.
 
-_Last reviewed against the codebase: 2026-08-03, `main` @ `111da4e` (PR #78).
-`npm test` 175/175, measured not assumed._
+_Last reviewed against the codebase: 2026-08-08, `main` @ `f722774` (PR #81).
+`npm test` 200/200, measured not assumed._
+
+_That pass closed **two** of the three starred items. The military terms pack
+grew from a 219-term draft into two registered packs of 474 pairs (#81), and the
+local model spike closed on its own written answer: `docs/local-model.md` says
+don't, so the item went rather than lingering. `backlog.md` lost both, gained
+PR #81 in the build queue, and promoted the shared term cache out of Needs
+clarification because the local-model doc names it the cheapest useful first
+step. `status.md` gained a shipped line and two Decisions entries. Grammar
+patterns is now the only starred item left. Previously 2026-08-03 @ `111da4e`
+(PR #78)._
 
 _That pass did three things. **Grammar was designed** before any code — argument
 in `vision.md`, type in `data-model.md`, design calls in `status.md`, staging in
