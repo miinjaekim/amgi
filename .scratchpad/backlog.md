@@ -49,46 +49,29 @@ the local model spike was the third and is **closed** — the written answer is
 [status.md](status.md), and the two pieces of it worth doing are under Medium.
 
 - [ ] **Grammar patterns — mobile parity.** ⭐ _Built, trialled and scoped closed
-      on web: PR #84, 2026-08-08 → 09._ Web is done and the design questions are
-      settled; only the port is left.
+      on web: PR #84, 2026-08-08 → 09._ Web is done and every design question is
+      settled or recorded; only the port is left.
 
       Read before starting: **`docs/grammar-research.md`**, which the design is
-      derived from, then the Decisions entries in [status.md](status.md), newest
-      first. A pattern is its own object with its own review verb — a cloze until
-      it sticks, then free production — and `kind` decides only whether it ever
-      makes that second step.
+      derived from, then the grammar Decisions entries in
+      [status.md](status.md), newest first — including what was cancelled and
+      why. A pattern is its own object with its own review verb: a cloze until
+      it sticks, then free production. `kind` decides only whether it ever makes
+      that second step.
 
-      **The port is JS-only**, so it rides a build rather than needing one.
-      `buildReviewCollections` on mobile already passes `[]`. Two things to
-      carry across that are easy to miss:
+      **JS-only, so it rides a build rather than needing one.**
+      `buildReviewCollections` on mobile already passes `[]`. Two things to carry
+      across that are easy to miss:
 
       - Mobile still offers "+ card" on a pattern finding, because
         `/api/writing` emits `card` alongside `pattern` precisely so the shipped
         build doesn't lose the take-away to a field it can't read. **That crutch
-        comes out with parity**, and the rule that replaces it is in
-        `WritingReviewPanel` on web: a card shows beside a pattern only when it
-        is a `gap` card.
+        comes out with parity**, replaced by the rule in web's
+        `WritingReviewPanel`: a card shows beside a pattern only when it is a
+        `gap` card.
       - Copy-to-clipboard on the writing rewrite is web-only. Mobile needs
-        `expo-clipboard`, which is a **native** dependency and so a build — free
-        if it rides one already queued, a build of its own otherwise.
-
-      **Known weak spot, undecided on purpose:** `alternates` has come back empty
-      on every live cloze so far, leaving the learner override to absorb every
-      legitimate variant answer. If that turns out to bite in use, the generation
-      prompt needs work rather than the override. Waiting on real sessions rather
-      than guessing.
-
-      **One question still open:** whether a tier-1 hint is ever offered
-      unprompted after an idle (production turns only). Offering rescues the
-      learner who won't ask; it also interrupts thinking, which is what the
-      design exists to protect.
-
-      **Settled — see status.md before reopening any of it:** no vocab-queue
-      interleaving, the Learn door cancelled, the learner override shipped,
-      graduation deliberately unverified, and the speculative tail (produce-
-      offline, contrast turns, structured input, the acquisition signal) off
-      this list with its reasoning preserved.
-      **Spoken production is deliberately not here** — see conversation practice.
+        `expo-clipboard`, which is **native** and so a build — free if it rides
+        one already queued, a build of its own otherwise.
 
 ## Medium
 

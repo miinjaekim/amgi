@@ -141,6 +141,19 @@ questions and cuts the backlog item down to what is actually left to do._
   directions including the lapse-demotes case, and the remaining risk is one a
   real session surfaces on its own. **Deliberate**, so don't read "unverified"
   as an oversight and add the tool.
+- **One open question left, and it is the last one:** whether a tier-1 hint is
+  ever offered unprompted after an idle, on production turns only. Offering
+  rescues the learner who won't ask; it also interrupts thinking, which is what
+  the design exists to protect. Not on the backlog — it wants a real session to
+  answer it, not a slot.
+- **Known weak spot, measured and left alone:** `alternates` came back **empty
+  on every live cloze generated so far**, across French and Korean, despite the
+  prompt asking outright for every acceptable variant and warning that a missing
+  one marks a correct answer wrong. So the learner override is currently
+  absorbing all of it. Left as-is deliberately: it is one prompt away from being
+  fixed *if* it turns out to bite, and guessing at which variants matter without
+  real answers to look at is how you write a worse prompt. The signal to watch
+  is being marked wrong while right.
 - **The speculative tail is off the backlog**, and none of the reasoning is lost
   because all of it already lives elsewhere: produce-offline /
   evaluate-on-reconnect and the acquisition signal are both in the older design
