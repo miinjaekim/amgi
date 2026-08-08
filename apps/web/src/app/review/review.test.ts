@@ -151,7 +151,8 @@ describe('buildReviewCollections', () => {
   });
 
   const pattern = (production?: { nextReview: Date }): GrammarPattern => ({
-    uid: 'u', studyLanguage: 'Japanese', pattern: '〜ながら', gloss: { English: 'while doing' },
+    uid: 'u', studyLanguage: 'Japanese', pattern: '〜ながら', kind: 'choice',
+    gloss: { English: 'while doing' },
     createdAt: new Date('2026-07-01'),
     production: production ? tracked(production.nextReview) : undefined,
   });

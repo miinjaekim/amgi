@@ -2,11 +2,14 @@
 
 import { useEffect, useRef, useState } from 'react';
 import {
+  CLOZE_GAP,
   PATTERN_MAX_CHARS,
   getPatternExercise,
   getStudyLanguageConfig,
+  gradeCloze,
   gradeFromReview,
   gradePatternAnswer,
+  overrideGrade,
   patternGloss,
 } from '@amgi/core';
 import type {
@@ -14,6 +17,7 @@ import type {
   HintTier,
   PatternExercise,
   PatternGrade,
+  PatternVerdict,
   ReviewTracking,
   StudyLanguage,
   TranslationKey,
@@ -29,32 +33,42 @@ import PronounceButton from '@/components/PronounceButton';
  * A grammar-pattern practice session.
  *
  * Its own component rather than another branch of the review page, because it
- * is a different verb: the review page flips a card in three seconds, and this
- * asks for forty seconds of production and then grades it. The two share a
- * surface — the Review picker — and nothing else.
+ * is a different verb: the review page flips a card, and this asks for a
+ * produced form and then grades it. The two share a surface — the Review
+ * picker — and nothing else.
  *
- * Four rules from the design are enforced here and are the ones to check
- * against before changing this file:
+ * **Two rungs, and the pattern's stage picks between them** (`exerciseFormat`,
+ * resolved inside `getPatternExercise`). A *cloze* is one sentence with the
+ * pattern blanked, graded locally by string comparison. A *production* turn is
+ * a situation to express freely, graded through `/api/writing`. Practice runs
+ * controlled → free and the first cut of this screen opened at free, which is
+ * where the ambiguity and grading variance both came from; see
+ * `docs/grammar-research.md`.
  *
- * 1. **The prompt never names the pattern.** Nothing on screen during the
- *    answering phase says which pattern is being practised. "Use `-다가` in a
- *    sentence" teaches the label; reaching for it is the skill.
- * 2. **Every turn is production.** No candidates are offered — selecting
- *    between near-neighbours is recognition wearing production's clothes.
- * 3. **The hint has two tiers and it costs.** Which is what keeps rule 2 from
- *    having a cliff behind it.
- * 4. **A grading failure never loses the typed sentence.** Forty seconds of
- *    the learner's writing is the one thing ruled out losing, and a 500 on
- *    turn 3 of 6 is not the offline case.
+ * Rules from the design enforced here, and the ones to check against before
+ * changing this file:
+ *
+ * 1. **Nothing offers candidates to pick between.** A cloze is cued recall, not
+ *    recognition — the learner types the form.
+ * 2. **A production turn never names the pattern.** Nothing on screen during
+ *    the answering phase says which pattern is being practised. A cloze does
+ *    not name it either; the sentence is what disambiguates.
+ * 3. **Hints cost.** Two tiers, clamping the verdict. On a cloze both tiers are
+ *    the pattern's own stored gloss and citation form, so they cost no round
+ *    trip and no generation.
+ * 4. **A grading failure never loses the typed answer**, and nothing writes a
+ *    verdict the learner did not earn or assert.
  */
 
-const VERDICT_LABEL: Record<PatternGrade['verdict'], TranslationKey> = {
+const VERDICT_LABEL: Record<PatternVerdict, TranslationKey> = {
+  easy: 'patternVerdictEasy',
   good: 'patternVerdictGood',
   hard: 'patternVerdictHard',
   again: 'patternVerdictAgain',
 };
 
-const VERDICT_COLOR: Record<PatternGrade['verdict'], string> = {
+const VERDICT_COLOR: Record<PatternVerdict, string> = {
+  easy: 'var(--color-highlight)',
   good: 'var(--color-highlight)',
   hard: 'var(--color-text)',
   again: 'rgb(248 113 113)',
@@ -66,7 +80,7 @@ interface Props {
   patterns: GrammarPattern[];
   studyLanguage: StudyLanguage;
   nativeLanguage: string | null | undefined;
-  /** Streak bookkeeping — a production turn is a review like any other. */
+  /** Streak bookkeeping — a practice turn is a review like any other. */
   onReviewed: () => void;
   /** Lets the picker's due count stay honest without a refetch. */
   onScheduled: (patternId: string, production: ReviewTracking) => void;
@@ -96,14 +110,15 @@ export default function PatternSession({
   const [grade, setGrade] = useState<PatternGrade | null>(null);
   const [reviewedCount, setReviewedCount] = useState(0);
   /**
-   * Deliberately outside the per-turn reset below: a skip is reported on the
-   * turn *after* the one that was skipped, so resetting it with everything else
+   * Deliberately outside the per-turn reset: a skip is reported on the turn
+   * *after* the one that was skipped, so resetting it with everything else
    * would mean the message never appeared at all.
    */
   const [skipped, setSkipped] = useState(false);
   const [done, setDone] = useState(false);
 
   const pattern = patterns[index];
+  const isCloze = exercise?.format === 'cloze';
   const overLimit = answer.length > PATTERN_MAX_CHARS;
 
   /**
@@ -156,11 +171,57 @@ export default function PatternSession({
     else setDone(true);
   };
 
+  /**
+   * Writes the scheduling one graded turn produced.
+   *
+   * Separate from the grading paths because the override re-runs it with a
+   * corrected verdict, and because it is the one place a `ReviewTracking` is
+   * written at all — a skip, a grading failure and an exit all deliberately
+   * reach nothing here, leaving the pattern due.
+   *
+   * `pattern.production` is the value from *before* this turn on every call,
+   * including the override's: the queue holds the objects loaded at session
+   * start and `onScheduled` updates the page's copy, not this one. So a
+   * re-grade schedules from the same baseline as the first grade rather than
+   * compounding on top of it.
+   */
+  const writeGrade = (graded: PatternGrade) => {
+    if (!pattern) return;
+    const { interval, ease, repetitions, nextReview } = getNextReviewData(
+      pattern.production ?? {},
+      graded.verdict,
+    );
+    const production: ReviewTracking = { interval, ease, repetitions, nextReview };
+    if (pattern.id) {
+      // Fire-and-forget, as the card path does: Firestore queues the write and
+      // syncs on reconnect, and the learner should not wait on it to see their
+      // feedback.
+      updatePatternTracking(pattern.id, production).catch(err => {
+        console.error('[patterns] failed to write scheduling:', err);
+      });
+      onScheduled(pattern.id, production);
+    }
+  };
+
   const handleCheck = async () => {
     if (!answer.trim() || overLimit || !exercise || !pattern) return;
+    setSkipped(false);
+
+    // Cloze grades locally: an exact comparison against what generation
+    // supplied. No round trip, so no failure path and no variance — the whole
+    // reason the controlled rung is cheap.
+    if (exercise.format === 'cloze') {
+      const graded = gradeCloze(answer.trim(), exercise, hintTier);
+      writeGrade(graded);
+      onReviewed();
+      setGrade(graded);
+      setReviewedCount(n => n + 1);
+      setPhase('graded');
+      return;
+    }
+
     setGrading(true);
     setGradeError(false);
-    setSkipped(false);
     try {
       const result = await gradePatternAnswer(
         answer.trim(),
@@ -168,26 +229,7 @@ export default function PatternSession({
         studyLanguage,
       );
       const graded = gradeFromReview(result, answer.trim(), exercise, hintTier);
-
-      // The write happens only now, on a verdict the model actually produced.
-      // Everything else on this screen — a skip, a grading failure, an exit —
-      // writes nothing and leaves the pattern due.
-      const { interval, ease, repetitions, nextReview } = getNextReviewData(
-        pattern.production ?? {},
-        graded.verdict,
-      );
-      const production: ReviewTracking = { interval, ease, repetitions, nextReview };
-
-      if (pattern.id) {
-        // Fire-and-forget, as the card path does: Firestore queues the write
-        // and syncs on reconnect, and the learner should not wait on it to see
-        // their feedback.
-        updatePatternTracking(pattern.id, production).catch(err => {
-          console.error('[patterns] failed to write scheduling:', err);
-        });
-        onScheduled(pattern.id, production);
-      }
-
+      writeGrade(graded);
       onReviewed();
       setReview(result);
       setGrade(graded);
@@ -203,10 +245,28 @@ export default function PatternSession({
     }
   };
 
+  /**
+   * The learner says the grader was wrong.
+   *
+   * Legitimate because they can see both strings — on a cloze the expected
+   * answer is on screen beside what they typed, so this is not appealing a
+   * hidden judgement, it is reporting that the generated `alternates` list was
+   * short. Re-grades correctness, not effort: the hint clamp still applies.
+   */
+  const handleOverride = () => {
+    const graded = overrideGrade(hintTier);
+    writeGrade(graded);
+    setGrade(graded);
+  };
+
   const handleSkip = () => {
     setSkipped(true);
     advance();
   };
+
+  /** The gloss and citation form, which are what a cloze uses for its hints. */
+  const clozeHintOne = patternGloss(pattern ?? { gloss: {} }, nativeLanguage) || pattern?.pattern || '';
+  const clozeHintTwo = pattern?.pattern ?? '';
 
   if (done || !pattern) {
     return (
@@ -225,6 +285,21 @@ export default function PatternSession({
       </div>
     );
   }
+
+  /** The cloze sentence, with the gap rendered as a blank rather than text. */
+  const renderGappedSentence = (sentence: string) => {
+    const [before, ...rest] = sentence.split(CLOZE_GAP);
+    return (
+      <p className="text-lg leading-relaxed text-[var(--color-text)]">
+        {before}
+        <span
+          className="inline-block align-baseline mx-1 px-6 border-b-2"
+          style={{ borderColor: 'var(--color-highlight)' }}
+        />
+        {rest.join(CLOZE_GAP)}
+      </p>
+    );
+  };
 
   return (
     <>
@@ -279,21 +354,52 @@ export default function PatternSession({
         ) : (
           <>
             <h3 className="text-xs font-semibold uppercase tracking-widest mb-2" style={{ color: 'var(--color-muted)' }}>
-              {t(nativeLanguage, 'patternSituationHeading')}
+              {t(nativeLanguage, exercise.format === 'cloze' ? 'patternClozeHeading' : 'patternSituationHeading')}
             </h3>
-            <p className="text-lg leading-relaxed whitespace-pre-wrap text-[var(--color-text)]">
-              {exercise.situation}
-            </p>
+
+            {exercise.format === 'cloze' ? (
+              <>
+                {renderGappedSentence(exercise.sentence)}
+                {/* The meaning is not a hint — it is half the prompt. A gap
+                    filled without understanding the sentence is mechanical
+                    practice, which is the one drill type the research does not
+                    support. */}
+                {exercise.meaning && (
+                  <p className="mt-2 text-sm leading-relaxed text-[var(--color-text)] opacity-70">
+                    {exercise.meaning}
+                  </p>
+                )}
+                {exercise.input && (
+                  <p className="mt-3 text-sm" style={{ color: 'var(--color-muted)' }}>
+                    {t(nativeLanguage, 'patternClozeFrom')}{' '}
+                    <span className="font-bold text-[var(--color-text)]">{exercise.input}</span>
+                  </p>
+                )}
+              </>
+            ) : (
+              <p className="text-lg leading-relaxed whitespace-pre-wrap text-[var(--color-text)]">
+                {exercise.situation}
+              </p>
+            )}
 
             {/* Hints, revealed in order and never before they are asked for.
-                Both tiers arrived with the situation, so asking costs no round
-                trip — what it costs is the ceiling on the verdict. */}
+                A production turn's tiers were generated with the situation, so
+                asking costs no round trip; a cloze's are the pattern's own
+                gloss and citation form, so they cost nothing at all. What
+                asking costs, in both cases, is the ceiling on the verdict. */}
             {hintTier >= 1 && (
               <div className="mt-4 pt-4 border-t text-sm" style={{ borderColor: 'var(--color-muted)' }}>
-                <p className="text-[var(--color-text)] opacity-80">{exercise.hintShape}</p>
+                {isCloze ? (
+                  <p className="text-[var(--color-text)] opacity-80">
+                    {t(nativeLanguage, 'patternHintPointMeans')}{' '}
+                    <span className="font-semibold">{clozeHintOne}</span>
+                  </p>
+                ) : (
+                  <p className="text-[var(--color-text)] opacity-80">{exercise.hintShape}</p>
+                )}
                 {hintTier >= 2 && (
                   <p className="mt-2 font-bold" style={{ color: 'var(--color-highlight)' }}>
-                    {exercise.hintName}
+                    {isCloze ? clozeHintTwo : exercise.hintName}
                   </p>
                 )}
                 <p className="mt-2 text-xs" style={{ color: 'var(--color-muted)' }}>
@@ -302,7 +408,7 @@ export default function PatternSession({
               </div>
             )}
 
-            {phase === 'graded' && grade && review ? (
+            {phase === 'graded' && grade && (
               <div className="mt-4 pt-4 border-t space-y-4" style={{ borderColor: 'var(--color-muted)' }}>
                 <div className="flex flex-wrap items-baseline gap-3">
                   <span className="text-lg font-bold" style={{ color: VERDICT_COLOR[grade.verdict] }}>
@@ -318,78 +424,150 @@ export default function PatternSession({
                   )}
                 </div>
 
-                {!grade.reached && (
-                  <p className="text-sm text-[var(--color-text)] opacity-80">
-                    {t(nativeLanguage, 'patternNotReached')}
+                {grade.overridden && (
+                  <p className="text-sm" style={{ color: 'var(--color-muted)' }}>
+                    {t(nativeLanguage, 'patternOverridden')}
                   </p>
                 )}
 
-                {/* The learner's own sentence stays on screen beside the
-                    rewrite. The textarea is gone by now, and a correction you
-                    cannot compare against what you wrote is a correction you
-                    read rather than learn from. */}
-                <div>
-                  <h4 className="text-xs font-semibold uppercase tracking-widest mb-1" style={{ color: 'var(--color-muted)' }}>
-                    {t(nativeLanguage, 'patternYourSentence')}
-                  </h4>
-                  <p className="leading-relaxed text-[var(--color-text)] opacity-70">{answer.trim()}</p>
-                </div>
-
-                {/* The rewrite shows on every verdict, including `good`. A
-                    sentence that got the pattern right and still differs from
-                    how a native would put it is worth seeing — the same
-                    reasoning `rewriteNative` exists for on writing review. */}
-                <div>
-                  <div className="flex items-center gap-2 mb-1">
-                    <h4 className="text-xs font-semibold uppercase tracking-widest" style={{ color: 'var(--color-muted)' }}>
-                      {t(nativeLanguage, 'writingRewriteHeading')}
-                    </h4>
-                    <PronounceButton text={review.rewrite} studyLanguage={studyLanguage} />
-                  </div>
-                  <p className="text-lg leading-relaxed text-[var(--color-text)]">{review.rewrite}</p>
-                  {review.rewriteNative && (
-                    <p className="mt-1 text-sm leading-relaxed text-[var(--color-text)] opacity-70">
-                      {review.rewriteNative}
-                    </p>
-                  )}
-                </div>
-
-                {review.findings.length > 0 && (
-                  <ol className="space-y-2">
-                    {review.findings.map((finding, i) => (
-                      <li key={i} className="text-sm text-[var(--color-text)] opacity-80">
-                        {(finding.original || finding.suggested) && (
-                          <span className="mr-2">
-                            {finding.original && <span className="line-through opacity-50">{finding.original}</span>}
-                            {finding.original && finding.suggested && <span className="mx-1">→</span>}
-                            {finding.suggested && (
-                              <span className="font-bold" style={{ color: 'var(--color-highlight)' }}>
-                                {finding.suggested}
-                              </span>
-                            )}
+                {exercise.format === 'cloze' ? (
+                  <>
+                    <div className="flex flex-wrap items-baseline gap-x-6 gap-y-2">
+                      <div>
+                        <h4 className="text-xs font-semibold uppercase tracking-widest mb-1" style={{ color: 'var(--color-muted)' }}>
+                          {t(nativeLanguage, 'patternYourSentence')}
+                        </h4>
+                        <span
+                          className="text-lg"
+                          style={{ color: grade.reached ? 'var(--color-text)' : 'rgb(248 113 113)' }}
+                        >
+                          {answer.trim()}
+                        </span>
+                      </div>
+                      {!grade.reached && (
+                        <div>
+                          <h4 className="text-xs font-semibold uppercase tracking-widest mb-1" style={{ color: 'var(--color-muted)' }}>
+                            {t(nativeLanguage, 'patternExpected')}
+                          </h4>
+                          <span className="text-lg font-bold" style={{ color: 'var(--color-highlight)' }}>
+                            {exercise.expected}
                           </span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* The whole sentence, filled in, so the turn ends on the
+                        thing being learned rather than on a fragment. */}
+                    <div className="flex items-center gap-2">
+                      <p className="text-lg text-[var(--color-text)]">
+                        {exercise.sentence.split(CLOZE_GAP).join(exercise.expected)}
+                      </p>
+                      <PronounceButton
+                        text={exercise.sentence.split(CLOZE_GAP).join(exercise.expected)}
+                        studyLanguage={studyLanguage}
+                      />
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    {!grade.reached && (
+                      <p className="text-sm text-[var(--color-text)] opacity-80">
+                        {t(nativeLanguage, 'patternNotReached')}
+                      </p>
+                    )}
+
+                    <div>
+                      <h4 className="text-xs font-semibold uppercase tracking-widest mb-1" style={{ color: 'var(--color-muted)' }}>
+                        {t(nativeLanguage, 'patternYourSentence')}
+                      </h4>
+                      <p className="leading-relaxed text-[var(--color-text)] opacity-70">{answer.trim()}</p>
+                    </div>
+
+                    {/* The rewrite shows on every verdict, including `good`. A
+                        sentence that got the pattern right and still differs
+                        from how a native would put it is worth seeing — the
+                        same reasoning `rewriteNative` exists for. */}
+                    {review && (
+                      <>
+                        <div>
+                          <div className="flex items-center gap-2 mb-1">
+                            <h4 className="text-xs font-semibold uppercase tracking-widest" style={{ color: 'var(--color-muted)' }}>
+                              {t(nativeLanguage, 'writingRewriteHeading')}
+                            </h4>
+                            <PronounceButton text={review.rewrite} studyLanguage={studyLanguage} />
+                          </div>
+                          <p className="text-lg leading-relaxed text-[var(--color-text)]">{review.rewrite}</p>
+                          {review.rewriteNative && (
+                            <p className="mt-1 text-sm leading-relaxed text-[var(--color-text)] opacity-70">
+                              {review.rewriteNative}
+                            </p>
+                          )}
+                        </div>
+
+                        {review.findings.length > 0 && (
+                          <ol className="space-y-2">
+                            {review.findings.map((finding, i) => (
+                              <li key={i} className="text-sm text-[var(--color-text)] opacity-80">
+                                {(finding.original || finding.suggested) && (
+                                  <span className="mr-2">
+                                    {finding.original && <span className="line-through opacity-50">{finding.original}</span>}
+                                    {finding.original && finding.suggested && <span className="mx-1">→</span>}
+                                    {finding.suggested && (
+                                      <span className="font-bold" style={{ color: 'var(--color-highlight)' }}>
+                                        {finding.suggested}
+                                      </span>
+                                    )}
+                                  </span>
+                                )}
+                                {finding.note}
+                              </li>
+                            ))}
+                          </ol>
                         )}
-                        {finding.note}
-                      </li>
-                    ))}
-                  </ol>
+                      </>
+                    )}
+                  </>
+                )}
+
+                {/* The escape hatch for a short `alternates` or `targetForms`
+                    list. Only offered where it can change something: at tier 2
+                    the clamp already pins the verdict at `again`, so a control
+                    that did nothing would be worse than none. */}
+                {!grade.overridden && grade.verdict !== 'good' && grade.verdict !== 'easy' && hintTier < 2 && (
+                  <button
+                    onClick={handleOverride}
+                    className="text-sm px-3 py-1.5 rounded-lg border border-[var(--color-muted)] text-[var(--color-muted)] hover:text-[var(--color-text)] hover:border-[var(--color-text)] transition-colors"
+                  >
+                    {t(nativeLanguage, 'patternOverride')}
+                  </button>
                 )}
               </div>
-            ) : null}
+            )}
           </>
         )}
       </div>
 
       {!exerciseError && exercise && phase === 'answering' && (
         <>
-          <textarea
-            value={answer}
-            onChange={e => setAnswer(e.target.value)}
-            placeholder={t(nativeLanguage, 'patternAnswerPlaceholder', { language: languageLabel })}
-            rows={3}
-            disabled={grading}
-            className="w-full p-3 rounded-lg bg-[var(--color-bg)] border border-[var(--color-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--color-highlight)] text-[var(--color-text)] placeholder-[var(--color-muted)] resize-y"
-          />
+          {exercise.format === 'cloze' ? (
+            <input
+              type="text"
+              value={answer}
+              onChange={e => setAnswer(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') handleCheck(); }}
+              placeholder={t(nativeLanguage, 'patternClozePlaceholder')}
+              className="w-full p-3 rounded-lg bg-[var(--color-bg)] border border-[var(--color-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--color-highlight)] text-[var(--color-text)] placeholder-[var(--color-muted)] text-lg"
+            />
+          ) : (
+            <textarea
+              value={answer}
+              onChange={e => setAnswer(e.target.value)}
+              placeholder={t(nativeLanguage, 'patternAnswerPlaceholder', { language: languageLabel })}
+              rows={3}
+              disabled={grading}
+              className="w-full p-3 rounded-lg bg-[var(--color-bg)] border border-[var(--color-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--color-highlight)] text-[var(--color-text)] placeholder-[var(--color-muted)] resize-y"
+            />
+          )}
 
           {gradeError && (
             <div className="mt-3 p-3 rounded-lg border text-sm" style={{ borderColor: 'var(--color-muted)', color: 'var(--color-text)' }}>
@@ -414,11 +592,14 @@ export default function PatternSession({
           )}
 
           <div className="mt-2 flex items-center justify-between gap-3 flex-wrap">
+            {/* The counter is a ceiling on a paragraph, which only a free
+                production turn can approach. A one-word cloze answer showing
+                "4 / 300" is noise. */}
             <span
               className="text-xs tabular-nums"
               style={{ color: overLimit ? 'var(--color-highlight)' : 'var(--color-muted)' }}
             >
-              {answer.length} / {PATTERN_MAX_CHARS}
+              {isCloze ? '' : `${answer.length} / ${PATTERN_MAX_CHARS}`}
             </span>
             <div className="flex items-center gap-2">
               {hintTier < 2 && (

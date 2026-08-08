@@ -104,13 +104,28 @@ Each finding is an object:
   that this learner will meet again. A connective ending, a tense construction,
   a case or agreement rule are patterns. A word, a set phrase, a collocation, a
   one-off slip and a typo are not.
-  This does NOT depend on "kind". A finding can be "naturalness" — no rule was
-  broken, but no native would phrase it that way — and still be about a pattern
-  the learner should be able to produce; those are often the most valuable ones
-  here. Judge the take-away, not the kind. Shape:
+  This does NOT depend on the finding's "kind". A finding can be "naturalness" —
+  no rule was broken, but no native would phrase it that way — and still be
+  about a pattern the learner should be able to produce; those are often the
+  most valuable ones here. Judge the take-away, not the kind. Shape:
     { "pattern": "the citation form, in ${language}",
+      "kind": "choice" | "form",
       "gloss": { "English": "…", "Korean": "…" },
       "note": "one or two sentences in ${nativeLanguage} on when to reach for it" }
+  The pattern's own "kind" classifies WHAT THIS LEARNER GOT WRONG, not what the
+  pattern is in the abstract:
+  - "choice" — they failed to reach for it. A meaning had to be matched to a
+    form and they picked a different form, or a clumsier way round it. The
+    pattern was available and they did not choose it.
+  - "form" — they reached for it and applied it wrongly. A rule operated on
+    something they were already writing and the output came out wrong:
+    an agreement, a contraction, a conjugation, an allomorph by sound.
+  Many patterns can be either depending on the error. Writing "de eau" instead
+  of "d'eau" is "form" — they wanted "de" and the elision rule failed. Writing a
+  correct but unnatural sequence of short sentences where a native would have
+  joined them is "choice" — nothing was misapplied, the pattern was never
+  reached for. Decide from the learner's actual mistake, and when the passage
+  genuinely does not distinguish them, answer "choice".
   "pattern" is the citation form — the pattern itself, not as it happened to be
   inflected in the passage. Each gloss is a few words on what the pattern does,
   in the same shortest-natural-phrasing style as a card back.
@@ -127,8 +142,8 @@ Respond with only this JSON:
   "findings": [
     { "kind": "…", "original": "…", "suggested": "…", "note": "…",
       "card": { "study": "…", "back": { "English": "…", "Korean": "…" } },
-      "pattern": { "pattern": "…", "gloss": { "English": "…", "Korean": "…" },
-                   "note": "…" } }
+      "pattern": { "pattern": "…", "kind": "choice",
+                   "gloss": { "English": "…", "Korean": "…" }, "note": "…" } }
   ]
 }`;
 

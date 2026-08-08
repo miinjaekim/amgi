@@ -71,30 +71,28 @@ the local model spike was the third and is **closed** — the written answer is
         `WritingFinding.pattern?`. The Firestore rule is in place. What it built
         survives as the **`choice`** half of the redesign; nothing here is thrown
         away.
-      - **(1a′) The redesign — next.** _Designed 2026-08-08 from
-        `docs/grammar-research.md`; read that, then vision.md, then the
-        Decisions entry, before starting._ Five pieces, in the order they pay
-        off. **Everything (1a) built survives as the production rung** — this is
-        additive, not a rewrite.
-        1. **Management surface** — a Cards/Patterns mode toggle on `/cards`,
-           with list, edit, archive, delete. Answers the loudest complaint and
-           gates nothing. Do it first.
-        2. **Manual add** — pattern, optional gloss, and the kind picked by the
-           user from two labelled options. Pure UI, no endpoint, no model call.
-        3. **`PatternKind` + derived stage** — `kind` on the pattern,
-           `CLOZE_REPETITIONS`, `exerciseFormat()`. Small, and gates (4).
-        4. **The cloze rung** — the bulk. `ClozeExercise`, a second arm on
-           `/api/grammar/exercise`, local exact grading with no `/api/writing`
-           call, and hint tiers read from the pattern's own `gloss` and citation
-           form rather than generated. Shuffle the session queue while here.
-        5. **Classification in the writing-finding offer** — `/api/writing`
-           returns `kind` alongside the pattern, judged from what the learner
-           got wrong rather than from what the pattern is.
-        **Not doing:** the bare transformation drill from the superseded design
-        (mechanical drills are the one format the literature is near-unanimous
-        against), and "situations state the meaning rather than a scene" — the
-        cloze rung solves the ambiguity that fix was aimed at, and by the time a
-        learner reaches production an under-specified situation is the *point*.
+      - **(1a′) The redesign — built 2026-08-08, awaiting a trial.** _Designed
+        from `docs/grammar-research.md`; read that, then vision.md, then the
+        Decisions entry._ All five pieces shipped to the branch, and everything
+        (1a) built survives as the production rung:
+        1. **Management surface** — Cards/Patterns mode toggle on `/cards`,
+           `PatternsPanel` with active/archived, edit, archive, restore, delete.
+        2. **Manual add** — pattern, optional gloss, kind picked from two
+           labelled options. No endpoint, no model call.
+        3. **`PatternKind` + derived stage** — `exerciseFormat()` off
+           `repetitions`; a lapse demotes for free.
+        4. **The cloze rung** — `ClozeExercise`, the second arm on
+           `/api/grammar/exercise`, local exact grading, hints from the
+           pattern's own gloss and citation form.
+        5. **Classification** — `/api/writing` returns `kind`, verified live.
+        Plus `buildPatternQueue` (interleaving), and the override and `easy`,
+        folded in on the same pass.
+        **Deliberately not done:** the bare transformation drill from the
+        superseded design (mechanical drills are the one format the literature
+        is near-unanimous against), and "situations state the meaning rather
+        than a scene" — the cloze rung solves the ambiguity that fix was aimed
+        at, and by the time a learner reaches production an under-specified
+        situation is the *point*.
       - **(1b) Web, the expensive door.** The third `ExplainResult` arm on
         `/api/explain` — six language branches × the `if (context)` split =
         **12 prompt templates**. Manual add (2 above) covers most of what this

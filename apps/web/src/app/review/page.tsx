@@ -6,6 +6,7 @@ import { fetchUserFlashcards, getCardsCollection, Flashcard, migrateExistingCard
 import {
   DIRECTION_FILTERS,
   buildReviewCollections,
+  buildPatternQueue,
   buildReviewQueue,
   collectionKey,
   dueReviewItems,
@@ -213,7 +214,7 @@ export default function ReviewPage() {
    * queue would shrink out from under the learner as they answered.
    */
   const handleStartPatterns = () => {
-    setPatternQueue([...duePatternList]);
+    setPatternQueue(buildPatternQueue(patterns));
   };
 
   const handlePatternScheduled = (patternId: string, production: ReviewTracking) => {

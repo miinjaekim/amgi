@@ -1,5 +1,5 @@
 import { db } from '@/config/firebase';
-import { collection, addDoc, Timestamp, query, where, getDocs, doc, updateDoc } from 'firebase/firestore';
+import { collection, addDoc, Timestamp, query, where, getDocs, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import type { DocumentData, QueryDocumentSnapshot } from 'firebase/firestore';
 import type { GrammarPattern, ReviewTracking, StudyLanguage } from '@amgi/core';
 
@@ -92,4 +92,48 @@ export async function updatePatternTracking(
 
 export async function archivePattern(patternId: string): Promise<void> {
   await updateDoc(doc(db, PATTERNS_COLLECTION, patternId), { archived: true });
+}
+
+export async function restorePattern(patternId: string): Promise<void> {
+  await updateDoc(doc(db, PATTERNS_COLLECTION, patternId), { archived: false });
+}
+
+export async function deletePattern(patternId: string): Promise<void> {
+  await deleteDoc(doc(db, PATTERNS_COLLECTION, patternId));
+}
+
+/** Merge arbitrary fields into a pattern — what the management surface edits. */
+export async function updatePatternFields(
+  patternId: string,
+  fields: Record<string, unknown>,
+): Promise<void> {
+  await updateDoc(doc(db, PATTERNS_COLLECTION, patternId), fields);
+}
+
+/**
+ * Every pattern including archived ones — the management surface, where the
+ * archived ones are the point of having the tab.
+ *
+ * `fetchUserPatterns` stays separate rather than growing a flag: review must
+ * never serve an archived pattern, and a boolean argument is one call site away
+ * from it doing exactly that.
+ */
+export async function fetchAllUserPatterns(
+  uid: string,
+  studyLanguage: StudyLanguage,
+): Promise<GrammarPattern[]> {
+  try {
+    const q = query(
+      collection(db, PATTERNS_COLLECTION),
+      where('uid', '==', uid),
+      where('studyLanguage', '==', studyLanguage),
+    );
+    const snapshot = await getDocs(q);
+    return snapshot.docs
+      .map(mapDocToPattern)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  } catch (error) {
+    console.error('[Firestore] Error in fetchAllUserPatterns:', error);
+    throw error;
+  }
 }

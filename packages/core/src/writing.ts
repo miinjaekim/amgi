@@ -70,6 +70,16 @@ export interface WritingCardCandidate {
 export interface WritingPatternCandidate {
   /** Citation form, in the study language — `-다가`, `passé composé`. */
   pattern: string;
+  /**
+   * Whether the learner's error was about *choosing* this pattern or about
+   * *applying* it — which decides whether practice ever graduates from a cloze
+   * to free production. `PatternKind` in `grammar.ts` carries the full
+   * reasoning, including why this describes the error and not the pattern.
+   *
+   * Optional here because the model may omit it and a missing classification
+   * must not cost the offer; `buildPatternDraft` defaults it.
+   */
+  kind?: 'choice' | 'form';
   gloss: { English?: string; Korean?: string };
   /** One or two sentences on when to reach for it, in the native language. */
   note?: string;
@@ -203,6 +213,7 @@ function parsePatternCandidate(raw: unknown): WritingPatternCandidate | undefine
   if (!isNonEmptyString(r.pattern)) return undefined;
   const gloss = (r.gloss ?? {}) as Record<string, unknown>;
   const candidate: WritingPatternCandidate = { pattern: r.pattern.trim(), gloss: {} };
+  if (r.kind === 'choice' || r.kind === 'form') candidate.kind = r.kind;
   if (isNonEmptyString(gloss.English)) candidate.gloss.English = gloss.English.trim();
   if (isNonEmptyString(gloss.Korean)) candidate.gloss.Korean = gloss.Korean.trim();
   if (isNonEmptyString(r.note)) candidate.note = r.note.trim();

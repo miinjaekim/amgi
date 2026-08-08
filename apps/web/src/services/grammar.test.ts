@@ -1,18 +1,24 @@
 import { describe, it, expect } from 'vitest';
 import {
+  CLOZE_REPETITIONS,
   PATTERN_MAX_CHARS,
   buildPatternDraft,
   clampForHints,
+  buildPatternQueue,
   duePatterns,
+  exerciseFormat,
+  gradeCloze,
   gradeFromReview,
   isPatternDue,
   nextPatternReviewDate,
+  overrideGrade,
   parsePatternExercise,
   parseWritingReview,
   patternGloss,
   reachedForPattern,
 } from '@amgi/core';
 import type { GrammarPattern, WritingReview } from '@amgi/core';
+import { getNextReviewData } from '@/services/sm2';
 
 const review = (kinds: WritingReview['findings'][number]['kind'][]): WritingReview => ({
   rewrite: '집에 가다가 친구를 만났어요.',
@@ -20,6 +26,42 @@ const review = (kinds: WritingReview['findings'][number]['kind'][]): WritingRevi
 });
 
 const exercise = { targetForms: ['가다가', '먹다가'] };
+
+describe('exerciseFormat', () => {
+  const at = (repetitions: number) => ({ nextReview: new Date(), interval: 1, ease: 2.5, repetitions });
+
+  it('starts every pattern at cloze', () => {
+    expect(exerciseFormat({ kind: 'choice', production: undefined })).toBe('cloze');
+    expect(exerciseFormat({ kind: 'form', production: undefined })).toBe('cloze');
+  });
+
+  it('graduates a choice pattern once the scheduler treats it as known', () => {
+    expect(exerciseFormat({ kind: 'choice', production: at(CLOZE_REPETITIONS - 1) })).toBe('cloze');
+    expect(exerciseFormat({ kind: 'choice', production: at(CLOZE_REPETITIONS) })).toBe('production');
+  });
+
+  // There is no meaning being chosen, so free production has nothing to add —
+  // and a rule that stayed at cloze forever is the whole point of the kind.
+  it('never graduates a form rule, however well known', () => {
+    expect(exerciseFormat({ kind: 'form', production: at(99) })).toBe('cloze');
+  });
+
+  // The demotion is free: getNextReviewData already resets repetitions to 0 on
+  // `again`, so a failed production turn lands back on controlled practice
+  // without anyone writing a rule for it.
+  it('demotes back to cloze when a lapse resets repetitions', () => {
+    const lapsed = getNextReviewData(at(5), 'again');
+    expect(exerciseFormat({ kind: 'choice', production: lapsed })).toBe('cloze');
+  });
+
+  it('keeps a shaky production turn at production', () => {
+    // `hard` is quality 3, so it increments rather than resets. Recorded as a
+    // reading rather than an accident — this is the test that would catch it
+    // changing.
+    const shaky = getNextReviewData(at(5), 'hard');
+    expect(exerciseFormat({ kind: 'choice', production: shaky })).toBe('production');
+  });
+});
 
 describe('parsePatternExercise', () => {
   it('returns null only when there is no situation to pose', () => {
@@ -33,9 +75,7 @@ describe('parsePatternExercise', () => {
     // learner who asks for help and gets an empty string is exactly who it was
     // supposed to catch.
     const parsed = parsePatternExercise({ situation: 'You were on your way home…' }, { pattern: '-다가' });
-    expect(parsed?.hintShape).toBe('-다가');
-    expect(parsed?.hintName).toBe('-다가');
-    expect(parsed?.targetForms).toEqual(['-다가']);
+    expect(parsed).toMatchObject({ format: 'production', hintShape: '-다가', hintName: '-다가' });
   });
 
   it('keeps the turn when only some target forms are usable', () => {
@@ -43,7 +83,129 @@ describe('parsePatternExercise', () => {
       { situation: 's', targetForms: ['가다가', '', null, '  먹다가  '] },
       { pattern: '-다가' },
     );
-    expect(parsed?.targetForms).toEqual(['가다가', '먹다가']);
+    expect(parsed).toMatchObject({ targetForms: ['가다가', '먹다가'] });
+  });
+});
+
+describe('parsePatternExercise — cloze', () => {
+  const raw = {
+    sentence: '집에 ___ 편의점에 들렀어요.',
+    meaning: 'On my way home I stopped at a convenience store.',
+    input: '가다',
+    expected: '가다가',
+    alternates: ['가다가요'],
+  };
+
+  it('parses a well-formed cloze', () => {
+    expect(parsePatternExercise(raw, { pattern: '-다가' }, 'cloze')).toEqual({
+      format: 'cloze',
+      sentence: '집에 ___ 편의점에 들렀어요.',
+      meaning: 'On my way home I stopped at a convenience store.',
+      input: '가다',
+      expected: '가다가',
+      alternates: ['가다가요'],
+    });
+  });
+
+  // A sentence the UI cannot find a gap in is a turn the learner cannot
+  // answer — better to fail into the retry path than to render it.
+  it('rejects a sentence with no gap', () => {
+    const parsed = parsePatternExercise({ ...raw, sentence: '집에 가다가 들렀어요.' }, undefined, 'cloze');
+    expect(parsed).toBeNull();
+  });
+
+  it('rejects a cloze with nothing to grade against', () => {
+    expect(parsePatternExercise({ ...raw, expected: '  ' }, undefined, 'cloze')).toBeNull();
+  });
+
+  // Models are inconsistent about blank length and bracket style even under a
+  // precise instruction. Cheaper to accept the variants than to retry.
+  it('normalizes whatever the model used for the gap', () => {
+    for (const gap of ['_____', '[...]', '[___]', '(___)', '＿＿＿']) {
+      const parsed = parsePatternExercise({ ...raw, sentence: `집에 ${gap} 들렀어요.` }, undefined, 'cloze');
+      expect(parsed).toMatchObject({ sentence: '집에 ___ 들렀어요.' });
+    }
+  });
+
+  it('keeps the turn when the meaning is missing', () => {
+    // It costs the scaffolding that makes the cloze meaningful rather than
+    // mechanical — worth knowing about, not worth losing the turn over.
+    const parsed = parsePatternExercise({ ...raw, meaning: '' }, undefined, 'cloze');
+    expect(parsed).toMatchObject({ meaning: '', expected: '가다가' });
+  });
+
+  it('omits an absent input rather than storing an empty one', () => {
+    const { input, ...noInput } = raw;
+    expect(input).toBeTruthy();
+    expect(parsePatternExercise(noInput, undefined, 'cloze')).not.toHaveProperty('input');
+  });
+});
+
+describe('gradeCloze', () => {
+  const exercise = { expected: '가다가', alternates: ['가다가요'] };
+
+  it('is easy on a clean first-try match', () => {
+    // The one path to `easy`, and the thing that un-sticks the ease ratchet: a
+    // string comparison is not a judgement that could be wrong.
+    expect(gradeCloze('가다가', exercise)).toEqual({ verdict: 'easy', reached: true });
+  });
+
+  it('accepts an alternate', () => {
+    expect(gradeCloze('가다가요', exercise).reached).toBe(true);
+  });
+
+  it('is again on a miss, with no partial credit', () => {
+    expect(gradeCloze('가서', exercise)).toEqual({ verdict: 'again', reached: false });
+  });
+
+  it('ignores case, surrounding space and Korean word spacing', () => {
+    expect(gradeCloze('  가다가  ', exercise).reached).toBe(true);
+    expect(gradeCloze('AI MANGÉ', { expected: 'ai mangé', alternates: [] }).reached).toBe(true);
+    expect(gradeCloze('가 다가', exercise).reached).toBe(true);
+  });
+
+  // The elision case is exactly why cloze grading cannot reuse
+  // `normalizeForMatch`, which strips punctuation wholesale: there, `d'` would
+  // compare equal to `d` and the rule being practised would be ungradeable.
+  it('does not strip the punctuation that IS the answer', () => {
+    const elision = { expected: "d'", alternates: [] };
+    expect(gradeCloze("d'", elision).reached).toBe(true);
+    expect(gradeCloze('d', elision).reached).toBe(false);
+    expect(gradeCloze('de', elision).reached).toBe(false);
+  });
+
+  // Measured against the live model, not anticipated: asked for a French
+  // elision cloze it answered `d’` with a curly apostrophe, which no learner
+  // types. Unfolded, the one rule that prompted this redesign is ungradeable.
+  it('folds typographic marks to what a keyboard produces', () => {
+    expect(gradeCloze("d'", { expected: 'd’', alternates: [] }).reached).toBe(true);
+    expect(gradeCloze('d’', { expected: "d'", alternates: [] }).reached).toBe(true);
+    expect(gradeCloze('co-op', { expected: 'co‑op', alternates: [] }).reached).toBe(true);
+  });
+
+  it('caps a hinted match the same way production is capped', () => {
+    expect(gradeCloze('가다가', exercise, 1).verdict).toBe('hard');
+    expect(gradeCloze('가다가', exercise, 2).verdict).toBe('again');
+  });
+});
+
+describe('overrideGrade', () => {
+  it('re-grades a wrong verdict as correct', () => {
+    expect(overrideGrade(0)).toEqual({ verdict: 'good', reached: true, overridden: true });
+  });
+
+  // It corrects the correctness judgement, not the effort one — so a hint
+  // taken still costs what it cost, and at tier 2 the override does nothing,
+  // which is why the UI does not offer it there.
+  it('still respects what the hints cost', () => {
+    expect(overrideGrade(1).verdict).toBe('hard');
+    expect(overrideGrade(2).verdict).toBe('again');
+  });
+
+  it('never claims the answer was easy', () => {
+    // The learner is telling us they were right, which is not the same as
+    // telling us it was effortless.
+    expect(overrideGrade(0).verdict).not.toBe('easy');
   });
 });
 
@@ -73,6 +235,11 @@ describe('clampForHints', () => {
     expect(clampForHints('good', 1)).toBe('hard');
     expect(clampForHints('good', 2)).toBe('again');
     expect(clampForHints('hard', 1)).toBe('hard');
+  });
+
+  it('leaves tier zero uncapped, which is how a clean cloze reaches easy', () => {
+    expect(clampForHints('easy', 0)).toBe('easy');
+    expect(clampForHints('easy', 1)).toBe('hard');
   });
 
   it('never improves a verdict', () => {
@@ -150,6 +317,23 @@ describe('pattern scheduling', () => {
   it('keeps the due list in the order given', () => {
     const list = [{ production: at(future) }, { production: undefined }, { production: at(past) }];
     expect(duePatterns(list, now)).toEqual([list[1], list[2]]);
+  });
+
+  it('queues exactly what is due, shuffled', () => {
+    // Interleaving beats blocking for grammar on delayed tests. The order is
+    // random, so the contract testable here is membership — that the queue is
+    // the due set and nothing else.
+    const list = [{ production: at(future) }, { production: undefined }, { production: at(past) }];
+    const queue = buildPatternQueue(list, now);
+    expect(queue).toHaveLength(2);
+    expect(new Set(queue)).toEqual(new Set([list[1], list[2]]));
+  });
+
+  it('does not disturb the caller\'s array', () => {
+    const list = [{ production: undefined }, { production: at(past) }];
+    const before = [...list];
+    buildPatternQueue(list, now);
+    expect(list).toEqual(before);
   });
 });
 

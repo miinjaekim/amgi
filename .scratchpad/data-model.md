@@ -300,6 +300,22 @@ interface ClozeExercise {
   /** One sentence with a gap where the pattern goes. */
   sentence: string;
   /**
+   * The whole sentence in the learner's native language — **always shown, not a
+   * hint.**
+   *
+   * This is what makes the cloze *meaningful* practice rather than mechanical,
+   * and that distinction is the one the literature is sharpest about: a gap
+   * filled without understanding the sentence is the drill type nothing
+   * supports. It also mirrors what a production turn already does — there the
+   * meaning is handed over as a situation and the learner supplies the form.
+   * A cloze gives the meaning *and* most of the sentence, which is precisely
+   * what "one rung more scaffolded" means.
+   *
+   * So yes, it gives away the relation being expressed. That was never the part
+   * being tested.
+   */
+  meaning: string;
+  /**
    * The base form to put into the gap, when the gap needs one — `가다` for a
    * `-다가` cloze, `de` for an elision cloze. Absent where the slot is bare, as
    * for a particle choice, and there the sentence and the hint carry it alone.
@@ -347,16 +363,47 @@ Four consequences to design for rather than discover:
   makes that override cheap and obviously correct to offer, because the expected
   answer is on screen and the learner can see whether theirs was also right.
 
-#### Grading and verdicts
+#### Grading, verdicts, and the override — decided 2026-08-08
 
-Cloze grades locally to `good` on a match and `again` otherwise, then the
-existing hint clamp applies — so `hard` is reachable on a cloze only by having
-taken one hint. Binary-plus-clamp is the same shape `drill.ts` uses (knew /
-missed) and needs no new machinery. Production grading is unchanged from (1a):
-`/api/writing`, `targetForms` for the reach check, findings for the form check.
+Cloze grades locally: an exact match against `expected` or one of `alternates`,
+then the hint clamp. Production grading is unchanged from (1a): `/api/writing`,
+`targetForms` for the reach check, findings for the form check.
 
-`easy` is still never emitted, so the **ease ratchet warning stands unchanged**
-and is now the strongest remaining argument for resolving the override question.
+**The learner may override a wrong verdict.** This was the last of the three
+open questions and it closes here. On any verdict below `good`, one control —
+"my answer was right too" — re-grades as if the answer had been correct.
+
+Why it closes now rather than staying open: cloze makes it *cheap and obviously
+correct*. The expected answer is on screen next to what the learner typed, so
+they are not appealing a judgement, they are reading two strings and telling us
+the generator's `alternates` list was short. That is a question they can answer
+better than the model can, which is exactly when an override is legitimate.
+
+- **The override changes the correctness judgement, not the effort judgement.**
+  It re-grades to `good` and then applies the same hint clamp, so at tier 1 it
+  yields `hard` and at tier 2 it yields `again` — i.e. it does nothing at tier
+  2, where the answer had already been shown. That is the honest result, not a
+  gap.
+- **It never writes anything the learner did not assert.** A skipped turn and a
+  failed grading still write no `ReviewTracking` at all.
+
+**`easy` is emitted, and the ease ratchet closes.** A cloze answered correctly
+with **no hints taken** grades `easy`, not `good`. The reasoning is specific to
+cloze and does not extend to production: an exact string match is not a
+judgement that could be wrong, so a clean hit is precisely the signal `easy`
+exists for. Production stays capped at `good`, because there the verdict is
+derived from a model's reading and a false `easy` inflates the interval on the
+strength of a guess.
+
+That makes `easy` reachable on exactly one path, and it is enough to un-stick
+the ratchet: ease can now climb for a pattern the learner reliably knows, where
+before it could only fall. The trivial-rule case this most helps is the one that
+prompted the redesign — `de` → `d'` climbs out to long intervals fast, which is
+the scheduler answering "does this really need practising" on its own.
+
+`PatternVerdict` therefore becomes `'again' | 'hard' | 'good' | 'easy'`, which
+is `getNextReviewData`'s existing signature — no scheduler change, and `sm2.ts`
+stays untouched in fact as well as in file.
 
 ## Firestore collections
 

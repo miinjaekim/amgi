@@ -18,9 +18,18 @@ import { doc, updateDoc } from 'firebase/firestore';
 import { t } from '@/lib/i18n';
 import CardDetailModal from '@/components/CardDetailModal';
 import ImportModal from '@/components/ImportModal';
+import PatternsPanel from '@/components/PatternsPanel';
 
 type SortKey = 'newest' | 'oldest' | 'az';
 type FilterKey = 'active' | 'archived' | 'all';
+/**
+ * Cards and grammar patterns are different objects with different review verbs,
+ * so this is a mode switch rather than another deck chip: `filterCardsByDeck`
+ * returns `Flashcard[]`, and a pattern is not one. They share this page because
+ * it is already "the things you have saved", and a fifth nav entry for a list
+ * of ten items would cost more than it returned.
+ */
+type LibraryMode = 'cards' | 'patterns';
 
 function highlight(text: string, query: string): React.ReactElement {
   if (!query.trim()) return <>{text}</>;
@@ -56,6 +65,7 @@ export default function CardsPage() {
   const [showImport, setShowImport] = useState(false);
   const [importSuccess, setImportSuccess] = useState<string | null>(null);
   const [showExportMenu, setShowExportMenu] = useState(false);
+  const [mode, setMode] = useState<LibraryMode>('cards');
 
   const langConfig = getStudyLanguageConfig(studyLanguage);
   const backConfig = getBackSideConfig(studyLanguage, nativeLanguage);
@@ -306,7 +316,10 @@ export default function CardsPage() {
     <div className="max-w-2xl mx-auto font-mono text-base pb-36" style={{ color: 'var(--color-text)' }}>
       <div className="flex items-start justify-between mt-8 mb-2">
         <h1 className="text-2xl font-bold text-[var(--color-highlight)]">{t(nativeLanguage, 'cardsPageTitle')}</h1>
-        {user && (
+        {/* Import and export are card-shaped — CSV columns, Anki notes — so
+            they leave with the card list rather than sitting greyed out over a
+            list they cannot act on. */}
+        {user && mode === 'cards' && (
           <div className="flex items-center gap-2">
             <button
               onClick={() => setShowImport(true)}
@@ -365,6 +378,34 @@ export default function CardsPage() {
           </Link>
         </div>
       ) : (
+        <>
+          {/* Mode switch, above everything. Sits outside the filter rows on
+              purpose: those all narrow one list, and this one changes which
+              list you are looking at. */}
+          <div className="flex gap-2 mb-4">
+            {(['cards', 'patterns'] as LibraryMode[]).map(m => (
+              <button
+                key={m}
+                onClick={() => setMode(m)}
+                className="px-4 py-2 rounded-lg text-sm font-semibold border transition-colors"
+                style={
+                  mode === m
+                    ? { background: 'var(--color-highlight)', color: 'var(--color-bg)', borderColor: 'var(--color-highlight)' }
+                    : { background: 'transparent', color: 'var(--color-text)', borderColor: 'var(--color-muted)' }
+                }
+              >
+                {t(nativeLanguage, m === 'cards' ? 'libraryModeCards' : 'libraryModePatterns')}
+              </button>
+            ))}
+          </div>
+
+          {mode === 'patterns' ? (
+            <PatternsPanel
+              uid={user.uid}
+              studyLanguage={studyLanguage}
+              nativeLanguage={nativeLanguage}
+            />
+          ) : (
         <>
           {/* Search */}
           <div className="mb-4">
@@ -624,10 +665,12 @@ export default function CardsPage() {
             </ul>
           )}
         </>
+          )}
+        </>
       )}
 
       {/* Bulk action bar */}
-      {selectMode && (
+      {selectMode && mode === 'cards' && (
         <div
           className="fixed bottom-16 sm:bottom-0 left-0 sm:left-[var(--sidenav-w,14rem)] right-0 z-40 border-t"
           style={{ background: 'var(--color-bg)', borderColor: 'var(--color-muted)' }}

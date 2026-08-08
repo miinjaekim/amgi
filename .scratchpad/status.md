@@ -162,14 +162,33 @@ had to be squeezed into it, which is (2). (1) is an independent gap.
   fighting a constraint rather than merely being un-Amgi. Errors-as-syllabus is
   well-founded — the patterns you get wrong are by construction the ones at your
   developmental edge.
-- **Still open, and now the sharpest of the three:** the learner override. It
-  was already the home for the `easy` the ease ratchet removes; it is now also
-  the only honest mitigation for a wrong verdict off a thin `alternates` or
-  `targetForms` list — and cloze makes it *cheap and obviously right* to offer,
-  because the expected answer is on screen and the learner can see whether
-  theirs was also correct. Two trials and the research now point at it. The
-  other two: folding into the vocab queue (above), and an unprompted tier-1 hint
-  after an idle, which now applies to production turns only.
+- **The learner override is in, and the ease ratchet closes with it.** _User's
+  call, 2026-08-08 — this was the last of the three opens._ On any verdict below
+  `good`, one control re-grades as if the answer had been right. Cloze is what
+  made it obviously correct rather than merely tempting: the expected answer sits
+  on screen beside what the learner typed, so they are not appealing a
+  judgement, they are reading two strings and reporting that `alternates` was
+  short. It re-grades correctness, not effort — the hint clamp still applies, so
+  at tier 2 it does nothing, which is right.
+  Separately, **a hint-free exact cloze match now emits `easy`**, which is what
+  actually un-sticks the ratchet. That reasoning is cloze-specific: a string
+  comparison is not a judgement that can be wrong, so a clean hit is exactly the
+  signal `easy` is for. Production stays capped at `good`. `sm2.ts` is still
+  untouched — `getNextReviewData` already takes all four responses.
+  **Two opens remain:** folding into the vocab queue (above), and an unprompted
+  tier-1 hint after an idle, which now applies to production turns only.
+- **What building it corrected** (2026-08-08, same day): only one thing, and it
+  was found by running the real model rather than by reasoning. Asked for a
+  French elision cloze, Gemini returns `d’` with a **curly** apostrophe — which
+  no learner types, so the single rule that prompted this entire redesign would
+  have been ungradeable on every attempt. Cloze comparison now folds
+  typographic apostrophes, quotes and dashes to their ASCII forms. Worth
+  remembering as a class of bug rather than an instance: the cloze grader is
+  exact by design, so *every* character the model and the keyboard disagree
+  about is a false negative.
+  Classification was verified live at the same time and needed no change —
+  `-는데` came back `choice` off a naturalness finding, and both French elisions
+  came back `form` off grammar findings.
 - **Recorded, not solved:** the meta-analyses behind all of this largely
   measured *explicit* knowledge — being good at grammar exercises. The claim
   that any of it transfers to writing Korean rests on the production rung and on

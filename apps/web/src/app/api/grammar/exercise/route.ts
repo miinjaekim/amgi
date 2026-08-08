@@ -7,19 +7,26 @@ function stripMarkdownCodeBlock(text: string): string {
 }
 
 /**
- * Generates one exercise for one grammar pattern.
+ * Generates one exercise for one grammar pattern, at whichever rung it is on.
  *
- * This is the *only* new model call the feature adds. Grading is `/api/writing`
- * unchanged — a pattern review is a one-sentence writing review with a target,
- * and inventing a second grading prompt is the parallel-endpoint drift this
- * codebase has paid for before.
+ * Two arms, because practice runs controlled → free and the learner's stage
+ * picks between them (`exerciseFormat`). A **cloze** is one sentence with the
+ * pattern blanked; a **production** turn is a situation to express freely.
  *
- * Language-generic, like `/api/writing` and unlike `/api/explain` — one prompt
- * rather than six branches splitting again on context. That is exactly why the
- * writing-finding door ships before the Learn door.
+ * This route is the only model call a cloze turn costs — grading one is a local
+ * string comparison, so there is no second round trip and no grading variance.
+ * A production turn additionally grades through `/api/writing` unchanged, since
+ * a pattern review is a one-sentence writing review with a target and inventing
+ * a second grading prompt is the parallel-endpoint drift this codebase has paid
+ * for before.
+ *
+ * Both arms are language-generic, like `/api/writing` and unlike `/api/explain`
+ * — one prompt each rather than six branches splitting again on context. That
+ * is exactly why the writing-finding door ships before the Learn door.
  */
 export async function POST(req: NextRequest) {
   const {
+    format = 'production',
     pattern,
     gloss = {},
     note,
@@ -61,10 +68,68 @@ export async function POST(req: NextRequest) {
     ? '\n- Write all Mandarin in Traditional characters (繁體字) as used in Taiwan, never Simplified (简体字).'
     : '';
 
-  const prompt = `A learner of ${language} is practising one grammar pattern by producing
+  const patternHeader = `PATTERN: ${pattern}${glossText ? `\nWHAT IT DOES: ${glossText}` : ''}${note ? `\nWHEN TO REACH FOR IT: ${note}` : ''}`;
+
+  const clozePrompt = `A learner of ${language} is practising one grammar pattern. Write them ONE
+fill-in-the-blank exercise.
+
+${patternHeader}
+
+Return four things.
+
+1. "sentence" — ONE natural ${language} sentence that uses this pattern, with the
+part the pattern contributes replaced by exactly three underscores: ___
+Everything else in the sentence stays intact. Exactly one gap, never two.
+
+The sentence must make the answer INFERABLE. A learner who knows this pattern
+should be able to fill the gap with confidence — so the surrounding words have to
+pin down which relation is wanted, and must not leave two equally good answers
+sitting in the gap. This is the single most important property; a gap with three
+defensible fillers is a broken exercise.
+
+Keep it short and everyday, one clause or two. Vary it: this same pattern comes
+round again and the learner must not be answering from memory of a previous
+sentence.
+
+Do NOT name the pattern anywhere in the sentence or elsewhere in your response
+except where asked below.
+
+2. "meaning" — the whole sentence, gap filled in, rendered naturally in
+${nativeLanguage}. This is shown to the learner alongside the gap, so they know
+what they are trying to say. Translate the complete thought, not the fragment.
+
+3. "input" — the base or dictionary form the learner must transform to fill the
+gap: 가다 for a Korean -다가 gap, "de" for a French elision gap, an infinitive for
+a tense gap. Give it whenever the gap is built out of some other word, so the
+learner is being tested on the pattern rather than on guessing which verb you
+had in mind. OMIT this field entirely when the gap is a bare slot with nothing to
+transform, such as a particle or article choice.
+
+4. "expected" — exactly the text that belongs in the gap. Just the gap's
+contents: if the sentence is "영화를 ___ 잠들었어요." then expected is "보다가", not
+the whole sentence and not "___보다가".
+
+5. "alternates" — an array of every OTHER answer that would also be correct in
+that exact gap. Different politeness levels, contracted and uncontracted forms,
+regional variants, spacing variants — anything a competent learner might
+reasonably type that a teacher would mark right. The learner's answer is compared
+against this list by exact match, so **be generous**: a missing alternate marks a
+correct answer wrong, which is the worst thing this exercise can do. Return an
+empty array only when the gap genuinely admits one single form.${scriptRule}
+
+Respond with only this JSON:
+{
+  "sentence": "a ${language} sentence with exactly one ___ gap",
+  "meaning": "the whole sentence in ${nativeLanguage}",
+  "input": "the base form to transform, omitted if there is nothing to transform",
+  "expected": "just what goes in the gap",
+  "alternates": ["another acceptable filling", "…"]
+}`;
+
+  const productionPrompt = `A learner of ${language} is practising one grammar pattern by producing
 sentences with it. Write them ONE exercise.
 
-PATTERN: ${pattern}${glossText ? `\nWHAT IT DOES: ${glossText}` : ''}${note ? `\nWHEN TO REACH FOR IT: ${note}` : ''}
+${patternHeader}
 
 Return four things.
 
@@ -127,11 +192,14 @@ Respond with only this JSON:
   "targetForms": ["a fragment", "another fragment", "…"]
 }`;
 
+  const isCloze = format === 'cloze';
+
   try {
-    const result = await model.generateContent(prompt);
+    const result = await model.generateContent(isCloze ? clozePrompt : productionPrompt);
     const parsed = parsePatternExercise(
       JSON.parse(stripMarkdownCodeBlock(result.response.text())),
       { pattern },
+      isCloze ? 'cloze' : 'production',
     );
 
     if (!parsed) {
