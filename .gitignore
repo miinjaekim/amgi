@@ -64,6 +64,9 @@ docs/*
 !docs/testflight-beta-info.md
 # ...and the local-model research answer, which the backlog item points at.
 !docs/local-model.md
+# ...and the grammar research, which the grammar item points at and which the
+# design is now derived from rather than merely informed by.
+!docs/grammar-research.md
 
 # pronunciation audio test output (throwaway)
 /audio-test/

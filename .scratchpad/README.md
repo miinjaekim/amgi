@@ -35,6 +35,14 @@ Related docs outside this folder:
   first step (a shared term cache, not a model). **The item is closed** — read
   this and the Decisions entry in `status.md` before reopening the on-device
   question.
+- `docs/grammar-research.md` — what SLA research says about how grammar is
+  learned and practised, written 2026-08-08 after the first grammar-patterns
+  trial failed. **Read it before touching the grammar design**: it confirms
+  three decisions already made (no curriculum, no multiple choice, spacing),
+  contradicts one (free production was made rung one when the evidence puts it
+  third), settles the interleaving question, and documents Bunpro as the closest
+  prior art — including the failure mode Amgi would inherit by copying it.
+  Tracked via an explicit `!docs/grammar-research.md` re-include.
 - `docs/testflight-beta-info.md` — TestFlight listing copy, Korean *and*
   English in one file (the `-ko` suffix was dropped 2026-08-02 for that
   reason). Tracked, despite `.gitignore` excluding `docs/*`, via an explicit
