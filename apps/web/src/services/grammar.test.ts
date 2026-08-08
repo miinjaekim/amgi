@@ -89,12 +89,62 @@ describe('parsePatternExercise', () => {
 
 describe('parsePatternExercise — cloze', () => {
   const raw = {
+    full: '집에 가다가 편의점에 들렀어요.',
     sentence: '집에 ___ 편의점에 들렀어요.',
     meaning: 'On my way home I stopped at a convenience store.',
     input: '가다',
     expected: '가다가',
     alternates: ['가다가요'],
   };
+
+  // The exact exercise that came back from a real session, and the reason the
+  // `full` round-trip check exists. Asked for `jouer à + jeu`, the model
+  // deleted "jouer" along with the gap but left it out of `expected` too, so
+  // filling the answer in produced "Mon frère adore au football" — not French.
+  // The learner wrote "jouer au", which is correct, and was marked wrong.
+  it('rejects an exercise whose answer does not rebuild the sentence', () => {
+    const broken = {
+      full: 'Mon frère adore jouer au football chaque week-end.',
+      sentence: 'Mon frère adore ___ football chaque week-end.',
+      meaning: 'My brother loves playing football every weekend.',
+      input: 'à',
+      expected: 'au',
+      alternates: [],
+    };
+    expect(parsePatternExercise(broken, undefined, 'cloze')).toBeNull();
+  });
+
+  it('accepts either gap width, so long as it rebuilds', () => {
+    const wide = {
+      full: 'Mon frère adore jouer au football.',
+      sentence: 'Mon frère adore ___ football.',
+      expected: 'jouer au',
+      meaning: 'My brother loves playing football.',
+      alternates: [],
+    };
+    const narrow = { ...wide, sentence: 'Mon frère adore jouer ___ football.', expected: 'au' };
+    expect(parsePatternExercise(wide, undefined, 'cloze')).not.toBeNull();
+    expect(parsePatternExercise(narrow, undefined, 'cloze')).not.toBeNull();
+  });
+
+  // Teaching wrong grammar is the worst thing this feature can do, so an
+  // unverifiable exercise fails visibly into retry rather than being shown.
+  it('rejects a cloze it cannot verify', () => {
+    const { full, ...noFull } = raw;
+    expect(full).toBeTruthy();
+    expect(parsePatternExercise(noFull, undefined, 'cloze')).toBeNull();
+  });
+
+  it('does not reject over whitespace or curly punctuation', () => {
+    const spaced = {
+      full: "J'ai besoin d’eau.",
+      sentence: "J'ai besoin  ___ eau.",
+      expected: 'd’',
+      meaning: 'I need water.',
+      alternates: [],
+    };
+    expect(parsePatternExercise(spaced, undefined, 'cloze')).not.toBeNull();
+  });
 
   it('parses a well-formed cloze', () => {
     expect(parsePatternExercise(raw, { pattern: '-다가' }, 'cloze')).toEqual({
@@ -122,7 +172,11 @@ describe('parsePatternExercise — cloze', () => {
   // precise instruction. Cheaper to accept the variants than to retry.
   it('normalizes whatever the model used for the gap', () => {
     for (const gap of ['_____', '[...]', '[___]', '(___)', '＿＿＿']) {
-      const parsed = parsePatternExercise({ ...raw, sentence: `집에 ${gap} 들렀어요.` }, undefined, 'cloze');
+      const parsed = parsePatternExercise(
+        { ...raw, full: '집에 가다가 들렀어요.', sentence: `집에 ${gap} 들렀어요.` },
+        undefined,
+        'cloze',
+      );
       expect(parsed).toMatchObject({ sentence: '집에 ___ 들렀어요.' });
     }
   });

@@ -296,6 +296,30 @@ export function parsePatternExercise(
     // and asked to fill nothing. Better to fail the turn into the retry path
     // than to render something unanswerable.
     if (!sentence.includes(CLOZE_GAP)) return null;
+
+    // **The gap and the answer must agree, and this is checked rather than
+    // trusted.** Observed in a trial: asked for `jouer à + jeu`, the model
+    // produced "Mon frère adore ___ football", meaning "loves *playing*
+    // football", and `expected: "au"` — so it had silently deleted "jouer"
+    // along with the gap. Filling in the answer gave "Mon frère adore au
+    // football", which is not French, and a learner who correctly wrote
+    // "jouer au" was marked wrong by their own app.
+    //
+    // Prompt wording cannot make that impossible; a redundant field can.
+    // Generation returns the complete sentence separately, and the exercise is
+    // only usable if filling the gap reproduces it exactly. A model that
+    // deletes a word it did not put in `expected` now fails this check and the
+    // turn regenerates. Teaching wrong grammar is the worst thing this feature
+    // can do, so a visible retry is the right side to fail on.
+    // Whitespace-insensitive, for a reason the strict version got wrong on its
+    // first run: an elision attaches with no space, so a model writing
+    // "J'ai besoin ___ eau." with `expected: "d'"` rebuilds to "d' eau" where
+    // `full` has "d'eau". That is a correct exercise and must not be thrown
+    // away. Ignoring spacing still catches the failure this check exists for —
+    // a missing "jouer" is a missing word, not a missing space.
+    if (!isNonEmptyString(r.full)) return null;
+    if (!sameSentence(sentence.split(CLOZE_GAP).join(r.expected), r.full)) return null;
+
     const alternates = Array.isArray(r.alternates)
       ? r.alternates.filter(isNonEmptyString).map(a => a.trim())
       : [];
@@ -480,25 +504,46 @@ export function overrideGrade(hintTier: HintTier = 0): PatternGrade {
  * compared with all of it removed, because Korean spacing varies legitimately
  * between writers and is not what a grammar cloze is testing.
  */
+/**
+ * Case, composition, whitespace and typographic marks neutralized.
+ *
+ * The typographic folding is measured, not anticipated: asked for a French
+ * elision cloze the model returned `d’` with a curly apostrophe, which no
+ * learner types — so the one rule that prompted the cloze redesign would have
+ * been ungradeable. The same applies to the quotes and dashes a generated
+ * sentence picks up.
+ *
+ * Deliberately does NOT strip punctuation the way `normalizeForMatch` does:
+ * on an elision cloze the apostrophe *is* the answer, and `d'` must not
+ * compare equal to `d`.
+ */
+function foldText(text: string): string {
+  return text
+    .normalize('NFC')
+    .replace(/[‘’ʼ′]/g, "'")
+    .replace(/[“”]/g, '"')
+    .replace(/[‐‑‒–—]/g, '-')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, ' ');
+}
+
+/**
+ * Two strings that say the same thing, ignoring spacing.
+ *
+ * Spacing is ignored for two independent reasons that happen to want the same
+ * rule: Korean word spacing varies legitimately between writers and is not what
+ * a grammar cloze tests, and an elision attaches with no space where a gap in
+ * the template has one either side of it.
+ */
+function sameSentence(a: string, b: string): boolean {
+  const x = foldText(a);
+  const y = foldText(b);
+  return x === y || x.replace(/\s/g, '') === y.replace(/\s/g, '');
+}
+
 function clozeMatches(answer: string, candidate: string): boolean {
-  const normalize = (text: string) =>
-    text
-      .normalize('NFC')
-      // Typographic variants of the marks that carry meaning here, folded to
-      // their ASCII forms. Measured, not anticipated: asked for a French
-      // elision cloze the model returned `d’` with a curly apostrophe, which no
-      // learner types — so the one rule that prompted this whole redesign would
-      // have been ungradeable. The same applies to the quotes and dashes a
-      // generated sentence picks up.
-      .replace(/[‘’ʼ′]/g, "'")
-      .replace(/[“”]/g, '"')
-      .replace(/[‐‑‒–—]/g, '-')
-      .trim()
-      .toLowerCase()
-      .replace(/\s+/g, ' ');
-  const a = normalize(answer);
-  const b = normalize(candidate);
-  return a === b || a.replace(/\s/g, '') === b.replace(/\s/g, '');
+  return sameSentence(answer, candidate);
 }
 
 /**

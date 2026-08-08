@@ -75,41 +75,63 @@ fill-in-the-blank exercise.
 
 ${patternHeader}
 
-Return four things.
+Work in this order. Write the complete sentence FIRST, then decide what to
+remove from it. Doing it the other way round is how these go wrong.
 
-1. "sentence" — ONE natural ${language} sentence that uses this pattern, with the
-part the pattern contributes replaced by exactly three underscores: ___
-Everything else in the sentence stays intact. Exactly one gap, never two.
-
-The sentence must make the answer INFERABLE. A learner who knows this pattern
-should be able to fill the gap with confidence — so the surrounding words have to
-pin down which relation is wanted, and must not leave two equally good answers
-sitting in the gap. This is the single most important property; a gap with three
-defensible fillers is a broken exercise.
+1. "full" — ONE complete, natural, fully grammatical ${language} sentence that
+uses this pattern. Nothing removed, nothing blanked. This is the sentence a
+native speaker would actually say.
 
 Keep it short and everyday, one clause or two. Vary it: this same pattern comes
 round again and the learner must not be answering from memory of a previous
 sentence.
 
+2. "expected" — the exact substring of "full" that you are going to blank out.
+Copy it character for character out of "full". It must be everything the pattern
+contributes and nothing else.
+
+3. "sentence" — "full" with that exact substring replaced by three underscores:
+___ and NOTHING else changed. Exactly one gap, never two.
+
+⚠️ THE CHECK THAT MATTERS: take "sentence", put "expected" back into the gap,
+and read it. You must get "full" back, character for character. If you deleted a
+word that is not in "expected", you have broken the exercise and the learner
+will be marked wrong for writing correct ${language}.
+
+  WRONG — "jouer" vanished and is in neither field:
+    full:     "Mon frère adore jouer au football."
+    sentence: "Mon frère adore ___ football."
+    expected: "au"          → fills to "Mon frère adore au football." ✗ not French
+
+  RIGHT — the gap covers everything that was removed:
+    sentence: "Mon frère adore ___ football."
+    expected: "jouer au"    → fills back to "full" ✓
+
+  ALSO RIGHT — a smaller gap, with the rest left in place:
+    sentence: "Mon frère adore jouer ___ football."
+    expected: "au"          → fills back to "full" ✓
+
+The gap must make the answer INFERABLE. A learner who knows this pattern should
+be able to fill it with confidence — so the surrounding words have to pin down
+which relation is wanted, and must not leave two equally good answers sitting in
+the gap. A gap with three defensible fillers is a broken exercise.
+
 Do NOT name the pattern anywhere in the sentence or elsewhere in your response
 except where asked below.
 
-2. "meaning" — the whole sentence, gap filled in, rendered naturally in
-${nativeLanguage}. This is shown to the learner alongside the gap, so they know
-what they are trying to say. Translate the complete thought, not the fragment.
+4. "meaning" — "full", rendered naturally in ${nativeLanguage}. This is shown to
+the learner alongside the gap, so they know what they are trying to say.
+Translate the complete sentence — it must describe the same thing "full" says,
+including whatever sits inside the gap.
 
-3. "input" — the base or dictionary form the learner must transform to fill the
+5. "input" — the base or dictionary form the learner must transform to fill the
 gap: 가다 for a Korean -다가 gap, "de" for a French elision gap, an infinitive for
 a tense gap. Give it whenever the gap is built out of some other word, so the
 learner is being tested on the pattern rather than on guessing which verb you
 had in mind. OMIT this field entirely when the gap is a bare slot with nothing to
 transform, such as a particle or article choice.
 
-4. "expected" — exactly the text that belongs in the gap. Just the gap's
-contents: if the sentence is "영화를 ___ 잠들었어요." then expected is "보다가", not
-the whole sentence and not "___보다가".
-
-5. "alternates" — an array of every OTHER answer that would also be correct in
+6. "alternates" — an array of every OTHER answer that would also be correct in
 that exact gap. Different politeness levels, contracted and uncontracted forms,
 regional variants, spacing variants — anything a competent learner might
 reasonably type that a teacher would mark right. The learner's answer is compared
@@ -119,10 +141,11 @@ empty array only when the gap genuinely admits one single form.${scriptRule}
 
 Respond with only this JSON:
 {
-  "sentence": "a ${language} sentence with exactly one ___ gap",
-  "meaning": "the whole sentence in ${nativeLanguage}",
+  "full": "the complete grammatical ${language} sentence, nothing removed",
+  "sentence": "that same sentence with exactly one ___ gap",
+  "expected": "the exact substring of full that the gap replaced",
+  "meaning": "full, in ${nativeLanguage}",
   "input": "the base form to transform, omitted if there is nothing to transform",
-  "expected": "just what goes in the gap",
   "alternates": ["another acceptable filling", "…"]
 }`;
 
