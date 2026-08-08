@@ -205,6 +205,9 @@ const translations = {
     // between them is what the diff exists to remove.
     writingViewChanges: 'Changes',
     writingViewFinal: 'Final',
+    copy: 'Copy',
+    copied: 'Copied',
+    copyFailed: 'Copy failed',
     // The rewrite is the one text on screen the user didn't write, so it's the
     // one whose meaning they can't check. This is that check.
     writingRewriteMeaning: 'What that says',
@@ -636,6 +639,9 @@ const translations = {
     writingRewriteHeading: '원어민이라면 이렇게',
     writingViewChanges: '고친 부분',
     writingViewFinal: '완성문',
+    copy: '복사',
+    copied: '복사됨',
+    copyFailed: '복사 실패',
     writingRewriteMeaning: '이런 뜻이에요',
     writingFindingsHeading: '눈여겨볼 점',
     writingNoFindings: '자연스럽게 읽혀요. 따로 짚을 부분이 없네요.',

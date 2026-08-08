@@ -23,6 +23,7 @@ import { t } from '@/lib/i18n';
 import Spinner from '@/components/Spinner';
 import PronounceButton from '@/components/PronounceButton';
 import TextDiff from '@/components/TextDiff';
+import CopyButton from '@/components/CopyButton';
 
 const KIND_LABEL_KEY: Record<FindingKind, TranslationKey> = {
   grammar: 'writingKindGrammar',
@@ -187,15 +188,20 @@ export default function WritingReviewPanel() {
                 {t(nativeLanguage, 'writingRewriteHeading')}
               </h2>
               <PronounceButton text={review.rewrite} studyLanguage={studyLanguage} />
-              {/* The clean rewrite is still worth reaching — it is the version
-                  you would read aloud or copy out, and a heavily edited passage
-                  is hard to read as a sentence through its own diff. */}
-              <button
-                onClick={() => setShowClean(v => !v)}
-                className="ml-auto text-xs px-2.5 py-1 rounded-lg border border-[var(--color-muted)] text-[var(--color-muted)] hover:text-[var(--color-text)] hover:border-[var(--color-text)] transition-colors"
-              >
-                {t(nativeLanguage, showClean ? 'writingViewChanges' : 'writingViewFinal')}
-              </button>
+              <div className="ml-auto flex items-center gap-2">
+                {/* Always the clean rewrite, never the diff — copying markup
+                    with deletions in it would paste back the mistakes. */}
+                <CopyButton text={review.rewrite} nativeLanguage={nativeLanguage} className="hover:text-[var(--color-text)] hover:border-[var(--color-text)]" />
+                {/* The clean rewrite is still worth reaching — it is the
+                    version you would read aloud, and a heavily edited passage
+                    is hard to read as a sentence through its own diff. */}
+                <button
+                  onClick={() => setShowClean(v => !v)}
+                  className="text-xs px-2.5 py-1 rounded-lg border border-[var(--color-muted)] text-[var(--color-muted)] hover:text-[var(--color-text)] hover:border-[var(--color-text)] transition-colors"
+                >
+                  {t(nativeLanguage, showClean ? 'writingViewChanges' : 'writingViewFinal')}
+                </button>
+              </div>
             </div>
             {showClean ? (
               <p className="text-lg leading-relaxed whitespace-pre-wrap text-[var(--color-text)]">{review.rewrite}</p>
