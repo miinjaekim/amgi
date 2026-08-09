@@ -50,10 +50,14 @@ deletion — which Apple looks for under 5.1.1(v)._
 
 ## High
 
-One starred item left. The military terms pack was another and shipped in #81;
-the local model spike was the third and is **closed** — the written answer is
-`docs/local-model.md`, the reasoning and the reopen condition are in
-[status.md](status.md), and the two pieces of it worth doing are under Medium.
+Three items. Grammar patterns is the starred one; spellcheck and term archiving
+were promoted from Medium on 2026-08-09 — both are cases where the app quietly
+does the wrong thing rather than doing nothing, which is why they outrank the
+larger ideas still under Medium. The military terms pack was another starred
+item and shipped in #81; the local model spike was the third and is **closed** —
+the written answer is `docs/local-model.md`, the reasoning and the reopen
+condition are in [status.md](status.md), and the two pieces of it worth doing
+are under Medium.
 
 - [ ] **Grammar patterns — built on both platforms, needs a device pass.** ⭐
       _PR #84, 2026-08-08 → 09._ Read `docs/grammar-research.md` and the grammar
@@ -82,9 +86,8 @@ the local model spike was the third and is **closed** — the written answer is
       gap-card rule, so the duplicate is inert in current code; it stays until no
       old build is in the wild, and with no OTA that is a while.
 
-## Medium
-
-- [ ] **Spellcheck on lookup — "showing results for…".** Type a misspelled term on
+- [ ] **Spellcheck on lookup — "showing results for…".** _Promoted from Medium
+      2026-08-09._ Type a misspelled term on
       Learn today and it goes straight to `/api/explain`, which will confidently
       explain a non-word; save it and the typo is now a card. Handle it the way
       Google does: search the corrected spelling, say **"showing results for X"**,
@@ -97,16 +100,8 @@ the local model spike was the third and is **closed** — the written answer is
       (see the reuse-the-endpoint rule); a separate check is a second call before
       the first. Decide that before building.
 
-- [ ] **Word learning surface — meet a word before it's due.** A new card is
-      immediately due in *both* directions (`isDue` returns both when neither is
-      tracked, `sm2.ts:23`), so a word goes from saved to graded review with no
-      first encounter in between. This is the surface for that first encounter:
-      see it, hear it, use it once, *then* let SM-2 have it.
-      Open before building: whether this writes scheduling at all or is purely a
-      presentation step; if it writes, it is an `sm2.ts` change and the ease
-      ratchet warning in the grammar item applies here too.
-
-- [ ] **Term archiving covers both sides during review.** Archiving from the review
+- [ ] **Term archiving covers both sides during review.** _Promoted from Medium
+      2026-08-09._ Archiving from the review
       manage panel writes the card-level `archived` flag, but
       `advanceAfterManage` (`apps/web/src/app/review/page.tsx:301`) drops only the
       *current index* from the in-session queue. The queue holds one entry per due
@@ -118,7 +113,50 @@ the local model spike was the third and is **closed** — the written answer is
       panel at all, so archiving mid-review isn't possible there. Parity work,
       cheap to do at the same time.
 
+## Medium
 
+- [ ] **Part of speech on cards.** _Raised 2026-08-09; deliberately not built in
+      the same pass, so it queues behind the two items just promoted to High._
+      A card says what a word means and how formal it is, but not what it *is* —
+      so a learner cannot tell a noun from the verb it was derived from, which
+      is exactly the confusion `briefDefinition` is worst at clearing up.
+
+      **Decided:** the badge reads **English** — `noun`, `verb`, `adjective` —
+      one vocabulary across all six study languages. This matches `formality`,
+      which already renders `Standard`/`Honorific` in English on a Korean card,
+      and it means **no i18n keys and no closed vocabulary the model has to be
+      coerced onto**. Revisit only if the rest of the badge row localizes.
+
+      The shape is already precedented twice over: `formality` (Korean-only)
+      and `gender` (Swedish/French-only) are both optional `TermCore` strings
+      rendered as a pill. `partOfSpeech` is the same field that happens to apply
+      everywhere. Touch points, all of them existing badge rows:
+
+      - `packages/core/src/types.ts:236` — `partOfSpeech?: string` on `TermCore`,
+        beside `formality`/`gender`.
+      - `apps/web/src/app/api/explain/route.ts` — the **12 prompt templates**
+        across 6 language branches, each with a rules line and a JSON shape line.
+        This is the bulk of the work and the easy place to miss a branch.
+      - Web render: `page.tsx:489`, `components/ReviewDetailsPanel.tsx:61`,
+        `components/CardDetailModal.tsx:165`, `components/ImportModal.tsx:179`,
+        and the CSV column list in `cards/page.tsx:281`.
+      - Mobile render: `src/components/CardDetailModal.tsx:92`, one entry in the
+        existing `badges` array.
+
+      **Scope is new lookups only.** Old cards and pack cards get no badge, the
+      same way a pre-Swedish card carries no `gender` — no migration. Backfilling
+      the ~600 pack terms is a separate call, and if it happens it should ride
+      the **Precompute depth and examples for the packs** script below rather
+      than being its own pass over the same terms.
+
+- [ ] **Word learning surface — meet a word before it's due.** A new card is
+      immediately due in *both* directions (`isDue` returns both when neither is
+      tracked, `sm2.ts:23`), so a word goes from saved to graded review with no
+      first encounter in between. This is the surface for that first encounter:
+      see it, hear it, use it once, *then* let SM-2 have it.
+      Open before building: whether this writes scheduling at all or is purely a
+      presentation step; if it writes, it is an `sm2.ts` change and the ease
+      ratchet warning in the grammar item applies here too.
 
 - [ ] **Vocabulary packs — iterate beyond v1.** Shipped: TOEIC (133), hiragana +
       katakana, TOPIK 고급 (160), and the two military packs (220 + 254, #81),

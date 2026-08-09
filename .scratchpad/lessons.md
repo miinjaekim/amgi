@@ -163,6 +163,14 @@ Gotchas already paid for. Grouped so you can skim the relevant section.
   modal; collapsing it to a nullable breaks first-load behavior.
 - Effects that load deck data must depend on `studyLanguage` — otherwise
   switching language keeps rendering the previous deck's cards.
+- **A web page opened from mobile is a stranger.** Mobile's Settings opens
+  `/privacy` with `WebBrowser.openBrowserAsync`, which carries **no Firebase
+  auth and no `localStorage`** — so every "has this user set up yet" gate on web
+  fires for a signed-in mobile user who answered months ago. It put the
+  first-run `LanguageSetupModal`, which has no dismiss, on top of the privacy
+  policy. Fixed by exempting `/privacy*` in `LayoutWithUser`. The general rule:
+  **any web route mobile links out to must render for a logged-out first-time
+  visitor**, because from the in-app browser's side that is exactly who it is.
 
 ## Expo / React Native monorepo
 
