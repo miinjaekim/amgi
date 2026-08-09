@@ -24,9 +24,9 @@ unverified on a real binary.
 
 - **PR #80** (merged 2026-08-04) — `/cards` holds pack cards, the mobile filter
   sheet, the first skeletons.
-- **PR #84** (grammar patterns) — the whole feature on both platforms, plus
-  `expo-clipboard`. The one native module in this batch; everything else in it
-  is JS.
+- **PR #84** (merged 2026-08-09, `c70c47c`) — grammar patterns: the whole
+  feature on both platforms, plus `expo-clipboard`. The one native module in
+  this batch; everything else in it is JS.
 - **PR #81** (merged 2026-08-08) — the two military packs reach mobile through
   the shared registry, and the packs list drops the per-pack description. ⚠️ The
   description change was **typechecked but never seen rendered** — the list went
