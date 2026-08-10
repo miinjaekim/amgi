@@ -3,7 +3,9 @@
 import { useEffect, useState } from 'react';
 import {
   getTermExplanation,
+  applySpellingCorrection,
   getDepthTarget,
+  SpellingCorrection,
   TermCore,
   TermDepth,
   TermAmbiguous,
@@ -84,6 +86,13 @@ export default function Home() {
   const [contextInput, setContextInput] = useState('');
   const [wordOfTheDay, setWordOfTheDay] = useState<WordOfTheDay | null>(null);
   const [wotdLoading, setWotdLoading] = useState(true);
+  /**
+   * The spelling question for the lookup on screen, once it has one.
+   * `applied` is which way round it was answered — corrected by default, as
+   * typed after the learner overrides — because the banner has to say which
+   * word these results are about either way, and offer the other one.
+   */
+  const [correction, setCorrection] = useState<(SpellingCorrection & { applied: boolean }) | null>(null);
 
   // A word tapped on a deck page arrives as `?term=`, because looking it up is
   // this page's job. Read from `window.location` rather than `useSearchParams`,
@@ -125,7 +134,21 @@ export default function Home() {
     return () => { cancelled = true; };
   }, [studyLanguage, nativeLanguage]);
 
-  const resolveExplanation = async (termValue: string, context?: string) => {
+  /**
+   * @param exact Look the term up as typed, skipping spellcheck — the
+   *   "search instead for…" override.
+   * @param keptCorrection Carried over from the lookup this one follows on
+   *   from: a declined correction, or the one still in force when a context
+   *   lookup re-asks about a word that was already corrected. Context lookups
+   *   never spellcheck, so without this the banner — and the way back to what
+   *   was typed — would disappear on disambiguating.
+   */
+  const resolveExplanation = async (
+    termValue: string,
+    context?: string,
+    exact = false,
+    keptCorrection?: SpellingCorrection & { applied: boolean },
+  ) => {
     setLoading(true);
     setError(null);
     setCore(null);
@@ -137,8 +160,12 @@ export default function Home() {
     setSaveSuccess(false);
     setShowContextInput(false);
     setContextInput('');
+    setCorrection(null);
     try {
-      const result = await getTermExplanation(termValue, nativeLanguage ?? 'English', context, '', studyLanguage);
+      const raw = await getTermExplanation(termValue, nativeLanguage ?? 'English', context, '', studyLanguage, exact);
+      const { result, correction: spelling } = applySpellingCorrection(raw, termValue);
+      if (spelling) setCorrection({ ...spelling, applied: true });
+      else if (keptCorrection) setCorrection(keptCorrection);
       if ('ambiguous' in result && result.ambiguous) {
         setAmbiguity(result);
       } else {
@@ -168,6 +195,7 @@ export default function Home() {
     setSaveSuccess(false);
     setShowContextInput(false);
     setContextInput('');
+    setCorrection(null);
     setCore(wordOfTheDayCore(wotd, studyLanguage, nativeLanguage));
   };
 
@@ -179,13 +207,30 @@ export default function Home() {
 
   const handleDisambiguate = async (meaningLabel: string) => {
     if (!ambiguity) return;
-    await resolveExplanation(ambiguity.term, meaningLabel);
+    await resolveExplanation(ambiguity.term, meaningLabel, false, correction ?? undefined);
   };
 
   const handleRegenerate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!core || !contextInput.trim()) return;
-    await resolveExplanation(core.term, contextInput.trim());
+    await resolveExplanation(core.term, contextInput.trim(), false, correction ?? undefined);
+  };
+
+  /**
+   * The escape hatch: look up the other spelling. Overriding a correction is
+   * `exact`, so the model cannot simply correct it again; going back to the
+   * correction is an ordinary lookup of a word already known to be spelled
+   * right, so it stays a normal one.
+   */
+  const handleSwitchSpelling = async () => {
+    if (!correction) return;
+    const declined = correction.applied;
+    await resolveExplanation(
+      declined ? correction.typed : correction.corrected,
+      undefined,
+      declined,
+      { ...correction, applied: !declined },
+    );
   };
 
   const handleLoadDepth = async () => {
@@ -312,6 +357,7 @@ export default function Home() {
         setFlashcardDraft(null);
         setShowContextInput(false);
         setContextInput('');
+        setCorrection(null);
         setSaveSuccess(true);
       } catch {
         setError(t(nativeLanguage, 'errorSaveFlashcard'));
@@ -456,9 +502,33 @@ export default function Home() {
         </div>
       )}
 
+      {/* Spelling correction — above whichever of the two results follows, so
+          the learner reads which word this is about before reading about it.
+          Muted rather than a warning: a correction that shouts is one the
+          learner has to dismiss, and being wrong here is expected often
+          enough that the way out sits right beside it. */}
+      {correction && (core || ambiguity) && (
+        <div className="mt-6 text-sm flex flex-wrap items-baseline gap-x-3 gap-y-1">
+          <span className="text-[var(--color-muted)]">
+            {t(nativeLanguage, 'showingResultsFor', {
+              term: correction.applied ? correction.corrected : correction.typed,
+            })}
+          </span>
+          <button
+            onClick={handleSwitchSpelling}
+            disabled={loading}
+            className="text-[var(--color-highlight)] hover:text-[var(--color-text)] transition-colors underline underline-offset-2 disabled:opacity-50"
+          >
+            {t(nativeLanguage, 'searchInsteadFor', {
+              term: correction.applied ? correction.typed : correction.corrected,
+            })}
+          </button>
+        </div>
+      )}
+
       {/* Disambiguation Picker */}
       {ambiguity && (
-        <div className="mt-10 p-6 rounded-xl bg-[var(--color-surface)] shadow-lg border border-[var(--color-muted)]">
+        <div className={`${correction ? "mt-3" : "mt-10"} p-6 rounded-xl bg-[var(--color-surface)] shadow-lg border border-[var(--color-muted)]`}>
           <h2 className="text-2xl font-bold text-[var(--color-highlight)] mb-2">{ambiguity.term}</h2>
           <p className="text-[var(--color-text)] opacity-70 text-sm mb-5">{t(nativeLanguage, 'disambiguationPrompt')}</p>
           <ul className="space-y-3">
@@ -480,7 +550,7 @@ export default function Home() {
 
       {/* Explanation Card */}
       {core && (
-        <div className="mt-10 p-6 rounded-xl bg-[var(--color-surface)] shadow-lg border border-[var(--color-muted)]">
+        <div className={`${correction ? "mt-3" : "mt-10"} p-6 rounded-xl bg-[var(--color-surface)] shadow-lg border border-[var(--color-muted)]`}>
           <div className="flex items-center gap-3 mb-4 flex-wrap">
             <h2 className="text-2xl font-bold text-[var(--color-highlight)]">{core.term}</h2>
             {core.termLanguage === studyLanguage && (

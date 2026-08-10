@@ -11,7 +11,8 @@ import {
 } from '@amgi/core';
 import type { GrammarPattern, StudyLanguage } from '@amgi/core';
 
-export type { ExplainResult, TermCore, TermDepth, TermAmbiguous, ExamplePair } from '@amgi/core';
+export { applySpellingCorrection } from '@amgi/core';
+export type { ExplainResult, TermCore, TermDepth, TermAmbiguous, ExamplePair, SpellingCorrection } from '@amgi/core';
 export type { WordOfTheDay } from '@amgi/core';
 
 const BASE_URL = (process.env.EXPO_PUBLIC_API_BASE_URL ?? '').replace(/\/$/, '');
@@ -21,7 +22,8 @@ export const getTermExplanation = (
   nativeLanguage?: string,
   context?: string,
   studyLanguage: StudyLanguage = 'Korean',
-) => _explain(term, nativeLanguage, context, BASE_URL, studyLanguage);
+  exact = false,
+) => _explain(term, nativeLanguage, context, BASE_URL, studyLanguage, exact);
 
 export const getTermDepth = (
   term: string,

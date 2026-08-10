@@ -1,4 +1,4 @@
-import type { ExamplePair, ExplainResult, TermDepth, StudyLanguage, WordOfTheDay } from './types';
+import type { ExamplePair, ExplainResult, TermDepth, StudyLanguage, WithCorrection, WordOfTheDay } from './types';
 import { getExampleSides } from './types';
 
 /**
@@ -99,21 +99,72 @@ export function depthFieldsToPersist(depth: TermDepth): Partial<TermDepth> {
   return fields;
 }
 
+/**
+ * @param exact Look up exactly what was passed, with no spellcheck. This is
+ *   the "search for what you typed instead" override, and it is also what a
+ *   surface with nowhere to *show* a correction should pass — a bulk import
+ *   writes what comes back straight onto cards, so a silent correction there
+ *   would be a card the learner never agreed to.
+ */
 export async function getTermExplanation(
   term: string,
   nativeLanguage = 'English',
   context?: string,
   baseUrl = '',
-  studyLanguage: StudyLanguage = 'Korean'
+  studyLanguage: StudyLanguage = 'Korean',
+  exact = false
 ): Promise<ExplainResult> {
   const res = await fetch(`${baseUrl}/api/explain`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ term, nativeLanguage, context, studyLanguage }),
+    body: JSON.stringify({ term, nativeLanguage, context, studyLanguage, exact }),
   });
 
   if (!res.ok) throw new Error('Failed to get term explanation');
   return res.json();
+}
+
+/** A lookup that answered about a different spelling than the one typed. */
+export interface SpellingCorrection {
+  /** What the learner typed. */
+  typed: string;
+  /** What the lookup answered about instead. */
+  corrected: string;
+}
+
+/**
+ * Split a lookup into the term to render and the correction to announce.
+ *
+ * Two jobs, both of which have to happen on every surface that looks a word up,
+ * which is why they are here and not in either client:
+ *
+ * 1. **Move the correction onto `term`.** The prompts echo back the term they
+ *    were given, so a corrected lookup returns the typo as `term` and the
+ *    corrected word in every other field — a card saved from it would read
+ *    "annyeonghaseyoo" on the front and be right about nothing else.
+ * 2. **Take `corrected` off.** It is a fact about the lookup, and everything
+ *    downstream spreads this object onto a card.
+ *
+ * A correction is only reported when it is a genuinely different spelling: the
+ * model echoing the term back, or changing only case or surrounding space,
+ * is not something to interrupt the learner with.
+ */
+export function applySpellingCorrection<T extends ExplainResult>(
+  result: T,
+  typed: string
+): { result: T; correction: SpellingCorrection | null } {
+  const cleaned: T = { ...result };
+  delete (cleaned as WithCorrection).corrected;
+
+  const suggested = typeof result.corrected === 'string' ? result.corrected.trim() : '';
+  const asTyped = typed.trim();
+  if (!suggested || suggested.toLowerCase() === asTyped.toLowerCase()) {
+    return { result: cleaned, correction: null };
+  }
+  return {
+    result: { ...cleaned, term: suggested },
+    correction: { typed: asTyped, corrected: suggested },
+  };
 }
 
 export async function getTermDepth(

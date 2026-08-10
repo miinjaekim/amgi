@@ -323,6 +323,9 @@ const translations = {
     notWhatYouMeant: 'Not what you meant?',
     addContextPlaceholder: 'Add context (e.g. "the fruit", "casual speech")',
     regenerate: 'Regenerate',
+    // Spellcheck on lookup
+    showingResultsFor: 'Showing results for {term}',
+    searchInsteadFor: 'Search instead for {term}',
     // Card detail modal
     noCardDetails: 'No additional details saved. Load definition and examples on the Learn page before saving to capture them.',
     // Review page — clarity
@@ -729,6 +732,10 @@ const translations = {
     notWhatYouMeant: '원하시는 내용이 아닌가요?',
     addContextPlaceholder: '맥락 추가 (예: "과일", "구어체")',
     regenerate: '다시 생성',
+    // Spellcheck on lookup — particle-free on purpose: {term} can be Hangul or
+    // Latin script, and 을/를 would be wrong half the time.
+    showingResultsFor: '{term} 검색 결과입니다',
+    searchInsteadFor: '대신 {term} 검색하기',
     // Card detail modal
     noCardDetails: '저장된 추가 정보가 없습니다. 학습 페이지에서 정의와 예문을 불러온 후 저장하면 여기에 표시됩니다.',
     // Review page — clarity
