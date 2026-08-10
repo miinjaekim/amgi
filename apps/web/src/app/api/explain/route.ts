@@ -18,7 +18,7 @@ function detectChinese(term: string): boolean {
 }
 
 export async function POST(req: NextRequest) {
-  const { term, nativeLanguage = 'English', context, studyLanguage = 'Korean' } = await req.json();
+  const { term, nativeLanguage = 'English', context, studyLanguage = 'Korean', exact = false } = await req.json();
 
   if (!term || typeof term !== 'string') {
     return NextResponse.json({ error: 'term is required' }, { status: 400 });
@@ -42,6 +42,36 @@ export async function POST(req: NextRequest) {
     `\n- "${back.backField}" must always be the ${back.backLanguage} word or phrase for that same meaning, written in ${back.backLanguage}. Single best translation — never list synonyms with semicolons or slashes.`;
   const nativeBackJson = back.backField === 'english' ? '' :
     `\n  "${back.backField}": "${back.backLanguage} word/phrase",`;
+
+  // Spellcheck rides the lookup instead of preceding it: one round trip, and
+  // the model that already knows this language pair does the judging. A
+  // separate check would be a second call before the first, and a second prompt
+  // to keep in step with these.
+  //
+  // Only the no-context prompts carry it. A context lookup is a *re*-lookup of
+  // a term this route already returned — disambiguation or "not what you
+  // meant?" — so the spelling question was settled a call ago.
+  //
+  // `exact` is the user's override, the "search for what you typed instead"
+  // link. It drops the rule rather than filtering the answer afterwards,
+  // because the thing being overridden is the model's judgement, not its
+  // formatting: asked again without the rule, it explains what was typed.
+  //
+  // The rule is written to refuse far more often than it fires. A learner
+  // typing a word they don't know well is exactly who a correction overrules
+  // wrongly, so rare, archaic, dialectal, slang and proper nouns are all named
+  // as *not* misspellings — a real word Amgi doesn't recognise has to stay
+  // reachable, and the override alone isn't enough if the correction is eager.
+  const spellBlock = exact ? '' : `
+Also judge the spelling of "${term}". Set "corrected" ONLY when it is a clear misspelling of one specific real word, one obvious slip away — of whatever kind this writing system makes easy. A transposed, doubled, dropped or wrong letter. A missing or wrong accent. A word spelled the way it *sounds* rather than the way the language spells it: Korean 마지하다 for 맞이하다, 안녕하세여 for 안녕하세요. Wrong okurigana, or kana where the word is normally written in kanji. A Simplified character where the Traditional one belongs.
+
+Finding yourself assembling a meaning out of the parts of "${term}", because you cannot place it as a word you know, is that same signal — a real word does not need to be assembled.
+
+Otherwise set "corrected" to null. A rare, archaic, dialectal, slang or proper-noun spelling is not a misspelling. A valid inflected, conjugated or compounded form is not a misspelling. Neither is anything where two different corrections are equally likely — you would be guessing which word the learner meant.
+
+When you do set it, every other field — the meanings too, if it is ambiguous — must describe the corrected spelling rather than "${term}".
+`;
+  const spellJson = exact ? '' : `\n  "corrected": "corrected spelling" | null,`;
 
   let prompt: string;
 
@@ -80,10 +110,11 @@ A term is NOT ambiguous when:
 - Secondary meanings are rare or archaic
 - The meanings are closely related variants of the same concept
 
+${spellBlock}
 If AMBIGUOUS, respond with only this JSON:
 {
   "ambiguous": true,
-  "term": "${term}",
+  "term": "${term}",${spellJson}
   "termLanguage": "Swedish or English",
   "meanings": [
     { "label": "short label (3-6 words max)", "hint": "one sentence clarifying this meaning" },
@@ -95,7 +126,7 @@ Every "label" and "hint" must be written in ${nativeLanguage} — the user may n
 
 If NOT ambiguous, respond with only this JSON:
 {
-  "term": "${term}",
+  "term": "${term}",${spellJson}
   "termLanguage": "Swedish or English",
   "swedish": "Swedish word/phrase",
   "english": "English word/phrase",${nativeBackJson}
@@ -145,10 +176,11 @@ A term is NOT ambiguous when:
 - Secondary meanings are rare or archaic
 - The meanings are closely related variants of the same concept
 
+${spellBlock}
 If AMBIGUOUS, respond with only this JSON:
 {
   "ambiguous": true,
-  "term": "${term}",
+  "term": "${term}",${spellJson}
   "termLanguage": "French or English",
   "meanings": [
     { "label": "short label (3-6 words max)", "hint": "one sentence clarifying this meaning" },
@@ -160,7 +192,7 @@ Every "label" and "hint" must be written in ${nativeLanguage} — the user may n
 
 If NOT ambiguous, respond with only this JSON:
 {
-  "term": "${term}",
+  "term": "${term}",${spellJson}
   "termLanguage": "French or English",
   "french": "French word/phrase",
   "english": "English word/phrase",${nativeBackJson}
@@ -211,10 +243,11 @@ A term is NOT ambiguous when:
 - Secondary meanings are rare or archaic
 - The meanings are closely related variants of the same concept
 
+${spellBlock}
 If AMBIGUOUS, respond with only this JSON:
 {
   "ambiguous": true,
-  "term": "${term}",
+  "term": "${term}",${spellJson}
   "termLanguage": "${termLanguage}",
   "meanings": [
     { "label": "short label (3-6 words max)", "hint": "one sentence clarifying this meaning" },
@@ -226,7 +259,7 @@ Every "label" and "hint" must be written in ${nativeLanguage} — the user may n
 
 If NOT ambiguous, respond with only this JSON:
 {
-  "term": "${term}",
+  "term": "${term}",${spellJson}
   "termLanguage": "${termLanguage}",
   "japanese": "Japanese word/phrase",
   "english": "English word/phrase",${nativeBackJson}
@@ -277,10 +310,11 @@ A term is NOT ambiguous when:
 - Secondary meanings are rare or archaic
 - The meanings are closely related variants of the same concept
 
+${spellBlock}
 If AMBIGUOUS, respond with only this JSON:
 {
   "ambiguous": true,
-  "term": "${term}",
+  "term": "${term}",${spellJson}
   "termLanguage": "${termLanguage}",
   "meanings": [
     { "label": "short label (3-6 words max)", "hint": "one sentence clarifying this meaning" },
@@ -292,7 +326,7 @@ Every "label" and "hint" must be written in ${nativeLanguage} — the user may n
 
 If NOT ambiguous, respond with only this JSON:
 {
-  "term": "${term}",
+  "term": "${term}",${spellJson}
   "termLanguage": "${termLanguage}",
   "traditionalChinese": "Mandarin word/phrase in 繁體字",
   "english": "English word/phrase",${nativeBackJson}
@@ -342,10 +376,11 @@ A term is NOT ambiguous when:
 - Secondary meanings are rare or archaic
 - The meanings are closely related variants of the same concept
 
+${spellBlock}
 If AMBIGUOUS, respond with only this JSON:
 {
   "ambiguous": true,
-  "term": "${term}",
+  "term": "${term}",${spellJson}
   "termLanguage": "${termLanguage}",
   "meanings": [
     { "label": "short label (3-6 words max)", "hint": "one sentence clarifying this meaning" },
@@ -357,7 +392,7 @@ Every "label" and "hint" must be written in ${nativeLanguage} — the user may n
 
 If NOT ambiguous, respond with only this JSON:
 {
-  "term": "${term}",
+  "term": "${term}",${spellJson}
   "termLanguage": "${termLanguage}",
   "english": "English word/phrase",
   "korean": "Korean word/phrase in 한국어",
@@ -407,10 +442,11 @@ A term is NOT ambiguous when:
 - Secondary meanings are rare or archaic
 - The meanings are closely related variants of the same concept
 
+${spellBlock}
 If AMBIGUOUS, respond with only this JSON:
 {
   "ambiguous": true,
-  "term": "${term}",
+  "term": "${term}",${spellJson}
   "termLanguage": "${termLanguage}",
   "meanings": [
     { "label": "short label (3-6 words max)", "hint": "one sentence clarifying this meaning" },
@@ -422,7 +458,7 @@ Every "label" and "hint" must be written in ${nativeLanguage} — the user may n
 
 If NOT ambiguous, respond with only this JSON:
 {
-  "term": "${term}",
+  "term": "${term}",${spellJson}
   "termLanguage": "${termLanguage}",
   "korean": "Korean word/phrase in 한국어",
   "english": "English word/phrase",

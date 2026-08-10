@@ -50,7 +50,10 @@ export default function ImportModal({ studyLanguage, onClose, onSaved }: Props) 
       if (abortRef.current) break;
       setItems(prev => prev.map((item, idx) => idx === i ? { ...item, status: 'loading' } : item));
       try {
-        const data = await getTermExplanation(words[i], nativeLanguage ?? 'English', undefined, studyLanguage);
+        // `exact`: an import has nowhere to show "showing results for X" and
+        // saves what comes back, so it looks up the word as written rather
+        // than quietly importing a card for a different one.
+        const data = await getTermExplanation(words[i], nativeLanguage ?? 'English', undefined, studyLanguage, true);
         if ('ambiguous' in data && data.ambiguous) {
           setItems(prev => prev.map((item, idx) => idx === i ? { ...item, status: 'ambiguous' } : item));
         } else {

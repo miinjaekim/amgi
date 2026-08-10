@@ -280,7 +280,21 @@ export interface TermAmbiguous {
   meanings: DisambiguationMeaning[];
 }
 
-export type ExplainResult = TermCore | TermAmbiguous;
+/**
+ * The spelling correction a lookup applied on the way to answering.
+ *
+ * Deliberately not a `TermCore` field: it describes the *lookup*, not the term,
+ * and `TermCore` is spread wholesale onto a saved card — a card carrying
+ * "this was once a typo" would be storing a detail about the day it was
+ * created. `applySpellingCorrection` lifts it off before the client keeps
+ * anything.
+ */
+export interface WithCorrection {
+  /** The corrected spelling, or null/absent when nothing was corrected. */
+  corrected?: string | null;
+}
+
+export type ExplainResult = (TermCore & WithCorrection) | (TermAmbiguous & WithCorrection);
 
 // Flashcard / review types
 export interface ReviewTracking {

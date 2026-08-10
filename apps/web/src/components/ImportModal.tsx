@@ -49,7 +49,10 @@ export default function ImportModal({
         const res = await fetch('/api/explain', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ term: words[i], nativeLanguage: nativeLanguage ?? 'English', studyLanguage }),
+          // `exact`: an import has nowhere to show "showing results for X" and
+          // saves what comes back, so it looks up the word as written rather
+          // than quietly importing a card for a different one.
+          body: JSON.stringify({ term: words[i], nativeLanguage: nativeLanguage ?? 'English', studyLanguage, exact: true }),
         });
         const data = await res.json();
         if (data.ambiguous) {

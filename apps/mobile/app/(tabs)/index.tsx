@@ -10,7 +10,7 @@ import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { useUser } from '../../src/context/UserContext';
 import {
   getTermExplanation, getTermDepth, getTermExamples, getWordOfTheDay,
-  streamTermDepth, streamTermExamples,
+  streamTermDepth, streamTermExamples, applySpellingCorrection,
 } from '../../src/services/gemini';
 import {
   getCharacterBreakdown, getDepthTarget, getReading, getStudyLanguageConfig, getBackSideConfig,
@@ -18,7 +18,7 @@ import {
   parseStreamedDepth, parseStreamedExamples, wordOfTheDayCore,
 } from '@amgi/core';
 import type { StudyLanguage } from '@amgi/core';
-import type { TermCore, TermDepth, TermAmbiguous, ExamplePair, WordOfTheDay } from '../../src/services/gemini';
+import type { TermCore, TermDepth, TermAmbiguous, ExamplePair, SpellingCorrection, WordOfTheDay } from '../../src/services/gemini';
 import { saveFlashcardToFirestore } from '../../src/services/firestore';
 import type { Flashcard } from '../../src/services/firestore';
 import SaveFlashcardModal from '../../src/components/SaveFlashcardModal';
@@ -111,6 +111,13 @@ export default function LearnScreen() {
   const [contextInput, setContextInput] = useState('');
   const [wordOfTheDay, setWordOfTheDay] = useState<WordOfTheDay | null>(null);
   const [wotdLoading, setWotdLoading] = useState(true);
+  /**
+   * The spelling question for the lookup on screen, once it has one.
+   * `applied` is which way round it was answered — corrected by default, as
+   * typed after the learner overrides — because the banner has to say which
+   * word these results are about either way, and offer the other one.
+   */
+  const [correction, setCorrection] = useState<(SpellingCorrection & { applied: boolean }) | null>(null);
 
   // Word of the day — refreshes when the language pair changes. Non-essential:
   // any failure just hides the card (getWordOfTheDay returns null).
@@ -143,6 +150,7 @@ export default function LearnScreen() {
 
   const reset = () => {
     setCore(null); setAmbiguity(null); setDepth(null); setExamples(null);
+    setCorrection(null);
     setError(null); setShowSaveModal(false); setFlashcardDraft(null);
     setSaveSuccess(false); setShowContextInput(false); setContextInput('');
     setLoadingDepth(false); setStreamingDepth(false);
@@ -187,13 +195,30 @@ export default function LearnScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [navigation, loading, core, ambiguity, error, saveSuccess]);
 
-  const resolveExplanation = async (termValue: string, context?: string) => {
+  /**
+   * @param exact Look the term up as typed, skipping spellcheck — the
+   *   "search instead for…" override.
+   * @param keptCorrection Carried over from the lookup this one follows on
+   *   from: a declined correction, or the one still in force when a context
+   *   lookup re-asks about a word that was already corrected. Context lookups
+   *   never spellcheck, so without this the banner — and the way back to what
+   *   was typed — would disappear on disambiguating.
+   */
+  const resolveExplanation = async (
+    termValue: string,
+    context?: string,
+    exact = false,
+    keptCorrection?: SpellingCorrection & { applied: boolean },
+  ) => {
     const run = ++runId.current;
     setLoading(true);
     reset();
     try {
-      const result = await getTermExplanation(termValue, nativeLanguage ?? 'English', context, studyLanguage);
+      const raw = await getTermExplanation(termValue, nativeLanguage ?? 'English', context, studyLanguage, exact);
       if (run !== runId.current) return;
+      const { result, correction: spelling } = applySpellingCorrection(raw, termValue);
+      if (spelling) setCorrection({ ...spelling, applied: true });
+      else if (keptCorrection) setCorrection(keptCorrection);
       if ('ambiguous' in result && result.ambiguous) {
         setAmbiguity(result as TermAmbiguous);
       } else {
@@ -226,7 +251,24 @@ export default function LearnScreen() {
 
   const handleDisambiguate = (label: string) => {
     if (!ambiguity) return;
-    resolveExplanation(ambiguity.term, label);
+    resolveExplanation(ambiguity.term, label, false, correction ?? undefined);
+  };
+
+  /**
+   * The escape hatch: look up the other spelling. Overriding a correction is
+   * `exact`, so the model cannot simply correct it again; going back to the
+   * correction is an ordinary lookup of a word already known to be spelled
+   * right, so it stays a normal one.
+   */
+  const handleSwitchSpelling = () => {
+    if (!correction) return;
+    const declined = correction.applied;
+    resolveExplanation(
+      declined ? correction.typed : correction.corrected,
+      undefined,
+      declined,
+      { ...correction, applied: !declined },
+    );
   };
 
   const handleLoadDepth = async () => {
@@ -360,7 +402,7 @@ export default function LearnScreen() {
 
   const handleRegenerate = () => {
     if (!core || !contextInput.trim()) return;
-    resolveExplanation(core.term, contextInput.trim());
+    resolveExplanation(core.term, contextInput.trim(), false, correction ?? undefined);
   };
 
   const translation = core
@@ -597,6 +639,27 @@ export default function LearnScreen() {
             </View>
           )}
 
+          {/* Spelling correction — above whichever of the two results follows,
+              so the learner reads which word this is about before reading
+              about it. Muted rather than a warning: being wrong here is
+              expected often enough that the way out sits right beside it. */}
+          {correction && (core || ambiguity) && (
+            <View style={s.correctionRow}>
+              <Text style={s.correctionText}>
+                {t(nativeLanguage, 'showingResultsFor', {
+                  term: correction.applied ? correction.corrected : correction.typed,
+                })}
+              </Text>
+              <TouchableOpacity onPress={handleSwitchSpelling} disabled={loading}>
+                <Text style={[s.correctionLink, loading && s.correctionLinkDisabled]}>
+                  {t(nativeLanguage, 'searchInsteadFor', {
+                    term: correction.applied ? correction.typed : correction.corrected,
+                  })}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
           {ambiguity && (
             <View style={s.card}>
               <Text style={s.cardTerm}>{ambiguity.term}</Text>
@@ -809,6 +872,13 @@ function makeStyles(C: Palette, tabBarHeight: number) {
   successText: { color: C.text, fontWeight: '600' },
   errorBanner: { backgroundColor: '#fde8e8', borderRadius: 10, padding: 14, marginBottom: 12 },
   errorText: { color: C.error, fontWeight: '600' },
+
+  // Wraps rather than truncates: the two spellings are the whole point of the
+  // row, and on a narrow screen they will not sit on one line.
+  correctionRow: { flexDirection: 'row', alignItems: 'baseline', flexWrap: 'wrap', gap: 8, marginBottom: 10 },
+  correctionText: { fontSize: 14, color: C.muted },
+  correctionLink: { fontSize: 14, color: C.highlight, textDecorationLine: 'underline' },
+  correctionLinkDisabled: { opacity: 0.5 },
 
   card: { backgroundColor: C.surface, borderRadius: 16, padding: 20, borderWidth: 1, borderColor: C.border, marginBottom: 16 },
   cardHeaderRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 16 },
