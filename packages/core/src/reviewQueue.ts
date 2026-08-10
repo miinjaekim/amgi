@@ -74,3 +74,33 @@ export function buildReviewQueue(
 ): ReviewQueueItem[] {
   return shuffle(filterByDirection(dueReviewItems(cards, now), filter));
 }
+
+/**
+ * Drop a card from a session queue after archiving or deleting it — every
+ * entry for it, not the one on screen.
+ *
+ * The queue holds one entry per due *direction*, so removing by index leaves
+ * the card queued the other way round: archive it in a `both` session and it
+ * comes back a few cards later, delete it and what comes back points at a
+ * document that no longer exists.
+ *
+ * Returns where the session should now sit as well as the queue, because the
+ * two only agree if the entries removed *before* the current one are counted:
+ * the index has to slide back by that many to still point at the card that
+ * followed. An empty queue means the session is over.
+ */
+export function removeCardFromQueue(
+  queue: readonly ReviewQueueItem[],
+  cardId: string,
+  currentIndex: number
+): { queue: ReviewQueueItem[]; index: number } {
+  const remaining = queue.filter(item => item.card.id !== cardId);
+  const removedBefore = queue
+    .slice(0, Math.max(currentIndex, 0))
+    .filter(item => item.card.id === cardId).length;
+  const index = Math.min(
+    Math.max(currentIndex - removedBefore, 0),
+    Math.max(remaining.length - 1, 0)
+  );
+  return { queue: remaining, index };
+}

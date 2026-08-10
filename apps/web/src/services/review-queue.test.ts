@@ -4,6 +4,7 @@ import {
   buildReviewQueue,
   dueReviewItems,
   filterByDirection,
+  removeCardFromQueue,
 } from '@amgi/core';
 import type { Flashcard, ReviewTracking } from '@amgi/core';
 
@@ -105,5 +106,48 @@ describe('buildReviewQueue', () => {
   it('keeps the same items whatever order it shuffles them into', () => {
     const ids = buildReviewQueue(cards, 'frontToBack', NOW).map(i => i.card.id).sort();
     expect(ids).toEqual(['a', 'b']);
+  });
+});
+
+describe('removeCardFromQueue', () => {
+  const queue = [
+    { card: card('a', {}), direction: 'frontToBack' as const },
+    { card: card('b', {}), direction: 'frontToBack' as const },
+    { card: card('a', {}), direction: 'backToFront' as const },
+    { card: card('c', {}), direction: 'frontToBack' as const },
+  ];
+
+  // The bug this function exists for: archiving mid-session dropped the entry
+  // on screen and left the same card queued the other way round.
+  it('drops every direction of the card, not just the one on screen', () => {
+    const { queue: remaining } = removeCardFromQueue(queue, 'a', 0);
+    expect(remaining.map(i => i.card.id)).toEqual(['b', 'c']);
+  });
+
+  it('lands on the entry that followed the removed one', () => {
+    const { queue: remaining, index } = removeCardFromQueue(queue, 'b', 1);
+    expect(remaining[index].card.id).toBe('a');
+    expect(remaining[index].direction).toBe('backToFront');
+  });
+
+  // The second 'a' sits behind the current index, so the index has to slide
+  // back with it or the session skips a card.
+  it('slides the index back past entries removed before it', () => {
+    const { queue: remaining, index } = removeCardFromQueue(queue, 'a', 2);
+    expect(remaining.map(i => i.card.id)).toEqual(['b', 'c']);
+    expect(remaining[index].card.id).toBe('c');
+  });
+
+  it('stays on the last entry when the removed card was at the end', () => {
+    const { queue: remaining, index } = removeCardFromQueue(queue, 'c', 3);
+    expect(index).toBe(remaining.length - 1);
+    expect(remaining[index].card.id).toBe('a');
+  });
+
+  it('empties the queue when the last card goes, whichever direction is showing', () => {
+    const onlyA = queue.filter(i => i.card.id === 'a');
+    const { queue: remaining, index } = removeCardFromQueue(onlyA, 'a', 1);
+    expect(remaining).toEqual([]);
+    expect(index).toBe(0);
   });
 });
