@@ -22,7 +22,8 @@ import {
   buildReviewQueue, collectionKey, dueReviewItems, duePatterns, filterByDirection,
   getBackSide, getCollectionId, getNextReviewDate,
   getNextReviewData, getStudyLangSide, getStudyLanguageConfig, getBackSideConfig,
-  directionLabel, directionPrompt, getCharacterBreakdown, getExampleSides, t,
+  directionLabel, directionPrompt, getCharacterBreakdown, getExampleSides,
+  removeCardFromQueue, t,
 } from '@amgi/core';
 import type {
   CardSideField, DirectionFilter, GrammarPattern, PendingReview, ReviewQueueItem,
@@ -466,11 +467,18 @@ export default function ReviewScreen() {
           try {
             // Not queued either; see handleEditSave.
             await withTimeout(archiveFlashcard(item.card.id!, studyLanguage));
-            const newQueue = queue.filter((_, i) => i !== index);
+            // By card, not by index: the queue holds one entry per due
+            // direction, so filtering by index left the card queued the other
+            // way round and it came back after being archived.
+            const { queue: newQueue, index: newIndex } =
+              removeCardFromQueue(queue, item.card.id!, index);
+            // The due counts on the picker derive from `cards`, so an archived
+            // card would still be counted as due until the next fetch.
+            setCards(prev => prev.filter(c => c.id !== item.card.id));
             setQueue(newQueue);
             resetCardState();
             if (newQueue.length === 0) setDone(true);
-            else if (index >= newQueue.length) setIndex(newQueue.length - 1);
+            else setIndex(newIndex);
           } catch {
             Alert.alert('Error', 'Failed to archive card.');
           }

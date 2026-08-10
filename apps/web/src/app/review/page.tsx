@@ -17,6 +17,7 @@ import {
   getNextReviewDate,
   getReading,
   getStudyLanguageConfig,
+  removeCardFromQueue,
   getBackSideConfig,
   directionLabel,
   directionPrompt,
@@ -341,7 +342,7 @@ export default function ReviewPage() {
       await archiveFlashcard(card.id, studyLanguage);
       setManageStatus(t(nativeLanguage, 'reviewCardArchived'));
       setShowManage(false);
-      advanceAfterManage();
+      advanceAfterManage(card.id);
     } catch {
       setManageStatus(t(nativeLanguage, 'errorArchiveFlashcard'));
     }
@@ -355,19 +356,26 @@ export default function ReviewPage() {
       await deleteFlashcard(card.id, studyLanguage);
       setManageStatus(t(nativeLanguage, 'reviewCardDeleted'));
       setShowManage(false);
-      advanceAfterManage();
+      advanceAfterManage(card.id);
     } catch {
       setManageStatus(t(nativeLanguage, 'errorDeleteFlashcard'));
     }
   };
 
-  const advanceAfterManage = () => {
-    const remaining = activeQueue.filter((_, i) => i !== currentReviewIdx);
+  /**
+   * By card, not by index — see `removeCardFromQueue`. `userFlashcards` is
+   * mirrored for the same reason ratings are: the due counts on the start
+   * screen derive from it, so a card archived mid-session would otherwise still
+   * be counted as due when the session ends.
+   */
+  const advanceAfterManage = (cardId: string) => {
+    const { queue: remaining, index } = removeCardFromQueue(activeQueue, cardId, currentReviewIdx);
+    setUserFlashcards(prev => prev.filter(c => c.id !== cardId));
     if (remaining.length === 0) {
       setReviewComplete(true);
     } else {
       setActiveQueue(remaining);
-      setCurrentReviewIdx(idx => Math.min(idx, remaining.length - 1));
+      setCurrentReviewIdx(index);
       setShowAnswer(false);
       setShowDetails(false);
     }
