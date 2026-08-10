@@ -1,5 +1,23 @@
 # Lessons
 
+## The review queue is per direction — never mutate it by index (2026-08-10)
+
+`ReviewQueueItem` is one entry per due **direction**, so a card due both ways is
+two entries with the same `card.id`. Any mutation that means "this card is gone"
+has to filter by id; filtering by index removes the question on screen and
+leaves the card queued the other way round. That is how archiving a card mid-
+session put it back a few cards later, and how deleting one left an entry
+pointing at a document that no longer existed (#86).
+
+Both platforms had it, written independently — which is the actual lesson: the
+queue's shape is easy to forget at the call site, so the removal lives in
+`removeCardFromQueue` in core and both screens call it. It returns the new index
+as well as the queue, because the two only agree if the entries removed *before*
+the current one are counted.
+
+Editing a card mid-session is the exception that proves it: `handleEditSave`
+maps by index on purpose, since only the entry on screen is being changed.
+
 ## Hermes has `Intl`, but not `Intl.Segmenter` (2026-08-09)
 
 Measured, not assumed — and measurable without a device:

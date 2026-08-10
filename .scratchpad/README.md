@@ -61,10 +61,22 @@ leaves that file:
 Backlog priority mirrors the user's Google Tasks list — `backlog.md` is the
 scoped version of it.
 
-_Last reviewed against the codebase: 2026-08-10, `main` @ `f760fcc`. `npm test`
-291/291, measured._
+_Last reviewed against the codebase: 2026-08-10, `main` @ `dd87d55`. `npm test`
+304/304, measured._
 
-_This pass **closed grammar patterns**. The mobile smoke test in Expo Go against
+_This pass **cleared High**. Both items shipped as separate PRs — term archiving
+during review (#86) and spellcheck on lookup (#87) — and each turned out to be
+one shared function away from being right on both platforms, which is why they
+closed together. Two things are worth reading before touching either area: the
+`removeCardFromQueue` entry in [lessons.md](lessons.md), because the review queue
+is per *direction* and both platforms had independently forgotten it; and the
+spellcheck decision in [status.md](status.md), which records where the correction
+comes from, why the override is a request rather than a filter, and the refusal
+set to re-probe before editing the prompt. The backlog item's open question —
+one round trip or two — closed on the reuse-the-endpoint rule. **`backlog.md`'s
+High section is now empty**; the next thing to pick up is under Medium._
+
+_The previous pass **closed grammar patterns**. The mobile smoke test in Expo Go against
 the deployed API came back clean, so the last item left `backlog.md` and the
 feature is done: `status.md` gained a Shipped line, a closing Decisions entry,
 and an updated Now. **`backlog.md` now has no starred items at all** — all three

@@ -13,14 +13,15 @@ build, a second rides along free rather than costing a build of its own.
 
 ## Queued for the next build
 
-**Three items queued, and one adds a native module.** Grammar patterns brought
+**Five items queued, and one adds a native module.** Grammar patterns brought
 `expo-clipboard` in for copy-to-clipboard on the writing rewrite, so the next
 build is a native-module build — the `expo config --type introspect` pass is
 required rather than skippable. ⚠️ **It has already been run and came back
 clean**: no entitlements, no usage descriptions, plugin list unchanged. Re-run it
-only if another native module lands first. 1.2.0 carries everything before these.
-See Builds in [status.md](status.md) for its contents and for what remains
-unverified on a real binary.
+only if another native module lands first — the two items added 2026-08-10 are
+both JS-only and do not disturb it. 1.2.0 carries everything before these. See
+Builds in [status.md](status.md) for its contents and for what remains unverified
+on a real binary.
 
 - **PR #80** (merged 2026-08-04) — `/cards` holds pack cards, the mobile filter
   sheet, the first skeletons.
@@ -29,6 +30,11 @@ unverified on a real binary.
   this batch; everything else in it is JS. ✅ Smoke-tested in Expo Go against the
   deployed API on 2026-08-10, no issues — the feature itself is closed, only the
   build is outstanding.
+- **PR #86** (merged 2026-08-10) — archive and delete drop the card from the
+  review queue rather than the index. Mobile's review screen was fixed in the
+  same pass; it archives, so it had the same bug. JS-only.
+- **PR #87** (merged 2026-08-10) — spellcheck on lookup, both platforms. The
+  Learn screen gains the "showing results for…" row and its override. JS-only.
 - **PR #81** (merged 2026-08-08) — the two military packs reach mobile through
   the shared registry, and the packs list drops the per-pack description. ⚠️ The
   description change was **typechecked but never seen rendered** — the list went
@@ -52,41 +58,14 @@ deletion — which Apple looks for under 5.1.1(v)._
 
 ## High
 
-Two items, both promoted from Medium on 2026-08-09 — both are cases where the app
-quietly does the wrong thing rather than doing nothing, which is why they outrank
-the larger ideas still under Medium. **Nothing is starred.** All three starred
-items are now closed: the military terms pack shipped in #81, the local model
-spike closed on its own written answer (`docs/local-model.md`), and grammar
-patterns closed on 2026-08-10 after the mobile pass came back clean — the
-reasoning for each, and the one carried-forward constraint grammar patterns
-leaves behind, are in [status.md](status.md).
+**Empty.** Both items — spellcheck on lookup (#87) and term archiving during
+review (#86) — shipped 2026-08-10 and moved to [status.md](status.md). They were
+promoted together on 2026-08-09 as the two cases where the app quietly does the
+wrong thing rather than nothing, and they closed together for the same reason:
+each was one shared function away from being right on both platforms.
 
-- [ ] **Spellcheck on lookup — "showing results for…".** _Promoted from Medium
-      2026-08-09._ Type a misspelled term on
-      Learn today and it goes straight to `/api/explain`, which will confidently
-      explain a non-word; save it and the typo is now a card. Handle it the way
-      Google does: search the corrected spelling, say **"showing results for X"**,
-      and offer **"search for _what you typed_ instead"** so the user can override.
-      The override matters more here than on a web search — a learner typing an
-      unfamiliar word is exactly who a correction will overrule wrongly, and a
-      real word Amgi doesn't recognise must stay reachable.
-      Open: where the correction comes from. `/api/explain` returning a `corrected`
-      field is one round trip and reuses the model already in the loop
-      (see the reuse-the-endpoint rule); a separate check is a second call before
-      the first. Decide that before building.
-
-- [ ] **Term archiving covers both sides during review.** _Promoted from Medium
-      2026-08-09._ Archiving from the review
-      manage panel writes the card-level `archived` flag, but
-      `advanceAfterManage` (`apps/web/src/app/review/page.tsx:301`) drops only the
-      *current index* from the in-session queue. The queue holds one entry per due
-      **direction**, so in a `both` session the same card comes back the other way
-      round after you archived it. **Delete has the identical bug** on the line
-      below — worse, since that entry points at a document that no longer exists.
-      Fix both: filter the queue by `card.id`, not by index.
-      Mobile has the bug's mirror image — its review screen has **no** manage
-      panel at all, so archiving mid-review isn't possible there. Parity work,
-      cheap to do at the same time.
+**Nothing is starred**, and hasn't been since 2026-08-10. The next thing to pick
+up comes from Medium below.
 
 ## Medium
 

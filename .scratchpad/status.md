@@ -3,16 +3,17 @@
 Session orientation: what's live, what's broken, what's decided. Shipped history
 sits at the bottom as reference — the reasoning worth keeping is in Decisions.
 
-_Reconciled against `main` @ `f760fcc`, 2026-08-10. `npm test` 291/291, measured._
+_Reconciled against `main` @ `dd87d55`, 2026-08-10. `npm test` 304/304, measured._
 
 ## Now
 
 - **1.2.0 is in TestFlight.** Submitted and accepted; **internal testing is
   live**, external is waiting on Beta App Review.
-- **Three mobile changes are queued behind it**, and one adds a native module
+- **Five mobile changes are queued behind it**, and one adds a native module
   (`expo-clipboard`), so the next build is a native-module build. The
-  `expo config --type introspect` pass has already been run and came back clean.
-  See Builds below for the pre-flight.
+  `expo config --type introspect` pass has already been run and came back clean;
+  the two items added 08-10 are JS-only and don't disturb it. See Builds below
+  for the pre-flight.
   - PR #80 (08-04): the `/cards` loosening, the filter sheet, the first
     skeletons. Checked on web and **on a device in Expo Go** before merge.
   - PR #81 (08-08): the two military packs reach mobile through the shared
@@ -23,8 +24,13 @@ _Reconciled against `main` @ `f760fcc`, 2026-08-10. `npm test` 291/291, measured
   - PR #84 (08-09): grammar patterns, the whole feature on both platforms.
     Smoke-tested in Expo Go against the deployed API on 08-10 and clean — the
     only one of the three verified on a device *after* merge.
-- **No code is in flight.** Next thing to build comes from
-  [backlog.md](backlog.md).
+  - PR #86 (08-10): archive and delete drop the card from the review queue, not
+    the index. Mobile's review screen had the same bug and was fixed with it.
+  - PR #87 (08-10): spellcheck on lookup. Mobile's Learn screen gains the
+    "showing results for…" row and its override. ⚠️ Verified on web; the mobile
+    render of that row is **typechecked but never seen**.
+- **No code is in flight.** High is empty in [backlog.md](backlog.md) — the next
+  thing to build comes from Medium.
 
 TestFlight context that isn't in the repo:
 
@@ -80,6 +86,51 @@ the production `EXPO_PUBLIC_API_BASE_URL`.
 
 Closed calls, kept with their reasoning — a decision whose reasoning is lost gets
 reopened by the next person to notice the symptom. Newest first.
+
+### The spellcheck correction rides the lookup, and is written to refuse (2026-08-10)
+
+The backlog item left one question open: where the correction comes from.
+**It rides `/api/explain`**, as a `corrected` field on the no-context prompts —
+one round trip, and the model that already knows this language pair does the
+judging. A separate check would have been a second call *before* the first, and
+a second prompt to keep in step with twelve existing ones. This is the
+reuse-the-endpoint rule applied to a route that already had the context.
+
+Three things fell out of that choice and are worth keeping:
+
+- **The prompts echo back the term they were given** (`"term": "${term}"` is
+  interpolated into all twelve), so a corrected answer arrives describing one
+  word and labelled with another. `applySpellingCorrection` moves the corrected
+  spelling onto `term` and strips `corrected` — which is a fact about the
+  lookup, not the term, and would otherwise be spread onto a saved card. Both
+  clients call it; neither may skip it.
+- **The override is a request, not a filter.** "Search instead for what you
+  typed" sends `exact: true`, which drops the rule from the prompt entirely.
+  Asked again without it, the model explains what was typed. Filtering the
+  answer client-side would have left the model still deciding.
+- **Only the no-context prompts carry the rule.** A context lookup is a
+  *re*-lookup of a term this route already returned — disambiguation, or "not
+  what you meant?" — so the spelling question was settled a call ago. Both Learn
+  screens carry the correction across those calls themselves, or the banner
+  would vanish on disambiguating and take the way back with it.
+
+The rule is written to **refuse**, because a learner typing a word they don't
+know well is exactly who a correction overrules wrongly: rare, archaic,
+dialectal, slang, proper-noun and validly inflected spellings are all named as
+*not* misspellings, and so is any case where two corrections are equally likely.
+
+⚠️ **It names slips per writing system, not per letter.** The first cut said
+"transposed, doubled, dropped or wrong letter" and silently missed the commonest
+Korean error: 마지하다 for 맞이하다 — the word spelled the way it *sounds* once
+받침 and 연음 apply, with no letter out of place. The model answered "to meet"
+with no correction offered, which is the exact failure the item existed to fix.
+Anything added here later should be probed against a Hangul phonetic misspelling
+before it is believed. The refusal set that must stay clean: `lagom`,
+`dépaysement`, `積ん読`, `눈치`, `撒嬌`, `rizz`, `Gyeongju`, `serendipity`,
+`맞이했습니다`, `먹었어요`, `하염없다`, `食べられなかった`, `s'agissait`.
+
+Bulk import passes `exact` too. It has nowhere to show a correction and saves
+what comes back, so a silent one would be a card the learner never agreed to.
 
 ### A word you reached for and didn't have is the best card a passage yields (2026-08-08)
 
@@ -852,6 +903,15 @@ the change is in Decisions above; durable gotchas are in
   import/export fully localized EN+KO.
 
 **Review loop & reminders**
+- **Archive and delete drop the card, not the index** (#86, 08-10) — the queue
+  holds one entry per due *direction*, so removing by index left the card queued
+  the other way round: archived cards came back, deleted ones came back pointing
+  at a document that no longer existed. `removeCardFromQueue` filters by
+  `card.id` and slides the index back past entries removed ahead of it, so the
+  session lands on the card that followed. Mobile's review screen archives too
+  and had the same bug — the backlog's note that it has no manage panel was out
+  of date. Both platforms now also drop the card from local card state, or the
+  due counts keep counting it. 5 tests.
 - **Offline review on mobile** (#53, 07-26) — mobile keeps its own durable state
   because Firestore's persistent cache is IndexedDB and therefore web-only. Card
   snapshots per user and language in AsyncStorage; a durable queue of unsent
@@ -914,6 +974,14 @@ the change is in Decisions above; durable gotchas are in
   have the last word. See [lessons.md](lessons.md).
 
 **Learn screen**
+- **Spellcheck on lookup, both platforms** (#87, 08-10) — a misspelled term used
+  to go straight to `/api/explain`, which explained the non-word confidently;
+  save it and the typo was a card. The correction now rides the same call as a
+  `corrected` field, and both Learn screens show "Showing results for X" with
+  "Search instead for *what you typed*" beside it. `applySpellingCorrection`
+  relabels the result and strips the field before anything saves it; `exact`
+  suppresses the rule for the override and for bulk import. The design calls,
+  and the refusal set to re-probe before touching the prompt, are in Decisions.
 - **Skeletons for the three worst spinners** (#80, 08-04) — the full-screen one a
   cold launch opened on (`authLoading`, first impression, nothing on it), plus
   the card and review lists. Each is laid out as the surface that replaces it, so
