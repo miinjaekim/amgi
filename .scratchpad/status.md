@@ -3,14 +3,16 @@
 Session orientation: what's live, what's broken, what's decided. Shipped history
 sits at the bottom as reference — the reasoning worth keeping is in Decisions.
 
-_Reconciled against `main` @ `f722774`, 2026-08-08. `npm test` 200/200._
+_Reconciled against `main` @ `f760fcc`, 2026-08-10. `npm test` 291/291, measured._
 
 ## Now
 
 - **1.2.0 is in TestFlight.** Submitted and accepted; **internal testing is
   live**, external is waiting on Beta App Review.
-- **Two mobile changes are queued behind it**, both JS-only — a build to reach a
-  tester, no native pass. See Builds below for the pre-flight.
+- **Three mobile changes are queued behind it**, and one adds a native module
+  (`expo-clipboard`), so the next build is a native-module build. The
+  `expo config --type introspect` pass has already been run and came back clean.
+  See Builds below for the pre-flight.
   - PR #80 (08-04): the `/cards` loosening, the filter sheet, the first
     skeletons. Checked on web and **on a device in Expo Go** before merge.
   - PR #81 (08-08): the two military packs reach mobile through the shared
@@ -18,6 +20,9 @@ _Reconciled against `main` @ `f722774`, 2026-08-08. `npm test` 200/200._
     description change was **typechecked but never seen rendered** — the list
     went from one deck per language to three, and the row spacing under a title
     with nothing beneath it is unverified.
+  - PR #84 (08-09): grammar patterns, the whole feature on both platforms.
+    Smoke-tested in Expo Go against the deployed API on 08-10 and clean — the
+    only one of the three verified on a device *after* merge.
 - **No code is in flight.** Next thing to build comes from
   [backlog.md](backlog.md).
 
@@ -111,6 +116,37 @@ English one inline, and got a *pattern* offer back but no vocabulary card.
   `crowded` → 붐비다 shown alongside a separate `-아/어서` pattern offer.
 - Mobile gets the new cards for free — its panel reads `finding.card` and does
   not branch on patterns — though not the `gap` label until parity.
+
+### Grammar patterns are closed — and one constraint outlives the item (2026-08-10)
+
+The mobile pass came back clean, so the last grammar-patterns item left
+[backlog.md](backlog.md) and the feature is done. Everything the item still
+carried was either answered or is recorded below; nothing is deferred.
+
+- **What the pass answered.** Both blockers the item named are gone: the API half
+  shipped with `c70c47c`, so `/api/grammar/exercise` and `/api/writing`'s
+  `pattern` field exist on the deployed API that `EXPO_PUBLIC_API_BASE_URL`
+  points at, and Expo Go against production exercised the feature end to end
+  with no issues found. The drawn cloze blank and the offline-disabled patterns
+  row were part of that pass.
+- ⚠️ **Carried forward, and the one reason to read this entry: don't remove the
+  "+ card" fallback from `/api/writing`.** It emits `card` alongside `pattern` so
+  a *shipped* build — which reads `card` and ignores `pattern` — still gets the
+  take-away. Both platforms now apply the gap-card rule, so the duplicate is
+  inert in current code and will look like dead weight to whoever next reads that
+  route. It stays until no old build is in the wild, and **with no OTA that is a
+  while** — the first build that could retire it is the one this queue produces,
+  plus however long users take to update.
+- **Two things stay unverified and neither is a task.** Graduation from cloze to
+  the production rung still needs about a week of real intervals to reach, which
+  is deliberate and argued in the entry below — don't build a "make due now"
+  control to shortcut it. And `alternates` is still coming back empty on live
+  clozes, absorbed by the learner override; the signal to watch is **being marked
+  wrong while right**, and one real instance is worth more than a prompt rewritten
+  on speculation.
+- **The last open design question is unchanged and still off the backlog:**
+  whether a tier-1 hint is ever offered unprompted after an idle on production
+  turns. It wants a real session to answer it, not a slot.
 
 ### Grammar patterns stay their own row, and the tail is cancelled (2026-08-09)
 
@@ -694,7 +730,19 @@ Reference only — one line per item, newest area first. Reasoning that outlived
 the change is in Decisions above; durable gotchas are in
 [lessons.md](lessons.md); the blow-by-blow is in git.
 
-**Writing & onboarding**
+**Writing, grammar & onboarding**
+- **Grammar patterns, web + mobile** (#84, 08-09) — the first thing Amgi teaches
+  that isn't a word. A pattern is practised, not flipped: a cloze until it
+  sticks, then free production, with the stage derived from `repetitions` so a
+  lapse demotes for free. Ships with its own Review row (disabled offline), a
+  Cards/Patterns management toggle, manual add, two hint tiers off stored fields,
+  a learner override, `easy` on a hint-free exact cloze, within-session
+  interleaving, and the writing panel's pattern offer alongside gap cards.
+  `/api/grammar/exercise` generates; grading is local for cloze and reuses
+  `/api/writing` for production. Design and its three corrections are in
+  Decisions above — read those and `docs/grammar-research.md` before changing
+  any of it. Mobile added `expo-clipboard`, which makes the next build a
+  native-module build.
 - **Writing review, web + mobile** (#69, 08-01) — Passage mode on Learn: native
   rewrite, that rewrite in your own language as a meaning check, and an ordered
   finding list each offering a card. First surface above word level on the

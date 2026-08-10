@@ -26,7 +26,9 @@ unverified on a real binary.
   sheet, the first skeletons.
 - **PR #84** (merged 2026-08-09, `c70c47c`) — grammar patterns: the whole
   feature on both platforms, plus `expo-clipboard`. The one native module in
-  this batch; everything else in it is JS.
+  this batch; everything else in it is JS. ✅ Smoke-tested in Expo Go against the
+  deployed API on 2026-08-10, no issues — the feature itself is closed, only the
+  build is outstanding.
 - **PR #81** (merged 2026-08-08) — the two military packs reach mobile through
   the shared registry, and the packs list drops the per-pack description. ⚠️ The
   description change was **typechecked but never seen rendered** — the list went
@@ -50,41 +52,14 @@ deletion — which Apple looks for under 5.1.1(v)._
 
 ## High
 
-Three items. Grammar patterns is the starred one; spellcheck and term archiving
-were promoted from Medium on 2026-08-09 — both are cases where the app quietly
-does the wrong thing rather than doing nothing, which is why they outrank the
-larger ideas still under Medium. The military terms pack was another starred
-item and shipped in #81; the local model spike was the third and is **closed** —
-the written answer is `docs/local-model.md`, the reasoning and the reopen
-condition are in [status.md](status.md), and the two pieces of it worth doing
-are under Medium.
-
-- [ ] **Grammar patterns — built on both platforms, needs a device pass.** ⭐
-      _PR #84, 2026-08-08 → 09._ Read `docs/grammar-research.md` and the grammar
-      Decisions entries in [status.md](status.md) before changing the design.
-
-      Web is done and trialled. Mobile is ported — the patterns row, both rungs
-      of `PatternSession`, `PatternsPanel` behind a Cards/Grammar toggle, manual
-      add, the writing panel's pattern offer and gap cards, and
-      copy-to-clipboard via `expo-clipboard`.
-
-      - [ ] **Try the mobile side against a deployed API.** ⚠️ Mobile calls
-            `EXPO_PUBLIC_API_BASE_URL`, not localhost — so in Expo Go against
-            production there are **no pattern offers on a writing review** (the
-            deployed `/api/writing` doesn't emit `pattern` yet) and pattern
-            practice would 404 (`/api/grammar/exercise` doesn't exist there).
-            Nothing is wrong with the app; the API half of this branch has to
-            ship, or the base URL has to point at a preview or a LAN dev server,
-            before any of it can be exercised on a phone.
-      - [ ] **Then the ordinary device pass**: the cloze gap renders as a drawn
-            blank rather than a literal `___`, and the patterns row is disabled
-            offline.
-
-      **Don't remove the "+ card" fallback from `/api/writing` yet.** It emits
-      `card` alongside `pattern` so a *shipped* build — which reads `card` and
-      ignores `pattern` — still gets the take-away. Both platforms now apply the
-      gap-card rule, so the duplicate is inert in current code; it stays until no
-      old build is in the wild, and with no OTA that is a while.
+Two items, both promoted from Medium on 2026-08-09 — both are cases where the app
+quietly does the wrong thing rather than doing nothing, which is why they outrank
+the larger ideas still under Medium. **Nothing is starred.** All three starred
+items are now closed: the military terms pack shipped in #81, the local model
+spike closed on its own written answer (`docs/local-model.md`), and grammar
+patterns closed on 2026-08-10 after the mobile pass came back clean — the
+reasoning for each, and the one carried-forward constraint grammar patterns
+leaves behind, are in [status.md](status.md).
 
 - [ ] **Spellcheck on lookup — "showing results for…".** _Promoted from Medium
       2026-08-09._ Type a misspelled term on

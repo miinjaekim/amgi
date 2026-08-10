@@ -61,9 +61,17 @@ leaves that file:
 Backlog priority mirrors the user's Google Tasks list — `backlog.md` is the
 scoped version of it.
 
-_Last reviewed against the codebase: 2026-08-08, branch `grammar-patterns` @
-`04c4473`. `npm test` 265/265, web and mobile both typecheck, build clean,
-measured not assumed._
+_Last reviewed against the codebase: 2026-08-10, `main` @ `f760fcc`. `npm test`
+291/291, measured._
+
+_This pass **closed grammar patterns**. The mobile smoke test in Expo Go against
+the deployed API came back clean, so the last item left `backlog.md` and the
+feature is done: `status.md` gained a Shipped line, a closing Decisions entry,
+and an updated Now. **`backlog.md` now has no starred items at all** — all three
+are closed. The one thing worth carrying was the `/api/writing` "+ card"
+fallback, which is inert in current code and must not be deleted until no old
+build is in the wild; it moved into the closing Decisions entry rather than
+vanishing with the backlog item._
 
 _The last pass on that branch **built the redesign and then fixed what testing
 it found**. Shipped: the cloze rung, `PatternKind`, derived stage, the
