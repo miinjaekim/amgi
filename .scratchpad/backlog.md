@@ -11,17 +11,25 @@ build, a second rides along free rather than costing a build of its own.
 
 ---
 
-## Queued for the next build
+## In the 1.3.0 build (cut 2026-08-11)
 
-**Six items queued, and one adds a native module.** Grammar patterns brought
-`expo-clipboard` in for copy-to-clipboard on the writing rewrite, so the next
-build is a native-module build — the `expo config --type introspect` pass is
-required rather than skippable. ⚠️ **It has already been run and came back
-clean**: no entitlements, no usage descriptions, plugin list unchanged. Re-run it
-only if another native module lands first — the two items added 2026-08-10 are
-both JS-only and do not disturb it. 1.2.0 carries everything before these. See
-Builds in [status.md](status.md) for its contents and for what remains unverified
-on a real binary.
+**These six are no longer queued — they are in a build being cut now.** `app.json`
+is at 1.3.0 and the EAS production build was started by hand; the build number
+comes from EAS and goes into the Builds table in [status.md](status.md). Nothing
+below leaves this file until the build is accepted, since a merged PR that no
+binary carries is still not shipped.
+
+**Merging another mobile change now is the thing to avoid.** With no OTA it does
+not reach anyone this build, but it does put `main` ahead of both the binary and
+the TestFlight listing copy — which is how the What to Test section ends up
+describing an app the tester doesn't have.
+
+⚠️ One native module: `expo-clipboard`, brought in by grammar patterns for
+copy-to-clipboard on the writing rewrite. The required `expo config --type
+introspect` pass **was run and came back clean** — no entitlements, no usage
+descriptions, plugin list unchanged — and everything merged after it is JS-only,
+so it stands. See Builds in [status.md](status.md) for the full contents and for
+what remains unverified on a real binary.
 
 - **PR #80** (merged 2026-08-04) — `/cards` holds pack cards, the mobile filter
   sheet, the first skeletons.
@@ -46,15 +54,31 @@ on a real binary.
   paragraph beneath it is unverified. Cheapest thing to check first in Expo Go.
 
 _1.2.0 status: submitted and accepted, **internal testing live**, external
-waiting on Beta App Review._
+waiting on Beta App Review. 1.3.0 replaces it once accepted — ⚠️ console state is
+never knowable from the repo, so confirm it rather than reading it here._
+
+**Still to do on this build**, in order: read the build number off EAS into the
+Builds table → submit to App Store Connect (`ascAppId` is already in `eas.json`)
+→ paste the refreshed `docs/testflight-beta-info.md` copy into Test Information,
+**both ko and en localizations** → then the verification pass that no build has
+had yet, on the binary itself: audio, CSV/Anki export, sharing, offline review
+across a force-kill and reconnect, account deletion against the production
+`EXPO_PUBLIC_API_BASE_URL`, and the review reminder firing *and then
+disappearing* once you review. The three renders never seen on a device (#81's
+packs list, #87's correction row, #88's badge) are the cheapest things to look at
+first.
 
 **Pre-flight, for next time:** smoke-test in Expo Go → verify the native-adjacent
-things on the build itself (audio, files, sharing, offline review + reconnect,
-account deletion, the review reminder firing *and then disappearing* once you
-review) → bump `version` in `app.json` → check
-`docs/testflight-beta-info.md` is still accurate → **`expo config --type
-introspect` if any native module was added**, which is where an entitlement you
-didn't ask for shows up before a cloud build finds it.
+things on the build itself → bump `version` in `app.json` **before** starting the
+build, not after → rewrite What to Test in `docs/testflight-beta-info.md` and
+re-check the rest of it → **`expo config --type introspect` if any native module
+was added**, which is where an entitlement you didn't ask for shows up before a
+cloud build finds it.
+
+_The version-bump ordering earned its place on 2026-08-11: the 1.3.0 build was
+started against an `app.json` still reading 1.2.0, and had to be restarted. EAS
+auto-increments the **build** number but never the version, so nothing catches
+this for you._
 
 _The listing check earned its place on 2026-07-27: it still advertised five study
 languages after Traditional Chinese made six, and said nothing about account

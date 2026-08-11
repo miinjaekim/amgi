@@ -3,17 +3,23 @@
 Session orientation: what's live, what's broken, what's decided. Shipped history
 sits at the bottom as reference — the reasoning worth keeping is in Decisions.
 
-_Reconciled against `main` @ `dd87d55`, 2026-08-10. `npm test` 304/304, measured._
+_Reconciled against `main` @ `c660d60`, 2026-08-11, while cutting 1.3.0._
 
 ## Now
 
-- **1.2.0 is in TestFlight.** Submitted and accepted; **internal testing is
-  live**, external is waiting on Beta App Review.
-- **Six mobile changes are queued behind it**, and one adds a native module
-  (`expo-clipboard`), so the next build is a native-module build. The
-  `expo config --type introspect` pass has already been run and came back clean;
-  the two items added 08-10 are JS-only and don't disturb it. See Builds below
-  for the pre-flight.
+- **1.3.0 is being cut** (2026-08-11). Version bumped from 1.2.0; EAS assigns the
+  build number (`appVersionSource: remote`, `autoIncrement`) — **read it off the
+  console and record it in Builds below**. This is a **native-module build**
+  (`expo-clipboard`), so it is the first binary the six queued changes reach.
+  TestFlight listing copy was refreshed for it in
+  `docs/testflight-beta-info.md` — Beta App Description, What to Test and the
+  Apple review notes all name grammar patterns.
+- **1.2.0 is in TestFlight** and stays there until 1.3.0 is accepted. Internal
+  testing was live; external was waiting on Beta App Review — ⚠️ console state,
+  confirm rather than assume.
+- **The six changes this build carries.** The `expo config --type introspect`
+  pass was run when `expo-clipboard` landed and came back clean; everything
+  merged after it is JS-only and doesn't disturb it.
   - PR #80 (08-04): the `/cards` loosening, the filter sheet, the first
     skeletons. Checked on web and **on a device in Expo Go** before merge.
   - PR #81 (08-08): the two military packs reach mobile through the shared
@@ -32,7 +38,8 @@ _Reconciled against `main` @ `dd87d55`, 2026-08-10. `npm test` 304/304, measured
   - PR #88 (08-11): part of speech on cards, both platforms. JS-only. ⚠️ Same
     caveat — the mobile badge is typechecked, never seen rendered.
 - **No code is in flight.** High is empty in [backlog.md](backlog.md) — the next
-  thing to build comes from Medium.
+  thing to build comes from Medium. Nothing should merge to mobile until 1.3.0 is
+  submitted, or the build and the listing copy stop describing the same app.
 
 TestFlight context that isn't in the repo:
 
@@ -50,6 +57,7 @@ No OTA, so every mobile change reaches users through one of these.
 
 | Version | Build | Date | Cut from |
 |---|---|---|---|
+| 1.3.0 | _read off EAS_ | 2026-08-11 | version bump on top of `c660d60` (PR #88) |
 | 1.2.0 | 9 | 2026-08-02 | `51a53e9` (PR #76, version bump) |
 | 1.1.0 | 8 | 2026-07-27 | `8359adf` on `fix/drop-push-entitlement`, pre-merge |
 | 1.0.2 | 4 | 2026-07-24 | `0288136` |
@@ -62,17 +70,29 @@ have to be read off the console and recorded here. Gaps are normal: the number i
 reserved when a job is created, not awarded on success. Builds 5–7 were failed
 attempts.
 
+**1.3.0 contents** — the six items above: `/cards` loosening + filter sheet +
+skeletons (#80), the two military packs (#81), grammar patterns (#84), archive
+and delete drop from the queue (#86), spellcheck on lookup (#87), part of speech
+(#88). **Native-module build** — `expo-clipboard`, for the copy button on the
+writing rewrite (`CopyButton.tsx`, the only caller).
+
+⚠️ **Three of the six were typechecked but never seen rendered on a device** —
+the packs list without per-pack descriptions (#81), the "showing results for…"
+row (#87) and the part-of-speech badge (#88). This build is the first chance to
+look at them.
+
 **1.2.0 contents** — nine merged items, all JS-only (no native module, so no
 `expo config --type introspect` pass): pack unification (#71), first run (#73),
 per-page help (#74), tab-focus reload (#75), writing review (#69), card backs
 follow native language (#67), direction choice on Review (#65), second Learn tab
 tap clears search (#66), TOPIK 고급 (#68).
 
-⚠️ **Never verified on a real binary**, on this build or any before it — the
-logic is tested, the native bindings are not: pronunciation audio, CSV/Anki
-export, sharing, offline review across a force-kill and reconnect, the review
-reminder firing *and* disappearing once you review, and account deletion against
-the production `EXPO_PUBLIC_API_BASE_URL`.
+⚠️ **Never verified on a real binary**, on any build so far — the logic is
+tested, the native bindings are not: pronunciation audio, CSV/Anki export,
+sharing, offline review across a force-kill and reconnect, the review reminder
+firing *and* disappearing once you review, and account deletion against the
+production `EXPO_PUBLIC_API_BASE_URL`. 1.3.0's What to Test asks testers for
+these by name — first build that does.
 
 ## Known Issues
 

@@ -61,10 +61,21 @@ leaves that file:
 Backlog priority mirrors the user's Google Tasks list — `backlog.md` is the
 scoped version of it.
 
-_Last reviewed against the codebase: 2026-08-10, `main` @ `dd87d55`. `npm test`
-304/304, measured._
+_Last reviewed against the codebase: 2026-08-11, `main` @ `c660d60`._
 
-_This pass **cleared High**. Both items shipped as separate PRs — term archiving
+_This pass **cut 1.3.0**. `app.json` went 1.2.0 → 1.3.0 and the mobile build was
+started by hand; the build number comes from EAS and has to be read off the
+console into the Builds table in [status.md](status.md). Two things worth
+knowing before the next mobile change: this is the **first native-module build**
+since 1.2.0 (`expo-clipboard`), so it is the only way the six queued PRs reach
+anyone — with no OTA, merging to mobile now means the shipped binary and the
+TestFlight listing describe different apps. And `docs/testflight-beta-info.md`
+was rewritten for it: What to Test is per-build copy and gets replaced every
+time, but this build's version also asks testers about the native paths **no
+build has ever verified** (audio, export, sharing, offline, reminders) — if
+those come back clean, that caveat can finally leave `status.md`._
+
+_The previous pass **cleared High**. Both items shipped as separate PRs — term archiving
 during review (#86) and spellcheck on lookup (#87) — and each turned out to be
 one shared function away from being right on both platforms, which is why they
 closed together. Two things are worth reading before touching either area: the
@@ -76,7 +87,7 @@ set to re-probe before editing the prompt. The backlog item's open question —
 one round trip or two — closed on the reuse-the-endpoint rule. **`backlog.md`'s
 High section is now empty**; the next thing to pick up is under Medium._
 
-_The previous pass **closed grammar patterns**. The mobile smoke test in Expo Go against
+_The pass before that **closed grammar patterns**. The mobile smoke test in Expo Go against
 the deployed API came back clean, so the last item left `backlog.md` and the
 feature is done: `status.md` gained a Shipped line, a closing Decisions entry,
 and an updated Now. **`backlog.md` now has no starred items at all** — all three
