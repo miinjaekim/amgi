@@ -63,17 +63,23 @@ scoped version of it.
 
 _Last reviewed against the codebase: 2026-08-11, `main` @ `c660d60`._
 
-_This pass **cut 1.3.0**. `app.json` went 1.2.0 → 1.3.0 and the mobile build was
-started by hand; the build number comes from EAS and has to be read off the
-console into the Builds table in [status.md](status.md). Two things worth
-knowing before the next mobile change: this is the **first native-module build**
-since 1.2.0 (`expo-clipboard`), so it is the only way the six queued PRs reach
-anyone — with no OTA, merging to mobile now means the shipped binary and the
-TestFlight listing describe different apps. And `docs/testflight-beta-info.md`
-was rewritten for it: What to Test is per-build copy and gets replaced every
-time, but this build's version also asks testers about the native paths **no
-build has ever verified** (audio, export, sharing, offline, reminders) — if
-those come back clean, that caveat can finally leave `status.md`._
+_This pass **cut 1.3.0, build 11**. `app.json` went 1.2.0 → 1.3.0; the build
+succeeded and is not yet submitted. It is the **first native-module build** since
+1.2.0 (`expo-clipboard`), so it is the only way the six queued PRs reach anyone —
+with no OTA, merging another mobile change before submission means the binary and
+the TestFlight listing describe different apps._
+
+_`docs/testflight-beta-info.md` was rewritten for it and then **cut for length on
+the user's call** — the tester-facing copy had grown past what its own author
+would read. What survived the cut is the rule worth keeping: **each bullet names
+the one thing that can go wrong**, because the rationale around it was what made
+it unreadable. The Apple review notes were deliberately **left long** and now
+carry a warning saying so — they answer rejection reasons, not curiosity, and the
+file notes which paragraphs are load-bearing (5.1.1(v) account deletion,
+notifications off by default, third-party processing). This build's What to Test
+also asks testers about the native paths **no build has ever verified** (audio,
+export, sharing, offline, reminders); if those come back clean, that caveat can
+finally leave [status.md](status.md)._
 
 _The previous pass **cleared High**. Both items shipped as separate PRs — term archiving
 during review (#86) and spellcheck on lookup (#87) — and each turned out to be

@@ -13,10 +13,8 @@ build, a second rides along free rather than costing a build of its own.
 
 ## In the 1.3.0 build (cut 2026-08-11)
 
-**These six are no longer queued — they are in a build being cut now.** `app.json`
-is at 1.3.0 and the EAS production build was started by hand; the build number
-comes from EAS and goes into the Builds table in [status.md](status.md). Nothing
-below leaves this file until the build is accepted, since a merged PR that no
+**These six are no longer queued — they are in build 11, which succeeded.**
+Nothing below leaves this file until it is accepted, since a merged PR that no
 binary carries is still not shipped.
 
 **Merging another mobile change now is the thing to avoid.** With no OTA it does
@@ -57,10 +55,11 @@ _1.2.0 status: submitted and accepted, **internal testing live**, external
 waiting on Beta App Review. 1.3.0 replaces it once accepted — ⚠️ console state is
 never knowable from the repo, so confirm it rather than reading it here._
 
-**Still to do on this build**, in order: read the build number off EAS into the
-Builds table → submit to App Store Connect (`ascAppId` is already in `eas.json`)
-→ paste the refreshed `docs/testflight-beta-info.md` copy into Test Information,
-**both ko and en localizations** → then the verification pass that no build has
+**Still to do on this build**, in order: submit build 11 to App Store Connect
+(`ascAppId` is already in `eas.json`) → paste the `docs/testflight-beta-info.md`
+copy into Test Information, **both ko and en localizations** — Beta App
+Description and What to Test were cut down on 08-11 for length, the Apple review
+notes deliberately were **not** → then the verification pass that no build has
 had yet, on the binary itself: audio, CSV/Anki export, sharing, offline review
 across a force-kill and reconnect, account deletion against the production
 `EXPO_PUBLIC_API_BASE_URL`, and the review reminder firing *and then

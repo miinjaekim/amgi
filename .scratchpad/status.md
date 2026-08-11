@@ -7,13 +7,10 @@ _Reconciled against `main` @ `c660d60`, 2026-08-11, while cutting 1.3.0._
 
 ## Now
 
-- **1.3.0 is being cut** (2026-08-11). Version bumped from 1.2.0; EAS assigns the
-  build number (`appVersionSource: remote`, `autoIncrement`) — **read it off the
-  console and record it in Builds below**. This is a **native-module build**
-  (`expo-clipboard`), so it is the first binary the six queued changes reach.
-  TestFlight listing copy was refreshed for it in
-  `docs/testflight-beta-info.md` — Beta App Description, What to Test and the
-  Apple review notes all name grammar patterns.
+- **1.3.0 build 11 succeeded** (2026-08-11) and is **not yet submitted**. A
+  **native-module build** (`expo-clipboard`), so it is the first binary the six
+  queued changes reach. Listing copy for it is ready to paste in
+  `docs/testflight-beta-info.md`, both localizations.
 - **1.2.0 is in TestFlight** and stays there until 1.3.0 is accepted. Internal
   testing was live; external was waiting on Beta App Review — ⚠️ console state,
   confirm rather than assume.
@@ -57,7 +54,7 @@ No OTA, so every mobile change reaches users through one of these.
 
 | Version | Build | Date | Cut from |
 |---|---|---|---|
-| 1.3.0 | _read off EAS_ | 2026-08-11 | version bump on top of `c660d60` (PR #88) |
+| 1.3.0 | 11 | 2026-08-11 | `86c2c5a` on `release/1.3.0` (version bump) |
 | 1.2.0 | 9 | 2026-08-02 | `51a53e9` (PR #76, version bump) |
 | 1.1.0 | 8 | 2026-07-27 | `8359adf` on `fix/drop-push-entitlement`, pre-merge |
 | 1.0.2 | 4 | 2026-07-24 | `0288136` |
