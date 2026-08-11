@@ -9,7 +9,7 @@ _Reconciled against `main` @ `dd87d55`, 2026-08-10. `npm test` 304/304, measured
 
 - **1.2.0 is in TestFlight.** Submitted and accepted; **internal testing is
   live**, external is waiting on Beta App Review.
-- **Five mobile changes are queued behind it**, and one adds a native module
+- **Six mobile changes are queued behind it**, and one adds a native module
   (`expo-clipboard`), so the next build is a native-module build. The
   `expo config --type introspect` pass has already been run and came back clean;
   the two items added 08-10 are JS-only and don't disturb it. See Builds below
@@ -29,6 +29,8 @@ _Reconciled against `main` @ `dd87d55`, 2026-08-10. `npm test` 304/304, measured
   - PR #87 (08-10): spellcheck on lookup. Mobile's Learn screen gains the
     "showing results for…" row and its override. ⚠️ Verified on web; the mobile
     render of that row is **typechecked but never seen**.
+  - PR #88 (08-11): part of speech on cards, both platforms. JS-only. ⚠️ Same
+    caveat — the mobile badge is typechecked, never seen rendered.
 - **No code is in flight.** High is empty in [backlog.md](backlog.md) — the next
   thing to build comes from Medium.
 

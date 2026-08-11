@@ -13,7 +13,7 @@ build, a second rides along free rather than costing a build of its own.
 
 ## Queued for the next build
 
-**Five items queued, and one adds a native module.** Grammar patterns brought
+**Six items queued, and one adds a native module.** Grammar patterns brought
 `expo-clipboard` in for copy-to-clipboard on the writing rewrite, so the next
 build is a native-module build — the `expo config --type introspect` pass is
 required rather than skippable. ⚠️ **It has already been run and came back
@@ -35,6 +35,10 @@ on a real binary.
   same pass; it archives, so it had the same bug. JS-only.
 - **PR #87** (merged 2026-08-10) — spellcheck on lookup, both platforms. The
   Learn screen gains the "showing results for…" row and its override. JS-only.
+- **PR #88** (merged 2026-08-11) — part of speech on cards, both platforms:
+  Learn, the card detail modal and the CSV column on mobile. JS-only. ⚠️ The
+  mobile badge is **typechecked but never seen rendered** — it goes into the
+  existing badge row, so the risk is wrapping on a narrow screen, not the value.
 - **PR #81** (merged 2026-08-08) — the two military packs reach mobile through
   the shared registry, and the packs list drops the per-pack description. ⚠️ The
   description change was **typechecked but never seen rendered** — the list went
