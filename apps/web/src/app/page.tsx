@@ -16,7 +16,7 @@ import { saveFlashcardToFirestore, Flashcard } from '@/services/firestore';
 import { getBackSideConfig, getTermBackSide, getCharacterBreakdown, getExampleSides, getReading, getStudyLanguageConfig, parseStreamedExamples, parseStreamedDepth, wordOfTheDayCore } from '@amgi/core';
 import type { WordOfTheDay } from '@amgi/core';
 import { useUser } from '@/components/UserContext';
-import { t } from '@/lib/i18n';
+import { t, partOfSpeechLabel } from '@/lib/i18n';
 import SaveFlashcardModal from '@/components/SaveFlashcardModal';
 import PronounceButton from '@/components/PronounceButton';
 import WritingReviewPanel from '@/components/WritingReviewPanel';
@@ -555,6 +555,11 @@ export default function Home() {
             <h2 className="text-2xl font-bold text-[var(--color-highlight)]">{core.term}</h2>
             {core.termLanguage === studyLanguage && (
               <PronounceButton text={core.term} furigana={core.furigana} studyLanguage={studyLanguage} />
+            )}
+            {partOfSpeechLabel(nativeLanguage, core) && (
+              <span className="px-2 py-0.5 text-xs rounded-full border border-[var(--color-muted)] text-[var(--color-muted)]">
+                {partOfSpeechLabel(nativeLanguage, core)}
+              </span>
             )}
             {core.formality && core.formality !== 'N/A' && (
               <span className="px-2 py-0.5 text-xs rounded-full border border-[var(--color-muted)] text-[var(--color-muted)]">

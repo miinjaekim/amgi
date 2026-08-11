@@ -5,7 +5,7 @@ import { useUser } from '@/components/UserContext';
 import { saveFlashcardToFirestore, Flashcard } from '@/services/firestore';
 import { TermCore } from '@/services/gemini';
 import { getStudyLanguageConfig, getBackSideConfig } from '@amgi/core';
-import { t } from '@/lib/i18n';
+import { t, partOfSpeechLabel } from '@/lib/i18n';
 import Spinner from '@/components/Spinner';
 
 type ImportStatus = 'pending' | 'loading' | 'success' | 'ambiguous' | 'error';
@@ -179,6 +179,7 @@ export default function ImportModal({
                         {item.status === 'success' && item.data && (
                           <span className="text-xs text-[var(--color-muted)]">
                             {item.data[langConfig.studyField]} · {item.data[backConfig.backField] || item.data.english}
+                            {partOfSpeechLabel(nativeLanguage, item.data) && ` · ${partOfSpeechLabel(nativeLanguage, item.data)}`}
                             {item.data.formality && item.data.formality !== 'N/A' && ` · ${item.data.formality}`}
                           </span>
                         )}

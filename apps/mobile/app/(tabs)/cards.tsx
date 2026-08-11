@@ -13,7 +13,7 @@ import {
   deleteFlashcard, updateFlashcardFields,
 } from '../../src/services/firestore';
 import type { Flashcard } from '../../src/services/firestore';
-import { t, DEFAULT_DECK_FILTER, buildDeckFilters, filterCardsByDeck, getCharacterBreakdown, getStudyLanguageConfig, getBackSideConfig, getStudyLangSide, getBackSide, getExampleSides } from '@amgi/core';
+import { t, DEFAULT_DECK_FILTER, buildDeckFilters, filterCardsByDeck, getCharacterBreakdown, getStudyLanguageConfig, getBackSideConfig, getStudyLangSide, getBackSide, getExampleSides, partOfSpeechLabel } from '@amgi/core';
 import type { CardSideField, DeckFilterId } from '@amgi/core';
 import { useTheme } from '../../src/context/ThemeContext';
 import { useFloatingTabBarHeight } from '../../src/components/FloatingTabBar';
@@ -205,7 +205,7 @@ export default function CardsScreen() {
   // why neither of them re-filters: an Anki export used to drop archived cards
   // on its own, which now would hand you an empty file from the Archived tab.
   const exportCSV = () => {
-    const rows = [[config.label, backConfig.backLanguage, 'Formality', 'Definition', 'Characters', 'Notes', 'Examples', 'Saved', 'Status']];
+    const rows = [[config.label, backConfig.backLanguage, 'Part of speech', 'Formality', 'Definition', 'Characters', 'Notes', 'Examples', 'Saved', 'Status']];
     for (const c of visibleCards) {
       const examples = c.examples?.map(e => {
         const sides = getExampleSides(e, studyLanguage, nativeLanguage);
@@ -213,7 +213,9 @@ export default function CardsScreen() {
       }).join(' | ') ?? '';
       const saved = c.createdAt instanceof Date ? c.createdAt.toISOString().slice(0, 10) : '';
       rows.push([
-        getStudyLangSide(c), getBackSide(c, nativeLanguage), c.formality || '', c.definition || '',
+        getStudyLangSide(c), getBackSide(c, nativeLanguage),
+        // The label, not the code — the column is read by a person.
+        partOfSpeechLabel(nativeLanguage, c) || '', c.formality || '', c.definition || '',
         getCharacterBreakdown(c) || '', c.notes || '', examples, saved, c.archived ? 'archived' : 'active',
       ]);
     }

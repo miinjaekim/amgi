@@ -34,7 +34,7 @@ import PatternSession from '@/components/PatternSession';
 import { db } from '@/config/firebase';
 import { doc, updateDoc } from 'firebase/firestore';
 import { getNextReviewData } from '@/services/sm2';
-import { t } from '@/lib/i18n';
+import { t, partOfSpeechLabel } from '@/lib/i18n';
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 import PronounceButton from '@/components/PronounceButton';
 import ReviewDetailsPanel from '@/components/ReviewDetailsPanel';
@@ -779,8 +779,15 @@ export default function ReviewPage() {
                             <div className="text-lg mb-3 text-[var(--color-text)] font-semibold">{getBackSide(currentReview.card, nativeLanguage)}</div>
                           )}
 
-                          {(currentReview.card.gender || getReading(currentReview.card)) && (
+                          {(partOfSpeechLabel(nativeLanguage, currentReview.card) ||
+                            currentReview.card.gender ||
+                            getReading(currentReview.card)) && (
                             <div className="mb-3 flex gap-2 flex-wrap">
+                              {partOfSpeechLabel(nativeLanguage, currentReview.card) && (
+                                <span className="px-2 py-0.5 text-xs rounded-full border border-[var(--color-muted)] text-[var(--color-muted)]">
+                                  {partOfSpeechLabel(nativeLanguage, currentReview.card)}
+                                </span>
+                              )}
                               {currentReview.card.gender && (
                                 <span className="px-2 py-0.5 text-xs rounded-full border border-[var(--color-muted)] text-[var(--color-muted)]">
                                   {currentReview.card.gender}
@@ -829,8 +836,15 @@ export default function ReviewPage() {
                             <PronounceButton text={getStudySide(currentReview.card)} furigana={currentReview.card.furigana} studyLanguage={studyLanguage} />
                           </div>
 
-                          {(currentReview.card.gender || getReading(currentReview.card)) && (
+                          {(partOfSpeechLabel(nativeLanguage, currentReview.card) ||
+                            currentReview.card.gender ||
+                            getReading(currentReview.card)) && (
                             <div className="mb-3 flex gap-2 flex-wrap">
+                              {partOfSpeechLabel(nativeLanguage, currentReview.card) && (
+                                <span className="px-2 py-0.5 text-xs rounded-full border border-[var(--color-muted)] text-[var(--color-muted)]">
+                                  {partOfSpeechLabel(nativeLanguage, currentReview.card)}
+                                </span>
+                              )}
                               {currentReview.card.gender && (
                                 <span className="px-2 py-0.5 text-xs rounded-full border border-[var(--color-muted)] text-[var(--color-muted)]">
                                   {currentReview.card.gender}

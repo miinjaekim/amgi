@@ -87,6 +87,34 @@ the production `EXPO_PUBLIC_API_BASE_URL`.
 Closed calls, kept with their reasoning — a decision whose reasoning is lost gets
 reopened by the next person to notice the symptom. Newest first.
 
+### Part of speech is stored as a code and rendered in the reader's language (2026-08-11)
+
+**This reverses the backlog item's own decision**, which had the badge reading
+English on every card — `noun`, `verb` — reasoning that `formality` already
+renders `Standard` in English beside it, so an English part of speech needed no
+i18n keys and no closed vocabulary to coerce the model onto. The user asked for
+the native language instead.
+
+The reversal was cheap because the alternative it rejected was the wrong one.
+"Localized" did not mean *generating* a label per language, which is what the
+original call was pricing — it meant storing a **code** and looking the label up
+at render. So the closed vocabulary the item wanted to avoid turned out to be
+the thing that made this easy: 15 codes in `PART_OF_SPEECH_CODES`, one
+`partOfSpeechLabel(nativeLanguage, card)`, and switching native language
+re-labels every existing card with no migration — the back-slot problem met
+again and solved outright rather than duplicated.
+
+What the item got right and is unchanged: the field sits beside `formality` and
+`gender` on `TermCore`, the work is mostly the twelve prompt templates, and
+scope is new lookups only — no backfill of old or pack cards. Two corrections to
+its touch-point list: `ReviewDetailsPanel` deliberately gets **no** badge (the
+review card above it now shows one on the same screen), and the word of the day
+also carries the field, which the item didn't mention.
+
+The shape, the language-generic code list, why the Japanese i/na split is out,
+and the one-day lag on the word of the day are all in
+[data-model.md](data-model.md).
+
 ### The spellcheck correction rides the lookup, and is written to refuse (2026-08-10)
 
 The backlog item left one question open: where the correction comes from.

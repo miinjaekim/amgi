@@ -10,6 +10,7 @@ import {
   getReading,
   getStudyLangSide,
   getStudyLanguageConfig,
+  partOfSpeechLabel,
   resolvePackBack,
   t,
 } from '@amgi/core';
@@ -89,6 +90,7 @@ export default function CardDetailModal({
   const hasDepth = !!(saved?.definition || characterBreakdown || saved?.notes);
   const hasDetails = hasDepth || hasExamples;
   const badges = [
+    saved ? partOfSpeechLabel(nativeLanguage, saved) : undefined,
     saved?.formality && saved.formality !== 'N/A' ? saved.formality : null,
     saved?.gender,
     saved ? getReading(saved) : undefined,

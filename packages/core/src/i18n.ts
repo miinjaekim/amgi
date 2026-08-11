@@ -1,5 +1,5 @@
 import { getStudyLanguageConfig, getBackSideConfig } from './types';
-import type { StudyLanguage } from './types';
+import type { StudyLanguage, TermCore } from './types';
 import type { ReviewDirection } from './sm2';
 
 const translations = {
@@ -444,6 +444,22 @@ const translations = {
     drillMissedAgain: 'Drill the {count} you missed',
     drillBackToDeck: 'Back to deck',
     drillNoProgress: 'Drilling changes no review schedules.',
+    // Parts of speech — read through `partOfSpeechLabel`, never `t` directly
+    posNoun: 'Noun',
+    posVerb: 'Verb',
+    posAdjective: 'Adjective',
+    posAdverb: 'Adverb',
+    posPronoun: 'Pronoun',
+    posDeterminer: 'Determiner',
+    posNumeral: 'Numeral',
+    posPreposition: 'Preposition',
+    posConjunction: 'Conjunction',
+    posInterjection: 'Interjection',
+    posParticle: 'Particle',
+    posCounter: 'Counter',
+    posAffix: 'Affix',
+    posPhrase: 'Phrase',
+    posIdiom: 'Idiom',
   },
   Korean: {
     // Learn page
@@ -850,6 +866,23 @@ const translations = {
     drillMissedAgain: '틀린 {count}개만 다시',
     drillBackToDeck: '단어팩으로 돌아가기',
     drillNoProgress: '연습은 복습 일정에 영향을 주지 않아요.',
+    // 품사 — 학교 문법에서 쓰는 이름 그대로. 배지에 한 단어로 들어가므로
+    // '단위를 세는 명사' 같은 설명형은 피했다.
+    posNoun: '명사',
+    posVerb: '동사',
+    posAdjective: '형용사',
+    posAdverb: '부사',
+    posPronoun: '대명사',
+    posDeterminer: '한정사',
+    posNumeral: '수사',
+    posPreposition: '전치사',
+    posConjunction: '접속사',
+    posInterjection: '감탄사',
+    posParticle: '조사',
+    posCounter: '단위 명사',
+    posAffix: '접사',
+    posPhrase: '표현',
+    posIdiom: '관용구',
   },
 } as const;
 
@@ -868,6 +901,26 @@ export function t(
     }
   }
   return text;
+}
+
+/**
+ * The part-of-speech badge text, in the reader's own language — 명사 for a
+ * Korean native, "Noun" for an English one, off the same stored code.
+ *
+ * Takes the card rather than the code so the six render sites read the same as
+ * `getReading(card)` beside them, and returns `undefined` — not a fallback
+ * string — for a card that has no part of speech or carries a code this build
+ * doesn't know. Every site already hides a badge whose value is empty, and an
+ * English code leaking onto a Korean card is worse than no badge at all.
+ */
+export function partOfSpeechLabel(
+  nativeLanguage: string | null | undefined,
+  card: Pick<TermCore, 'partOfSpeech'>
+): string | undefined {
+  const pos = card.partOfSpeech;
+  if (!pos) return undefined;
+  const key = `pos${pos.charAt(0).toUpperCase()}${pos.slice(1)}` as TranslationKey;
+  return key in translations.English ? t(nativeLanguage, key) : undefined;
 }
 
 /**
