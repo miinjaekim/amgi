@@ -9,6 +9,11 @@ Test Information은 로컬라이제이션을 지원하므로, 언어 목록에 *
 **English (en)** 을 모두 추가한 뒤 아래 각 언어의 문구를 넣으면 기기 언어 설정에
 따라 테스터에게 알맞은 언어로 표시됩니다.
 
+⚠️ **코드 블록 안은 문단마다 한 줄입니다 — 줄바꿈을 다시 넣지 마세요.** 넣은
+줄바꿈은 TestFlight에서 그대로 살아 있고, 화면 폭에 맞춰 알아서 접히는 것과
+겹쳐서 폰에서 들쭉날쭉하게 보입니다. 이 파일을 편집할 때 에디터가 자동 줄바꿈을
+하더라도 저장할 때 한 줄로 두세요. 줄이 나뉘는 곳은 문단 사이와 `·` 항목 사이뿐입니다.
+
 ---
 
 ## 1. Beta App Description (베타 앱 설명)
@@ -18,14 +23,11 @@ Test Information은 로컬라이제이션을 지원하므로, 언어 목록에 *
 ```
 Amgi는 언어 학습용 플래시카드 앱입니다.
 
-단어를 찾아보면 뜻과 뉘앙스, 격식, 예문이 나옵니다. 한자어는 한자 풀이도
-함께요. 그대로 카드로 저장하면 간격 반복 일정에 맞춰 다시 나타납니다.
+단어를 찾아보면 뜻과 뉘앙스, 격식, 예문이 나옵니다. 한자어는 한자 풀이도 함께요. 그대로 카드로 저장하면 간격 반복 일정에 맞춰 다시 나타납니다.
 
-글을 쓰면 원어민이라면 어떻게 썼을지 보여줍니다. 거기서 걸린 문법은 따로
-연습할 수 있습니다.
+글을 쓰면 원어민이라면 어떻게 썼을지 보여줍니다. 거기서 걸린 문법은 따로 연습할 수 있습니다.
 
-AI가 만든 설명이라 틀릴 수 있습니다. 어색하거나 잘못된 부분을 알려 주시는
-것이 이번 베타에서 가장 도움이 됩니다.
+AI가 만든 설명이라 틀릴 수 있습니다. 어색하거나 잘못된 부분을 알려 주시는 것이 이번 베타에서 가장 도움이 됩니다.
 
 학습 언어: 영어, 일본어, 중국어(번체), 스웨덴어, 프랑스어, 한국어
 화면 언어: 한국어 / 영어 (설정에서 변경)
@@ -38,15 +40,11 @@ AI가 만든 설명이라 틀릴 수 있습니다. 어색하거나 잘못된 부
 ```
 Amgi is a flashcard app for language learners.
 
-Look up a word and you get its meaning, nuance, register and example sentences
-— plus a character breakdown for anything written in Chinese characters. Save
-that as a card and it comes back on a spaced-repetition schedule.
+Look up a word and you get its meaning, nuance, register and example sentences — plus a character breakdown for anything written in Chinese characters. Save that as a card and it comes back on a spaced-repetition schedule.
 
-Write a passage and you get it back as a native speaker would have put it.
-Grammar that trips you up there becomes a pattern you practise separately.
+Write a passage and you get it back as a native speaker would have put it. Grammar that trips you up there becomes a pattern you practise separately.
 
-The explanations are AI-generated, so they can be wrong. Telling me when they
-are is the most useful thing you can do in this beta.
+The explanations are AI-generated, so they can be wrong. Telling me when they are is the most useful thing you can do in this beta.
 
 Study languages: English, Japanese, Traditional Chinese, Swedish, French, Korean
 Display language: Korean or English (change in Settings)
@@ -79,26 +77,18 @@ kenyamjkim@gmail.com
 ### 한국어
 
 ```
-며칠 편하게 써 보시고 이상한 점을 알려 주세요. AI 설명이 틀린 경우, 앱이
-멈추는 경우, 화면 언어가 설정과 다른 경우가 특히 도움이 됩니다.
+며칠 편하게 써 보시고 이상한 점을 알려 주세요. AI 설명이 틀린 경우, 앱이 멈추는 경우, 화면 언어가 설정과 다른 경우가 특히 도움이 됩니다.
 
 이번 빌드에서 새로 볼 것:
-· 문법 패턴 — 가장 큰 변화입니다. 글 첨삭에서 저장하거나 카드 화면의
-  '문법'에서 직접 추가하면, 복습에 빈칸 채우기로 나옵니다. 두 번 맞히면
-  직접 문장을 씁니다. 맞는 답을 틀렸다고 하면 알려 주세요.
-· 내 카드 — 단어팩에서 저장한 카드가 이제 여기 보입니다. 덱·보관·정렬은
-  필터 버튼 하나로 모았어요.
-· 군사용어 팩 두 개 — 부대·참모, 안보·정세. 번역이 실제로 쓰는 말과 다르면
-  꼭 알려 주세요. 이 팩은 특히 그런 지적이 필요합니다.
-· 맞춤법 — 오타를 내면 고쳐서 찾아 줍니다. 멀쩡한 단어(사투리, 옛말,
-  고유명사, 활용형)를 고치면 알려 주세요.
-· 품사 — 새로 찾아본 단어에 명사·동사가 붙습니다. 예전 카드엔 없는 게
-  정상입니다.
+
+· 문법 패턴 — 가장 큰 변화입니다. 글 첨삭에서 저장하거나 카드 화면의 '문법'에서 직접 추가하면, 복습에 빈칸 채우기로 나옵니다. 두 번 맞히면 직접 문장을 씁니다. 맞는 답을 틀렸다고 하면 알려 주세요.
+· 내 카드 — 단어팩에서 저장한 카드가 이제 여기 보입니다. 덱·보관·정렬은 필터 버튼 하나로 모았어요.
+· 군사용어 팩 두 개 — 부대·참모, 안보·정세. 번역이 실제로 쓰는 말과 다르면 꼭 알려 주세요. 이 팩은 특히 그런 지적이 필요합니다.
+· 맞춤법 — 오타를 내면 고쳐서 찾아 줍니다. 멀쩡한 단어(사투리, 옛말, 고유명사, 활용형)를 고치면 알려 주세요.
+· 품사 — 새로 찾아본 단어에 명사·동사가 붙습니다. 예전 카드엔 없는 게 정상입니다.
 · 복습 중 보관하거나 지운 카드가 그 세션에 다시 나오면 알려 주세요.
 
-오랜만의 새 빌드라 아직 실제 앱에서 확인 못 한 것들이 있습니다. 발음 듣기,
-내보내기, 공유, 오프라인 복습, 복습 알림, 첨삭 문장 복사 — 안 되는 게
-있으면 알려 주세요.
+오랜만의 새 빌드라 아직 실제 앱에서 확인 못 한 것들이 있습니다. 발음 듣기, 내보내기, 공유, 오프라인 복습, 복습 알림, 첨삭 문장 복사 — 안 되는 게 있으면 알려 주세요.
 
 피드백은 TestFlight의 '피드백 보내기' 또는 kenyamjkim@gmail.com으로.
 ```
@@ -106,34 +96,20 @@ kenyamjkim@gmail.com
 ### English
 
 ```
-Use the app for a few days and flag anything odd. Wrong AI explanations,
-freezes, or a screen in the wrong language are the most useful reports.
+Use the app for a few days and flag anything odd. Wrong AI explanations, freezes, or a screen in the wrong language are the most useful reports.
 
 New in this build:
-· Grammar patterns — the biggest change. Keep the grammar a passage review
-  catches, or add one under "Grammar" on the Cards screen; it turns up in
-  Review as a fill-in-the-gap, then as a sentence you write yourself after
-  two clean passes. Tell me if it marks a correct answer wrong.
-· My Cards — words saved from a pack now show up here. Deck, archived and
-  sort moved behind one filter button.
-· Two military terminology packs — Unit & Staff, Security Affairs. Please
-  flag any translation that isn't what people actually say; this pack needs
-  that more than the others.
-· Spellcheck — misspell something and it looks up the correction. Tell me if
-  it "fixes" a word that was fine: dialect, archaic, proper nouns,
-  inflections.
-· Part of speech — newly looked-up words get a noun/verb badge. Older cards
-  having none is expected.
-· Archive or delete a card mid-review and it shouldn't come back that
-  session. Tell me if it does.
 
-It's been a while since the last build, so some things have never been checked
-on a real install: pronunciation audio, export, sharing, offline review,
-review reminders, and copying a corrected passage. Let me know if any fall
-over.
+· Grammar patterns — the biggest change. Keep the grammar a passage review catches, or add one under "Grammar" on the Cards screen; it turns up in Review as a fill-in-the-gap, then as a sentence you write yourself after two clean passes. Tell me if it marks a correct answer wrong.
+· My Cards — words saved from a pack now show up here. Deck, archived and sort moved behind one filter button.
+· Two military terminology packs — Unit & Staff, Security Affairs. Please flag any translation that isn't what people actually say; this pack needs that more than the others.
+· Spellcheck — misspell something and it looks up the correction. Tell me if it "fixes" a word that was fine: dialect, archaic, proper nouns, inflections.
+· Part of speech — newly looked-up words get a noun/verb badge. Older cards having none is expected.
+· Archive or delete a card mid-review and it shouldn't come back that session. Tell me if it does.
 
-Send feedback via TestFlight's "Send Beta Feedback" or to
-kenyamjkim@gmail.com.
+It's been a while since the last build, so some things have never been checked on a real install: pronunciation audio, export, sharing, offline review, review reminders, and copying a corrected passage. Let me know if any fall over.
+
+Send feedback via TestFlight's "Send Beta Feedback" or to kenyamjkim@gmail.com.
 ```
 
 ---
@@ -155,45 +131,21 @@ kenyamjkim@gmail.com.
 **Review Notes:**
 
 ```
-Amgi is a language-learning app that pairs AI-generated word explanations with
-spaced-repetition flashcards.
+Amgi is a language-learning app that pairs AI-generated word explanations with spaced-repetition flashcards.
 
-Sign-in: The app uses Google Sign-In (Firebase Authentication) only. Demo
-credentials are provided in the demo account fields above. Any Google account can
-sign in and immediately access all functionality.
+Sign-in: The app uses Google Sign-In (Firebase Authentication) only. Demo credentials are provided in the demo account fields above. Any Google account can sign in and immediately access all functionality.
 
-How to test: On first launch the app asks for a native language and a study
-language before anything else, and cannot be used until both are answered. This is
-required because explanations are written in the native language, and a learner
-cannot study the language they already speak. Both can be changed later in Settings.
+How to test: On first launch the app asks for a native language and a study language before anything else, and cannot be used until both are answered. This is required because explanations are written in the native language, and a learner cannot study the language they already speak. Both can be changed later in Settings.
 
-On the Learn tab, type any word or phrase and tap Learn to get an explanation, then
-save it as a flashcard. The Word/Passage toggle at the top of the same tab switches
-to writing review: enter a few sentences and the app returns a native-sounding
-rewrite plus specific notes on grammar and phrasing. The Review tab runs the
-spaced-repetition session over saved cards. The Cards tab lists, edits, and exports
-saved cards; its Cards/Grammar toggle switches to grammar patterns, which are
-practised in Review as short written exercises rather than flipped as cards. The
-Packs tab holds pre-made decks that can be saved as cards or drilled directly.
+On the Learn tab, type any word or phrase and tap Learn to get an explanation, then save it as a flashcard. The Word/Passage toggle at the top of the same tab switches to writing review: enter a few sentences and the app returns a native-sounding rewrite plus specific notes on grammar and phrasing. The Review tab runs the spaced-repetition session over saved cards. The Cards tab lists, edits, and exports saved cards; its Cards/Grammar toggle switches to grammar patterns, which are practised in Review as short written exercises rather than flipped as cards. The Packs tab holds pre-made decks that can be saved as cards or drilled directly.
 
-Account deletion: Settings → Delete account, at the bottom of the screen. This
-permanently deletes the account and all associated data from within the app, as
-required by guideline 5.1.1(v). It asks for confirmation and may re-prompt for
-Google sign-in, because deleting an account requires a recent authentication.
+Account deletion: Settings → Delete account, at the bottom of the screen. This permanently deletes the account and all associated data from within the app, as required by guideline 5.1.1(v). It asks for confirmation and may re-prompt for Google sign-in, because deleting an account requires a recent authentication.
 
-Notifications: The app can schedule local reminders for the word of the day and
-for due reviews. Both are off by default and are turned on individually in
-Settings; the permission prompt appears only when one is enabled. These are local
-notifications scheduled on the device — the app sends no remote push and stores no
-push tokens.
+Notifications: The app can schedule local reminders for the word of the day and for due reviews. Both are off by default and are turned on individually in Settings; the permission prompt appears only when one is enabled. These are local notifications scheduled on the device — the app sends no remote push and stores no push tokens.
 
-Third-party processing: Word explanations and writing review are generated with
-Google's Gemini API, and pronunciation audio with Google Cloud Text-to-Speech. Only
-the submitted text, optional context, and language settings are sent — never account
-identifiers. This is described in the privacy policy.
+Third-party processing: Word explanations and writing review are generated with Google's Gemini API, and pronunciation audio with Google Cloud Text-to-Speech. Only the submitted text, optional context, and language settings are sent — never account identifiers. This is described in the privacy policy.
 
-The app contains no ads, no analytics, and no tracking. It does not access location,
-contacts, camera, or photos.
+The app contains no ads, no analytics, and no tracking. It does not access location, contacts, camera, or photos.
 
 Privacy policy: https://amgi-iota.vercel.app/privacy
 ```

@@ -47,7 +47,10 @@ Related docs outside this folder:
   English in one file (the `-ko` suffix was dropped 2026-08-02 for that
   reason). Tracked, despite `.gitignore` excluding `docs/*`, via an explicit
   `!docs/testflight-beta-info.md` re-include — so if you rename it again,
-  rename it there too or it silently stops being tracked.
+  rename it there too or it silently stops being tracked. **The code blocks are
+  one line per paragraph on purpose** — this is pasted text, not source, and a
+  hard wrap survives into TestFlight to fight the phone's own wrapping. Don't
+  reflow them to match the prose around them.
 
 **Convention:** `backlog.md` holds **only open work**. When something closes it
 leaves that file:
