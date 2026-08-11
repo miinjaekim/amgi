@@ -13,7 +13,7 @@ build, a second rides along free rather than costing a build of its own.
 
 ## Queued for the next build
 
-**Five items queued, and one adds a native module.** Grammar patterns brought
+**Six items queued, and one adds a native module.** Grammar patterns brought
 `expo-clipboard` in for copy-to-clipboard on the writing rewrite, so the next
 build is a native-module build — the `expo config --type introspect` pass is
 required rather than skippable. ⚠️ **It has already been run and came back
@@ -35,6 +35,10 @@ on a real binary.
   same pass; it archives, so it had the same bug. JS-only.
 - **PR #87** (merged 2026-08-10) — spellcheck on lookup, both platforms. The
   Learn screen gains the "showing results for…" row and its override. JS-only.
+- **PR #88** (merged 2026-08-11) — part of speech on cards, both platforms:
+  Learn, the card detail modal and the CSV column on mobile. JS-only. ⚠️ The
+  mobile badge is **typechecked but never seen rendered** — it goes into the
+  existing badge row, so the risk is wrapping on a narrow screen, not the value.
 - **PR #81** (merged 2026-08-08) — the two military packs reach mobile through
   the shared registry, and the packs list drops the per-pack description. ⚠️ The
   description change was **typechecked but never seen rendered** — the list went
@@ -68,40 +72,6 @@ each was one shared function away from being right on both platforms.
 up comes from Medium below.
 
 ## Medium
-
-- [ ] **Part of speech on cards.** _Raised 2026-08-09; deliberately not built in
-      the same pass, so it queues behind the two items just promoted to High._
-      A card says what a word means and how formal it is, but not what it *is* —
-      so a learner cannot tell a noun from the verb it was derived from, which
-      is exactly the confusion `briefDefinition` is worst at clearing up.
-
-      **Decided:** the badge reads **English** — `noun`, `verb`, `adjective` —
-      one vocabulary across all six study languages. This matches `formality`,
-      which already renders `Standard`/`Honorific` in English on a Korean card,
-      and it means **no i18n keys and no closed vocabulary the model has to be
-      coerced onto**. Revisit only if the rest of the badge row localizes.
-
-      The shape is already precedented twice over: `formality` (Korean-only)
-      and `gender` (Swedish/French-only) are both optional `TermCore` strings
-      rendered as a pill. `partOfSpeech` is the same field that happens to apply
-      everywhere. Touch points, all of them existing badge rows:
-
-      - `packages/core/src/types.ts:236` — `partOfSpeech?: string` on `TermCore`,
-        beside `formality`/`gender`.
-      - `apps/web/src/app/api/explain/route.ts` — the **12 prompt templates**
-        across 6 language branches, each with a rules line and a JSON shape line.
-        This is the bulk of the work and the easy place to miss a branch.
-      - Web render: `page.tsx:489`, `components/ReviewDetailsPanel.tsx:61`,
-        `components/CardDetailModal.tsx:165`, `components/ImportModal.tsx:179`,
-        and the CSV column list in `cards/page.tsx:281`.
-      - Mobile render: `src/components/CardDetailModal.tsx:92`, one entry in the
-        existing `badges` array.
-
-      **Scope is new lookups only.** Old cards and pack cards get no badge, the
-      same way a pre-Swedish card carries no `gender` — no migration. Backfilling
-      the ~600 pack terms is a separate call, and if it happens it should ride
-      the **Precompute depth and examples for the packs** script below rather
-      than being its own pass over the same terms.
 
 - [ ] **Word learning surface — meet a word before it's due.** A new card is
       immediately due in *both* directions (`isDue` returns both when neither is

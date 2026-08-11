@@ -1,1 +1,1 @@
-export { t } from '@amgi/core';
+export { t, partOfSpeechLabel } from '@amgi/core';

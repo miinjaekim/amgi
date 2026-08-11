@@ -1,7 +1,7 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/firebaseAdmin';
-import { getStudyLanguageConfig, getBackSideConfig, isStudyLanguage, parseModelJson, wordOfTheDayCore, type WordOfTheDay } from '@amgi/core';
+import { PART_OF_SPEECH_CODES, getStudyLanguageConfig, getBackSideConfig, isStudyLanguage, normalizePartOfSpeech, parseModelJson, wordOfTheDayCore, type WordOfTheDay } from '@amgi/core';
 
 /** How far back to look when keeping the daily word from repeating. */
 const EXCLUSION_DAYS = 60;
@@ -169,7 +169,8 @@ Respond with only this JSON:
 {
   "term": "the ${languageName} word, written in ${languageName}",
   ${translationLine},
-  "briefDefinition": "one sentence in ${nativeLanguage} explaining the meaning"${extraField ? `,\n  ${extraField}` : ''}
+  "briefDefinition": "one sentence in ${nativeLanguage} explaining the meaning",
+  "partOfSpeech": "${PART_OF_SPEECH_CODES.join(' | ')}" | null${extraField ? `,\n  ${extraField}` : ''}
 }`;
 
   const generate = async (insist: boolean) => {
@@ -179,7 +180,15 @@ Respond with only this JSON:
     // model returned a `term` or an `english`. Preserved as-is because a sweep
     // is the wrong place to start validating an unrelated route; noted so the
     // gap is visible rather than implied.
-    return parseModelJson(result.response.text()) as WordOfTheDay;
+    const word = parseModelJson(result.response.text()) as WordOfTheDay;
+    // The exception to the note above: this one is a code the reader's UI looks
+    // up, not text it prints, and the document is written once and read by
+    // everyone on that date — an unlisted value would show no badge to every
+    // one of them. Same normalization `/api/explain` applies.
+    const pos = normalizePartOfSpeech(word?.partOfSpeech);
+    if (pos) word.partOfSpeech = pos;
+    else delete word?.partOfSpeech;
+    return word;
   };
 
   let parsed = await generate(false);

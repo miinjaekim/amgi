@@ -29,7 +29,7 @@ import PronounceButton from '../../src/components/PronounceButton';
 import PageHeader from '../../src/components/PageHeader';
 import Markdown from '../../src/components/Markdown';
 import { SkeletonBar, SkeletonGroup } from '../../src/components/Skeleton';
-import { t } from '@amgi/core';
+import { t, partOfSpeechLabel } from '@amgi/core';
 import { useTheme } from '../../src/context/ThemeContext';
 import { useFloatingTabBarHeight } from '../../src/components/FloatingTabBar';
 import type { Palette } from '../../src/theme';
@@ -679,6 +679,11 @@ export default function LearnScreen() {
                 <Text style={s.cardTerm}>{core.term}</Text>
                 {core.termLanguage === studyLanguage && (
                   <PronounceButton text={core.term} furigana={core.furigana} studyLanguage={studyLanguage} />
+                )}
+                {partOfSpeechLabel(nativeLanguage, core) && (
+                  <View style={s.formalityBadge}>
+                    <Text style={s.formalityText}>{partOfSpeechLabel(nativeLanguage, core)}</Text>
+                  </View>
                 )}
                 {core.formality && core.formality !== 'N/A' && (
                   <View style={s.formalityBadge}>

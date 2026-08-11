@@ -21,7 +21,7 @@ import {
 import { useCardEnrichment } from '@/hooks/useCardEnrichment';
 import type { PackEntry, StudyLanguage } from '@amgi/core';
 import Markdown from '@/components/Markdown';
-import { t } from '@/lib/i18n';
+import { t, partOfSpeechLabel } from '@/lib/i18n';
 import PronounceButton from '@/components/PronounceButton';
 
 function isExamplePairArray(arr: unknown[]): arr is ExamplePair[] {
@@ -162,6 +162,11 @@ export default function CardDetailModal({
             <div className="flex items-center gap-3 flex-wrap">
               <h2 className="text-2xl font-bold" style={{ color: 'var(--color-highlight)' }}>{studySide}</h2>
               <PronounceButton text={studySide} furigana={saved?.furigana} studyLanguage={lang} />
+              {saved && partOfSpeechLabel(nativeLanguage, saved) && (
+                <span className="px-2 py-0.5 text-xs rounded-full border" style={{ borderColor: 'var(--color-muted)', color: 'var(--color-muted)' }}>
+                  {partOfSpeechLabel(nativeLanguage, saved)}
+                </span>
+              )}
               {saved?.formality && saved.formality !== 'N/A' && (
                 <span className="px-2 py-0.5 text-xs rounded-full border" style={{ borderColor: 'var(--color-muted)', color: 'var(--color-muted)' }}>
                   {saved.formality}

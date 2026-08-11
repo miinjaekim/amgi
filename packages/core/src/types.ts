@@ -223,6 +223,65 @@ export interface ExamplePair {
   english: string;
 }
 
+/**
+ * The parts of speech a card can be tagged with — one closed, language-generic
+ * set, stored as a code and rendered through `partOfSpeechLabel()`.
+ *
+ * **A code, never display text**, and that is the whole point: "noun" on a card
+ * has to read 명사 to a Korean native and Noun to an English one, and which of
+ * those a reader wants can change after the card is saved. Storing the label
+ * would mean either a Firestore migration on every native-language switch or a
+ * second generated field per language — the problem the two back slots already
+ * solved once, and a code solves outright because there is nothing to store per
+ * reader. Unknown values never reach a card: `/api/explain` normalizes the
+ * model's answer through `normalizePartOfSpeech` before it is returned.
+ *
+ * Language-generic on purpose. `particle` covers Korean 조사 and Japanese 助詞,
+ * `counter` covers 単位/量詞, and no code names a language — the registry
+ * warning at the top of this file applies here too, so don't add
+ * `naAdjective` for Japanese. The i/na split is a real distinction and it is
+ * deliberately not here: it belongs in the depth notes, where it can be
+ * explained, rather than in a badge that would be blank for five of the six
+ * decks.
+ */
+export const PART_OF_SPEECH_CODES = [
+  'noun',
+  'verb',
+  'adjective',
+  'adverb',
+  'pronoun',
+  'determiner',
+  'numeral',
+  'preposition',
+  'conjunction',
+  'interjection',
+  'particle',
+  'counter',
+  'affix',
+  'phrase',
+  'idiom',
+] as const;
+
+export type PartOfSpeech = (typeof PART_OF_SPEECH_CODES)[number];
+
+/**
+ * A model's part-of-speech answer as a code, or undefined if it isn't one.
+ *
+ * Tolerant of case and stray whitespace, and of the two shapes a model reaches
+ * for when a closed list is not quite enough — "Noun (countable)" and
+ * "noun/verb" both resolve to the first code named. Anything else is dropped
+ * rather than stored: a card carrying `gerund` would render no badge at every
+ * site anyway, and dropping it at the boundary keeps that from being a fact
+ * about the UI.
+ */
+export function normalizePartOfSpeech(value: unknown): PartOfSpeech | undefined {
+  if (typeof value !== 'string') return undefined;
+  const first = value.toLowerCase().split(/[/,(]/)[0].trim();
+  return (PART_OF_SPEECH_CODES as readonly string[]).includes(first)
+    ? (first as PartOfSpeech)
+    : undefined;
+}
+
 export interface TermCore {
   term: string;
   termLanguage: StudyLanguage;
@@ -233,6 +292,16 @@ export interface TermCore {
   traditionalChinese?: string;
   english: string;
   translation?: string;
+  /**
+   * The part of speech of the **study-language** word, not of `term`.
+   *
+   * Same rule as `getDepthTarget`: a learner who typed "awkward" into a Korean
+   * deck is being shown a card whose front is 어색하다, and tagging that card
+   * with English "awkward"'s adjective would describe the word they already
+   * knew. Absent on every card saved before this field existed, and on pack
+   * cards, which author no part of speech.
+   */
+  partOfSpeech?: PartOfSpeech;
   formality?: string;
   gender?: string; // grammatical gender: Swedish 'en'/'ett', French 'le'/'la'
   furigana?: string; // Japanese kana reading, present when the term contains kanji
@@ -450,6 +519,7 @@ export interface WordOfTheDay {
   english: string;
   korean?: string; // translation side for English study
   briefDefinition?: string;
+  partOfSpeech?: PartOfSpeech; // every language
   formality?: string; // Korean
   gender?: string; // Swedish/French
   furigana?: string; // Japanese
@@ -485,6 +555,7 @@ export function wordOfTheDayCore(
     // native-aware; the English side is what those documents have.
     [backField]: (backField === 'korean' ? wotd.korean : wotd.english) ?? wotd.english,
     briefDefinition: wotd.briefDefinition,
+    partOfSpeech: wotd.partOfSpeech,
     formality: wotd.formality,
     gender: wotd.gender,
     furigana: wotd.furigana,

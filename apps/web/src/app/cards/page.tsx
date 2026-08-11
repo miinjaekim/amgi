@@ -15,7 +15,7 @@ import { DEFAULT_DECK_FILTER, buildDeckFilters, filterCardsByDeck, getBackSide, 
 import type { DeckFilterId } from '@amgi/core';
 import { db } from '@/config/firebase';
 import { doc, updateDoc } from 'firebase/firestore';
-import { t } from '@/lib/i18n';
+import { t, partOfSpeechLabel } from '@/lib/i18n';
 import CardDetailModal from '@/components/CardDetailModal';
 import ImportModal from '@/components/ImportModal';
 import PatternsPanel from '@/components/PatternsPanel';
@@ -267,7 +267,7 @@ export default function CardsPage() {
   // why neither of them re-filters: an Anki export used to drop archived cards
   // on its own, which now would hand you an empty file from the Archived tab.
   const exportCSV = () => {
-    const rows = [[langConfig.label, backConfig.backLanguage, 'Formality', 'Definition', 'Characters', 'Notes', 'Examples', 'Saved', 'Status']];
+    const rows = [[langConfig.label, backConfig.backLanguage, 'Part of speech', 'Formality', 'Definition', 'Characters', 'Notes', 'Examples', 'Saved', 'Status']];
     for (const c of visibleCards) {
       const studySide = getStudySide(c);
       const examples = c.examples?.map(e => {
@@ -278,6 +278,9 @@ export default function CardsPage() {
       rows.push([
         studySide,
         getBackSide(c, nativeLanguage),
+        // The label, not the code: the column is read by a person, and it is
+        // the same word the badge showed them.
+        partOfSpeechLabel(nativeLanguage, c) || '',
         c.formality || '',
         c.definition || '',
         getCharacterBreakdown(c) || '',

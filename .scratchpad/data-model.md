@@ -23,6 +23,7 @@ interface TermCore {
   korean?: string; swedish?: string; french?: string;
   japanese?: string; traditionalChinese?: string;
   english: string;
+  partOfSpeech?: PartOfSpeech;  // a code from a closed list — see below
   formality?: string;   // Korean: Casual | Standard | Formal | Honorific | Slang
   gender?: string;      // grammatical gender: Swedish en/ett, French le/la
   furigana?: string;    // Japanese kana reading, when the term contains kanji
@@ -454,6 +455,55 @@ across separate dates) — it reads "TraditionalChinese" and infers correctly. S
 this is readability and robustness, not a bug that was shipping. Don't cite it
 as a defect; do keep using `label`, because the next code that isn't an English
 word won't necessarily be as guessable.
+
+## `partOfSpeech` — a code, not a label (2026-08-11)
+
+**This reverses the call recorded in the backlog**, which had the badge reading
+English on every card — `noun`, `verb` — on the grounds that `formality` already
+renders `Standard` in English beside it. The user asked for the native language
+instead, and the reversal is cheap in a way the original decision assumed it
+wasn't: nothing has to be generated per reader.
+
+`PART_OF_SPEECH_CODES` in `types.ts` is one closed, language-generic list of 15
+codes. The card stores the code; `partOfSpeechLabel(nativeLanguage, card)` in
+`i18n.ts` renders it — 명사 to a Korean native, "Noun" to an English one, off the
+same stored value.
+
+- **Why a code rather than a generated label.** The back-slot problem, met again
+  and solved outright this time. Cards carry *both* backs so switching native
+  language switches existing cards with you; a generated part-of-speech label
+  would need the same trick, and a third language would need a third field. A
+  code needs none — the switch is a render-time lookup.
+- **It describes the study-language word, not `term`.** Same rule as
+  `getDepthTarget`: typing "awkward" into a Korean deck saves 어색하다, and
+  tagging that card `adjective` off the English would describe the word the
+  learner came in already knowing. The prompts say so explicitly.
+- **The codes are language-generic, and stay that way.** `particle` covers 조사
+  and 助詞, `counter` covers 個/枚/마리. Japanese i- vs na-adjectives are a real
+  distinction and deliberately absent: a code that is meaningful for one of six
+  decks is the per-language subtype the warning at the top of this file is
+  about. It belongs in the depth notes, where it can be explained.
+- **Unknown values never reach a card.** Both generating routes run the model's
+  answer through `normalizePartOfSpeech`, which accepts `Noun`, `noun
+  (countable)` and `adjective/adverb`, and drops anything else. A card carrying
+  `gerund` would render no badge at every site anyway; dropping it at the
+  boundary keeps that from becoming a fact about the UI.
+- **No backfill.** Existing cards, pack cards and writing-review candidates carry
+  no part of speech and get no badge, the way a pre-Swedish card carries no
+  `gender`. The backlog item's note stands: if the ~600 pack terms are ever
+  backfilled it should ride the precompute-depth script, not its own pass.
+- **The word of the day lags by up to a day, and that is the storage working.**
+  Its document is written once per `date_studyLanguage_nativeLanguage` and read
+  by everyone after — so the doc for the day this shipped was generated without
+  a part of speech and keeps no badge however many times it is tapped, while
+  looking the same word up by hand shows one. Measured on 2026-08-11: 왔다갔다,
+  Korean/English, `partOfSpeech` absent on both the document and its stored
+  `core`. Every document generated from the next day on carries it. Nothing
+  repairs a stored document on read — that would put a model call back on the
+  cache-hit path, which is exactly what storing `core` removed.
+- **`ReviewDetailsPanel` deliberately has no badge** even though it renders
+  `formality`. The review card above it already shows the part of speech, and
+  the panel opens on the same screen.
 
 **Pronunciation readings** (Japanese `furigana`, Traditional Chinese `pinyin`)
 are separate `TermCore` fields but one badge slot — `getReading(card)` in
