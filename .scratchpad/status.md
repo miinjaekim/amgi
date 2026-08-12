@@ -3,7 +3,8 @@
 Session orientation: what's live, what's broken, what's decided. Shipped history
 sits at the bottom as reference — the reasoning worth keeping is in Decisions.
 
-_Reconciled against `main` @ `c660d60`, 2026-08-12, after 1.3.0 went live._
+_Reconciled against `main` @ `b9604d9`, 2026-08-12, after 1.3.0 went live.
+`npm test` 313/313, measured._
 
 ## Now
 

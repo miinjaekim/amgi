@@ -64,7 +64,8 @@ leaves that file:
 Backlog priority mirrors the user's Google Tasks list — `backlog.md` is the
 scoped version of it.
 
-_Last reviewed against the codebase: 2026-08-12, `main` @ `c660d60`._
+_Last reviewed against the codebase: 2026-08-12, `main` @ `b9604d9`. `npm test`
+313/313, measured._
 
 _This pass **shipped 1.3.0, build 11 — the first build approved for external
 testing**. Every release before it reached internal testers only; 1.2.0 was
