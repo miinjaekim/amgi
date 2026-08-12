@@ -64,8 +64,31 @@ leaves that file:
 Backlog priority mirrors the user's Google Tasks list — `backlog.md` is the
 scoped version of it.
 
-_Last reviewed against the codebase: 2026-08-12, `main` @ `b9604d9`. `npm test`
+_Last reviewed against the codebase: 2026-08-12, `main` @ `18be687`. `npm test`
 313/313, measured._
+
+_This pass **synced `backlog.md` with Google Tasks** and scoped the four new
+names against the code, which is most of the value — a one-line task title and a
+grounded item are not the same artifact. **High is no longer empty:** three
+starred items (review page discrepancy, improve stats, word order practice) plus
+*Add Spanish* under Medium. Three findings came out of the scoping and are worth
+knowing before picking any of them up. **The review discrepancy has a concrete
+prime suspect**: `where('archived', '!=', true)` excludes documents where the
+field is missing, `migrateExistingCards` never backfilled it, and review is the
+only surface that filters `archived` at all — so the fix is a backfill plus a
+decision about which count is honest, not a query rewrite. **"Improve stats" is a
+data-model item**, because no per-review record is written anywhere and the two
+fields that do exist are per-user rather than per-language and count directions
+rather than cards. And **word order practice argues against a call already
+made** — the bare transformation drill was dropped deliberately, and a token-
+arranging drill is mechanical in exactly the sense `docs/grammar-research.md`
+warns about, so it has to earn a rung under the cloze rather than beside it._
+
+_Nothing was removed. Tasks lists six open items where `backlog.md` holds
+eighteen; the untracked ones have no decision recorded against them, so they were
+ranked below the Tasks names and left in place rather than deleted, per the
+convention below. The stale `npm test` count in Housekeeping (200/200) was
+corrected to a measured 313/313 in passing._
 
 _This pass **shipped 1.3.0, build 11 — the first build approved for external
 testing**. Every release before it reached internal testers only; 1.2.0 was
