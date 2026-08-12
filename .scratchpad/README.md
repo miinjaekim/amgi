@@ -47,7 +47,10 @@ Related docs outside this folder:
   English in one file (the `-ko` suffix was dropped 2026-08-02 for that
   reason). Tracked, despite `.gitignore` excluding `docs/*`, via an explicit
   `!docs/testflight-beta-info.md` re-include — so if you rename it again,
-  rename it there too or it silently stops being tracked.
+  rename it there too or it silently stops being tracked. **The code blocks are
+  one line per paragraph on purpose** — this is pasted text, not source, and a
+  hard wrap survives into TestFlight to fight the phone's own wrapping. Don't
+  reflow them to match the prose around them.
 
 **Convention:** `backlog.md` holds **only open work**. When something closes it
 leaves that file:
@@ -61,10 +64,36 @@ leaves that file:
 Backlog priority mirrors the user's Google Tasks list — `backlog.md` is the
 scoped version of it.
 
-_Last reviewed against the codebase: 2026-08-10, `main` @ `dd87d55`. `npm test`
-304/304, measured._
+_Last reviewed against the codebase: 2026-08-12, `main` @ `c660d60`._
 
-_This pass **cleared High**. Both items shipped as separate PRs — term archiving
+_This pass **shipped 1.3.0, build 11 — the first build approved for external
+testing**. Every release before it reached internal testers only; 1.2.0 was
+accepted but never cleared Beta App Review. That makes the six PRs it carries the
+first work in this project that is shipped in the sense the no-OTA model means:
+in someone's hands. They left [backlog.md](backlog.md) for the Shipped list on
+this pass and not before, because a merged PR no binary carries is not shipped._
+
+_Two things follow, both in `backlog.md`. **The oldest open items in the project
+are now cheap to close**: the native paths no release has ever verified (audio,
+export, sharing, offline, reminders, account deletion, and 1.3.0's new copy
+button) plus three renders never seen on a device. 1.3.0's What to Test asks
+testers for all of them by name, so reading what comes back beats testing by
+hand. And **the next version bump queues for Beta App Review again** — the
+external approval covers 1.3.0, so batching changes into a build is worth more
+than cutting one per feature._
+
+_`docs/testflight-beta-info.md` was rewritten for this build, then **cut for
+length on the user's call** — the tester-facing copy had grown past what its own
+author would read. The rule that survived: **each bullet names the one thing that
+can go wrong**, since the rationale around it was what made it unreadable. Two
+things in that file are deliberate and easy to undo by accident, so both carry
+warnings in the file itself: the Apple review notes are **left long** (they
+answer rejection reasons — 5.1.1(v) account deletion, notifications off by
+default, third-party processing), and the code blocks are **one line per
+paragraph** because TestFlight keeps every newline it is given and a hard wrap
+fights the phone's own wrapping._
+
+_The previous pass **cleared High**. Both items shipped as separate PRs — term archiving
 during review (#86) and spellcheck on lookup (#87) — and each turned out to be
 one shared function away from being right on both platforms, which is why they
 closed together. Two things are worth reading before touching either area: the
@@ -76,7 +105,7 @@ set to re-probe before editing the prompt. The backlog item's open question —
 one round trip or two — closed on the reuse-the-endpoint rule. **`backlog.md`'s
 High section is now empty**; the next thing to pick up is under Medium._
 
-_The previous pass **closed grammar patterns**. The mobile smoke test in Expo Go against
+_The pass before that **closed grammar patterns**. The mobile smoke test in Expo Go against
 the deployed API came back clean, so the last item left `backlog.md` and the
 feature is done: `status.md` gained a Shipped line, a closing Decisions entry,
 and an updated Now. **`backlog.md` now has no starred items at all** — all three

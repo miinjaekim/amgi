@@ -13,48 +13,42 @@ build, a second rides along free rather than costing a build of its own.
 
 ## Queued for the next build
 
-**Six items queued, and one adds a native module.** Grammar patterns brought
-`expo-clipboard` in for copy-to-clipboard on the writing rewrite, so the next
-build is a native-module build — the `expo config --type introspect` pass is
-required rather than skippable. ⚠️ **It has already been run and came back
-clean**: no entitlements, no usage descriptions, plugin list unchanged. Re-run it
-only if another native module lands first — the two items added 2026-08-10 are
-both JS-only and do not disturb it. 1.2.0 carries everything before these. See
-Builds in [status.md](status.md) for its contents and for what remains unverified
-on a real binary.
+**Nothing.** 1.3.0 (build 11) went out 2026-08-11 and was approved for external
+testing on 08-12 — the six PRs it carried are shipped and have left this file for
+the Shipped list in [status.md](status.md). The next mobile change starts this
+section over.
 
-- **PR #80** (merged 2026-08-04) — `/cards` holds pack cards, the mobile filter
-  sheet, the first skeletons.
-- **PR #84** (merged 2026-08-09, `c70c47c`) — grammar patterns: the whole
-  feature on both platforms, plus `expo-clipboard`. The one native module in
-  this batch; everything else in it is JS. ✅ Smoke-tested in Expo Go against the
-  deployed API on 2026-08-10, no issues — the feature itself is closed, only the
-  build is outstanding.
-- **PR #86** (merged 2026-08-10) — archive and delete drop the card from the
-  review queue rather than the index. Mobile's review screen was fixed in the
-  same pass; it archives, so it had the same bug. JS-only.
-- **PR #87** (merged 2026-08-10) — spellcheck on lookup, both platforms. The
-  Learn screen gains the "showing results for…" row and its override. JS-only.
-- **PR #88** (merged 2026-08-11) — part of speech on cards, both platforms:
-  Learn, the card detail modal and the CSV column on mobile. JS-only. ⚠️ The
-  mobile badge is **typechecked but never seen rendered** — it goes into the
-  existing badge row, so the risk is wrapping on a narrow screen, not the value.
-- **PR #81** (merged 2026-08-08) — the two military packs reach mobile through
-  the shared registry, and the packs list drops the per-pack description. ⚠️ The
-  description change was **typechecked but never seen rendered** — the list went
-  from one deck per language to three, and the row spacing under a title with no
-  paragraph beneath it is unverified. Cheapest thing to check first in Expo Go.
+⚠️ **Verify on the binary before the next build goes out.** These are the oldest
+open items in the project — never checked on any release, only in Expo Go — and
+1.3.0 is the first build in enough hands to close them cheaply, from what testers
+report rather than by hand:
 
-_1.2.0 status: submitted and accepted, **internal testing live**, external
-waiting on Beta App Review._
+- The native paths: pronunciation audio, CSV/Anki export, sharing, offline review
+  across a force-kill and reconnect, account deletion against the production
+  `EXPO_PUBLIC_API_BASE_URL`, the review reminder firing *and then disappearing*
+  once you review, and the writing-rewrite copy button (`expo-clipboard`, new in
+  1.3.0).
+- The three renders never seen on a device: #81's packs list without per-pack
+  descriptions, #87's "showing results for…" row, #88's part-of-speech badge.
+  Cosmetic risk only — spacing, fit, wrapping.
 
 **Pre-flight, for next time:** smoke-test in Expo Go → verify the native-adjacent
-things on the build itself (audio, files, sharing, offline review + reconnect,
-account deletion, the review reminder firing *and then disappearing* once you
-review) → bump `version` in `app.json` → check
-`docs/testflight-beta-info.md` is still accurate → **`expo config --type
-introspect` if any native module was added**, which is where an entitlement you
-didn't ask for shows up before a cloud build finds it.
+things on the build itself → bump `version` in `app.json` **before** starting the
+build, not after → rewrite What to Test in `docs/testflight-beta-info.md` and
+re-check the rest of it → **`expo config --type introspect` if any native module
+was added**, which is where an entitlement you didn't ask for shows up before a
+cloud build finds it → submit (`ascAppId` is in `eas.json`) → paste the listing
+copy into Test Information, **both ko and en localizations**.
+
+_The version-bump ordering earned its place on 2026-08-11: the 1.3.0 build was
+started against an `app.json` still reading 1.2.0, and had to be restarted. EAS
+auto-increments the **build** number but never the version, so nothing catches
+this for you._
+
+_A version change means another Beta App Review. 1.3.0's external approval covers
+1.3.0 — new external testers can be invited under it freely, but the next version
+bump queues for review again, so it is worth batching rather than cutting builds
+one feature at a time._
 
 _The listing check earned its place on 2026-07-27: it still advertised five study
 languages after Traditional Chinese made six, and said nothing about account
