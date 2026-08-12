@@ -11,73 +11,44 @@ build, a second rides along free rather than costing a build of its own.
 
 ---
 
-## In the 1.3.0 build (cut 2026-08-11)
+## Queued for the next build
 
-**These six are no longer queued — they are in build 11, which succeeded.**
-Nothing below leaves this file until it is accepted, since a merged PR that no
-binary carries is still not shipped.
+**Nothing.** 1.3.0 (build 11) went out 2026-08-11 and was approved for external
+testing on 08-12 — the six PRs it carried are shipped and have left this file for
+the Shipped list in [status.md](status.md). The next mobile change starts this
+section over.
 
-**Merging another mobile change now is the thing to avoid.** With no OTA it does
-not reach anyone this build, but it does put `main` ahead of both the binary and
-the TestFlight listing copy — which is how the What to Test section ends up
-describing an app the tester doesn't have.
+⚠️ **Verify on the binary before the next build goes out.** These are the oldest
+open items in the project — never checked on any release, only in Expo Go — and
+1.3.0 is the first build in enough hands to close them cheaply, from what testers
+report rather than by hand:
 
-⚠️ One native module: `expo-clipboard`, brought in by grammar patterns for
-copy-to-clipboard on the writing rewrite. The required `expo config --type
-introspect` pass **was run and came back clean** — no entitlements, no usage
-descriptions, plugin list unchanged — and everything merged after it is JS-only,
-so it stands. See Builds in [status.md](status.md) for the full contents and for
-what remains unverified on a real binary.
-
-- **PR #80** (merged 2026-08-04) — `/cards` holds pack cards, the mobile filter
-  sheet, the first skeletons.
-- **PR #84** (merged 2026-08-09, `c70c47c`) — grammar patterns: the whole
-  feature on both platforms, plus `expo-clipboard`. The one native module in
-  this batch; everything else in it is JS. ✅ Smoke-tested in Expo Go against the
-  deployed API on 2026-08-10, no issues — the feature itself is closed, only the
-  build is outstanding.
-- **PR #86** (merged 2026-08-10) — archive and delete drop the card from the
-  review queue rather than the index. Mobile's review screen was fixed in the
-  same pass; it archives, so it had the same bug. JS-only.
-- **PR #87** (merged 2026-08-10) — spellcheck on lookup, both platforms. The
-  Learn screen gains the "showing results for…" row and its override. JS-only.
-- **PR #88** (merged 2026-08-11) — part of speech on cards, both platforms:
-  Learn, the card detail modal and the CSV column on mobile. JS-only. ⚠️ The
-  mobile badge is **typechecked but never seen rendered** — it goes into the
-  existing badge row, so the risk is wrapping on a narrow screen, not the value.
-- **PR #81** (merged 2026-08-08) — the two military packs reach mobile through
-  the shared registry, and the packs list drops the per-pack description. ⚠️ The
-  description change was **typechecked but never seen rendered** — the list went
-  from one deck per language to three, and the row spacing under a title with no
-  paragraph beneath it is unverified. Cheapest thing to check first in Expo Go.
-
-_1.2.0 status: submitted and accepted, **internal testing live**, external
-waiting on Beta App Review. 1.3.0 replaces it once accepted — ⚠️ console state is
-never knowable from the repo, so confirm it rather than reading it here._
-
-**Still to do on this build**, in order: submit build 11 to App Store Connect
-(`ascAppId` is already in `eas.json`) → paste the `docs/testflight-beta-info.md`
-copy into Test Information, **both ko and en localizations** — Beta App
-Description and What to Test were cut down on 08-11 for length, the Apple review
-notes deliberately were **not** → then the verification pass that no build has
-had yet, on the binary itself: audio, CSV/Anki export, sharing, offline review
-across a force-kill and reconnect, account deletion against the production
-`EXPO_PUBLIC_API_BASE_URL`, and the review reminder firing *and then
-disappearing* once you review. The three renders never seen on a device (#81's
-packs list, #87's correction row, #88's badge) are the cheapest things to look at
-first.
+- The native paths: pronunciation audio, CSV/Anki export, sharing, offline review
+  across a force-kill and reconnect, account deletion against the production
+  `EXPO_PUBLIC_API_BASE_URL`, the review reminder firing *and then disappearing*
+  once you review, and the writing-rewrite copy button (`expo-clipboard`, new in
+  1.3.0).
+- The three renders never seen on a device: #81's packs list without per-pack
+  descriptions, #87's "showing results for…" row, #88's part-of-speech badge.
+  Cosmetic risk only — spacing, fit, wrapping.
 
 **Pre-flight, for next time:** smoke-test in Expo Go → verify the native-adjacent
 things on the build itself → bump `version` in `app.json` **before** starting the
 build, not after → rewrite What to Test in `docs/testflight-beta-info.md` and
 re-check the rest of it → **`expo config --type introspect` if any native module
 was added**, which is where an entitlement you didn't ask for shows up before a
-cloud build finds it.
+cloud build finds it → submit (`ascAppId` is in `eas.json`) → paste the listing
+copy into Test Information, **both ko and en localizations**.
 
 _The version-bump ordering earned its place on 2026-08-11: the 1.3.0 build was
 started against an `app.json` still reading 1.2.0, and had to be restarted. EAS
 auto-increments the **build** number but never the version, so nothing catches
 this for you._
+
+_A version change means another Beta App Review. 1.3.0's external approval covers
+1.3.0 — new external testers can be invited under it freely, but the next version
+bump queues for review again, so it is worth batching rather than cutting builds
+one feature at a time._
 
 _The listing check earned its place on 2026-07-27: it still advertised five study
 languages after Traditional Chinese made six, and said nothing about account

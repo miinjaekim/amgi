@@ -64,25 +64,34 @@ leaves that file:
 Backlog priority mirrors the user's Google Tasks list — `backlog.md` is the
 scoped version of it.
 
-_Last reviewed against the codebase: 2026-08-11, `main` @ `c660d60`._
+_Last reviewed against the codebase: 2026-08-12, `main` @ `c660d60`._
 
-_This pass **cut 1.3.0, build 11**. `app.json` went 1.2.0 → 1.3.0; the build
-succeeded and is not yet submitted. It is the **first native-module build** since
-1.2.0 (`expo-clipboard`), so it is the only way the six queued PRs reach anyone —
-with no OTA, merging another mobile change before submission means the binary and
-the TestFlight listing describe different apps._
+_This pass **shipped 1.3.0, build 11 — the first build approved for external
+testing**. Every release before it reached internal testers only; 1.2.0 was
+accepted but never cleared Beta App Review. That makes the six PRs it carries the
+first work in this project that is shipped in the sense the no-OTA model means:
+in someone's hands. They left [backlog.md](backlog.md) for the Shipped list on
+this pass and not before, because a merged PR no binary carries is not shipped._
 
-_`docs/testflight-beta-info.md` was rewritten for it and then **cut for length on
-the user's call** — the tester-facing copy had grown past what its own author
-would read. What survived the cut is the rule worth keeping: **each bullet names
-the one thing that can go wrong**, because the rationale around it was what made
-it unreadable. The Apple review notes were deliberately **left long** and now
-carry a warning saying so — they answer rejection reasons, not curiosity, and the
-file notes which paragraphs are load-bearing (5.1.1(v) account deletion,
-notifications off by default, third-party processing). This build's What to Test
-also asks testers about the native paths **no build has ever verified** (audio,
-export, sharing, offline, reminders); if those come back clean, that caveat can
-finally leave [status.md](status.md)._
+_Two things follow, both in `backlog.md`. **The oldest open items in the project
+are now cheap to close**: the native paths no release has ever verified (audio,
+export, sharing, offline, reminders, account deletion, and 1.3.0's new copy
+button) plus three renders never seen on a device. 1.3.0's What to Test asks
+testers for all of them by name, so reading what comes back beats testing by
+hand. And **the next version bump queues for Beta App Review again** — the
+external approval covers 1.3.0, so batching changes into a build is worth more
+than cutting one per feature._
+
+_`docs/testflight-beta-info.md` was rewritten for this build, then **cut for
+length on the user's call** — the tester-facing copy had grown past what its own
+author would read. The rule that survived: **each bullet names the one thing that
+can go wrong**, since the rationale around it was what made it unreadable. Two
+things in that file are deliberate and easy to undo by accident, so both carry
+warnings in the file itself: the Apple review notes are **left long** (they
+answer rejection reasons — 5.1.1(v) account deletion, notifications off by
+default, third-party processing), and the code blocks are **one line per
+paragraph** because TestFlight keeps every newline it is given and a hard wrap
+fights the phone's own wrapping._
 
 _The previous pass **cleared High**. Both items shipped as separate PRs — term archiving
 during review (#86) and spellcheck on lookup (#87) — and each turned out to be

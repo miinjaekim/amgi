@@ -3,17 +3,27 @@
 Session orientation: what's live, what's broken, what's decided. Shipped history
 sits at the bottom as reference — the reasoning worth keeping is in Decisions.
 
-_Reconciled against `main` @ `c660d60`, 2026-08-11, while cutting 1.3.0._
+_Reconciled against `main` @ `c660d60`, 2026-08-12, after 1.3.0 went live._
 
 ## Now
 
-- **1.3.0 build 11 succeeded** (2026-08-11) and is **not yet submitted**. A
-  **native-module build** (`expo-clipboard`), so it is the first binary the six
-  queued changes reach. Listing copy for it is ready to paste in
-  `docs/testflight-beta-info.md`, both localizations.
-- **1.2.0 is in TestFlight** and stays there until 1.3.0 is accepted. Internal
-  testing was live; external was waiting on Beta App Review — ⚠️ console state,
-  confirm rather than assume.
+- **1.3.0 (build 11) is live in TestFlight and approved for external testing**
+  (2026-08-12). **This is the first external approval the project has had** —
+  1.2.0 was submitted and accepted but never cleared Beta App Review, so until
+  now every build only ever reached internal testers. External testers can be
+  invited without another review as long as the version doesn't change.
+- **The six queued changes are in the hands of testers**, which is the first time
+  any of them counts as shipped: with no OTA, a merged PR reaches nobody until a
+  binary carries it. See Builds for contents.
+- ⚠️ **Nothing in 1.3.0 has been checked on the binary yet.** Three renders have
+  never been seen on a device at all (#81's packs list, #87's correction row,
+  #88's badge), and the native paths listed under Builds have never been verified
+  on *any* build. 1.3.0's What to Test asks testers for both by name — the
+  cheapest path is now to read what comes back rather than to test it all by
+  hand.
+- **Mobile merges are unblocked.** The freeze held only until submission; the
+  binary and the listing copy now describe the same app, and the next mobile
+  change simply waits for the build after this one.
 - **The six changes this build carries.** The `expo config --type introspect`
   pass was run when `expo-clipboard` landed and came back clean; everything
   merged after it is JS-only and doesn't disturb it.
@@ -35,8 +45,7 @@ _Reconciled against `main` @ `c660d60`, 2026-08-11, while cutting 1.3.0._
   - PR #88 (08-11): part of speech on cards, both platforms. JS-only. ⚠️ Same
     caveat — the mobile badge is typechecked, never seen rendered.
 - **No code is in flight.** High is empty in [backlog.md](backlog.md) — the next
-  thing to build comes from Medium. Nothing should merge to mobile until 1.3.0 is
-  submitted, or the build and the listing copy stop describing the same app.
+  thing to build comes from Medium.
 
 TestFlight context that isn't in the repo:
 
@@ -44,9 +53,12 @@ TestFlight context that isn't in the repo:
   from generating certs — worked around with an App Store Connect API Key.
 - Bundle ID `com.tegi.amgi` is **disposable**. A public launch under the user's
   own account is a fresh relaunch, not a migration: Apple's App Transfer doesn't
-  cover TestFlight-only apps.
-- ⚠️ Console state (review approved? public link live?) is never knowable from
-  the repo. Confirm before assuming.
+  cover TestFlight-only apps. External approval doesn't change this — it is
+  approval of a beta on someone else's account, not a foothold in the store.
+- ⚠️ Console state (public link live? testers actually invited?) is never
+  knowable from the repo. Confirm before assuming. External *approval* is
+  recorded above because it was reported directly; whether anyone has been
+  invited under it is not.
 
 ## Builds
 
@@ -54,7 +66,7 @@ No OTA, so every mobile change reaches users through one of these.
 
 | Version | Build | Date | Cut from |
 |---|---|---|---|
-| 1.3.0 | 11 | 2026-08-11 | `86c2c5a` on `release/1.3.0` (version bump) |
+| 1.3.0 | 11 | 2026-08-11 | `86c2c5a` on `release/1.3.0` (version bump) — **first build approved for external testing**, 08-12 |
 | 1.2.0 | 9 | 2026-08-02 | `51a53e9` (PR #76, version bump) |
 | 1.1.0 | 8 | 2026-07-27 | `8359adf` on `fix/drop-push-entitlement`, pre-merge |
 | 1.0.2 | 4 | 2026-07-24 | `0288136` |
@@ -75,8 +87,9 @@ writing rewrite (`CopyButton.tsx`, the only caller).
 
 ⚠️ **Three of the six were typechecked but never seen rendered on a device** —
 the packs list without per-pack descriptions (#81), the "showing results for…"
-row (#87) and the part-of-speech badge (#88). This build is the first chance to
-look at them.
+row (#87) and the part-of-speech badge (#88). All three are cosmetic-risk rather
+than logic-risk (row spacing, a row that may not fit, a badge that may wrap), so
+the build being live is now the cheapest way to find out.
 
 **1.2.0 contents** — nine merged items, all JS-only (no native module, so no
 `expo config --type introspect` pass): pack unification (#71), first run (#73),
@@ -87,9 +100,12 @@ tap clears search (#66), TOPIK 고급 (#68).
 ⚠️ **Never verified on a real binary**, on any build so far — the logic is
 tested, the native bindings are not: pronunciation audio, CSV/Anki export,
 sharing, offline review across a force-kill and reconnect, the review reminder
-firing *and* disappearing once you review, and account deletion against the
-production `EXPO_PUBLIC_API_BASE_URL`. 1.3.0's What to Test asks testers for
-these by name — first build that does.
+firing *and* disappearing once you review, account deletion against the
+production `EXPO_PUBLIC_API_BASE_URL`, and now the copy button on the writing
+rewrite (`expo-clipboard`, new in 1.3.0). 1.3.0's What to Test asks testers for
+these by name — the first listing that does. **This is the caveat to retire
+first**: it has outlived every release so far, and 1.3.0 is the first build in
+enough hands to close it without a dedicated session.
 
 ## Known Issues
 
@@ -1021,6 +1037,16 @@ the change is in Decisions above; durable gotchas are in
   have the last word. See [lessons.md](lessons.md).
 
 **Learn screen**
+- **Part of speech on cards, both platforms** (#88, 08-11) — a card said what a
+  word means and how formal it is, but not what it *is*. `partOfSpeech` on
+  `TermCore`, stored as a **code** from a closed language-generic list of 15 and
+  rendered through `partOfSpeechLabel(nativeLanguage, card)`, so switching native
+  language re-labels every existing card with no migration. It describes the
+  study-language word, not what was typed. Twelve prompt templates gained a rule
+  line each; both generating routes normalize the answer and drop anything
+  unlisted. No backfill, and the word of the day lags a day because its document
+  is written once per date. The reversal of the item's own English-only decision
+  is in Decisions above.
 - **Spellcheck on lookup, both platforms** (#87, 08-10) — a misspelled term used
   to go straight to `/api/explain`, which explained the non-word confidently;
   save it and the typo was a card. The correction now rides the same call as a
