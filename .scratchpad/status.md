@@ -159,6 +159,15 @@ writing review was the only surface that could observe it. Lookup, packs, manual
 add and CSV import are the remaining card doors. `docs/grammar-research.md`
 stays: it is the argument, and it outlives the code.
 
+**Word order practice is cancelled with it.** It sat in the backlog as a
+controlled rung *below* the cloze, inside `ExerciseFormat`'s ladder — with no
+ladder there is nothing for it to be a rung of. The case for it (L1 interference
+on SOV order, which a cloze structurally cannot reach) was never refuted and is
+worth re-reading in `docs/grammar-research.md` if grammar is ever revisited, but
+it does not survive as a standalone drill: the same research §"controlled →
+meaningful → free" calls a bare ordering task mechanical in Paulston's sense, and
+mechanical drills do not build form-meaning mapping on their own.
+
 **Collateral simplification:** `ReviewCollection.kind` is gone. It existed only
 because a patterns row and your own cards were both `id: null`; with patterns
 removed `id` identifies a row again, and `collectionKey` is now `id ?? ''`.

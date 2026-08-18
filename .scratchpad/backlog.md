@@ -5,10 +5,14 @@ Open work only, ordered by priority. Shipped, cancelled and decided items move t
 reopened from this file. Source of truth is the user's Google Tasks list; this is
 the scoped version.
 
-**Synced with Google Tasks 2026-08-12.** Tasks lists six open items: starred are
-*Review page discrepancy*, *improve stats*, *Word order practice* (all three new
-here, now under High); unstarred are *Add Spanish* (new, under Medium), *Word
-learning surface* and *grid view for cards* (both already here). Everything else
+**Synced with Google Tasks 2026-08-12; High reworked 2026-08-18.** Tasks listed
+six open items. Of the three starred, two survive under High in reworked form —
+*Review page discrepancy* is now **Data loading and freshness** (it was never one
+page's bug) and *improve stats* is now **Progress dashboard** — and *Word order
+practice* is **cancelled**, since grammar was removed from the app entirely
+(2026-08-18); its reasoning is in [status.md](status.md). Unstarred are
+*Add Spanish* (under Medium), *Word learning surface* and *grid view for cards*
+(both already here). Everything else
 below — packs, the term cache, precompute, offline capture, the Bigger bets, the
 parked generation features and all of Housekeeping — **is not in Tasks**. That is
 not the same as closed, so none of it was removed: nothing here has a decision
@@ -73,74 +77,104 @@ order Tasks shows them, which is recency and not a ranking — pick by what the
 notes below say, not by position. The previous High pair (spellcheck #87, term
 archiving #86) shipped 2026-08-10 and is in [status.md](status.md).
 
-- [ ] **Review page discrepancy** — the review page disagrees with the rest of
-      the app about which cards exist. **Symptom not yet pinned down** (it came
-      in as a one-line note), so confirm what was seen before fixing — but the
-      code has two concrete disagreements already, and they are worth checking
-      first because both are cheap to confirm.
-      1. **The `archived` field is missing on old cards, and `!=` excludes
-         missing fields.** `fetchUserFlashcards` filters
-         `where('archived', '!=', true)` + `orderBy('archived')`
-         (`apps/web/src/services/firestore.ts:122`, mirrored at
-         `apps/mobile/src/services/firestore.ts:110`). Both platforms write
-         `archived: false` on save *now*, but `migrateExistingCards` never
-         backfilled it, so any card older than that field is invisible in
-         review — and equally invisible in the archived list, which filters
-         `archived == true`. It exists and shows up nowhere.
-         This is [lessons.md](lessons.md)'s own "backfill new boolean fields"
-         gotcha, unbackfilled. **The fix is a backfill, not a query change.**
-      2. **Review is the only surface that filters archived at all.** Every
-         other reader — `cards`, `decks`, `decks/[packId]`, on both platforms —
-         calls `fetchAllUserFlashcards`, which has no `archived` clause. The
-         decks pages never mention `archived` anywhere, so their per-deck
-         counts include archived cards while the review row for the same deck
-         excludes them. Decide which number is the honest one before editing
-         either.
-      Also worth a look while in here, though neither is a count bug: web
-      mirrors a rating inline in the page (`review/page.tsx:273`) where mobile
-      uses core's `applyPendingReviews` overlay — two implementations of one
-      job, and the per-direction subtlety in the `removeCardFromQueue` entry in
-      [lessons.md](lessons.md) already caught both platforms once.
+- [ ] **Data loading and freshness** — reframed 2026-08-18, on the user's read.
+      This came in as "review page discrepancy", a bug on one page. It is not:
+      **every surface owns a private copy of the data and nothing tells any of
+      them when it changes.** The discrepancies are the symptom of that, which is
+      why they show up somewhere new each time — a stale review deadline, a
+      streak that disagrees with itself, a card saved and not shown.
+      *Understand this before building anything; no implementation yet.*
 
-- [ ] **Improve stats** — **this is a data-model item before it is a UI one.**
-      Everything the app knows is three fields on `users/{uid}`: `streak`,
-      `lastReviewDate`, `reviewedToday` (`types.ts:573`), rendered as a single
-      streak chip in `Header`/`SideNav` and on mobile's home. There is **no
-      per-review log anywhere**, so accuracy, retention, time-of-day, per-deck
-      progress and any history at all are not "unsurfaced" — they were never
-      written. Any real stat needs a write path first; decide its shape before
-      designing a screen, because that write is the expensive, hard-to-change
-      half.
-      Two existing fields are wrong in ways a stats surface would amplify
-      rather than fix: `reviewedToday` counts due **directions**, not cards, so
-      it already reads roughly double what a learner thinks they did; and both
-      it and `streak` live on the user doc, not per language, so six study
-      languages share one streak and one counter while cards are per-language
-      collections.
+      **What the code actually does today.** There is no cache layer and no query
+      layer — every screen is `useState` + a `fetch…()` in an effect:
+      - Web: `cards/page.tsx:73`, `decks/page.tsx:21`, `review/page.tsx:144` each
+        fetch independently. **Web never refetches on navigation** — a surface
+        shows whatever it loaded when it mounted.
+      - Mobile: `useFocusEffect` + a hand-rolled `reloadToken`
+        (`review.tsx:153`, `cards.tsx:85`) — refetch-on-focus, reimplemented per
+        screen.
+      - Streak is worse than stale, it is *divergent*: `UserContext` holds
+        `streak`/`reviewedToday`/`lastReviewDate` as local state read once at
+        auth (`UserContext.tsx:85`), then `recordReview()` increments the local
+        copy and writes the doc (`:152`). The chip is a local counter, so a
+        second device or a mid-session reload disagrees with the document.
+      - Mobile has **three** sources for one list — server, the offline cache,
+        and the `applyPendingReviews` overlay — where web mirrors a rating
+        inline (`review/page.tsx:273`). Two implementations of one job, already
+        caught by the `removeCardFromQueue` entry in [lessons.md](lessons.md).
 
-- [ ] **Word order practice** — a controlled rung below the cloze: arrange given
-      tokens into the right order. The case for it is L1 interference that a
-      cloze structurally cannot reach — Korean and Japanese are SOV and the
-      cloze hands the learner the finished frame, so word order is the one thing
-      the current ladder never asks for. It also grades trivially: a permutation
-      of known tokens is checkable by construction, which is the
-      [lessons.md](lessons.md) "checkable, not just well-prompted" bar met for
-      free rather than by a redundant field.
-      **Argue it against a call already made.** The grammar redesign *dropped
-      the bare transformation drill outright*, and `docs/grammar-research.md`
-      §"Practice runs controlled → meaningful → free" is why: this is a
-      **mechanical** drill in Paulston's sense — form only, no meaning — and the
-      consensus there is that mechanical drills do not build form-meaning
-      mapping on their own. Read that section before building. The defensible
-      version is a rung *under* `ExerciseFormat`'s existing `cloze` →
-      `production` ladder (`grammar.ts:103`), reached only by patterns whose
-      difficulty is order, and never a destination.
-      Open: whether it is a third `ExerciseFormat` (then `exerciseFormat()` and
-      the derived-stage logic change, and `CLOZE_REPETITIONS` gains a sibling
-      threshold) or a separate surface that writes no scheduling at all. Also
-      whether arranging offered tokens breaches the no-multiple-choice rule —
-      the `ClozeExercise` doc comment (`grammar.ts:137`) argues the analogous
-      case for cued recall and is the precedent to match or to distinguish.
+      **The question to answer first: invalidate or subscribe.**
+      - *Invalidate* — the mainstream answer is a server-state cache with query
+        keys and explicit invalidation (TanStack Query, SWR): one cache entry per
+        `(uid, studyLanguage, view)`, a write invalidates its keys, refetch on
+        focus/reconnect is built in rather than hand-rolled, and optimistic
+        updates get rollback for free. Replaces both the per-screen effects and
+        `reloadToken`.
+      - *Subscribe* — **worth weighing seriously because it is already paid
+        for**: they are on Firestore, so `onSnapshot` deletes the invalidation
+        problem instead of managing it. Every surface converges without anyone
+        remembering to invalidate. Costs are real and should be measured, not
+        assumed: read billing on long-lived listeners, and it argues with
+        mobile's offline cache + pending queue, which exists for a reason.
+      The honest answer is likely both — subscribe for the small hot documents
+      (the user doc, so the streak stops being a local counter) and cache +
+      invalidate for the card lists. **Decide the counts question too:** which
+      number is the true one when two surfaces legitimately count differently.
+
+      **Separately, and don't let it hide in here: one real query bug.**
+      `fetchUserFlashcards` filters `where('archived', '!=', true)` +
+      `orderBy('archived')` (`apps/web/src/services/firestore.ts:122`, mirrored
+      at `apps/mobile/src/services/firestore.ts:110`), and **`!=` excludes
+      documents where the field is missing.** `migrateExistingCards` never
+      backfilled it, so a card older than the field is invisible in review *and*
+      in the archived list — it exists and appears nowhere. This is
+      [lessons.md](lessons.md)'s own "backfill new boolean fields" gotcha,
+      unbackfilled. **The fix is a backfill, not a query rewrite**, and it is
+      independent of everything above. Review is also the only surface that
+      filters `archived` at all — every other reader calls
+      `fetchAllUserFlashcards`, so deck counts include archived cards where the
+      review row for the same deck excludes them.
+
+- [ ] **Progress dashboard** — scoped 2026-08-18 from "improve stats". A hub to
+      look back on: **which days you reviewed, how much, and how many new cards
+      you learned**, plus habit tracking and recaps. The user's framing: we
+      can't improve what we don't measure.
+
+      **This is a write-path item before it is a screen.** Everything the app
+      knows is three fields on `users/{uid}` — `streak`, `lastReviewDate`,
+      `reviewedToday` (`types.ts:573`) — rendered as one chip. **There is no
+      per-review record anywhere**, so "which days did I review" and "how many
+      new cards" are not unsurfaced, they were never written. Design the write
+      first; it is the expensive, hard-to-change half, and a screen designed
+      against data that doesn't exist will specify the wrong one.
+
+      **Decide before writing anything:**
+      - *Grain.* One row per rating is the flexible choice and the only one that
+        answers accuracy and time-of-day; a daily rollup per `(uid, language)` is
+        far cheaper and answers the heatmap, the streak and the recap — which is
+        everything actually asked for. Start at rollup unless a question needs
+        the row.
+      - *Fields.* A day needs at minimum: reviews done, cards *new* that day
+        (distinct from reviewed — this is the one the current model cannot
+        express at all), and enough to derive the streak. Verdict counts only if
+        accuracy is in scope.
+      - *Backfill.* `createdAt` on cards can reconstruct new-cards-per-day
+        retroactively; review history cannot be reconstructed at all. So history
+        begins the day the write ships, and the first useful dashboard is weeks
+        later — worth knowing before it looks broken.
+
+      **Two existing fields are wrong in ways a dashboard would amplify rather
+      than fix, and both should be corrected by the same write path:**
+      `reviewedToday` counts due **directions**, not cards, so it already reads
+      roughly double what a learner thinks they did; and both it and `streak`
+      live on the user doc rather than per language, so six study languages
+      share one streak and one counter while cards are per-language collections.
+
+      **Depends on the item above.** A dashboard is a fourth surface reading the
+      same data, and shipping it onto the current per-screen-copy model adds a
+      fourth thing to disagree with the other three — worst of all for the
+      streak, which it would display prominently and which is a local counter
+      today. Settle the loading model, or at least the user doc, first.
 
 ## Medium
 
