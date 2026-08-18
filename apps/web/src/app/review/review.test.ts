@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { getNextReviewData } from '@/services/sm2';
 import { buildReviewCollections, collectionKey, isDue } from '@amgi/core';
-import type { GrammarPattern } from '@amgi/core';
 import { Flashcard, ReviewTracking } from '@/services/firestore';
 
 // Mock updateDoc function
@@ -150,17 +149,9 @@ describe('buildReviewCollections', () => {
     frontToBack: tracked(nextReview), backToFront: tracked(nextReview),
   });
 
-  const pattern = (production?: { nextReview: Date }): GrammarPattern => ({
-    uid: 'u', studyLanguage: 'Japanese', pattern: '〜ながら', kind: 'choice',
-    gloss: { English: 'while doing' },
-    createdAt: new Date('2026-07-01'),
-    production: production ? tracked(production.nextReview) : undefined,
-  });
-
   it('keeps your own cards and each pack apart, your own first', () => {
     const collections = buildReviewCollections(
       [card('kana-hiragana', past), card(undefined, past), card('kana-hiragana', future)],
-      [],
       'Japanese',
       'English',
       now
@@ -176,50 +167,19 @@ describe('buildReviewCollections', () => {
   // A pack you have not enrolled in belongs on Decks, which is where you would
   // go to enrol in it — not in the review picker as a zero row.
   it('omits collections with no cards', () => {
-    const collections = buildReviewCollections([card(undefined, past)], [], 'Japanese', 'English', now);
+    const collections = buildReviewCollections([card(undefined, past)], 'Japanese', 'English', now);
     expect(collections.map(c => c.id)).toEqual([null]);
   });
 
-  // The door into patterns is a writing finding, not this list — so an account
-  // with no patterns must not be shown an empty row advertising the feature.
-  it('adds no patterns row when there are no patterns', () => {
-    const collections = buildReviewCollections([card(undefined, past)], [], 'Japanese', 'English', now);
-    expect(collections.every(c => c.kind === 'cards')).toBe(true);
-  });
-
-  it('counts patterns one apiece, not two — there is only one direction', () => {
-    // A card due both ways counts twice in `dueCount`. A pattern has no second
-    // rung to schedule: recognising it in running text comes free from reading.
+  // `collectionKey` is what a React list and a stored selection key on. `null`
+  // is the cards you made yourself and must stay distinct from a pack id.
+  it('gives every row a distinct key', () => {
     const collections = buildReviewCollections(
-      [card(undefined, past)],
-      [pattern(), pattern({ nextReview: past }), pattern({ nextReview: future })],
+      [card(undefined, past), card('kana-hiragana', past)],
       'Japanese',
       'English',
       now
     );
-    const patterns = collections.find(c => c.kind === 'patterns')!;
-    expect(patterns.cardCount).toBe(3);
-    expect(patterns.dueCount).toBe(2); // untracked is due, plus the lapsed one
-    expect(patterns.nextReview).toEqual(future);
-  });
-
-  it('puts the heavier session last', () => {
-    const collections = buildReviewCollections(
-      [card('kana-hiragana', past), card(undefined, past)],
-      [pattern()],
-      'Japanese',
-      'English',
-      now
-    );
-    expect(collections.map(c => c.kind)).toEqual(['cards', 'cards', 'patterns']);
-  });
-
-  // `id` stopped identifying a row the moment patterns arrived: your own cards
-  // and your patterns are both `id: null`. Anything keying on `id` alone — a
-  // React list, a stored selection — silently collapses the two.
-  it('gives every row a distinct key even though two share an id', () => {
-    const collections = buildReviewCollections([card(undefined, past)], [pattern()], 'Japanese', 'English', now);
-    expect(collections.filter(c => c.id === null)).toHaveLength(2);
     expect(new Set(collections.map(collectionKey)).size).toBe(collections.length);
   });
 });

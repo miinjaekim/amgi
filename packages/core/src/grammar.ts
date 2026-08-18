@@ -3,6 +3,29 @@ import { getWritingReview } from './writing';
 import type { WritingPatternCandidate, WritingReview } from './writing';
 
 /**
+ * **RETAINED FOR OLD BUILDS. DO NOT DELETE AS DEAD CODE.**
+ *
+ * Grammar patterns were removed from Amgi in 2026-08 — the practice session, the
+ * Cards/Grammar management panel and the review collection are all gone, so
+ * nothing in this tree imports this module and it looks exactly like something
+ * safe to drop. It is not. `/api/grammar/exercise/route.ts` imports
+ * `parsePatternExercise`, and that route exists to keep TestFlight builds
+ * shipped before the removal working: mobile has no OTA, so an installed build
+ * carries its own frozen copy of the pattern UI and calls the deployed route at
+ * runtime. Deleting this breaks the route, and the route breaking is a tester's
+ * pattern session erroring out mid-turn.
+ *
+ * Only `parsePatternExercise` is load-bearing today. The rest — scheduling,
+ * grading, the queue builders — has no caller and is kept with it so the module
+ * stays readable as one piece rather than a stripped parser with dangling
+ * references.
+ *
+ * **When this can go:** once no build predating the removal is still in use. See
+ * the removal entry in `.scratchpad/status.md`. The design argument behind all
+ * of this is in `docs/grammar-research.md`, which outlives the code.
+ *
+ * ---
+ *
  * Grammar patterns: the thing you exercise, as opposed to the card you flip.
  *
  * The argument is in `.scratchpad/vision.md` and is worth reading before

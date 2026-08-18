@@ -2,6 +2,25 @@ import { getStudyLanguageConfig } from './types';
 import type { StudyLanguage } from './types';
 
 /**
+ * **RETAINED FOR OLD BUILDS. DO NOT DELETE AS DEAD CODE.**
+ *
+ * Writing review was removed from Amgi in 2026-08 — every surface that called
+ * this module is gone, so it has no callers in this tree and looks exactly like
+ * something safe to drop. It is not. `/api/writing/route.ts` imports
+ * `parseWritingReview` and `WRITING_MAX_CHARS`, and that route exists to keep
+ * TestFlight builds shipped before the removal working: mobile has no OTA, so an
+ * installed build carries its own frozen copy of the writing UI and calls the
+ * deployed route at runtime. Deleting this breaks the route, and the route
+ * breaking is a tester's Writing tab erroring out.
+ *
+ * `getWritingReview` below is the client half and genuinely has no caller — it
+ * is kept with the parser only so the module stays readable as one piece.
+ *
+ * **When this can go:** once no build predating the removal is still in use.
+ * See the removal entry in `.scratchpad/status.md`.
+ *
+ * ---
+ *
  * Writing review: you submit a passage, and get back how a native would have
  * written it plus an ordered list of what to notice.
  *
