@@ -123,6 +123,61 @@ enough hands to close it without a dedicated session.
 Closed calls, kept with their reasoning — a decision whose reasoning is lost gets
 reopened by the next person to notice the symptom. Newest first.
 
+### Grammar and writing are removed — the routes stay behind (2026-08-18)
+
+**The user's call, and it reverses everything in the four grammar entries below
+rather than amending them.** Grammar patterns and writing review were built,
+trialled and redesigned across two weeks; the conclusion is that neither belongs
+in Amgi for now. Removed on `chore/remove-grammar-features`: pattern practice,
+the writing review panel, the Cards/Grammar management toggle, the Learn
+Word/Passage toggle, the patterns Review collection, `services/patterns.ts` on
+both platforms, `packages/core/src/diff.ts` and both `TextDiff` components, and
+88 i18n keys × 2 languages.
+
+**Two API routes and their parsers deliberately survive**, and this is the part
+that will look like an oversight later. `/api/writing` and
+`/api/grammar/exercise` stay deployed, which forces `packages/core/src/writing.ts`
+and `grammar.ts` to stay too — the routes import `parseWritingReview`,
+`WRITING_MAX_CHARS` and `parsePatternExercise`. Both modules now have **zero
+callers in the tree**, which is exactly the shape of something safe to delete.
+
+The reason is the no-OTA model. TestFlight 1.3.0 is in external testers' hands
+with the writing and pattern UI compiled into the binary; deleting source here
+cannot reach it, so those screens keep rendering and keep calling the deployed
+routes. Delete the routes and a tester's Writing tab errors out mid-use. Each
+module carries a `DO NOT DELETE AS DEAD CODE` header pointing back here.
+
+**When they can go:** once no build predating the removal is still in use — i.e.
+after the next build ships and testers have updated. That is the one condition;
+nothing else gates it.
+
+**What was given up, recorded because it was argued for at length.** The
+"demonstrated gap" card offer — a word the learner reached for and did not have —
+went with the writing panel. The entry below at 2026-08-08 calls it the
+highest-confidence signal a passage can produce about what to learn next, and
+writing review was the only surface that could observe it. Lookup, packs, manual
+add and CSV import are the remaining card doors. `docs/grammar-research.md`
+stays: it is the argument, and it outlives the code.
+
+**Word order practice is cancelled with it.** It sat in the backlog as a
+controlled rung *below* the cloze, inside `ExerciseFormat`'s ladder — with no
+ladder there is nothing for it to be a rung of. The case for it (L1 interference
+on SOV order, which a cloze structurally cannot reach) was never refuted and is
+worth re-reading in `docs/grammar-research.md` if grammar is ever revisited, but
+it does not survive as a standalone drill: the same research §"controlled →
+meaningful → free" calls a bare ordering task mechanical in Paulston's sense, and
+mechanical drills do not build form-meaning mapping on their own.
+
+**Collateral simplification:** `ReviewCollection.kind` is gone. It existed only
+because a patterns row and your own cards were both `id: null`; with patterns
+removed `id` identifies a row again, and `collectionKey` is now `id ?? ''`.
+`buildReviewCollections` lost its `patterns` parameter.
+
+**Test count: 313 → 222.** Three test files deleted (`grammar.test.ts`,
+`writing-review.test.ts`, `diff.test.ts`) plus four pattern cases out of
+`review.test.ts`. Measured, both apps typecheck, `next build` clean with both
+retained routes in the manifest.
+
 ### Part of speech is stored as a code and rendered in the reader's language (2026-08-11)
 
 **This reverses the backlog item's own decision**, which had the badge reading

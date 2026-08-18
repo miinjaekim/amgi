@@ -19,18 +19,8 @@ import { useUser } from '@/components/UserContext';
 import { t, partOfSpeechLabel } from '@/lib/i18n';
 import SaveFlashcardModal from '@/components/SaveFlashcardModal';
 import PronounceButton from '@/components/PronounceButton';
-import WritingReviewPanel from '@/components/WritingReviewPanel';
 import Spinner from '@/components/Spinner';
 import React from 'react';
-
-/**
- * Learn takes two sizes of the same question — "is this right?" — asked about a
- * word you met and about a passage you wrote. They share this page rather than
- * splitting the nav because the nav question properly comes due when
- * conversation practice lands and there are two output surfaces to place
- * together, not one.
- */
-type LearnMode = 'word' | 'passage';
 
 const EXAMPLE_TERMS: Record<string, string[]> = {
   Korean: ['배', 'longing', '눈치', 'awkward', '사랑'],
@@ -66,7 +56,6 @@ function animateText(
 
 export default function Home() {
   const { user, nativeLanguage, studyLanguage, handleSignIn } = useUser();
-  const [mode, setMode] = useState<LearnMode>('word');
   const [term, setTerm] = useState('');
   const [core, setCore] = useState<TermCore | null>(null);
   const [ambiguity, setAmbiguity] = useState<TermAmbiguous | null>(null);
@@ -380,35 +369,6 @@ export default function Home() {
 
   return (
     <div className="max-w-2xl mx-auto font-mono text-base" style={{ color: 'var(--color-text)' }}>
-      {/* A segmented control rather than a subtler affordance: this is the only
-          thing advertising that Learn does passages at all, so it has to be
-          legible at a glance from the empty state. */}
-      <div className="mt-6 flex justify-center">
-        <div
-          role="tablist"
-          aria-label={t(nativeLanguage, 'navLearn')}
-          className="inline-flex rounded-full border p-1"
-          style={{ borderColor: 'var(--color-muted)' }}
-        >
-          {(['word', 'passage'] as const).map(m => (
-            <button
-              key={m}
-              role="tab"
-              aria-selected={mode === m}
-              onClick={() => setMode(m)}
-              className="px-4 py-1 rounded-full text-sm font-bold transition-colors"
-              style={mode === m
-                ? { background: 'var(--color-highlight)', color: 'var(--color-bg)' }
-                : { color: 'var(--color-muted)' }}
-            >
-              {t(nativeLanguage, m === 'word' ? 'learnModeWord' : 'learnModePassage')}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {mode === 'passage' ? <WritingReviewPanel /> : (
-      <>
       {/* Tagline above the search bar (empty state) — pushes the input toward
           the vertical center; stays during loading to avoid a layout jump */}
       {!core && !ambiguity && !error && (
@@ -754,8 +714,6 @@ export default function Home() {
           onSave={handleSaveFlashcard}
           onClose={() => { setShowFlashcardForm(false); setFlashcardDraft(null); }}
         />
-      )}
-      </>
       )}
     </div>
   );

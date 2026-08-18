@@ -64,8 +64,39 @@ leaves that file:
 Backlog priority mirrors the user's Google Tasks list — `backlog.md` is the
 scoped version of it.
 
-_Last reviewed against the codebase: 2026-08-12, `main` @ `18be687`. `npm test`
-313/313, measured._
+_Last reviewed against the codebase: 2026-08-18, `chore/remove-grammar-features`.
+`npm test` 222/222, measured._
+
+_This pass **removed grammar and writing from the app** on the user's call, and
+then **reframed the two remaining starred backlog items**. The removal took
+~5,000 lines: pattern practice, writing review, the Cards/Grammar toggle, the
+Learn Word/Passage toggle, the patterns review collection, `core/diff.ts` and
+both `TextDiff`s, and 88 i18n keys per language. **The one thing to know before
+touching `packages/core`:** `grammar.ts` and `writing.ts` are still there with
+**zero callers**, and that is deliberate — `/api/writing` and
+`/api/grammar/exercise` stay deployed so TestFlight 1.3.0, which has the UI
+compiled into its binary and no OTA, keeps working. Both files carry a
+`DO NOT DELETE AS DEAD CODE` header; the condition for removing them is in
+[status.md](status.md). `docs/grammar-research.md` stays too — it is the
+argument, and it outlives the code._
+
+_The backlog rework is the more interesting half. **"Review page discrepancy" was
+never one page's bug**: every surface owns a private copy of the data and nothing
+tells any of them when it changes, which is why the symptom moves — a stale
+deadline, a divergent streak, a card saved and not shown. It is now **Data
+loading and freshness**, with the real architecture written down (no cache layer;
+`useState` + effect per screen; web never refetches on navigation; mobile
+hand-rolls `reloadToken`; the streak is a *local counter* in `UserContext`, not a
+read of the doc) and the actual question posed — invalidate (TanStack Query/SWR)
+or subscribe (`onSnapshot`, already paid for since they are on Firestore). **The
+one genuine query bug is called out separately** so it doesn't hide inside the
+architecture question: `where('archived', '!=', true)` excludes missing fields and
+was never backfilled, so old cards appear nowhere at all. **"Improve stats" is now
+Progress dashboard**, and it is a *write-path* item — there is no per-review
+record anywhere, so history begins the day the write ships, and it depends on the
+loading item because a dashboard is a fourth surface to disagree with the other
+three. **Word order practice was cancelled**, since it was a rung on a ladder
+that no longer exists._
 
 _This pass **synced `backlog.md` with Google Tasks** and scoped the four new
 names against the code, which is most of the value — a one-line task title and a

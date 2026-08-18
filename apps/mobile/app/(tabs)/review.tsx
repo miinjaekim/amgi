@@ -18,18 +18,16 @@ import { enqueueReview } from '../../src/services/offlineReview';
 import { usePendingReviewSync } from '../../src/hooks/usePendingReviewSync';
 import { refreshReminders } from '../../src/services/reminders';
 import {
-  DIRECTION_FILTERS, applyPendingReviews, buildPatternQueue, buildReviewCollections,
-  buildReviewQueue, collectionKey, dueReviewItems, duePatterns, filterByDirection,
+  DIRECTION_FILTERS, applyPendingReviews, buildReviewCollections,
+  buildReviewQueue, collectionKey, dueReviewItems, filterByDirection,
   getBackSide, getCollectionId, getNextReviewDate,
   getNextReviewData, getStudyLangSide, getStudyLanguageConfig, getBackSideConfig,
   directionLabel, directionPrompt, getCharacterBreakdown, getExampleSides,
   removeCardFromQueue, t,
 } from '@amgi/core';
 import type {
-  CardSideField, DirectionFilter, GrammarPattern, PendingReview, ReviewQueueItem,
+  CardSideField, DirectionFilter, PendingReview, ReviewQueueItem,
 } from '@amgi/core';
-import { fetchUserPatterns } from '../../src/services/patterns';
-import PatternSession from '../../src/components/PatternSession';
 import { useTheme } from '../../src/context/ThemeContext';
 import { useFloatingTabBarHeight } from '../../src/components/FloatingTabBar';
 import PageHeader from '../../src/components/PageHeader';
@@ -55,16 +53,10 @@ export default function ReviewScreen() {
    */
   const [uncachedLanguage, setUncachedLanguage] = useState(false);
   /**
-   * The chosen row, as a `collectionKey` — `undefined` is "hasn't picked yet".
-   *
-   * A key rather than an id, because an id stopped identifying a row when
-   * grammar patterns arrived: your own cards and your patterns are both
-   * `id: null`, and only `kind` separates them.
+   * The chosen row, as a `collectionKey` — `undefined` is "hasn't picked yet",
+   * which is distinct from `''` for the cards you made yourself.
    */
   const [selectedKey, setSelectedKey] = useState<string | undefined>(undefined);
-  /** Non-null while a pattern practice session is running; the session queue. */
-  const [patternQueue, setPatternQueue] = useState<GrammarPattern[] | null>(null);
-  const [patterns, setPatterns] = useState<GrammarPattern[]>([]);
   /**
    * Deliberately per-session and not remembered: it resets to `both` with the
    * collection, so a one-off drill in one direction never quietly becomes how
@@ -184,7 +176,6 @@ export default function ReviewScreen() {
     // worse flicker than the staleness being fixed.
     if (!isRefresh) setLoading(true);
     setSelectedKey(undefined);
-    setPatternQueue(null);
     setUncachedLanguage(false);
     // A reload already has these folded in — the fetch replays the pending
     // queue — so keeping them would only double-count.
@@ -204,14 +195,6 @@ export default function ReviewScreen() {
         setCards(cached);
         setLoading(false);
       }
-
-      // Patterns are their own collection and their own failure. They are not
-      // cached for offline the way cards are, because a pattern turn needs the
-      // network anyway — so a failed read just means no patterns row, which is
-      // also what an account with no patterns sees.
-      fetchUserPatterns(uid, studyLanguage)
-        .then(list => { if (active) setPatterns(list); })
-        .catch(() => { if (active) setPatterns([]); });
 
       try {
         const fresh = await fetchAndCacheReviewCards(uid, studyLanguage);
@@ -255,28 +238,22 @@ export default function ReviewScreen() {
   );
 
   const collections = useMemo(
-    () => buildReviewCollections(reviewedCards, patterns, studyLanguage, nativeLanguage),
-    [reviewedCards, patterns, studyLanguage, nativeLanguage]
+    () => buildReviewCollections(reviewedCards, studyLanguage, nativeLanguage),
+    [reviewedCards, studyLanguage, nativeLanguage]
   );
 
   const selected = selectedKey === undefined
     ? undefined
     : collections.find(c => collectionKey(c) === selectedKey);
-  const isPatterns = selected?.kind === 'patterns';
-  /**
-   * The card collection in play, or `undefined` when none is — which now
-   * includes "patterns are selected". Everything below this line is card
-   * machinery that the patterns branch returns before reaching.
-   */
-  const collectionId = selected && selected.kind === 'cards' ? selected.id : undefined;
+  /** The card collection in play, or `undefined` when none is. */
+  const collectionId = selected ? selected.id : undefined;
 
   // Declared here rather than beside the focus effect above, because it reads
   // `collectionId`, which is derived from `collections` — and that in turn
   // needs `sessionRatings`. Hook order stays stable, which is all that matters.
   useEffect(() => {
-    sessionRunningRef.current =
-      (started && queueFor === collectionId && !done && !stopped) || patternQueue !== null;
-  }, [started, queueFor, collectionId, done, stopped, patternQueue]);
+    sessionRunningRef.current = started && queueFor === collectionId && !done && !stopped;
+  }, [started, queueFor, collectionId, done, stopped]);
 
   /**
    * What is due in the chosen collection right now, both ways round. Derived
@@ -314,9 +291,8 @@ export default function ReviewScreen() {
     if (collections.length === 0 || selectedKey !== undefined) return;
     // The param outlives the handoff, so it is consumed once — otherwise
     // "change collection" would be dragged straight back to the deck.
-    // A deck handoff always names a pack, so it only ever selects a cards row.
     const handoff = requested
-      ? collections.find(c => c.kind === 'cards' && c.id === requested)
+      ? collections.find(c => c.id === requested)
       : undefined;
     if (handoff && consumedNonce.current !== nonce) {
       consumedNonce.current = nonce;
@@ -583,11 +559,7 @@ export default function ReviewScreen() {
           {collections.map(collection => (
             <TouchableOpacity
               key={collectionKey(collection)}
-              // Model-graded production cannot work offline and offline review
-              // is shipped, so the row is disabled rather than left to fail on
-              // the first turn.
-              style={[s.pickerRow, collection.kind === 'patterns' && !isOnline && s.pickerRowDisabled]}
-              disabled={collection.kind === 'patterns' && !isOnline}
+              style={s.pickerRow}
               onPress={() => setSelectedKey(collectionKey(collection))}
             >
               <View style={s.pickerRowTop}>
@@ -599,13 +571,8 @@ export default function ReviewScreen() {
                 </Text>
               </View>
               <Text style={s.pickerCount}>
-                {collection.kind === 'patterns'
-                  ? t(nativeLanguage, 'patternCollectionCount', { count: collection.cardCount })
-                  : t(nativeLanguage, 'deckEntryCount', { count: collection.cardCount })}
+                {t(nativeLanguage, 'deckEntryCount', { count: collection.cardCount })}
               </Text>
-              {collection.kind === 'patterns' && !isOnline && (
-                <Text style={s.pickerCount}>{t(nativeLanguage, 'patternOffline')}</Text>
-              )}
             </TouchableOpacity>
           ))}
         </ScrollView>
@@ -616,77 +583,16 @@ export default function ReviewScreen() {
   // Only offered when there is something else to change to — a single
   // collection is not a choice, and a control for it would only be noise.
   const changeCollectionButton = collections.length > 1 && (
-    <TouchableOpacity style={s.changeBtn} onPress={() => { setSelectedKey(undefined); setPatternQueue(null); }}>
+    <TouchableOpacity style={s.changeBtn} onPress={() => setSelectedKey(undefined)}>
       <Text style={s.changeBtnText}>{t(nativeLanguage, 'reviewChangeCollection')}</Text>
     </TouchableOpacity>
   );
 
   const collectionName = selected.name;
 
-  /**
-   * The patterns branch: a start screen, then the session.
-   *
-   * Returned whole rather than threaded through the card paths below, because
-   * almost nothing is shared — no direction filter, no reveal, no four-way
-   * self-rating, no offline queue. What they share is the picker that got here.
-   */
-  if (isPatterns) {
-    if (patternQueue) {
-      return (
-        <SafeAreaView style={s.root} edges={['top']}>
-          <PatternSession
-            patterns={patternQueue}
-            studyLanguage={studyLanguage}
-            nativeLanguage={nativeLanguage}
-            onReviewed={recordReview}
-            onScheduled={(id: string, production: ReviewTracking) =>
-              setPatterns(prev => prev.map(p => (p.id === id ? { ...p, production } : p)))}
-            onExit={() => setPatternQueue(null)}
-          />
-        </SafeAreaView>
-      );
-    }
-    const duePatternList = duePatterns(patterns);
-    return (
-      <SafeAreaView style={s.root} edges={['top']}>
-        <PageHeader
-          titleKey="reviewPageTitle"
-          helpTitleKey="helpReviewTitle"
-          helpLeadKey="helpReviewLead"
-          helpPointsKey="helpReviewPoints"
-        />
-        <ScrollView contentContainerStyle={s.pickerScroll}>
-          {offlineNotice}
-          <Text style={s.pickerTitle}>{collectionName}</Text>
-          {duePatternList.length === 0 ? (
-            <Text style={s.pickerCount}>{t(nativeLanguage, 'patternSessionCaughtUp')}</Text>
-          ) : (
-            <>
-              <Text style={s.patternBlurb}>{t(nativeLanguage, 'patternSessionBlurb')}</Text>
-              <TouchableOpacity
-                style={[s.startBtn, !isOnline && s.startBtnOff]}
-                disabled={!isOnline}
-                onPress={() => setPatternQueue(buildPatternQueue(patterns))}
-              >
-                <Text style={s.startBtnText}>
-                  {t(nativeLanguage, 'patternStart', { count: duePatternList.length })}
-                </Text>
-              </TouchableOpacity>
-              {!isOnline && (
-                <Text style={s.pickerCount}>{t(nativeLanguage, 'patternOffline')}</Text>
-              )}
-            </>
-          )}
-          {changeCollectionButton}
-        </ScrollView>
-      </SafeAreaView>
-    );
-  }
-
-  // The picker returned above and so did the patterns branch, so a cards row is
-  // selected and its id is a value rather than "nothing picked". Restated for
-  // the type system, which cannot see that through the `isPatterns` boolean.
-  const cardsCollectionId: string | null = selected.kind === 'cards' ? selected.id : null;
+  // The picker returned above, so a row is selected and its id is a value
+  // rather than "nothing picked". Restated for the type system.
+  const cardsCollectionId: string | null = selected.id;
 
   // No session running. `queueFor` also catches the single frame after a
   // collection change, where `started` still belongs to the collection just
@@ -883,7 +789,7 @@ export default function ReviewScreen() {
       <View style={s.progressRow}>
         <View style={s.progressLabelWrap}>
           {collections.length > 1 ? (
-            <TouchableOpacity onPress={() => { setSelectedKey(undefined); setPatternQueue(null); }} hitSlop={8}>
+            <TouchableOpacity onPress={() => setSelectedKey(undefined)} hitSlop={8}>
               <Text style={s.progressText}>
                 {collectionName} · {index + 1} / {queue.length}
               </Text>
@@ -1234,7 +1140,6 @@ function makeStyles(C: Palette, tabBarHeight: number) {
   startBtnOff: { opacity: 0.4 },
   startBtnText: { fontSize: 16, fontWeight: '700', color: C.bg },
     pickerRowDisabled: { opacity: 0.45 },
-    patternBlurb: { fontSize: 14, color: C.muted, lineHeight: 21, marginBottom: 16 },
   startNote: { fontSize: 13, color: C.muted, textAlign: 'center', marginTop: 12 },
 
   changeBtn: {

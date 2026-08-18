@@ -156,8 +156,6 @@ const translations = {
     tourLearnBody: 'Look up any word or phrase, then keep the explanation as a flashcard.',
     tourReviewBody: 'Cards come back just before you would forget them — in both directions.',
     tourDecksBody: 'Curated decks to draw from when no particular word is on your mind.',
-    tourWritingLabel: 'Writing',
-    tourWritingBody: 'Write a few sentences and see how a native would put it.',
     tourStart: 'Get started',
     // Per-page help, opened from the "?" in a page title. Deliberately answers
     // the question the page actually raises rather than restating its name —
@@ -173,12 +171,12 @@ const translations = {
       // words *become* your cards, so that read as a contradiction. What is
       // actually separate is the review session, not the ownership.
       'Each pack has its own review session, apart from your other cards.',
-    helpLearnTitle: 'Word and Passage',
-    helpLearnLead: 'Two sizes of the same question: is this right?',
+    helpLearnTitle: 'What Learn is for',
+    helpLearnLead: 'Look up anything you are unsure of, then keep it.',
     helpLearnPoints:
-      'Word — look up a word or phrase and keep the explanation as a card.\n' +
-      'Passage — write a few sentences and see how a native would put it.\n' +
-      'Both turn what you learn into flashcards.',
+      'Look up a word or phrase and get an explanation pitched at what you asked.\n' +
+      'Save it as a card — the examples and the breakdown are saved with it.\n' +
+      'Word of the day is there for when nothing particular is on your mind.',
     helpReviewTitle: 'How review works',
     helpReviewLead: 'Cards come back just before you would forget them.',
     helpReviewPoints:
@@ -190,131 +188,9 @@ const translations = {
     taglineSubtitle: 'Get an instant AI-powered explanation, then save it as a flashcard to review with spaced repetition.',
     exampleTermsLabel: 'Try:',
     wordOfTheDay: 'Word of the day',
-    // Writing review — the second mode on Learn. A word you met and a sentence
-    // you wrote are the same question ("is this right?") asked at two sizes,
-    // which is why they share a surface rather than splitting the nav.
-    learnModeWord: 'Word',
-    learnModePassage: 'Passage',
-    writingPlaceholder: 'Write a few sentences in {language}, and see how a native would put it...',
-    writingButton: 'Review',
-    writingTagline: 'Write something. See how a native would say it.',
-    writingTaglineSubtitle: 'Grammar where you need it, natural phrasing where you don\'t — pitched at whatever you wrote. Keep the phrases you were reaching for as flashcards.',
-    writingRewriteHeading: 'Native version',
-    // Toggle between the correction shown as edits in place and the clean
-    // rewritten text. Defaults to the edits — reading two blocks and looking
-    // between them is what the diff exists to remove.
-    writingViewChanges: 'Changes',
-    writingViewFinal: 'Final',
     copy: 'Copy',
     copied: 'Copied',
     copyFailed: 'Copy failed',
-    // The rewrite is the one text on screen the user didn't write, so it's the
-    // one whose meaning they can't check. This is that check.
-    writingRewriteMeaning: 'What that says',
-    writingFindingsHeading: 'What to notice',
-    // Shown when the model returns no findings. Deliberately not "no errors" —
-    // an advanced writer gets an empty list because their prose is natural,
-    // not because it was checked and passed.
-    writingNoFindings: 'This reads naturally. Nothing worth flagging.',
-    writingKindGrammar: 'grammar',
-    writingKindNaturalness: 'naturalness',
-    writingKindRegister: 'register',
-    writingKindVocabulary: 'vocabulary',
-    writingAddCard: '+ card',
-    writingCardSaved: 'Saved',
-    // A word the passage proves they needed and did not have — they wrote it in
-    // their own language, or talked around it. Distinct from every other card
-    // offer, which is a judgement rather than evidence.
-    writingWordYouNeeded: 'word you needed',
-    writingStartOver: 'Write something else',
-    errorWritingReview: 'Could not review this. Please try again.',
-    // Grammar patterns — the thing you exercise, not the card you flip. A
-    // pattern review is a production turn: a situation in your own language,
-    // one sentence from you, a verdict on what came back. Copy here never
-    // says "card" for a pattern, and never names the pattern in a prompt.
-    patternPractise: 'Practice this pattern',
-    patternAdded: 'In practice',
-    errorSavePattern: 'Could not add this pattern. Please try again.',
-    reviewCollectionPatterns: 'Grammar patterns',
-    patternCollectionCount: '{count} patterns',
-    patternSessionProgress: 'Pattern {index} of {total}',
-    patternGenerating: 'Writing you a situation...',
-    patternSituationHeading: 'Say this',
-    patternYourSentence: 'What you wrote',
-    // The controlled rung — a sentence with the pattern blanked. Copy never
-    // calls it a quiz or a test: it is practice, and the learner types the
-    // answer rather than picking one.
-    patternClozeHeading: 'Fill the gap',
-    patternClozePlaceholder: 'What goes in the gap?',
-    patternClozeFrom: 'Starting from',
-    patternExpected: 'Expected',
-    patternHintPointMeans: 'What you need means:',
-    patternOverride: 'My answer was right too',
-    patternOverridden: 'Counted as correct.',
-    patternKindChoice: 'A choice about how to say something',
-    patternKindChoiceHelp: 'You have to reach for it. Practice moves on to writing your own sentences.',
-    patternKindForm: 'A rule that just applies',
-    patternKindChoiceShort: 'choice',
-    patternKindFormHelp: 'It rewrites something you were writing anyway. Practice stays as gap-filling.',
-    patternKindFormShort: 'rule',
-    // Managing patterns — a mode on the Cards page, since a pattern is not a
-    // card and cannot share the deck axis, but is still a thing you saved.
-    libraryModeCards: 'Cards',
-    libraryModePatterns: 'Grammar',
-    patternsLoading: 'Loading patterns...',
-    patternsLoadFailed: 'Could not load your patterns.',
-    patternsNone: 'No grammar patterns yet. They come from what your writing shows you need — or add one here.',
-    patternsNoneArchived: 'Nothing archived.',
-    patternAddManual: '+ Add pattern',
-    patternFieldPattern: 'Pattern',
-    patternFieldPatternPlaceholder: 'e.g. -다가, passé composé',
-    patternFieldGloss: 'What it does',
-    patternFieldGlossPlaceholder: 'A few words — while doing X, then Y',
-    patternFieldKind: 'What kind of thing is it?',
-    patternStageCloze: 'Filling gaps',
-    patternStageProduction: 'Writing sentences',
-    patternDueNow: 'due now',
-    patternNextOn: 'next {date}',
-    patternConfirmDelete: 'Delete this pattern? Its practice history goes with it.',
-    patternDeleteFailed: 'Could not delete this pattern.',
-    patternAnswerPlaceholder: 'Write it in {language}...',
-    patternCheck: 'Check',
-    patternChecking: 'Checking...',
-    // One control, two tiers. Taking a hint costs — the ceiling drops to Hard
-    // after the first and Again after the second — because retrieval has to
-    // stay the learner's, and the scheduler has to be told the truth about how
-    // much of the search space was handed over.
-    patternHint: 'Hint',
-    patternHintAgain: 'Still stuck',
-    patternHintCostHard: 'Hint taken — this one counts as Hard at best.',
-    patternHintCostAgain: 'Pattern shown — this one counts as Again.',
-    // Shown when the sentence was fine but sidestepped the pattern entirely.
-    // Knowing when to reach for it is the skill, so this is not a pass.
-    patternNotReached: 'That works, but it goes around the pattern rather than using it.',
-    patternVerdictEasy: 'Nailed it',
-    patternVerdictGood: 'Got it',
-    patternVerdictHard: 'Close — the form slipped',
-    patternVerdictAgain: 'Not yet',
-    patternNext: 'Next',
-    patternFinish: 'Finish',
-    patternSessionDone: 'Practice complete',
-    patternSessionDoneCount: 'You practised {count} patterns.',
-    patternSessionCaughtUp: 'Nothing to practise right now.',
-    patternStart: 'Practice {count} patterns',
-    // Says what the turn will be, because it is not what the Review page has
-    // trained anyone to expect: a production turn between two three-second
-    // flips is a change worth naming before it happens rather than after.
-    patternSessionBlurb: 'You will be given a situation and write one sentence. No multiple choice — a hint is there if you get stuck.',
-    // A 500 on turn 3 of 6 is not the offline case: 40 seconds of the
-    // learner's writing is on screen and losing it is the one outcome ruled
-    // out. The text stays, retry is offered, and a skip writes no verdict at
-    // all — leaving the pattern due, which is the honest result.
-    patternGradeFailed: 'Could not grade that — your sentence is still here.',
-    patternExerciseFailed: 'Could not write an exercise for this one.',
-    patternRetry: 'Try again',
-    patternSkip: 'Skip this one',
-    patternSkipped: 'Skipped — this pattern is still due.',
-    patternOffline: 'Pattern practice needs a connection.',
     // Depth / examples errors
     errorLoadDepth: 'Failed to load definition. Please try again.',
     errorLoadExamples: 'Failed to load examples. Please try again.',
@@ -612,8 +488,6 @@ const translations = {
     tourLearnBody: '모르는 단어나 표현을 찾아보고, 그 설명을 그대로 카드로 저장하세요.',
     tourReviewBody: '잊어버릴 때쯤 카드가 다시 나타나요. 양방향으로 복습합니다.',
     tourDecksBody: '딱히 찾을 단어가 없을 땐 정리된 단어팩에서 골라 담으세요.',
-    tourWritingLabel: '글쓰기',
-    tourWritingBody: '몇 문장 써 보면 원어민이라면 어떻게 쓸지 보여드려요.',
     tourStart: '시작하기',
     // Per-page help
     helpButtonLabel: '이 화면은 무엇을 하는 곳인가요?',
@@ -626,14 +500,12 @@ const translations = {
       // '내 카드' one line up, and '~해서' is a loose causal join where a full
       // stop reads better.
       '복습은 팩별로 따로 해요. 다른 카드와 섞이지 않아요.',
-    helpLearnTitle: '단어와 글',
-    helpLearnLead: '궁금한 게 단어 하나든 직접 쓴 글이든, 여기서 물어보세요.',
-    // '글' and '단어' rather than '문장'/'어휘' — they are what the toggle on
-    // screen actually says, and help that renames the controls is worse than none.
+    helpLearnTitle: '단어 찾아보기',
+    helpLearnLead: '궁금한 단어나 표현을 찾아보고, 그대로 카드로 남겨요.',
     helpLearnPoints:
-      '단어 — 모르는 단어나 표현을 찾아보고 설명을 카드로 저장해요.\n' +
-      '글 — 몇 문장 써 보면 원어민이라면 어떻게 쓸지 알려드려요.\n' +
-      '어느 쪽이든 배운 건 카드로 남길 수 있어요.',
+      '단어나 표현을 검색하면 뜻과 쓰임을 설명해드려요.\n' +
+      '설명을 카드로 저장하면 예문과 풀이도 같이 저장돼요.\n' +
+      '딱히 찾을 게 없을 땐 오늘의 단어부터 시작해보세요.',
     helpReviewTitle: '복습은 이렇게 진행돼요',
     helpReviewLead: '잊어버릴 때쯤 카드가 다시 나타나요.',
     helpReviewPoints:
@@ -647,99 +519,9 @@ const translations = {
     taglineSubtitle: 'AI로 즉각적인 설명을 받고, 플래시카드로 저장해 간격 반복 학습을 시작하세요.',
     exampleTermsLabel: '예시:',
     wordOfTheDay: '오늘의 단어',
-    // Writing review. 첨삭 is what Koreans actually call written correction —
-    // "글 검토" would be the literal render and reads like a document review.
-    learnModeWord: '단어',
-    learnModePassage: '글',
-    writingPlaceholder: '{language}로 몇 문장 써보세요. 원어민이라면 어떻게 쓸지 보여드릴게요...',
-    writingButton: '첨삭',
-    writingTagline: '직접 써보세요. 원어민이라면 이렇게 씁니다.',
-    writingTaglineSubtitle: '문법이 필요하면 문법을, 아니면 더 자연스러운 표현을 — 쓴 글에 맞춰 짚어드려요. 떠올리지 못했던 표현은 카드로 저장하세요.',
-    writingRewriteHeading: '원어민 표현',
-    writingViewChanges: '고친 부분',
-    writingViewFinal: '완성문',
     copy: '복사',
     copied: '복사됨',
     copyFailed: '복사 실패',
-    writingRewriteMeaning: '이런 뜻이에요',
-    writingFindingsHeading: '눈여겨볼 점',
-    writingNoFindings: '자연스럽게 읽혀요. 따로 짚을 부분이 없네요.',
-    writingKindGrammar: '문법',
-    writingKindNaturalness: '자연스러움',
-    writingKindRegister: '말투',
-    writingKindVocabulary: '어휘',
-    writingAddCard: '+ 카드',
-    writingCardSaved: '저장됨',
-    writingWordYouNeeded: '필요했던 단어',
-    writingStartOver: '다른 글 써보기',
-    errorWritingReview: '첨삭에 실패했어요. 다시 시도해주세요.',
-    // Grammar patterns. 패턴 rather than 문형 — 문형 is textbook vocabulary and
-    // this is not a syllabus. Nothing here calls a pattern a 카드.
-    patternPractise: '이 패턴 연습하기',
-    patternAdded: '연습 중',
-    errorSavePattern: '패턴을 추가하지 못했어요. 다시 시도해주세요.',
-    reviewCollectionPatterns: '문법 패턴',
-    patternCollectionCount: '패턴 {count}개',
-    patternSessionProgress: '패턴 {index} / {total}',
-    patternGenerating: '상황을 만드는 중...',
-    patternSituationHeading: '이렇게 말해보세요',
-    patternYourSentence: '내가 쓴 문장',
-    patternClozeHeading: '빈칸 채우기',
-    patternClozePlaceholder: '빈칸에 들어갈 말은?',
-    patternClozeFrom: '기본형',
-    patternExpected: '정답',
-    patternHintPointMeans: '필요한 표현의 뜻:',
-    patternOverride: '제 답도 맞아요',
-    patternOverridden: '정답으로 처리했어요.',
-    patternKindChoice: '어떻게 말할지 고르는 문법',
-    patternKindChoiceHelp: '떠올려서 써야 하는 표현이에요. 익숙해지면 직접 문장을 쓰는 연습으로 넘어가요.',
-    patternKindForm: '그냥 적용되는 규칙',
-    patternKindChoiceShort: '선택',
-    patternKindFormHelp: '이미 쓰던 말을 바꾸는 규칙이에요. 계속 빈칸 채우기로 연습해요.',
-    patternKindFormShort: '규칙',
-    libraryModeCards: '카드',
-    libraryModePatterns: '문법',
-    patternsLoading: '문법 패턴을 불러오는 중...',
-    patternsLoadFailed: '문법 패턴을 불러오지 못했어요.',
-    patternsNone: '아직 저장된 문법 패턴이 없어요. 쓴 글에서 필요한 게 보이면 추가되고, 여기서 직접 추가할 수도 있어요.',
-    patternsNoneArchived: '보관한 패턴이 없어요.',
-    patternAddManual: '+ 패턴 추가',
-    patternFieldPattern: '패턴',
-    patternFieldPatternPlaceholder: '예: -다가, passé composé',
-    patternFieldGloss: '어떤 뜻인가요',
-    patternFieldGlossPlaceholder: '짧게 — 하다가 다른 일이 생길 때',
-    patternFieldKind: '어떤 종류인가요?',
-    patternStageCloze: '빈칸 채우기',
-    patternStageProduction: '문장 쓰기',
-    patternDueNow: '지금 복습',
-    patternNextOn: '다음 {date}',
-    patternConfirmDelete: '이 패턴을 삭제할까요? 연습 기록도 함께 사라져요.',
-    patternDeleteFailed: '패턴을 삭제하지 못했어요.',
-    patternAnswerPlaceholder: '{language}로 한 문장 써보세요...',
-    patternCheck: '확인',
-    patternChecking: '확인하는 중...',
-    patternHint: '힌트',
-    patternHintAgain: '아직 모르겠어요',
-    patternHintCostHard: '힌트를 봤으니 잘해야 "어려움"으로 기록돼요.',
-    patternHintCostAgain: '패턴을 봤으니 "다시"로 기록돼요.',
-    patternNotReached: '문장은 괜찮지만, 이 패턴을 쓰지 않고 돌아갔어요.',
-    patternVerdictEasy: '완벽해요',
-    patternVerdictGood: '맞혔어요',
-    patternVerdictHard: '거의 다 왔어요 — 형태가 어긋났어요',
-    patternVerdictAgain: '아직이에요',
-    patternNext: '다음',
-    patternFinish: '끝내기',
-    patternSessionDone: '연습 완료',
-    patternSessionDoneCount: '패턴 {count}개를 연습했어요.',
-    patternSessionCaughtUp: '지금 연습할 패턴이 없어요.',
-    patternStart: '패턴 {count}개 연습하기',
-    patternSessionBlurb: '상황을 드리면 한 문장으로 표현해보세요. 객관식은 없고, 막히면 힌트를 볼 수 있어요.',
-    patternGradeFailed: '채점하지 못했어요. 쓴 문장은 그대로 있어요.',
-    patternExerciseFailed: '이 패턴으로 문제를 만들지 못했어요.',
-    patternRetry: '다시 시도',
-    patternSkip: '이건 건너뛰기',
-    patternSkipped: '건너뛰었어요. 이 패턴은 그대로 남아 있어요.',
-    patternOffline: '문법 패턴 연습은 인터넷 연결이 필요해요.',
     // Depth / examples errors
     errorLoadDepth: '정의를 불러오지 못했습니다. 다시 시도해주세요.',
     errorLoadExamples: '예문을 불러오지 못했습니다. 다시 시도해주세요.',

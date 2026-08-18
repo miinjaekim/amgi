@@ -122,13 +122,12 @@ export default function LanguageSetupModal() {
   );
 }
 
-// Learn, Review and Packs borrow their nav labels; Writing is a mode on Learn
-// rather than a tab, so it carries its own.
+// Every row borrows its nav label, so what the tour names is exactly what the
+// nav is called.
 const TOUR_ROWS: { labelKey: TranslationKey; bodyKey: TranslationKey }[] = [
   { labelKey: 'navLearn', bodyKey: 'tourLearnBody' },
   { labelKey: 'navReview', bodyKey: 'tourReviewBody' },
   { labelKey: 'navDecks', bodyKey: 'tourDecksBody' },
-  { labelKey: 'tourWritingLabel', bodyKey: 'tourWritingBody' },
 ];
 
 function makeStyles(C: Palette) {
