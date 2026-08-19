@@ -54,5 +54,15 @@ export function getNavItems(nativeLanguage: string | null | undefined, pathname:
         </svg>
       ),
     },
+    {
+      label: t(nativeLanguage, 'navProgress'),
+      href: '/progress',
+      active: pathname === '/progress',
+      icon: (active: boolean, className = 'w-6 h-6') => (
+        <svg className={className} fill="none" stroke="currentColor" strokeWidth={active ? 2.5 : 1.8} viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M4 19V5m0 14h16M8 19v-6m4 6V9m4 10v-4" />
+        </svg>
+      ),
+    },
   ];
 }
