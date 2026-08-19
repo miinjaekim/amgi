@@ -7,6 +7,7 @@
 import type { Flashcard, PendingReview, StudyLanguage } from '@amgi/core';
 import { applyPendingReviews, collapsePendingReviews } from '@amgi/core';
 import { fetchUserFlashcardsFromServer, updateFlashcardReview } from './firestore';
+import { withTimeout } from './withTimeout';
 import {
   readCachedCards, readKnownLanguages, readPendingReviews, removePendingReviews,
   writeCachedCards,
@@ -43,34 +44,9 @@ export async function fetchAndCacheReviewCards(
   return applyPendingReviews(cards, pending, studyLanguage);
 }
 
-/**
- * How long to wait on a Firestore call before treating it as unreachable.
- *
- * A write is not optional here: `updateDoc` does not reject when offline, it
- * returns a promise that stays pending until the SDK can commit — potentially
- * forever. Awaiting one un-raced would stall the flush on its first entry, and
- * because flushes are chained, block every flush behind it for the life of the
- * process.
- *
- * Timing out is safe because every queued write is idempotent: it sets the
- * card's scheduling to a fixed value. A write that lands after we gave up on it
- * is simply written again next flush, to exactly the same result.
- */
-const REQUEST_TIMEOUT_MS = 10_000;
-
-class TimeoutError extends Error {
-  constructor() { super('Firestore request timed out'); }
-}
-
-export function withTimeout<T>(work: Promise<T>): Promise<T> {
-  return new Promise<T>((resolve, reject) => {
-    const timer = setTimeout(() => reject(new TimeoutError()), REQUEST_TIMEOUT_MS);
-    work.then(
-      value => { clearTimeout(timer); resolve(value); },
-      error => { clearTimeout(timer); reject(error); },
-    );
-  });
-}
+// Re-exported because `review.tsx` imports it from here, and because moving it
+// out is what breaks the firestore → progress → reviewSync → firestore cycle.
+export { withTimeout } from './withTimeout';
 
 /**
  * Refresh the snapshots for every language this device has loaded before,

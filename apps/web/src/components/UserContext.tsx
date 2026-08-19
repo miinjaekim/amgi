@@ -3,7 +3,8 @@ import React, { createContext, useContext, useEffect, useState, ReactNode } from
 import { auth, googleProvider } from '@/config/firebase';
 import { signInWithPopup, signOut, onAuthStateChanged, User } from 'firebase/auth';
 import { getUserPreferences, saveUserPreferences } from '@/services/userPreferences';
-import { isStudyLanguage, resolveNativeLanguage, resolveStudyLanguage, type StudyLanguage } from '@amgi/core';
+import { recordProgress } from '@/services/progress';
+import { isStudyLanguage, resolveNativeLanguage, resolveStudyLanguage, reviewDelta, type ReviewVerdict, type StudyLanguage } from '@amgi/core';
 
 const LANG_CACHE_KEY = 'amgi_native_language';
 const STUDY_LANG_CACHE_KEY = 'amgi_study_language';
@@ -21,7 +22,7 @@ interface UserContextType {
   reviewedToday: number;
   setNativeLanguage: (lang: string) => Promise<void>;
   setStudyLanguage: (lang: StudyLanguage) => Promise<void>;
-  recordReview: () => void;
+  recordReview: (verdict: ReviewVerdict) => void;
   handleSignIn: () => Promise<void>;
   handleSignOut: () => Promise<void>;
 }
@@ -149,9 +150,16 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const recordReview = () => {
+  const recordReview = (verdict: ReviewVerdict) => {
     if (!user) return;
     const today = getTodayString();
+
+    // The day rollup, which is what the progress dashboard reads. Kept separate
+    // from the streak fields below rather than folded into them: this one is an
+    // atomic increment on its own document, so two devices reviewing the same
+    // day add up instead of overwriting each other. Fire-and-forget — a lost
+    // tally mark must never cost a card its scheduling.
+    recordProgress(user.uid, reviewDelta(studyLanguage, verdict), today).catch(() => {});
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
     const yesterdayStr = yesterday.toLocaleDateString('en-CA');

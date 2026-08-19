@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { AppState } from 'react-native';
 import { flushPendingReviews } from '../services/reviewSync';
+import { flushPendingProgress } from '../services/progress';
 import { readPendingReviews } from '../services/offlineReview';
 import { useNetworkStatus } from './useNetworkStatus';
 
@@ -30,6 +31,10 @@ export function usePendingReviewSync(uid: string | undefined) {
   const sync = useCallback(async () => {
     if (!uid) return;
     await flushPendingReviews(uid);
+    // Progress deltas ride the same three triggers. Not awaited together with
+    // the ratings: a stuck progress flush must not delay a rating, which is the
+    // write that actually affects what the learner sees next.
+    void flushPendingProgress(uid);
     await refreshPendingCount();
   }, [uid, refreshPendingCount]);
 

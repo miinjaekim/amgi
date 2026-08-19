@@ -2,6 +2,7 @@ import { db } from '@/config/firebase';
 import { collection, addDoc, Timestamp, query, where, orderBy, getDocs, getCountFromServer, doc, updateDoc, deleteDoc, writeBatch } from 'firebase/firestore';
 import type { DocumentData, QueryDocumentSnapshot } from 'firebase/firestore';
 import { getStudyLanguageConfig } from '@amgi/core';
+import { recordNewCards } from './progress';
 import type { Flashcard, ReviewTracking, StudyLanguage } from '@amgi/core';
 
 export type { Flashcard, ReviewTracking, StudyLanguage } from '@amgi/core';
@@ -55,6 +56,10 @@ export async function saveFlashcardToFirestore(
 ) {
   const collectionName = getCardsCollection(studyLanguage);
   const docRef = await addDoc(collection(db, collectionName), buildFlashcardDoc(flashcard, studyLanguage));
+  // Counted here rather than at the call sites — there are four of them (home
+  // lookup, the import modal, enrichment, and mobile's home) and a counter that
+  // one of them forgets is worse than no counter, because the gap is invisible.
+  void recordNewCards(flashcard.uid, studyLanguage, 1, 'lookup').catch(() => {});
   return docRef.id;
 }
 
@@ -76,6 +81,10 @@ export async function saveFlashcardsBatch(
     }
     await batch.commit();
   }
+  // Counted as `packCards`, not `newCards`: enrolling in a 474-card pack and
+  // looking up one word are both "cards added" and are nothing alike, and a
+  // heatmap where one import dwarfs every real study day is worse than none.
+  void recordNewCards(flashcards[0]?.uid, studyLanguage, flashcards.length, 'pack').catch(() => {});
   return flashcards.length;
 }
 

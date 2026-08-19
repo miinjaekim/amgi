@@ -13,9 +13,10 @@ import { refreshReminders } from '../services/reminders';
 import {
   markStreakSynced, readCachedStreak, writeCachedStreak,
 } from '../services/offlineReview';
+import { recordProgress } from '../services/progress';
 import {
   isStudyLanguage, mergeStreakState, resolveNativeLanguage, resolveStudyLanguage,
-  type StreakState, type StudyLanguage,
+  reviewDelta, type ReviewVerdict, type StreakState, type StudyLanguage,
 } from '@amgi/core';
 
 WebBrowser.maybeCompleteAuthSession();
@@ -45,7 +46,7 @@ interface UserContextType {
   reviewedToday: number;
   setNativeLanguage: (lang: string) => Promise<void>;
   setStudyLanguage: (lang: StudyLanguage) => Promise<void>;
-  recordReview: () => void;
+  recordReview: (verdict: ReviewVerdict) => void;
   deleteAccount: () => Promise<void>;
   handleSignIn: () => Promise<void>;
   handleSignOut: () => Promise<void>;
@@ -258,9 +259,15 @@ export function UserProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const recordReview = () => {
+  const recordReview = (verdict: ReviewVerdict) => {
     if (!user) return;
     const today = getTodayString();
+
+    // The day rollup the progress dashboard reads. It has its own AsyncStorage
+    // queue rather than riding on the streak's `dirty` flag, because the two
+    // fail differently: the streak can be reconstructed from the server's copy
+    // on the next launch, where an uncounted day is uncounted forever.
+    void recordProgress(user.uid, reviewDelta(studyLanguage, verdict), today);
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
     const yesterdayStr = yesterday.toLocaleDateString('en-CA');
