@@ -516,6 +516,56 @@ render sites across web and mobile don't grow a conditional per language.
 - `studyLanguage`: string — which deck is currently active
 - `streak`, `longestStreak`, `lastReviewDate`, `reviewedToday` — SRS progress
 
+### `users/{uid}/progress/{YYYY-MM-DD}` — daily rollups (2026-08-19)
+
+The write path behind the progress dashboard. The four fields above answer "am
+I on a streak" and nothing else; "which days did I review", "how much" and "how
+many new cards" were **never written down**, so they could not be surfaced.
+
+```
+users/{uid}/progress/2026-08-19
+  date        'YYYY-MM-DD', local time, also the document id
+  reviews     ratings submitted — counts *directions*, like `reviewedToday`
+  newCards    cards added one at a time (lookup, import, enrichment)
+  packCards   cards added by enrolling in a pack
+  again/hard/good/easy   verdict counts, whole-day
+  byLanguage  { [StudyLanguage]: { reviews, newCards, packCards } }
+```
+
+Four calls, all deliberate:
+
+- **Grain is one document per day**, not one per rating. Every question being
+  asked is a per-day question, and a year is 365 documents rather than ~20,000.
+  The cost is that a rollup discards anything it didn't count in advance —
+  time-of-day and per-card history are unrecoverable once a day is summed. That
+  is why the field list is wider than the first screen renders: a field added
+  later only collects from the day it ships.
+- **The day is per user; the language detail lives inside it.** The habit is
+  "studied today", not "studied Korean today", so reviewing Japanese keeps the
+  streak — but a day can still be broken down.
+- **A subcollection, not a top-level collection**, specifically because the
+  *Delete User Data* extension is configured as `users/{UID}` with recursive
+  mode. A `progress_daily` at top level would survive account deletion until
+  someone remembered to add the path.
+- **`reviews` counts directions**, matching `reviewedToday`, so the two cannot
+  disagree about what a number means. It reads roughly double what a learner
+  pictures; correcting that is a separate, user-visible call and is still open.
+
+Writes are `increment()` on a `merge: true` `setDoc`, so two devices on one day
+add up and there is no create-vs-update branch. Reads range on `documentId()` —
+the id *is* the date and dates sort lexically — which keeps them single-field
+queries on the document key and therefore **needing no composite index**, unlike
+every card query. Worth preserving.
+
+⚠️ **The security rule is manual**, like every other collection — see
+[tech-stack.md](tech-stack.md). Until it exists, every write fails
+`permission-denied`.
+
+Logic is in `packages/core/src/progress.ts` (pure, tested); the Firestore layer
+is `apps/{web,mobile}/src/services/progress.ts`. Mobile adds an AsyncStorage
+queue, because a Firestore write neither resolves nor rejects offline and an
+uncounted day cannot be rebuilt from server state the way a card rating can.
+
 **Reminder preferences are deliberately *not* here.** They live on the device
 (`AsyncStorage`, via `apps/mobile/src/services/reminders.ts`) because a
 notification setting belongs to the phone that would do the notifying — the same

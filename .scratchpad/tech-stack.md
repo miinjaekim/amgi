@@ -13,6 +13,24 @@ Monorepo (npm workspaces + Turborepo): `apps/web`, `apps/mobile`, `packages/core
 - **TTS:** Google Cloud TTS (Chirp 3: HD), audio cached in Firebase Storage
 - **Deployment:** Vercel — https://amgi-iota.vercel.app
 
+### Security rules (console config)
+
+Rules are console state, not repo code, and **there is no wildcard support** —
+every collection needs its own `match`. Added 2026-08-19 for the progress
+dashboard's daily rollups; without it every write fails `permission-denied`:
+
+```
+match /users/{uid}/progress/{day} {
+  allow read, write: if request.auth != null && request.auth.uid == uid;
+}
+```
+
+Note this is a **subcollection of `users/{uid}`**, so ownership is in the path
+and the rule needs no field check — unlike the card collections, which are
+top-level and match on the `uid` field. If the `users/{uid}` rule is written
+with a bare `match /users/{uid}` and no recursive wildcard, the subcollection is
+*not* covered by it; rules do not cascade to subcollections.
+
 ### Delete User Data extension (console config)
 
 Account deletion is `deleteUser()` from the client SDK; this extension does the

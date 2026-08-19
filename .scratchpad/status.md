@@ -45,8 +45,16 @@ _Reconciled against `main` @ `b9604d9`, 2026-08-12, after 1.3.0 went live.
     render of that row is **typechecked but never seen**.
   - PR #88 (08-11): part of speech on cards, both platforms. JS-only. ⚠️ Same
     caveat — the mobile badge is typechecked, never seen rendered.
-- **No code is in flight.** High is empty in [backlog.md](backlog.md) — the next
-  thing to build comes from Medium.
+- **The progress dashboard is on `feat/progress-dashboard`, unmerged.** Daily
+  rollups are written on every rating and every card save, and both platforms
+  have a screen reading them. ⚠️ **It cannot work until the Firestore security
+  rule for `users/{uid}/progress/{day}` exists in the console** — the rule is in
+  [tech-stack.md](tech-stack.md), and until it is added every write fails
+  `permission-denied` silently, because the writes are fire-and-forget by
+  design. Nothing has been run against a live Firestore yet: web builds, both
+  apps typecheck, 246 tests pass, and that is the whole of the verification.
+- **History starts the day this merges**, so the dashboard is near-empty for
+  weeks by construction. That is expected, not a bug — the empty state says so.
 
 TestFlight context that isn't in the repo:
 
@@ -122,6 +130,46 @@ enough hands to close it without a dedicated session.
 
 Closed calls, kept with their reasoning — a decision whose reasoning is lost gets
 reopened by the next person to notice the symptom. Newest first.
+
+### Progress is a daily rollup, and the streak stays where it is (2026-08-19)
+
+Four calls made while building the dashboard, each of which would be expensive
+to revisit later.
+
+**Grain: one document per user-day, not one row per rating.** Every question
+asked of it — which days, how much, how many new cards, habit, recap — is a
+per-day question, and a year is 365 documents rather than ~20,000. The cost is
+real and worth naming: a rollup discards whatever it didn't count in advance, so
+time-of-day and per-card history are gone once a day is summed. Event rows can
+be added *alongside* later if a question needs them; the rollup does not have to
+be undone first.
+
+**The day is per user, with the language breakdown inside it.** The habit being
+tracked is "studied today", not "studied Korean today" — someone who reviews
+Japanese has kept their streak. Splitting the streak six ways would punish
+exactly the multilingual use the app is built for. The dashboard can still break
+any day down by language.
+
+**`reviews` counts directions, not cards** — the same thing `reviewedToday` has
+always counted. This is *not* an endorsement of that number: it reads roughly
+double what a learner thinks they did. It is a refusal to have two counters that
+disagree about what one number means while the honest fix is still an open,
+user-visible call. Fix both together or neither.
+
+**The dashboard shows the stored streak, not one derived from the rows.** The
+derived number is the better one eventually, and `deriveStreak` is written and
+tested in core against that day. But the rows begin empty, so deriving it today
+shows `1` to someone on a 200-day streak — and adding a fourth surface that
+disagrees about the streak is the precise failure the data-freshness item exists
+to stop. The swap is safe once the history is older than the longest live
+streak.
+
+One consequence to hold on to: **history begins the day this ships**. New cards
+per day could be reconstructed from `createdAt`, but review history cannot be
+reconstructed at all, from anything. That asymmetry is why the write shipped
+ahead of the screen rather than behind it, and ahead of the data-freshness item
+it nominally depends on — the dependency was always about the screen being a
+fourth stale surface, never about the write.
 
 ### Grammar and writing are removed — the routes stay behind (2026-08-18)
 
