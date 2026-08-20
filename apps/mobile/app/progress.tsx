@@ -52,12 +52,33 @@ export default function ProgressScreen() {
   );
 
   const summary = useMemo(() => summarizeProgress(days ?? []), [days]);
+  const cells = useMemo(
+    () => buildHeatmap(days ?? [], localDateString(), rangeDays),
+    [days, rangeDays],
+  );
   const weeks = useMemo(() => {
-    const cells = buildHeatmap(days ?? [], localDateString(), rangeDays);
     const columns: HeatmapCell[][] = [];
     for (let i = 0; i < cells.length; i += 7) columns.push(cells.slice(i, i + 7));
     return columns;
-  }, [days, rangeDays]);
+  }, [cells]);
+
+  /**
+   * The selected day, as its index into `cells`.
+   *
+   * Selection persists rather than lasting only while a finger is down: on a
+   * phone the finger is on top of the cell, so "hold to read" would mean
+   * reading around your own thumb. Tapping the same cell again clears it.
+   */
+  const [selected, setSelected] = useState<number | null>(null);
+  /** The full day behind a cell; `HeatmapCell` only carries the review count. */
+  const daysByDate = useMemo(
+    () => new Map((days ?? []).map(day => [day.date, day])),
+    [days],
+  );
+
+  // A selection is an index, so it stops meaning the same day if the window
+  // changes underneath it.
+  const selectRange = (next: number) => { setRangeDays(next); setSelected(null); };
 
   const header = (
     <View style={s.header}>
@@ -91,7 +112,7 @@ export default function ProgressScreen() {
             return (
               <TouchableOpacity
                 key={range.days}
-                onPress={() => setRangeDays(range.days)}
+                onPress={() => selectRange(range.days)}
                 style={[s.rangeBtn, selected && s.rangeBtnOn]}
               >
                 <Text style={[s.rangeText, selected && s.rangeTextOn]}>
@@ -127,18 +148,48 @@ export default function ProgressScreen() {
             <Text style={s.sectionTitle}>{t(nativeLanguage, 'progressCalendar')}</Text>
             {/* Scrolls sideways on its own — a year is 52 columns and will not
                 fit a phone. */}
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              // Vertical room for the bubble, which is absolutely positioned and
+              // would otherwise be clipped by the scroller's own bounds.
+              contentContainerStyle={s.heatmapScroll}
+            >
               <View style={s.heatmap}>
-                {weeks.map((week, index) => (
-                  <View key={index} style={s.heatmapCol}>
-                    {week.map(cell => (
-                      <View
-                        key={cell.date}
-                        style={[s.cell, { backgroundColor: levelColor(C, cell.level) }]}
-                      />
-                    ))}
+                {weeks.map((week, weekIndex) => (
+                  <View key={weekIndex} style={s.heatmapCol}>
+                    {week.map((cell, dayIndex) => {
+                      const index = weekIndex * 7 + dayIndex;
+                      return (
+                        <TouchableOpacity
+                          key={cell.date}
+                          activeOpacity={0.6}
+                          onPress={() => setSelected(current => current === index ? null : index)}
+                          onLongPress={() => setSelected(index)}
+                          accessibilityRole="button"
+                          accessibilityLabel={describeDay(nativeLanguage, cell.date, daysByDate.get(cell.date))}
+                          style={[
+                            s.cell,
+                            { backgroundColor: levelColor(C, cell.level) },
+                            selected === index && { borderWidth: 1, borderColor: C.text },
+                          ]}
+                        />
+                      );
+                    })}
                   </View>
                 ))}
+
+                {selected !== null && cells[selected] && (
+                  <DayTooltip
+                    C={C}
+                    s={s}
+                    nativeLanguage={nativeLanguage}
+                    cell={cells[selected]}
+                    day={daysByDate.get(cells[selected].date)}
+                    index={selected}
+                    columnCount={weeks.length}
+                  />
+                )}
               </View>
             </ScrollView>
             <View style={s.legend}>
@@ -172,6 +223,90 @@ export default function ProgressScreen() {
       </ScrollView>
     </SafeAreaView>
   );
+}
+
+/**
+ * Heatmap geometry, shared by the cells and the bubble that points at them.
+ * Kept as constants rather than measured: the grid is fixed-size by
+ * construction, and a layout pass per selection buys nothing.
+ */
+const CELL = 12;
+const GAP = 3;
+const PITCH = CELL + GAP;
+/** Fixed so the bubble can be centred exactly without measuring its text. */
+const TOOLTIP_WIDTH = 150;
+const TOOLTIP_HEIGHT = 42;
+
+function DayTooltip({ C, s, nativeLanguage, cell, day, index, columnCount }: {
+  C: Palette;
+  s: ReturnType<typeof makeStyles>;
+  nativeLanguage: string | null | undefined;
+  cell: HeatmapCell;
+  day: DailyProgress | undefined;
+  index: number;
+  columnCount: number;
+}) {
+  const column = Math.floor(index / 7);
+  const row = index % 7;
+  const cardsAdded = (day?.newCards ?? 0) + (day?.packCards ?? 0);
+
+  // Centred on the cell, then clamped so neither end runs past the grid.
+  const gridWidth = columnCount * PITCH - GAP;
+  const left = Math.max(0, Math.min(
+    column * PITCH + CELL / 2 - TOOLTIP_WIDTH / 2,
+    gridWidth - TOOLTIP_WIDTH,
+  ));
+
+  // Above the cell, except for the top two rows where there is no room. Above
+  // is preferred because the finger that selected the cell is sitting on it.
+  const top = row <= 1
+    ? row * PITCH + CELL + 6
+    : row * PITCH - TOOLTIP_HEIGHT - 6;
+
+  return (
+    <View style={[s.tooltip, { left, top, width: TOOLTIP_WIDTH, borderColor: C.muted, backgroundColor: C.surface }]}>
+      <Text style={s.tooltipDate}>{formatDay(nativeLanguage, cell.date)}</Text>
+      <Text style={s.tooltipDetail} numberOfLines={1}>
+        {cell.reviews === 0
+          ? t(nativeLanguage, 'progressTooltipNoReviews')
+          : cell.reviews === 1
+            ? t(nativeLanguage, 'progressTooltipOneReview')
+            : t(nativeLanguage, 'progressTooltipReviews', { count: cell.reviews })}
+        {cardsAdded > 0
+          ? ` · ${cardsAdded === 1
+            ? t(nativeLanguage, 'progressTooltipOneCard')
+            : t(nativeLanguage, 'progressTooltipCards', { count: cardsAdded })}`
+          : ''}
+      </Text>
+    </View>
+  );
+}
+
+/** `2026-08-19` → `19 August` / `8월 19일`, in the reader's language. */
+function formatDay(nativeLanguage: string | null | undefined, date: string): string {
+  // Parsed at UTC noon so the date can't slip a day either side of the line.
+  return new Date(`${date}T12:00:00Z`).toLocaleDateString(
+    nativeLanguage === 'Korean' ? 'ko-KR' : 'en-GB',
+    { month: 'long', day: 'numeric' },
+  );
+}
+
+/** The same content as the tooltip, flattened for screen readers. */
+function describeDay(
+  nativeLanguage: string | null | undefined,
+  date: string,
+  day: DailyProgress | undefined,
+): string {
+  const reviews = day?.reviews ?? 0;
+  const cardsAdded = (day?.newCards ?? 0) + (day?.packCards ?? 0);
+  const parts = [
+    formatDay(nativeLanguage, date),
+    reviews === 0
+      ? t(nativeLanguage, 'progressTooltipNoReviews')
+      : t(nativeLanguage, 'progressTooltipReviews', { count: reviews }),
+  ];
+  if (cardsAdded > 0) parts.push(t(nativeLanguage, 'progressTooltipCards', { count: cardsAdded }));
+  return parts.join(' · ');
 }
 
 function Stat({ s, label, value }: {
@@ -215,9 +350,18 @@ function makeStyles(C: Palette) {
     statValue: { color: C.highlight, fontSize: 20, fontWeight: '700' },
     statLabel: { color: C.muted, fontSize: 12, marginTop: 2 },
     sectionTitle: { color: C.text, fontSize: 14, fontWeight: '700', marginBottom: 10 },
-    heatmap: { flexDirection: 'row', gap: 3 },
-    heatmapCol: { flexDirection: 'column', gap: 3 },
-    cell: { width: 12, height: 12, borderRadius: 2 },
+    // The bubble sits above or below a cell and is absolutely positioned, so
+    // the scroller needs room for it or it gets clipped at the grid's edge.
+    heatmapScroll: { paddingTop: 48, paddingBottom: 24 },
+    heatmap: { flexDirection: 'row', gap: GAP, position: 'relative' },
+    heatmapCol: { flexDirection: 'column', gap: GAP },
+    cell: { width: CELL, height: CELL, borderRadius: 2 },
+    tooltip: {
+      position: 'absolute', zIndex: 10, paddingHorizontal: 8, paddingVertical: 5,
+      borderRadius: 8, borderWidth: 1,
+    },
+    tooltipDate: { fontSize: 11, fontWeight: '700', color: C.text },
+    tooltipDetail: { fontSize: 11, color: C.muted, marginTop: 1 },
     legend: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 10, marginBottom: 24 },
     legendText: { color: C.muted, fontSize: 11 },
     langRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 12, borderRadius: 12, borderWidth: 1, borderColor: C.border, marginBottom: 8 },

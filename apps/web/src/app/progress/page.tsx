@@ -70,6 +70,20 @@ export default function ProgressPage() {
     return columns;
   }, [heatmap]);
 
+  /**
+   * The hovered day, as its index into `heatmap`.
+   *
+   * One tooltip node positioned from the index, rather than a hidden one inside
+   * every cell — a year is 364 cells, and 364 permanently-mounted tooltips is a
+   * lot of DOM for something at most one of which is ever visible.
+   */
+  const [hovered, setHovered] = useState<number | null>(null);
+  /** The full day behind a cell; `HeatmapCell` only carries the review count. */
+  const daysByDate = useMemo(
+    () => new Map((days ?? []).map(day => [day.date, day])),
+    [days],
+  );
+
   if (authLoading) return null;
 
   if (!user) {
@@ -139,22 +153,46 @@ export default function ProgressPage() {
               {t(nativeLanguage, 'progressCalendar')}
             </h2>
             {/* Scrolls on its own rather than letting the page scroll sideways:
-                a year is 52 columns and will not fit a phone. */}
+                a year is 52 columns and will not fit a phone. `relative` is the
+                tooltip's positioning context, and it sits inside the scroller so
+                the bubble travels with the grid instead of detaching from its
+                cell. */}
             <div className="overflow-x-auto pb-2">
-              <div className="flex gap-1 w-max">
-                {weeks.map((week, index) => (
-                  <div key={index} className="flex flex-col gap-1">
-                    {week.map(cell => (
-                      <div
-                        key={cell.date}
-                        title={cell.reviews > 0
-                          ? t(nativeLanguage, 'progressDayCell', { date: cell.date, count: cell.reviews })
-                          : t(nativeLanguage, 'progressDayCellNone', { date: cell.date })}
-                        className={`w-3 h-3 rounded-sm ${LEVEL_STYLES[cell.level]}`}
-                      />
-                    ))}
+              <div
+                className="relative flex gap-1 w-max"
+                style={{ paddingTop: TOOLTIP_LANE }}
+                onMouseLeave={() => setHovered(null)}
+              >
+                {weeks.map((week, weekIndex) => (
+                  <div key={weekIndex} className="flex flex-col gap-1">
+                    {week.map((cell, dayIndex) => {
+                      const index = weekIndex * 7 + dayIndex;
+                      return (
+                        <button
+                          key={cell.date}
+                          type="button"
+                          aria-label={describeDay(nativeLanguage, cell.date, daysByDate.get(cell.date))}
+                          onMouseEnter={() => setHovered(index)}
+                          onFocus={() => setHovered(index)}
+                          onBlur={() => setHovered(null)}
+                          className={`w-3 h-3 rounded-sm ${LEVEL_STYLES[cell.level]} ${
+                            hovered === index ? 'ring-1 ring-[var(--color-text)]' : ''
+                          }`}
+                        />
+                      );
+                    })}
                   </div>
                 ))}
+
+                {hovered !== null && heatmap[hovered] && (
+                  <DayTooltip
+                    nativeLanguage={nativeLanguage}
+                    cell={heatmap[hovered]}
+                    day={daysByDate.get(heatmap[hovered].date)}
+                    index={hovered}
+                    columnCount={weeks.length}
+                  />
+                )}
               </div>
             </div>
             <div className="flex items-center gap-1.5 mt-3 text-xs text-[var(--color-muted)]">
@@ -198,6 +236,90 @@ export default function ProgressPage() {
       )}
     </div>
   );
+}
+
+/**
+ * Reserved height above the grid so the bubble has somewhere to go without
+ * shifting the calendar when it appears. Cheaper than measuring, and a grid
+ * that jumps on hover is worse than a little whitespace.
+ */
+const TOOLTIP_LANE = 44;
+/** Cell (12px) plus the `gap-1` between columns (4px). */
+const COLUMN_PITCH = 16;
+
+function DayTooltip({ nativeLanguage, cell, day, index, columnCount }: {
+  nativeLanguage: string | null | undefined;
+  cell: { date: string; reviews: number };
+  day: DailyProgress | undefined;
+  index: number;
+  columnCount: number;
+}) {
+  const column = Math.floor(index / 7);
+  const cardsAdded = (day?.newCards ?? 0) + (day?.packCards ?? 0);
+
+  /**
+   * Centred, except near the ends where a centred bubble would be clipped by
+   * the scroller. Flipping the alignment costs three cases and no measuring —
+   * the alternative is a ref, a layout read, and a second render on every
+   * cell you pass over.
+   */
+  const alignment = column <= 2
+    ? 'translate-x-0'
+    : column >= columnCount - 3
+      ? '-translate-x-full'
+      : '-translate-x-1/2';
+
+  return (
+    <div
+      className={`absolute top-0 ${alignment} pointer-events-none z-10 px-2 py-1.5 rounded-lg text-xs whitespace-nowrap shadow-lg`}
+      style={{
+        left: column * COLUMN_PITCH + 6,
+        background: 'var(--color-surface)',
+        border: '1px solid var(--color-muted)',
+      }}
+    >
+      <div className="font-bold text-[var(--color-text)]">{formatDay(nativeLanguage, cell.date)}</div>
+      <div className="text-[var(--color-muted)]">
+        {cell.reviews === 0
+          ? t(nativeLanguage, 'progressTooltipNoReviews')
+          : cell.reviews === 1
+            ? t(nativeLanguage, 'progressTooltipOneReview')
+            : t(nativeLanguage, 'progressTooltipReviews', { count: cell.reviews })}
+        {cardsAdded > 0 && (
+          <> · {cardsAdded === 1
+            ? t(nativeLanguage, 'progressTooltipOneCard')
+            : t(nativeLanguage, 'progressTooltipCards', { count: cardsAdded })}</>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/** `2026-08-19` → `19 August` / `8월 19일`, in the reader's language. */
+function formatDay(nativeLanguage: string | null | undefined, date: string): string {
+  // Parsed at UTC noon so the date can't slip a day either side of the line.
+  return new Date(`${date}T12:00:00Z`).toLocaleDateString(
+    nativeLanguage === 'Korean' ? 'ko-KR' : 'en-GB',
+    { month: 'long', day: 'numeric' },
+  );
+}
+
+/** The same content as the tooltip, flattened for screen readers. */
+function describeDay(
+  nativeLanguage: string | null | undefined,
+  date: string,
+  day: DailyProgress | undefined,
+): string {
+  const reviews = day?.reviews ?? 0;
+  const cardsAdded = (day?.newCards ?? 0) + (day?.packCards ?? 0);
+  const parts = [
+    formatDay(nativeLanguage, date),
+    reviews === 0
+      ? t(nativeLanguage, 'progressTooltipNoReviews')
+      : t(nativeLanguage, 'progressTooltipReviews', { count: reviews }),
+  ];
+  if (cardsAdded > 0) parts.push(t(nativeLanguage, 'progressTooltipCards', { count: cardsAdded }));
+  return parts.join(' · ');
 }
 
 function Stat({ label, value }: { label: string; value: string | number }) {
