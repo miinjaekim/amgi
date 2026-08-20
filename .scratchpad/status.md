@@ -45,16 +45,18 @@ _Reconciled against `main` @ `b9604d9`, 2026-08-12, after 1.3.0 went live.
     render of that row is **typechecked but never seen**.
   - PR #88 (08-11): part of speech on cards, both platforms. JS-only. ⚠️ Same
     caveat — the mobile badge is typechecked, never seen rendered.
-- **The progress dashboard is on `feat/progress-dashboard`, unmerged.** Daily
-  rollups are written on every rating and every card save, and both platforms
-  have a screen reading them. ⚠️ **It cannot work until the Firestore security
-  rule for `users/{uid}/progress/{day}` exists in the console** — the rule is in
-  [tech-stack.md](tech-stack.md), and until it is added every write fails
-  `permission-denied` silently, because the writes are fire-and-forget by
-  design. Nothing has been run against a live Firestore yet: web builds, both
-  apps typecheck, 246 tests pass, and that is the whole of the verification.
-- **History starts the day this merges**, so the dashboard is near-empty for
-  weeks by construction. That is expected, not a bug — the empty state says so.
+- **The progress dashboard shipped to web** (#90, 2026-08-20). Daily rollups are
+  written on every rating and every card save, and both platforms have a screen
+  reading them, with per-day detail on hover (web) and tap (mobile). The
+  Firestore security rule for `users/{uid}/progress/{day}` is live in the
+  console — it was the one blocker, since without it every write fails
+  `permission-denied` *silently* by design. Verified on web and in Expo Go.
+- ⚠️ **History began 2026-08-20 and cannot be backfilled.** New cards per day
+  could be reconstructed from `createdAt`; review history cannot be
+  reconstructed from anything. So the calendar is near-empty for weeks by
+  construction — expected, not a bug, and the empty state says so.
+- **Mobile's copy waits for a build**, as ever. It is JS-only, so it rides along
+  with whatever else is queued rather than earning a build of its own.
 
 TestFlight context that isn't in the repo:
 
@@ -947,6 +949,16 @@ shape, so a future single-character pack inherits the grid without being asked.
 Reference only — one line per item, newest area first. Reasoning that outlived
 the change is in Decisions above; durable gotchas are in
 [lessons.md](lessons.md); the blow-by-blow is in git.
+
+**Progress & stats**
+- **Progress dashboard, web + mobile** (#90, 08-20) — the first thing the app
+  remembers about a day beyond a streak chip. Daily rollups at
+  `users/{uid}/progress/{YYYY-MM-DD}` incremented on every rating and every card
+  save, plus a screen: stat row, contribution calendar over 30/90/364 days with
+  per-day detail on hover/tap, and a per-language breakdown. Counting lives
+  inside the save functions rather than at their four call sites. Mobile carries
+  its own AsyncStorage queue, because an uncounted day cannot be rebuilt from
+  server state the way a card rating can. The four design calls are in Decisions.
 
 **Writing, grammar & onboarding**
 - **Grammar patterns, web + mobile** (#84, 08-09) — the first thing Amgi teaches

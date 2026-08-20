@@ -64,8 +64,36 @@ leaves that file:
 Backlog priority mirrors the user's Google Tasks list — `backlog.md` is the
 scoped version of it.
 
-_Last reviewed against the codebase: 2026-08-18, `chore/remove-grammar-features`.
-`npm test` 222/222, measured._
+_Last reviewed against the codebase: 2026-08-20, `feat/progress-dashboard` (#90).
+`npm test` 246/246, measured._
+
+_This pass **built the progress dashboard** — the first thing the app remembers
+about a day beyond a streak chip. **It is a write-path change before it is a
+screen**, and that ordering is the whole point: everything the app knew was four
+fields on `users/{uid}`, so "which days did I review" was never written down
+rather than merely unsurfaced. The two things to know before touching it are
+both in [data-model.md](data-model.md). **The grain is one document per
+user-day**, not one row per rating — which answers every question actually
+asked at 1/50th the writes, but permanently discards anything not counted in
+advance, so a field added later only collects from the day it ships. And **it is
+a subcollection on purpose**: the Delete User Data extension is configured as
+`users/{UID}` recursive, so a top-level `progress_daily` would have quietly
+survived account deletion._
+
+_Two traps worth reading before debugging it. **The security rule is console
+state and its failure is silent** — writes are fire-and-forget, so a missing
+rule looks like "the dashboard doesn't work" rather than an error; the rule is
+in [tech-stack.md](tech-stack.md) and went live 08-20. And **progress increments
+are not idempotent**, unlike the card-rating queue they sit beside: a
+timed-out-but-committed write over-counts on retry, accepted deliberately
+because the alternative wedges the flush chain and loses whole days.
+`withTimeout` says so at the point of use._
+
+_**History began 2026-08-20 and cannot be backfilled** — review history is
+reconstructible from nothing. So the calendar is near-empty for weeks by
+construction, and the streak shown is still `UserContext`'s stored counter
+rather than `deriveStreak`, which is written and tested for the day the rows
+outlive the longest live streak. Not before ~November 2026._
 
 _This pass **removed grammar and writing from the app** on the user's call, and
 then **reframed the two remaining starred backlog items**. The removal took

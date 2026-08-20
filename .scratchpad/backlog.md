@@ -5,10 +5,11 @@ Open work only, ordered by priority. Shipped, cancelled and decided items move t
 reopened from this file. Source of truth is the user's Google Tasks list; this is
 the scoped version.
 
-**Progress dashboard built 2026-08-19** — the write path and a first screen are
-on a branch, and the item below is now only what remains (a security rule,
-recaps, device verification). **Synced with Google Tasks 2026-08-12; High
-reworked 2026-08-18.** Tasks listed
+**Progress dashboard shipped to web 2026-08-20 (#90)** — the write path and the
+first screen are merged and the security rule is live; the item below is now
+only recaps plus two corrections deliberately deferred. Mobile has it too, but
+mobile ships by build, so it sits in Queued below.
+**Synced with Google Tasks 2026-08-12; High reworked 2026-08-18.** Tasks listed
 six open items. Of the three starred, two survive under High in reworked form —
 *Review page discrepancy* is now **Data loading and freshness** (it was never one
 page's bug) and *improve stats* is now **Progress dashboard** — and *Word order
@@ -32,11 +33,17 @@ build, a second rides along free rather than costing a build of its own.
 
 ## Queued for the next build
 
-- **Progress dashboard** (`feat/progress-dashboard`, unmerged as of 2026-08-19)
-  — daily rollups plus a screen on both platforms. Mobile changes: the new
-  screen, the streak badge becoming a link to it, and an AsyncStorage queue for
-  offline increments. JS-only, no new native module, so no
+- **Progress dashboard** (#90, merged 2026-08-20) — daily rollups plus a screen
+  on both platforms. Mobile changes: the new screen, the streak badge becoming a
+  link to it, an AsyncStorage queue for offline increments, and tap/long-press
+  day details on the calendar. JS-only, no new native module, so no
   `expo config --type introspect` pass is owed.
+  Smoke-tested in Expo Go 2026-08-20 and clean. Two things that pass in Expo Go
+  and still deserve a look on the binary: **offline increments across a
+  force-kill and reconnect** (the queue is the point of that code, and Expo Go's
+  networking is not the phone's), and **Korean date formatting** in the day
+  tooltip — nothing else in the app formats a date with a locale and options, so
+  Hermes' `Intl` behaviour there is unproven on a release build.
 
 1.3.0 (build 11) went out 2026-08-11 and was approved for external testing on
 08-12 — the six PRs it carried are shipped and have left this file for the
@@ -143,31 +150,22 @@ archiving #86) shipped 2026-08-10 and is in [status.md](status.md).
       `fetchAllUserFlashcards`, so deck counts include archived cards where the
       review row for the same deck excludes them.
 
-- [ ] **Progress dashboard — the rest of it.** The write path and a first screen
-      are built on `feat/progress-dashboard` (2026-08-19); the shape and the four
-      calls behind it are in [status.md](status.md) and
-      [data-model.md](data-model.md). What is *not* done:
+- [ ] **Progress dashboard — recaps, and two deferred corrections.** The write
+      path and the first screen shipped in #90 (2026-08-20); the shape and the
+      four calls behind it are in [status.md](status.md) and
+      [data-model.md](data-model.md). The security rule is live. What is left:
 
-      ⚠️ **The Firestore security rule is the blocker and it is console state.**
-      `users/{uid}/progress/{day}` needs its own `match` — rules do not cascade
-      into subcollections — and until it exists every write fails
-      `permission-denied` **silently**, because the writes are deliberately
-      fire-and-forget. The rule is written out in [tech-stack.md](tech-stack.md).
-      Nothing has run against a live Firestore yet.
-
-      - **Recaps** were part of the original ask and are not built. A weekly or
-        monthly "here's how it went" needs no new write — the rollups already
-        carry it — so this is a screen-and-copy item, not a data one.
-      - **Verify on a device.** The mobile screen is typechecked and has never
-        been seen rendered; the heatmap in particular is 52 columns of 12px
-        cells in a horizontal scroll, which is exactly the kind of thing that
-        looks fine in reasoning and wrong on a phone.
-      - **Then swap the streak to the derived one.** The dashboard shows the
-        stored counter today, because the rows start empty and deriving it would
-        show `1` to someone on a 200-day streak. `deriveStreak` is written and
-        tested in core for that day; the swap is safe once the history outlives
-        the longest live streak, and it is what stops the streak being a local
-        counter that two devices can disagree about.
+      - **Recaps** were part of the original ask and are the only genuinely
+        unbuilt piece. A weekly or monthly "here's how it went" needs **no new
+        write** — the rollups already carry everything it would say — so this is
+        a screen-and-copy item, not a data one. Cheapest next step here.
+      - **Swap the streak to the derived one.** The dashboard shows the stored
+        counter today, because the rows started empty on 2026-08-20 and deriving
+        it would have shown `1` to someone on a long streak. `deriveStreak` is
+        written and tested in core for that day. The swap is safe once the
+        history outlives the longest live streak — **so not before roughly
+        November 2026**, and it is what finally stops the streak being a local
+        counter two devices can disagree about.
       - **`reviewedToday` still counts directions, not cards** — roughly double
         what a learner thinks they did. The rollup deliberately matches it rather
         than quietly disagreeing. Fixing it is a user-visible call that should
@@ -175,6 +173,11 @@ archiving #86) shipped 2026-08-10 and is in [status.md](status.md).
       - **Per-language streaks stay unbuilt on purpose**, not by omission: the
         habit is "studied today". The per-language detail lives inside each day
         and the dashboard already renders it.
+
+      ⚠️ **History began 2026-08-20.** The dashboard is near-empty by
+      construction for weeks, and no amount of backfill fixes it — new cards per
+      day could be reconstructed from `createdAt`, review history cannot be
+      reconstructed from anything. Don't read the sparse calendar as a bug.
 
 ## Medium
 

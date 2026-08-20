@@ -16,8 +16,9 @@ Monorepo (npm workspaces + Turborepo): `apps/web`, `apps/mobile`, `packages/core
 ### Security rules (console config)
 
 Rules are console state, not repo code, and **there is no wildcard support** —
-every collection needs its own `match`. Added 2026-08-19 for the progress
-dashboard's daily rollups; without it every write fails `permission-denied`:
+every collection needs its own `match`. Added to the console 2026-08-20 for the
+progress dashboard's daily rollups and confirmed working; without it every write
+fails `permission-denied`:
 
 ```
 match /users/{uid}/progress/{day} {
