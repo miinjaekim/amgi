@@ -29,6 +29,10 @@ export default function RootLayout() {
               that wants the whole screen, and inside the group the tab bar
               would no longer give way to it. */}
           <Stack.Screen name="decks/[packId]/drill" />
+          {/* Outside the tab group deliberately: the bar already carries five
+              tabs, and a sixth would crowd them for a screen you visit to look
+              back rather than to study. Reached by tapping the streak badge. */}
+          <Stack.Screen name="progress" />
         </Stack>
         <FirstRun />
       </UserProvider>

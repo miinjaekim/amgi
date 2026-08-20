@@ -5,6 +5,10 @@ Open work only, ordered by priority. Shipped, cancelled and decided items move t
 reopened from this file. Source of truth is the user's Google Tasks list; this is
 the scoped version.
 
+**Progress dashboard shipped to web 2026-08-20 (#90)** — the write path and the
+first screen are merged and the security rule is live; the item below is now
+only recaps plus two corrections deliberately deferred. Mobile has it too, but
+mobile ships by build, so it sits in Queued below.
 **Synced with Google Tasks 2026-08-12; High reworked 2026-08-18.** Tasks listed
 six open items. Of the three starred, two survive under High in reworked form —
 *Review page discrepancy* is now **Data loading and freshness** (it was never one
@@ -29,10 +33,21 @@ build, a second rides along free rather than costing a build of its own.
 
 ## Queued for the next build
 
-**Nothing.** 1.3.0 (build 11) went out 2026-08-11 and was approved for external
-testing on 08-12 — the six PRs it carried are shipped and have left this file for
-the Shipped list in [status.md](status.md). The next mobile change starts this
-section over.
+- **Progress dashboard** (#90, merged 2026-08-20) — daily rollups plus a screen
+  on both platforms. Mobile changes: the new screen, the streak badge becoming a
+  link to it, an AsyncStorage queue for offline increments, and tap/long-press
+  day details on the calendar. JS-only, no new native module, so no
+  `expo config --type introspect` pass is owed.
+  Smoke-tested in Expo Go 2026-08-20 and clean. Two things that pass in Expo Go
+  and still deserve a look on the binary: **offline increments across a
+  force-kill and reconnect** (the queue is the point of that code, and Expo Go's
+  networking is not the phone's), and **Korean date formatting** in the day
+  tooltip — nothing else in the app formats a date with a locale and options, so
+  Hermes' `Intl` behaviour there is unproven on a release build.
+
+1.3.0 (build 11) went out 2026-08-11 and was approved for external testing on
+08-12 — the six PRs it carried are shipped and have left this file for the
+Shipped list in [status.md](status.md).
 
 ⚠️ **Verify on the binary before the next build goes out.** These are the oldest
 open items in the project — never checked on any release, only in Expo Go — and
@@ -135,46 +150,34 @@ archiving #86) shipped 2026-08-10 and is in [status.md](status.md).
       `fetchAllUserFlashcards`, so deck counts include archived cards where the
       review row for the same deck excludes them.
 
-- [ ] **Progress dashboard** — scoped 2026-08-18 from "improve stats". A hub to
-      look back on: **which days you reviewed, how much, and how many new cards
-      you learned**, plus habit tracking and recaps. The user's framing: we
-      can't improve what we don't measure.
+- [ ] **Progress dashboard — recaps, and two deferred corrections.** The write
+      path and the first screen shipped in #90 (2026-08-20); the shape and the
+      four calls behind it are in [status.md](status.md) and
+      [data-model.md](data-model.md). The security rule is live. What is left:
 
-      **This is a write-path item before it is a screen.** Everything the app
-      knows is three fields on `users/{uid}` — `streak`, `lastReviewDate`,
-      `reviewedToday` (`types.ts:573`) — rendered as one chip. **There is no
-      per-review record anywhere**, so "which days did I review" and "how many
-      new cards" are not unsurfaced, they were never written. Design the write
-      first; it is the expensive, hard-to-change half, and a screen designed
-      against data that doesn't exist will specify the wrong one.
+      - **Recaps** were part of the original ask and are the only genuinely
+        unbuilt piece. A weekly or monthly "here's how it went" needs **no new
+        write** — the rollups already carry everything it would say — so this is
+        a screen-and-copy item, not a data one. Cheapest next step here.
+      - **Swap the streak to the derived one.** The dashboard shows the stored
+        counter today, because the rows started empty on 2026-08-20 and deriving
+        it would have shown `1` to someone on a long streak. `deriveStreak` is
+        written and tested in core for that day. The swap is safe once the
+        history outlives the longest live streak — **so not before roughly
+        November 2026**, and it is what finally stops the streak being a local
+        counter two devices can disagree about.
+      - **`reviewedToday` still counts directions, not cards** — roughly double
+        what a learner thinks they did. The rollup deliberately matches it rather
+        than quietly disagreeing. Fixing it is a user-visible call that should
+        change both counters at once, or neither.
+      - **Per-language streaks stay unbuilt on purpose**, not by omission: the
+        habit is "studied today". The per-language detail lives inside each day
+        and the dashboard already renders it.
 
-      **Decide before writing anything:**
-      - *Grain.* One row per rating is the flexible choice and the only one that
-        answers accuracy and time-of-day; a daily rollup per `(uid, language)` is
-        far cheaper and answers the heatmap, the streak and the recap — which is
-        everything actually asked for. Start at rollup unless a question needs
-        the row.
-      - *Fields.* A day needs at minimum: reviews done, cards *new* that day
-        (distinct from reviewed — this is the one the current model cannot
-        express at all), and enough to derive the streak. Verdict counts only if
-        accuracy is in scope.
-      - *Backfill.* `createdAt` on cards can reconstruct new-cards-per-day
-        retroactively; review history cannot be reconstructed at all. So history
-        begins the day the write ships, and the first useful dashboard is weeks
-        later — worth knowing before it looks broken.
-
-      **Two existing fields are wrong in ways a dashboard would amplify rather
-      than fix, and both should be corrected by the same write path:**
-      `reviewedToday` counts due **directions**, not cards, so it already reads
-      roughly double what a learner thinks they did; and both it and `streak`
-      live on the user doc rather than per language, so six study languages
-      share one streak and one counter while cards are per-language collections.
-
-      **Depends on the item above.** A dashboard is a fourth surface reading the
-      same data, and shipping it onto the current per-screen-copy model adds a
-      fourth thing to disagree with the other three — worst of all for the
-      streak, which it would display prominently and which is a local counter
-      today. Settle the loading model, or at least the user doc, first.
+      ⚠️ **History began 2026-08-20.** The dashboard is near-empty by
+      construction for weeks, and no amount of backfill fixes it — new cards per
+      day could be reconstructed from `createdAt`, review history cannot be
+      reconstructed from anything. Don't read the sparse calendar as a bug.
 
 ## Medium
 

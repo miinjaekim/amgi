@@ -5,7 +5,7 @@ import {
   Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useLocalSearchParams, useNavigation } from 'expo-router';
+import { router, useLocalSearchParams, useNavigation } from 'expo-router';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { useUser } from '../../src/context/UserContext';
 import {
@@ -469,8 +469,16 @@ export default function LearnScreen() {
     />
   );
 
+  // The badge is the way into the progress screen — it is already the thing on
+  // screen that means "how am I doing", and promoting it beats a sixth tab.
   const streakBadge = user && streak > 0 ? (
-    <View style={s.streakBadge}>
+    <TouchableOpacity
+      style={s.streakBadge}
+      onPress={() => router.push('/progress')}
+      accessibilityRole="button"
+      accessibilityLabel={t(nativeLanguage, 'progressTitle')}
+      hitSlop={8}
+    >
       <Text style={s.streakFlame}>🔥</Text>
       <Text style={s.streakText}>
         {nativeLanguage === 'Korean' ? `${streak}일` : `${streak} ${streak === 1 ? 'day' : 'days'}`}
@@ -479,7 +487,7 @@ export default function LearnScreen() {
       <Text style={s.streakMuted}>
         {nativeLanguage === 'Korean' ? `오늘 ${reviewedToday}개` : `${reviewedToday} ${reviewedToday === 1 ? 'card' : 'cards'} today`}
       </Text>
-    </View>
+    </TouchableOpacity>
   ) : null;
 
   // ── Empty state: search + chips resting in the lower part of the screen ──

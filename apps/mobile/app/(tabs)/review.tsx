@@ -366,7 +366,7 @@ export default function ReviewScreen() {
     const item = queue[index];
     const cardId = item?.card.id;
     if (!item || !cardId || !user) return;
-    recordReview();
+    recordReview(rating);
     setSubmitting(rating);
     const { card, direction } = item;
     const tracking: ReviewTracking = card[direction] ?? {

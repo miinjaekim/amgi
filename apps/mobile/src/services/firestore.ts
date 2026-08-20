@@ -4,6 +4,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { getStudyLanguageConfig } from '@amgi/core';
+import { recordNewCards } from './progress';
 import type { Flashcard, ReviewTracking, StudyLanguage } from '@amgi/core';
 
 export type { Flashcard, ReviewTracking, StudyLanguage } from '@amgi/core';
@@ -73,6 +74,10 @@ export async function saveFlashcardToFirestore(
     collection(db, getCardsCollection(studyLanguage)),
     buildFlashcardDoc(flashcard, studyLanguage),
   );
+  // Counted here rather than at the call sites, so a surface added later gets
+  // it without anyone remembering — a counter with an invisible gap in it is
+  // worse than no counter.
+  void recordNewCards(flashcard.uid, studyLanguage, 1, 'lookup');
   return ref.id;
 }
 
@@ -94,6 +99,10 @@ export async function saveFlashcardsBatch(
     }
     await batch.commit();
   }
+  // `packCards`, not `newCards`: a 474-card pack import and a single lookup are
+  // both "cards added" and nothing alike, and a heatmap one import can swamp is
+  // worse than no heatmap.
+  void recordNewCards(flashcards[0]?.uid, studyLanguage, flashcards.length, 'pack');
   return flashcards.length;
 }
 

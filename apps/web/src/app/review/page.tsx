@@ -198,7 +198,7 @@ export default function ReviewPage() {
       response
     );
 
-    recordReview();
+    recordReview(response);
 
     const update: Record<string, unknown> = {};
     update[`${direction}.interval`] = interval;
