@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
+  advanceStreak,
   applyPendingReviews,
   collapsePendingReviews,
   mergeStreakState,
@@ -153,6 +154,70 @@ describe('applyPendingReviews', () => {
   it('skips queued ratings for cards not in the snapshot', () => {
     const cards = [card('a')];
     expect(applyPendingReviews(cards, [pending('missing', 'frontToBack')], 'Korean')).toEqual(cards);
+  });
+});
+
+describe('advanceStreak', () => {
+  const TODAY = '2026-07-26';
+  const YESTERDAY = '2026-07-25';
+
+  it('extends the streak when the last review was yesterday', () => {
+    const next = advanceStreak(
+      { streak: 5, longestStreak: 9, lastReviewDate: YESTERDAY, reviewedToday: 12 },
+      TODAY, YESTERDAY,
+    );
+    expect(next).toEqual({
+      streak: 6, longestStreak: 9, lastReviewDate: TODAY, reviewedToday: 1,
+    });
+  });
+
+  it('restarts the streak after a missed day', () => {
+    const next = advanceStreak(
+      { streak: 5, longestStreak: 9, lastReviewDate: '2026-07-20', reviewedToday: 4 },
+      TODAY, YESTERDAY,
+    );
+    expect(next.streak).toBe(1);
+    expect(next.reviewedToday).toBe(1);
+  });
+
+  it('starts at one for a user who has never reviewed', () => {
+    const next = advanceStreak(
+      { streak: 0, longestStreak: 0, lastReviewDate: null, reviewedToday: 0 },
+      TODAY, YESTERDAY,
+    );
+    expect(next).toEqual({
+      streak: 1, longestStreak: 1, lastReviewDate: TODAY, reviewedToday: 1,
+    });
+  });
+
+  it('counts further reviews on the same day without moving the streak', () => {
+    const next = advanceStreak(
+      { streak: 6, longestStreak: 9, lastReviewDate: TODAY, reviewedToday: 3 },
+      TODAY, YESTERDAY,
+    );
+    expect(next.streak).toBe(6);
+    expect(next.reviewedToday).toBe(4);
+  });
+
+  it('raises the longest streak when the current one passes it', () => {
+    const next = advanceStreak(
+      { streak: 9, longestStreak: 9, lastReviewDate: YESTERDAY, reviewedToday: 1 },
+      TODAY, YESTERDAY,
+    );
+    expect(next.longestStreak).toBe(10);
+  });
+
+  /**
+   * The two-tab bug this exists for: both tabs read `reviewedToday: 0`, so the
+   * old local-counter code wrote 10 and then 1. Composing from the *result* of
+   * the previous call is what a transaction guarantees, and it adds up.
+   */
+  it('adds up when a second writer starts from the first writer result', () => {
+    const stored = { streak: 5, longestStreak: 9, lastReviewDate: YESTERDAY, reviewedToday: 0 };
+    const afterFirst = advanceStreak(stored, TODAY, YESTERDAY);
+    const afterSecond = advanceStreak(afterFirst, TODAY, YESTERDAY);
+    expect(afterSecond.reviewedToday).toBe(2);
+    expect(afterSecond.streak).toBe(6);
   });
 });
 

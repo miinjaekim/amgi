@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useUser } from '@/components/UserContext';
 import {
-  fetchAllUserFlashcards,
+  subscribeToAllUserFlashcards,
   saveFlashcardsBatch,
   Flashcard,
 } from '@/services/firestore';
@@ -40,19 +40,20 @@ export default function DeckDetailPage() {
   const [detail, setDetail] = useState<PackEntry | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
 
-  const loadCards = useCallback(() => {
-    if (!user) { setCards(null); return () => {}; }
-    let cancelled = false;
-    fetchAllUserFlashcards(user.uid, studyLanguage)
-      .then(fetched => { if (!cancelled) { setCards(fetched); setLoadFailed(false); } })
+  // Live: enrolling writes a batch of cards, and the enrolled/remaining counts
+  // below are derived from this list, so they update themselves.
+  useEffect(() => {
+    if (!user) { setCards(null); return; }
+    return subscribeToAllUserFlashcards(
+      user.uid,
+      studyLanguage,
+      fetched => { setCards(fetched); setLoadFailed(false); },
       // Browsing still works without this, but enrolling does not: a failure
       // used to be swallowed, leaving the deck looking empty and the enrol
       // button primed to add every card a second time.
-      .catch(() => { if (!cancelled) setLoadFailed(true); });
-    return () => { cancelled = true; };
+      () => setLoadFailed(true),
+    );
   }, [user, studyLanguage]);
-
-  useEffect(loadCards, [loadCards]);
 
   // Progress deliberately matches on text: a word you looked up on your own
   // counts towards the deck.
@@ -310,7 +311,7 @@ export default function DeckDetailPage() {
           studyLanguage={studyLanguage}
           nativeLanguage={nativeLanguage}
           onClose={() => setDetail(null)}
-          onChanged={loadCards}
+          // No `onChanged`: the subscription carries the modal's writes.
         />
       )}
     </div>

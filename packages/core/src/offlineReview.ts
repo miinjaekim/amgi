@@ -108,6 +108,47 @@ export interface StreakState {
   dirty: boolean;
 }
 
+/** The four streak fields as they sit on `users/{uid}`, before any review. */
+export interface StoredStreak {
+  streak: number;
+  longestStreak: number;
+  lastReviewDate: string | null;
+  reviewedToday: number;
+}
+
+/**
+ * The streak fields after one more review, given what the server currently
+ * holds. Pure, so the concurrency-safe caller can run it inside a transaction
+ * and the tests can run it without Firestore.
+ *
+ * `reviewedToday` restarts rather than incrementing when the stored date isn't
+ * today: the field is a count *for a day*, and a stale one belongs to a day
+ * that is over.
+ *
+ * The reason this takes the stored values as an argument rather than reading
+ * React state is the bug it exists to fix. The old code incremented a copy read
+ * once at sign-in, so two tabs both starting from `0` would write `10` and `1`
+ * for eleven reviews. Computing from the server's current value — under a
+ * transaction — is what makes the second write see the first.
+ */
+export function advanceStreak(
+  stored: StoredStreak,
+  today: string,
+  yesterday: string,
+): StoredStreak {
+  const isNewDay = stored.lastReviewDate !== today;
+  const streak = isNewDay
+    ? (stored.lastReviewDate === yesterday ? stored.streak + 1 : 1)
+    : stored.streak;
+
+  return {
+    streak,
+    longestStreak: Math.max(stored.longestStreak, streak),
+    lastReviewDate: today,
+    reviewedToday: isNewDay ? 1 : stored.reviewedToday + 1,
+  };
+}
+
 /**
  * Reconcile the device's copy with the server's.
  *
