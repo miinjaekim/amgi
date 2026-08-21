@@ -93,7 +93,6 @@ export default function ReviewPage() {
     } else {
       setUserFlashcards([]);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, studyLanguage]);
 
   const collections = useMemo(
@@ -157,7 +156,6 @@ export default function ReviewPage() {
     runMigration(user.uid).catch(error => {
       console.error('Error during migration:', error);
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, migrationComplete]);
 
   /**

@@ -70,8 +70,28 @@ Backlog priority mirrors the user's Google Tasks list — `backlog.md` is the
 scoped version of it. Keep entries at the size that says what to do next; the
 argument behind a call goes in `status.md`, not in the item.
 
-_Last reviewed against the codebase: 2026-08-21, `main` @ `bc8cb97`.
-`npm test` 246/246, measured._
+_Last reviewed against the codebase: 2026-08-22, `main` @ `ace3e39`.
+`npm test` 252/252, measured._
+
+_This pass **made web read its data live** and, in doing so, **retracted two
+claims these notes had asserted**. Both retractions are the more useful half, so
+read the Decisions entry in [status.md](status.md) before the code. The
+`archived` "query bug" — called "one genuine query bug" here and prescribed a
+backfill — **does not exist**: an audit over all seven collections found 1,316
+cards and **zero** missing the field, and `buildFlashcardDoc` is a single
+constructor per platform that hardcodes it, so none can be created. It had been
+reasoned from code and never checked against data. The counts question was
+**decided as what the code already did**. What remained was one real problem —
+nothing pushes — and `onSnapshot` appeared nowhere in the repo._
+
+_The thing worth carrying: **subscribing fixes displaying a stale value and does
+nothing about two writers**. The streak needed a transaction as well as a
+listener, because two tabs both loading `reviewedToday: 0` and reviewing 10 and
+1 times stored `1` — no second device required. And **mobile is the opposite
+case, not the same one later**: its streak is already offline-first and
+reconciled, and the transaction that fixes web *fails offline*, which is the bug
+mobile's cache exists to prevent. It was left alone deliberately;
+[backlog.md](backlog.md) says what would actually be worth doing there._
 
 _This pass **cut both tracking files down to what GitHub can't tell you.**
 `status.md` lost its Shipped section entirely (~270 lines), plus the per-PR

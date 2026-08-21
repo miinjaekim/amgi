@@ -104,13 +104,73 @@ enough hands to close it without a dedicated session.
   **OTA was abandoned 2026-07-23** rather than diagnosed. Not a blocker under the
   Expo Go + production build model — reopen only with a specific reason to want
   OTA back. See [tech-stack.md](tech-stack.md).
-- **18 lint warnings, 0 errors** — 13 React Compiler, 5 accumulated since. Scoped
-  under Housekeeping in [backlog.md](backlog.md).
+- **20 lint warnings, 0 errors** (measured 2026-08-22) — 13 React Compiler, the
+  rest accumulated since. Two were added by the subscribe change: the
+  `set-state-in-effect` rule fires on the `if (!user) { setX([]); return; }`
+  guard that every subscription effect opens with. Same class the codebase
+  already carries in `useOnlineStatus` and `useCardEnrichment`, and React's own
+  docs name subscribing-in-an-effect as the intended use. Scoped under
+  Housekeeping in [backlog.md](backlog.md).
 
 ## Decisions
 
 Closed calls, kept with their reasoning — a decision whose reasoning is lost gets
 reopened by the next person to notice the symptom. Newest first.
+
+### Web subscribes; the archived bug was never real (2026-08-22)
+
+Four calls out of the data-freshness item, two of which **retract things this
+scratchpad asserted**.
+
+**Subscribe, not invalidate.** The item posed it as an open question —
+TanStack Query/SWR against `onSnapshot` — and framed listeners as the risky
+option whose "read billing should be measured rather than assumed". That has it
+backwards, and the measurement is the wrong way round. Firestore bills a
+listener for the documents in its *first* snapshot and thereafter only for
+documents that actually change, so an idle listener costs nothing, where the
+code it replaced re-read the whole collection on every mount of three separate
+list surfaces. **A listener is cheaper than what was already there.** The
+deciding argument is not cost though: web already initialises
+`persistentLocalCache` with `persistentMultipleTabManager` and then reads past
+it with one-shot `getDocs`. A query cache on top would have been a *third*
+cache — Query → Firestore local → server — each with its own idea of the truth,
+which is the disease rather than the cure. Firestore is a sync engine; the
+invalidation problem it would have managed is one it does not have.
+
+**The `archived` "query bug" does not exist.** The item called it "one genuine
+query bug" and prescribed a backfill. It was reasoned from code and never
+checked against data. Checked 2026-08-22 with a read-only audit over all seven
+collections: **1,316 cards, zero missing the field.** Nor can one be created —
+`buildFlashcardDoc` is the single card constructor on each platform and both
+hardcode `archived: false`, and every write path (`addDoc` for saves,
+`batch.set` for pack imports) goes through it. The reasoning about `!=` was
+correct in the abstract and simply had no instances. **No backfill was run and
+none is needed.** Left as it is rather than "fixed defensively", because a
+migration over 1,316 documents to repair nothing is a real risk taken against
+an imagined one.
+
+**Deck counts show every card; archived filters belong to review and Cards.**
+This was posed as "which number is true when two surfaces legitimately count
+differently". Decided: browsing a deck is asking how big it is, so decks counts
+everything; review and Cards are working surfaces where archiving means
+something. **The code already did exactly this** — no change was made, and the
+backlog's framing of it as a discrepancy was wrong.
+
+**The streak needed a transaction, not just a listener.** Worth separating,
+because subscribing looked sufficient and is not. A listener fixes *displaying*
+a stale value; it does nothing about two writers computing from the same
+starting value. Two tabs both loading `reviewedToday: 0` and reviewing 10 and 1
+times stored `1` — and this needs no second device, only the multi-tab setup
+web already enables. So `recordReview` keeps no local copy at all now:
+`recordReviewStreak` re-reads inside a transaction, and the subscription brings
+the answer back. This is the pattern `recordProgress` has used since the
+dashboard shipped, sitting directly above the streak write that did not.
+
+**Mobile stays as it is,** and its reasons are in [backlog.md](backlog.md).
+The short version: mobile's streak is already offline-first and reconciled
+rather than divergent, and the transaction that fixes web *fails offline*,
+which is the bug mobile's cache exists to prevent. Same symptom name, opposite
+correct answer.
 
 ### Spanish is European Spanish, and that is a deck not a setting (2026-08-21)
 

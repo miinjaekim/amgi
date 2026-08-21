@@ -57,52 +57,35 @@ _A version bump queues another Beta App Review; 1.3.0's external approval covers
 
 ## High
 
-- [ ] **Data loading and freshness** — reframed 2026-08-18. This came in as
-      "review page discrepancy", a bug on one page. It is not: **every surface
-      owns a private copy of the data and nothing tells any of them when it
-      changes.** The discrepancies are the symptom, which is why they show up
-      somewhere new each time — a stale review deadline, a streak that disagrees
-      with itself, a card saved and not shown.
-      *Understand this before building anything; no implementation yet.*
+- [ ] **Data loading and freshness — mobile half.** The web half shipped
+      2026-08-22: four surfaces subscribe, and the streak is a transaction plus
+      a listener rather than a local counter. The reasoning, and the two claims
+      this item carried that turned out to be **wrong**, are in the Decisions
+      entry in [status.md](status.md). Read that before picking this up.
 
-      **What the code does today.** No cache layer, no query layer — every screen
-      is `useState` + a `fetch…()` in an effect:
-      - Web: `cards/page.tsx:73`, `decks/page.tsx:21`, `review/page.tsx:144`
-        fetch independently, and **never refetch on navigation**.
-      - Mobile: `useFocusEffect` + a hand-rolled `reloadToken`
-        (`review.tsx:153`, `cards.tsx:85`) — refetch-on-focus, per screen.
-      - Streak is *divergent*, not merely stale: `UserContext` reads
-        `streak`/`reviewedToday`/`lastReviewDate` once at auth
-        (`UserContext.tsx:85`), then `recordReview()` increments the local copy
-        and writes the doc (`:152`). A second device or a mid-session reload
-        disagrees with the document.
-      - Mobile has **three** sources for one list — server, offline cache, and
-        the `applyPendingReviews` overlay — where web mirrors a rating inline
-        (`review/page.tsx:273`).
+      **Mobile was deliberately left alone, and the burden of proof is on
+      changing it.** It is not the same problem wearing a different hat:
+      - Its streak is **already offline-first** and reconciled, not divergent.
+        `recordReview` writes the local copy, marks it `dirty`, attempts the
+        server write and reconciles on the next launch that connects via
+        `mergeStreakState` (`context/UserContext.tsx:289`). Web's fix —
+        `recordReviewStreak`, a transaction — **fails offline**, which is the
+        exact bug mobile's cache was written to prevent.
+      - Its card reads feed the AsyncStorage snapshot and the
+        `applyPendingReviews` overlay. That is the offline story, not an
+        accident.
+      - `getFirestore` there is **memory-only** because the JS SDK has no
+        IndexedDB in React Native, so a listener dropped on backgrounding
+        re-charges its whole result set on reattach after 30 minutes. Web's
+        `persistentLocalCache` has no equivalent here.
+      - **No OTA.** A web regression is a redeploy; a mobile one waits for a
+        build *and* Beta App Review.
 
-      **The question to answer first: invalidate or subscribe.** *Invalidate* is
-      the mainstream answer (TanStack Query / SWR): one entry per `(uid,
-      studyLanguage, view)`, writes invalidate keys, refetch-on-focus and
-      optimistic rollback come free, replacing both the per-screen effects and
-      `reloadToken`. *Subscribe* is **already paid for** — they are on Firestore,
-      so `onSnapshot` deletes the invalidation problem instead of managing it;
-      costs are read billing on long-lived listeners and friction with mobile's
-      offline cache + pending queue, and should be measured rather than assumed.
-      Likely both: subscribe for the small hot documents (the user doc, so the
-      streak stops being a local counter), cache + invalidate for card lists.
-      **Decide the counts question too** — which number is true when two surfaces
-      legitimately count differently.
-
-      **Separately, and don't let it hide in here: one real query bug.**
-      `fetchUserFlashcards` filters `where('archived', '!=', true)` +
-      `orderBy('archived')` (`apps/web/src/services/firestore.ts:122`, mirrored
-      at `apps/mobile/src/services/firestore.ts:110`), and **`!=` excludes
-      documents where the field is missing**. `migrateExistingCards` never
-      backfilled it, so a card older than the field is invisible in review *and*
-      in the archived list. **The fix is a backfill, not a query rewrite**, and it
-      is independent of everything above. Review is also the only surface that
-      filters `archived` at all, so deck counts include archived cards where the
-      review row for the same deck excludes them.
+      **What would actually be worth doing**, in order: (1) subscribe to
+      `users/{uid}` for *display* only, leaving the offline write path alone —
+      the smallest useful piece, and it makes a laptop review show up on the
+      phone; (2) leave `reloadToken` until (1) has been on a build for a
+      release. There is no case for touching the pending-review queue.
 
 - [ ] **Progress dashboard — recaps, plus two deferred corrections.** The write
       path and the first screen shipped 2026-08-20; the shape and the four calls
@@ -194,10 +177,15 @@ _A version bump queues another Beta App Review; 1.3.0's external approval covers
 
 ## Housekeeping — tooling that hides signal
 
-`npm test` (246/246, measured 2026-08-21) and `npx eslint .` (0 errors) are
+`npm test` (252/252, measured 2026-08-22) and `npx eslint .` (0 errors) are
 green. What's left is what those two now *show*.
 
-- [ ] **18 lint warnings.** 13 React Compiler
+- [ ] **Two callerless functions in `apps/web/src/services/firestore.ts`** —
+      `countUserFlashcards` and `fetchArchivedFlashcards`, neither imported
+      anywhere. Unlike `writing.ts`/`grammar.ts` these have **no build to keep
+      alive**: they are web-only, so nothing pins them. Left in place while the
+      subscribe change was landing to keep that diff to one subject.
+- [ ] **20 lint warnings.** 13 React Compiler
       (`react-hooks/set-state-in-effect` ×11, `react-hooks/immutability` ×2) and
       they're real: a `useEffect` calling `setState` synchronously renders twice
       on mount. Most want `useSyncExternalStore`, so each is a small design call,
