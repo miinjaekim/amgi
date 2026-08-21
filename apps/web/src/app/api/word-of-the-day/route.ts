@@ -116,6 +116,8 @@ export async function GET(req: NextRequest) {
       ? '"gender": "en" | "ett" | null'
       : studyLanguage === 'French'
         ? '"gender": "le" | "la" | null'
+        : studyLanguage === 'Spanish'
+        ? '"gender": "el" | "la" | null'
         : studyLanguage === 'Japanese'
           ? '"furigana": "reading in hiragana if the word contains kanji" | null'
           : studyLanguage === 'TraditionalChinese'

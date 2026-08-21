@@ -10,7 +10,8 @@ export type StudyLanguage =
   | 'English'
   | 'French'
   | 'Japanese'
-  | 'TraditionalChinese';
+  | 'TraditionalChinese'
+  | 'Spanish';
 
 /**
  * i18n keys for the character-breakdown section heading. Every Han-script
@@ -24,7 +25,8 @@ export type FieldLabelKey =
   | 'labelSwedish'
   | 'labelFrench'
   | 'labelJapanese'
-  | 'labelTraditionalChinese';
+  | 'labelTraditionalChinese'
+  | 'labelSpanish';
 
 export type CardSideField =
   | 'korean'
@@ -32,7 +34,8 @@ export type CardSideField =
   | 'english'
   | 'french'
   | 'japanese'
-  | 'traditionalChinese';
+  | 'traditionalChinese'
+  | 'spanish';
 
 /**
  * Per-study-language configuration. Adding a language means adding an entry
@@ -124,6 +127,23 @@ export const STUDY_LANGUAGE_CONFIGS: Record<StudyLanguage, StudyLanguageConfig> 
     studyLabelKey: 'labelFrench',
     ttsLanguageCode: 'fr-FR',
     ttsVoiceName: 'fr-FR-Chirp3-HD-Charon',
+  },
+  Spanish: {
+    code: 'Spanish',
+    label: 'Spanish',
+    labelNative: 'Español',
+    collection: 'cards_spanish',
+    locale: 'es',
+    studyField: 'spanish',
+    studyLabelKey: 'labelSpanish',
+    // European Spanish, chosen the way `fr-FR` and `sv-SE` were: one deck per
+    // registry entry, named for the variety it actually speaks. Latin American
+    // Spanish is a real and larger-audience alternative (`es-US`, and vocabulary
+    // differences well past the accent), and if it is ever wanted it follows the
+    // Traditional/Simplified rule at the top of this file — its own entry with
+    // its own collection, not a script or accent toggle on this one.
+    ttsLanguageCode: 'es-ES',
+    ttsVoiceName: 'es-ES-Chirp3-HD-Charon',
   },
   Japanese: {
     code: 'Japanese',
@@ -220,6 +240,7 @@ export interface ExamplePair {
   french?: string;
   japanese?: string;
   traditionalChinese?: string;
+  spanish?: string;
   english: string;
 }
 
@@ -290,6 +311,7 @@ export interface TermCore {
   french?: string;
   japanese?: string;
   traditionalChinese?: string;
+  spanish?: string;
   english: string;
   translation?: string;
   /**
@@ -489,6 +511,7 @@ export function getDepthTarget(
     | 'french'
     | 'japanese'
     | 'traditionalChinese'
+    | 'spanish'
     | 'english'
     | 'briefDefinition'
   >,
