@@ -35,14 +35,16 @@ _Reconciled against `main` @ `bc8cb97`, 2026-08-21. `npm test` 246/246, measured
   per day could be reconstructed from `createdAt`; review history cannot be
   reconstructed from anything. So the calendar is near-empty for weeks by
   construction — expected, not a bug, and the empty state says so.
-- ⚠️ **Spanish is code-complete and blocked on two console steps** (2026-08-21).
-  The registry entry, prompt branch, i18n and example terms are merged and the
-  lookup was exercised against the live API in both directions. But
-  `cards_spanish` has **no security rule and no `archived + createdAt` composite
-  index**, and neither lives in the repo, so nothing in CI or the build will ever
-  say so. Until both exist in the Firebase console the deck is pickable and
-  every save fails `permission-denied`, then every review query fails on the
-  missing index. Mirror what `cards_french` already has. See
+- **Spanish is live on web** (2026-08-22). Registry entry, prompt branch, i18n
+  and example terms merged; lookup verified against the live API in both
+  directions. `cards_spanish`'s security rule and **both** composite indexes are
+  in the console, and `/cards` and `/review` load clean against them. Mobile has
+  the code but reaches users only through a build, and nothing has been cut since
+  1.3.0 — see Builds.
+  The rule uses the explicit `read, update, delete` + `create` form that `cards`
+  and `cards_chinese_traditional` use, not the `read, write` form the middle four
+  collections drifted into. Both work; only one says what it means. Why, and why
+  a new collection needs two indexes rather than one, are in
   [lessons.md](lessons.md).
 - **Grammar and writing were removed from the app** (2026-08-18), but
   `/api/writing` and `/api/grammar/exercise` stay deployed because 1.3.0's binary

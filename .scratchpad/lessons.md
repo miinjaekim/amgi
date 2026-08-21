@@ -144,6 +144,27 @@ Gotchas already paid for. Grouped so you can skim the relevant section.
 - **Composite indexes** are required for multi-field filter+sort queries (e.g.
   `archived + createdAt`). Firebase gives a direct creation link on the first
   failing query.
+- **A new cards collection needs _two_ composite indexes, and the console link
+  only builds the one that failed.** Measured adding Spanish (2026-08-22), where
+  the backlog item had said "the composite index", singular:
+  - `uid` ASC, `archived` ASC, `createdAt` DESC — `fetchUserFlashcards` (the
+    main cards/review query) and `fetchArchivedFlashcards`
+  - `uid` ASC, `createdAt` DESC — `fetchAllUserFlashcards`, used by export and
+    by mobile's card list
+
+  Both platforms issue the same shapes. The trap is that clicking the link in
+  the first error makes the deck look finished — the second index isn't reached
+  until someone exports, so it fails later and somewhere unrelated. Create both
+  up front; the second link comes out of the browser console the same way.
+- **Two rule shapes are in use for card collections, and only one says what it
+  means.** `cards` and `cards_chinese_traditional` use explicit
+  `read, update, delete` + a separate `create`. The middle four (`cards_swedish`,
+  `cards_english`, `cards_french`, `cards_japanese`) use `read, write` + a
+  separate `create`, which *works only by accident*: `write` already covers
+  `create`, and on a create `resource.data` is null, so that clause always
+  denies — the separate `create` line is what actually grants it, because rules
+  OR together. Copy the explicit form for a new collection. Don't "simplify" a
+  card rule down to `allow read, write` alone; it would deny every create.
 - **Backfill new boolean fields** on existing documents — `!=` and `==` both
   exclude documents where the field is missing entirely.
 - **Firebase v9 rejects `undefined` field values.** `addDoc`/`setDoc` throw
