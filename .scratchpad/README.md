@@ -9,7 +9,7 @@ into context without loading everything. Read only what the task needs.
 | [ui-ux.md](ui-ux.md) | Palette, themes, navigation, copy/i18n, open design questions | Styling or laying out a surface |
 | [tech-stack.md](tech-stack.md) | Web + mobile stack, deployment, CI, shared package layout | Setting up, adding a dependency, touching build/deploy |
 | [data-model.md](data-model.md) | Flashcard discriminated union, Firestore collections, `STUDY_LANGUAGE_CONFIGS`, API shapes | Adding a language, changing card fields, touching API routes |
-| [status.md](status.md) | What's shipped, in progress, decided, known issues | Orienting at the start of a session |
+| [status.md](status.md) | What's live, what's decided and why, known issues, build/console state | Orienting at the start of a session |
 | [backlog.md](backlog.md) | Open work only — prioritized, plus unscoped ideas | Picking the next thing to build |
 | [lessons.md](lessons.md) | Gotchas already paid for — Firestore, Expo monorepo, EAS, Next.js | Debugging something that smells familiar |
 
@@ -55,17 +55,36 @@ Related docs outside this folder:
 **Convention:** `backlog.md` holds **only open work**. When something closes it
 leaves that file:
 
-- **Shipped** → the Shipped list in `status.md`, with PR number and merge date.
+- **Shipped** → nowhere. Git and GitHub already track what shipped and when; a
+  second copy in these notes only goes stale. Delete the bullet.
 - **Decided or cancelled** → the Decisions section in `status.md`, *with the
   reasoning* — a closed call whose reasoning is lost gets reopened by whoever
   next notices the symptom.
-- **Durable gotcha** → `lessons.md`, not the shipped bullet.
+- **Durable gotcha** → `lessons.md`.
+
+The test these files have to pass: **would GitHub tell me this?** If yes, it
+doesn't belong here. What does belong is reasoning, console and binary state that
+lives outside the repo, and what is currently unverified.
 
 Backlog priority mirrors the user's Google Tasks list — `backlog.md` is the
-scoped version of it.
+scoped version of it. Keep entries at the size that says what to do next; the
+argument behind a call goes in `status.md`, not in the item.
 
-_Last reviewed against the codebase: 2026-08-20, `feat/progress-dashboard` (#90).
+_Last reviewed against the codebase: 2026-08-21, `main` @ `bc8cb97`.
 `npm test` 246/246, measured._
+
+_This pass **cut both tracking files down to what GitHub can't tell you.**
+`status.md` lost its Shipped section entirely (~270 lines), plus the per-PR
+enumerations in Now and Builds — all of it derivable from git. What stayed is
+Decisions, the EAS/TestFlight state that only lives in a console, and the
+unverified-on-binary caveats. `backlog.md` was pruned to items that say what to
+work on next: the Google Tasks sync narration went, the writing-review follow-ups
+went with the feature (recorded in the grammar-removal decision), and the
+remaining items were cut to their actionable core. Two things were **added**
+rather than removed, because nothing else tracked them: deleting the callerless
+`writing.ts`/`grammar.ts` and their routes once no pre-removal build is in use,
+and `/api/explain`'s missing `try`/`catch`, which outlived the writing item that
+carried it._
 
 _This pass **built the progress dashboard** — the first thing the app remembers
 about a day beyond a streak chip. **It is a write-path change before it is a

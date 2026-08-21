@@ -1,62 +1,43 @@
 # Project Status
 
-Session orientation: what's live, what's broken, what's decided. Shipped history
-sits at the bottom as reference — the reasoning worth keeping is in Decisions.
+Session orientation: what's live, what's broken, what's decided.
 
-_Reconciled against `main` @ `b9604d9`, 2026-08-12, after 1.3.0 went live.
-`npm test` 313/313, measured._
+**Shipped history is not recorded here** — git and GitHub already track it, and a
+second copy only goes stale. What belongs in this file is what those two can't
+show: the reasoning behind closed calls (Decisions), the console and binary state
+that lives outside the repo (Builds, TestFlight), and what is currently
+unverified.
+
+_Reconciled against `main` @ `bc8cb97`, 2026-08-21. `npm test` 246/246, measured._
 
 ## Now
 
 - **1.3.0 (build 11) is live in TestFlight and approved for external testing**
-  (2026-08-12). **This is the first external approval the project has had** —
-  1.2.0 was submitted and accepted but never cleared Beta App Review, so until
-  now every build only ever reached internal testers. External testers can be
-  invited without another review as long as the version doesn't change.
-- **The six queued changes are in the hands of testers**, which is the first time
-  any of them counts as shipped: with no OTA, a merged PR reaches nobody until a
-  binary carries it. See Builds for contents.
-- ⚠️ **Nothing in 1.3.0 has been checked on the binary yet.** Three renders have
-  never been seen on a device at all (#81's packs list, #87's correction row,
-  #88's badge), and the native paths listed under Builds have never been verified
-  on *any* build. 1.3.0's What to Test asks testers for both by name — the
-  cheapest path is now to read what comes back rather than to test it all by
-  hand.
+  (2026-08-12) — the first external approval the project has had. External
+  testers can be invited without another review as long as the version doesn't
+  change; the next version bump queues for Beta App Review again, so batching
+  changes into a build beats cutting one per feature.
+- ⚠️ **Nothing in 1.3.0 has been checked on the binary yet**, and the native
+  paths under Builds have never been verified on *any* build. Three renders have
+  additionally never been seen on a device at all: the packs list without
+  per-pack descriptions, the "showing results for…" row, and the part-of-speech
+  badge. 1.3.0's What to Test asks testers for both sets by name — reading what
+  comes back is cheaper than testing it all by hand.
 - **Mobile merges are unblocked.** The freeze held only until submission; the
-  binary and the listing copy now describe the same app, and the next mobile
-  change simply waits for the build after this one.
-- **The six changes this build carries.** The `expo config --type introspect`
-  pass was run when `expo-clipboard` landed and came back clean; everything
-  merged after it is JS-only and doesn't disturb it.
-  - PR #80 (08-04): the `/cards` loosening, the filter sheet, the first
-    skeletons. Checked on web and **on a device in Expo Go** before merge.
-  - PR #81 (08-08): the two military packs reach mobile through the shared
-    registry, and the packs list drops the per-pack description. ⚠️ The
-    description change was **typechecked but never seen rendered** — the list
-    went from one deck per language to three, and the row spacing under a title
-    with nothing beneath it is unverified.
-  - PR #84 (08-09): grammar patterns, the whole feature on both platforms.
-    Smoke-tested in Expo Go against the deployed API on 08-10 and clean — the
-    only one of the three verified on a device *after* merge.
-  - PR #86 (08-10): archive and delete drop the card from the review queue, not
-    the index. Mobile's review screen had the same bug and was fixed with it.
-  - PR #87 (08-10): spellcheck on lookup. Mobile's Learn screen gains the
-    "showing results for…" row and its override. ⚠️ Verified on web; the mobile
-    render of that row is **typechecked but never seen**.
-  - PR #88 (08-11): part of speech on cards, both platforms. JS-only. ⚠️ Same
-    caveat — the mobile badge is typechecked, never seen rendered.
-- **The progress dashboard shipped to web** (#90, 2026-08-20). Daily rollups are
-  written on every rating and every card save, and both platforms have a screen
-  reading them, with per-day detail on hover (web) and tap (mobile). The
-  Firestore security rule for `users/{uid}/progress/{day}` is live in the
-  console — it was the one blocker, since without it every write fails
-  `permission-denied` *silently* by design. Verified on web and in Expo Go.
-- ⚠️ **History began 2026-08-20 and cannot be backfilled.** New cards per day
-  could be reconstructed from `createdAt`; review history cannot be
+  next mobile change waits for the build after this one. Anything merged since
+  1.3.0 is JS-only, so it rides along rather than earning a build of its own.
+- **The progress dashboard is on both platforms** (2026-08-20) but only in users'
+  hands on web, since mobile ships by build. Daily rollups are written on every
+  rating and every card save. The Firestore security rule for
+  `users/{uid}/progress/{day}` is live in the console — it was the one blocker,
+  since without it every write fails `permission-denied` *silently* by design.
+- ⚠️ **Progress history began 2026-08-20 and cannot be backfilled.** New cards
+  per day could be reconstructed from `createdAt`; review history cannot be
   reconstructed from anything. So the calendar is near-empty for weeks by
   construction — expected, not a bug, and the empty state says so.
-- **Mobile's copy waits for a build**, as ever. It is JS-only, so it rides along
-  with whatever else is queued rather than earning a build of its own.
+- **Grammar and writing were removed from the app** (2026-08-18), but
+  `/api/writing` and `/api/grammar/exercise` stay deployed because 1.3.0's binary
+  still calls them. See Decisions for the one condition that lets them go.
 
 TestFlight context that isn't in the repo:
 
@@ -90,23 +71,10 @@ have to be read off the console and recorded here. Gaps are normal: the number i
 reserved when a job is created, not awarded on success. Builds 5–7 were failed
 attempts.
 
-**1.3.0 contents** — the six items above: `/cards` loosening + filter sheet +
-skeletons (#80), the two military packs (#81), grammar patterns (#84), archive
-and delete drop from the queue (#86), spellcheck on lookup (#87), part of speech
-(#88). **Native-module build** — `expo-clipboard`, for the copy button on the
-writing rewrite (`CopyButton.tsx`, the only caller).
-
-⚠️ **Three of the six were typechecked but never seen rendered on a device** —
-the packs list without per-pack descriptions (#81), the "showing results for…"
-row (#87) and the part-of-speech badge (#88). All three are cosmetic-risk rather
-than logic-risk (row spacing, a row that may not fit, a badge that may wrap), so
-the build being live is now the cheapest way to find out.
-
-**1.2.0 contents** — nine merged items, all JS-only (no native module, so no
-`expo config --type introspect` pass): pack unification (#71), first run (#73),
-per-page help (#74), tab-focus reload (#75), writing review (#69), card backs
-follow native language (#67), direction choice on Review (#65), second Learn tab
-tap clears search (#66), TOPIK 고급 (#68).
+What a build carries is derivable from its commit, so it isn't listed here. The
+one fact that isn't: **1.3.0 is a native-module build** (`expo-clipboard`), and
+its `expo config --type introspect` pass came back clean. 1.2.0 and everything
+merged since 1.3.0 are JS-only, so no introspect pass is owed for them.
 
 ⚠️ **Never verified on a real binary**, on any build so far — the logic is
 tested, the native bindings are not: pronunciation audio, CSV/Anki export,
@@ -217,6 +185,13 @@ worth re-reading in `docs/grammar-research.md` if grammar is ever revisited, but
 it does not survive as a standalone drill: the same research §"controlled →
 meaningful → free" calls a bare ordering task mechanical in Paulston's sense, and
 mechanical drills do not build form-meaning mapping on their own.
+
+**The writing-review follow-ups die with it** (2026-08-21), and they were never a
+separate call: untested long rewrites through `PronounceButton`, two-gloss card
+backs from `/api/writing`, streaming findings as NDJSON. All three describe a
+surface that no longer exists. The one that outlived the feature is
+`/api/writing`'s missing `try`/`catch` — because `/api/explain` has the same
+exposure and is still the core loop, so it stays on the backlog in its own right.
 
 **Collateral simplification:** `ReviewCollection.kind` is gone. It existed only
 because a patterns row and your own cards were both `id: null`; with patterns
@@ -943,272 +918,3 @@ shape, so a future single-character pack inherits the grid without being asked.
   consistency; moving Japanese and Korean wholesale to Neural2 would cost quality
   on longer text. **Not a consistency bug** — if it resurfaces it's a re-decision.
 - **No OTA.** See Known Issues and [tech-stack.md](tech-stack.md).
-
-## Shipped
-
-Reference only — one line per item, newest area first. Reasoning that outlived
-the change is in Decisions above; durable gotchas are in
-[lessons.md](lessons.md); the blow-by-blow is in git.
-
-**Progress & stats**
-- **Progress dashboard, web + mobile** (#90, 08-20) — the first thing the app
-  remembers about a day beyond a streak chip. Daily rollups at
-  `users/{uid}/progress/{YYYY-MM-DD}` incremented on every rating and every card
-  save, plus a screen: stat row, contribution calendar over 30/90/364 days with
-  per-day detail on hover/tap, and a per-language breakdown. Counting lives
-  inside the save functions rather than at their four call sites. Mobile carries
-  its own AsyncStorage queue, because an uncounted day cannot be rebuilt from
-  server state the way a card rating can. The four design calls are in Decisions.
-
-**Writing, grammar & onboarding**
-- **Grammar patterns, web + mobile** (#84, 08-09) — the first thing Amgi teaches
-  that isn't a word. A pattern is practised, not flipped: a cloze until it
-  sticks, then free production, with the stage derived from `repetitions` so a
-  lapse demotes for free. Ships with its own Review row (disabled offline), a
-  Cards/Patterns management toggle, manual add, two hint tiers off stored fields,
-  a learner override, `easy` on a hint-free exact cloze, within-session
-  interleaving, and the writing panel's pattern offer alongside gap cards.
-  `/api/grammar/exercise` generates; grading is local for cloze and reuses
-  `/api/writing` for production. Design and its three corrections are in
-  Decisions above — read those and `docs/grammar-research.md` before changing
-  any of it. Mobile added `expo-clipboard`, which makes the next build a
-  native-module build.
-- **Writing review, web + mobile** (#69, 08-01) — Passage mode on Learn: native
-  rewrite, that rewrite in your own language as a meaning check, and an ordered
-  finding list each offering a card. First surface above word level on the
-  production side of the ladder. `packages/core/src/writing.ts` holds the types,
-  parser, `buildWritingCardDraft` and the one fetch both apps call — it says
-  nothing about *writing*, because conversation practice is the same job on a
-  different capture.
-- **First run, both platforms** (#73, 08-02) — mobile gained the blocking language
-  setup it never had, plus a third step naming Learn / Review / Packs / Writing.
-  Filtering the native language out of the study options makes "native Korean,
-  studying Korean" unreachable by construction. Both answers commit on the last
-  tap and neither is awaited — an awaited write strands a signed-in offline user
-  behind a modal with no dismiss. A brand-new account inherits what the device
-  already answered.
-- **Per-page help on mobile** (#74, 08-02) — a "?" in the title on Learn, Packs
-  and Review. Pull, not push, which is why it needs **no per-user state** — the
-  blocker on the contextual-tips item. Review mounts it twice so a brand-new user
-  can reach it. Korean copy was reworked, not re-translated (see
-  [ui-ux.md](ui-ux.md)).
-- **Card lists reload on tab focus** (#75, 08-02) — Expo Router keeps tab screens
-  mounted, so loads keyed on `[user, studyLanguage]` never re-ran and only killing
-  the app refreshed. Review defers a refresh mid-session, since its load resets
-  `collectionId`.
-
-**Packs, decks & collections**
-- **Two military terminology packs, in both directions** (#81, 08-08) — 474
-  Korean–English pairs from one authored source, registered four ways:
-  `military-unit-{ko,en}` (220, 부대·참모 — a unit and a combined staff) and
-  `military-affairs-{ko,en}` (254, 안보·정세 — a briefing and a press statement).
-  Design calls in Decisions above. The second pack exists because the first draft
-  was reconciled against a 어학병/통역장교 선발 prep glossary built for the
-  selection exam's news-interpretation task: **the overlap was about fifty
-  concepts, under a quarter of either list**, so nearly everything it covered
-  and the draft did not became 안보·정세. That comparison also caught a real
-  error — §1 gave Army rank equivalents with no note they are service-specific,
-  and a ROK Navy 대위 introduced as "Captain" sounds four grades senior than they
-  are. Mobile's packs list dropped the per-pack description in the same PR: one
-  deck per language became three, and three paragraphs stacked is a page to read
-  rather than a list to choose from. Drafts stay in `docs/packs/` as the review
-  artifacts and still hold the open questions — the acronym convention (nobody
-  says "Korea Massive Punishment and Retaliation" aloud), ten section rows
-  against a deck page laid out for four and six, and the contested renderings
-  (동해, 독도, 위안부) that deliberately use the ROK government's English.
-- **`/cards` holds every card, packs included** (#80, 08-04) — the last
-  structural piece of the pack work, and the reversal of the "pack cards left
-  `/cards` entirely" line below: a card belongs to a pack *and* to your list. The
-  load stopped filtering; a **second axis** narrows instead — All / My Cards /
-  each enrolled deck, orthogonal to active/archived. `all` leaves out
-  `layout === 'grid'` packs only, so kana is hidden but still one chip away and a
-  future single-character pack inherits the rule. `filterCardsByDeck` and
-  `buildDeckFilters` are in `collections.ts`, shared by both platforms.
-  **The default is `mine`, not `all`** (`DEFAULT_DECK_FILTER`, pinned by a test):
-  the page is called My Cards, so it opens on them and widening to a pack is
-  deliberate. It is also where a selection lands when the deck it pointed at
-  stops existing. The status chip is **"Both" (둘 다), not "All"** — there are
-  exactly two states, so it is the more precise word, and it stops that chip
-  reading identically to the deck row's "All", which means something else.
-  Web briefly carried group headings to disambiguate the two; renaming fixed it
-  at the source, so the headings went and the rows are told apart by fill alone
-  (`text` vs `highlight`). The headings survive in mobile's sheet, where they
-  are structure rather than a patch.
-  _Considered and rejected: dropping the both-states option altogether. It is
-  what makes search state-agnostic — "did I already save this?" is asked without
-  knowing whether you archived it — and, now that export follows the filter, the
-  only way to get a complete library into one file. The CSV's Status column
-  exists for exactly that export._
-  Deck chips are built from **all** cards, not the status-filtered ones — the
-  other order retires a chip the moment its deck has nothing archived, including
-  the selected one. **Export follows the visible filter**, which is why the Anki
-  export lost its own archived skip and `cardsExportCSV` lost "(all cards)".
-  Review untouched (it filters by collection itself); `deckManageHint` deleted as
-  a dead key asserting the old rule.
-  **The platforms diverge on the control, deliberately.** Web has the room for
-  two chip rows and reads well with them. Mobile did not — deck, status and sort
-  came to three rows plus search, half a screen of chrome before the first card,
-  to answer a question you ask once. All three moved behind one summary button
-  (`FilterSheet.tsx`) that states what is currently on, which a row of chips
-  never did well: it shows what is *available* and leaves you to spot which one
-  is lit. Counts went with them, since a count informs the choice and belongs
-  where the choice is made. Selections apply on tap, so there is no draft state
-  and "Done" only closes. Section themes as filters land as a fourth group here,
-  not a fourth row.
-- **Packs unified into one pre-authored kind** (#71, 08-02) — `lookup`/`cards`,
-  `LookupPack`, `CardPack`, `PackWord`, `PackCard` all gone. Every pack is
-  `PackEntry {study, back, context?}` in named `PackSection`s, with `layout` and
-  `pronounceable` the only differences. Section enrolment is the unit (TOEIC 4,
-  TOPIK 6, kana 3). 293 card backs authored and approved. `CardDetailModal` is now
-  the one card surface. On-demand depth/examples callable from deck, list and
-  mid-review. Drill works on every pack.
-- **Review by collection** (#51, 07-26) — your own cards and each pack are separate
-  collections, reviewed apart. `getCollectionId` is the one place `packId` is read
-  for grouping. `isDue` moved into core with one signature (the two copies
-  disagreed). Review lands on the collection picker; direction chips moved inside.
-  Pack cards left `/cards` entirely — reversed by #80 above. Decks became a nav
-  item on both platforms.
-- **Decks page** (#50, 07-25) — `PacksModal` retired; `/decks` and `/decks/[packId]`.
-  `packId` on saved cards is **provenance only** — progress still matches on the
-  study side. **Drill** added the same branch: shuffled prompt → reveal →
-  knew/missed, missed requeued 4 later; queue is pure, in `drill.ts`, 13 tests.
-  Shuffle before cutting to size, or every session drills the same opening kana.
-- **TOPIK 고급 pack** (#68, 07-30) — Korean's first pack, 160 words, six sections,
-  48 context hints (Korean homographs are one form with unrelated senses). Word
-  list approved after use on mobile. Fixed on the way: `.gitignore` said `docs/`
-  and git never descends into an excluded directory, so `!docs/packs/**` had never
-  worked.
-- **TOEIC pack + Korean-user UX** (#34, 07-13) — 133 curated words; cards
-  import/export fully localized EN+KO.
-
-**Review loop & reminders**
-- **Archive and delete drop the card, not the index** (#86, 08-10) — the queue
-  holds one entry per due *direction*, so removing by index left the card queued
-  the other way round: archived cards came back, deleted ones came back pointing
-  at a document that no longer existed. `removeCardFromQueue` filters by
-  `card.id` and slides the index back past entries removed ahead of it, so the
-  session lands on the card that followed. Mobile's review screen archives too
-  and had the same bug — the backlog's note that it has no manage panel was out
-  of date. Both platforms now also drop the card from local card state, or the
-  due counts keep counting it. 5 tests.
-- **Offline review on mobile** (#53, 07-26) — mobile keeps its own durable state
-  because Firestore's persistent cache is IndexedDB and therefore web-only. Card
-  snapshots per user and language in AsyncStorage; a durable queue of unsent
-  ratings committed to disk *before* the network is tried. Conflicts are
-  last-flush-wins. A session can be stopped early and is allowed to finish. Added
-  `expo-network`.
-- **Web review session parity** (#54, 07-26) — ratings never fed back into
-  `userFlashcards`, so the due count was frozen at page load and a second session
-  re-served the whole deck.
-- **Direction choice on mobile Review** (#65, 07-28) — a start screen after the
-  collection pick, not pills on the picker, which single-collection users never
-  see. Per-session, reset with the collection. Queue moved to `reviewQueue.ts`
-  beside the drill queue (12 tests).
-- **Word-of-the-day and review reminders** (#61, 07-27) — local scheduled
-  notifications, not remote push: everything the decision needs is already on the
-  device, and it avoids an APNs key on a borrowed account. Both opt-in, off by
-  default. WOTD fires at a fixed 09:00. The review reminder is a one-shot
-  re-planned when its inputs move, scheduled only when cards are due *and* today
-  has had no review. A "streak at risk" reminder was considered and dropped —
-  what it adds is loss-aversion framing. Logic is pure, in `reminders.ts`, 15
-  tests. Added `expo-notifications`.
-
-**Multi-language**
-- Six study languages via the `STUDY_LANGUAGE_CONFIGS` registry: Korean, Swedish
-  (#gender, 07-04), English/French/Japanese (#31, 07-06), Traditional Chinese
-  (07-24). Per-language collection routing, prompts, and readings
-  (`furigana`/`pinyin` through `getReading()`).
-- **Card backs follow native language** (#67, 07-28) — the back slot was decided
-  per *study* language, so a Korean native studying Japanese got English backs
-  everywhere. `getBackSideConfig(studyLanguage, nativeLanguage)` made the 31-file
-  change tractable by turning 42 reads into compiler errors. Cards carry **both**
-  slots, so switching native language switches existing cards and no migration was
-  needed. Two one-off scripts in `apps/web/scripts/` were applied to production
-  (backfill 355 cards, dedupe 71).
-- **Japanese & Chinese depth** (#49, 07-25) — pronunciation for four more
-  languages; per-language character breakdown (`TermDepth.hanja` →
-  `characterBreakdown`, read through a helper that falls back, so no migration);
-  kana packs generated from one table in `kana.ts`.
-
-**Privacy & account**
-- **Account deletion + "your data"** (#59, 07-27) — App Store 5.1.1(v) makes this
-  a submission blocker, not hygiene. Client `deleteUser()` plus the Delete User
-  Data extension: no API route, no `firebase-admin`. **Second attempt** — PR #55
-  did it server-side and adding `firebase-admin/auth` took `/api/pronounce` and
-  `/api/word-of-the-day` down with it; **root cause never found**, and the current
-  design simply doesn't need that module. Requires a console step (see
-  [tech-stack.md](tech-stack.md)). Pronunciation audio is deliberately kept —
-  it's keyed by text hash and shared. Verified end to end on both platforms.
-
-**iOS & mobile parity**
-- **TestFlight prep** (#38, 07-19), **EAS OTA automation** (#39–41, 07-21),
-  **channel fix** (#43, 07-21), **Korean beta info + `/privacy/ko`** (#42, 07-21),
-  **theme parity** (#44, 07-22).
-- **Mobile ↔ web parity** (4 phases, 07-21) — study languages across all screens,
-  Learn features, Cards import/export + detail modal, streaming depth/examples.
-- **Push entitlement dropped** (#63, 07-27) — the 1.1.0 build failed on a Push
-  Notifications capability the app has no use for; `expo-notifications` sets
-  `aps-environment` unconditionally. `withoutPushEntitlement.js` deletes it.
-  **Registration order is the subtle part** — the plugin must be listed *first* to
-  have the last word. See [lessons.md](lessons.md).
-
-**Learn screen**
-- **Part of speech on cards, both platforms** (#88, 08-11) — a card said what a
-  word means and how formal it is, but not what it *is*. `partOfSpeech` on
-  `TermCore`, stored as a **code** from a closed language-generic list of 15 and
-  rendered through `partOfSpeechLabel(nativeLanguage, card)`, so switching native
-  language re-labels every existing card with no migration. It describes the
-  study-language word, not what was typed. Twelve prompt templates gained a rule
-  line each; both generating routes normalize the answer and drop anything
-  unlisted. No backfill, and the word of the day lags a day because its document
-  is written once per date. The reversal of the item's own English-only decision
-  is in Decisions above.
-- **Spellcheck on lookup, both platforms** (#87, 08-10) — a misspelled term used
-  to go straight to `/api/explain`, which explained the non-word confidently;
-  save it and the typo was a card. The correction now rides the same call as a
-  `corrected` field, and both Learn screens show "Showing results for X" with
-  "Search instead for *what you typed*" beside it. `applySpellingCorrection`
-  relabels the result and strips the field before anything saves it; `exact`
-  suppresses the rule for the override and for bulk import. The design calls,
-  and the refusal set to re-probe before touching the prompt, are in Decisions.
-- **Skeletons for the three worst spinners** (#80, 08-04) — the full-screen one a
-  cold launch opened on (`authLoading`, first impression, nothing on it), plus
-  the card and review lists. Each is laid out as the surface that replaces it, so
-  the load resolves into position instead of swapping a centred wheel for a full
-  screen. The cold-launch one is text-free for a second reason: `nativeLanguage`
-  is still undefined there, so any label would render in English and correct
-  itself a beat later. `Skeleton.tsx` drives every bar from **one** shared
-  `Animated.Value` — per-bar loops drift apart within seconds — stops it when the
-  last bar unmounts, and honours Reduce Motion. In-button spinners left alone.
-- **Keyboard + generate link** (#60, 07-27) — the search bar now sits above a band
-  held open at 46% of screen height, so the field doesn't move on focus. 46% is
-  *tuned, not measured*: measuring means reacting, and reacting means movement.
-  Removed the "generate words for a goal" link from both platforms.
-- **A second Learn tab tap clears the search** (#66, 07-28) — the screen had no way
-  back. Arriving from another tab is left alone. Clearing exposed a race: a `runId`
-  ref now marks the lookup on screen so async writers can check it.
-- **Empty state + WOTD skeleton** (07-24) and **depth/examples sense pinning**
-  (#35, 07-14); **WOTD persisted in Firestore** (#37) so the word is stable
-  regardless of cache; **WOTD repeats fixed** (#47, 07-24) by excluding the last 60
-  days by document ID.
-
-**Foundation**
-- Core loop (lookup → Gemini → save → bidirectional SM-2), Firebase Auth +
-  Firestore + rules, Gemini proxied server-side, Next.js 16.2.7 on Vercel.
-- Cards page (search, filter, sort, detail modal, bulk actions, CSV + Anki export,
-  import), streaks, NDJSON streaming with typewriter, Firestore IndexedDB cache.
-- Design system — Forest/Sonokai/Paper/System themes, Source Code Pro, localized
-  UI (EN + KO), desktop side nav, pre-paint theme script.
-- **Pronunciation audio** (07-11) — Google Cloud TTS, lazy-generated, cached in
-  Firebase Storage keyed by text+language+voice+rate.
-
-**Tooling**
-- **Test suite green** (07-26) — the two stale review tests are gone. One was
-  scoped as "delete line 150", which was wrong: that line masked a **date bug in
-  the same test** that would have started failing on its own on 25 July. A test
-  failing for the stated reason doesn't mean that's the only reason it fails.
-- **`npm run lint` works again** (07-26) — `next lint` was removed in Next 16.
-  `eslint-config-next@16` **is** flat config, so the `FlatCompat` wrapper fails on
-  it. Running eslint directly doesn't ignore build output implicitly, and `.next/`
-  buried 90 real findings under 25,000 generated ones — the ignores are
-  load-bearing. 24 real errors fixed.
