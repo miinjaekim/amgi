@@ -2,7 +2,7 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { auth, googleProvider } from '@/config/firebase';
 import { signInWithPopup, signOut, onAuthStateChanged, User } from 'firebase/auth';
-import { getUserPreferences, saveUserPreferences } from '@/services/userPreferences';
+import { getUserPreferences, recordReviewStreak, saveUserPreferences, subscribeToUserPreferences } from '@/services/userPreferences';
 import { recordProgress } from '@/services/progress';
 import { isStudyLanguage, resolveNativeLanguage, resolveStudyLanguage, reviewDelta, type ReviewVerdict, type StudyLanguage } from '@amgi/core';
 
@@ -35,8 +35,6 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   const [nativeLanguage, setNativeLanguageState] = useState<string | null | undefined>(undefined);
   const [studyLanguage, setStudyLanguageState] = useState<StudyLanguage>('Korean');
   const [streak, setStreak] = useState(0);
-  const [longestStreak, setLongestStreak] = useState(0);
-  const [lastReviewDate, setLastReviewDate] = useState<string | null>(null);
   const [reviewedToday, setReviewedToday] = useState(0);
 
   useEffect(() => {
@@ -82,11 +80,8 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
           }).catch(() => { /* Asked again next visit; harmless. */ });
         }
 
-        const today = getTodayString();
-        setStreak(prefs?.streak ?? 0);
-        setLongestStreak(prefs?.longestStreak ?? 0);
-        setLastReviewDate(prefs?.lastReviewDate ?? null);
-        setReviewedToday(prefs?.lastReviewDate === today ? (prefs?.reviewedToday ?? 0) : 0);
+        // The streak fields are *not* seeded here — the subscription below owns
+        // them, and seeding would only race it to set the same values.
       } else {
         const cached = localStorage.getItem(LANG_CACHE_KEY);
         if (cached) {
@@ -99,14 +94,39 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
           setStudyLanguageState(cachedStudy);
         }
         setStreak(0);
-        setLongestStreak(0);
-        setLastReviewDate(null);
         setReviewedToday(0);
       }
       setAuthLoading(false);
     });
     return () => unsubscribe();
   }, []);
+
+  /**
+   * The streak, read live rather than counted locally.
+   *
+   * This is the whole point of the change: the four streak fields used to be
+   * read once at sign-in and thereafter only written, so a second tab or a
+   * second device disagreed and nothing ever noticed. Now the document is the
+   * only copy, and every writer's result arrives here.
+   *
+   * `reviewedToday` is zeroed when the stored date isn't today — the field
+   * counts a day, and a stale one belongs to a day that is over. The rollover
+   * lands on the next review rather than at midnight, which is what the stored
+   * counter has always done.
+   */
+  useEffect(() => {
+    if (!user) return;
+    const unsubscribe = subscribeToUserPreferences(
+      user.uid,
+      prefs => {
+        const today = getTodayString();
+        setStreak(prefs?.streak ?? 0);
+        setReviewedToday(prefs?.lastReviewDate === today ? (prefs?.reviewedToday ?? 0) : 0);
+      },
+      error => console.error('[UserContext] preferences subscription failed:', error),
+    );
+    return unsubscribe;
+  }, [user]);
 
   const setNativeLanguage = async (lang: string) => {
     setNativeLanguageState(lang);
@@ -164,26 +184,11 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     yesterday.setDate(yesterday.getDate() - 1);
     const yesterdayStr = yesterday.toLocaleDateString('en-CA');
 
-    let newStreak = streak;
-    let newLongest = longestStreak;
-    const newReviewedToday = reviewedToday + 1;
-
-    if (lastReviewDate !== today) {
-      newStreak = lastReviewDate === yesterdayStr ? streak + 1 : 1;
-      newLongest = Math.max(longestStreak, newStreak);
-      setStreak(newStreak);
-      setLongestStreak(newLongest);
-      setLastReviewDate(today);
-    }
-
-    setReviewedToday(newReviewedToday);
-
-    saveUserPreferences(user.uid, {
-      streak: newStreak,
-      longestStreak: newLongest,
-      lastReviewDate: today,
-      reviewedToday: newReviewedToday,
-    }).catch(() => {});
+    // No local increment. The transaction computes from what the server holds
+    // and the subscription brings the result back, so the number on screen is
+    // the number in the document — including whatever another tab just wrote.
+    // Fire-and-forget for the same reason as the rollup above.
+    recordReviewStreak(user.uid, today, yesterdayStr).catch(() => {});
   };
 
   const handleSignIn = async () => {

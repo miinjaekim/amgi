@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useUser } from '@/components/UserContext';
-import { fetchAllUserFlashcards } from '@/services/firestore';
+import { subscribeToAllUserFlashcards } from '@/services/firestore';
 import {
   collectSavedTerms,
   countSavedPackTerms,
@@ -18,13 +18,16 @@ export default function DecksPage() {
   const packs = getVocabPacks(studyLanguage);
   const [savedTerms, setSavedTerms] = useState<Set<string> | null>(null);
 
+  // Live, so enrolling from a pack detail page or saving from Learn updates the
+  // per-deck progress here without a revisit.
   useEffect(() => {
     if (!user) { setSavedTerms(null); return; }
-    let cancelled = false;
-    fetchAllUserFlashcards(user.uid, studyLanguage)
-      .then(cards => { if (!cancelled) setSavedTerms(collectSavedTerms(cards)); })
-      .catch(() => {}); // progress is a nicety — browsing still works
-    return () => { cancelled = true; };
+    return subscribeToAllUserFlashcards(
+      user.uid,
+      studyLanguage,
+      cards => setSavedTerms(collectSavedTerms(cards)),
+      () => {}, // progress is a nicety — browsing still works
+    );
   }, [user, studyLanguage]);
 
   return (

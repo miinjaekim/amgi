@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useUser } from '@/components/UserContext';
 import {
-  fetchAllUserFlashcards,
+  subscribeToAllUserFlashcards,
   archiveFlashcard,
   restoreFlashcard,
   deleteFlashcard,
@@ -70,18 +70,19 @@ export default function CardsPage() {
   // is the deck chips below: a dimension you can widen or narrow, rather than a
   // decision taken before the data arrives. Review is unaffected — it filters
   // by collection itself.
-  const loadCards = (uid: string) => {
-    setLoading(true);
-    fetchAllUserFlashcards(uid, studyLanguage)
-      .then(setAllCards)
-      .catch(() => setAllCards([]))
-      .finally(() => setLoading(false));
-  };
-
+  // Live, not fetched-on-mount. A card saved from Learn, archived during
+  // review, or edited on another tab lands here without this screen being told
+  // to go and look — which is what it had no way of being.
   useEffect(() => {
     if (!user) { setAllCards([]); return; }
-    loadCards(user.uid);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    setLoading(true);
+    const unsubscribe = subscribeToAllUserFlashcards(
+      user.uid,
+      studyLanguage,
+      cards => { setAllCards(cards); setLoading(false); },
+      () => { setAllCards([]); setLoading(false); },
+    );
+    return unsubscribe;
   }, [user, studyLanguage]);
 
   // The chips to offer and which one is lit. `deckKey` is validated against the
@@ -300,7 +301,7 @@ export default function CardsPage() {
 
   const handleImportSaved = async (count: number) => {
     setShowImport(false);
-    if (user) loadCards(user.uid);
+    // No reload: the imported cards arrive on the subscription.
     setImportSuccess(t(nativeLanguage, count === 1 ? 'importSavedToastOne' : 'importSavedToast', { count }));
     setTimeout(() => setImportSuccess(null), 4000);
   };
@@ -670,9 +671,8 @@ export default function CardsPage() {
           studyLanguage={studyLanguage}
           nativeLanguage={nativeLanguage}
           onClose={() => setDetailCard(null)}
-          // The modal can now write — enrichment, an edited back, archive,
-          // delete — so this list has to hear about it.
-          onChanged={() => user && loadCards(user.uid)}
+          // No `onChanged`: the modal's writes — enrichment, an edited back,
+          // archive, delete — reach this list on the subscription now.
         />
       )}
     </div>

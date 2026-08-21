@@ -1,5 +1,5 @@
 import { db } from '@/config/firebase';
-import { collection, addDoc, Timestamp, query, where, orderBy, getDocs, getCountFromServer, doc, updateDoc, deleteDoc, writeBatch } from 'firebase/firestore';
+import { collection, addDoc, Timestamp, query, where, orderBy, getDocs, getCountFromServer, onSnapshot, doc, updateDoc, deleteDoc, writeBatch } from 'firebase/firestore';
 import type { DocumentData, QueryDocumentSnapshot } from 'firebase/firestore';
 import { getStudyLanguageConfig } from '@amgi/core';
 import { recordNewCards } from './progress';
@@ -122,17 +122,32 @@ function mapDocToFlashcard(
   };
 }
 
+/**
+ * The two card queries, built once so the one-shot read and the subscription
+ * can never drift apart. Before this they were written out twice each, which
+ * is how the same question ends up with two answers.
+ */
+function activeCardsQuery(uid: string, studyLanguage?: StudyLanguage) {
+  return query(
+    collection(db, getCardsCollection(studyLanguage)),
+    where('uid', '==', uid),
+    where('archived', '!=', true),
+    orderBy('archived'),
+    orderBy('createdAt', 'desc')
+  );
+}
+
+function allCardsQuery(uid: string, studyLanguage?: StudyLanguage) {
+  return query(
+    collection(db, getCardsCollection(studyLanguage)),
+    where('uid', '==', uid),
+    orderBy('createdAt', 'desc')
+  );
+}
+
 export async function fetchUserFlashcards(uid: string, studyLanguage?: StudyLanguage): Promise<Flashcard[]> {
-  const collectionName = getCardsCollection(studyLanguage);
   try {
-    const q = query(
-      collection(db, collectionName),
-      where('uid', '==', uid),
-      where('archived', '!=', true),
-      orderBy('archived'),
-      orderBy('createdAt', 'desc')
-    );
-    const snapshot = await getDocs(q);
+    const snapshot = await getDocs(activeCardsQuery(uid, studyLanguage));
     return snapshot.docs.map(d => mapDocToFlashcard(d, studyLanguage));
   } catch (error) {
     console.error('[Firestore] Error in fetchUserFlashcards:', error);
@@ -150,19 +165,55 @@ export async function countUserFlashcards(uid: string, studyLanguage?: StudyLang
 }
 
 export async function fetchAllUserFlashcards(uid: string, studyLanguage?: StudyLanguage): Promise<Flashcard[]> {
-  const collectionName = getCardsCollection(studyLanguage);
   try {
-    const q = query(
-      collection(db, collectionName),
-      where('uid', '==', uid),
-      orderBy('createdAt', 'desc')
-    );
-    const snapshot = await getDocs(q);
+    const snapshot = await getDocs(allCardsQuery(uid, studyLanguage));
     return snapshot.docs.map(d => mapDocToFlashcard(d, studyLanguage));
   } catch (error) {
     console.error('[Firestore] Error in fetchAllUserFlashcards:', error);
     throw error;
   }
+}
+
+/**
+ * Every card for this language, and every later change to any of them.
+ *
+ * The subscription replaces "fetch on mount and hope nothing moves": a card
+ * saved from the Learn page, archived from Cards, or edited mid-review reaches
+ * every mounted surface without any of them being told to go and look. That
+ * telling is what the old code could not do, and what the discrepancies were.
+ *
+ * Cheaper than what it replaces, not dearer. Firestore bills a listener for
+ * the documents in its *first* snapshot and then only for documents that
+ * actually change, so an idle listener costs nothing — where the previous
+ * pattern re-read the whole collection on every mount of all three surfaces.
+ *
+ * Returns the unsubscribe function.
+ */
+export function subscribeToAllUserFlashcards(
+  uid: string,
+  studyLanguage: StudyLanguage | undefined,
+  onChange: (cards: Flashcard[]) => void,
+  onError: (error: Error) => void,
+): () => void {
+  return onSnapshot(
+    allCardsQuery(uid, studyLanguage),
+    snapshot => onChange(snapshot.docs.map(d => mapDocToFlashcard(d, studyLanguage))),
+    onError,
+  );
+}
+
+/** As above, but excluding archived cards — what review counts. */
+export function subscribeToUserFlashcards(
+  uid: string,
+  studyLanguage: StudyLanguage | undefined,
+  onChange: (cards: Flashcard[]) => void,
+  onError: (error: Error) => void,
+): () => void {
+  return onSnapshot(
+    activeCardsQuery(uid, studyLanguage),
+    snapshot => onChange(snapshot.docs.map(d => mapDocToFlashcard(d, studyLanguage))),
+    onError,
+  );
 }
 
 export async function fetchArchivedFlashcards(uid: string, studyLanguage?: StudyLanguage): Promise<Flashcard[]> {

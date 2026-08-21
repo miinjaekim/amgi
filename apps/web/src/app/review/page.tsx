@@ -2,7 +2,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useUser } from '@/components/UserContext';
-import { fetchUserFlashcards, getCardsCollection, Flashcard, migrateExistingCards, archiveFlashcard, deleteFlashcard } from '@/services/firestore';
+import { subscribeToUserFlashcards, getCardsCollection, Flashcard, migrateExistingCards, archiveFlashcard, deleteFlashcard } from '@/services/firestore';
 import {
   DIRECTION_FILTERS,
   buildReviewCollections,
@@ -141,30 +141,64 @@ export default function ReviewPage() {
     setNextReviewDate(dueCards.length === 0 ? getNextReviewDate(collectionCards) : null);
   }, [collectionCards, dueCards]);
 
-  const loadCards = async (forceMigration = false) => {
-    if (!user) return;
-
-    setFlashcardsLoading(true);
-    try {
-      if (forceMigration || !migrationComplete) {
-        const count = await migrateExistingCards(user.uid);
-        console.log(`Migrated/updated ${count} cards to bidirectional tracking`);
-        setMigrationComplete(true);
-      }
-
-      setUserFlashcards(await fetchUserFlashcards(user.uid, studyLanguage));
-    } catch (error) {
-      console.error('Error during migration or fetching cards:', error);
-      setUserFlashcards([]);
-    } finally {
-      setFlashcardsLoading(false);
-      setIsSyncing(false);
-    }
+  /**
+   * The legacy migration, which is genuinely one-shot — it repairs documents
+   * rather than reading them, so it has no business being a subscription and
+   * runs once per signed-in user.
+   */
+  const runMigration = async (uid: string) => {
+    const count = await migrateExistingCards(uid);
+    console.log(`Migrated/updated ${count} cards to bidirectional tracking`);
+    setMigrationComplete(true);
   };
 
+  useEffect(() => {
+    if (!user || migrationComplete) return;
+    runMigration(user.uid).catch(error => {
+      console.error('Error during migration:', error);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, migrationComplete]);
+
+  /**
+   * The card list, live.
+   *
+   * Safe to update mid-session: `activeQueue` is built once by
+   * `handleStartReview` and held in its own state, so a snapshot arriving now
+   * refreshes the counts and the collection list *behind* the session without
+   * reshuffling the queue being worked through. The rating just written comes
+   * back on this same subscription, which is what removes the need to mirror it
+   * into `userFlashcards` by hand.
+   */
+  useEffect(() => {
+    if (!user) { setUserFlashcards([]); return; }
+    setFlashcardsLoading(true);
+    const unsubscribe = subscribeToUserFlashcards(
+      user.uid,
+      studyLanguage,
+      cards => { setUserFlashcards(cards); setFlashcardsLoading(false); setIsSyncing(false); },
+      error => {
+        console.error('Error subscribing to cards:', error);
+        setUserFlashcards([]);
+        setFlashcardsLoading(false);
+        setIsSyncing(false);
+      },
+    );
+    return unsubscribe;
+  }, [user, studyLanguage]);
+
+  // "Force synchronize" now only has the migration left to force — the card
+  // list is already live.
   const handleForceSynchronize = async () => {
+    if (!user) return;
     setIsSyncing(true);
-    await loadCards(true);
+    try {
+      await runMigration(user.uid);
+    } catch (error) {
+      console.error('Error during migration:', error);
+    } finally {
+      setIsSyncing(false);
+    }
   };
 
   const handleStartReview = () => {
@@ -250,7 +284,7 @@ export default function ReviewPage() {
     setShowManage(false);
     setManageEditDraft(null);
     setManageStatus(null);
-    loadCards();
+    // No reload: the subscription has been delivering throughout the session.
   };
 
   const getStudySide = (card: Flashcard) =>
