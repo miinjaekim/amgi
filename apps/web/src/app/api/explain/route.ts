@@ -229,6 +229,72 @@ IMPORTANT for the non-ambiguous case:
 - "gender": if the French term is a noun, set to "le" or "la". Otherwise set to null.${posRule}
 - "briefDefinition" must be a single sentence defining the core meaning. No examples, no cultural context.`;
     }
+  } else if (studyLanguage === 'Spanish') {
+    // Spanish: termLanguage is set by Gemini (Latin script — can't detect client-side)
+    if (context) {
+      prompt = `Provide a concise translation for the Spanish/English term "${term}" with this context: "${context}".
+
+Determine whether "${term}" is Spanish or English and set "termLanguage" accordingly.
+
+IMPORTANT:
+- "spanish" must always be the Spanish word or phrase written in Spanish
+- "english" must always be the English word or phrase written in English${nativeBackRule}
+- Both fields should use the single best translation. Only use 2-3 words if one word is genuinely insufficient. Never list synonyms with semicolons or slashes.
+- "gender": if the Spanish term is a noun, set to "el" or "la". Otherwise set to null.${posRule}
+- "briefDefinition": a single clear sentence defining the term in ${nativeLanguage}.
+
+Respond with only this JSON:
+{
+  "term": "${term}",
+  "termLanguage": "Spanish or English",
+  "spanish": "Spanish word/phrase",
+  "english": "English word/phrase",${nativeBackJson}
+  "gender": "el" | "la" | null,${posJson}
+  "briefDefinition": "one-sentence definition"
+}`;
+    } else {
+      prompt = `You are a language learning assistant for Spanish-English learners.
+
+Given the term "${term}", determine whether it is Spanish or English, then check if it has multiple significantly different meanings.
+
+A term is ambiguous when it has 2 or more distinct common meanings that would confuse a language learner.
+
+A term is NOT ambiguous when:
+- It has one clear primary meaning
+- Secondary meanings are rare or archaic
+- The meanings are closely related variants of the same concept
+
+${spellBlock}
+If AMBIGUOUS, respond with only this JSON:
+{
+  "ambiguous": true,
+  "term": "${term}",${spellJson}
+  "termLanguage": "Spanish or English",
+  "meanings": [
+    { "label": "short label (3-6 words max)", "hint": "one sentence clarifying this meaning" },
+    { "label": "...", "hint": "..." }
+  ]
+}
+
+Every "label" and "hint" must be written in ${nativeLanguage} — the user may not understand any other language.
+
+If NOT ambiguous, respond with only this JSON:
+{
+  "term": "${term}",${spellJson}
+  "termLanguage": "Spanish or English",
+  "spanish": "Spanish word/phrase",
+  "english": "English word/phrase",${nativeBackJson}
+  "gender": "el" | "la" | null,${posJson}
+  "briefDefinition": "one-sentence definition in ${nativeLanguage}"
+}
+
+IMPORTANT for the non-ambiguous case:
+- "spanish" must always be written in Spanish
+- "english" must always be written in English${nativeBackRule}
+- Both should be the single best translation. Never list synonyms with semicolons or slashes.
+- "gender": if the Spanish term is a noun, set to "el" or "la". Otherwise set to null.${posRule}
+- "briefDefinition" must be a single sentence defining the core meaning. No examples, no cultural context.`;
+    }
   } else if (studyLanguage === 'Japanese') {
     // Japanese: kana/kanji are script-detectable
     const termLanguage = detectJapanese(term) ? 'Japanese' : 'English';

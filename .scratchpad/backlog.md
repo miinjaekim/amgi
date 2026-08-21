@@ -124,21 +124,6 @@ _A version bump queues another Beta App Review; 1.3.0's external approval covers
 
 ## Medium
 
-- [ ] **Add Spanish** — a seventh study language. Latin script, so it follows the
-      Swedish/French path: `/api/explain` needs the two-template branch that has
-      Gemini set `termLanguage` itself, because script detection can't do it
-      client-side (`api/explain/route.ts:100` Swedish, `:166` French). `gender`
-      already exists as a per-language string, so `el`/`la` needs no new field.
-      The rest is the known checklist, ~32 non-test references to `Swedish` as
-      the map: a `STUDY_LANGUAGE_CONFIGS` entry with `collection:
-      'cards_spanish'` and an `es-ES` Chirp3 voice (`types.ts:92`),
-      `labelSpanish` in both i18n locales, `EXAMPLE_TERMS` on web and mobile
-      home, and the `word-of-the-day` branch.
-      **Two steps are outside the codebase and nothing in CI catches either:**
-      Firestore security rules are per-collection with no wildcards, and the
-      `archived + createdAt` composite index has to exist for `cards_spanish` or
-      every review query on it fails. Both are in [lessons.md](lessons.md).
-
 - [ ] **Word learning surface — meet a word before it's due.** A new card is
       immediately due in *both* directions (`isDue` returns both when neither is
       tracked, `sm2.ts:23`), so a word goes from saved to graded review with no

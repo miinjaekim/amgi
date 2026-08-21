@@ -35,6 +35,17 @@ _Reconciled against `main` @ `bc8cb97`, 2026-08-21. `npm test` 246/246, measured
   per day could be reconstructed from `createdAt`; review history cannot be
   reconstructed from anything. So the calendar is near-empty for weeks by
   construction — expected, not a bug, and the empty state says so.
+- **Spanish is live on web** (2026-08-22). Registry entry, prompt branch, i18n
+  and example terms merged; lookup verified against the live API in both
+  directions. `cards_spanish`'s security rule and **both** composite indexes are
+  in the console, and `/cards` and `/review` load clean against them. Mobile has
+  the code but reaches users only through a build, and nothing has been cut since
+  1.3.0 — see Builds.
+  The rule uses the explicit `read, update, delete` + `create` form that `cards`
+  and `cards_chinese_traditional` use, not the `read, write` form the middle four
+  collections drifted into. Both work; only one says what it means. Why, and why
+  a new collection needs two indexes rather than one, are in
+  [lessons.md](lessons.md).
 - **Grammar and writing were removed from the app** (2026-08-18), but
   `/api/writing` and `/api/grammar/exercise` stay deployed because 1.3.0's binary
   still calls them. See Decisions for the one condition that lets them go.
@@ -100,6 +111,27 @@ enough hands to close it without a dedicated session.
 
 Closed calls, kept with their reasoning — a decision whose reasoning is lost gets
 reopened by the next person to notice the symptom. Newest first.
+
+### Spanish is European Spanish, and that is a deck not a setting (2026-08-21)
+
+The registry needs a locale and a voice, and Spanish is the first language added
+where the obvious choice is genuinely contested: `es-ES` against `es-US`, where
+the Latin American varieties have the larger audience and differ well past the
+accent — `coche`/`carro`, `vosotros`, `ordenador`/`computadora`.
+
+**Went with `es-ES`/`es-ES-Chirp3-HD-Charon`**, on consistency with how `fr-FR`
+and `sv-SE` were already chosen: one registry entry names one variety and speaks
+it. The alternative was never "support both" — it was a preference toggle, and
+that is the design the file header already rejects for Traditional vs Simplified
+Chinese. If Latin American Spanish is ever wanted it is **its own entry with its
+own collection**, so neither deck constrains the other and a learner's cards
+never silently change which Spanish they teach. The comment on the entry says so,
+because the cheap-looking fix is to add an accent setting.
+
+Worth knowing: the voice was **verified against the live TTS API**, listed and
+synthesized, rather than assumed from the naming pattern. A wrong voice name is a
+runtime 400 on the pronounce path that no build or test would catch — the same
+class of gap as the two console steps this language is still blocked on.
 
 ### Progress is a daily rollup, and the streak stays where it is (2026-08-19)
 

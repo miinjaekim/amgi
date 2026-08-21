@@ -48,6 +48,11 @@ describe('getBackSideConfig', () => {
       Japanese: 'english',
       TraditionalChinese: 'english',
       English: 'korean',
+      // Registered after the table was replaced, so this line extends it rather
+      // than reproducing it — there are no pre-rule Spanish cards to protect.
+      // It stays listed so the loop below is exhaustive over the registry: a
+      // language added with no entry here fails rather than being skipped.
+      Spanish: 'english',
     };
     for (const { code } of SUPPORTED_STUDY_LANGUAGES) {
       expect(getBackSideConfig(code, 'English').backField, code).toBe(expected[code]);
