@@ -9,6 +9,9 @@ this is the scoped version of it.
 **Mobile ships by build — no OTA.** Iterate in Expo Go (`npx expo start`), cut a
 production build when a batch is worth a release. Once one native module is in a
 build, a second rides along free rather than costing a build of its own.
+**Android auth work is the exception**: it cannot run in Expo Go, so it needs a
+development build — and Android release builds face no review, so a fix there
+costs ~20 minutes rather than an App Review cycle.
 
 ---
 
@@ -57,47 +60,28 @@ _A version bump queues another Beta App Review; 1.3.0's external approval covers
 
 ## High
 
-- [ ] **Android, as a sideloadable APK.** The build is one command —
-      `eas build --platform android --profile preview`, which already yields an
-      APK rather than an AAB because that profile is `distribution: internal`,
-      and EAS hands back an install URL and a QR code. **The build is not the
-      work.** The app has never been configured for Android at all, and one of
-      the gaps is fatal rather than cosmetic:
-      - **Google sign-in throws on Android, so nothing behind it is reachable.**
-        `expo-auth-session`'s Google provider picks its client id by platform and
-        *invariants* when the running platform's id is missing
-        (`Platform.select` in `providers/Google.js`); `UserContext.tsx:106`
-        passes `webClientId` and `iosClientId` only. `UserContext.tsx:57-61` then
-        gates the reversed-client-id redirect on `Platform.OS === 'ios'`, so
-        Android needs both an id and its own redirect. Two small edits — the
-        credential behind them is the slow part.
-      - **That credential has a chicken-and-egg order.** An Android OAuth client
-        is keyed to *package name + SHA-1 of the signing certificate*, and the
-        certificate is the keystore EAS generates on the first Android build.
-        So: set `android.package` → let EAS create the keystore (`eas
-        credentials`) → read the SHA-1 → create the Android client in Google
-        Cloud → put `EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID` in the **EAS
-        production environment**, not `.env.local` → then build for real. Let
-        EAS hold the keystore; losing it means a new SHA-1 and a re-registered
-        client.
-      - **`app.json` has no `android` block.** `package` is permanent — it is
-        baked into the OAuth client and into any future Play listing — so pick it
-        deliberately instead of taking the derived default. `assets/` has only
-        `icon.png` and no adaptive-icon foreground.
-      - **An APK has no update path at all** — worse than TestFlight, which at
-        least notifies. Every Android release is a fresh link and a manual
-        re-install, and testers meet "install from unknown sources" and a Play
-        Protect warning on the way in. That is the price of skipping the $25 Play
-        account and its review, and **Play internal testing is the deferred
-        decision here, not the rejected one** — revisit it once there are enough
-        Android testers that re-sending links hurts.
-      - **Nothing in this app has ever run on Android.** The verify-on-the-binary
-        list above is an iOS list; on Android every path in it — audio, CSV/Anki
-        export, sharing, offline across a force-kill, account deletion, reminders
-        — is unverified from zero. Two Android-only additions: notifications need
-        the runtime `POST_NOTIFICATIONS` grant on Android 13+, and
-        `reminders.ts` creates no notification channel, so reminders land in
-        Android's default "Miscellaneous" channel.
+- [ ] **Android follow-ups.** The APK ships and Google sign-in works on a real
+      device; what shipped is in git and the reasoning is in
+      [status.md](status.md). What is left:
+      - **Nothing but sign-in has been exercised on Android.** Audio, CSV/Anki
+        export, sharing, offline review across a force-kill, account deletion,
+        and reminders are all unverified there from zero — the verify-on-binary
+        list above is an iOS list. Two Android-only ones: notifications need the
+        runtime `POST_NOTIFICATIONS` grant on 13+, and `reminders.ts` creates no
+        channel, so reminders land in Android's default "Miscellaneous".
+      - **Custom URI schemes are borrowed time.** Sign-in works via a toggle
+        Google describes as temporary, and it recommends Google Identity
+        Services instead. Migrating means `@react-native-google-signin`, which
+        **breaks Expo Go on both platforms** — so it is a real decision, not a
+        chore. Not urgent while the toggle holds.
+      - **`app.json` lists `com.miinjaekim.amgi` as a scheme redundantly** —
+        Expo already registers the package name (`getNativeAppIdScheme`), so it
+        appears twice and Linking warns about ambiguous schemes. Cosmetic, but
+        removing it is untested: that array is what generates the working intent
+        filter, so verify the redirect still routes before believing it.
+      - **The OAuth consent screen says "Amgi AI", not Amgi.** Console-side, no
+        build needed — and it is shown to **iOS and web users too**, so this is
+        not an Android item except that Android is where it was noticed.
 
 - [ ] **English vocabulary packs — daily life and idioms.** Two packs, both
       English, sitting under the same pack rules as the rest (audience is not
