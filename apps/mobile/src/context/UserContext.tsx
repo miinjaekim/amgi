@@ -412,7 +412,24 @@ export function UserProvider({ children }: { children: ReactNode }) {
   };
 
   const handleSignIn = async () => {
-    await promptAsync();
+  /**
+   * `showInRecents` is the Android workaround, not a preference.
+   *
+   * Android has no native AuthSession, so `expo-web-browser` polyfills one by
+   * racing "the browser closed" against "the redirect arrived" — and the
+   * redirect is *what closes the browser*, so both fire from one event. When
+   * the browser-closed side wins, this resolves `dismiss`, the redirect
+   * listener is torn down in a `finally`, and the authorization code is
+   * dropped with nothing logged (expo/expo#23781). Keeping the tab in recents
+   * changes how it is torn down and lets the redirect land first.
+   *
+   * It cannot be verified in a development build: debug timing does not lose
+   * the race, which is why sign-in passed there against the same code that
+   * failed on a release APK. Only a release build proves this.
+   *
+   * No-op on iOS, which has a real native implementation and never races.
+   */
+    await promptAsync({ showInRecents: true });
   };
 
   /**
@@ -437,7 +454,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
       if ((error as { code?: string }).code !== 'auth/requires-recent-login') throw error;
     }
 
-    const result = await promptAsync();
+    const result = await promptAsync({ showInRecents: true });
     handledResponse.current = result;
     if (result?.type !== 'success' || !result.params?.id_token) {
       throw new Error('Reauthentication cancelled.');
