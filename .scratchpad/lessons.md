@@ -147,15 +147,35 @@ Gotchas already paid for. Grouped so you can skim the relevant section.
 - **A new cards collection needs _two_ composite indexes, and the console link
   only builds the one that failed.** Measured adding Spanish (2026-08-22), where
   the backlog item had said "the composite index", singular:
-  - `uid` ASC, `archived` ASC, `createdAt` DESC — `fetchUserFlashcards` (the
-    main cards/review query) and `fetchArchivedFlashcards`
-  - `uid` ASC, `createdAt` DESC — `fetchAllUserFlashcards`, used by export and
-    by mobile's card list
+  - `uid` ASC, `archived` ASC, `createdAt` DESC — `activeCardsQuery`, so
+    `subscribeToUserFlashcards` / `fetchUserFlashcards` (**`/review`**, both
+    platforms) and `fetchArchivedFlashcards`
+  - `uid` ASC, `createdAt` DESC — `allCardsQuery`, so
+    `subscribeToAllUserFlashcards` / `fetchAllUserFlashcards` (**`/cards` and
+    the decks pages**, both platforms, and export)
 
   Both platforms issue the same shapes. The trap is that clicking the link in
-  the first error makes the deck look finished — the second index isn't reached
-  until someone exports, so it fails later and somewhere unrelated. Create both
-  up front; the second link comes out of the browser console the same way.
+  the first error makes the deck look finished, because the two surfaces you
+  check first need *different* indexes: `/review` comes back to life and
+  `/cards` is still broken.
+
+  **`/cards` is where the second one bites — not export**, which is what this
+  lesson said until Kikuyu (2026-08-22) proved otherwise by failing there
+  immediately. Export was the wrong landmark: it made the gap sound remote when
+  it is one nav click away.
+
+  **And on web that failure had no error and no link.** `/cards` subscribes, and
+  its `onError` used to discard the error — Firestore only logs a
+  snapshot-listener error itself when *no* handler is supplied, so an empty
+  handler is quieter than none. What you get instead is the saved card
+  appearing for a second, served out of the IndexedDB cache, and then vanishing
+  under "no cards saved". Fixed in `cards/page.tsx` so the link reaches the
+  console, but the shape is worth recognising: **a card that flashes and
+  disappears is a failing query, not a failing write.**
+
+  Create both up front. If a link never arrives, build the second by hand —
+  Indexes → Composite, collection `cards_<lang>`, `uid` ASC then `createdAt`
+  DESC, scope Collection.
 - **Two rule shapes are in use for card collections, and only one says what it
   means.** `cards` and `cards_chinese_traditional` use explicit
   `read, update, delete` + a separate `create`. The middle four (`cards_swedish`,
