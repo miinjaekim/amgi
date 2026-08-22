@@ -1,6 +1,7 @@
 import {
   collection, addDoc, Timestamp, query, where, orderBy,
-  getDocs, getDocsFromServer, doc, updateDoc, deleteDoc, writeBatch,
+  getDocsFromServer, onSnapshot, doc, updateDoc, deleteDoc, writeBatch,
+  type Query,
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { getStudyLanguageConfig } from '@amgi/core';
@@ -106,10 +107,12 @@ export async function saveFlashcardsBatch(
   return flashcards.length;
 }
 
-export async function fetchAllUserFlashcards(uid: string, studyLanguage?: StudyLanguage): Promise<Flashcard[]> {
-  const q = query(collection(db, getCardsCollection(studyLanguage)), where('uid', '==', uid), orderBy('createdAt', 'desc'));
-  const snap = await getDocs(q);
-  return snap.docs.map(d => mapDoc(d, studyLanguage));
+function allCardsQuery(uid: string, studyLanguage?: StudyLanguage) {
+  return query(
+    collection(db, getCardsCollection(studyLanguage)),
+    where('uid', '==', uid),
+    orderBy('createdAt', 'desc'),
+  );
 }
 
 function activeCardsQuery(uid: string, studyLanguage?: StudyLanguage) {
@@ -122,13 +125,8 @@ function activeCardsQuery(uid: string, studyLanguage?: StudyLanguage) {
   );
 }
 
-export async function fetchUserFlashcards(uid: string, studyLanguage?: StudyLanguage): Promise<Flashcard[]> {
-  const snap = await getDocs(activeCardsQuery(uid, studyLanguage));
-  return snap.docs.map(d => mapDoc(d, studyLanguage));
-}
-
 /**
- * The same read, but it fails instead of falling back to the local cache.
+ * A one-shot read that fails instead of falling back to the local cache.
  *
  * `getDocs` offline resolves against Firestore's cache — which on React Native
  * is memory-only and usually empty — so it hands back an *empty* result rather
@@ -136,6 +134,9 @@ export async function fetchUserFlashcards(uid: string, studyLanguage?: StudyLang
  * feeding it to `writeCachedCards` would wipe a perfectly good offline snapshot
  * the moment the user opened review underground. Refreshing the snapshot must
  * therefore use a read that can actually fail.
+ *
+ * The screens all subscribe now; what is left for this is warming the snapshot
+ * of a language nobody is looking at, which has no listener to ride on.
  */
 export async function fetchUserFlashcardsFromServer(
   uid: string,
@@ -143,6 +144,77 @@ export async function fetchUserFlashcardsFromServer(
 ): Promise<Flashcard[]> {
   const snap = await getDocsFromServer(activeCardsQuery(uid, studyLanguage));
   return snap.docs.map(d => mapDoc(d, studyLanguage));
+}
+
+/** What a live card read hands back alongside the cards. */
+export interface CardSnapshotMeta {
+  /**
+   * True when Firestore answered from its own cache rather than the server.
+   * Callers that persist the result — anything touching `writeCachedCards` —
+   * must not treat a cached answer as the server's word.
+   */
+  fromCache: boolean;
+}
+
+export type CardSnapshotHandler = (cards: Flashcard[], meta: CardSnapshotMeta) => void;
+
+/**
+ * A live card query, with the one guard React Native forces on it.
+ *
+ * **An empty snapshot from the cache is dropped, not delivered.** This is the
+ * listener form of the trap `fetchUserFlashcardsFromServer` above was written
+ * to dodge: Firestore's cache here is memory-only, so before the server answers
+ * it has nothing, and "nothing" is returned as an ordinary empty result rather
+ * than an error. Delivered as-is it is indistinguishable from "this account has
+ * no cards" — it would blank the list on every cold start and, worse, overwrite
+ * a perfectly good offline snapshot with nothing.
+ *
+ * Only *empty* cached snapshots are dropped. A non-empty one is real data the
+ * server already gave us this session, and it is what makes a listener keep
+ * working after the connection goes away.
+ *
+ * The consequence to know: **offline with a cold cache, this calls nothing at
+ * all** — no data, no error, just silence, because a listener has nothing to
+ * report and no reason to fail. A caller that shows a spinner has to time out
+ * on its own; `review.tsx` is the one that does.
+ */
+function subscribeToCards(
+  cardsQuery: Query,
+  studyLanguage: StudyLanguage | undefined,
+  onChange: CardSnapshotHandler,
+  onError: (error: Error) => void,
+): () => void {
+  return onSnapshot(
+    cardsQuery,
+    snap => {
+      if (snap.empty && snap.metadata.fromCache) return;
+      onChange(
+        snap.docs.map(d => mapDoc(d, studyLanguage)),
+        { fromCache: snap.metadata.fromCache },
+      );
+    },
+    onError,
+  );
+}
+
+/** Every card for this language, archived included — what the Cards tab lists. */
+export function subscribeToAllUserFlashcards(
+  uid: string,
+  studyLanguage: StudyLanguage | undefined,
+  onChange: CardSnapshotHandler,
+  onError: (error: Error) => void,
+): () => void {
+  return subscribeToCards(allCardsQuery(uid, studyLanguage), studyLanguage, onChange, onError);
+}
+
+/** The reviewable cards — archived excluded, as review and its counts want. */
+export function subscribeToActiveUserFlashcards(
+  uid: string,
+  studyLanguage: StudyLanguage | undefined,
+  onChange: CardSnapshotHandler,
+  onError: (error: Error) => void,
+): () => void {
+  return subscribeToCards(activeCardsQuery(uid, studyLanguage), studyLanguage, onChange, onError);
 }
 
 export async function archiveFlashcard(cardId: string, studyLanguage?: StudyLanguage): Promise<void> {

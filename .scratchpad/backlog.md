@@ -57,32 +57,32 @@ _A version bump queues another Beta App Review; 1.3.0's external approval covers
 
 ## High
 
-- [ ] **Data loading and freshness — mobile half, step (2).** Step (1) — the
-      `users/{uid}` display subscription — shipped 2026-08-22; how it avoids
-      becoming a second writer is in the Decisions entry in [status.md](status.md).
+- [ ] **Data loading and freshness — mobile, watch it on a build.** Both steps
+      shipped 2026-08-22: the `users/{uid}` streak subscription, then all four
+      card surfaces. The reasoning is in the Decisions entry in
+      [status.md](status.md); read it before changing any of it.
 
-      **What is left is deliberately gated: `reloadToken` on the card surfaces
-      stays until (1) has been on a build for a release.** Not because it is
-      hard, but because the whole point of shipping (1) alone was to learn
-      whether a listener behaves on a memory-only cache before adding four more
-      — and there is **no OTA**, so a regression waits for a build *and* Beta
-      App Review. `review.tsx:117` and `cards.tsx:52` are the two.
+      **Nothing here is unbuilt — what is left is verification, and it can only
+      happen on a device.** Mobile has no test harness, so the whole change is
+      argued rather than exercised, and no OTA means a regression waits for a
+      build *and* Beta App Review. The four things to actually look at:
+      - **Review, offline, on a language this device has never loaded.** The
+        listener stays silent rather than failing, so a 10s deadline in the load
+        effect is the only thing that ends the spinner. This is the newest
+        machinery and the least like anything that was there before.
+      - **A long session's AsyncStorage writes.** Each rating echoes back as its
+        own snapshot; the offline copy is written on a 5s debounce so thirty
+        reviews do not re-serialise ~1,300 cards thirty times. Watch for jank.
+      - **Backgrounding for 30+ minutes**, then returning: a dropped listener
+        re-charges its whole result set on reattach, and that is per collection
+        now, not per user document.
+      - **Read volume generally.** Cheaper than fetch-per-focus in theory —
+        first snapshot then only changed documents — but that is the one claim
+        here that has never been measured against a bill.
 
-      The reasons mobile is not simply web-again still hold, and the burden of
-      proof is still on changing more:
-      - Its card reads feed the AsyncStorage snapshot and the
-        `applyPendingReviews` overlay. That is the offline story, not an
-        accident.
-      - `getFirestore` there is **memory-only** because the JS SDK has no
-        IndexedDB in React Native, so a listener dropped on backgrounding
-        re-charges its whole result set on reattach after 30 minutes. One user
-        document is why (1) was safe to do first; a card collection is not the
-        same bet. Web's `persistentLocalCache` has no equivalent here.
-      - The streak write stays offline-first and is **not** becoming a
-        transaction: a transaction fails offline, which is the bug the cache
-        exists to prevent.
-
-      There is no case for touching the pending-review queue.
+      There is no case for touching the pending-review queue: the queue is built
+      on the Start tap and owns its cards from then on, which is exactly why a
+      listener could replace the focus reload without a mid-session guard.
 
 - [ ] **Progress dashboard — recaps, plus two deferred corrections.** The write
       path and the first screen shipped 2026-08-20; the shape and the four calls

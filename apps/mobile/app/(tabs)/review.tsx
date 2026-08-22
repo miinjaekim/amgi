@@ -4,16 +4,18 @@ import {
   StyleSheet, Animated, TextInput, Alert, ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { useUser } from '../../src/context/UserContext';
 import { useCardEnrichment } from '../../src/hooks/useCardEnrichment';
 import {
-  archiveFlashcard, updateFlashcardFields,
+  archiveFlashcard, updateFlashcardFields, subscribeToActiveUserFlashcards,
 } from '../../src/services/firestore';
 import type { Flashcard, ReviewTracking } from '../../src/services/firestore';
 import {
-  fetchAndCacheReviewCards, readCachedReviewCards, warmKnownLanguages, withTimeout,
+  replayPendingOver, persistReviewSnapshot, readCachedReviewCards,
+  warmKnownLanguages, withTimeout, SNAPSHOT_WRITE_DEBOUNCE_MS,
 } from '../../src/services/reviewSync';
+import { REQUEST_TIMEOUT_MS } from '../../src/services/withTimeout';
 import { enqueueReview } from '../../src/services/offlineReview';
 import { usePendingReviewSync } from '../../src/hooks/usePendingReviewSync';
 import { refreshReminders } from '../../src/services/reminders';
@@ -114,105 +116,134 @@ export default function ReviewScreen() {
   const [editDraft, setEditDraft] = useState<Partial<Record<CardSideField, string>> | null>(null);
   const [submitting, setSubmitting] = useState<Rating | null>(null);
 
-  const [reloadToken, setReloadToken] = useState(0);
-
   /**
-   * Re-read whenever this tab is focused again — but never mid-session.
+   * The cards this language holds, read live, plus the offline copy underneath.
    *
-   * The first attempt gated this on a module-scope counter bumped by every
-   * write. It did not work on the device, and the likely reason is that Fast
-   * Refresh re-evaluates a module when anything importing it is edited, so the
-   * counter silently reset to zero mid-session. Nothing here depends on module
-   * state now: focus is the signal, and `reloadToken` below distinguishes a
-   * focus reload from a first load without anything outliving the component.
+   * This replaced re-reading the whole collection every time the tab was
+   * focused. That reload had to be suppressed mid-session, because it reset the
+   * pick and would rebuild the queue under someone eight cards into thirty. A
+   * listener needs no such guard, and the reason is a property of this screen
+   * rather than of Firestore: **`cards` is not what the session runs on.** The
+   * queue is built from it on the Start tap and owns its copy from then on, so
+   * a snapshot landing mid-session moves the picker's due counts and leaves the
+   * cards in front of the learner alone. That is the same reason `cards` is
+   * deliberately absent from the queue-building effect's dependencies.
    *
-   * The cost is one query per visit to a Review tab that has nothing new,
-   * which the backlog called papering over. That objection was about a large
-   * deck reading slowly; the screen already pays this exact query on mount,
-   * and a list that silently lies is worse than a query that repeats.
+   * Order of what the screen shows: the device's own snapshot first, so a
+   * session opens instantly and, underground, at all — then live data over the
+   * top as it arrives. The cached read stays behind `delivered` so a slow disk
+   * cannot flash a stale list over a snapshot that already landed.
    *
-   * Rebuilding the queue under someone eight cards into thirty would be worse
-   * than the staleness, and the load below resets `collectionId` — so a
-   * session actually in progress defers the refresh.
-   *
-   * "In progress" is the same expression the render uses, and emphatically not
-   * `collectionId !== undefined`. That was the first guard and it silently
-   * disabled the whole fix for the commonest case: with a single collection
-   * the effect above auto-selects it, so `collectionId` is `null` from the
-   * first render and never `undefined` again. Anyone whose only cards are
-   * their own — which is every new user — got no refresh at all, while anyone
-   * with a pack landed on the picker and did. A guard that keys on a *choice*
-   * rather than on the *session* it was protecting.
-   *
-   * Read through a ref so the callback stays stable: in the deps it would be
-   * rebuilt the moment a collection was picked, and the screen is focused
-   * then, so the effect would re-run and fight the pick.
+   * `sessionRatings` is cleared here and *not* per snapshot. Every snapshot has
+   * the unsent queue replayed over it by `replayPendingOver`, so ratings are
+   * never lost by keeping them — but clearing them on a snapshot that raced a
+   * rating would drag an answered card back into the counts.
    */
-  const sessionRunningRef = useRef(false);
-  const firstFocus = useRef(true);
-  useFocusEffect(useCallback(() => {
-    // Mount already loads; without this the first focus would fetch twice.
-    if (firstFocus.current) { firstFocus.current = false; return; }
-    if (sessionRunningRef.current) return;
-    setReloadToken(n => n + 1);
-  }, []));
-
-  // Packs belong to one study language, so a deck is not a choice that survives
-  // switching to another one — the pick resets with the cards.
-  const appliedToken = useRef(reloadToken);
   useEffect(() => {
     if (!user) return;
     const uid = user.uid;
     let active = true;
+    let delivered = false;
+    let hasCached = false;
+    // Snapshots arrive in order, but each one's replay is an async storage read
+    // — so without this, two changes in quick succession could resolve the
+    // other way round and leave the older set on screen.
+    let latest = 0;
 
-    // True when this run came from returning to the tab, false on a first load
-    // or a study-language switch — which still want the cached snapshot and a
-    // spinner. Presentation only; the reload itself already happened.
-    const isRefresh = appliedToken.current !== reloadToken;
-    appliedToken.current = reloadToken;
-
-    // A refresh keeps the current list on screen while it re-reads. Blanking to
-    // a full-screen spinner because a card was saved on another tab would be a
-    // worse flicker than the staleness being fixed.
-    if (!isRefresh) setLoading(true);
+    setLoading(true);
+    // Packs belong to one study language, so a deck is not a choice that
+    // survives switching to another one — the pick resets with the cards. Note
+    // this runs on a language or account change and no longer on every visit,
+    // which is what used to make suppressing it mid-session necessary.
     setSelectedKey(undefined);
     setUncachedLanguage(false);
-    // A reload already has these folded in — the fetch replays the pending
-    // queue — so keeping them would only double-count.
     setSessionRatings([]);
 
-    (async () => {
-      // Cache first, so a session starts on whatever this device already holds
-      // instead of on a spinner — underground that is the only thing there is,
-      // and on a good connection it just makes review open instantly.
+    void (async () => {
       const cached = await readCachedReviewCards(uid, studyLanguage);
       if (!active) return;
-      // Still read on a refresh — it is the offline fallback in the catch
-      // below — but not shown, because it predates the change that triggered
-      // this and would flash the stale list before the fetch lands. A cold
-      // start still opens on it, which is the whole offline story.
-      if (cached && !isRefresh) {
+      hasCached = cached !== null;
+      if (cached && !delivered) {
         setCards(cached);
         setLoading(false);
       }
-
-      try {
-        const fresh = await fetchAndCacheReviewCards(uid, studyLanguage);
-        if (active) setCards(fresh);
-      } catch {
-        // Unreachable. With a snapshot that is invisible; without one, this
-        // language has simply never been on this device.
-        if (active && !cached) {
-          setCards([]);
-          setUncachedLanguage(true);
-        }
-      } finally {
-        if (active) setLoading(false);
-      }
     })();
 
-    return () => { active = false; };
-  }, [user, studyLanguage, reloadToken]);
+    /**
+     * Offline with a cold cache, the listener says *nothing at all* — it has no
+     * data to report and no reason to error, and `subscribeToActiveUserFlashcards`
+     * drops the empty cache-backed snapshot that would otherwise arrive as a
+     * lie. Without a deadline the screen would spin on it forever. This is the
+     * one thing the old `withTimeout` fetch gave us for free.
+     */
+    const deadline = setTimeout(() => {
+      if (!active || delivered) return;
+      setLoading(false);
+      if (!hasCached) { setCards([]); setUncachedLanguage(true); }
+    }, REQUEST_TIMEOUT_MS);
+
+    /**
+     * Storing the snapshot runs on a slower clock than showing it.
+     *
+     * Every rating in a session comes back as its own snapshot, so writing the
+     * offline copy on each would re-serialise the whole collection once per
+     * card. The screen still updates immediately; only the durable copy waits,
+     * and the pending queue — not this — is what protects unsent ratings.
+     * Held in the effect rather than in the module because module-scope state
+     * does not survive Fast Refresh, which this screen has been bitten by.
+     */
+    let storeTimer: ReturnType<typeof setTimeout> | null = null;
+    let toStore: Flashcard[] | null = null;
+    const storeSoon = (fresh: Flashcard[]) => {
+      toStore = fresh;
+      if (storeTimer) return;
+      storeTimer = setTimeout(() => {
+        storeTimer = null;
+        const next = toStore;
+        toStore = null;
+        if (next) void persistReviewSnapshot(uid, studyLanguage, next);
+      }, SNAPSHOT_WRITE_DEBOUNCE_MS);
+    };
+
+    const unsubscribe = subscribeToActiveUserFlashcards(
+      uid,
+      studyLanguage,
+      (fresh, { fromCache }) => {
+        delivered = true;
+        clearTimeout(deadline);
+        // Only the server's word is allowed to replace the durable copy.
+        if (!fromCache) storeSoon(fresh);
+        const seq = ++latest;
+        void (async () => {
+          const replayed = await replayPendingOver(uid, studyLanguage, fresh);
+          if (!active || seq !== latest) return;
+          setCards(replayed);
+          setUncachedLanguage(false);
+          setLoading(false);
+        })();
+      },
+      () => {
+        // A dead listener leaves whatever is on screen: the cached snapshot if
+        // there is one, and otherwise the same "never loaded here" state the
+        // failed fetch used to produce.
+        if (!active || delivered) return;
+        setLoading(false);
+        if (!hasCached) { setCards([]); setUncachedLanguage(true); }
+      },
+    );
+
+    return () => {
+      active = false;
+      clearTimeout(deadline);
+      unsubscribe();
+      // Leaving the language is the one moment the delay must not swallow a
+      // write: nothing will report these cards again until the user comes back.
+      if (storeTimer) {
+        clearTimeout(storeTimer);
+        if (toStore) void persistReviewSnapshot(uid, studyLanguage, toStore);
+      }
+    };
+  }, [user, studyLanguage]);
 
   // Keep the other languages this device studies ready for a switch made
   // offline. Best-effort and in the background — nothing waits on it.
@@ -247,13 +278,6 @@ export default function ReviewScreen() {
     : collections.find(c => collectionKey(c) === selectedKey);
   /** The card collection in play, or `undefined` when none is. */
   const collectionId = selected ? selected.id : undefined;
-
-  // Declared here rather than beside the focus effect above, because it reads
-  // `collectionId`, which is derived from `collections` — and that in turn
-  // needs `sessionRatings`. Hook order stays stable, which is all that matters.
-  useEffect(() => {
-    sessionRunningRef.current = started && queueFor === collectionId && !done && !stopped;
-  }, [started, queueFor, collectionId, done, stopped]);
 
   /**
    * What is due in the chosen collection right now, both ways round. Derived

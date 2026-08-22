@@ -31,7 +31,7 @@
  * days. Over-counting is also self-limiting and only ever inflates a tally,
  * where the other failure silently erases history that cannot be rebuilt.
  */
-const REQUEST_TIMEOUT_MS = 10_000;
+export const REQUEST_TIMEOUT_MS = 10_000;
 
 class TimeoutError extends Error {
   constructor() { super('Firestore request timed out'); }

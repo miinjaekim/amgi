@@ -117,6 +117,66 @@ enough hands to close it without a dedicated session.
 Closed calls, kept with their reasoning — a decision whose reasoning is lost gets
 reopened by the next person to notice the symptom. Newest first.
 
+### Mobile's card surfaces subscribe too — the gate was opened by a test, not a build (2026-08-22)
+
+Step (2), the same day as step (1). The gate was "step (1) has been on a build
+for a release"; what actually opened it was the user reviewing on the laptop and
+watching the phone's streak move in Expo Go. **That is weaker evidence than the
+gate asked for, and it was taken deliberately** — it settles the question the
+gate existed to settle (does `onSnapshot` deliver on React Native, through a
+memory-only cache, in this app) and settles nothing about collections. What
+follows is what had to be handled *because* the test could not cover it.
+
+**An empty snapshot from the cache is dropped, not delivered.** This is the
+listener form of the trap `fetchUserFlashcardsFromServer` was written to dodge:
+the cache is memory-only, so before the server answers it holds nothing, and
+Firestore reports nothing as an ordinary empty result rather than an error.
+Delivered as-is it is indistinguishable from "this account has no cards" — it
+would blank the list on every cold start and overwrite the offline snapshot with
+nothing. **The streak listener never met this**, because a missing document is
+simply ignored there; a collection cannot do that, since empty is a legitimate
+answer. So the clean laptop-to-phone test could never have caught it.
+
+**Storing the snapshot is on a slower clock than showing it.** Every rating in a
+session comes back as its own snapshot, so writing the offline copy on each
+would re-serialise the whole collection once per card, where the fetch-per-focus
+it replaced wrote once a visit. It is debounced 5s and flushed when the language
+or account changes. Coalescing is safe here in a way it would not be for a
+rating: this is a *cache*, unsent ratings live in their own queue and are
+replayed over whatever is stored, so a dropped write costs a slightly older
+starting point on the next cold offline launch and nothing else. The debounce
+lives in the effect, not the module — module-scope state does not survive Fast
+Refresh, which is the bug that killed this screen's first freshness attempt.
+
+**Review needed no mid-session guard, and that is a property of the screen.**
+The focus reload had to be suppressed mid-session because it reset the pick and
+would rebuild the queue under someone eight cards into thirty. A listener does
+not, because **`cards` is not what a session runs on**: the queue is built from
+it on the Start tap and owns its copy from then on. A snapshot landing mid-review
+moves the picker's due counts and leaves the cards in front of the learner alone.
+`sessionRunningRef` and `reloadToken` are gone with the reload they protected.
+
+**The one thing a listener does not give back is a deadline.** Offline with a
+cold cache it says nothing at all — no data, no error, and the empty cached
+snapshot is dropped by the guard above — so the screen would spin forever on a
+language this device has never loaded. `withTimeout`'s 10s is now applied by the
+load effect itself. This is the newest machinery in the change and the first
+thing to check on a device.
+
+Also: `sessionRatings` is cleared per language change and *not* per snapshot.
+Every snapshot has the unsent queue replayed over it, so keeping them loses
+nothing, and `applyPendingReviews` assigns rather than increments — but clearing
+them on a snapshot that raced a rating would drag an answered card back into the
+counts. The `onChanged`/`loadCards` calls that told screens to go and look again
+are gone, as are `fetchAllUserFlashcards` and `fetchUserFlashcards`, which have
+no callers left. `fetchUserFlashcardsFromServer` stays: warming a language nobody
+is looking at has no listener to ride on.
+
+**Progress is deliberately not subscribed**, on either platform. It is a
+historical rollup whose only moving row is today's, it re-reads on focus, and the
+review tab is one tap away. Subscribing it would add a listener for a number that
+cannot change while you are looking at it.
+
 ### Mobile subscribes for display only, and a ref is what serialises its writes (2026-08-22)
 
 Step (1) of the mobile half, done the day web shipped. The scope was set in

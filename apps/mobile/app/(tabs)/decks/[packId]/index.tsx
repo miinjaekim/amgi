@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -10,7 +10,7 @@ import {
 import type { PackEntry, PackSection } from '@amgi/core';
 import { useUser } from '../../../../src/context/UserContext';
 import { useTheme } from '../../../../src/context/ThemeContext';
-import { fetchAllUserFlashcards, saveFlashcardsBatch } from '../../../../src/services/firestore';
+import { subscribeToAllUserFlashcards, saveFlashcardsBatch } from '../../../../src/services/firestore';
 import type { Flashcard } from '../../../../src/services/firestore';
 import CardDetailModal from '../../../../src/components/CardDetailModal';
 import PronounceButton from '../../../../src/components/PronounceButton';
@@ -33,17 +33,21 @@ export default function DeckDetailScreen() {
   const [error, setError] = useState<string | null>(null);
   const [detail, setDetail] = useState<PackEntry | null>(null);
 
-  const loadCards = useCallback(() => {
+  // Live: enrolling writes a batch of cards, and the listener is what turns the
+  // deck's saved-count and every row's state over once they land. Nothing has
+  // to re-read on the way back from a card, either.
+  useEffect(() => {
     if (!user) { setCards(null); return; }
-    fetchAllUserFlashcards(user.uid, studyLanguage)
-      .then(fetched => { setCards(fetched); setLoadFailed(false); })
+    return subscribeToAllUserFlashcards(
+      user.uid,
+      studyLanguage,
+      fetched => { setCards(fetched); setLoadFailed(false); },
       // Browsing still works without this, but enrolling does not: a failure
       // used to be swallowed, leaving the deck looking empty and the enrol
       // button primed to add every card a second time.
-      .catch(() => setLoadFailed(true));
+      () => setLoadFailed(true),
+    );
   }, [user, studyLanguage]);
-
-  useEffect(loadCards, [loadCards]);
 
   // Progress deliberately matches on text: a word you looked up on your own
   // counts towards the deck.
@@ -271,7 +275,9 @@ export default function DeckDetailScreen() {
           studyLanguage={studyLanguage}
           nativeLanguage={nativeLanguage}
           onClose={() => setDetail(null)}
-          onChanged={loadCards}
+          // No `onChanged`: the listener above already reports anything the
+          // modal writes, so telling the screen to go and look again would only
+          // duplicate the read it is about to get for free.
         />
       )}
     </SafeAreaView>

@@ -99,9 +99,20 @@ nothing being unsent, because `refreshReminders` reads that cached
 `lastReviewDate` and would otherwise nag about work already done; and mobile
 turned out to have web's local-counter bug after all, in a **single-device**
 form — two quick ratings both computing from the same render-old state — fixed
-with a ref rather than a transaction, since a transaction fails offline. Step (2)
-is gated on this having been in a build for a release; see
-[backlog.md](backlog.md) and the Decisions entry in [status.md](status.md)._
+with a ref rather than a transaction, since a transaction fails offline._
+
+_Step (2) followed the same day, after the streak listener was watched working
+on a phone. **The gate asked for a release and was opened by an Expo Go test** —
+deliberately, and worth knowing which questions that left open. Two things the
+collection listeners needed that the streak one did not: an **empty cached
+snapshot is dropped**, because on a memory-only cache "nothing yet" and "no
+cards" arrive identically and the streak sidesteps it by ignoring missing
+documents; and the offline snapshot is **written on a debounce**, because every
+rating echoes back as a snapshot and writing each would re-serialise the whole
+collection per card. A listener also gives back no **deadline**, so review keeps
+`withTimeout`'s 10s itself — offline on an unloaded language it would otherwise
+spin forever. **What is left is verification on a device**, and
+[backlog.md](backlog.md) lists the four things to watch._
 
 _This pass **cut both tracking files down to what GitHub can't tell you.**
 `status.md` lost its Shipped section entirely (~270 lines), plus the per-PR

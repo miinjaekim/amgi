@@ -7,7 +7,7 @@ import {
 } from '@amgi/core';
 import { useUser } from '../../../src/context/UserContext';
 import { useTheme } from '../../../src/context/ThemeContext';
-import { fetchAllUserFlashcards } from '../../../src/services/firestore';
+import { subscribeToAllUserFlashcards } from '../../../src/services/firestore';
 import { useFloatingTabBarHeight } from '../../../src/components/FloatingTabBar';
 import PageHeader from '../../../src/components/PageHeader';
 import type { Palette } from '../../../src/theme';
@@ -20,13 +20,16 @@ export default function DecksScreen() {
   const packs = getVocabPacks(studyLanguage);
   const [savedTerms, setSavedTerms] = useState<Set<string> | null>(null);
 
+  // Live, so enrolling in a deck or saving a word updates the progress counts
+  // here without a trip back through the tab bar.
   useEffect(() => {
     if (!user) { setSavedTerms(null); return; }
-    let cancelled = false;
-    fetchAllUserFlashcards(user.uid, studyLanguage)
-      .then(cards => { if (!cancelled) setSavedTerms(collectSavedTerms(cards)); })
-      .catch(() => {}); // progress is a nicety — browsing still works
-    return () => { cancelled = true; };
+    return subscribeToAllUserFlashcards(
+      user.uid,
+      studyLanguage,
+      cards => setSavedTerms(collectSavedTerms(cards)),
+      () => {}, // progress is a nicety — browsing still works
+    );
   }, [user, studyLanguage]);
 
   return (
