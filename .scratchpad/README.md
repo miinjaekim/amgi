@@ -70,8 +70,9 @@ Backlog priority mirrors the user's Google Tasks list — `backlog.md` is the
 scoped version of it. Keep entries at the size that says what to do next; the
 argument behind a call goes in `status.md`, not in the item.
 
-_Last reviewed against the codebase: 2026-08-22, `main` @ `ace3e39`.
-`npm test` 252/252, measured._
+_Last reviewed against the codebase: 2026-08-22, `main` @ `032cdad`.
+`npm test` 252/252, measured. Mobile has no test script — its half of the
+freshness work is covered by `tsc` and a bundle, not by tests._
 
 _This pass **made web read its data live** and, in doing so, **retracted two
 claims these notes had asserted**. Both retractions are the more useful half, so
