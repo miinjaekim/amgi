@@ -46,15 +46,16 @@ _Reconciled against `main` @ `bc8cb97`, 2026-08-21. `npm test` 246/246, measured
   collections drifted into. Both work; only one says what it means. Why, and why
   a new collection needs two indexes rather than one, are in
   [lessons.md](lessons.md).
-- ⚠️ **Kikuyu is code-complete and blocked on the same two console steps Spanish
-  was** (2026-08-22). Registry entry, prompt branch, i18n and example terms are
-  merged, and every route was exercised against the live API — lookup both
-  directions, Korean back, examples, depth, word of the day. But `cards_kikuyu`
-  has **no security rule and neither composite index**, so until they exist in
-  the console every save fails `permission-denied` and then every review query
-  fails on the missing index. Mirror `cards_spanish`, and create *both* indexes
-  up front — see [lessons.md](lessons.md) for why the console's link only builds
-  one.
+- **Kikuyu is live on web** (2026-08-22), an eighth study language and the first
+  with no audio. Registry entry, prompt branch, i18n and example terms merged;
+  every route exercised against the live API — lookup both directions, Korean
+  back, examples, depth, word of the day. `cards_kikuyu`'s security rule and
+  **both** composite indexes are in the console, and saving a card then seeing it
+  on `/cards` was confirmed end to end. Mobile has the code but reaches users
+  only through a build, and nothing has been cut since 1.3.0 — see Builds.
+  Both console steps went in one at a time and each failed the *next* surface
+  rather than the one just fixed, which is the whole of what
+  [lessons.md](lessons.md) now says about ordering them.
 - **Kikuyu has no pronunciation, and that is the finished state, not a gap.**
   It is the first registry entry with no `ttsLanguageCode`, so it is also the
   first time that field's optionality has ever been exercised: both apps hide
