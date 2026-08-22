@@ -11,7 +11,8 @@ export type StudyLanguage =
   | 'French'
   | 'Japanese'
   | 'TraditionalChinese'
-  | 'Spanish';
+  | 'Spanish'
+  | 'Kikuyu';
 
 /**
  * i18n keys for the character-breakdown section heading. Every Han-script
@@ -26,7 +27,8 @@ export type FieldLabelKey =
   | 'labelFrench'
   | 'labelJapanese'
   | 'labelTraditionalChinese'
-  | 'labelSpanish';
+  | 'labelSpanish'
+  | 'labelKikuyu';
 
 export type CardSideField =
   | 'korean'
@@ -35,7 +37,8 @@ export type CardSideField =
   | 'french'
   | 'japanese'
   | 'traditionalChinese'
-  | 'spanish';
+  | 'spanish'
+  | 'kikuyu';
 
 /**
  * Per-study-language configuration. Adding a language means adding an entry
@@ -145,6 +148,33 @@ export const STUDY_LANGUAGE_CONFIGS: Record<StudyLanguage, StudyLanguageConfig> 
     ttsLanguageCode: 'es-ES',
     ttsVoiceName: 'es-ES-Chirp3-HD-Charon',
   },
+  Kikuyu: {
+    code: 'Kikuyu',
+    label: 'Kikuyu',
+    labelNative: 'Gĩkũyũ',
+    collection: 'cards_kikuyu',
+    // `ki` is the ISO 639-1 code, and `Intl.Segmenter` accepts it — verified,
+    // because an unrecognised tag would silently fall back to the host locale
+    // and mis-segment every writing diff.
+    locale: 'ki',
+    studyField: 'kikuyu',
+    studyLabelKey: 'labelKikuyu',
+    // **The first entry with no TTS at all**, which is why `ttsLanguageCode`
+    // and `ttsVoiceName` were optional. Google Cloud TTS has no Kikuyu voice —
+    // checked against the live voice list, not assumed: 2066 voices, 62
+    // locales, and the only Bantu one is `sw-KE`. Swahili is the tempting
+    // stand-in and it is the wrong one: it has no `ĩ`/`ũ` in its alphabet, so
+    // the two vowels that distinguish Kikuyu words are exactly what it would
+    // mispronounce. Silence beats confidently wrong pronunciation on a
+    // learner's card. Both apps already hide the button when these are unset.
+    //
+    // No `gender` either — Kikuyu marks noun class, not gender, and the model
+    // is not reliable enough to teach it. Measured on eight nouns: `mũndũ` and
+    // `mũtĩ` came back right, `rũthiomi` came back with the Swahili plural
+    // `ndimi` instead of `thiomi`. A wrong class on a card teaches wrong
+    // agreement across every sentence the learner builds with it, so the field
+    // is left off until something better than the model can fill it.
+  },
   Japanese: {
     code: 'Japanese',
     label: 'Japanese',
@@ -241,6 +271,7 @@ export interface ExamplePair {
   japanese?: string;
   traditionalChinese?: string;
   spanish?: string;
+  kikuyu?: string;
   english: string;
 }
 
@@ -312,6 +343,7 @@ export interface TermCore {
   japanese?: string;
   traditionalChinese?: string;
   spanish?: string;
+  kikuyu?: string;
   english: string;
   translation?: string;
   /**
@@ -512,6 +544,7 @@ export function getDepthTarget(
     | 'japanese'
     | 'traditionalChinese'
     | 'spanish'
+    | 'kikuyu'
     | 'english'
     | 'briefDefinition'
   >,

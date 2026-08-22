@@ -53,6 +53,7 @@ describe('getBackSideConfig', () => {
       // It stays listed so the loop below is exhaustive over the registry: a
       // language added with no entry here fails rather than being skipped.
       Spanish: 'english',
+      Kikuyu: 'english',
     };
     for (const { code } of SUPPORTED_STUDY_LANGUAGES) {
       expect(getBackSideConfig(code, 'English').backField, code).toBe(expected[code]);

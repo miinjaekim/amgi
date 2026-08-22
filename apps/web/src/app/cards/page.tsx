@@ -80,7 +80,13 @@ export default function CardsPage() {
       user.uid,
       studyLanguage,
       cards => { setAllCards(cards); setLoading(false); },
-      () => { setAllCards([]); setLoading(false); },
+      // Log it. Firestore only logs a snapshot-listener error itself when no
+      // handler is given, so an empty handler is *quieter* than none — and this
+      // one silently rendered "no cards saved" over a missing composite index,
+      // which is the one failure whose message carries the console link that
+      // fixes it. The listener has already served the local cache by then, so
+      // the shape on screen is a card that appears and then vanishes.
+      error => { console.error('[Cards] Error subscribing to cards:', error); setAllCards([]); setLoading(false); },
     );
     return unsubscribe;
   }, [user, studyLanguage]);

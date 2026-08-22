@@ -295,6 +295,79 @@ IMPORTANT for the non-ambiguous case:
 - "gender": if the Spanish term is a noun, set to "el" or "la". Otherwise set to null.${posRule}
 - "briefDefinition" must be a single sentence defining the core meaning. No examples, no cultural context.`;
     }
+  } else if (studyLanguage === 'Kikuyu') {
+    // Kikuyu: termLanguage is set by Gemini (Latin script — can't detect client-side)
+    //
+    // Two rules here that no other language needs, both measured rather than
+    // guessed. **Orthography**: `ĩ` and `ũ` are distinct vowels, not accents on
+    // `i`/`u`, and the model drops them often enough that asking is worth a
+    // line — a card that teaches `muthenya` teaches the wrong word.
+    // **Not Swahili**: probing Kikuyu noun classes returned Swahili forms
+    // (`ndimi` for `thiomi`), so the nearest high-resource Bantu language is a
+    // live contamination risk and is named as one.
+    //
+    // No `gender`, unlike the three Latin-script languages above — see the
+    // registry entry for why noun class is not on the card.
+    const kikuyuRules = `
+- "kikuyu" must always be the Kikuyu word or phrase, written in standard Kikuyu orthography. Kikuyu has seven vowels: "ĩ" and "ũ" are their own letters, not decorated "i" and "u", and must be written wherever the word has them.
+- Kikuyu (Gĩkũyũ) is not Swahili. Never answer with a Swahili word, and never borrow Swahili grammar or spelling.
+- "english" must always be the English word or phrase written in English${nativeBackRule}
+- Both fields should use the single best translation. Only use 2-3 words if one word is genuinely insufficient. Never list synonyms with semicolons or slashes.${posRule}`;
+
+    if (context) {
+      prompt = `Provide a concise translation for the Kikuyu(Gĩkũyũ)/English term "${term}" with this context: "${context}".
+
+Determine whether "${term}" is Kikuyu or English and set "termLanguage" accordingly.
+
+IMPORTANT:${kikuyuRules}
+- "briefDefinition": a single clear sentence defining the term in ${nativeLanguage}.
+
+Respond with only this JSON:
+{
+  "term": "${term}",
+  "termLanguage": "Kikuyu or English",
+  "kikuyu": "Kikuyu word/phrase",
+  "english": "English word/phrase",${nativeBackJson}${posJson}
+  "briefDefinition": "one-sentence definition"
+}`;
+    } else {
+      prompt = `You are a language learning assistant for Kikuyu(Gĩkũyũ)-English learners.
+
+Given the term "${term}", determine whether it is Kikuyu or English, then check if it has multiple significantly different meanings.
+
+A term is ambiguous when it has 2 or more distinct common meanings that would confuse a language learner.
+
+A term is NOT ambiguous when:
+- It has one clear primary meaning
+- Secondary meanings are rare or archaic
+- The meanings are closely related variants of the same concept
+
+${spellBlock}
+If AMBIGUOUS, respond with only this JSON:
+{
+  "ambiguous": true,
+  "term": "${term}",${spellJson}
+  "termLanguage": "Kikuyu or English",
+  "meanings": [
+    { "label": "short label (3-6 words max)", "hint": "one sentence clarifying this meaning" },
+    { "label": "...", "hint": "..." }
+  ]
+}
+
+Every "label" and "hint" must be written in ${nativeLanguage} — the user may not understand any other language.
+
+If NOT ambiguous, respond with only this JSON:
+{
+  "term": "${term}",${spellJson}
+  "termLanguage": "Kikuyu or English",
+  "kikuyu": "Kikuyu word/phrase",
+  "english": "English word/phrase",${nativeBackJson}${posJson}
+  "briefDefinition": "one-sentence definition in ${nativeLanguage}"
+}
+
+IMPORTANT for the non-ambiguous case:${kikuyuRules}
+- "briefDefinition" must be a single sentence defining the core meaning. No examples, no cultural context.`;
+    }
   } else if (studyLanguage === 'Japanese') {
     // Japanese: kana/kanji are script-detectable
     const termLanguage = detectJapanese(term) ? 'Japanese' : 'English';
