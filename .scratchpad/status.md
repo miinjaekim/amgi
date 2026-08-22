@@ -176,6 +176,19 @@ time — Google restricts them for new clients by default and recommends Google
 Identity Services — so the current path works but is not durable. The three
 traps that had to be cleared to get here are in [lessons.md](lessons.md).
 
+**The follow-ups were deliberately not tracked** (user's call, same day). A
+backlog item listing them was written and then removed: the APK works, and the
+rest was speculative — Android paths nobody has complained about, a migration
+with no deadline, a cosmetic scheme duplicate. Tracking them would have kept a
+High item open against work nobody intends to do. They get raised again if a
+tester hits one, not on a schedule. The two that are real if they ever surface:
+**nothing but sign-in has been exercised on Android** (audio, export, sharing,
+offline, account deletion, reminders — and reminders need the runtime
+`POST_NOTIFICATIONS` grant on 13+ and land in the default "Miscellaneous"
+channel), and **removing the redundant `com.miinjaekim.amgi` scheme from
+`app.json` is untested** — that array generates the working intent filter, so
+verify the redirect still routes before believing it is safe.
+
 ### Mobile's card surfaces subscribe too — the gate was opened by a test, not a build (2026-08-22)
 
 Step (2), the same day as step (1). The gate was "step (1) has been on a build

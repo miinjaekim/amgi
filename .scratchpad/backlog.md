@@ -60,29 +60,6 @@ _A version bump queues another Beta App Review; 1.3.0's external approval covers
 
 ## High
 
-- [ ] **Android follow-ups.** The APK ships and Google sign-in works on a real
-      device; what shipped is in git and the reasoning is in
-      [status.md](status.md). What is left:
-      - **Nothing but sign-in has been exercised on Android.** Audio, CSV/Anki
-        export, sharing, offline review across a force-kill, account deletion,
-        and reminders are all unverified there from zero — the verify-on-binary
-        list above is an iOS list. Two Android-only ones: notifications need the
-        runtime `POST_NOTIFICATIONS` grant on 13+, and `reminders.ts` creates no
-        channel, so reminders land in Android's default "Miscellaneous".
-      - **Custom URI schemes are borrowed time.** Sign-in works via a toggle
-        Google describes as temporary, and it recommends Google Identity
-        Services instead. Migrating means `@react-native-google-signin`, which
-        **breaks Expo Go on both platforms** — so it is a real decision, not a
-        chore. Not urgent while the toggle holds.
-      - **`app.json` lists `com.miinjaekim.amgi` as a scheme redundantly** —
-        Expo already registers the package name (`getNativeAppIdScheme`), so it
-        appears twice and Linking warns about ambiguous schemes. Cosmetic, but
-        removing it is untested: that array is what generates the working intent
-        filter, so verify the redirect still routes before believing it.
-      - **The OAuth consent screen says "Amgi AI", not Amgi.** Console-side, no
-        build needed — and it is shown to **iOS and web users too**, so this is
-        not an Android item except that Android is where it was noticed.
-
 - [ ] **English vocabulary packs — daily life and idioms.** Two packs, both
       English, sitting under the same pack rules as the rest (audience is not
       beginners; packs unlock domains, never "starter" anything; curated from real
