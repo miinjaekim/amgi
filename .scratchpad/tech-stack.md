@@ -154,15 +154,49 @@ screens, layout, styles, themes, i18n, business logic, state. Server-side
 changes need nothing mobile at all — API routes deploy with Vercel and the app
 picks them up on the next call.
 
-Google sign-in **works in Expo Go**, despite the custom
+Google sign-in **works in Expo Go on iOS**, despite the custom
 `com.googleusercontent.apps.…:/oauthredirect` scheme — see [lessons.md](lessons.md)
-for why, and don't re-derive it.
+for why, and don't re-derive it. **It cannot work in Expo Go on Android**, and
+that is not a bug to fix: iOS works because `ASWebAuthenticationSession`
+intercepts the redirect with nothing registered anywhere, and Android has no
+equivalent — the scheme must be registered by the app receiving it, which in
+Expo Go is Expo Go. Use a development build for Android auth work.
 
 Known limits:
 - `expo-updates` code paths don't execute in Expo Go.
 - Expo Go runs the SDK's own bundled native module versions, so behavior can
   differ subtly from a production build. Fine for layout/state; verify anything
   native-adjacent (audio, file system, sharing) on a real build before release.
+- **Timing differs from a release build**, which is not only a "subtle
+  behaviour" caveat: an Android auth race that failed every release APK did not
+  reproduce in a development build at all. A race is only closed by the build
+  type it appears in.
+
+### Development build — required for Android auth, optional otherwise
+
+`expo-dev-client` plus the `development` profile in `eas.json`. Build once, then
+`npx expo start` behaves exactly as above; rebuild only when a **native**
+dependency or `app.json` native config changes.
+
+```
+npx eas-cli build --platform android --profile development
+```
+
+Nothing here goes near App Store Connect — the profile is `distribution:
+internal`. Adopting the native Google Sign-In module would break Expo Go on
+**both** platforms, since the JS would import a module Expo Go does not carry;
+that has not been done. See the Decisions entry in [status.md](status.md).
+
+### Release — Android APK
+
+```
+npx eas-cli build --platform android --profile preview
+```
+
+`distribution: internal` is what makes this an APK rather than a Play AAB. Each
+build gets its own install URL; installs land over the top with data intact so
+long as the package name and EAS-held keystore are unchanged. No review, so an
+Android fix costs ~20 minutes rather than an App Review cycle.
 
 ### Release — production build
 

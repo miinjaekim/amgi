@@ -9,6 +9,9 @@ this is the scoped version of it.
 **Mobile ships by build — no OTA.** Iterate in Expo Go (`npx expo start`), cut a
 production build when a batch is worth a release. Once one native module is in a
 build, a second rides along free rather than costing a build of its own.
+**Android auth work is the exception**: it cannot run in Expo Go, so it needs a
+development build — and Android release builds face no review, so a fix there
+costs ~20 minutes rather than an App Review cycle.
 
 ---
 
@@ -160,6 +163,11 @@ _A version bump queues another Beta App Review; 1.3.0's external approval covers
 
 `npm test` (252/252, measured 2026-08-22) and `npx eslint .` (0 errors) are
 green. What's left is what those two now *show*.
+
+- [ ] **The Google consent screen says "Amgi AI".** Rename it to **Amgi** in the
+      Google Cloud OAuth consent screen → Branding → App name. Console-side, no
+      build, no code — but it is shown to **every** user signing in, on iOS and
+      web as much as Android.
 
 - [ ] **Two callerless functions in `apps/web/src/services/firestore.ts`** —
       `countUserFlashcards` and `fetchArchivedFlashcards`, neither imported

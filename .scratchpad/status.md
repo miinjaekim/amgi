@@ -133,6 +133,62 @@ enough hands to close it without a dedicated session.
 Closed calls, kept with their reasoning — a decision whose reasoning is lost gets
 reopened by the next person to notice the symptom. Newest first.
 
+### Android ships as a sideloaded APK, and auth work leaves Expo Go (2026-08-22)
+
+Android is live as a direct-download APK built on the `preview` profile —
+`distribution: internal`, which is what makes EAS emit an APK rather than a
+Play-store AAB. Verified end to end on a real device: install, launch, Google
+sign-in, cards.
+
+**Play was deferred, not rejected.** Sideloading costs nothing, needs no
+account and faces no review, which is why it went first. The price is that an
+APK has **no update path at all** — worse than TestFlight, which at least
+notifies. Every release is a fresh link (EAS gives each build its own URL) and a
+manual re-install by each tester. Installs land over the top with data intact,
+since the package name and the EAS-held keystore stay constant; if that keystore
+is ever lost, every tester has to uninstall first and loses local data.
+Revisit Play internal testing when re-sending links costs more than $25 and a
+review cycle.
+
+`com.miinjaekim.amgi` is permanent — it is keyed into the Google OAuth client
+and would be keyed into any Play listing. Chosen over the iOS bundle id
+(`com.tegi.amgi`) because that one lives on a borrowed Apple account.
+
+**The development-build change is the part that supersedes an earlier call.**
+[tech-stack.md](tech-stack.md) said: develop in Expo Go, build to release.
+**Google sign-in on Android was never covered by that.** It does work in Expo
+Go on iOS, which is why the loop held for a year — but that depends on
+`ASWebAuthenticationSession` intercepting the redirect with nothing registered,
+and Android has no equivalent, so its auth surface was untestable under the
+documented loop. Four rounds of 20-minute release builds on a borrowed phone is
+what that blind spot actually cost.
+
+So a development build (`expo-dev-client`, the `development` profile that had
+sat unused in `eas.json` since the abandoned OTA setup) is now the loop for
+anything native-adjacent. **This does not touch the no-OTA decision**, which is
+about how work reaches users, not how it is tested. Expo Go still works for
+ordinary JS, and nothing forces iOS off it — *unless* the native Google Sign-In
+module is ever adopted, which would break Expo Go on both platforms at once.
+
+**What is explicitly still open:** whether to migrate to
+`@react-native-google-signin`. Custom URI schemes on Android are on borrowed
+time — Google restricts them for new clients by default and recommends Google
+Identity Services — so the current path works but is not durable. The three
+traps that had to be cleared to get here are in [lessons.md](lessons.md).
+
+**The follow-ups were deliberately not tracked** (user's call, same day). A
+backlog item listing them was written and then removed: the APK works, and the
+rest was speculative — Android paths nobody has complained about, a migration
+with no deadline, a cosmetic scheme duplicate. Tracking them would have kept a
+High item open against work nobody intends to do. They get raised again if a
+tester hits one, not on a schedule. The two that are real if they ever surface:
+**nothing but sign-in has been exercised on Android** (audio, export, sharing,
+offline, account deletion, reminders — and reminders need the runtime
+`POST_NOTIFICATIONS` grant on 13+ and land in the default "Miscellaneous"
+channel), and **removing the redundant `com.miinjaekim.amgi` scheme from
+`app.json` is untested** — that array generates the working intent filter, so
+verify the redirect still routes before believing it is safe.
+
 ### Mobile's card surfaces subscribe too — the gate was opened by a test, not a build (2026-08-22)
 
 Step (2), the same day as step (1). The gate was "step (1) has been on a build

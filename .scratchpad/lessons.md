@@ -1,5 +1,68 @@
 # Lessons
 
+## Google sign-in on Android: three traps, and none of them in our code (2026-08-22)
+
+The first Android build reached Google, got a code back, and still signed
+nobody in. Three separate things had to be cleared, and **not one of them was a
+bug in this repo** — which is the reason to write them down.
+
+**1. Google blocks custom URI schemes for *new* Android OAuth clients.** The
+symptom is `400: invalid_request` on the consent screen, which reads like a
+malformed redirect. It is not: Google restricted custom schemes for app
+impersonation reasons, and the block applies to **newly created clients only**.
+Existing ones keep working — which is exactly why iOS was fine and Android was
+not, on the same code. The fix is a toggle in the client's *Advanced Settings*
+in Google Cloud, not a rebuild. **The discriminator is the client's age, not
+anything you can see from the app**, so nothing in a diff will ever point at it.
+It is also a reprieve rather than a fix; Google says it may withdraw the
+escape hatch, and points at Google Identity Services instead.
+
+**2. expo-router answers the OAuth redirect before the auth session does.** The
+redirect arrives as a deep link and *two* subsystems consume it: the auth
+session resolves the sign-in, and the router treats the same URL as navigation.
+With no matching route the router renders "Unmatched Route", so a **successful**
+sign-in ends on an error screen. `app/oauthredirect.tsx` exists only to give
+that navigation somewhere to go. iOS never sees this, because
+`ASWebAuthenticationSession` intercepts the redirect in-process and it never
+becomes a deep link at all.
+
+**3. The one that actually dropped the token: Android has no native
+AuthSession.** Expo's own docs say so. `expo-web-browser` polyfills it by
+racing two promises — "the browser closed" against "the redirect arrived" — and
+**the redirect is what closes the browser**, so both fire from a single event.
+When the browser-closed side wins, `promptAsync` resolves `dismiss`, the
+redirect listener is torn down in a `finally`, and the authorization code is
+discarded. Nothing is logged: the provider's code-for-token exchange
+(`providers/Google.js`) has a `.then` and **no `.catch`**, so every failure in
+that path is invisible by construction. Open as expo/expo#23781; worked around
+with `promptAsync({ showInRecents: true })`.
+
+**The meta-lesson is about what a development build can and cannot prove.**
+Sign-in succeeded in a dev build against the *same code* that had just failed on
+a release APK — because debug timing does not lose the race. That was worth
+having: it proved the client id, the SHA-1, the redirect URI, the console
+toggle and the Firebase exchange were all correct, narrowing the problem to one
+thing. But it could not prove the fix, and treating it as a green light would
+have shipped a broken build. **A timing bug is only closed by the build type it
+appears in.**
+
+Underneath all three, the same asymmetry: **Google sign-in works in Expo Go on
+iOS and cannot work there on Android.** Passing `redirectUri` explicitly dodges
+the `exp://` that `makeRedirectUri` would return, and then
+`ASWebAuthenticationSession` intercepts the custom scheme with nothing
+registered anywhere. Android has no such interception — the scheme has to be
+registered by the app receiving it, and in Expo Go the app *is* Expo Go. So the
+one platform that needed the most iteration was the one the documented dev loop
+could never touch. See the development-build decision in [status.md](status.md).
+
+**Reading Android logs, since this is where it was settled.** Filter by the
+app's process, never by keyword — `adb logcat --pid=$(adb shell pidof -s
+<package>)`. Grepping logcat for `Error` returns pages of unrelated system
+noise (`keystore2`, RKP provisioning, Phenotype) and none of your app. The line
+that ended the guessing was `ActivityTaskManager: START ... dat=<scheme>:/...
+cmp=<package>/.MainActivity`, which proved the OS delivered the redirect to the
+live process — so everything before the library race was working.
+
 ## The review queue is per direction — never mutate it by index (2026-08-10)
 
 `ReviewQueueItem` is one entry per due **direction**, so a card due both ways is
