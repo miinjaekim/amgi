@@ -57,50 +57,44 @@ _A version bump queues another Beta App Review; 1.3.0's external approval covers
 
 ## High
 
-- [ ] **Data loading and freshness — mobile, watch it on a build.** Both steps
-      shipped 2026-08-22: the `users/{uid}` streak subscription, then all four
-      card surfaces. The reasoning is in the Decisions entry in
-      [status.md](status.md); read it before changing any of it.
+- [ ] **Kikuyu as a language option.** The first language added since Spanish;
+      follow the same path that one took (see the Spanish entry in
+      [status.md](status.md)) — every study-language list, the prompt branches in
+      `/api/explain`, and the study-language count in
+      `docs/testflight-beta-info.md`, which the build pre-flight already asks for.
+      Open before building: whether the model is good enough at Kikuyu to trust
+      the same lookup loop, and what pronunciation does — `/api/pronounce` needs a
+      voice that may not exist. Answer both on a handful of real words before
+      wiring any UI.
 
-      **Nothing here is unbuilt — what is left is verification, and it can only
-      happen on a device.** Mobile has no test harness, so the whole change is
-      argued rather than exercised, and no OTA means a regression waits for a
-      build *and* Beta App Review. The four things to actually look at:
-      - **Review, offline, on a language this device has never loaded.** The
-        listener stays silent rather than failing, so a 10s deadline in the load
-        effect is the only thing that ends the spinner. This is the newest
-        machinery and the least like anything that was there before.
-      - **A long session's AsyncStorage writes.** Each rating echoes back as its
-        own snapshot; the offline copy is written on a 5s debounce so thirty
-        reviews do not re-serialise ~1,300 cards thirty times. Watch for jank.
-      - **Backgrounding for 30+ minutes**, then returning: a dropped listener
-        re-charges its whole result set on reattach, and that is per collection
-        now, not per user document.
-      - **Read volume generally.** Cheaper than fetch-per-focus in theory —
-        first snapshot then only changed documents — but that is the one claim
-        here that has never been measured against a bill.
+- [ ] **English vocabulary packs — daily life and idioms.** Two packs, both
+      English, sitting under the same pack rules as the rest (audience is not
+      beginners; packs unlock domains, never "starter" anything; curated from real
+      sources, not AI-generated; **word lists need approval before shipping**).
+      Idioms are the harder of the two: an idiom's back is a usage note, not a
+      gloss, and that is exactly the case the two-gloss rule was written for.
+      Drafts go in `docs/packs/` with backs alongside the word list. See the
+      packs item under Medium for the rest of the pack backlog.
 
-      There is no case for touching the pending-review queue: the queue is built
-      on the Start tap and owns its cards from then on, which is exactly why a
-      listener could replace the focus reload without a mid-session guard.
-
-- [ ] **Progress dashboard — recaps, plus two deferred corrections.** The write
-      path and the first screen shipped 2026-08-20; the shape and the four calls
-      behind it are in [status.md](status.md) and [data-model.md](data-model.md).
-      - **Recaps** are the only genuinely unbuilt piece and the cheapest next step
-        here. A weekly or monthly "here's how it went" needs **no new write** —
-        the rollups already carry everything it would say.
-      - **Swap the streak to the derived one.** `deriveStreak` is written and
-        tested; the dashboard shows the stored counter because the rows started
-        empty. Safe once the history outlives the longest live streak — **not
-        before roughly November 2026** — and it is what finally stops the streak
-        being a local counter two devices can disagree about.
-      - **`reviewedToday` counts directions, not cards** — roughly double what a
-        learner thinks they did. The rollup deliberately matches it rather than
-        quietly disagreeing. Fixing it is a user-visible call that changes both
-        counters at once, or neither.
-      - Per-language streaks stay unbuilt on purpose: the habit is "studied
-        today". Per-language detail lives inside each day and already renders.
+- [ ] **Typed responses during review** — _needs design, together._ Today review
+      is flip-and-rate; this makes the learner produce the word before seeing it.
+      The obvious win is recall over recognition; the obvious problem is grading.
+      To settle before any code:
+      - **What counts as right.** Exact match is too harsh (accents, spacing,
+        articles, 조사), model grading costs a call per card and can't run
+        offline. A normalize-then-compare pass with a "close enough" tier is the
+        cheap middle, and may be enough on its own.
+      - **How it meets SM-2.** Does the typed result *become* the rating, or does
+        the learner still rate themselves afterwards? This decides whether it is
+        an `sm2.ts` change or purely a capture surface.
+      - **Which direction, and whether it is a mode or a per-card thing.**
+        Typing the target language is the useful half; typing the gloss is much
+        weaker.
+      - **Offline.** Whatever grades it has to work with no network, or typing
+        silently degrades on exactly the commute where review happens.
+      Related but distinct from the word-learning surface under Medium — that one
+      is about meeting a word *before* it's due, this is about how it's tested
+      once it is.
 
 ## Medium
 
@@ -146,18 +140,6 @@ _A version bump queues another Beta App Review; 1.3.0's external approval covers
 - [ ] **Grid view for cards** — denser scanning of a large deck. Nobody's blocked.
 
 ## Bigger bets
-
-- [ ] **Conversation practice** — _needs design._ Transcription + per-participant
-      feedback; MVP is end-of-conversation feedback on a recording. Same "here's
-      what you meant to say" model as writing review was.
-      The app has **no ASR at all** — TTS out, nothing in. Web has Web Speech;
-      mobile needs a native module, so a build of its own.
-      `WritingFinding`/`WritingCardCandidate` in `packages/core` say nothing about
-      writing on purpose, because per-utterance feedback is the same job on a
-      different capture — reuse them rather than writing a parallel copy, which is
-      the drift that put `reviewQueue`/`drill`/`reminders` in core. ⚠️ Those types
-      are currently callerless and scheduled for deletion (see the queued item
-      above); if this lands after that, they come back from git.
 
 - [ ] **Should `/api/explain` allow two glosses?** It still says "single best
       translation" across six prompt branches (12 templates), while a card back is
