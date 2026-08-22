@@ -55,10 +55,42 @@ function streakFromPreferences(prefs: UserPreferences | null): StreakState {
 // Passing redirectUri explicitly bypasses that override.
 // ASWebAuthenticationSession intercepts custom schemes without Info.plist registration.
 const iosClientId = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID ?? '';
+
+/**
+ * Left `undefined` when unset rather than defaulting to `''`.
+ *
+ * `expo-auth-session` invariants on `typeof value === 'undefined'` only
+ * (`providers/ProviderUtils.js`), so an empty string sails past the check and
+ * fails later at Google as an unexplained `invalid_client`. Undefined throws
+ * "Client Id property `androidClientId` must be defined", which names the
+ * missing env var.
+ */
+const androidClientId = process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID;
+
+/**
+ * The redirect Google hands the code back to, per platform.
+ *
+ * **iOS** uses the reversed client id (`com.googleusercontent.apps.<id>`) —
+ * see the note above on why that needs no Info.plist entry.
+ *
+ * **Android has no equivalent escape hatch.** A Chrome Custom Tab redirect goes
+ * through the OS, which will only route a scheme some app has actually
+ * registered, so the scheme here must also appear in `app.json`'s `scheme`
+ * array or the browser lands on a dead URL and the flow hangs with no error.
+ * That is why this is the *package name* rather than the reversed client id:
+ * both are accepted by Google for an Android client, and the package name is
+ * a value `app.json` can state statically, whereas the reversed client id is
+ * only known once the env var is read.
+ *
+ * Keep the two in sync — changing one alone breaks sign-in on the build and
+ * not in Expo Go.
+ */
 const nativeRedirectUri =
   Platform.OS === 'ios' && iosClientId
     ? `${iosClientId.split('.').reverse().join('.')}:/oauthredirect`
-    : undefined;
+    : Platform.OS === 'android'
+      ? 'com.miinjaekim.amgi:/oauthredirect'
+      : undefined;
 
 interface UserContextType {
   user: User | null;
@@ -106,6 +138,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const [, response, promptAsync] = Google.useAuthRequest({
     webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
     iosClientId,
+    androidClientId,
     ...(nativeRedirectUri ? { redirectUri: nativeRedirectUri } : {}),
   });
 

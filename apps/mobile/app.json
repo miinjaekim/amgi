@@ -3,7 +3,7 @@
     "name": "Amgi",
     "slug": "amgi",
     "version": "1.3.0",
-    "scheme": "amgi",
+    "scheme": ["amgi", "com.miinjaekim.amgi"],
     "sdkVersion": "54.0.0",
     "platforms": [
       "ios",
@@ -29,6 +29,13 @@
       "bundleIdentifier": "com.tegi.amgi",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "package": "com.miinjaekim.amgi",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#173F35"
       }
     },
     "updates": {
