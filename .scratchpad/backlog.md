@@ -57,35 +57,32 @@ _A version bump queues another Beta App Review; 1.3.0's external approval covers
 
 ## High
 
-- [ ] **Data loading and freshness — mobile half.** The web half shipped
-      2026-08-22: four surfaces subscribe, and the streak is a transaction plus
-      a listener rather than a local counter. The reasoning, and the two claims
-      this item carried that turned out to be **wrong**, are in the Decisions
-      entry in [status.md](status.md). Read that before picking this up.
+- [ ] **Data loading and freshness — mobile half, step (2).** Step (1) — the
+      `users/{uid}` display subscription — shipped 2026-08-22; how it avoids
+      becoming a second writer is in the Decisions entry in [status.md](status.md).
 
-      **Mobile was deliberately left alone, and the burden of proof is on
-      changing it.** It is not the same problem wearing a different hat:
-      - Its streak is **already offline-first** and reconciled, not divergent.
-        `recordReview` writes the local copy, marks it `dirty`, attempts the
-        server write and reconciles on the next launch that connects via
-        `mergeStreakState` (`context/UserContext.tsx:289`). Web's fix —
-        `recordReviewStreak`, a transaction — **fails offline**, which is the
-        exact bug mobile's cache was written to prevent.
+      **What is left is deliberately gated: `reloadToken` on the card surfaces
+      stays until (1) has been on a build for a release.** Not because it is
+      hard, but because the whole point of shipping (1) alone was to learn
+      whether a listener behaves on a memory-only cache before adding four more
+      — and there is **no OTA**, so a regression waits for a build *and* Beta
+      App Review. `review.tsx:117` and `cards.tsx:52` are the two.
+
+      The reasons mobile is not simply web-again still hold, and the burden of
+      proof is still on changing more:
       - Its card reads feed the AsyncStorage snapshot and the
         `applyPendingReviews` overlay. That is the offline story, not an
         accident.
       - `getFirestore` there is **memory-only** because the JS SDK has no
         IndexedDB in React Native, so a listener dropped on backgrounding
-        re-charges its whole result set on reattach after 30 minutes. Web's
-        `persistentLocalCache` has no equivalent here.
-      - **No OTA.** A web regression is a redeploy; a mobile one waits for a
-        build *and* Beta App Review.
+        re-charges its whole result set on reattach after 30 minutes. One user
+        document is why (1) was safe to do first; a card collection is not the
+        same bet. Web's `persistentLocalCache` has no equivalent here.
+      - The streak write stays offline-first and is **not** becoming a
+        transaction: a transaction fails offline, which is the bug the cache
+        exists to prevent.
 
-      **What would actually be worth doing**, in order: (1) subscribe to
-      `users/{uid}` for *display* only, leaving the offline write path alone —
-      the smallest useful piece, and it makes a laptop review show up on the
-      phone; (2) leave `reloadToken` until (1) has been on a build for a
-      release. There is no case for touching the pending-review queue.
+      There is no case for touching the pending-review queue.
 
 - [ ] **Progress dashboard — recaps, plus two deferred corrections.** The write
       path and the first screen shipped 2026-08-20; the shape and the four calls

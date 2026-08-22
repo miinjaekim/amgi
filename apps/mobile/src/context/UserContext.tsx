@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useRef, useState, ReactNode } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState, ReactNode } from 'react';
 import { AppState, Platform } from 'react-native';
 import {
   GoogleAuthProvider, signInWithCredential, signOut, onAuthStateChanged,
@@ -8,15 +8,17 @@ import * as Google from 'expo-auth-session/providers/google';
 import * as WebBrowser from 'expo-web-browser';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { auth } from '../config/firebase';
-import { getUserPreferencesFromServer, saveUserPreferences } from '../services/userPreferences';
+import {
+  getUserPreferencesFromServer, saveUserPreferences, subscribeToUserPreferences,
+} from '../services/userPreferences';
 import { refreshReminders } from '../services/reminders';
 import {
   markStreakSynced, readCachedStreak, writeCachedStreak,
 } from '../services/offlineReview';
 import { recordProgress } from '../services/progress';
 import {
-  isStudyLanguage, mergeStreakState, resolveNativeLanguage, resolveStudyLanguage,
-  reviewDelta, type ReviewVerdict, type StreakState, type StudyLanguage,
+  advanceStreak, isStudyLanguage, mergeStreakState, resolveNativeLanguage, resolveStudyLanguage,
+  reviewDelta, type ReviewVerdict, type StreakState, type StudyLanguage, type UserPreferences,
 } from '@amgi/core';
 
 WebBrowser.maybeCompleteAuthSession();
@@ -24,8 +26,29 @@ WebBrowser.maybeCompleteAuthSession();
 const LANG_CACHE_KEY = 'amgi_native_language';
 const STUDY_LANG_CACHE_KEY = 'amgi_study_language';
 
+const EMPTY_STREAK: StreakState = {
+  streak: 0, longestStreak: 0, lastReviewDate: null, reviewedToday: 0, dirty: false,
+};
+
 function getTodayString(): string {
   return new Date().toLocaleDateString('en-CA');
+}
+
+function yesterdayString(): string {
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  return yesterday.toLocaleDateString('en-CA');
+}
+
+/** The four streak fields as the preferences document carries them. */
+function streakFromPreferences(prefs: UserPreferences | null): StreakState {
+  return {
+    streak: prefs?.streak ?? 0,
+    longestStreak: prefs?.longestStreak ?? 0,
+    lastReviewDate: prefs?.lastReviewDate ?? null,
+    reviewedToday: prefs?.reviewedToday ?? 0,
+    dirty: false,
+  };
 }
 
 // In Expo Go, makeRedirectUri always returns exp://... which Google rejects.
@@ -59,10 +82,26 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const [authLoading, setAuthLoading] = useState(true);
   const [nativeLanguage, setNativeLanguageState] = useState<string | null | undefined>(undefined);
   const [studyLanguage, setStudyLanguageState] = useState<StudyLanguage>('Korean');
-  const [streak, setStreak] = useState(0);
-  const [longestStreak, setLongestStreak] = useState(0);
-  const [lastReviewDate, setLastReviewDate] = useState<string | null>(null);
-  const [reviewedToday, setReviewedToday] = useState(0);
+  /**
+   * The streak as one value, because every rule that touches it — merging a
+   * server copy in, advancing it by a review — is a decision over all four
+   * fields at once. Held as four `useState`s they could be updated out of step,
+   * and a merge would have had to take its inputs from a render-old closure.
+   *
+   * The ref is not a cache of the state, it is the input to those rules: React
+   * state does not update until the next render, so two ratings in quick
+   * succession both computed from the same starting value and the second write
+   * silently replaced the first. That is the local-counter bug web fixed with a
+   * transaction, in its single-device form — and a transaction is not available
+   * here, because it fails offline, which is the case this whole path exists
+   * for. Write both through `commitStreak` and never one without the other.
+   */
+  const streakRef = useRef<StreakState>(EMPTY_STREAK);
+  const [streakState, setStreakState] = useState<StreakState>(EMPTY_STREAK);
+  const commitStreak = useCallback((next: StreakState) => {
+    streakRef.current = next;
+    setStreakState(next);
+  }, []);
 
   const [, response, promptAsync] = Google.useAuthRequest({
     webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
@@ -151,22 +190,10 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
         const merged = mergeStreakState(
           await readCachedStreak(uid),
-          reachedServer
-            ? {
-                streak: prefs?.streak ?? 0,
-                longestStreak: prefs?.longestStreak ?? 0,
-                lastReviewDate: prefs?.lastReviewDate ?? null,
-                reviewedToday: prefs?.reviewedToday ?? 0,
-                dirty: false,
-              }
-            : null,
+          reachedServer ? streakFromPreferences(prefs) : null,
         );
 
-        const today = getTodayString();
-        setStreak(merged.streak);
-        setLongestStreak(merged.longestStreak);
-        setLastReviewDate(merged.lastReviewDate);
-        setReviewedToday(merged.lastReviewDate === today ? merged.reviewedToday : 0);
+        commitStreak(merged);
 
         // Offline reviews that outlived their session; push them now that we
         // know the server is reachable and the numbers have been reconciled.
@@ -192,15 +219,71 @@ export function UserProvider({ children }: { children: ReactNode }) {
         setNativeLanguageState(cached ?? null);
         const cachedStudy = await AsyncStorage.getItem(STUDY_LANG_CACHE_KEY);
         if (isStudyLanguage(cachedStudy)) setStudyLanguageState(cachedStudy);
-        setStreak(0);
-        setLongestStreak(0);
-        setLastReviewDate(null);
-        setReviewedToday(0);
+        commitStreak(EMPTY_STREAK);
       }
       setAuthLoading(false);
     });
     return () => unsubscribe();
   }, []);
+
+  /**
+   * Watch the preferences document so a review done elsewhere shows up here.
+   *
+   * Reading the streak once at sign-in is what left the badge on yesterday's
+   * number all evening after a session on the laptop. This fixes *displaying*
+   * that, and nothing else: mobile's write path is offline-first and stays
+   * exactly as it was. Web's fix — a transaction — is the wrong answer here,
+   * because a transaction fails offline, which is the case the cache exists for.
+   *
+   * Three rules keep the listener from becoming a second writer:
+   *
+   * - **Merge, never assign.** `mergeStreakState` is the same reconcile the
+   *   launch path runs, so the device's unsent work outranks the server's older
+   *   copy rather than being overwritten by it. Straight assignment would throw
+   *   away a session reviewed underground the moment a snapshot arrived.
+   * - **The cache is refreshed only when nothing is unsent.** While `dirty`,
+   *   the AsyncStorage copy belongs to `recordReview` and its retry, and this
+   *   must not step on it. Clean, the write is the same one the next launch
+   *   would do anyway — worth doing now because reminders are planned from the
+   *   cached `lastReviewDate`, so a laptop review also stops the phone nagging
+   *   about work already done.
+   * - **Streak fields only.** The document also carries the languages, and
+   *   `nativeLanguage` going momentarily null is what the first-run modal
+   *   watches for — a snapshot racing the setup flow would pop it over someone
+   *   mid-answer. Languages are read at launch and changed on one device at a
+   *   time; the streak is the field that genuinely moves elsewhere.
+   *
+   * Gated on `authLoading` so the launch reconcile settles first, otherwise the
+   * server's copy would show for a frame before the device's own is even read.
+   *
+   * Worth knowing: once this device records a review, the in-memory copy stays
+   * `dirty` for the rest of the session — only the cached copy is cleared, by
+   * `markStreakSynced`, and only when it still says what was sent. So every
+   * later snapshot merges by date and then by highest rather than simply taking
+   * the server's value. That is deliberate: highest never loses a review, and a
+   * genuinely newer day on the server still wins outright.
+   */
+  const signedInUid = user?.uid;
+  useEffect(() => {
+    if (!signedInUid || authLoading) return;
+    return subscribeToUserPreferences(
+      signedInUid,
+      prefs => {
+        // A missing document is a new account, not a streak of zero. Nothing to
+        // merge, and assigning zeros here would wipe a first session that has
+        // not been written yet.
+        if (!prefs) return;
+        const merged = mergeStreakState(streakRef.current, streakFromPreferences(prefs));
+        commitStreak(merged);
+        if (!merged.dirty) void writeCachedStreak(signedInUid, merged);
+      },
+      error => {
+        // Not fatal: the launch reconcile and the local cache still drive the
+        // session, so this degrades to the behaviour before the listener.
+        console.warn('Streak subscription dropped:', error);
+      },
+    );
+  }, [signedInUid, authLoading]);
 
   /**
    * Reminders are planned from local state, so they need re-planning whenever
@@ -268,31 +351,17 @@ export function UserProvider({ children }: { children: ReactNode }) {
     // fail differently: the streak can be reconstructed from the server's copy
     // on the next launch, where an uncounted day is uncounted forever.
     void recordProgress(user.uid, reviewDelta(studyLanguage, verdict), today);
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayStr = yesterday.toLocaleDateString('en-CA');
 
-    let newStreak = streak;
-    let newLongest = longestStreak;
-    const newReviewedToday = reviewedToday + 1;
-
-    if (lastReviewDate !== today) {
-      newStreak = lastReviewDate === yesterdayStr ? streak + 1 : 1;
-      newLongest = Math.max(longestStreak, newStreak);
-      setStreak(newStreak);
-      setLongestStreak(newLongest);
-      setLastReviewDate(today);
-    }
-
-    setReviewedToday(newReviewedToday);
-
+    // `advanceStreak` is the same pure rule web runs inside its transaction —
+    // including restarting `reviewedToday` on a new day rather than
+    // incrementing yesterday's count. It reads from the ref rather than from
+    // React state so that consecutive ratings compose instead of both starting
+    // from the value the last render happened to see.
     const next: StreakState = {
-      streak: newStreak,
-      longestStreak: newLongest,
-      lastReviewDate: today,
-      reviewedToday: newReviewedToday,
+      ...advanceStreak(streakRef.current, today, yesterdayString()),
       dirty: true,
     };
+    commitStreak(next);
 
     // Local first, and marked unsent. The Firestore write below does not reject
     // when offline — it simply never settles — so without this the streak would
@@ -300,10 +369,10 @@ export function UserProvider({ children }: { children: ReactNode }) {
     const uid = user.uid;
     void writeCachedStreak(uid, next);
     saveUserPreferences(uid, {
-      streak: newStreak,
-      longestStreak: newLongest,
+      streak: next.streak,
+      longestStreak: next.longestStreak,
       lastReviewDate: today,
-      reviewedToday: newReviewedToday,
+      reviewedToday: next.reviewedToday,
     })
       .then(() => markStreakSynced(uid, next))
       .catch(() => { /* Stays dirty; reconciled on the next launch that connects. */ });
@@ -351,8 +420,14 @@ export function UserProvider({ children }: { children: ReactNode }) {
     await signOut(auth);
   };
 
+  // Derived rather than stored: `reviewedToday` counts *for a day*, so a count
+  // left over from a day that is over displays as zero without the stored value
+  // — which is still what the streak is computed from — being rewritten.
+  const reviewedToday =
+    streakState.lastReviewDate === getTodayString() ? streakState.reviewedToday : 0;
+
   return (
-    <UserContext.Provider value={{ user, authLoading, nativeLanguage, studyLanguage, streak, reviewedToday, setNativeLanguage, setStudyLanguage, recordReview, deleteAccount, handleSignIn, handleSignOut }}>
+    <UserContext.Provider value={{ user, authLoading, nativeLanguage, studyLanguage, streak: streakState.streak, reviewedToday, setNativeLanguage, setStudyLanguage, recordReview, deleteAccount, handleSignIn, handleSignOut }}>
       {children}
     </UserContext.Provider>
   );

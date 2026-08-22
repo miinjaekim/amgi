@@ -90,8 +90,18 @@ listener, because two tabs both loading `reviewedToday: 0` and reviewing 10 and
 1 times stored `1` — no second device required. And **mobile is the opposite
 case, not the same one later**: its streak is already offline-first and
 reconciled, and the transaction that fixes web *fails offline*, which is the bug
-mobile's cache exists to prevent. It was left alone deliberately;
-[backlog.md](backlog.md) says what would actually be worth doing there._
+mobile's cache exists to prevent._
+
+_Mobile then took **step (1) only** — a `users/{uid}` subscription for display,
+merged into what the device holds and never written back from. The scope was set
+before the code and held. Two things came out of it: the cache write is gated on
+nothing being unsent, because `refreshReminders` reads that cached
+`lastReviewDate` and would otherwise nag about work already done; and mobile
+turned out to have web's local-counter bug after all, in a **single-device**
+form — two quick ratings both computing from the same render-old state — fixed
+with a ref rather than a transaction, since a transaction fails offline. Step (2)
+is gated on this having been in a build for a release; see
+[backlog.md](backlog.md) and the Decisions entry in [status.md](status.md)._
 
 _This pass **cut both tracking files down to what GitHub can't tell you.**
 `status.md` lost its Shipped section entirely (~270 lines), plus the per-PR
