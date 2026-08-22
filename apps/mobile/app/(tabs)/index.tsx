@@ -62,6 +62,7 @@ const EXAMPLE_TERMS: Record<StudyLanguage, string[]> = {
   English: ['serendipity', '아쉽다', 'procrastinate', '답답하다', 'nuance'],
   French: ['dépaysement', 'flâner', 'retrouvailles', 'longing', 'terroir'],
   Spanish: ['sobremesa', 'madrugar', 'empalagoso', 'awkward', 'duende'],
+  Kikuyu: ['ũhoro', 'mũgũnda', 'mũrata', 'harvest', 'rũciũ'],
   Japanese: ['木漏れ日', '積ん読', 'nostalgia', 'awkward', '侘寂'],
   TraditionalChinese: ['緣分', '撒嬌', 'nostalgia', 'awkward', '將就'],
 };

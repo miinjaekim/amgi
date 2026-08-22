@@ -46,6 +46,21 @@ _Reconciled against `main` @ `bc8cb97`, 2026-08-21. `npm test` 246/246, measured
   collections drifted into. Both work; only one says what it means. Why, and why
   a new collection needs two indexes rather than one, are in
   [lessons.md](lessons.md).
+- ⚠️ **Kikuyu is code-complete and blocked on the same two console steps Spanish
+  was** (2026-08-22). Registry entry, prompt branch, i18n and example terms are
+  merged, and every route was exercised against the live API — lookup both
+  directions, Korean back, examples, depth, word of the day. But `cards_kikuyu`
+  has **no security rule and neither composite index**, so until they exist in
+  the console every save fails `permission-denied` and then every review query
+  fails on the missing index. Mirror `cards_spanish`, and create *both* indexes
+  up front — see [lessons.md](lessons.md) for why the console's link only builds
+  one.
+- **Kikuyu has no pronunciation, and that is the finished state, not a gap.**
+  It is the first registry entry with no `ttsLanguageCode`, so it is also the
+  first time that field's optionality has ever been exercised: both apps hide
+  the pronounce button and `/api/pronounce` returns a clean 400. Verified on
+  both. If a future language also lands without audio, this is the path it
+  takes.
 - **Grammar and writing were removed from the app** (2026-08-18), but
   `/api/writing` and `/api/grammar/exercise` stay deployed because 1.3.0's binary
   still calls them. See Decisions for the one condition that lets them go.
@@ -291,6 +306,49 @@ The short version: mobile's streak is already offline-first and reconciled
 rather than divergent, and the transaction that fixes web *fails offline*,
 which is the bug mobile's cache exists to prevent. Same symptom name, opposite
 correct answer.
+
+### Kikuyu ships with no audio and no noun class, both measured (2026-08-22)
+
+Kikuyu is the first study language added where the open questions were about the
+*language's* support rather than the app's, and the backlog item said to answer
+them on real words before wiring any UI. Both were answered that way.
+
+**No pronunciation, because no voice exists.** Checked against the live Google
+Cloud TTS voice list rather than inferred: 2066 voices across 62 locales, and no
+`ki`. The only Bantu locale is `sw-KE`, and Swahili is the wrong stand-in for a
+reason worse than accent — its alphabet has no `ĩ` or `ũ`, which are the two
+vowels that separate Kikuyu words from each other. A voice that cannot say the
+distinguishing sounds teaches the wrong pronunciation confidently, which is worse
+than a hidden button. So the entry has no `ttsLanguageCode`, and the optional-TTS
+path that had been written but never used is now live.
+
+**No noun class on the card, even though it is the obvious analogue of
+`gender`.** Kikuyu marks class, not gender, and class governs agreement across
+the whole sentence — so it is more useful than `el`/`la`, and a wrong one is
+also much more damaging. Probed on eight nouns: `mũndũ` (1/2, `andũ`) and `mũtĩ`
+(3/4, `mĩtĩ`) came back right, but `rũthiomi` came back with `ndimi` — the
+*Swahili* plural, where Kikuyu has `thiomi`. A field that is wrong that often
+teaches wrong agreement everywhere the learner uses the word. Left off until
+something better than the model can fill it. The Swahili leak is also why the
+prompt branch names Swahili explicitly as something not to answer with; the
+nearest high-resource Bantu language is a live contamination risk, not a
+theoretical one.
+
+**Everything else was better than expected.** Single-word lookup was correct on
+~19 of 20 real words in both directions, `ũhoro` was correctly split into its two
+senses, depth returned accurate cultural notes (including the `mũgũnda`/`werũ`
+contrast), and example sentences carried correct locative morphology. The one
+gloss believed wrong was `gũtherũka`, returned as "to become clear" where it
+means "to boil" — close to `gũthera`, which is the shape of error to expect here:
+a real Kikuyu word confused with a near neighbour, not an invented one.
+
+**Worth knowing: the spellcheck rule turned out to be a Kikuyu feature.** It was
+written for transposed letters and missing accents, and on Kikuyu it restores
+dropped vowel diacritics — `muthenya` → `mũthenya`, which is exactly how a
+learner will type. The fear was the opposite, that a low-resource language would
+be over-corrected into hallucinated forms; five real-but-less-common words
+(`gĩthomo`, `mũhĩrĩga`, `kĩrĩma`, `nyeki`, `gũtherũka`) all came back with
+`corrected: null`. Re-measure this if the rule is ever loosened.
 
 ### Spanish is European Spanish, and that is a deck not a setting (2026-08-21)
 

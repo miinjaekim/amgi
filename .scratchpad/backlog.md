@@ -57,16 +57,6 @@ _A version bump queues another Beta App Review; 1.3.0's external approval covers
 
 ## High
 
-- [ ] **Kikuyu as a language option.** The first language added since Spanish;
-      follow the same path that one took (see the Spanish entry in
-      [status.md](status.md)) — every study-language list, the prompt branches in
-      `/api/explain`, and the study-language count in
-      `docs/testflight-beta-info.md`, which the build pre-flight already asks for.
-      Open before building: whether the model is good enough at Kikuyu to trust
-      the same lookup loop, and what pronunciation does — `/api/pronounce` needs a
-      voice that may not exist. Answer both on a handful of real words before
-      wiring any UI.
-
 - [ ] **English vocabulary packs — daily life and idioms.** Two packs, both
       English, sitting under the same pack rules as the rest (audience is not
       beginners; packs unlock domains, never "starter" anything; curated from real
@@ -97,6 +87,18 @@ _A version bump queues another Beta App Review; 1.3.0's external approval covers
       once it is.
 
 ## Medium
+
+- [ ] **Word of the day returns synonym lists where cards refuse them.** Found
+      while verifying Kikuyu, then cross-checked — it is not language-specific:
+      `gũcoka` came back as "to return; to do again; to recover", `délai` as
+      "deadline, time limit, period", `sedan` as "since, then, ago". `/api/explain`
+      forbids exactly this ("Never list synonyms with semicolons or slashes") and
+      the two-gloss rule allows a *second* gloss only where one would mislead;
+      `word-of-the-day/route.ts:138` just asks for "the best English translation"
+      with no such rule, so a saved word-of-the-day card gets a back the lookup
+      path would never have produced. The fix is the missing rule, not a new one —
+      but decide first whether the ceiling is one gloss or the two the card rule
+      already allows.
 
 - [ ] **Word learning surface — meet a word before it's due.** A new card is
       immediately due in *both* directions (`isDue` returns both when neither is
