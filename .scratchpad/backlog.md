@@ -57,6 +57,48 @@ _A version bump queues another Beta App Review; 1.3.0's external approval covers
 
 ## High
 
+- [ ] **Android, as a sideloadable APK.** The build is one command —
+      `eas build --platform android --profile preview`, which already yields an
+      APK rather than an AAB because that profile is `distribution: internal`,
+      and EAS hands back an install URL and a QR code. **The build is not the
+      work.** The app has never been configured for Android at all, and one of
+      the gaps is fatal rather than cosmetic:
+      - **Google sign-in throws on Android, so nothing behind it is reachable.**
+        `expo-auth-session`'s Google provider picks its client id by platform and
+        *invariants* when the running platform's id is missing
+        (`Platform.select` in `providers/Google.js`); `UserContext.tsx:106`
+        passes `webClientId` and `iosClientId` only. `UserContext.tsx:57-61` then
+        gates the reversed-client-id redirect on `Platform.OS === 'ios'`, so
+        Android needs both an id and its own redirect. Two small edits — the
+        credential behind them is the slow part.
+      - **That credential has a chicken-and-egg order.** An Android OAuth client
+        is keyed to *package name + SHA-1 of the signing certificate*, and the
+        certificate is the keystore EAS generates on the first Android build.
+        So: set `android.package` → let EAS create the keystore (`eas
+        credentials`) → read the SHA-1 → create the Android client in Google
+        Cloud → put `EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID` in the **EAS
+        production environment**, not `.env.local` → then build for real. Let
+        EAS hold the keystore; losing it means a new SHA-1 and a re-registered
+        client.
+      - **`app.json` has no `android` block.** `package` is permanent — it is
+        baked into the OAuth client and into any future Play listing — so pick it
+        deliberately instead of taking the derived default. `assets/` has only
+        `icon.png` and no adaptive-icon foreground.
+      - **An APK has no update path at all** — worse than TestFlight, which at
+        least notifies. Every Android release is a fresh link and a manual
+        re-install, and testers meet "install from unknown sources" and a Play
+        Protect warning on the way in. That is the price of skipping the $25 Play
+        account and its review, and **Play internal testing is the deferred
+        decision here, not the rejected one** — revisit it once there are enough
+        Android testers that re-sending links hurts.
+      - **Nothing in this app has ever run on Android.** The verify-on-the-binary
+        list above is an iOS list; on Android every path in it — audio, CSV/Anki
+        export, sharing, offline across a force-kill, account deletion, reminders
+        — is unverified from zero. Two Android-only additions: notifications need
+        the runtime `POST_NOTIFICATIONS` grant on Android 13+, and
+        `reminders.ts` creates no notification channel, so reminders land in
+        Android's default "Miscellaneous" channel.
+
 - [ ] **English vocabulary packs — daily life and idioms.** Two packs, both
       English, sitting under the same pack rules as the rest (audience is not
       beginners; packs unlock domains, never "starter" anything; curated from real
