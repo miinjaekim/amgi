@@ -90,8 +90,29 @@ listener, because two tabs both loading `reviewedToday: 0` and reviewing 10 and
 1 times stored `1` — no second device required. And **mobile is the opposite
 case, not the same one later**: its streak is already offline-first and
 reconciled, and the transaction that fixes web *fails offline*, which is the bug
-mobile's cache exists to prevent. It was left alone deliberately;
-[backlog.md](backlog.md) says what would actually be worth doing there._
+mobile's cache exists to prevent._
+
+_Mobile then took **step (1) only** — a `users/{uid}` subscription for display,
+merged into what the device holds and never written back from. The scope was set
+before the code and held. Two things came out of it: the cache write is gated on
+nothing being unsent, because `refreshReminders` reads that cached
+`lastReviewDate` and would otherwise nag about work already done; and mobile
+turned out to have web's local-counter bug after all, in a **single-device**
+form — two quick ratings both computing from the same render-old state — fixed
+with a ref rather than a transaction, since a transaction fails offline._
+
+_Step (2) followed the same day, after the streak listener was watched working
+on a phone. **The gate asked for a release and was opened by an Expo Go test** —
+deliberately, and worth knowing which questions that left open. Two things the
+collection listeners needed that the streak one did not: an **empty cached
+snapshot is dropped**, because on a memory-only cache "nothing yet" and "no
+cards" arrive identically and the streak sidesteps it by ignoring missing
+documents; and the offline snapshot is **written on a debounce**, because every
+rating echoes back as a snapshot and writing each would re-serialise the whole
+collection per card. A listener also gives back no **deadline**, so review keeps
+`withTimeout`'s 10s itself — offline on an unloaded language it would otherwise
+spin forever. **What is left is verification on a device**, and
+[backlog.md](backlog.md) lists the four things to watch._
 
 _This pass **cut both tracking files down to what GitHub can't tell you.**
 `status.md` lost its Shipped section entirely (~270 lines), plus the per-PR

@@ -29,19 +29,53 @@ export async function readCachedReviewCards(
 }
 
 /**
- * Refresh from Firestore, update the snapshot, and return the result with any
- * still-unsent ratings replayed. The replay matters even on a fresh fetch: a
- * rating that hasn't flushed yet isn't on the server, so without it the server
- * copy would drag already-answered cards back into the queue.
+ * A freshly-read set of cards with anything still unsent replayed over it.
+ *
+ * The replay matters even on cards straight from the server: a rating that
+ * hasn't flushed yet isn't on the server, so without it the server's copy would
+ * drag already-answered cards back into the queue.
+ *
+ * Deliberately does *not* touch the stored snapshot. Under a listener this runs
+ * on every change, and refreshing storage is on a much slower clock than
+ * refreshing the screen — see `persistReviewSnapshot`.
  */
-export async function fetchAndCacheReviewCards(
+export async function replayPendingOver(
   uid: string,
   studyLanguage: StudyLanguage,
+  cards: Flashcard[],
 ): Promise<Flashcard[]> {
-  const cards = await withTimeout(fetchUserFlashcardsFromServer(uid, studyLanguage));
-  await writeCachedCards(uid, studyLanguage, cards);
   const pending = await readPendingReviews(uid);
   return applyPendingReviews(cards, pending, studyLanguage);
+}
+
+/**
+ * How long to sit on a snapshot before writing it to the device.
+ *
+ * A listener reports every change, and each of a session's ratings comes back
+ * as one — so writing on each would re-serialise the whole collection thirty
+ * times during thirty reviews, where the fetch-per-focus it replaced wrote once
+ * a visit. Coalescing is safe in a way it would not be for a rating, because
+ * this snapshot is a *cache*: unsent ratings live in their own queue and are
+ * replayed over whatever is stored, so the worst a dropped write costs is a
+ * slightly older starting point on the next cold, offline launch.
+ */
+export const SNAPSHOT_WRITE_DEBOUNCE_MS = 5_000;
+
+/**
+ * Store a snapshot as this device's offline copy of a language.
+ *
+ * **Only ever call this with cards that came from the server.** A cache-backed
+ * snapshot is data Firestore already held this session — fine to display, but
+ * writing it back lets the memory cache overwrite the durable copy with a
+ * subset of itself, which is the trap `fetchUserFlashcardsFromServer` was
+ * written to dodge and the same rule the streak listener follows.
+ */
+export async function persistReviewSnapshot(
+  uid: string,
+  studyLanguage: StudyLanguage,
+  cards: Flashcard[],
+): Promise<void> {
+  await writeCachedCards(uid, studyLanguage, cards);
 }
 
 // Re-exported because `review.tsx` imports it from here, and because moving it

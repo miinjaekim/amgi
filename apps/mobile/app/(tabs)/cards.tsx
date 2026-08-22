@@ -1,15 +1,14 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, FlatList,
   StyleSheet, Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useFocusEffect } from 'expo-router';
 import { File, Paths } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import { useUser } from '../../src/context/UserContext';
 import {
-  fetchAllUserFlashcards, archiveFlashcard, restoreFlashcard,
+  subscribeToAllUserFlashcards, archiveFlashcard, restoreFlashcard,
   deleteFlashcard, updateFlashcardFields,
 } from '../../src/services/firestore';
 import type { Flashcard } from '../../src/services/firestore';
@@ -49,7 +48,6 @@ export default function CardsScreen() {
   const [bulkWorking, setBulkWorking] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
-  const [reloadToken, setReloadToken] = useState(0);
   const [importSuccess, setImportSuccess] = useState<string | null>(null);
 
   // Every card for this language, packs included. A card used to belong to a
@@ -59,34 +57,27 @@ export default function CardsScreen() {
   // is the deck group in the filter sheet: a dimension you can widen or narrow,
   // rather than a decision taken before the data arrives. Review is unaffected
   // — it filters by collection itself.
-  const loadCards = useCallback(() => {
+  /**
+   * Read live, which is what replaced re-reading on every tab visit.
+   *
+   * Expo Router keeps this screen mounted, so a plain mount effect would never
+   * run again and a card saved on Learn would not appear until the process was
+   * killed. That used to be paid for with a full re-read of the collection on
+   * every focus — the honest price of a list that is never quietly wrong. A
+   * listener is both fresher and cheaper: Firestore bills the first snapshot
+   * and thereafter only documents that actually change, and the list now
+   * updates while you are looking at it rather than on the way back in.
+   */
+  useEffect(() => {
     if (!user) { setAllCards([]); return; }
     setLoading(true);
-    fetchAllUserFlashcards(user.uid, studyLanguage)
-      .then(setAllCards)
-      .catch(() => setError('Failed to load cards.'))
-      .finally(() => setLoading(false));
-  }, [user, studyLanguage, reloadToken]);
-
-  useEffect(loadCards, [loadCards]);
-
-  /**
-   * Re-read whenever this tab is focused again.
-   *
-   * Expo Router keeps this screen mounted, so the effect above would otherwise
-   * never run and a card saved on Learn would not appear until the process was
-   * killed. Deliberately unconditional rather than gated on the card counter:
-   * that counter lives in module scope, and Fast Refresh re-evaluates a module
-   * when anything importing it is edited, so its value cannot be trusted to
-   * survive a dev session. One query per tab visit is the honest price of a
-   * list that is never quietly wrong.
-   */
-  const firstFocus = useRef(true);
-  useFocusEffect(useCallback(() => {
-    // Mount already loads; without this the first focus would fetch twice.
-    if (firstFocus.current) { firstFocus.current = false; return; }
-    setReloadToken(n => n + 1);
-  }, []));
+    return subscribeToAllUserFlashcards(
+      user.uid,
+      studyLanguage,
+      cards => { setAllCards(cards); setError(null); setLoading(false); },
+      () => { setError('Failed to load cards.'); setLoading(false); },
+    );
+  }, [user, studyLanguage]);
 
   // The chips to offer and which one is lit. `deckKey` is validated against the
   // offered chips rather than reset by an effect: deleting the last card of a
@@ -236,7 +227,8 @@ export default function CardsScreen() {
 
   const handleImportSaved = (count: number) => {
     setShowImport(false);
-    loadCards();
+    // The imported cards arrive on their own — the listener reports the batch
+    // as it lands, so there is nothing to go and fetch.
     setImportSuccess(t(nativeLanguage, count === 1 ? 'importSavedToastOne' : 'importSavedToast', { count }));
     setTimeout(() => setImportSuccess(null), 4000);
   };
@@ -593,9 +585,9 @@ export default function CardsScreen() {
           studyLanguage={studyLanguage}
           nativeLanguage={nativeLanguage}
           onClose={() => setDetailCard(null)}
-          // The modal can now write — enrichment, an edited back, archive,
-          // delete — so this list has to hear about it.
-          onChanged={loadCards}
+          // The modal writes — enrichment, an edited back, archive, delete —
+          // and the listener above reports every one of them, so this list no
+          // longer has to be told.
         />
       )}
     </SafeAreaView>

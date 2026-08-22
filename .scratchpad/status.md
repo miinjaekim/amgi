@@ -117,6 +117,126 @@ enough hands to close it without a dedicated session.
 Closed calls, kept with their reasoning — a decision whose reasoning is lost gets
 reopened by the next person to notice the symptom. Newest first.
 
+### Mobile's card surfaces subscribe too — the gate was opened by a test, not a build (2026-08-22)
+
+Step (2), the same day as step (1). The gate was "step (1) has been on a build
+for a release"; what actually opened it was the user reviewing on the laptop and
+watching the phone's streak move in Expo Go. **That is weaker evidence than the
+gate asked for, and it was taken deliberately** — it settles the question the
+gate existed to settle (does `onSnapshot` deliver on React Native, through a
+memory-only cache, in this app) and settles nothing about collections. What
+follows is what had to be handled *because* the test could not cover it.
+
+**An empty snapshot from the cache is dropped, not delivered.** This is the
+listener form of the trap `fetchUserFlashcardsFromServer` was written to dodge:
+the cache is memory-only, so before the server answers it holds nothing, and
+Firestore reports nothing as an ordinary empty result rather than an error.
+Delivered as-is it is indistinguishable from "this account has no cards" — it
+would blank the list on every cold start and overwrite the offline snapshot with
+nothing. **The streak listener never met this**, because a missing document is
+simply ignored there; a collection cannot do that, since empty is a legitimate
+answer. So the clean laptop-to-phone test could never have caught it.
+
+**Storing the snapshot is on a slower clock than showing it.** Every rating in a
+session comes back as its own snapshot, so writing the offline copy on each
+would re-serialise the whole collection once per card, where the fetch-per-focus
+it replaced wrote once a visit. It is debounced 5s and flushed when the language
+or account changes. Coalescing is safe here in a way it would not be for a
+rating: this is a *cache*, unsent ratings live in their own queue and are
+replayed over whatever is stored, so a dropped write costs a slightly older
+starting point on the next cold offline launch and nothing else. The debounce
+lives in the effect, not the module — module-scope state does not survive Fast
+Refresh, which is the bug that killed this screen's first freshness attempt.
+
+**Review needed no mid-session guard, and that is a property of the screen.**
+The focus reload had to be suppressed mid-session because it reset the pick and
+would rebuild the queue under someone eight cards into thirty. A listener does
+not, because **`cards` is not what a session runs on**: the queue is built from
+it on the Start tap and owns its copy from then on. A snapshot landing mid-review
+moves the picker's due counts and leaves the cards in front of the learner alone.
+`sessionRunningRef` and `reloadToken` are gone with the reload they protected.
+
+**The one thing a listener does not give back is a deadline.** Offline with a
+cold cache it says nothing at all — no data, no error, and the empty cached
+snapshot is dropped by the guard above — so the screen would spin forever on a
+language this device has never loaded. `withTimeout`'s 10s is now applied by the
+load effect itself. This is the newest machinery in the change and the first
+thing to check on a device.
+
+Also: `sessionRatings` is cleared per language change and *not* per snapshot.
+Every snapshot has the unsent queue replayed over it, so keeping them loses
+nothing, and `applyPendingReviews` assigns rather than increments — but clearing
+them on a snapshot that raced a rating would drag an answered card back into the
+counts. The `onChanged`/`loadCards` calls that told screens to go and look again
+are gone, as are `fetchAllUserFlashcards` and `fetchUserFlashcards`, which have
+no callers left. `fetchUserFlashcardsFromServer` stays: warming a language nobody
+is looking at has no listener to ride on.
+
+**Progress is deliberately not subscribed**, on either platform. It is a
+historical rollup whose only moving row is today's, it re-reads on focus, and the
+review tab is one tap away. Subscribing it would add a listener for a number that
+cannot change while you are looking at it.
+
+### Mobile subscribes for display only, and a ref is what serialises its writes (2026-08-22)
+
+Step (1) of the mobile half, done the day web shipped. The scope was set in
+advance — subscribe to `users/{uid}` for **display**, leave the offline write
+path alone — and it held. What is worth keeping is *how* a listener is prevented
+from quietly becoming a second writer, since the obvious wiring does become one.
+
+**Merge, never assign.** The snapshot handler runs `mergeStreakState` against
+what the device holds, which is the same reconcile the launch path already ran.
+Assigning the server's copy would discard a session reviewed underground the
+instant a snapshot landed. This is the whole reason the listener is safe next to
+an offline-first write path rather than in competition with it.
+
+**The AsyncStorage cache is refreshed only when nothing is unsent.** While
+`dirty`, that copy belongs to `recordReview` and its retry, and a listener
+writing over it would race `markStreakSynced`. Clean, the write is the one the
+next launch would have done anyway — worth doing early because `refreshReminders`
+plans from the cached `lastReviewDate`, so a laptop review now also stops the
+phone nagging about work already done. That second-order effect was the argument
+for writing the cache at all; display alone would have left the badge and the
+notification disagreeing.
+
+**Streak fields only, though the listener carries the whole document.** The
+languages are in there too, and `nativeLanguage` going momentarily null is
+exactly what the first-run modal watches for — a snapshot racing the setup flow
+would pop it over someone mid-answer. Languages are read at launch and changed
+on one device at a time; the streak is the field that genuinely moves elsewhere.
+
+**The streak became one value behind a ref, and that fixed a real bug on the
+way.** Four `useState`s could not be merged atomically, and the merge would have
+had to read a render-old closure. Moving to one `StreakState` plus a ref means
+`recordReview` computes from the ref, not from React state — and consecutive
+ratings now compose instead of both starting from the value the last render
+happened to see, where the second write silently replaced the first. **That is
+web's local-counter bug in its single-device form**, and it was sitting in the
+mobile write path unnoticed while the item said mobile did not have that problem.
+The item was right that mobile's *cross-device* story was already reconciled; it
+was wrong that nothing local could disagree. A transaction still is not the
+answer here — it fails offline — and a ref costs nothing.
+
+`recordReview` now calls core's `advanceStreak`, the same pure rule web runs
+inside its transaction, rather than its own copy of the arithmetic. Verified
+equivalent field by field before swapping, including the new-day restart of
+`reviewedToday`; `reviewedToday` is now *derived* for display rather than stored
+as zero, so the value the streak is computed from stays honest.
+
+One thing deliberately not done: the in-memory copy stays `dirty` for the rest
+of a session once this device records a review — only the cached copy is
+cleared, by `markStreakSynced`, and only when it still says what was sent. So
+later snapshots merge by date and then by highest rather than taking the server
+outright. Left as it is because highest never loses a review and a genuinely
+newer day still wins outright; clearing it in state would mean duplicating
+`markStreakSynced`'s "only if it still says what was sent" guard.
+
+Unverified on a device: this typechecks, bundles and rides on core logic with
+252 passing tests, but **the listener itself has not been watched on a phone**.
+Mobile has no test harness, so the wiring is argued rather than exercised — and
+that is precisely why step (2) is gated on this having been in a build for a
+release. See [backlog.md](backlog.md).
+
 ### Web subscribes; the archived bug was never real (2026-08-22)
 
 Four calls out of the data-freshness item, two of which **retract things this
