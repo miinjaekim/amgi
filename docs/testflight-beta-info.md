@@ -2,7 +2,7 @@
 
 _한국어와 영어 문구가 모두 이 파일에 있습니다. Both languages live here._
 
-_마지막 갱신: 2026-08-11, 1.3.0용._
+_마지막 갱신: 2026-08-22, 1.4.0용._
 
 App Store Connect → TestFlight → **Test Information**에 붙여넣는 문구 모음입니다.
 Test Information은 로컬라이제이션을 지원하므로, 언어 목록에 **Korean (ko)** 과
@@ -25,7 +25,7 @@ Amgi는 언어 학습용 플래시카드 앱입니다.
 
 단어를 찾아보면 뜻과 뉘앙스, 격식, 예문이 나옵니다. 한자어는 한자 풀이도 함께요. 그대로 카드로 저장하면 간격 반복 일정에 맞춰 다시 나타납니다.
 
-글을 쓰면 원어민이라면 어떻게 썼을지 보여줍니다. 거기서 걸린 문법은 따로 연습할 수 있습니다.
+단어팩으로 한 분야의 어휘를 한번에 담을 수 있고, 학습 기록에서 어느 날 복습했는지 돌아볼 수 있습니다.
 
 AI가 만든 설명이라 틀릴 수 있습니다. 어색하거나 잘못된 부분을 알려 주시는 것이 이번 베타에서 가장 도움이 됩니다.
 
@@ -42,7 +42,7 @@ Amgi is a flashcard app for language learners.
 
 Look up a word and you get its meaning, nuance, register and example sentences — plus a character breakdown for anything written in Chinese characters. Save that as a card and it comes back on a spaced-repetition schedule.
 
-Write a passage and you get it back as a native speaker would have put it. Grammar that trips you up there becomes a pattern you practise separately.
+Vocabulary packs cover one domain at a time, and the progress screen shows which days you actually reviewed.
 
 The explanations are AI-generated, so they can be wrong. Telling me when they are is the most useful thing you can do in this beta.
 
@@ -81,14 +81,12 @@ kenyamjkim@gmail.com
 
 이번 빌드에서 새로 볼 것:
 
-· 문법 패턴 — 가장 큰 변화입니다. 글 첨삭에서 저장하거나 카드 화면의 '문법'에서 직접 추가하면, 복습에 빈칸 채우기로 나옵니다. 두 번 맞히면 직접 문장을 씁니다. 맞는 답을 틀렸다고 하면 알려 주세요.
-· 내 카드 — 단어팩에서 저장한 카드가 이제 여기 보입니다. 덱·보관·정렬은 필터 버튼 하나로 모았어요.
-· 군사용어 팩 두 개 — 부대·참모, 안보·정세. 번역이 실제로 쓰는 말과 다르면 꼭 알려 주세요. 이 팩은 특히 그런 지적이 필요합니다.
-· 맞춤법 — 오타를 내면 고쳐서 찾아 줍니다. 멀쩡한 단어(사투리, 옛말, 고유명사, 활용형)를 고치면 알려 주세요.
-· 품사 — 새로 찾아본 단어에 명사·동사가 붙습니다. 예전 카드엔 없는 게 정상입니다.
-· 복습 중 보관하거나 지운 카드가 그 세션에 다시 나오면 알려 주세요.
+· 학습 기록 — 새 화면입니다. 연속 학습 표시를 누르면 열려요. 복습한 날이 달력에 채워지는데, 오늘 복습했는데 비어 있거나 숫자가 안 맞으면 알려 주세요.
+· 오프라인 복습 — 비행기 모드에서 복습하고, 앱을 완전히 종료한 다음 다시 연결해 보세요. 복습한 기록이 사라지면 알려 주세요. 이번 빌드에서 가장 확인이 필요한 부분입니다.
+· 스페인어와 키쿠유어 — 학습 언어로 추가했습니다. 키쿠유어는 발음 듣기가 없는 것이 정상입니다.
+· 문법 연습과 글 첨삭은 없어졌습니다 — 의도한 변경입니다. 흔적이 남아 있거나, 눌러도 아무 일도 일어나지 않는 버튼이 있으면 알려 주세요.
 
-오랜만의 새 빌드라 아직 실제 앱에서 확인 못 한 것들이 있습니다. 발음 듣기, 내보내기, 공유, 오프라인 복습, 복습 알림, 첨삭 문장 복사 — 안 되는 게 있으면 알려 주세요.
+아직 실제 앱에서 확인하지 못한 것들이 있습니다. 발음 듣기, 내보내기, 공유, 계정 삭제, 복습 알림 — 안 되는 게 있으면 알려 주세요.
 
 피드백은 TestFlight의 '피드백 보내기' 또는 kenyamjkim@gmail.com으로.
 ```
@@ -100,14 +98,12 @@ Use the app for a few days and flag anything odd. Wrong AI explanations, freezes
 
 New in this build:
 
-· Grammar patterns — the biggest change. Keep the grammar a passage review catches, or add one under "Grammar" on the Cards screen; it turns up in Review as a fill-in-the-gap, then as a sentence you write yourself after two clean passes. Tell me if it marks a correct answer wrong.
-· My Cards — words saved from a pack now show up here. Deck, archived and sort moved behind one filter button.
-· Two military terminology packs — Unit & Staff, Security Affairs. Please flag any translation that isn't what people actually say; this pack needs that more than the others.
-· Spellcheck — misspell something and it looks up the correction. Tell me if it "fixes" a word that was fine: dialect, archaic, proper nouns, inflections.
-· Part of speech — newly looked-up words get a noun/verb badge. Older cards having none is expected.
-· Archive or delete a card mid-review and it shouldn't come back that session. Tell me if it does.
+· Progress — a new screen, opened by tapping the streak badge. The calendar fills in the days you reviewed. Tell me if today is blank after you've reviewed, or if the counts look wrong.
+· Offline review — review in airplane mode, force-quit the app, then reconnect. Tell me if the reviews you did go missing. This is the one thing I most need checked in this build.
+· Spanish and Kikuyu — both added as study languages. Kikuyu having no pronunciation audio is expected.
+· Grammar practice and writing review are gone — that's deliberate. Tell me if you find a leftover trace, or a button that does nothing when tapped.
 
-It's been a while since the last build, so some things have never been checked on a real install: pronunciation audio, export, sharing, offline review, review reminders, and copying a corrected passage. Let me know if any fall over.
+Some things still haven't been checked on a real install: pronunciation audio, export, sharing, account deletion, and review reminders. Let me know if any fall over.
 
 Send feedback via TestFlight's "Send Beta Feedback" or to kenyamjkim@gmail.com.
 ```
@@ -137,13 +133,13 @@ Sign-in: The app uses Google Sign-In (Firebase Authentication) only. Demo creden
 
 How to test: On first launch the app asks for a native language and a study language before anything else, and cannot be used until both are answered. This is required because explanations are written in the native language, and a learner cannot study the language they already speak. Both can be changed later in Settings.
 
-On the Learn tab, type any word or phrase and tap Learn to get an explanation, then save it as a flashcard. The Word/Passage toggle at the top of the same tab switches to writing review: enter a few sentences and the app returns a native-sounding rewrite plus specific notes on grammar and phrasing. The Review tab runs the spaced-repetition session over saved cards. The Cards tab lists, edits, and exports saved cards; its Cards/Grammar toggle switches to grammar patterns, which are practised in Review as short written exercises rather than flipped as cards. The Packs tab holds pre-made decks that can be saved as cards or drilled directly.
+On the Learn tab, type any word or phrase and tap Learn to get an explanation, then save it as a flashcard. The Review tab runs the spaced-repetition session over saved cards. The Cards tab lists, edits, and exports saved cards. The Packs tab holds pre-made decks that can be saved as cards or drilled directly. Tapping the streak badge opens a progress screen showing which days were reviewed.
 
 Account deletion: Settings → Delete account, at the bottom of the screen. This permanently deletes the account and all associated data from within the app, as required by guideline 5.1.1(v). It asks for confirmation and may re-prompt for Google sign-in, because deleting an account requires a recent authentication.
 
 Notifications: The app can schedule local reminders for the word of the day and for due reviews. Both are off by default and are turned on individually in Settings; the permission prompt appears only when one is enabled. These are local notifications scheduled on the device — the app sends no remote push and stores no push tokens.
 
-Third-party processing: Word explanations and writing review are generated with Google's Gemini API, and pronunciation audio with Google Cloud Text-to-Speech. Only the submitted text, optional context, and language settings are sent — never account identifiers. This is described in the privacy policy.
+Third-party processing: Word explanations are generated with Google's Gemini API, and pronunciation audio with Google Cloud Text-to-Speech. Only the submitted text, optional context, and language settings are sent — never account identifiers. This is described in the privacy policy.
 
 The app contains no ads, no analytics, and no tracking. It does not access location, contacts, camera, or photos.
 
