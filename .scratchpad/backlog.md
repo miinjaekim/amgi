@@ -164,6 +164,11 @@ _A version bump queues another Beta App Review; 1.3.0's external approval covers
 `npm test` (252/252, measured 2026-08-22) and `npx eslint .` (0 errors) are
 green. What's left is what those two now *show*.
 
+- [ ] **The Google consent screen says "Amgi AI".** Rename it to **Amgi** in the
+      Google Cloud OAuth consent screen → Branding → App name. Console-side, no
+      build, no code — but it is shown to **every** user signing in, on iOS and
+      web as much as Android.
+
 - [ ] **Two callerless functions in `apps/web/src/services/firestore.ts`** —
       `countUserFlashcards` and `fetchArchivedFlashcards`, neither imported
       anywhere. Unlike `writing.ts`/`grammar.ts` these have **no build to keep
