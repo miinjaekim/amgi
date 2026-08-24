@@ -1,6 +1,9 @@
 import type { CardSides, StudyLanguage } from './types';
 import { getBackSideConfig, getStudyLanguageConfig } from './types';
+import { DAILY_LIFE_PACK } from './dailyLife';
+import { IDIOMS_PACK } from './idioms';
 import { HIRAGANA_PACK, KATAKANA_PACK } from './kana';
+import { KANJI_GRADE_1_2_PACK } from './kanji';
 import {
   MILITARY_AFFAIRS_PACK_EN,
   MILITARY_AFFAIRS_PACK_KO,
@@ -429,10 +432,17 @@ const TOEIC_PACK: VocabPack = {
  * headed for public affairs wants 안보·정세 first, and the deck page has no way
  * to say "either, depending". Listed after the exam packs because those are
  * what most of each language's users came for.
+ *
+ * English runs exam → everyday → idioms → job, which is register order rather
+ * than difficulty order: TOEIC is what most English users arrived for, Everyday
+ * English is the plainest thing here and Idioms the least literal, and the two
+ * military packs stay last for the reason above. Japanese is the one registry
+ * that *is* a sequence — hiragana, katakana, then kanji, because the kanji
+ * pack's backs are written in the two scripts the packs before it teach.
  */
 export const VOCAB_PACKS: Partial<Record<StudyLanguage, VocabPack[]>> = {
-  English: [TOEIC_PACK, MILITARY_UNIT_PACK_EN, MILITARY_AFFAIRS_PACK_EN],
-  Japanese: [HIRAGANA_PACK, KATAKANA_PACK],
+  English: [TOEIC_PACK, DAILY_LIFE_PACK, IDIOMS_PACK, MILITARY_UNIT_PACK_EN, MILITARY_AFFAIRS_PACK_EN],
+  Japanese: [HIRAGANA_PACK, KATAKANA_PACK, KANJI_GRADE_1_2_PACK],
   Korean: [TOPIK_ADVANCED_PACK, MILITARY_UNIT_PACK_KO, MILITARY_AFFAIRS_PACK_KO],
 };
 

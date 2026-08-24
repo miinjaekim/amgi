@@ -66,14 +66,34 @@ Android is the exception — no review, so a fix there ships the same day._
 
 ## High
 
-- [ ] **English vocabulary packs — daily life and idioms.** Two packs, both
-      English, sitting under the same pack rules as the rest (audience is not
-      beginners; packs unlock domains, never "starter" anything; curated from real
-      sources, not AI-generated; **word lists need approval before shipping**).
-      Idioms are the harder of the two: an idiom's back is a usage note, not a
-      gloss, and that is exactly the case the two-gloss rule was written for.
-      Drafts go in `docs/packs/` with backs alongside the word list. See the
-      packs item under Medium for the rest of the pack backlog.
+- [ ] **Approve the three new pack word lists** (2026-08-24, branch
+      `feat/vocab-packs-daily-idioms-kanji`). Everyday English (149), English
+      Idioms (100) and Kanji 教育漢字 1–2 (240) are authored, registered, tested
+      and drafted in `docs/packs/{daily-life,idioms,kanji}-pack-draft.md`.
+      **Nothing ships until the lists are signed off** — that gate is the whole
+      of what is left. Each draft leads with the calls that need a decision.
+      What was settled while building them:
+      - **The daily-life pack sets aside "audience is not beginners"** — asked
+        for that way and recorded as a deliberate exception, not a change of
+        principle. It stays inside the *spirit* of the rule by filtering
+        **concrete over frequent**: `faucet`, `drawer`, `leftovers`, `errand`,
+        not `happy`/`wait`/`always`. A future pack citing this as precedent is
+        citing an exception.
+      - **The idioms pack confirmed the backs prediction.** An idiom's back is a
+        usage note, and the Korean back is the nearest Korean 관용구 where one
+        lands on the same occasion (설상가상, 전화위복, 식은 죽 먹기). Every
+        entry also carries an `idiom — …` context hint, which is the TOPIK
+        convention; a test enforces the prefix *and* a minimum length, because
+        the failure mode is the hint quietly decaying back into the gloss. It
+        caught four on the first run.
+      - **The kanji pack is the JLPT gap answered with the school list instead**
+        — 教育漢字 grades 1–2, verified character-for-character against
+        文部科学省's 学年別漢字配当表 in a test. N5 is a subset of it. Its back is
+        `meaning — kun / ON`, the only pack whose back is not a gloss, which is
+        also why it is the first single-glyph pack laid out as a *list*. That
+        costs the grid decks' exemption from the "All" chip on the card list —
+        240 kanji cards will sit alongside the user's own words there. Named in
+        the draft as the one open design question.
 
 - [ ] **Typed responses during review** — _needs design, together._ Today review
       is flip-and-rate; this makes the learner produce the word before seeing it.
@@ -118,12 +138,16 @@ Android is the exception — no review, so a fix there ships the same day._
       presentation step. If it writes, it is an `sm2.ts` change.
 
 - [ ] **Vocabulary packs — iterate beyond v1.** Shipped: TOEIC, kana, TOPIK 고급,
-      two military packs, all one pre-authored kind.
-      *Principles:* audience is not beginners; packs unlock domains, never
-      "starter" anything; curated from real sources, not AI-generated; word lists
-      need user approval before shipping.
-      *Next:* **JLPT** is the obvious gap — Japanese has only the kana packs —
-      then TOEFL. Swedish, French and Traditional Chinese have **no pack at all**.
+      two military packs, all one pre-authored kind. Authored and awaiting
+      approval: Everyday English, English Idioms, Kanji 1–2 (see High).
+      *Principles:* audience is not beginners — **one recorded exception, the
+      daily-life pack, deliberate and not a precedent**; packs unlock domains,
+      never "starter" anything; curated from real sources, not AI-generated; word
+      lists need user approval before shipping.
+      *Next:* **TOEFL**, now that the Japanese gap is answered by the kanji pack
+      (教育漢字 1–2 rather than JLPT — N5 is a subset of it, so an exam-ladder
+      pack is a re-sectioning, not a re-authoring). Swedish, French and
+      Traditional Chinese still have **no pack at all**.
       A new pack needs backs drafted alongside its word list; drafts live in
       `docs/packs/`. Section themes as `/cards` filters are a third rung on the
       deck axis that already shipped, not a new control.

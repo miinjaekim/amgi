@@ -66,10 +66,15 @@ describe('kana packs', () => {
     }
   });
 
-  it('is registered for Japanese and marked pronounceable', () => {
+  // The kanji pack joined this registry after the two kana packs and is
+  // deliberately neither pronounceable nor a grid — a lone kanji has no one
+  // reading to speak, and its back carries readings that do not fit a tile.
+  // Asserted here rather than only in the kanji test because it is the kana
+  // packs' two distinguishing properties that must not spread by default.
+  it('leads the Japanese registry, pronounceable and laid out as a grid', () => {
     const packs = getVocabPacks('Japanese');
-    expect(packs.map(p => p.id)).toEqual(['kana-hiragana', 'kana-katakana']);
-    for (const pack of packs) {
+    expect(packs.map(p => p.id)).toEqual(['kana-hiragana', 'kana-katakana', 'kanji-grade-1-2']);
+    for (const pack of [HIRAGANA_PACK, KATAKANA_PACK]) {
       expect(pack.pronounceable).toBe(true);
       // A wall of single glyphs is the one content shape a grid beats a list on.
       expect(pack.layout).toBe('grid');
