@@ -77,6 +77,18 @@ const translations = {
     // support, and this way the copy is right at 1 in both languages.
     reviewStartCount: 'Start review ({count})',
     reviewNothingInDirection: 'Nothing due this way right now.',
+    // Typed responses — produce the word before seeing it. The toggle sits by
+    // the direction filter because it is the same kind of choice: how the
+    // session asks, not what it asks about.
+    typedReviewToggle: 'Type your answers',
+    typedAnswerPlaceholder: 'Type it in {language}',
+    typedAnswerCheck: 'Check',
+    // The per-card escape hatch. Flipping asserts nothing, so it grades
+    // nothing — the card falls straight through to the ordinary flow.
+    typedAnswerReveal: 'Show answer instead',
+    typedAnswerCorrect: 'Correct',
+    typedAnswerMissed: 'Not quite',
+    typedAnswerYours: 'You typed',
     // Offline review — mobile keeps its own card snapshot and rating queue
     offlineReviewBanner: 'Offline — reviewing the cards saved on this device.',
     offlinePendingReviews: '{count} to sync',
@@ -444,6 +456,14 @@ const translations = {
     reviewChangeCollection: '다른 묶음 고르기',
     reviewStartCount: '복습 시작 ({count}개)',
     reviewNothingInDirection: '이 방향은 지금 복습할 카드가 없어요.',
+    // Typed responses
+    typedReviewToggle: '답을 직접 입력하기',
+    typedAnswerPlaceholder: '{language}로 입력해 보세요',
+    typedAnswerCheck: '확인',
+    typedAnswerReveal: '그냥 정답 보기',
+    typedAnswerCorrect: '맞았어요',
+    typedAnswerMissed: '아쉬워요',
+    typedAnswerYours: '입력한 답',
     // Offline review — mobile keeps its own card snapshot and rating queue
     offlineReviewBanner: '오프라인 상태예요. 받아둔 카드로 복습할 수 있어요.',
     offlinePendingReviews: '{count}개 저장 대기 중',
@@ -800,4 +820,22 @@ export function directionPrompt(
       ? getBackSideConfig(studyLanguage, nativeLanguage).backLabelKey
       : getStudyLanguageConfig(studyLanguage).studyLabelKey;
   return t(nativeLanguage, key, { language: t(nativeLanguage, labelKey) });
+}
+
+/**
+ * Placeholder for the typed-answer input: "type it in Japanese".
+ *
+ * Always the study language, because typing only ever runs `backToFront` —
+ * see `promptsForTyping`. Named the same way `directionPrompt` names it, so
+ * the input and the question above it cannot disagree about what to call the
+ * language.
+ */
+export function typedAnswerPlaceholder(
+  nativeLanguage: string | null | undefined,
+  studyLanguage: StudyLanguage | string | undefined
+): string {
+  const { studyLabelKey } = getStudyLanguageConfig(studyLanguage);
+  return t(nativeLanguage, 'typedAnswerPlaceholder', {
+    language: t(nativeLanguage, studyLabelKey),
+  });
 }

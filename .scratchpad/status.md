@@ -148,6 +148,86 @@ separately unverified on Android, where only sign-in has been exercised.
 Closed calls, kept with their reasoning — a decision whose reasoning is lost gets
 reopened by the next person to notice the symptom. Newest first.
 
+### Typed responses: a local grader, and the rating row is the override (2026-08-24)
+
+Review can now ask the learner to **produce** the word instead of flipping to
+it. Four calls, all made with the user, and the backlog item's four open
+questions map onto them one for one.
+
+**Grading is local, and strict.** Fold case, Unicode composition, whitespace and
+typographic marks, then compare — spacing-insensitively, because Korean word
+spacing varies legitimately between writers. No model call: review happens on a
+commute, so a grader that needs a signal stops working exactly where the feature
+is used, and it would cost a round trip per card and reintroduce the grading
+variance the cloze design deliberately removed. **No "close enough" tier
+either** — an edit-distance band needs a threshold per writing system, since one
+character of a two-character Korean word is a different word where one character
+of `anniversaire` is a slip of the thumb.
+
+**The rating row is what makes strictness honest.** A verdict only *preselects*
+a rating; all four buttons stay live, with the expected answer on screen beside
+what was typed. So a learner whose answer was right in a way the card could not
+know corrects it with the tap they were already making. This is the removed
+cloze override's argument — *they are not appealing a judgement, they are
+reading two strings* — and here it costs no extra control at all, because the
+buttons were already there. **`sm2.ts` is untouched**: `getNextReviewData`
+already took all four responses, so this is purely a capture surface.
+
+**It never emits `easy`.** The cloze grader did, reasoning that a string match
+is not a judgement that could be wrong. That does not carry over: a cloze was a
+rung a learner climbed, where typing a due vocabulary word correctly is the
+*expected* outcome. Emitting `easy` there would ratchet ease upward across the
+whole deck on the strength of the card working as designed. A hit preselects
+`good`, a miss `again`; the learner can still claim `easy` themselves.
+
+**⚠️ Accents are matched strictly, which contradicts how the backlog item was
+written.** That item named accents alongside spacing and articles as a case
+where exact matching is too harsh. The codebase disagrees and wins:
+`STUDY_LANGUAGE_CONFIGS` refuses a Swahili TTS voice for Kikuyu precisely
+because `ĩ`/`ũ` are the two vowels that distinguish words, and French `ou`/`où`
+and `sur`/`sûr` are different words. Folding them together would teach that the
+distinction does not matter — worse than a false miss the learner corrects in
+one tap. **Articles are handled, and only the card's own:** `gender` holds
+French `le`/`la` and Swedish `en`/`ett` in a field of its own, so `le délai` is
+accepted for a card whose study side is the bare `délai`. There is no
+per-language article list to keep in step with the registry.
+
+**Readings are not accepted.** Typing `かんじ` for 漢字 answers a different
+question than the card asked, and a kana or kanji pack exists to teach the
+script. Left to the learner to claim on the rating row rather than granted
+silently.
+
+**Typing is a session property, and only `backToFront`.** A toggle on the start
+screen beside the direction filter — the same axis, *how* the session asks
+rather than what it asks about — and not persisted, for the reason the direction
+filter is not: a one-off drill should not quietly become how you review from
+then on. Only the produce-the-word direction is typed, so a `both` session is
+mixed on screen. Typing the *gloss* is the weak half: a back is allowed up to
+two translations where the study side is one word, so the expected answer is
+genuinely ambiguous in a direction the target never is.
+
+**Every typed card can still be flipped instead** — _the user's call, added to
+the design._ One control under the input reveals the answer exactly as typing-off
+would, and grades nothing, because nothing was asserted. That matters beyond
+convenience: on a phone, typing Korean or Japanese means switching IME every
+card, and a learner without one to hand must not be stuck.
+
+**Where the grader came from.** `foldText` and the spacing-insensitive compare
+were the cloze grader's, in `grammar.ts` — the module the Queued list is about to
+delete. They moved to `packages/core/src/typedAnswer.ts` and `grammar.ts` now
+imports them back, so the deployed `/api/grammar/exercise` route is unaffected
+and the rules outlive the deletion. **The typographic folding is measured, not
+anticipated:** asked for a French elision cloze the model returned `d'` with a
+curly apostrophe, and phone keyboards substitute the same character in the other
+direction — so an answer typed on iOS and a card written by the model can
+disagree on a character neither party chose.
+
+**Unverified, and both are device-shaped.** The keyboard-avoidance on the review
+session (the bottom action row is otherwise covered on a typed card) has only
+been reasoned and typechecked, not watched on a phone; and nothing has yet
+confirmed what a Korean or Japanese IME actually does to `autoCorrect={false}`
+and `autoCapitalize="none"`. Both are in `backlog.md` under what to watch for.
+
 ### Three packs authored; one of them sets a rule aside on purpose (2026-08-24)
 
 Everyday English (149), English Idioms (100) and Kanji 教育漢字 1–2 (240).

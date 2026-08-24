@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import {
   View, Text, TouchableOpacity, ActivityIndicator,
   StyleSheet, Animated, TextInput, Alert, ScrollView,
+  KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams } from 'expo-router';
@@ -26,9 +27,11 @@ import {
   getNextReviewData, getStudyLangSide, getStudyLanguageConfig, getBackSideConfig,
   directionLabel, directionPrompt, getCharacterBreakdown, getExampleSides,
   removeCardFromQueue, t,
+  gradeTypedAnswer, promptsForTyping, typedAnswerPlaceholder,
 } from '@amgi/core';
 import type {
   CardSideField, DirectionFilter, PendingReview, ReviewQueueItem,
+  TypedAnswerGrade,
 } from '@amgi/core';
 import { useTheme } from '../../src/context/ThemeContext';
 import { useFloatingTabBarHeight } from '../../src/components/FloatingTabBar';
@@ -65,6 +68,19 @@ export default function ReviewScreen() {
    * you review from then on.
    */
   const [directionFilter, setDirectionFilter] = useState<DirectionFilter>('both');
+  /**
+   * Typing is a property of the session, chosen on the start screen beside the
+   * direction filter, and per-session for the same reason that one is: a
+   * one-off drill should not quietly become how you review from then on.
+   */
+  const [typingEnabled, setTypingEnabled] = useState(false);
+  const [typedAnswer, setTypedAnswer] = useState('');
+  /**
+   * The graded answer, or null when nothing was asserted — which covers both
+   * "hasn't answered yet" and "revealed instead of typing". Both want the same
+   * thing: no verdict, and no rating preselected.
+   */
+  const [typedGrade, setTypedGrade] = useState<TypedAnswerGrade | null>(null);
   /** False on the start screen, true once a queue is running. */
   const [started, setStarted] = useState(false);
   const [queue, setQueue] = useState<ReviewQueueItem[]>([]);
@@ -373,6 +389,8 @@ export default function ReviewScreen() {
 
   const resetCardState = () => {
     setRevealed(false);
+    setTypedAnswer('');
+    setTypedGrade(null);
     setShowDetails(false);
     setShowOptions(false);
     setEditing(false);
@@ -383,6 +401,21 @@ export default function ReviewScreen() {
   const handleReveal = () => {
     setRevealed(true);
     Animated.spring(revealAnim, { toValue: 1, useNativeDriver: true, friction: 8 }).start();
+  };
+
+  /**
+   * Grade what was typed, then reveal.
+   *
+   * Local and synchronous — no network, which is the point on a phone: review
+   * happens on a commute, and a grader that needs a signal is a grader that
+   * stops working exactly where the feature is used. The verdict only
+   * preselects a rating; all four stay live, with both strings on screen.
+   */
+  const handleSubmitTyped = () => {
+    const item = queue[index];
+    if (!item || !typedAnswer.trim()) return;
+    setTypedGrade(gradeTypedAnswer(typedAnswer, item.card));
+    handleReveal();
   };
 
   const handleRate = async (rating: Rating) => {
@@ -678,6 +711,17 @@ export default function ReviewScreen() {
               </TouchableOpacity>
             ))}
           </View>
+          {/* Same axis as the direction pills above: how the session asks, not
+              what it asks about. Only the produce-the-word half of a `both`
+              session is typed. */}
+          <TouchableOpacity
+            style={[s.pill, s.typingPill, typingEnabled && s.pillOn]}
+            onPress={() => setTypingEnabled(v => !v)}
+          >
+            <Text style={[s.pillText, typingEnabled && s.pillTextOn]}>
+              {t(nativeLanguage, 'typedReviewToggle')}
+            </Text>
+          </TouchableOpacity>
           <TouchableOpacity
             style={[s.startBtn, filteredDueCount === 0 && s.startBtnOff]}
             disabled={filteredDueCount === 0}
@@ -778,6 +822,8 @@ export default function ReviewScreen() {
   const frontText = isFront ? studySide : backSide;
   const backText = isFront ? backSide : studySide;
   const prompt = directionPrompt(nativeLanguage, studyLanguage, isFront ? 'frontToBack' : 'backToFront');
+  /** Only `backToFront` is ever typed — see `promptsForTyping`. */
+  const typingThisCard = promptsForTyping(typingEnabled, direction);
   // The enriched copy when something was just generated, the queue's otherwise.
   const shownCard = enrichedCard ?? card;
   const definition = shownCard.definition;
@@ -800,237 +846,307 @@ export default function ReviewScreen() {
 
   return (
     <SafeAreaView style={s.root} edges={['top']}>
-      {offlineNotice}
-      {/* Progress */}
-      <View style={s.progressBar}>
-        <View style={[s.progressFill, { width: `${(index / queue.length) * 100}%` }]} />
-      </View>
-      {/* Two different exits, side by side and deliberately distinct: the name
-          switches which collection you are in — without it, picking the wrong
-          one would mean working through the whole queue to escape it — while
-          the ✕ ends the session outright. The ✕ is the only one that shows on
-          a single collection, where there is nothing to switch to. */}
-      <View style={s.progressRow}>
-        <View style={s.progressLabelWrap}>
-          {collections.length > 1 ? (
-            <TouchableOpacity onPress={() => setSelectedKey(undefined)} hitSlop={8}>
-              <Text style={s.progressText}>
-                {collectionName} · {index + 1} / {queue.length}
-              </Text>
-            </TouchableOpacity>
-          ) : (
-            <Text style={s.progressText}>{index + 1} / {queue.length}</Text>
-          )}
+      {/* Lifts the bottom action row above the keyboard, which otherwise
+          covers both Check and the reveal-instead escape hatch on a typed
+          card. A no-op when nothing is focused, so an untyped session is
+          unaffected. Same shape the Learn screen uses. */}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={s.sessionFlex}
+      >
+        {offlineNotice}
+        {/* Progress */}
+        <View style={s.progressBar}>
+          <View style={[s.progressFill, { width: `${(index / queue.length) * 100}%` }]} />
         </View>
-        <TouchableOpacity
-          style={s.stopBtn}
-          onPress={() => setStopped(true)}
-          hitSlop={12}
-          accessibilityRole="button"
-          accessibilityLabel={t(nativeLanguage, 'exitReview')}
-        >
-          <Text style={s.stopBtnText}>✕</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Direction label */}
-      <Text style={s.directionLabel}>
-        {directionLabel(nativeLanguage, studyLanguage, isFront ? 'frontToBack' : 'backToFront')}
-      </Text>
-
-      {/* Card */}
-      <View style={s.cardWrap}>
-        {/* Card header: term + options button */}
-        <View style={s.cardHeader}>
-          <Text style={s.prompt}>{prompt}</Text>
+        {/* Two different exits, side by side and deliberately distinct: the name
+            switches which collection you are in — without it, picking the wrong
+            one would mean working through the whole queue to escape it — while
+            the ✕ ends the session outright. The ✕ is the only one that shows on
+            a single collection, where there is nothing to switch to. */}
+        <View style={s.progressRow}>
+          <View style={s.progressLabelWrap}>
+            {collections.length > 1 ? (
+              <TouchableOpacity onPress={() => setSelectedKey(undefined)} hitSlop={8}>
+                <Text style={s.progressText}>
+                  {collectionName} · {index + 1} / {queue.length}
+                </Text>
+              </TouchableOpacity>
+            ) : (
+              <Text style={s.progressText}>{index + 1} / {queue.length}</Text>
+            )}
+          </View>
           <TouchableOpacity
-            style={s.optionsBtn}
-            onPress={() => {
-              if (editing) {
-                setEditing(false);
-                setEditDraft(null);
-              }
-              setShowOptions(v => !v);
-            }}
+            style={s.stopBtn}
+            onPress={() => setStopped(true)}
+            hitSlop={12}
+            accessibilityRole="button"
+            accessibilityLabel={t(nativeLanguage, 'exitReview')}
           >
-            <Text style={s.optionsBtnText}>···</Text>
+            <Text style={s.stopBtnText}>✕</Text>
           </TouchableOpacity>
         </View>
 
-        {/* Options menu */}
-        {showOptions && !editing && (
-          <View style={s.optionsMenu}>
+        {/* Direction label */}
+        <Text style={s.directionLabel}>
+          {directionLabel(nativeLanguage, studyLanguage, isFront ? 'frontToBack' : 'backToFront')}
+        </Text>
+
+        {/* Card */}
+        <View style={s.cardWrap}>
+          {/* Card header: term + options button */}
+          <View style={s.cardHeader}>
+            <Text style={s.prompt}>{prompt}</Text>
             <TouchableOpacity
-              style={s.optionsMenuItem}
+              style={s.optionsBtn}
               onPress={() => {
-                setEditDraft({ [config.studyField]: studySide, [backConfig.backField]: backSide });
-                setEditing(true);
-                setShowOptions(false);
+                if (editing) {
+                  setEditing(false);
+                  setEditDraft(null);
+                }
+                setShowOptions(v => !v);
               }}
             >
-              <Text style={s.optionsMenuText}>Edit</Text>
-            </TouchableOpacity>
-            <View style={s.optionsMenuDivider} />
-            <TouchableOpacity style={s.optionsMenuItem} onPress={handleArchive}>
-              <Text style={[s.optionsMenuText, { color: C.error }]}>Archive</Text>
+              <Text style={s.optionsBtnText}>···</Text>
             </TouchableOpacity>
           </View>
-        )}
 
-        {/* Edit form */}
-        {editing && editDraft ? (
-          <View style={s.editForm}>
-            <Text style={s.editLabel}>{t(nativeLanguage, config.studyLabelKey)}</Text>
-            <TextInput
-              style={s.editInput}
-              value={editDraft[config.studyField] ?? ''}
-              onChangeText={v => setEditDraft(d => d ? { ...d, [config.studyField]: v } : d)}
-              autoFocus
-            />
-            <Text style={s.editLabel}>{t(nativeLanguage, backConfig.backLabelKey)}</Text>
-            <TextInput
-              style={s.editInput}
-              value={editDraft[backConfig.backField] ?? ''}
-              onChangeText={v => setEditDraft(d => d ? { ...d, [backConfig.backField]: v } : d)}
-            />
-            <View style={s.editActions}>
-              <TouchableOpacity style={s.editSaveBtn} onPress={handleEditSave}>
-                <Text style={s.editSaveBtnText}>Save</Text>
+          {/* Options menu */}
+          {showOptions && !editing && (
+            <View style={s.optionsMenu}>
+              <TouchableOpacity
+                style={s.optionsMenuItem}
+                onPress={() => {
+                  setEditDraft({ [config.studyField]: studySide, [backConfig.backField]: backSide });
+                  setEditing(true);
+                  setShowOptions(false);
+                }}
+              >
+                <Text style={s.optionsMenuText}>Edit</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={s.editCancelBtn} onPress={() => { setEditing(false); setEditDraft(null); }}>
-                <Text style={s.editCancelBtnText}>Cancel</Text>
+              <View style={s.optionsMenuDivider} />
+              <TouchableOpacity style={s.optionsMenuItem} onPress={handleArchive}>
+                <Text style={[s.optionsMenuText, { color: C.error }]}>Archive</Text>
               </TouchableOpacity>
             </View>
-          </View>
-        ) : (
-          // Scrollable: a generated definition plus notes and three examples is
-          // far taller than a card front, and the fixed-height card used to
-          // simply clip it with no way to reach the rest.
-          <ScrollView
-            style={s.cardScroll}
-            contentContainerStyle={s.cardScrollContent}
-            showsVerticalScrollIndicator={false}
-          >
-            <Text style={s.frontText}>{frontText}</Text>
+          )}
 
-            {revealed && (
-              <Animated.View style={[s.revealWrap, revealStyle]}>
-                <View style={s.divider} />
-                <Text style={s.backText}>{backText}</Text>
-
-                {/* One toggle for everything, shown whenever there is either
-                    something to read or something to write. */}
-                <TouchableOpacity style={s.detailsBtn} onPress={() => setShowDetails(v => !v)}>
-                  <Text style={s.detailsBtnText}>
-                    {t(nativeLanguage, showDetails ? 'hideDetails' : 'showDetails')}
-                  </Text>
+          {/* Edit form */}
+          {editing && editDraft ? (
+            <View style={s.editForm}>
+              <Text style={s.editLabel}>{t(nativeLanguage, config.studyLabelKey)}</Text>
+              <TextInput
+                style={s.editInput}
+                value={editDraft[config.studyField] ?? ''}
+                onChangeText={v => setEditDraft(d => d ? { ...d, [config.studyField]: v } : d)}
+                autoFocus
+              />
+              <Text style={s.editLabel}>{t(nativeLanguage, backConfig.backLabelKey)}</Text>
+              <TextInput
+                style={s.editInput}
+                value={editDraft[backConfig.backField] ?? ''}
+                onChangeText={v => setEditDraft(d => d ? { ...d, [backConfig.backField]: v } : d)}
+              />
+              <View style={s.editActions}>
+                <TouchableOpacity style={s.editSaveBtn} onPress={handleEditSave}>
+                  <Text style={s.editSaveBtnText}>Save</Text>
                 </TouchableOpacity>
+                <TouchableOpacity style={s.editCancelBtn} onPress={() => { setEditing(false); setEditDraft(null); }}>
+                  <Text style={s.editCancelBtnText}>Cancel</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ) : (
+            // Scrollable: a generated definition plus notes and three examples is
+            // far taller than a card front, and the fixed-height card used to
+            // simply clip it with no way to reach the rest.
+            <ScrollView
+              style={s.cardScroll}
+              contentContainerStyle={s.cardScrollContent}
+              showsVerticalScrollIndicator={false}
+              // Or the first tap on anything in the card only dismisses the
+              // keyboard raised by the typed-answer field.
+              keyboardShouldPersistTaps="handled"
+            >
+              <Text style={s.frontText}>{frontText}</Text>
 
-                {showDetails && (
-                  <View style={s.definitionWrap}>
-                    {!!definition && (
-                      <View style={s.detailSection}>
-                        <Text style={s.detailLabel}>{t(nativeLanguage, 'sectionDefinition')}</Text>
-                        <Markdown style={s.definitionText}>{definition}</Markdown>
-                      </View>
-                    )}
-                    {!!characterBreakdown && (
-                      <View style={s.detailSection}>
-                        <Text style={s.detailLabel}>{t(nativeLanguage, characterSectionKey)}</Text>
-                        <Markdown style={s.definitionText}>{characterBreakdown}</Markdown>
-                      </View>
-                    )}
-                    {!!shownCard.notes && (
-                      <View style={s.detailSection}>
-                        <Text style={s.detailLabel}>{t(nativeLanguage, 'sectionNotes')}</Text>
-                        <Markdown style={s.definitionText}>{shownCard.notes}</Markdown>
-                      </View>
-                    )}
-                    {hasExamples && (
-                      <View style={s.detailSection}>
-                        <Text style={s.detailLabel}>{t(nativeLanguage, 'sectionExamples')}</Text>
-                        {shownCard.examples!.map((ex, i) => {
-                          const sides = getExampleSides(ex, studyLanguage, nativeLanguage);
-                          return (
-                            <View key={i} style={s.exampleItem}>
-                              <Text style={s.exampleStudy}>{sides.study}</Text>
-                              {sides.back ? <Text style={s.exampleBack}>{sides.back}</Text> : null}
-                            </View>
-                          );
-                        })}
-                      </View>
-                    )}
+              {typingThisCard && !revealed && (
+                <TextInput
+                  // Remounted per card: `autoFocus` fires on mount only, and
+                  // this input holds the same slot from one card to the next.
+                  key={index}
+                  style={s.typedInput}
+                  value={typedAnswer}
+                  onChangeText={setTypedAnswer}
+                  onSubmitEditing={handleSubmitTyped}
+                  placeholder={typedAnswerPlaceholder(nativeLanguage, studyLanguage)}
+                  placeholderTextColor={C.muted}
+                  autoFocus
+                  returnKeyType="done"
+                  // Off on purpose: a phone completing the word being recalled
+                  // does the exercise for the learner.
+                  autoCorrect={false}
+                  autoCapitalize="none"
+                  spellCheck={false}
+                />
+              )}
 
-                    {/* Mid-review is where a one-line gloss most often turns out
-                        not to be enough — you find out at the moment you fail to
-                        recall it. Offering the write here means that discovery
-                        does not cost you the session. Each button waits only on
-                        its own request. */}
-                    {(!hasDepth || !hasExamples) && (
-                      <View style={s.enrichRow}>
-                        {!hasDepth && (
-                          <TouchableOpacity
-                            style={[s.detailsBtn, enrichRunning('depth') && s.btnDisabled]}
-                            onPress={() => enrich('depth')}
-                            disabled={enrichRunning('depth')}
-                          >
-                            <Text style={s.detailsBtnText}>
-                              {enrichRunning('depth')
-                                ? t(nativeLanguage, 'cardEnriching')
-                                : t(nativeLanguage, 'loadDefinition')}
-                            </Text>
-                          </TouchableOpacity>
-                        )}
-                        {!hasExamples && (
-                          <TouchableOpacity
-                            style={[s.detailsBtn, enrichRunning('examples') && s.btnDisabled]}
-                            onPress={() => enrich('examples')}
-                            disabled={enrichRunning('examples')}
-                          >
-                            <Text style={s.detailsBtnText}>
-                              {enrichRunning('examples')
-                                ? t(nativeLanguage, 'cardEnriching')
-                                : t(nativeLanguage, 'loadExamples')}
-                            </Text>
-                          </TouchableOpacity>
-                        )}
-                      </View>
-                    )}
-                    {enrichError && <Text style={s.enrichError}>{enrichError}</Text>}
-                  </View>
-                )}
-              </Animated.View>
-            )}
-          </ScrollView>
-        )}
-      </View>
+              {revealed && (
+                <Animated.View style={[s.revealWrap, revealStyle]}>
+                  <View style={s.divider} />
+                  <Text style={s.backText}>{backText}</Text>
 
-      {/* Bottom action row — same position for both show-answer and ratings */}
-      {!editing && (
-        revealed ? (
-          <View style={s.ratingRow}>
-            {RATINGS.map(r => (
+                  {/* Both strings on screen. This is what lets the grader be
+                      strict: the learner is not appealing a judgement they
+                      cannot see, they are reading two answers and rating. */}
+                  {typedGrade && (
+                    <Text style={s.typedVerdict}>
+                      <Text style={typedGrade.correct ? s.typedVerdictOk : s.typedVerdictMiss}>
+                        {t(nativeLanguage, typedGrade.correct ? 'typedAnswerCorrect' : 'typedAnswerMissed')}
+                      </Text>
+                      {!typedGrade.correct && (
+                        <Text>{` · ${t(nativeLanguage, 'typedAnswerYours')}: ${typedAnswer}`}</Text>
+                      )}
+                    </Text>
+                  )}
+
+                  {/* One toggle for everything, shown whenever there is either
+                      something to read or something to write. */}
+                  <TouchableOpacity style={s.detailsBtn} onPress={() => setShowDetails(v => !v)}>
+                    <Text style={s.detailsBtnText}>
+                      {t(nativeLanguage, showDetails ? 'hideDetails' : 'showDetails')}
+                    </Text>
+                  </TouchableOpacity>
+
+                  {showDetails && (
+                    <View style={s.definitionWrap}>
+                      {!!definition && (
+                        <View style={s.detailSection}>
+                          <Text style={s.detailLabel}>{t(nativeLanguage, 'sectionDefinition')}</Text>
+                          <Markdown style={s.definitionText}>{definition}</Markdown>
+                        </View>
+                      )}
+                      {!!characterBreakdown && (
+                        <View style={s.detailSection}>
+                          <Text style={s.detailLabel}>{t(nativeLanguage, characterSectionKey)}</Text>
+                          <Markdown style={s.definitionText}>{characterBreakdown}</Markdown>
+                        </View>
+                      )}
+                      {!!shownCard.notes && (
+                        <View style={s.detailSection}>
+                          <Text style={s.detailLabel}>{t(nativeLanguage, 'sectionNotes')}</Text>
+                          <Markdown style={s.definitionText}>{shownCard.notes}</Markdown>
+                        </View>
+                      )}
+                      {hasExamples && (
+                        <View style={s.detailSection}>
+                          <Text style={s.detailLabel}>{t(nativeLanguage, 'sectionExamples')}</Text>
+                          {shownCard.examples!.map((ex, i) => {
+                            const sides = getExampleSides(ex, studyLanguage, nativeLanguage);
+                            return (
+                              <View key={i} style={s.exampleItem}>
+                                <Text style={s.exampleStudy}>{sides.study}</Text>
+                                {sides.back ? <Text style={s.exampleBack}>{sides.back}</Text> : null}
+                              </View>
+                            );
+                          })}
+                        </View>
+                      )}
+
+                      {/* Mid-review is where a one-line gloss most often turns out
+                          not to be enough — you find out at the moment you fail to
+                          recall it. Offering the write here means that discovery
+                          does not cost you the session. Each button waits only on
+                          its own request. */}
+                      {(!hasDepth || !hasExamples) && (
+                        <View style={s.enrichRow}>
+                          {!hasDepth && (
+                            <TouchableOpacity
+                              style={[s.detailsBtn, enrichRunning('depth') && s.btnDisabled]}
+                              onPress={() => enrich('depth')}
+                              disabled={enrichRunning('depth')}
+                            >
+                              <Text style={s.detailsBtnText}>
+                                {enrichRunning('depth')
+                                  ? t(nativeLanguage, 'cardEnriching')
+                                  : t(nativeLanguage, 'loadDefinition')}
+                              </Text>
+                            </TouchableOpacity>
+                          )}
+                          {!hasExamples && (
+                            <TouchableOpacity
+                              style={[s.detailsBtn, enrichRunning('examples') && s.btnDisabled]}
+                              onPress={() => enrich('examples')}
+                              disabled={enrichRunning('examples')}
+                            >
+                              <Text style={s.detailsBtnText}>
+                                {enrichRunning('examples')
+                                  ? t(nativeLanguage, 'cardEnriching')
+                                  : t(nativeLanguage, 'loadExamples')}
+                              </Text>
+                            </TouchableOpacity>
+                          )}
+                        </View>
+                      )}
+                      {enrichError && <Text style={s.enrichError}>{enrichError}</Text>}
+                    </View>
+                  )}
+                </Animated.View>
+              )}
+            </ScrollView>
+          )}
+        </View>
+
+        {/* Bottom action row — same position for both show-answer and ratings */}
+        {!editing && (
+          revealed ? (
+            <View style={s.ratingRow}>
+              {RATINGS.map(r => (
+                <TouchableOpacity
+                  key={r.key}
+                  // A ring on what the typed answer earned. Emphasis only —
+                  // every button stays live, because the whole point is that the
+                  // learner can disagree with the grader.
+                  style={[
+                    s.ratingBtn,
+                    { borderColor: r.color },
+                    typedGrade?.suggested === r.key && s.ratingBtnSuggested,
+                  ]}
+                  onPress={() => handleRate(r.key)}
+                  disabled={!!submitting}
+                >
+                  <Text style={[s.ratingBtnText, { color: r.color, opacity: submitting && submitting !== r.key ? 0.4 : submitting === r.key ? 0 : 1 }]}>
+                    {r.label}
+                  </Text>
+                  {submitting === r.key && (
+                    <ActivityIndicator size="small" color={r.color} style={StyleSheet.absoluteFill} />
+                  )}
+                </TouchableOpacity>
+              ))}
+            </View>
+          ) : typingThisCard ? (
+            <View style={s.typedActions}>
               <TouchableOpacity
-                key={r.key}
-                style={[s.ratingBtn, { borderColor: r.color }]}
-                onPress={() => handleRate(r.key)}
-                disabled={!!submitting}
+                style={[s.showBtn, !typedAnswer.trim() && s.showBtnOff]}
+                onPress={handleSubmitTyped}
+                disabled={!typedAnswer.trim()}
               >
-                <Text style={[s.ratingBtnText, { color: r.color, opacity: submitting && submitting !== r.key ? 0.4 : submitting === r.key ? 0 : 1 }]}>
-                  {r.label}
-                </Text>
-                {submitting === r.key && (
-                  <ActivityIndicator size="small" color={r.color} style={StyleSheet.absoluteFill} />
-                )}
+                <Text style={s.showBtnText}>{t(nativeLanguage, 'typedAnswerCheck')}</Text>
               </TouchableOpacity>
-            ))}
-          </View>
-        ) : (
-          <TouchableOpacity style={s.showBtn} onPress={handleReveal}>
-            <Text style={s.showBtnText}>{t(nativeLanguage, 'showAnswer')}</Text>
-          </TouchableOpacity>
-        )
-      )}
+              {/* The per-card way out. A card you cannot type — no IME to hand,
+                  or you simply don't want to — flips exactly as it would with
+                  typing off, and grades nothing, because nothing was asserted. */}
+              <TouchableOpacity onPress={handleReveal} hitSlop={8}>
+                <Text style={s.typedRevealText}>{t(nativeLanguage, 'typedAnswerReveal')}</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <TouchableOpacity style={s.showBtn} onPress={handleReveal}>
+              <Text style={s.showBtnText}>{t(nativeLanguage, 'showAnswer')}</Text>
+            </TouchableOpacity>
+          )
+        )}
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -1038,6 +1154,7 @@ export default function ReviewScreen() {
 function makeStyles(C: Palette, tabBarHeight: number) {
   return StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg, paddingBottom: tabBarHeight },
+  sessionFlex: { flex: 1 },
   center: { flex: 1, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center', padding: 32 },
   // `center` owns the whole screen; this centers within what a header leaves.
   centerFill: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 },
@@ -1125,6 +1242,24 @@ function makeStyles(C: Palette, tabBarHeight: number) {
     paddingVertical: 14, alignItems: 'center',
   },
   showBtnText: { fontSize: 16, color: C.text, fontWeight: '600' },
+  showBtnOff: { opacity: 0.4 },
+
+  // Typed responses
+  typedInput: {
+    marginTop: 20,
+    borderWidth: 1, borderColor: C.border, borderRadius: 10,
+    paddingHorizontal: 12, paddingVertical: 12, fontSize: 20, color: C.text,
+    backgroundColor: C.bg,
+  },
+  typedVerdict: { fontSize: 13, color: C.muted, marginTop: 10 },
+  typedVerdictOk: { color: C.highlight, fontWeight: '700' },
+  // The same red the `again` rating uses, since that is the rating this
+  // verdict preselects.
+  typedVerdictMiss: { color: '#c0392b', fontWeight: '700' },
+  typedActions: { paddingBottom: 8 },
+  typedRevealText: {
+    fontSize: 13, color: C.muted, textAlign: 'center', paddingVertical: 10,
+  },
 
   ratingRow: {
     flexDirection: 'row', gap: 8, paddingHorizontal: 16, paddingBottom: 8,
@@ -1134,6 +1269,9 @@ function makeStyles(C: Palette, tabBarHeight: number) {
     paddingVertical: 12, alignItems: 'center',
   },
   ratingBtnText: { fontSize: 13, fontWeight: '700' },
+  // A neutral fill on the rating the typed answer earned — emphasis, not a
+  // lock: the other three are still tappable.
+  ratingBtnSuggested: { backgroundColor: C.border },
 
   pickerScroll: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 24, gap: 12 },
   pickerTitle: { fontSize: 15, color: C.muted, marginBottom: 4 },
@@ -1157,6 +1295,7 @@ function makeStyles(C: Palette, tabBarHeight: number) {
   pillOn: { backgroundColor: C.highlight, borderColor: C.highlight },
   pillText: { fontSize: 13, color: C.text },
   pillTextOn: { color: C.bg, fontWeight: '700' },
+  typingPill: { marginTop: 12, alignSelf: 'center' },
   startBtn: {
     marginTop: 24, backgroundColor: C.highlight,
     borderRadius: 12, paddingHorizontal: 24, paddingVertical: 13,

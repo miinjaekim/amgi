@@ -285,6 +285,13 @@ Gotchas already paid for. Grouped so you can skim the relevant section.
   modal; collapsing it to a nullable breaks first-load behavior.
 - Effects that load deck data must depend on `studyLanguage` — otherwise
   switching language keeps rendering the previous deck's cards.
+- **Routing a `setState` through a helper can add a React Compiler warning.**
+  `handleExitReview` in `review/page.tsx` is called from an effect. Inlining two
+  `setState` calls into it is free; calling a `clearTypedAnswer()` helper that
+  does the same two calls added a fresh `react-hooks/exhaustive-deps` warning
+  against that effect. The rule is set to `warn` deliberately so the existing
+  ones could be cleared thoughtfully — adding one is a regression, and the fix
+  is to inline rather than to silence.
 - **A web page opened from mobile is a stranger.** Mobile's Settings opens
   `/privacy` with `WebBrowser.openBrowserAsync`, which carries **no Firebase
   auth and no `localStorage`** — so every "has this user set up yet" gate on web

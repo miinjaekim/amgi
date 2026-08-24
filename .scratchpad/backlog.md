@@ -17,8 +17,9 @@ costs ~20 minutes rather than an App Review cycle.
 
 ## Queued for the next build
 
-Nothing. 1.4.0 (build 13) is approved for external testing and carries
-everything merged to date, on both platforms — the first time that has been true.
+**Typed responses during review** (2026-08-24). Web gets it at deploy, mobile at
+the next build — no native module, so it rides whatever build comes next rather
+than earning one. Two things to watch for on that build are listed below.
 
 - **Delete `packages/core/src/writing.ts`, `grammar.ts` and the two API routes
   that keep them alive.** **The gate is open**: it was "once no build predating
@@ -26,7 +27,9 @@ everything merged to date, on both platforms — the first time that has been tr
   is left is not a condition but a fact to check — that testers have actually
   updated, since an un-updated 1.3.0 device still has the UI compiled in and
   calls those routes. Both files carry a `DO NOT DELETE AS DEAD CODE` header;
-  the reasoning is in [status.md](status.md).
+  the reasoning is in [status.md](status.md). **`typedAnswer.ts` is not part of
+  this** — `grammar.ts` imports its folding rules rather than owning them now,
+  so the deletion takes the importer and leaves the module.
 
 ⚠️ **Read what testers report, rather than testing by hand.** These are the
 oldest open items in the project — never checked on any release, only in Expo Go
@@ -39,6 +42,11 @@ oldest open items in the project — never checked on any release, only in Expo 
 - Three renders never seen on a device: the packs list without per-pack
   descriptions, the "showing results for…" row, the part-of-speech badge.
   Cosmetic risk only — spacing, fit, wrapping.
+- **Typed responses on a phone**, both parts device-shaped: whether the bottom
+  action row actually clears a raised keyboard on a typed card, and what a
+  Korean or Japanese IME does with `autoCorrect={false}` /
+  `autoCapitalize="none"` — an IME that autocorrects the word being recalled
+  does the exercise for the learner.
 - **Korean date formatting** in the progress day tooltip — nothing else in the
   app formats a date with a locale and options, so Hermes' `Intl` is unproven
   there on a release build.
@@ -66,25 +74,9 @@ Android is the exception — no review, so a fix there ships the same day._
 
 ## High
 
-- [ ] **Typed responses during review** — _needs design, together._ Today review
-      is flip-and-rate; this makes the learner produce the word before seeing it.
-      The obvious win is recall over recognition; the obvious problem is grading.
-      To settle before any code:
-      - **What counts as right.** Exact match is too harsh (accents, spacing,
-        articles, 조사), model grading costs a call per card and can't run
-        offline. A normalize-then-compare pass with a "close enough" tier is the
-        cheap middle, and may be enough on its own.
-      - **How it meets SM-2.** Does the typed result *become* the rating, or does
-        the learner still rate themselves afterwards? This decides whether it is
-        an `sm2.ts` change or purely a capture surface.
-      - **Which direction, and whether it is a mode or a per-card thing.**
-        Typing the target language is the useful half; typing the gloss is much
-        weaker.
-      - **Offline.** Whatever grades it has to work with no network, or typing
-        silently degrades on exactly the commute where review happens.
-      Related but distinct from the word-learning surface under Medium — that one
-      is about meeting a word *before* it's due, this is about how it's tested
-      once it is.
+Nothing. Typed responses closed 2026-08-24 — the design calls and the one place
+the built thing contradicts how the item was written are in the Decisions entry
+in [status.md](status.md).
 
 ## Medium
 

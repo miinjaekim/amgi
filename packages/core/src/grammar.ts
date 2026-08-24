@@ -1,6 +1,7 @@
 import type { ReviewTracking, StudyLanguage } from './types';
 import { getWritingReview } from './writing';
 import type { WritingPatternCandidate, WritingReview } from './writing';
+import { sameFoldedText } from './typedAnswer';
 
 /**
  * **RETAINED FOR OLD BUILDS. DO NOT DELETE AS DEAD CODE.**
@@ -352,7 +353,7 @@ export function parsePatternExercise(
     // away. Ignoring spacing still catches the failure this check exists for —
     // a missing "jouer" is a missing word, not a missing space.
     if (!isNonEmptyString(r.full)) return null;
-    if (!sameSentence(sentence.split(CLOZE_GAP).join(r.expected), r.full)) return null;
+    if (!sameFoldedText(sentence.split(CLOZE_GAP).join(r.expected), r.full)) return null;
 
     const alternates = Array.isArray(r.alternates)
       ? r.alternates.filter(isNonEmptyString).map(a => a.trim())
@@ -530,55 +531,15 @@ export function overrideGrade(hintTier: HintTier = 0): PatternGrade {
 }
 
 /**
- * Compares a cloze answer to what was expected.
- *
- * Deliberately gentler than `normalizeForMatch`, which strips punctuation
- * wholesale — that would be wrong here, because on an elision cloze the
- * apostrophe *is* the answer and `d'` would compare equal to `d`. So only case,
- * Unicode composition and whitespace are neutralized. Whitespace is then also
- * compared with all of it removed, because Korean spacing varies legitimately
- * between writers and is not what a grammar cloze is testing.
+ * The folding rules that back `sameFoldedText` were written here, for the
+ * cloze grader, and now live in `typedAnswer.ts` — typed responses during
+ * review grade the same way, and the rules had to outlive this module's
+ * deletion. Imported back rather than copied: two copies of "which characters
+ * count as the same character" is exactly the pair that drifts.
  */
-/**
- * Case, composition, whitespace and typographic marks neutralized.
- *
- * The typographic folding is measured, not anticipated: asked for a French
- * elision cloze the model returned `d’` with a curly apostrophe, which no
- * learner types — so the one rule that prompted the cloze redesign would have
- * been ungradeable. The same applies to the quotes and dashes a generated
- * sentence picks up.
- *
- * Deliberately does NOT strip punctuation the way `normalizeForMatch` does:
- * on an elision cloze the apostrophe *is* the answer, and `d'` must not
- * compare equal to `d`.
- */
-function foldText(text: string): string {
-  return text
-    .normalize('NFC')
-    .replace(/[‘’ʼ′]/g, "'")
-    .replace(/[“”]/g, '"')
-    .replace(/[‐‑‒–—]/g, '-')
-    .trim()
-    .toLowerCase()
-    .replace(/\s+/g, ' ');
-}
-
-/**
- * Two strings that say the same thing, ignoring spacing.
- *
- * Spacing is ignored for two independent reasons that happen to want the same
- * rule: Korean word spacing varies legitimately between writers and is not what
- * a grammar cloze tests, and an elision attaches with no space where a gap in
- * the template has one either side of it.
- */
-function sameSentence(a: string, b: string): boolean {
-  const x = foldText(a);
-  const y = foldText(b);
-  return x === y || x.replace(/\s/g, '') === y.replace(/\s/g, '');
-}
 
 function clozeMatches(answer: string, candidate: string): boolean {
-  return sameSentence(answer, candidate);
+  return sameFoldedText(answer, candidate);
 }
 
 /**
