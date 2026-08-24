@@ -17,26 +17,20 @@ costs ~20 minutes rather than an App Review cycle.
 
 ## Queued for the next build
 
-Merged, but in nobody's hands until a binary carries it.
+Nothing. 1.4.0 (build 13) is approved for external testing and carries
+everything merged to date, on both platforms — the first time that has been true.
 
-- **Progress dashboard, mobile half** — the screen, the streak badge as a link to
-  it, an AsyncStorage queue for offline increments, tap/long-press day details.
-  JS-only, so no `expo config --type introspect` pass is owed. Smoke-tested in
-  Expo Go 2026-08-20 and clean. Two things that pass in Expo Go and still deserve
-  a look on the binary: **offline increments across a force-kill and reconnect**
-  (that queue is the point of the code, and Expo Go's networking is not the
-  phone's), and **Korean date formatting** in the day tooltip — nothing else in
-  the app formats a date with a locale and options, so Hermes' `Intl` there is
-  unproven on a release build.
 - **Delete `packages/core/src/writing.ts`, `grammar.ts` and the two API routes
-  that keep them alive** — once no build predating the 2026-08-18 grammar removal
-  is still in use, i.e. after the next build ships and testers update. Both files
-  carry a `DO NOT DELETE AS DEAD CODE` header; the condition and the reasoning
-  are in [status.md](status.md).
+  that keep them alive.** **The gate is open**: it was "once no build predating
+  the 2026-08-18 grammar removal is still in use", and 1.4.0 is that build. What
+  is left is not a condition but a fact to check — that testers have actually
+  updated, since an un-updated 1.3.0 device still has the UI compiled in and
+  calls those routes. Both files carry a `DO NOT DELETE AS DEAD CODE` header;
+  the reasoning is in [status.md](status.md).
 
-⚠️ **Verify on the binary before the next build goes out.** These are the oldest
-open items in the project — never checked on any release, only in Expo Go — and
-1.3.0 is the first build in enough hands to close them from what testers report:
+⚠️ **Read what testers report, rather than testing by hand.** These are the
+oldest open items in the project — never checked on any release, only in Expo Go
+— and 1.4.0's What to Test asks for them by name, with **offline review first**:
 
 - Native paths: pronunciation audio, CSV/Anki export, sharing, offline review
   across a force-kill and reconnect, account deletion against the production
@@ -45,18 +39,30 @@ open items in the project — never checked on any release, only in Expo Go — 
 - Three renders never seen on a device: the packs list without per-pack
   descriptions, the "showing results for…" row, the part-of-speech badge.
   Cosmetic risk only — spacing, fit, wrapping.
+- **Korean date formatting** in the progress day tooltip — nothing else in the
+  app formats a date with a locale and options, so Hermes' `Intl` is unproven
+  there on a release build.
+- All of the above is **separately unverified on Android**, where only sign-in
+  has been exercised.
 
 **Pre-flight:** smoke-test in Expo Go → verify the native-adjacent things on the
 build itself → bump `version` in `app.json` **before** starting the build (EAS
 auto-increments the *build* number and never the version, so nothing catches this
 for you) → rewrite What to Test in `docs/testflight-beta-info.md` and re-check
-the rest of it, including the study-language count → **`expo config --type
-introspect` if any native module was added**, which is where an unasked-for
-entitlement shows up before a cloud build finds it → submit (`ascAppId` is in
-`eas.json`) → paste the listing copy into Test Information, **both ko and en**.
+the rest of it — **the description and the Apple review notes go stale too**, and
+1.4.0 shipped with both still describing features removed in August → **`expo
+config --type introspect` if any native module was added**, which is where an
+unasked-for entitlement shows up before a cloud build finds it → submit
+(`ascAppId` is in `eas.json`) → paste the listing copy into Test Information,
+**both ko and en**.
 
-_A version bump queues another Beta App Review; 1.3.0's external approval covers
-1.3.0 only. Batch changes into a build rather than cutting one per feature._
+⚠️ **Cut the build without `--non-interactive`.** It does not skip prompts, it
+turns one into an error — 1.4.0 died on an unanswerable Apple Team ID question
+and burned build 12. The flag is for CI.
+
+_A version bump queues another Beta App Review; 1.4.0's external approval covers
+1.4.0 only. Batch changes into a build rather than cutting one per feature.
+Android is the exception — no review, so a fix there ships the same day._
 
 ## High
 
