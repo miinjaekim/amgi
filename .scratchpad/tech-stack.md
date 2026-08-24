@@ -208,17 +208,26 @@ nothing ships between builds):
 - Native dependencies, `app.json` `plugins`/permissions/icon/bundle id
 - `version` bumps
 
-The command, from `apps/mobile` (verified 2026-07-24 cutting 1.0.2):
+The command, from `apps/mobile` (verified 2026-08-22 cutting 1.4.0):
 
 ```
-npx eas-cli build --platform ios --profile production --auto-submit --non-interactive
+npx eas-cli build --platform ios --profile production --auto-submit
 ```
 
-`--non-interactive` works because the App Store Connect API Key and iOS
-credentials already live on the EAS servers; it skips Apple-side validation of
-the distribution cert but builds and submits fine. Notes on the output:
-- It warns that the app "uses Expo Go for development" — expected under our
-  model, not a problem. Silence it with `EAS_BUILD_NO_EXPO_GO_WARNING=true`.
+⚠️ **Do not add `--non-interactive`.** This file recommended it until 1.4.0, on
+the strength of one 2026-07-24 run — and it failed: the flag does not skip
+prompts, it turns one into an error. EAS asked for an **Apple Team ID**, which
+is configured nowhere (no `appleTeamId` in `eas.json`, no `credentials.json`),
+and the build died after the version counter had already incremented, burning
+build 12. `npx` fetches a new EAS CLI every run, so *"it worked in July"* is not
+evidence about today. The flag is for CI, where nobody can answer. Notes on the
+output:
+- It used to warn that the app "uses Expo Go for development", silenced with
+  `EAS_BUILD_NO_EXPO_GO_WARNING=true`. That variable is **probably now
+  vestigial** — the warning fires when no `expo-dev-client` is present, and
+  there has been one since 1.4.0. Worth noting what it was saying: Expo Go can
+  behave differently from a production build. It was suppressed for a year, and
+  that is the class of gap that cost four release builds on Android auth.
 - `appVersionSource: remote` means EAS owns the build number; bump only
   `version` in `app.json` and let `autoIncrement` handle the rest. Check the
   current one with `eas-cli build:version:get --platform ios`.

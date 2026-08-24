@@ -85,6 +85,7 @@ No OTA, so every mobile change reaches users through one of these.
 
 | Version | Build | Date | Cut from |
 |---|---|---|---|
+| 1.4.0 | 13 | 2026-08-22 | `dedcdd6` on `release/1.4.0` (version bump + TestFlight copy) — external testing approved 08-24 |
 | 1.3.0 | 11 | 2026-08-11 | `86c2c5a` on `release/1.3.0` (version bump) — **first build approved for external testing**, 08-12 |
 | 1.2.0 | 9 | 2026-08-02 | `51a53e9` (PR #76, version bump) |
 | 1.1.0 | 8 | 2026-07-27 | `8359adf` on `fix/drop-push-entitlement`, pre-merge |
@@ -93,25 +94,39 @@ No OTA, so every mobile change reaches users through one of these.
 | 1.0.1 | 2 | 2026-07-21 | `4d217f3` |
 | 1.0.0 | 1 | 2026-07-17 | `db8a6ea` (PR #37) |
 
+The table is **iOS only**. Android ships as a sideloaded APK on its own cadence
+with no review, so its builds are not release events worth recording — see the
+Decisions entry for how it is distributed.
+
 Build numbers live in EAS (`appVersionSource: remote`), not the repo, so they
 have to be read off the console and recorded here. Gaps are normal: the number is
 reserved when a job is created, not awarded on success. Builds 5–7 were failed
-attempts.
+attempts, and **12 was burned by a failed 1.4.0 run** — the counter increments
+before credentials resolve, so a build that never starts still consumes a number.
+
+⚠️ **`--non-interactive` is what failed that run.** It does not skip prompts, it
+turns one into an error, and no `appleTeamId` is configured anywhere. The flag
+is for CI; drop it when cutting a build by hand. `tech-stack.md` documented it
+as the standard incantation, verified in July — `npx` pulls a new EAS CLI every
+run, so a command that worked once is not a command that works.
 
 What a build carries is derivable from its commit, so it isn't listed here. The
-one fact that isn't: **1.3.0 is a native-module build** (`expo-clipboard`), and
-its `expo config --type introspect` pass came back clean. 1.2.0 and everything
-merged since 1.3.0 are JS-only, so no introspect pass is owed for them.
+one fact that isn't: **1.3.0 and 1.4.0 are both native-module builds**
+(`expo-clipboard`, then `expo-dev-client`), and both `expo config --type
+introspect` passes came back clean — 1.4.0's `entitlements: {}` confirms
+`withoutPushEntitlement` still strips `aps-environment`. 1.4.0 is also the first
+iOS release carrying `expo-dev-client`, `expo-dev-launcher` and `expo-dev-menu`.
 
 ⚠️ **Never verified on a real binary**, on any build so far — the logic is
 tested, the native bindings are not: pronunciation audio, CSV/Anki export,
 sharing, offline review across a force-kill and reconnect, the review reminder
-firing *and* disappearing once you review, account deletion against the
-production `EXPO_PUBLIC_API_BASE_URL`, and now the copy button on the writing
-rewrite (`expo-clipboard`, new in 1.3.0). 1.3.0's What to Test asks testers for
-these by name — the first listing that does. **This is the caveat to retire
-first**: it has outlived every release so far, and 1.3.0 is the first build in
-enough hands to close it without a dedicated session.
+firing *and* disappearing once you review, and account deletion against the
+production `EXPO_PUBLIC_API_BASE_URL`. (The 1.3.0 copy button left this list
+with the writing rewrite it belonged to.) 1.4.0's What to Test asks for these by
+name and puts **offline review first**. **This is the caveat to retire first**:
+it has outlived every release, and 1.4.0 is approved for external testing, so
+reading what testers report beats a dedicated session. Everything here is
+separately unverified on Android, where only sign-in has been exercised.
 
 ## Known Issues
 
