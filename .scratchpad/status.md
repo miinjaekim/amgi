@@ -148,6 +148,58 @@ separately unverified on Android, where only sign-in has been exercised.
 Closed calls, kept with their reasoning — a decision whose reasoning is lost gets
 reopened by the next person to notice the symptom. Newest first.
 
+### Three packs authored; one of them sets a rule aside on purpose (2026-08-24)
+
+Everyday English (149), English Idioms (100) and Kanji 教育漢字 1–2 (240).
+**Word lists approved 2026-08-24**, the gate every pack goes through. Drafts, now
+the record rather than the request: `docs/packs/{daily-life,idioms,kanji}-pack-draft.md`.
+
+Content-only and registry-driven — no pack id is hardcoded anywhere in `apps/`,
+so both platforms picked all three up with no change. That also sets when each
+audience sees them: **web at deploy, mobile at the next build**, since mobile
+ships by build and there is no OTA. Nothing here needs a native module, so the
+packs ride whatever build comes next rather than earning one.
+
+Four calls worth keeping:
+
+**"Audience is not beginners" has one recorded exception, and it is the
+daily-life pack.** Asked for that way, so it is a deliberate exception rather
+than a change of principle — a future pack citing it as precedent is citing an
+exception. What keeps it from being a bad deck is a second filter, **concrete
+over frequent**: a beginner list fails by filling with the two hundred words a
+Korean learner already met in middle school and feeling comprehensive while
+teaching nothing, so the entries are elementary in register and *specific* in
+reference — `faucet`, `drawer`, `leftovers`, `errand` — and bare high-frequency
+function words are left out.
+
+**The kanji pack is the JLPT gap, answered with the school list.** 学年別漢字
+配当表 grades 1–2 rather than N5: N5 is an exam's slice of the same material and
+stops part-way, where the school list is an order someone thought about and
+reaches the point where kanji compound (電車, 教室, 何曜日). N5 is a subset, so
+an exam-ladder pack later is a re-sectioning, not a re-authoring. A test checks
+the 240 character-for-character against the official lists — across eleven themed
+sections nothing else could.
+
+**It is the first pack whose back is not a gloss, and therefore the first
+single-glyph pack that is a list.** A kanji's meaning alone does not answer the
+card — 生 means "life" and says nothing about 学生 or 生きる — so the back is
+`meaning — kun / ON`, kun in hiragana with okurigana in parentheses, on in
+katakana, script alone distinguishing them. That does not fit the 4.5rem tile
+that makes 71 kana scannable, hence `layout: 'list'`. **The cost is live and
+named in the draft:** `isGridDeck` exempts grid decks from the "All" chip on the
+card list and list decks are not exempt, so 240 kanji cards will sit alongside
+the user's own words there. If that turns out wrong the fix is a per-pack flag,
+not a layout change — the layout is keyed on content shape for a reason.
+
+**The idioms prediction in the backlog held.** An idiom's back is a usage note,
+so the Korean back is the nearest Korean 관용구 landing on the same *occasion*
+(설상가상, 전화위복, 식은 죽 먹기) and every entry additionally carries an
+`idiom — …` context hint — the TOPIK convention, so one grep finds every
+figurative entry in the app. The hint and the back do different jobs (what it
+means vs. when you would say it), and the failure mode is the hint decaying into
+the gloss: a test enforces the prefix *and* a minimum length, and caught four
+real ones on the first run.
+
 ### Android ships as a sideloaded APK, and auth work leaves Expo Go (2026-08-22)
 
 Android is live as a direct-download APK built on the `preview` profile —

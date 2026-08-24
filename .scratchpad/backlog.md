@@ -66,15 +66,6 @@ Android is the exception — no review, so a fix there ships the same day._
 
 ## High
 
-- [ ] **English vocabulary packs — daily life and idioms.** Two packs, both
-      English, sitting under the same pack rules as the rest (audience is not
-      beginners; packs unlock domains, never "starter" anything; curated from real
-      sources, not AI-generated; **word lists need approval before shipping**).
-      Idioms are the harder of the two: an idiom's back is a usage note, not a
-      gloss, and that is exactly the case the two-gloss rule was written for.
-      Drafts go in `docs/packs/` with backs alongside the word list. See the
-      packs item under Medium for the rest of the pack backlog.
-
 - [ ] **Typed responses during review** — _needs design, together._ Today review
       is flip-and-rate; this makes the learner produce the word before seeing it.
       The obvious win is recall over recognition; the obvious problem is grading.
@@ -117,13 +108,29 @@ Android is the exception — no review, so a fix there ships the same day._
       Open before building: whether it writes scheduling at all or is purely a
       presentation step. If it writes, it is an `sm2.ts` change.
 
+- [ ] **Watch the kanji deck on the "All" chip.** The kanji pack is the first
+      single-glyph pack laid out as a `list`, because its back carries readings
+      that do not fit a tile — and `isGridDeck` exempts only *grid* decks from
+      the "All" chip on the card list. So an account that enrols the whole deck
+      puts 240 kanji cards next to its own words there, which is the swamping the
+      exemption exists to prevent. Shipped that way deliberately: the alternative
+      was a tile showing a truncated reading, which breaks the pack on the page
+      it exists to be read on. **The fix, if it does turn out wrong, is a per-pack
+      flag — not a layout change**, since layout is keyed on content shape so a
+      future single-character pack inherits the grid without being asked. Needs a
+      real account with the deck enrolled before deciding.
+
 - [ ] **Vocabulary packs — iterate beyond v1.** Shipped: TOEIC, kana, TOPIK 고급,
-      two military packs, all one pre-authored kind.
-      *Principles:* audience is not beginners; packs unlock domains, never
-      "starter" anything; curated from real sources, not AI-generated; word lists
-      need user approval before shipping.
-      *Next:* **JLPT** is the obvious gap — Japanese has only the kana packs —
-      then TOEFL. Swedish, French and Traditional Chinese have **no pack at all**.
+      two military packs, all one pre-authored kind. Authored and awaiting
+      approval: Everyday English, English Idioms, Kanji 1–2 (see High).
+      *Principles:* audience is not beginners — **one recorded exception, the
+      daily-life pack, deliberate and not a precedent**; packs unlock domains,
+      never "starter" anything; curated from real sources, not AI-generated; word
+      lists need user approval before shipping.
+      *Next:* **TOEFL**, now that the Japanese gap is answered by the kanji pack
+      (教育漢字 1–2 rather than JLPT — N5 is a subset of it, so an exam-ladder
+      pack is a re-sectioning, not a re-authoring). Swedish, French and
+      Traditional Chinese still have **no pack at all**.
       A new pack needs backs drafted alongside its word list; drafts live in
       `docs/packs/`. Section themes as `/cards` filters are a third rung on the
       deck axis that already shipped, not a new control.

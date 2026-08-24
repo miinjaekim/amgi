@@ -25,6 +25,15 @@ Related docs outside this folder:
   above these are **bilingual pair lists**, not a study side plus glosses, and
   they still carry live open questions — read them before changing a term or a
   hint, and hand *these* to a reviewer rather than the TS.
+- `docs/packs/daily-life-pack-draft.md`, `docs/packs/idioms-pack-draft.md`,
+  `docs/packs/kanji-pack-draft.md` — the three packs added 2026-08-24 (referenced
+  from `dailyLife.ts`, `idioms.ts`, `kanji.ts`), **approved 2026-08-24**. Each
+  carries the word list *and* its backs in one file, rather than the list/backs
+  split the older drafts use, and each leads
+  with the calls that need a decision: the daily-life pack sets aside the
+  not-for-beginners rule, the idioms pack's Korean 관용구 matches are judgement
+  calls, and the kanji pack trades the kana grid for a list to fit readings on the
+  back. Hand *these* to a reviewer, not the TS.
 - `docs/packs/toeic-backs-draft.md`, `docs/packs/topik-backs-draft.md` — the 293
   card backs, approved 2026-08-02. Kept as the record of what was authored and
   why; still the place to read before changing a gloss, since each leads with

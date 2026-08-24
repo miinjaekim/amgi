@@ -27,6 +27,8 @@ describe('military packs', () => {
   it('registers each pack under both study languages', () => {
     expect(getVocabPacks('English').map(p => p.id)).toEqual([
       'toeic-core',
+      'daily-life',
+      'english-idioms',
       'military-unit-en',
       'military-affairs-en',
     ]);
