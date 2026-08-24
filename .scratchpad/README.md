@@ -27,9 +27,9 @@ Related docs outside this folder:
   hint, and hand *these* to a reviewer rather than the TS.
 - `docs/packs/daily-life-pack-draft.md`, `docs/packs/idioms-pack-draft.md`,
   `docs/packs/kanji-pack-draft.md` — the three packs added 2026-08-24 (referenced
-  from `dailyLife.ts`, `idioms.ts`, `kanji.ts`). **Awaiting approval — the word
-  lists have not been signed off.** Each carries the word list *and* its backs in
-  one file, rather than the list/backs split the older drafts use, and each leads
+  from `dailyLife.ts`, `idioms.ts`, `kanji.ts`), **approved 2026-08-24**. Each
+  carries the word list *and* its backs in one file, rather than the list/backs
+  split the older drafts use, and each leads
   with the calls that need a decision: the daily-life pack sets aside the
   not-for-beginners rule, the idioms pack's Korean 관용구 matches are judgement
   calls, and the kanji pack trades the kana grid for a list to fit readings on the

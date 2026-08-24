@@ -1,8 +1,9 @@
 # Everyday English Pack — Draft for Review
 
-**⚠️ Not shipped until you approve this list.** The pack is wired into
-`packages/core/src/dailyLife.ts` and the English registry on the branch, but
-word lists go through this gate first — same as TOEIC and TOPIK did.
+**✅ Word list approved 2026-08-24.** Kept as the record of what was authored
+and why — still the place to read before changing an entry or a gloss, since the
+sections below lead with the calls a bare source diff would not explain. The pack
+lives in `packages/core/src/dailyLife.ts`.
 
 **149 entries · 7 sections · Korean backs only · `layout: 'list'`**
 

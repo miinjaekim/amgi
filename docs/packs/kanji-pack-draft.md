@@ -1,7 +1,8 @@
 # Kanji Pack (教育漢字 grades 1–2) — Draft for Review
 
-**⚠️ Not shipped until you approve this list.** Wired into
-`packages/core/src/kanji.ts` and the Japanese registry on the branch.
+**✅ Word list approved 2026-08-24.** Kept as the record of what was authored
+and why — read it before changing a meaning or a reading. The pack lives in
+`packages/core/src/kanji.ts`.
 
 **240 characters · 11 sections · both backs authored · `layout: 'list'`**
 

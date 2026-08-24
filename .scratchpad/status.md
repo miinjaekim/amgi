@@ -150,10 +150,17 @@ reopened by the next person to notice the symptom. Newest first.
 
 ### Three packs authored; one of them sets a rule aside on purpose (2026-08-24)
 
-Everyday English (149), English Idioms (100) and Kanji 教育漢字 1–2 (240), on
-`feat/vocab-packs-daily-idioms-kanji`, **unapproved** — the word lists still need
-sign-off, which is the only thing between them and shipping. Drafts:
-`docs/packs/{daily-life,idioms,kanji}-pack-draft.md`. Four calls worth keeping:
+Everyday English (149), English Idioms (100) and Kanji 教育漢字 1–2 (240).
+**Word lists approved 2026-08-24**, the gate every pack goes through. Drafts, now
+the record rather than the request: `docs/packs/{daily-life,idioms,kanji}-pack-draft.md`.
+
+Content-only and registry-driven — no pack id is hardcoded anywhere in `apps/`,
+so both platforms picked all three up with no change. That also sets when each
+audience sees them: **web at deploy, mobile at the next build**, since mobile
+ships by build and there is no OTA. Nothing here needs a native module, so the
+packs ride whatever build comes next rather than earning one.
+
+Four calls worth keeping:
 
 **"Audience is not beginners" has one recorded exception, and it is the
 daily-life pack.** Asked for that way, so it is a deliberate exception rather

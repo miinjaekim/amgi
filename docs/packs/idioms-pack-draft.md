@@ -1,8 +1,8 @@
 # English Idioms Pack — Draft for Review
 
-**⚠️ Not shipped until you approve this list.** Wired into
-`packages/core/src/idioms.ts` and the English registry on the branch; the word
-list goes through this gate first.
+**✅ Word list approved 2026-08-24.** Kept as the record of what was authored
+and why — read it before changing an entry, a Korean 관용구 match or a usage
+hint. The pack lives in `packages/core/src/idioms.ts`.
 
 **100 entries · 6 sections · Korean backs only · `layout: 'list'`**
 
