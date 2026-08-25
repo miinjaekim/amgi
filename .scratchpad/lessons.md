@@ -174,6 +174,32 @@ Two things to carry forward:
 
 Gotchas already paid for. Grouped so you can skim the relevant section.
 
+## A layout bug is not fixed by arithmetic (2026-08-25)
+
+The typed-review card on mobile took three attempts, and the first two were
+reasoned from style values instead of looked at. The real fault was visible in
+one screenshot the whole time: **the card wrapped a `ScrollView`, and focusing
+the field made it auto-scroll to bring the input into view — carrying the word
+off the top of the card.** The learner was asked to translate a word that was no
+longer on screen. Neither of the first two attempts touched a ScrollView.
+
+Three things worth keeping:
+
+- **Attempt one — pinning the input to the fixed bottom block — made it worse**,
+  and predictably so. The card was `flex: 1`; every pixel the bottom block grew
+  came straight out of it.
+- **`KeyboardAvoidingView` under-lifts on a screen that already pads its
+  bottom.** It derives the overlap from its own measured frame, so the floating
+  tab bar's `paddingBottom` got double-counted and it lifted ~90pt short —
+  enough to cut the submit button in half. Reserving the keyboard's *measured*
+  height (`keyboardWillShow` → `endCoordinates.height`, minus what the screen
+  already pads) leaves no arithmetic to be wrong about. The Learn screen had
+  already concluded this; it is written in a comment there.
+- **In a React Native column, content that does not fit is drawn over what is
+  below it** — it does not clip and it does not scroll. So a layout with nothing
+  flexible left silently overlaps rather than failing visibly, and "it fits on my
+  arithmetic" is worth about nothing. Ask for a screenshot.
+
 ## Process
 
 - Always use Git — new branch per feature, commit as work completes. Never work

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import {
   View, Text, TouchableOpacity, ActivityIndicator,
   StyleSheet, Animated, TextInput, Alert, ScrollView,
-  KeyboardAvoidingView, Platform,
+  Keyboard, Pressable,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams } from 'expo-router';
@@ -125,6 +125,24 @@ export default function ReviewScreen() {
   const [stopped, setStopped] = useState(false);
   const [reviewedCount, setReviewedCount] = useState(0);
   const revealAnim = useRef(new Animated.Value(0)).current;
+  /**
+   * The keyboard's real height, from the event rather than inferred.
+   *
+   * `KeyboardAvoidingView` was here first and got it wrong: it derives the
+   * overlap from its own frame, and inside a screen that already pads for the
+   * floating tab bar it lifted by ~90pt too little — enough that 확인 was cut
+   * in half and the reveal link was gone entirely. Reserving the measured
+   * height leaves no arithmetic to be wrong about, which is also why the Learn
+   * screen does it this way.
+   */
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  useEffect(() => {
+    // `will` rather than `did`, so the layout moves with the keyboard's own
+    // animation instead of snapping after it.
+    const show = Keyboard.addListener('keyboardWillShow', e => setKeyboardHeight(e.endCoordinates.height));
+    const hide = Keyboard.addListener('keyboardWillHide', () => setKeyboardHeight(0));
+    return () => { show.remove(); hide.remove(); };
+  }, []);
 
   // Card options (⋯ menu)
   const [showOptions, setShowOptions] = useState(false);
@@ -403,21 +421,6 @@ export default function ReviewScreen() {
     Animated.spring(revealAnim, { toValue: 1, useNativeDriver: true, friction: 8 }).start();
   };
 
-  /**
-   * Grade what was typed, then reveal.
-   *
-   * Local and synchronous — no network, which is the point on a phone: review
-   * happens on a commute, and a grader that needs a signal is a grader that
-   * stops working exactly where the feature is used. The verdict only
-   * preselects a rating; all four stay live, with both strings on screen.
-   */
-  const handleSubmitTyped = () => {
-    const item = queue[index];
-    if (!item || !typedAnswer.trim()) return;
-    setTypedGrade(gradeTypedAnswer(typedAnswer, item.card));
-    handleReveal();
-  };
-
   const handleRate = async (rating: Rating) => {
     if (submitting) return;
     const item = queue[index];
@@ -468,6 +471,36 @@ export default function ReviewScreen() {
     } else {
       setIndex(i => i + 1);
     }
+  };
+
+  /**
+   * Grade what was typed. A hit is rated and gone; only a miss stops to ask.
+   *
+   * Local and synchronous — no network, which is the point on a phone: review
+   * happens on a commute, and a grader that needs a signal is a grader that
+   * stops working exactly where the feature is used.
+   *
+   * The asymmetry is deliberate. Producing the word from memory and spelling
+   * it correctly is not a judgement the learner can improve on, so `easy` is
+   * applied rather than offered, and the session moves on. A miss is the
+   * opposite — the grader may simply not know the answer was also right — so
+   * it reveals both strings and keeps the full rating row, which is where the
+   * override lives.
+   *
+   * Declared below `handleRate` rather than above it: an earlier version of
+   * this file taught us that referencing a later `const` from a handler is
+   * what the React Compiler flags.
+   */
+  const handleSubmitTyped = () => {
+    const item = queue[index];
+    if (!item || !typedAnswer.trim()) return;
+    const grade = gradeTypedAnswer(typedAnswer, item.card);
+    if (grade.correct) {
+      void handleRate(grade.suggested);
+      return;
+    }
+    setTypedGrade(grade);
+    handleReveal();
   };
 
   const handleEditSave = async () => {
@@ -849,10 +882,9 @@ export default function ReviewScreen() {
           covers both Check and the reveal-instead escape hatch on a typed
           card. A no-op when nothing is focused, so an untyped session is
           unaffected. Same shape the Learn screen uses. */}
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={s.sessionFlex}
-      >
+      {/* `root` already pads for the floating tab bar, so only the difference
+          is reserved here — together they come to exactly the keyboard. */}
+      <View style={[s.sessionFlex, { paddingBottom: Math.max(0, keyboardHeight - tabBarHeight) }]}>
         {offlineNotice}
         {/* Progress */}
         <View style={s.progressBar}>
@@ -891,193 +923,235 @@ export default function ReviewScreen() {
           {directionLabel(nativeLanguage, studyLanguage, isFront ? 'frontToBack' : 'backToFront')}
         </Text>
 
-        {/* Card */}
-        <View style={s.cardWrap}>
-          {/* Card header: the options button alone. The question the card is
-              asking used to be spelled out here — "이것을 영어로 어떻게
-              말하나요?" — and it was saying a third time what the direction
-              label above the card already says and what the front text itself
-              makes obvious. On a typed card it also stood between the word and
-              the field. */}
-          <View style={s.cardHeader}>
-            <TouchableOpacity
-              style={s.optionsBtn}
-              onPress={() => {
-                if (editing) {
-                  setEditing(false);
-                  setEditDraft(null);
-                }
-                setShowOptions(v => !v);
-              }}
-            >
-              <Text style={s.optionsBtnText}>···</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Options menu */}
-          {showOptions && !editing && (
-            <View style={s.optionsMenu}>
+        {/* The card and the space under it are one dismiss target, the way
+            Learn's is. It has to be the card and not just the spacer: with the
+            keyboard up the spacer is nearly nothing, and a keyboard you cannot
+            put away is worse than one that covers something. Children with
+            their own handlers — the ⋯, the field, the details buttons — still
+            take their taps first, and with no keyboard up this is a no-op. */}
+        <Pressable style={s.dismissArea} onPress={Keyboard.dismiss}>
+          {/* Card */}
+          <View style={[s.cardWrap, typingThisCard && !revealed && s.cardWrapSnug]}>
+            {/* Card header: the options button alone. The question the card is
+                asking used to be spelled out here — "이것을 영어로 어떻게
+                말하나요?" — and it was saying a third time what the direction
+                label above the card already says and what the front text itself
+                makes obvious. On a typed card it also stood between the word and
+                the field. */}
+            <View style={[s.cardHeader, typingThisCard && !revealed && s.cardHeaderSnug]}>
               <TouchableOpacity
-                style={s.optionsMenuItem}
+                style={s.optionsBtn}
                 onPress={() => {
-                  setEditDraft({ [config.studyField]: studySide, [backConfig.backField]: backSide });
-                  setEditing(true);
-                  setShowOptions(false);
+                  if (editing) {
+                    setEditing(false);
+                    setEditDraft(null);
+                  }
+                  setShowOptions(v => !v);
                 }}
               >
-                <Text style={s.optionsMenuText}>Edit</Text>
-              </TouchableOpacity>
-              <View style={s.optionsMenuDivider} />
-              <TouchableOpacity style={s.optionsMenuItem} onPress={handleArchive}>
-                <Text style={[s.optionsMenuText, { color: C.error }]}>Archive</Text>
+                <Text style={s.optionsBtnText}>···</Text>
               </TouchableOpacity>
             </View>
-          )}
 
-          {/* Edit form */}
-          {editing && editDraft ? (
-            <View style={s.editForm}>
-              <Text style={s.editLabel}>{t(nativeLanguage, config.studyLabelKey)}</Text>
-              <TextInput
-                style={s.editInput}
-                value={editDraft[config.studyField] ?? ''}
-                onChangeText={v => setEditDraft(d => d ? { ...d, [config.studyField]: v } : d)}
-                autoFocus
-              />
-              <Text style={s.editLabel}>{t(nativeLanguage, backConfig.backLabelKey)}</Text>
-              <TextInput
-                style={s.editInput}
-                value={editDraft[backConfig.backField] ?? ''}
-                onChangeText={v => setEditDraft(d => d ? { ...d, [backConfig.backField]: v } : d)}
-              />
-              <View style={s.editActions}>
-                <TouchableOpacity style={s.editSaveBtn} onPress={handleEditSave}>
-                  <Text style={s.editSaveBtnText}>Save</Text>
+            {/* Options menu */}
+            {showOptions && !editing && (
+              <View style={s.optionsMenu}>
+                <TouchableOpacity
+                  style={s.optionsMenuItem}
+                  onPress={() => {
+                    setEditDraft({ [config.studyField]: studySide, [backConfig.backField]: backSide });
+                    setEditing(true);
+                    setShowOptions(false);
+                  }}
+                >
+                  <Text style={s.optionsMenuText}>Edit</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={s.editCancelBtn} onPress={() => { setEditing(false); setEditDraft(null); }}>
-                  <Text style={s.editCancelBtnText}>Cancel</Text>
+                <View style={s.optionsMenuDivider} />
+                <TouchableOpacity style={s.optionsMenuItem} onPress={handleArchive}>
+                  <Text style={[s.optionsMenuText, { color: C.error }]}>Archive</Text>
                 </TouchableOpacity>
               </View>
-            </View>
-          ) : (
-            // Scrollable: a generated definition plus notes and three examples is
-            // far taller than a card front, and the fixed-height card used to
-            // simply clip it with no way to reach the rest.
-            <ScrollView
-              style={s.cardScroll}
-              contentContainerStyle={s.cardScrollContent}
-              showsVerticalScrollIndicator={false}
-              // Or the first tap on anything in the card only dismisses the
-              // keyboard raised by the typed-answer field.
-              keyboardShouldPersistTaps="handled"
-            >
-              <Text style={s.frontText}>{frontText}</Text>
+            )}
 
-              {revealed && (
-                <Animated.View style={[s.revealWrap, revealStyle]}>
-                  <View style={s.divider} />
-                  <Text style={s.backText}>{backText}</Text>
-
-                  {/* Both strings on screen. This is what lets the grader be
-                      strict: the learner is not appealing a judgement they
-                      cannot see, they are reading two answers and rating. */}
-                  {typedGrade && (
-                    <Text style={s.typedVerdict}>
-                      <Text style={typedGrade.correct ? s.typedVerdictOk : s.typedVerdictMiss}>
-                        {t(nativeLanguage, typedGrade.correct ? 'typedAnswerCorrect' : 'typedAnswerMissed')}
-                      </Text>
-                      {!typedGrade.correct && (
-                        <Text>{` · ${t(nativeLanguage, 'typedAnswerYours')}: ${typedAnswer}`}</Text>
-                      )}
-                    </Text>
-                  )}
-
-                  {/* One toggle for everything, shown whenever there is either
-                      something to read or something to write. */}
-                  <TouchableOpacity style={s.detailsBtn} onPress={() => setShowDetails(v => !v)}>
-                    <Text style={s.detailsBtnText}>
-                      {t(nativeLanguage, showDetails ? 'hideDetails' : 'showDetails')}
-                    </Text>
+            {/* Edit form */}
+            {editing && editDraft ? (
+              <View style={s.editForm}>
+                <Text style={s.editLabel}>{t(nativeLanguage, config.studyLabelKey)}</Text>
+                <TextInput
+                  style={s.editInput}
+                  value={editDraft[config.studyField] ?? ''}
+                  onChangeText={v => setEditDraft(d => d ? { ...d, [config.studyField]: v } : d)}
+                  autoFocus
+                />
+                <Text style={s.editLabel}>{t(nativeLanguage, backConfig.backLabelKey)}</Text>
+                <TextInput
+                  style={s.editInput}
+                  value={editDraft[backConfig.backField] ?? ''}
+                  onChangeText={v => setEditDraft(d => d ? { ...d, [backConfig.backField]: v } : d)}
+                />
+                <View style={s.editActions}>
+                  <TouchableOpacity style={s.editSaveBtn} onPress={handleEditSave}>
+                    <Text style={s.editSaveBtnText}>Save</Text>
                   </TouchableOpacity>
+                  <TouchableOpacity style={s.editCancelBtn} onPress={() => { setEditing(false); setEditDraft(null); }}>
+                    <Text style={s.editCancelBtnText}>Cancel</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ) : typingThisCard && !revealed ? (
+              // **No scroll container, and the card is sized to these two
+              // children rather than stretched** (`cardWrapSnug`). A ScrollView
+              // here is what broke the exercise: focusing the field made it
+              // auto-scroll to bring the input into view, and that carried the
+              // word off the top of the card — the learner was asked to
+              // translate a word they could no longer see. Before the reveal
+              // there is nothing to scroll, so there is nothing to scroll away.
+              <>
+                <Text style={s.frontText}>{frontText}</Text>
+                <TextInput
+                  // Remounted per card: `autoFocus` fires on mount only, and
+                  // this input holds the same slot from one card to the next.
+                  key={index}
+                  style={s.typedInput}
+                  value={typedAnswer}
+                  onChangeText={setTypedAnswer}
+                  onSubmitEditing={handleSubmitTyped}
+                  placeholder={typedAnswerPlaceholder(nativeLanguage, studyLanguage)}
+                  placeholderTextColor={C.muted}
+                  autoFocus
+                  returnKeyType="done"
+                  // Off on purpose: a phone completing the word being recalled
+                  // does the exercise for the learner.
+                  autoCorrect={false}
+                  autoCapitalize="none"
+                  spellCheck={false}
+                />
+              </>
+            ) : (
+              // Scrollable: a generated definition plus notes and three examples is
+              // far taller than a card front, and the fixed-height card used to
+              // simply clip it with no way to reach the rest.
+              <ScrollView
+                style={s.cardScroll}
+                contentContainerStyle={s.cardScrollContent}
+                showsVerticalScrollIndicator={false}
+                // Or the first tap on anything in the card only dismisses the
+                // keyboard raised by the typed-answer field.
+                keyboardShouldPersistTaps="handled"
+              >
+                <Text style={s.frontText}>{frontText}</Text>
 
-                  {showDetails && (
-                    <View style={s.definitionWrap}>
-                      {!!definition && (
-                        <View style={s.detailSection}>
-                          <Text style={s.detailLabel}>{t(nativeLanguage, 'sectionDefinition')}</Text>
-                          <Markdown style={s.definitionText}>{definition}</Markdown>
-                        </View>
-                      )}
-                      {!!characterBreakdown && (
-                        <View style={s.detailSection}>
-                          <Text style={s.detailLabel}>{t(nativeLanguage, characterSectionKey)}</Text>
-                          <Markdown style={s.definitionText}>{characterBreakdown}</Markdown>
-                        </View>
-                      )}
-                      {!!shownCard.notes && (
-                        <View style={s.detailSection}>
-                          <Text style={s.detailLabel}>{t(nativeLanguage, 'sectionNotes')}</Text>
-                          <Markdown style={s.definitionText}>{shownCard.notes}</Markdown>
-                        </View>
-                      )}
-                      {hasExamples && (
-                        <View style={s.detailSection}>
-                          <Text style={s.detailLabel}>{t(nativeLanguage, 'sectionExamples')}</Text>
-                          {shownCard.examples!.map((ex, i) => {
-                            const sides = getExampleSides(ex, studyLanguage, nativeLanguage);
-                            return (
-                              <View key={i} style={s.exampleItem}>
-                                <Text style={s.exampleStudy}>{sides.study}</Text>
-                                {sides.back ? <Text style={s.exampleBack}>{sides.back}</Text> : null}
-                              </View>
-                            );
-                          })}
-                        </View>
-                      )}
+                {revealed && (
+                  <Animated.View style={[s.revealWrap, revealStyle]}>
+                    <View style={s.divider} />
+                    <Text style={s.backText}>{backText}</Text>
 
-                      {/* Mid-review is where a one-line gloss most often turns out
-                          not to be enough — you find out at the moment you fail to
-                          recall it. Offering the write here means that discovery
-                          does not cost you the session. Each button waits only on
-                          its own request. */}
-                      {(!hasDepth || !hasExamples) && (
-                        <View style={s.enrichRow}>
-                          {!hasDepth && (
-                            <TouchableOpacity
-                              style={[s.detailsBtn, enrichRunning('depth') && s.btnDisabled]}
-                              onPress={() => enrich('depth')}
-                              disabled={enrichRunning('depth')}
-                            >
-                              <Text style={s.detailsBtnText}>
-                                {enrichRunning('depth')
-                                  ? t(nativeLanguage, 'cardEnriching')
-                                  : t(nativeLanguage, 'loadDefinition')}
-                              </Text>
-                            </TouchableOpacity>
-                          )}
-                          {!hasExamples && (
-                            <TouchableOpacity
-                              style={[s.detailsBtn, enrichRunning('examples') && s.btnDisabled]}
-                              onPress={() => enrich('examples')}
-                              disabled={enrichRunning('examples')}
-                            >
-                              <Text style={s.detailsBtnText}>
-                                {enrichRunning('examples')
-                                  ? t(nativeLanguage, 'cardEnriching')
-                                  : t(nativeLanguage, 'loadExamples')}
-                              </Text>
-                            </TouchableOpacity>
-                          )}
-                        </View>
-                      )}
-                      {enrichError && <Text style={s.enrichError}>{enrichError}</Text>}
-                    </View>
-                  )}
-                </Animated.View>
-              )}
-            </ScrollView>
-          )}
-        </View>
+                    {/* Both strings on screen. This is what lets the grader be
+                        strict: the learner is not appealing a judgement they
+                        cannot see, they are reading two answers and rating. */}
+                    {typedGrade && (
+                      <Text style={s.typedVerdict}>
+                        <Text style={typedGrade.correct ? s.typedVerdictOk : s.typedVerdictMiss}>
+                          {t(nativeLanguage, typedGrade.correct ? 'typedAnswerCorrect' : 'typedAnswerMissed')}
+                        </Text>
+                        {!typedGrade.correct && (
+                          <Text>{` · ${t(nativeLanguage, 'typedAnswerYours')}: ${typedAnswer}`}</Text>
+                        )}
+                      </Text>
+                    )}
+
+                    {/* One toggle for everything, shown whenever there is either
+                        something to read or something to write. */}
+                    <TouchableOpacity style={s.detailsBtn} onPress={() => setShowDetails(v => !v)}>
+                      <Text style={s.detailsBtnText}>
+                        {t(nativeLanguage, showDetails ? 'hideDetails' : 'showDetails')}
+                      </Text>
+                    </TouchableOpacity>
+
+                    {showDetails && (
+                      <View style={s.definitionWrap}>
+                        {!!definition && (
+                          <View style={s.detailSection}>
+                            <Text style={s.detailLabel}>{t(nativeLanguage, 'sectionDefinition')}</Text>
+                            <Markdown style={s.definitionText}>{definition}</Markdown>
+                          </View>
+                        )}
+                        {!!characterBreakdown && (
+                          <View style={s.detailSection}>
+                            <Text style={s.detailLabel}>{t(nativeLanguage, characterSectionKey)}</Text>
+                            <Markdown style={s.definitionText}>{characterBreakdown}</Markdown>
+                          </View>
+                        )}
+                        {!!shownCard.notes && (
+                          <View style={s.detailSection}>
+                            <Text style={s.detailLabel}>{t(nativeLanguage, 'sectionNotes')}</Text>
+                            <Markdown style={s.definitionText}>{shownCard.notes}</Markdown>
+                          </View>
+                        )}
+                        {hasExamples && (
+                          <View style={s.detailSection}>
+                            <Text style={s.detailLabel}>{t(nativeLanguage, 'sectionExamples')}</Text>
+                            {shownCard.examples!.map((ex, i) => {
+                              const sides = getExampleSides(ex, studyLanguage, nativeLanguage);
+                              return (
+                                <View key={i} style={s.exampleItem}>
+                                  <Text style={s.exampleStudy}>{sides.study}</Text>
+                                  {sides.back ? <Text style={s.exampleBack}>{sides.back}</Text> : null}
+                                </View>
+                              );
+                            })}
+                          </View>
+                        )}
+
+                        {/* Mid-review is where a one-line gloss most often turns out
+                            not to be enough — you find out at the moment you fail to
+                            recall it. Offering the write here means that discovery
+                            does not cost you the session. Each button waits only on
+                            its own request. */}
+                        {(!hasDepth || !hasExamples) && (
+                          <View style={s.enrichRow}>
+                            {!hasDepth && (
+                              <TouchableOpacity
+                                style={[s.detailsBtn, enrichRunning('depth') && s.btnDisabled]}
+                                onPress={() => enrich('depth')}
+                                disabled={enrichRunning('depth')}
+                              >
+                                <Text style={s.detailsBtnText}>
+                                  {enrichRunning('depth')
+                                    ? t(nativeLanguage, 'cardEnriching')
+                                    : t(nativeLanguage, 'loadDefinition')}
+                                </Text>
+                              </TouchableOpacity>
+                            )}
+                            {!hasExamples && (
+                              <TouchableOpacity
+                                style={[s.detailsBtn, enrichRunning('examples') && s.btnDisabled]}
+                                onPress={() => enrich('examples')}
+                                disabled={enrichRunning('examples')}
+                              >
+                                <Text style={s.detailsBtnText}>
+                                  {enrichRunning('examples')
+                                    ? t(nativeLanguage, 'cardEnriching')
+                                    : t(nativeLanguage, 'loadExamples')}
+                                </Text>
+                              </TouchableOpacity>
+                            )}
+                          </View>
+                        )}
+                        {enrichError && <Text style={s.enrichError}>{enrichError}</Text>}
+                      </View>
+                    )}
+                  </Animated.View>
+                )}
+              </ScrollView>
+            )}
+          </View>
+
+          {/* Takes the height the card gave up, so 확인 stays at the bottom and
+              the word keeps its position whether or not the keyboard is up — the
+              keyboard eats this, not the card. */}
+          {typingThisCard && !revealed && <View style={s.typedSpacer} />}
+        </Pressable>
 
         {/* Bottom action row — same position for both show-answer and ratings */}
         {!editing && (
@@ -1107,30 +1181,7 @@ export default function ReviewScreen() {
               ))}
             </View>
           ) : typingThisCard ? (
-            /* The input lives here rather than in the card, so it is pinned
-               above the keyboard with Check and cannot scroll out of reach —
-               the card body scrolls on its own behind it. Inside the card it
-               competed with the word, the button and the keyboard for the same
-               vertical space, and lost. */
             <View style={s.typedActions}>
-              <TextInput
-                // Remounted per card: `autoFocus` fires on mount only, and
-                // this input holds the same slot from one card to the next.
-                key={index}
-                style={s.typedInput}
-                value={typedAnswer}
-                onChangeText={setTypedAnswer}
-                onSubmitEditing={handleSubmitTyped}
-                placeholder={typedAnswerPlaceholder(nativeLanguage, studyLanguage)}
-                placeholderTextColor={C.muted}
-                autoFocus
-                returnKeyType="done"
-                // Off on purpose: a phone completing the word being recalled
-                // does the exercise for the learner.
-                autoCorrect={false}
-                autoCapitalize="none"
-                spellCheck={false}
-              />
               <TouchableOpacity
                 style={[s.showBtn, !typedAnswer.trim() && s.showBtnOff]}
                 onPress={handleSubmitTyped}
@@ -1151,7 +1202,7 @@ export default function ReviewScreen() {
             </TouchableOpacity>
           )
         )}
-      </KeyboardAvoidingView>
+      </View>
     </SafeAreaView>
   );
 }
@@ -1160,6 +1211,7 @@ function makeStyles(C: Palette, tabBarHeight: number) {
   return StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg, paddingBottom: tabBarHeight },
   sessionFlex: { flex: 1 },
+  dismissArea: { flex: 1 },
   center: { flex: 1, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center', padding: 32 },
   // `center` owns the whole screen; this centers within what a header leaves.
   centerFill: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 },
@@ -1191,6 +1243,19 @@ function makeStyles(C: Palette, tabBarHeight: number) {
     borderRadius: 20, borderWidth: 1, borderColor: C.border,
     padding: 28,
   },
+  // Before the reveal a typed card holds a word and a field, so it hugs them
+  // instead of stretching. Stretched, it left ~500pt of empty card below the
+  // field with the keyboard down, and collapsed onto its own ScrollView with
+  // the keyboard up.
+  //
+  // The tighter vertical padding is not decoration: with the keyboard up the
+  // fixed content came to ~22pt more than the screen had, and since nothing
+  // here scrolls or shrinks, the overflow was drawn *over* the card — 확인
+  // sitting across its bottom border. This and `cardHeaderSnug` give back
+  // ~36pt of padding that was holding nothing.
+  cardWrapSnug: { flex: 0, paddingVertical: 16 },
+  cardHeaderSnug: { marginBottom: 4 },
+  typedSpacer: { flex: 1 },
   cardHeader: { flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'flex-start', marginBottom: 16 },
   optionsBtn: { paddingHorizontal: 8, paddingVertical: 2, marginLeft: 8 },
   optionsBtnText: { fontSize: 20, color: C.muted, letterSpacing: 2 },
@@ -1249,14 +1314,11 @@ function makeStyles(C: Palette, tabBarHeight: number) {
   showBtnOff: { opacity: 0.4 },
 
   // Typed responses
-  // Sits in the bottom block, so it takes that block's gutter rather than the
-  // card's padding, and `surface` to stand off the screen background the way
-  // the card does.
   typedInput: {
-    marginHorizontal: 16, marginBottom: 10,
-    borderWidth: 1, borderColor: C.border, borderRadius: 12,
-    paddingHorizontal: 14, paddingVertical: 12, fontSize: 20, color: C.text,
-    backgroundColor: C.surface,
+    marginTop: 14,
+    borderWidth: 1, borderColor: C.border, borderRadius: 10,
+    paddingHorizontal: 12, paddingVertical: 12, fontSize: 20, color: C.text,
+    backgroundColor: C.bg,
   },
   typedVerdict: { fontSize: 13, color: C.muted, marginTop: 10 },
   typedVerdictOk: { color: C.highlight, fontWeight: '700' },
@@ -1265,7 +1327,7 @@ function makeStyles(C: Palette, tabBarHeight: number) {
   typedVerdictMiss: { color: '#c0392b', fontWeight: '700' },
   typedActions: { paddingBottom: 8 },
   typedRevealText: {
-    fontSize: 13, color: C.muted, textAlign: 'center', paddingVertical: 10,
+    fontSize: 13, color: C.muted, textAlign: 'center', paddingVertical: 8,
   },
 
   ratingRow: {

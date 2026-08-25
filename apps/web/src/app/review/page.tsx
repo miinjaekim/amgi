@@ -240,17 +240,23 @@ export default function ReviewPage() {
   };
 
   /**
-   * Grade what was typed, then reveal.
+   * Grade what was typed. A hit is rated and gone; only a miss stops to ask.
    *
-   * The verdict only ever *preselects* a rating — all four buttons stay live,
-   * with the expected answer on screen beside what was typed. A learner whose
-   * answer was right in a way the card could not know corrects it with the tap
-   * they were making anyway, which is why the grader can afford to be strict.
+   * The asymmetry is the point. Producing the word from memory and spelling it
+   * correctly is not a judgement the learner can improve on, so `easy` is
+   * applied rather than offered. A miss is the opposite — the grader may not
+   * know the answer was also right — so it reveals both strings and keeps the
+   * full rating row, which is where the override lives.
    */
   const handleSubmitTypedAnswer = () => {
     const { card } = activeQueue[currentReviewIdx] ?? {};
     if (!card || !typedAnswer.trim()) return;
-    setTypedGrade(gradeTypedAnswer(typedAnswer, card));
+    const grade = gradeTypedAnswer(typedAnswer, card);
+    if (grade.correct) {
+      void handleReviewResponse(grade.suggested);
+      return;
+    }
+    setTypedGrade(grade);
     setShowAnswer(true);
     setShowDetails(false);
   };

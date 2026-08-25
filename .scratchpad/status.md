@@ -164,21 +164,31 @@ either** — an edit-distance band needs a threshold per writing system, since o
 character of a two-character Korean word is a different word where one character
 of `anniversaire` is a slip of the thumb.
 
-**The rating row is what makes strictness honest.** A verdict only *preselects*
-a rating; all four buttons stay live, with the expected answer on screen beside
-what was typed. So a learner whose answer was right in a way the card could not
-know corrects it with the tap they were already making. This is the removed
-cloze override's argument — *they are not appealing a judgement, they are
-reading two strings* — and here it costs no extra control at all, because the
-buttons were already there. **`sm2.ts` is untouched**: `getNextReviewData`
-already took all four responses, so this is purely a capture surface.
+**A hit is rated `easy` and gone; only a miss stops to ask** — _the user's
+call, 2026-08-25, reversing the first cut below._ The asymmetry is the whole
+design: producing the word from memory and spelling it correctly is not a
+judgement the learner can improve on, so asking them to rate it is asking a
+question with one honest answer. A miss is the opposite — the grader may simply
+not know the spelling was also right — so it reveals both strings and keeps the
+full rating row. **`sm2.ts` is untouched either way**: `getNextReviewData`
+already took all four responses.
 
-**It never emits `easy`.** The cloze grader did, reasoning that a string match
-is not a judgement that could be wrong. That does not carry over: a cloze was a
-rung a learner climbed, where typing a due vocabulary word correctly is the
-*expected* outcome. Emitting `easy` there would ratchet ease upward across the
-whole deck on the strength of the card working as designed. A hit preselects
-`good`, a miss `again`; the learner can still claim `easy` themselves.
+**The rating row on a miss is what makes strictness honest.** All four buttons
+live, with the expected answer beside what was typed, so a learner whose answer
+was right in a way the card could not know corrects it with the tap they were
+already making. This is the removed cloze override's argument — *they are not
+appealing a judgement, they are reading two strings* — and it costs no extra
+control, because the buttons were already there.
+
+**⚠️ What the first cut argued, and why it lost.** It capped a hit at `good` and
+made the learner rate every card, reasoning that a cloze was a rung a learner
+climbed where a due vocabulary word typed correctly is merely the card working
+as designed — so emitting `easy` every time ratchets ease across the whole deck.
+**That effect is real and it is unbounded**: `getNextReviewData` applies
+`ease + 0.1` at quality 5 with no ceiling, so a reliably-typed card's interval
+multiplier climbs without limit. Accepted deliberately — a word typed correctly
+on sight is a word whose interval *should* be growing fast. If it ever needs
+reining in, the lever is a cap in `sm2.ts`, not a downgrade of the verdict.
 
 **⚠️ Accents are matched strictly, which contradicts how the backlog item was
 written.** That item named accents alongside spacing and articles as a case
@@ -222,13 +232,36 @@ curly apostrophe, and phone keyboards substitute the same character in the other
 direction — so an answer typed on iOS and a card written by the model can
 disagree on a character neither party chose.
 
-**On mobile the input is pinned above the keyboard, not in the card** — _found
-on a device, 2026-08-25._ First cut put it in the card body under the word,
-where it competed with the word, the Check button and the keyboard for the same
-vertical space and lost: the learner had to scroll to see what they were typing
-into. It now sits in the fixed bottom block directly above Check, so it cannot
-scroll out of reach, and the card body scrolls on its own behind it. Web keeps
-its input in the card, where there is room.
+**⚠️ The mobile typed card took three tries, and the first two were fixed by
+reasoning rather than looking.** Worth reading before touching that layout, in
+`lessons.md` too. What was actually wrong: **the card wrapped a ScrollView, and
+focusing the field made it auto-scroll the word off the top** — the learner was
+asked to translate a word they could no longer see. Neither of the first two
+attempts touched that. Pinning the input to the bottom block made it worse (it
+stole height from an already-collapsing `flex: 1` card); blaming
+`KeyboardAvoidingView` was closer but still wrong about which part.
+
+What it is now, before the reveal: **no scroll container** — there is nothing to
+scroll, so there is nothing to scroll away — a card sized to its two children
+rather than stretched, a flexible spacer under it so the buttons stay at the
+bottom and the *spacer* is what the keyboard eats, and **the keyboard's measured
+height reserved rather than `KeyboardAvoidingView`'s inferred one**. That last
+one matters: KAV derives the overlap from its own frame, and on a screen that
+already pads for the floating tab bar it under-lifted by ~90pt, cutting 확인 in
+half. `keyboardWillShow` hands over the real number. Tapping the card dismisses
+the keyboard, the way Learn's does, and it has to be the card rather than the
+spacer because the spacer is nearly nothing when the keyboard is up.
+
+**The typed card's padding is load-bearing, not decoration.** With the keyboard
+up the fixed content ran ~22pt over the screen, and since nothing there scrolls
+or shrinks the overflow was drawn *over* the card. `cardWrapSnug` and
+`cardHeaderSnug` give back ~36pt that was holding nothing. The remaining slack
+is small — a smaller phone or a larger system text size will overflow again, and
+the next lever is dropping the ⋯ row before the reveal, worth ~32pt more.
+
+Web keeps its input in the card and keeps its direction prompt: there is room,
+and the prompt is filling an otherwise empty answer area rather than restating
+the label above it.
 
 **The mobile card no longer spells out the question** — _the user's call, same
 pass._ "이것을 영어로 어떻게 말하나요?" was the third statement of the same

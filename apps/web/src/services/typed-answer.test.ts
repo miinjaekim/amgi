@@ -59,10 +59,10 @@ describe('acceptedAnswers', () => {
 });
 
 describe('gradeTypedAnswer', () => {
-  it('accepts an exact answer and suggests good, never easy', () => {
+  it('accepts an exact answer and earns easy, which the caller applies', () => {
     expect(gradeTypedAnswer('어색하다', korean)).toEqual({
       correct: true,
-      suggested: 'good',
+      suggested: 'easy',
       expected: '어색하다',
     });
   });

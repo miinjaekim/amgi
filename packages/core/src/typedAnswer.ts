@@ -96,17 +96,23 @@ export function acceptedAnswers(card: TypedAnswerCard): string[] {
 export interface TypedAnswerGrade {
   correct: boolean;
   /**
-   * The rating to preselect — never `easy`, and never `hard`.
+   * The rating this answer earns.
    *
-   * The cloze grader emitted `easy` on a clean hit, reasoning that a string
-   * comparison is not a judgement that could be wrong. That argument does not
-   * carry over: a cloze was one rung of a ladder a learner climbed, where
-   * typing a vocabulary word correctly is the *expected* outcome of a due
-   * card. Emitting `easy` there would ratchet ease upward across the whole
-   * deck on the strength of the card working as intended. The learner can
-   * still say it was effortless — the button is right there.
+   * **A hit is `easy`, and it is applied rather than offered** — _the user's
+   * call, 2026-08-25._ The reasoning is asymmetry: producing the word from
+   * memory, spelled correctly, is not a judgement the learner can improve on,
+   * so asking them to rate it is asking a question with one honest answer.
+   * A miss is the opposite — the grader may simply not know the spelling was
+   * also right — so that one keeps the full rating row, which is where the
+   * override lives.
+   *
+   * This reverses an earlier call that capped a hit at `good`, on the ground
+   * that emitting `easy` every time ratchets ease across the deck. That effect
+   * is real and unbounded — `getNextReviewData` has no ceiling on `ease` — and
+   * was accepted deliberately: a word typed correctly on sight is a word whose
+   * interval should be growing quickly.
    */
-  suggested: 'again' | 'good';
+  suggested: 'again' | 'easy';
   /** What the card expected, to show beside what was typed. */
   expected: string;
 }
@@ -114,7 +120,8 @@ export interface TypedAnswerGrade {
 /**
  * Grades a typed answer against the card's study side.
  *
- * A hit is any accepted spelling under `sameFoldedText`. There is no partial
+ * A hit is any accepted spelling under `sameFoldedText`. Callers apply a hit
+ * straight to the scheduler and move on; only a miss reveals and asks. There is no partial
  * credit and no "close enough" tier: an edit-distance band needs a threshold
  * per writing system, because one character of a two-character Korean word is
  * a different word where one character of `anniversaire` is a slip of the
@@ -125,7 +132,7 @@ export function gradeTypedAnswer(typed: string, card: TypedAnswerCard): TypedAns
   const answer = typed.trim();
   const correct = answer.length > 0
     && acceptedAnswers(card).some(candidate => sameFoldedText(answer, candidate));
-  return { correct, suggested: correct ? 'good' : 'again', expected };
+  return { correct, suggested: correct ? 'easy' : 'again', expected };
 }
 
 /**
