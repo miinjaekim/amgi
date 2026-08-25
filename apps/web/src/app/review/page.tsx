@@ -19,11 +19,15 @@ import {
   getBackSideConfig,
   directionLabel,
   directionPrompt,
+  gradeTypedAnswer,
+  promptsForTyping,
+  typedAnswerPlaceholder,
 } from '@amgi/core';
 import type {
   DirectionFilter,
   ReviewCollection,
   ReviewQueueItem,
+  TypedAnswerGrade,
 } from '@amgi/core';
 import { db } from '@/config/firebase';
 import { doc, updateDoc } from 'firebase/firestore';
@@ -69,6 +73,20 @@ export default function ReviewPage() {
   const [reviewStopped, setReviewStopped] = useState(false);
   const [reviewedCount, setReviewedCount] = useState(0);
   const [showAnswer, setShowAnswer] = useState(false);
+  /**
+   * Typing is a property of the session, chosen before it starts, like the
+   * direction filter beside it. It is not persisted: nothing else about how a
+   * session is asked is, and a preference is a settings surface on two
+   * platforms before we know the feature earns one.
+   */
+  const [typingEnabled, setTypingEnabled] = useState(false);
+  const [typedAnswer, setTypedAnswer] = useState('');
+  /**
+   * The graded answer, or null when the learner asserted nothing — which is
+   * both "hasn't answered yet" and "flipped the card instead". Those two want
+   * identical behaviour: no verdict, no preselected rating.
+   */
+  const [typedGrade, setTypedGrade] = useState<TypedAnswerGrade | null>(null);
   const [showDetails, setShowDetails] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [showManage, setShowManage] = useState(false);
@@ -199,8 +217,14 @@ export default function ReviewPage() {
     }
   };
 
+  const clearTypedAnswer = () => {
+    setTypedAnswer('');
+    setTypedGrade(null);
+  };
+
   const handleStartReview = () => {
     setActiveQueue(buildReviewQueue(collectionCards, directionFilter));
+    clearTypedAnswer();
     setReviewMode(true);
     setCurrentReviewIdx(0);
     setReviewComplete(false);
@@ -211,6 +235,28 @@ export default function ReviewPage() {
   };
 
   const handleShowAnswer = () => {
+    setShowAnswer(true);
+    setShowDetails(false);
+  };
+
+  /**
+   * Grade what was typed. A hit is rated and gone; only a miss stops to ask.
+   *
+   * The asymmetry is the point. Producing the word from memory and spelling it
+   * correctly is not a judgement the learner can improve on, so `easy` is
+   * applied rather than offered. A miss is the opposite — the grader may not
+   * know the answer was also right — so it reveals both strings and keeps the
+   * full rating row, which is where the override lives.
+   */
+  const handleSubmitTypedAnswer = () => {
+    const { card } = activeQueue[currentReviewIdx] ?? {};
+    if (!card || !typedAnswer.trim()) return;
+    const grade = gradeTypedAnswer(typedAnswer, card);
+    if (grade.correct) {
+      void handleReviewResponse(grade.suggested);
+      return;
+    }
+    setTypedGrade(grade);
     setShowAnswer(true);
     setShowDetails(false);
   };
@@ -259,6 +305,7 @@ export default function ReviewPage() {
       : existing));
     setReviewedCount(n => n + 1);
 
+    clearTypedAnswer();
     if (currentReviewIdx + 1 < activeQueue.length) {
       setCurrentReviewIdx(currentReviewIdx + 1);
       setShowAnswer(false);
@@ -272,6 +319,11 @@ export default function ReviewPage() {
   };
 
   const handleExitReview = () => {
+    // Inlined rather than calling `clearTypedAnswer`: an effect above calls
+    // this on a user or language change, and routing it through another
+    // closure adds a dependency the React Compiler then flags.
+    setTypedAnswer('');
+    setTypedGrade(null);
     setReviewMode(false);
     setReviewComplete(false);
     setReviewStopped(false);
@@ -287,6 +339,17 @@ export default function ReviewPage() {
 
   const getStudySide = (card: Flashcard) =>
     card[langConfig.studyField] ?? card.term ?? '';
+
+  /**
+   * A ring on the rating the typed answer earned. Emphasis only — every button
+   * stays live, because the point is that the learner can disagree. Neutral
+   * rather than tinted, so it reads the same on the red `again` and the pale
+   * `easy`.
+   */
+  const ratingEmphasis = (rating: 'again' | 'hard' | 'good' | 'easy') =>
+    typedGrade?.suggested === rating
+      ? { boxShadow: '0 0 0 3px var(--color-text)' }
+      : undefined;
 
   const handleOpenManage = (card: Flashcard) => {
     setManageEditDraft({ studySide: getStudySide(card), backSide: getBackSide(card, nativeLanguage) });
@@ -381,6 +444,10 @@ export default function ReviewPage() {
   }, []);
 
   const currentReview = activeQueue[currentReviewIdx];
+  /** Only `backToFront` is ever typed — see `promptsForTyping`. */
+  const typingThisCard = currentReview
+    ? promptsForTyping(typingEnabled, currentReview.direction)
+    : false;
 
   // Only offered when there is something else to change to — a single
   // collection is not a choice, and a control for it would only be noise.
@@ -747,6 +814,25 @@ export default function ReviewPage() {
                             <PronounceButton text={getStudySide(currentReview.card)} furigana={currentReview.card.furigana} studyLanguage={studyLanguage} />
                           </div>
 
+                          {/* The two strings side by side. This is what makes
+                              a strict grader honest: the learner is not
+                              appealing a judgement they cannot see, they are
+                              reading both answers and rating accordingly. */}
+                          {typedGrade && (
+                            <div className="mb-3 text-sm">
+                              <span className={typedGrade.correct ? 'text-[var(--color-highlight)] font-semibold' : 'text-red-400 font-semibold'}>
+                                {typedGrade.correct
+                                  ? t(nativeLanguage, 'typedAnswerCorrect')
+                                  : t(nativeLanguage, 'typedAnswerMissed')}
+                              </span>
+                              {!typedGrade.correct && (
+                                <span className="text-[var(--color-muted)]">
+                                  {' · '}{t(nativeLanguage, 'typedAnswerYours')}: <span className="line-through">{typedAnswer}</span>
+                                </span>
+                              )}
+                            </div>
+                          )}
+
                           {(partOfSpeechLabel(nativeLanguage, currentReview.card) ||
                             currentReview.card.gender ||
                             getReading(currentReview.card)) && (
@@ -786,9 +872,34 @@ export default function ReviewPage() {
                           )}
                         </>
                       ) : (
-                        <div className="text-[var(--color-muted)] text-lg mt-4 italic">
-                          {directionPrompt(nativeLanguage, studyLanguage, 'backToFront')}
-                        </div>
+                        <>
+                          <div className="text-[var(--color-muted)] text-lg mt-4 italic">
+                            {directionPrompt(nativeLanguage, studyLanguage, 'backToFront')}
+                          </div>
+                          {typingThisCard && (
+                            <input
+                              type="text"
+                              // Remounted per card: `autoFocus` fires on mount
+                              // only, and this input holds the same slot from
+                              // one card to the next.
+                              key={currentReviewIdx}
+                              autoFocus
+                              value={typedAnswer}
+                              onChange={e => setTypedAnswer(e.target.value)}
+                              onKeyDown={e => { if (e.key === 'Enter') handleSubmitTypedAnswer(); }}
+                              placeholder={typedAnswerPlaceholder(nativeLanguage, studyLanguage)}
+                              // Autocorrect and capitalisation are off on
+                              // purpose: a phone helpfully completing the word
+                              // being recalled is the whole exercise done for
+                              // the learner.
+                              autoComplete="off"
+                              autoCorrect="off"
+                              autoCapitalize="off"
+                              spellCheck={false}
+                              className="w-full mt-4 px-4 py-3 rounded-lg text-lg bg-[var(--color-bg)] text-[var(--color-text)] border border-[var(--color-muted)] focus:border-[var(--color-highlight)] focus:outline-none"
+                            />
+                          )}
+                        </>
                       )}
                     </>
                   )}
@@ -799,26 +910,50 @@ export default function ReviewPage() {
                     <button
                       className="px-4 py-3 rounded-lg bg-red-400 text-white hover:bg-red-500 font-semibold"
                       onClick={() => handleReviewResponse('again')}
+                      style={ratingEmphasis('again')}
                     >
                       {t(nativeLanguage, 'ratingAgain')}
                     </button>
                     <button
                       className="px-4 py-3 rounded-lg bg-[var(--color-highlight)] text-[var(--color-bg)] hover:bg-[var(--color-text)] font-semibold"
                       onClick={() => handleReviewResponse('hard')}
+                      style={ratingEmphasis('hard')}
                     >
                       {t(nativeLanguage, 'ratingHard')}
                     </button>
                     <button
                       className="px-4 py-3 rounded-lg bg-[var(--color-muted)] text-[var(--color-text)] hover:bg-[var(--color-muted-dark)] font-semibold"
                       onClick={() => handleReviewResponse('good')}
+                      style={ratingEmphasis('good')}
                     >
                       {t(nativeLanguage, 'ratingGood')}
                     </button>
                     <button
                       className="px-4 py-3 rounded-lg bg-[var(--color-bg)] text-[var(--color-text)] border border-[var(--color-muted)] hover:bg-[var(--color-muted)] font-semibold"
                       onClick={() => handleReviewResponse('easy')}
+                      style={ratingEmphasis('easy')}
                     >
                       {t(nativeLanguage, 'ratingEasy')}
+                    </button>
+                  </div>
+                ) : typingThisCard ? (
+                  <div className="mt-4 flex flex-col gap-2">
+                    <button
+                      className="w-full px-4 py-3 bg-[var(--color-highlight)] text-[var(--color-bg)] rounded-lg hover:bg-[var(--color-text)] text-lg font-semibold disabled:opacity-40 disabled:cursor-not-allowed"
+                      onClick={handleSubmitTypedAnswer}
+                      disabled={!typedAnswer.trim()}
+                    >
+                      {t(nativeLanguage, 'typedAnswerCheck')}
+                    </button>
+                    {/* The per-card way out. A card you cannot type — no IME
+                        to hand, or you simply don't want to — flips exactly as
+                        it would with typing off, and grades nothing, because
+                        nothing was asserted. */}
+                    <button
+                      className="w-full px-4 py-2 text-sm text-[var(--color-muted)] hover:text-[var(--color-text)]"
+                      onClick={handleShowAnswer}
+                    >
+                      {t(nativeLanguage, 'typedAnswerReveal')}
                     </button>
                   </div>
                 ) : (
@@ -857,6 +992,18 @@ export default function ReviewPage() {
                   </button>
                 ))}
               </div>
+              {/* Same axis as the direction row above it: how the session asks,
+                  not what it asks about. Only the produce-the-word half of a
+                  `both` session is typed. */}
+              <label className="flex items-center gap-2 mb-6 text-sm text-[var(--color-text)] cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={typingEnabled}
+                  onChange={e => setTypingEnabled(e.target.checked)}
+                  className="accent-[var(--color-highlight)] w-4 h-4"
+                />
+                {t(nativeLanguage, 'typedReviewToggle')}
+              </label>
               <button
                 className="px-6 py-3 rounded-lg text-lg font-semibold mb-4 bg-[var(--color-highlight)] text-[var(--color-bg)] hover:bg-[var(--color-text)] disabled:opacity-40 disabled:cursor-not-allowed"
                 onClick={handleStartReview}

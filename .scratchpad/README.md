@@ -80,8 +80,31 @@ scoped version of it. Keep entries at the size that says what to do next; the
 argument behind a call goes in `status.md`, not in the item.
 
 _Last reviewed against the codebase: 2026-08-22, `main` @ `032cdad`.
-`npm test` 252/252, measured. Mobile has no test script — its half of the
+`npm test` 289/289, measured 2026-08-24 on `feat/typed-responses` — 273 of them
+on `main`, which the 252 recorded here had already gone stale against. Mobile has no test script — its half of the
 freshness work is covered by `tsc` and a bundle, not by tests._
+
+_This pass **built typed responses during review**, the last starred item —
+`backlog.md`'s High section is empty again. It was designed before any code, as
+the item asked, and the four questions it posed are answered in the Decisions
+entry in [status.md](status.md). **The one thing to read before touching the
+grader:** it matches accents *strictly*, which is the opposite of what the
+backlog item prescribed — Kikuyu's `ĩ`/`ũ` and French `ou`/`où` are word
+distinctions, and the `STUDY_LANGUAGE_CONFIGS` comment refusing a Swahili voice
+for Kikuyu is the same argument. What makes strictness affordable is that the
+verdict only **preselects** a rating: all four buttons stay live with both
+strings on screen, so the learner corrects a false miss with the tap they were
+making anyway. `sm2.ts` is untouched._
+
+_Two structural notes. The grader is **not new code** — `foldText` and the
+spacing-insensitive compare are the cloze grader's, lifted out of `grammar.ts`
+into `packages/core/src/typedAnswer.ts` so they outlive that module's queued
+deletion; `grammar.ts` imports them back, so the deployed route is unaffected
+and **the deletion takes the importer, not the module**. And typing is a
+**session** property, not a stored preference: a toggle beside the direction
+filter, applying only to the produce-the-word direction, with a per-card way to
+flip instead — which is what keeps a learner with no IME to hand from being
+stuck._
 
 _This pass **made web read its data live** and, in doing so, **retracted two
 claims these notes had asserted**. Both retractions are the more useful half, so

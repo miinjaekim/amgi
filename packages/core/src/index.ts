@@ -12,6 +12,7 @@ export * from './idioms';
 export * from './topik';
 export * from './military';
 export * from './drill';
+export * from './typedAnswer';
 export * from './tts';
 export * from './offlineReview';
 export * from './progress';

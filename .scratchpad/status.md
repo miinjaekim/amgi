@@ -148,6 +148,143 @@ separately unverified on Android, where only sign-in has been exercised.
 Closed calls, kept with their reasoning — a decision whose reasoning is lost gets
 reopened by the next person to notice the symptom. Newest first.
 
+### Typed responses: a local grader, and the rating row is the override (2026-08-24)
+
+Review can now ask the learner to **produce** the word instead of flipping to
+it. Four calls, all made with the user, and the backlog item's four open
+questions map onto them one for one.
+
+**Grading is local, and strict.** Fold case, Unicode composition, whitespace and
+typographic marks, then compare — spacing-insensitively, because Korean word
+spacing varies legitimately between writers. No model call: review happens on a
+commute, so a grader that needs a signal stops working exactly where the feature
+is used, and it would cost a round trip per card and reintroduce the grading
+variance the cloze design deliberately removed. **No "close enough" tier
+either** — an edit-distance band needs a threshold per writing system, since one
+character of a two-character Korean word is a different word where one character
+of `anniversaire` is a slip of the thumb.
+
+**A hit is rated `easy` and gone; only a miss stops to ask** — _the user's
+call, 2026-08-25, reversing the first cut below._ The asymmetry is the whole
+design: producing the word from memory and spelling it correctly is not a
+judgement the learner can improve on, so asking them to rate it is asking a
+question with one honest answer. A miss is the opposite — the grader may simply
+not know the spelling was also right — so it reveals both strings and keeps the
+full rating row. **`sm2.ts` is untouched either way**: `getNextReviewData`
+already took all four responses.
+
+**The rating row on a miss is what makes strictness honest.** All four buttons
+live, with the expected answer beside what was typed, so a learner whose answer
+was right in a way the card could not know corrects it with the tap they were
+already making. This is the removed cloze override's argument — *they are not
+appealing a judgement, they are reading two strings* — and it costs no extra
+control, because the buttons were already there.
+
+**⚠️ What the first cut argued, and why it lost.** It capped a hit at `good` and
+made the learner rate every card, reasoning that a cloze was a rung a learner
+climbed where a due vocabulary word typed correctly is merely the card working
+as designed — so emitting `easy` every time ratchets ease across the whole deck.
+**That effect is real and it is unbounded**: `getNextReviewData` applies
+`ease + 0.1` at quality 5 with no ceiling, so a reliably-typed card's interval
+multiplier climbs without limit. Accepted deliberately — a word typed correctly
+on sight is a word whose interval *should* be growing fast. If it ever needs
+reining in, the lever is a cap in `sm2.ts`, not a downgrade of the verdict.
+
+**⚠️ Accents are matched strictly, which contradicts how the backlog item was
+written.** That item named accents alongside spacing and articles as a case
+where exact matching is too harsh. The codebase disagrees and wins:
+`STUDY_LANGUAGE_CONFIGS` refuses a Swahili TTS voice for Kikuyu precisely
+because `ĩ`/`ũ` are the two vowels that distinguish words, and French `ou`/`où`
+and `sur`/`sûr` are different words. Folding them together would teach that the
+distinction does not matter — worse than a false miss the learner corrects in
+one tap. **Articles are handled, and only the card's own:** `gender` holds
+French `le`/`la` and Swedish `en`/`ett` in a field of its own, so `le délai` is
+accepted for a card whose study side is the bare `délai`. There is no
+per-language article list to keep in step with the registry.
+
+**Readings are not accepted.** Typing `かんじ` for 漢字 answers a different
+question than the card asked, and a kana or kanji pack exists to teach the
+script. Left to the learner to claim on the rating row rather than granted
+silently.
+
+**Typing is a session property, and only `backToFront`.** A toggle on the start
+screen beside the direction filter — the same axis, *how* the session asks
+rather than what it asks about — and not persisted, for the reason the direction
+filter is not: a one-off drill should not quietly become how you review from
+then on. Only the produce-the-word direction is typed, so a `both` session is
+mixed on screen. Typing the *gloss* is the weak half: a back is allowed up to
+two translations where the study side is one word, so the expected answer is
+genuinely ambiguous in a direction the target never is.
+
+**Every typed card can still be flipped instead** — _the user's call, added to
+the design._ One control under the input reveals the answer exactly as typing-off
+would, and grades nothing, because nothing was asserted. That matters beyond
+convenience: on a phone, typing Korean or Japanese means switching IME every
+card, and a learner without one to hand must not be stuck.
+
+**Where the grader came from.** `foldText` and the spacing-insensitive compare
+were the cloze grader's, in `grammar.ts` — the module the Queued list is about to
+delete. They moved to `packages/core/src/typedAnswer.ts` and `grammar.ts` now
+imports them back, so the deployed `/api/grammar/exercise` route is unaffected
+and the rules outlive the deletion. **The typographic folding is measured, not
+anticipated:** asked for a French elision cloze the model returned `d'` with a
+curly apostrophe, and phone keyboards substitute the same character in the other
+direction — so an answer typed on iOS and a card written by the model can
+disagree on a character neither party chose.
+
+**⚠️ The mobile typed card took three tries, and the first two were fixed by
+reasoning rather than looking.** Worth reading before touching that layout, in
+`lessons.md` too. What was actually wrong: **the card wrapped a ScrollView, and
+focusing the field made it auto-scroll the word off the top** — the learner was
+asked to translate a word they could no longer see. Neither of the first two
+attempts touched that. Pinning the input to the bottom block made it worse (it
+stole height from an already-collapsing `flex: 1` card); blaming
+`KeyboardAvoidingView` was closer but still wrong about which part.
+
+What it is now, before the reveal: **no scroll container** — there is nothing to
+scroll, so there is nothing to scroll away — a card sized to its two children
+rather than stretched, a flexible spacer under it so the buttons stay at the
+bottom and the *spacer* is what the keyboard eats, and **the keyboard's measured
+height reserved rather than `KeyboardAvoidingView`'s inferred one**. That last
+one matters: KAV derives the overlap from its own frame, and on a screen that
+already pads for the floating tab bar it under-lifted by ~90pt, cutting 확인 in
+half. `keyboardWillShow` hands over the real number. Tapping the card dismisses
+the keyboard, the way Learn's does, and it has to be the card rather than the
+spacer because the spacer is nearly nothing when the keyboard is up.
+
+**The typed card's padding is load-bearing, not decoration.** With the keyboard
+up the fixed content ran ~22pt over the screen, and since nothing there scrolls
+or shrinks the overflow was drawn *over* the card. `cardWrapSnug` and
+`cardHeaderSnug` give back ~36pt that was holding nothing.
+
+**⚠️ The remaining slack is ~20pt, and anything added to that screen spends it.**
+This is not theoretical — the offline/pending banner did exactly that the first
+time it appeared during a typed session, pushing the card down until 확인 was
+drawn across its border again. Which is why the running session shows that state
+as `sessionSyncSuffix`, a suffix on the progress line that already exists,
+rather than the bordered block: the other five render sites keep the block,
+because the picker, the start screens and the end screens all have room and are
+where someone actually looks. **Before adding any chrome to a running session,
+check it with the keyboard up.** The next lever, if one is needed, is dropping
+the ⋯ row before the reveal — worth ~32pt.
+
+Web keeps its input in the card and keeps its direction prompt: there is room,
+and the prompt is filling an otherwise empty answer area rather than restating
+the label above it.
+
+**The mobile card no longer spells out the question** — _the user's call, same
+pass._ "이것을 영어로 어떻게 말하나요?" was the third statement of the same
+thing: the direction label sits right above the card, and the front text's own
+language settles it. Worth knowing that removing it **saved no vertical space**
+— the header row it lived in stays for the ⋯ options button, which is taller
+than the text was. It went for redundancy, and the scrolling was fixed by the
+move above.
+
+**Unverified, and both are device-shaped.** The keyboard-avoidance on the review
+session has been watched working; what has not is what a Korean or Japanese IME
+does to `autoCorrect={false}` and `autoCapitalize="none"`. In `backlog.md` under
+what to watch for.
+
 ### Three packs authored; one of them sets a rule aside on purpose (2026-08-24)
 
 Everyday English (149), English Idioms (100) and Kanji 教育漢字 1–2 (240).
