@@ -78,9 +78,71 @@ Android is the exception — no review, so a fix there ships the same day._
 
 ## High
 
-Nothing. Typed responses closed 2026-08-24 — the design calls and the one place
-the built thing contradicts how the item was written are in the Decisions entry
-in [status.md](status.md).
+Three queued 2026-08-25 for the next working session, in the user's order.
+
+- [ ] **Add Swahili.** A registry entry in `STUDY_LANGUAGE_CONFIGS`
+      (`packages/core/src/types.ts`) + an `/api/explain` prompt branch + i18n
+      keys + the two manual Firestore steps — security rules and the
+      `archived + createdAt` composite index, neither of which lives in the
+      codebase. `cards_swahili`, `studyField: 'swahili'`, `labelNative`
+      **Kiswahili**, and no `characterSectionKey`.
+      *What's already known:* **a voice exists** — `sw-KE` is the one Bantu
+      locale in the live Google TTS list, found while ruling it out as a Kikuyu
+      stand-in. Check *which* voice it has before writing the line: Chirp 3: HD
+      where the locale has one, otherwise the Traditional Chinese fallback
+      applies. No `ttsShortVoiceName` unless single-letter Swahili terms turn
+      out to be a real card, which they aren't.
+      *Verify, don't assume:* that `Intl.Segmenter` accepts `sw` — an
+      unrecognised tag silently falls back to the host locale and mis-segments
+      every writing diff, which is why `ki` was checked rather than trusted.
+      *Open:* Swahili marks **noun class**, not gender, so the `gender` field
+      stays off for the same reason it's off on Kikuyu — the model returned a
+      Swahili plural for a Kikuyu noun, and a wrong class teaches wrong
+      agreement across every sentence built from the card. Ships with no pack,
+      like Swedish and French.
+
+- [ ] **Audio on mobile review.** Web review has the pronounce button on both
+      revealed states (`apps/web/src/app/review/page.tsx:886`, `:949`); mobile
+      `app/(tabs)/review.tsx` has **none** — the last surface where the two
+      diverge. Learn, decks, drill and card detail already mount
+      `src/components/PronounceButton.tsx`, so this is placement, not a new
+      capability: `expo-audio` is already in the shipped build, so it's JS only
+      and rides the next build free.
+      *The one thing web didn't have to answer:* mobile review is the
+      **offline-first** surface — cached cards, queued ratings — and
+      `/api/pronounce` is a network call with no local cache, so offline the
+      button spins and lands in its error state. Decide whether it hides while
+      `!isOnline` or is allowed to fail; the screen already tracks `isOnline`
+      and shows it in the progress line.
+      *Also decide:* study side only (matching web), and press-to-play rather
+      than autoplay on reveal — the ask was "playable", and audio that fires
+      itself on every card is a different feature.
+
+- [ ] **Text-based pronunciation aid, per language.** **Plan before code** —
+      the seam is cheap and the per-language answer is the whole problem.
+      *The seam:* `getReading(card)` (`packages/core/src/types.ts:514`) already
+      folds Japanese `furigana` and Traditional Chinese `pinyin` into one badge
+      slot across the six Learn/review/detail render sites on web and mobile, so
+      a third reading is one field plus one line there — not a conditional per
+      site.
+      *Why it needs clarification:* "the reading" isn't the same job in each
+      language. Hangul is already phonetic, so romanising Korean teaches
+      nothing — the useful aid there is the **sound change** (좋아요 → [조아요]),
+      which is a different kind of data. French wants liaison/elision or IPA,
+      Swedish pitch accent, English IPA for a Korean native. **Kikuyu has no TTS
+      at all**, so a text aid is the only pronunciation support that language
+      can ever get — likely the highest-value one, and the hardest, since it's
+      tone. Swahili's stress is regular (penultimate), so it may want a rule
+      stated once rather than per-card data.
+      *So the call per language is which of three:* a stored `TermCore` field
+      like furigana/pinyin (costs a field + a prompt branch + a backfill story
+      for existing cards), a render-time transform off the term, or a static
+      rule shown once in the UI. Only the first is expensive.
+      *Two constraints on whatever fills it:* it comes from **`/api/explain`,
+      the same route furigana and pinyin come from** — never a parallel prompt.
+      And a wrong reading is permanent on the card and teaches wrong
+      pronunciation every review, the same failure mode that kept noun class off
+      Kikuyu, so accuracy has to be measured on real terms before it ships.
 
 ## Medium
 
