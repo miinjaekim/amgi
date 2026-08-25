@@ -26,11 +26,11 @@ import {
   getBackSide, getCollectionId, getNextReviewDate,
   getNextReviewData, getStudyLangSide, getStudyLanguageConfig, getBackSideConfig,
   directionLabel, getCharacterBreakdown, getExampleSides,
-  removeCardFromQueue, t,
+  removeCardFromQueue, t, trackingFor,
   gradeTypedAnswer, promptsForTyping, typedAnswerPlaceholder,
 } from '@amgi/core';
 import type {
-  CardSideField, DirectionFilter, PendingReview, ReviewQueueItem,
+  CardSideField, DirectionFilter, PendingReview, ReviewDirection, ReviewQueueItem,
   TypedAnswerGrade,
 } from '@amgi/core';
 import { useTheme } from '../../src/context/ThemeContext';
@@ -42,11 +42,36 @@ import type { Palette } from '../../src/theme';
 
 type Rating = 'again' | 'hard' | 'good' | 'easy';
 
+/**
+ * Everything needed to put the last rating back.
+ *
+ * Captured at rating time rather than reconstructed on undo, because half of
+ * it no longer exists by then: the typed answer has been cleared and the card
+ * in `reviewedCards` has already been rewritten by the overlay. A single slot
+ * rather than a stack — this exists for the misclick you notice immediately,
+ * and walking backwards through a whole session is a different feature with a
+ * different failure mode.
+ */
+interface UndoableRating {
+  index: number;
+  cardId: string;
+  direction: ReviewDirection;
+  /** The direction's tracking as it stood *before* the rating. */
+  tracking: ReviewTracking;
+  /** The other direction, which the legacy top-level `nextReview` derives from. */
+  otherTracking?: ReviewTracking;
+  verdict: Rating;
+  /** The day the tally mark went on, which may not be today by now. */
+  countedOn: string;
+  typedAnswer: string;
+  typedGrade: TypedAnswerGrade | null;
+}
+
 export default function ReviewScreen() {
   const { C } = useTheme();
   const tabBarHeight = useFloatingTabBarHeight();
   const s = useMemo(() => makeStyles(C, tabBarHeight), [C, tabBarHeight]);
-  const { user, nativeLanguage, studyLanguage, recordReview } = useUser();
+  const { user, nativeLanguage, studyLanguage, recordReview, undoReview } = useUser();
   const config = getStudyLanguageConfig(studyLanguage);
   const backConfig = getBackSideConfig(studyLanguage, nativeLanguage);
   const { isOnline, pendingCount, sync } = usePendingReviewSync(user?.uid);
@@ -124,6 +149,7 @@ export default function ReviewScreen() {
    */
   const [stopped, setStopped] = useState(false);
   const [reviewedCount, setReviewedCount] = useState(0);
+  const [lastRating, setLastRating] = useState<UndoableRating | null>(null);
   const revealAnim = useRef(new Animated.Value(0)).current;
   /**
    * The keyboard's real height, from the event rather than inferred.
@@ -379,6 +405,7 @@ export default function ReviewScreen() {
     setDone(q.length === 0);
     setStopped(false);
     setReviewedCount(0);
+    setLastRating(null);
   }, []);
 
   /** Back to the start screen, where both choices can be made again. */
@@ -389,6 +416,7 @@ export default function ReviewScreen() {
     setDone(false);
     setStopped(false);
     setReviewedCount(0);
+    setLastRating(null);
   }, []);
 
   // Changing collection drops whatever session was running back to the start
@@ -421,17 +449,25 @@ export default function ReviewScreen() {
     Animated.spring(revealAnim, { toValue: 1, useNativeDriver: true, friction: 8 }).start();
   };
 
-  const handleRate = async (rating: Rating) => {
+  const handleRate = async (
+    rating: Rating,
+    // The grade behind the rating, for the undo snapshot. A correct typed
+    // answer is rated without ever being put into `typedGrade`, so it has to be
+    // passed rather than read — otherwise undoing one loses the ring saying
+    // which rating the grader applied.
+    grade: TypedAnswerGrade | null = typedGrade,
+  ) => {
     if (submitting) return;
     const item = queue[index];
     const cardId = item?.card.id;
     if (!item || !cardId || !user) return;
-    recordReview(rating);
+    const countedOn = recordReview(rating);
     setSubmitting(rating);
     const { card, direction } = item;
-    const tracking: ReviewTracking = card[direction] ?? {
-      nextReview: new Date(), interval: 0, ease: 2.5, repetitions: 0,
-    };
+    // What the rating reads from is also what undoing it puts back, so it is
+    // taken once and kept. `trackingFor` is shared with web, which used to read
+    // the pre-bidirectional fields here where this did not.
+    const tracking = trackingFor(card, direction);
     const next = getNextReviewData(tracking, rating);
     const otherDir = direction === 'frontToBack' ? 'backToFront' : 'frontToBack';
 
@@ -443,6 +479,17 @@ export default function ReviewScreen() {
       otherTracking: card[otherDir],
       reviewedAt: new Date().toISOString(),
     };
+    setLastRating({
+      index,
+      cardId,
+      direction,
+      tracking,
+      otherTracking: card[otherDir],
+      verdict: rating,
+      countedOn,
+      typedAnswer,
+      typedGrade: grade,
+    });
 
     // Durable before anything else. SM-2 already ran locally, so the rating is
     // complete the moment it is on disk; the network write is delivery, not
@@ -474,6 +521,57 @@ export default function ReviewScreen() {
   };
 
   /**
+   * Put the last rating back — the misclick after a flip, which until now had
+   * no way out short of archiving the card.
+   *
+   * Sent as an *inverse rating* rather than by pulling the original out of the
+   * queue, because by now it may already have reached Firestore.
+   * `collapsePendingReviews` keeps the last entry per card and direction, so
+   * this one supersedes the rating whether it flushed or not — and being an
+   * ordinary queue entry, an undo made underground survives the app being
+   * killed exactly as the rating did.
+   *
+   * Pushed onto `sessionRatings` too, which is what `reviewedCards` replays, so
+   * the picker's due counts come back with it.
+   */
+  const handleUndo = async () => {
+    if (!lastRating || submitting || !user) return;
+    const { cardId, direction, tracking, otherTracking, verdict, countedOn } = lastRating;
+
+    const entry: PendingReview = {
+      cardId,
+      studyLanguage,
+      direction,
+      tracking,
+      otherTracking,
+      reviewedAt: new Date().toISOString(),
+    };
+    // Durable before anything else, on the same terms as a rating.
+    await enqueueReview(user.uid, entry);
+    setSessionRatings(prev => [...prev, entry]);
+    undoReview(verdict, countedOn);
+    setReviewedCount(n => Math.max(0, n - 1));
+    void sync();
+    // The card is due again, so what the reminders were planned around has
+    // moved back.
+    void refreshReminders(user.uid, nativeLanguage);
+
+    // Back onto the card, flipped, with the typed answer and its grade as they
+    // were — the point is to re-rate, not to answer it again.
+    setLastRating(null);
+    setIndex(lastRating.index);
+    setDone(false);
+    setShowDetails(false);
+    setShowOptions(false);
+    setEditing(false);
+    setEditDraft(null);
+    setTypedAnswer(lastRating.typedAnswer);
+    setTypedGrade(lastRating.typedGrade);
+    setRevealed(true);
+    revealAnim.setValue(1);
+  };
+
+  /**
    * Grade what was typed. A hit is rated and gone; only a miss stops to ask.
    *
    * Local and synchronous — no network, which is the point on a phone: review
@@ -496,7 +594,7 @@ export default function ReviewScreen() {
     if (!item || !typedAnswer.trim()) return;
     const grade = gradeTypedAnswer(typedAnswer, item.card);
     if (grade.correct) {
-      void handleRate(grade.suggested);
+      void handleRate(grade.suggested, grade);
       return;
     }
     setTypedGrade(grade);
@@ -538,6 +636,10 @@ export default function ReviewScreen() {
             // way round and it came back after being archived.
             const { queue: newQueue, index: newIndex } =
               removeCardFromQueue(queue, item.card.id!, index);
+            // Undo is anchored to a position in the queue, and the queue has
+            // just shifted under it — the slot that held the rated card may now
+            // hold a different one.
+            setLastRating(null);
             // The due counts on the picker derive from `cards`, so an archived
             // card would still be counted as due until the next fetch.
             setCards(prev => prev.filter(c => c.id !== item.card.id));
@@ -855,6 +957,13 @@ export default function ReviewScreen() {
             <Text style={s.doneBody}>{t(nativeLanguage, 'reviewCompleteMessage')}</Text>
           </>
         )}
+        {/* The last card of a session is exactly where a misclick had no
+            recourse: answering it ends the session, and the card is gone. */}
+        {lastRating && (
+          <TouchableOpacity style={s.changeBtn} onPress={handleUndo}>
+            <Text style={s.changeBtnText}>↺ {t(nativeLanguage, 'undoRating')}</Text>
+          </TouchableOpacity>
+        )}
         <TouchableOpacity style={s.changeBtn} onPress={endSession}>
           <Text style={s.changeBtnText}>{t(nativeLanguage, 'exitReview')}</Text>
         </TouchableOpacity>
@@ -911,6 +1020,23 @@ export default function ReviewScreen() {
             the ✕ ends the session outright. The ✕ is the only one that shows on
             a single collection, where there is nothing to switch to. */}
         <View style={s.progressRow}>
+          {/* Mirrors the ✕ across the label, and holds its slot as a spacer
+              when there is nothing to undo — the count stays put rather than
+              jumping sideways on the first rating of a session. */}
+          {lastRating ? (
+            <TouchableOpacity
+              style={s.undoBtn}
+              onPress={handleUndo}
+              disabled={!!submitting}
+              hitSlop={12}
+              accessibilityRole="button"
+              accessibilityLabel={t(nativeLanguage, 'undoRating')}
+            >
+              <Text style={s.undoBtnText}>↺</Text>
+            </TouchableOpacity>
+          ) : (
+            <View style={s.undoBtn} />
+          )}
           <View style={s.progressLabelWrap}>
             {collections.length > 1 ? (
               <TouchableOpacity onPress={() => setSelectedKey(undefined)} hitSlop={8}>
@@ -1250,11 +1376,15 @@ function makeStyles(C: Palette, tabBarHeight: number) {
   progressFill: { height: 3, backgroundColor: C.highlight },
   progressText: { fontSize: 12, color: C.muted, textAlign: 'center', marginTop: 6 },
   // The label stays centred on the screen rather than in the space left over
-  // beside the ✕, so it doesn't shift when the collection name appears.
+  // beside the ✕, so it doesn't shift when the collection name appears. The
+  // undo slot on the left is what balances it — rendered empty when there is
+  // nothing to undo, for the same reason.
   progressRow: { flexDirection: 'row', alignItems: 'center' },
-  progressLabelWrap: { flex: 1, marginLeft: 44 },
+  progressLabelWrap: { flex: 1 },
   stopBtn: { width: 44, alignItems: 'center', justifyContent: 'center', marginTop: 6 },
   stopBtnText: { fontSize: 21, color: C.muted, lineHeight: 24 },
+  undoBtn: { width: 44, alignItems: 'center', justifyContent: 'center', marginTop: 6 },
+  undoBtnText: { fontSize: 21, color: C.muted, lineHeight: 24 },
   directionLabel: { fontSize: 12, color: C.muted, textAlign: 'center', marginBottom: 16, textTransform: 'uppercase', letterSpacing: 0.8 },
 
   cardWrap: {

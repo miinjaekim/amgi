@@ -148,6 +148,43 @@ separately unverified on Android, where only sign-in has been exercised.
 Closed calls, kept with their reasoning — a decision whose reasoning is lost gets
 reopened by the next person to notice the symptom. Newest first.
 
+### Undo a rating: scheduling is reversed, the streak is not (2026-08-25)
+
+A misclicked rating after a flip had no way out — the manage panel can edit or
+archive a card but not reschedule it, so a stray `easy` on a mature card pushed
+it weeks out with nothing to be done. Review now carries an undo. Four calls:
+
+**One step, not a stack.** Undo restores the last rating and then clears itself;
+rating the next card replaces it. This exists for the misclick you notice
+immediately, and walking backwards through a session is a different feature with
+a different failure mode. The snapshot is one slot of state (`UndoableRating` on
+both platforms), so the stack version is a small change if it is ever wanted.
+
+**The day rollup is reversed; the streak is not.** `negateDelta` walks the
+day's counters back — `increment()` takes a negative as happily as a positive.
+`advanceStreak` has no inverse: it cannot know whether the rating being undone
+was the one that started today. And a review genuinely happened, so correcting
+which button it landed on is no reason to put a streak at risk. **The cost is
+that `reviewedToday` reads one high per undo for the rest of the day**, which is
+the deliberate trade rather than a bug to fix later.
+
+**It works from the completion screen too.** The last card of a session is
+exactly where a misclick had no recourse — answering it ends the session. Undo
+there reopens the card, flipped, and finishing again returns to the summary.
+
+**Mobile sends an inverse rating rather than un-queueing the original**, which
+by then may already have reached Firestore. `collapsePendingReviews` keeps the
+last entry per card and direction, so the inverse supersedes the rating whether
+it flushed or not, and an undo made underground survives the app being killed
+exactly as the rating did.
+
+Two shared helpers came out of it and are worth knowing about.
+`trackingFor(card, direction)` is now what *both* rate paths read from — web
+read the pre-bidirectional legacy fields here and mobile did not, so the same
+untouched legacy card started from a different ease on each platform.
+`legacyNextReview` is the deprecated top-level field, derived from both
+directions; web used to assign it the rated direction's date.
+
 ### Typed responses: a local grader, and the rating row is the override (2026-08-24)
 
 Review can now ask the learner to **produce** the word instead of flipping to

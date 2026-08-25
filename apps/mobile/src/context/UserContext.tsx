@@ -17,8 +17,9 @@ import {
 } from '../services/offlineReview';
 import { recordProgress } from '../services/progress';
 import {
-  advanceStreak, isStudyLanguage, mergeStreakState, resolveNativeLanguage, resolveStudyLanguage,
-  reviewDelta, type ReviewVerdict, type StreakState, type StudyLanguage, type UserPreferences,
+  advanceStreak, isStudyLanguage, mergeStreakState, negateDelta, resolveNativeLanguage,
+  resolveStudyLanguage, reviewDelta,
+  type ReviewVerdict, type StreakState, type StudyLanguage, type UserPreferences,
 } from '@amgi/core';
 
 WebBrowser.maybeCompleteAuthSession();
@@ -101,7 +102,9 @@ interface UserContextType {
   reviewedToday: number;
   setNativeLanguage: (lang: string) => Promise<void>;
   setStudyLanguage: (lang: StudyLanguage) => Promise<void>;
-  recordReview: (verdict: ReviewVerdict) => void;
+  /** Returns the day the rating was counted against, for `undoReview`. */
+  recordReview: (verdict: ReviewVerdict) => string;
+  undoReview: (verdict: ReviewVerdict, date: string) => void;
   deleteAccount: () => Promise<void>;
   handleSignIn: () => Promise<void>;
   handleSignOut: () => Promise<void>;
@@ -375,9 +378,9 @@ export function UserProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const recordReview = (verdict: ReviewVerdict) => {
-    if (!user) return;
+  const recordReview = (verdict: ReviewVerdict): string => {
     const today = getTodayString();
+    if (!user) return today;
 
     // The day rollup the progress dashboard reads. It has its own AsyncStorage
     // queue rather than riding on the streak's `dirty` flag, because the two
@@ -409,6 +412,29 @@ export function UserProvider({ children }: { children: ReactNode }) {
     })
       .then(() => markStreakSynced(uid, next))
       .catch(() => { /* Stays dirty; reconciled on the next launch that connects. */ });
+    return today;
+  };
+
+  /**
+   * Walk back the counters for a rating the user has undone.
+   *
+   * The day rollup is reversed — it rides the same AsyncStorage queue as the
+   * rating it cancels, so an undo made underground survives being killed just
+   * as the rating did, and the two collapse into one write on reconnect.
+   *
+   * The streak fields deliberately are not reversed: `advanceStreak` has no
+   * inverse — it cannot know whether the rating being undone was the one that
+   * started today — and a review did genuinely happen. Correcting which button
+   * it landed on is no reason to put a streak at risk. The cost is that
+   * `reviewedToday` reads one high per undo, for the rest of the day.
+   *
+   * `date` is the day `recordReview` handed back rather than today, so a
+   * session carried across midnight takes the tally mark off the day it was
+   * actually put on.
+   */
+  const undoReview = (verdict: ReviewVerdict, date: string) => {
+    if (!user) return;
+    void recordProgress(user.uid, negateDelta(reviewDelta(studyLanguage, verdict)), date);
   };
 
   const handleSignIn = async () => {
@@ -477,7 +503,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     streakState.lastReviewDate === getTodayString() ? streakState.reviewedToday : 0;
 
   return (
-    <UserContext.Provider value={{ user, authLoading, nativeLanguage, studyLanguage, streak: streakState.streak, reviewedToday, setNativeLanguage, setStudyLanguage, recordReview, deleteAccount, handleSignIn, handleSignOut }}>
+    <UserContext.Provider value={{ user, authLoading, nativeLanguage, studyLanguage, streak: streakState.streak, reviewedToday, setNativeLanguage, setStudyLanguage, recordReview, undoReview, deleteAccount, handleSignIn, handleSignOut }}>
       {children}
     </UserContext.Provider>
   );

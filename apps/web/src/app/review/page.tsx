@@ -15,6 +15,8 @@ import {
   getNextReviewDate,
   getReading,
   getStudyLanguageConfig,
+  legacyNextReview,
+  trackingFor,
   removeCardFromQueue,
   getBackSideConfig,
   directionLabel,
@@ -26,7 +28,10 @@ import {
 import type {
   DirectionFilter,
   ReviewCollection,
+  ReviewDirection,
   ReviewQueueItem,
+  ReviewTracking,
+  ReviewVerdict,
   TypedAnswerGrade,
 } from '@amgi/core';
 import { db } from '@/config/firebase';
@@ -48,8 +53,33 @@ function formatRelativeDate(date: Date, lang: string | null | undefined, now: Da
   return date.toLocaleDateString(lang === 'Korean' ? 'ko-KR' : 'en-US', { month: 'short', day: 'numeric' });
 }
 
+/**
+ * Everything needed to put the last rating back.
+ *
+ * Captured at rating time rather than reconstructed on undo, because half of
+ * it no longer exists by then: the card in `activeQueue` has been rewritten,
+ * and the typed answer has been cleared. A single slot rather than a stack —
+ * this exists for the misclick you notice immediately, and being able to walk
+ * backwards through a whole session is a different feature with a different
+ * failure mode.
+ */
+interface UndoableRating {
+  index: number;
+  cardId: string;
+  direction: ReviewDirection;
+  /** The direction's tracking as it stood *before* the rating. */
+  tracking: ReviewTracking;
+  /** The other direction, which the legacy top-level `nextReview` derives from. */
+  otherTracking?: ReviewTracking;
+  verdict: ReviewVerdict;
+  /** The day the tally mark went on, which may not be today by now. */
+  countedOn: string;
+  typedAnswer: string;
+  typedGrade: TypedAnswerGrade | null;
+}
+
 export default function ReviewPage() {
-  const { user, nativeLanguage, studyLanguage, recordReview } = useUser();
+  const { user, nativeLanguage, studyLanguage, recordReview, undoReview } = useUser();
   const langConfig = getStudyLanguageConfig(studyLanguage);
   const backConfig = getBackSideConfig(studyLanguage, nativeLanguage);
   const [userFlashcards, setUserFlashcards] = useState<Flashcard[]>([]);
@@ -72,6 +102,7 @@ export default function ReviewPage() {
    */
   const [reviewStopped, setReviewStopped] = useState(false);
   const [reviewedCount, setReviewedCount] = useState(0);
+  const [lastRating, setLastRating] = useState<UndoableRating | null>(null);
   const [showAnswer, setShowAnswer] = useState(false);
   /**
    * Typing is a property of the session, chosen before it starts, like the
@@ -230,6 +261,7 @@ export default function ReviewPage() {
     setReviewComplete(false);
     setReviewStopped(false);
     setReviewedCount(0);
+    setLastRating(null);
     setShowAnswer(false);
     setShowDetails(false);
   };
@@ -253,7 +285,7 @@ export default function ReviewPage() {
     if (!card || !typedAnswer.trim()) return;
     const grade = gradeTypedAnswer(typedAnswer, card);
     if (grade.correct) {
-      void handleReviewResponse(grade.suggested);
+      void handleReviewResponse(grade.suggested, grade);
       return;
     }
     setTypedGrade(grade);
@@ -265,18 +297,35 @@ export default function ReviewPage() {
     setShowDetails(!showDetails);
   };
 
-  const handleReviewResponse = async (response: 'again' | 'hard' | 'good' | 'easy') => {
+  const handleReviewResponse = async (
+    response: 'again' | 'hard' | 'good' | 'easy',
+    // The grade behind the rating, for the undo snapshot. A correct typed
+    // answer is rated without ever being put into `typedGrade`, so it has to be
+    // passed rather than read — otherwise undoing one loses the ring saying
+    // which rating the grader applied.
+    grade: TypedAnswerGrade | null = typedGrade,
+  ) => {
     const { card, direction } = activeQueue[currentReviewIdx];
     if (!card || !card.id) return;
 
-    const { interval, ease, repetitions, nextReview } = getNextReviewData(
-      direction === 'frontToBack' ?
-        (card.frontToBack || { interval: card.interval, ease: card.ease, repetitions: card.repetitions }) :
-        (card.backToFront || { interval: card.interval, ease: card.ease, repetitions: card.repetitions }),
-      response
-    );
+    // What the rating reads from is also what undoing it puts back, so it is
+    // taken once and kept.
+    const previous = trackingFor(card, direction);
+    const otherTracking = card[direction === 'frontToBack' ? 'backToFront' : 'frontToBack'];
+    const { interval, ease, repetitions, nextReview } = getNextReviewData(previous, response);
 
-    recordReview(response);
+    const countedOn = recordReview(response);
+    setLastRating({
+      index: currentReviewIdx,
+      cardId: card.id,
+      direction,
+      tracking: previous,
+      otherTracking,
+      verdict: response,
+      countedOn,
+      typedAnswer,
+      typedGrade: grade,
+    });
 
     const update: Record<string, unknown> = {};
     update[`${direction}.interval`] = interval;
@@ -286,7 +335,10 @@ export default function ReviewPage() {
     // that used to live here has moved into the scheduler — where mobile gets
     // it too.
     update[`${direction}.nextReview`] = nextReview;
-    update.nextReview = nextReview;
+    // Derived from both directions rather than assigned the rated one, so the
+    // deprecated field and the undo that restores it agree — and so a card due
+    // sooner the other way round isn't pushed out by a rating on this one.
+    update.nextReview = legacyNextReview({ interval, ease, repetitions, nextReview }, otherTracking);
 
     const collectionName = getCardsCollection(studyLanguage);
     // Fire-and-forget: Firestore queues writes offline and syncs when reconnected.
@@ -318,6 +370,50 @@ export default function ReviewPage() {
     }
   };
 
+  /**
+   * Put the last rating back — the misclick after a flip, which until now had
+   * no way out short of the manage panel.
+   *
+   * Order matters only in that the card is restored before the session moves:
+   * everything else is local state. The Firestore write is a second write to
+   * the same document from the same client, so it lands after the rating's own
+   * write and wins, online or queued.
+   */
+  const handleUndoRating = () => {
+    if (!lastRating) return;
+    const { cardId, direction, tracking, otherTracking, verdict, countedOn } = lastRating;
+
+    const update: Record<string, unknown> = {
+      [`${direction}.interval`]: tracking.interval,
+      [`${direction}.ease`]: tracking.ease,
+      [`${direction}.repetitions`]: tracking.repetitions,
+      [`${direction}.nextReview`]: new Date(tracking.nextReview),
+      nextReview: legacyNextReview(tracking, otherTracking),
+    };
+    updateDoc(doc(db, getCardsCollection(studyLanguage), cardId), update).catch(err => {
+      console.error('Failed to undo card scheduling:', err);
+    });
+
+    setUserFlashcards(prev => prev.map(existing => existing.id === cardId
+      ? { ...existing, [direction]: { ...tracking, nextReview: new Date(tracking.nextReview) } }
+      : existing));
+    undoReview(verdict, countedOn);
+    setReviewedCount(n => Math.max(0, n - 1));
+
+    // Back onto the card, flipped, with the typed answer and its grade as they
+    // were — the point is to re-rate, not to answer it again.
+    setLastRating(null);
+    setCurrentReviewIdx(lastRating.index);
+    setReviewComplete(false);
+    setShowAnswer(true);
+    setShowDetails(false);
+    setShowManage(false);
+    setManageEditDraft(null);
+    setManageStatus(null);
+    setTypedAnswer(lastRating.typedAnswer);
+    setTypedGrade(lastRating.typedGrade);
+  };
+
   const handleExitReview = () => {
     // Inlined rather than calling `clearTypedAnswer`: an effect above calls
     // this on a user or language change, and routing it through another
@@ -328,6 +424,7 @@ export default function ReviewPage() {
     setReviewComplete(false);
     setReviewStopped(false);
     setReviewedCount(0);
+    setLastRating(null);
     setCurrentReviewIdx(0);
     setShowAnswer(false);
     setShowDetails(false);
@@ -417,6 +514,10 @@ export default function ReviewPage() {
   const advanceAfterManage = (cardId: string) => {
     const { queue: remaining, index } = removeCardFromQueue(activeQueue, cardId, currentReviewIdx);
     setUserFlashcards(prev => prev.filter(c => c.id !== cardId));
+    // Undo is anchored to a position in the queue, and the queue has just
+    // shifted under it — the slot that held the rated card may now hold a
+    // different one, or the card itself may be gone.
+    setLastRating(null);
     if (remaining.length === 0) {
       setReviewComplete(true);
     } else {
@@ -458,6 +559,22 @@ export default function ReviewPage() {
       className="mt-4 text-sm px-3 py-1.5 rounded-lg border border-[var(--color-muted)] text-[var(--color-muted)] hover:text-[var(--color-text)] hover:border-[var(--color-text)] transition-colors"
     >
       {t(nativeLanguage, 'reviewChangeCollection')}
+    </button>
+  );
+
+  /**
+   * The undo on the end screens. The last card of a session is exactly where a
+   * misclick had no recourse: answering it ends the session, and the card is
+   * gone. Both endings get it, since which one you land on depends on whether
+   * anything else was missed.
+   */
+  const undoRatingButton = lastRating && (
+    <button
+      className="px-5 py-2.5 rounded-lg border font-semibold transition-colors hover:bg-[var(--color-muted)]/20"
+      style={{ borderColor: 'var(--color-muted)', color: 'var(--color-text)' }}
+      onClick={handleUndoRating}
+    >
+      ↺ {t(nativeLanguage, 'undoRating')}
     </button>
   );
 
@@ -579,6 +696,7 @@ export default function ReviewPage() {
                       >
                         {t(nativeLanguage, 'reviewAgainMissed')}
                       </button>
+                      {undoRatingButton}
                       <button
                         className="px-5 py-2.5 rounded-lg border font-semibold transition-colors hover:bg-[var(--color-muted)]/20"
                         style={{ borderColor: 'var(--color-muted)', color: 'var(--color-text)' }}
@@ -605,6 +723,7 @@ export default function ReviewPage() {
                       >
                         {t(nativeLanguage, 'exitReview')}
                       </button>
+                      {undoRatingButton}
                       <Link
                         href="/"
                         className="px-5 py-2.5 rounded-lg border font-semibold transition-colors hover:bg-[var(--color-muted)]/20"
@@ -662,6 +781,22 @@ export default function ReviewPage() {
                     </span>
                   </h2>
                   <div className="flex items-center gap-2">
+                    {/* Only while there is something to undo, and only until the
+                        next rating replaces it — a permanently visible control
+                        that is usually inert reads as broken. The glyph alone,
+                        because this row already carries Manage and ✕ beside a
+                        progress heading; the end screens have room to spell it
+                        out and do. */}
+                    {lastRating && (
+                      <button
+                        onClick={handleUndoRating}
+                        aria-label={t(nativeLanguage, 'undoRating')}
+                        title={t(nativeLanguage, 'undoRating')}
+                        className="text-lg leading-none px-2.5 py-1 rounded-lg border border-[var(--color-muted)] text-[var(--color-muted)] hover:text-[var(--color-text)] hover:border-[var(--color-text)] transition-colors"
+                      >
+                        ↺
+                      </button>
+                    )}
                     <button
                       onClick={() => showManage ? setShowManage(false) : handleOpenManage(currentReview.card)}
                       className="text-sm px-3 py-1 rounded-lg border border-[var(--color-muted)] text-[var(--color-muted)] hover:text-[var(--color-text)] hover:border-[var(--color-text)] transition-colors"

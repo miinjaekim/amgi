@@ -7,6 +7,7 @@ import {
   emptyDailyProgress,
   localDateString,
   mergeDeltas,
+  negateDelta,
   newCardsDelta,
   reviewDelta,
   shiftDate,
@@ -218,5 +219,25 @@ describe('buildHeatmap', () => {
   it('is all zeroes when nothing was reviewed', () => {
     const cells = buildHeatmap([], '2026-08-19', 3);
     expect(cells.every(cell => cell.level === 0 && cell.reviews === 0)).toBe(true);
+  });
+});
+
+describe('negateDelta', () => {
+  it('cancels a rating out exactly', () => {
+    const delta = reviewDelta('Japanese', 'easy');
+    expect(applyDelta(applyDelta(day('2026-08-25'), delta), negateDelta(delta)))
+      .toEqual(day('2026-08-25', { byLanguage: { Japanese: { reviews: 0, newCards: 0, packCards: 0 } } }));
+  });
+
+  it('negates every counter that is present and invents none', () => {
+    expect(negateDelta(reviewDelta('Korean', 'again'))).toEqual({
+      reviews: -1,
+      again: -1,
+      byLanguage: { Korean: { reviews: -1 } },
+    });
+  });
+
+  it('leaves an empty delta empty', () => {
+    expect(negateDelta({})).toEqual({});
   });
 });

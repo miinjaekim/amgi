@@ -12,6 +12,9 @@ export type ReviewDirection = 'frontToBack' | 'backToFront';
 /** A card carries scheduling per direction, plus the pre-split legacy fields. */
 type CardForDueCheck = Pick<Flashcard, 'frontToBack' | 'backToFront' | 'nextReview'>;
 
+/** The above plus the legacy scheduling fields, which `trackingFor` falls back to. */
+type CardForTracking = CardForDueCheck & Pick<Flashcard, 'interval' | 'ease' | 'repetitions'>;
+
 /**
  * The directions a card is due in — empty when it is not due at all.
  *
@@ -91,4 +94,60 @@ export function getNextReviewData(card: CardForReview, response: 'again' | 'hard
     ? now
     : new Date(now.getTime() + interval * 24 * 60 * 60 * 1000);
   return { interval, ease, repetitions, nextReview };
+}
+
+/**
+ * The tracking a direction restores to when it had never been studied.
+ *
+ * Undoing the *first* rating of a direction has nothing to put back — the
+ * field did not exist before. Deleting it again would be the literal restore,
+ * but this is the same thing said positively: zero repetitions, the starting
+ * ease, and a `nextReview` of now — which `isDue` reads as due, exactly as it
+ * reads a direction with no tracking. Writing a value rather than deleting one
+ * keeps undo a single ordinary field write on both platforms, and keeps
+ * mobile's pending queue able to carry it like any other rating.
+ */
+export function freshTracking(now: Date = new Date()): ReviewTracking {
+  return { interval: 0, ease: 2.5, repetitions: 0, nextReview: now };
+}
+
+/**
+ * The tracking a rating in one direction reads from, and the tracking undoing
+ * that rating puts back.
+ *
+ * Three cases in priority order: the direction's own tracking; the
+ * pre-bidirectional top-level fields, for a card last rated before the split;
+ * and a fresh card's. Shared because web read the legacy fields here and
+ * mobile did not, so the same untouched legacy card started from a different
+ * ease on each platform — and because undo has to restore precisely what the
+ * rating consumed.
+ */
+export function trackingFor(
+  card: CardForTracking,
+  direction: ReviewDirection,
+  now: Date = new Date(),
+): ReviewTracking {
+  const tracked = card[direction];
+  if (tracked) return tracked;
+  const fresh = freshTracking(now);
+  return {
+    interval: card.interval ?? fresh.interval,
+    ease: card.ease ?? fresh.ease,
+    repetitions: card.repetitions ?? fresh.repetitions,
+    nextReview: card.nextReview ?? fresh.nextReview,
+  };
+}
+
+/**
+ * The value for the deprecated top-level `nextReview`: the sooner of the two
+ * directions, so a card that is due either way still reads as due to anything
+ * old enough to only know this field.
+ *
+ * Shared because the rating path and the undo path have to agree about it, and
+ * because mobile's Firestore writer was already deriving it this way.
+ */
+export function legacyNextReview(tracking: ReviewTracking, other?: ReviewTracking): Date {
+  const thisDate = new Date(tracking.nextReview);
+  const otherDate = other ? new Date(other.nextReview) : null;
+  return otherDate && otherDate < thisDate ? otherDate : thisDate;
 }

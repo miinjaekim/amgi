@@ -21,6 +21,11 @@ costs ~20 minutes rather than an App Review cycle.
 the next build — no native module, so it rides whatever build comes next rather
 than earning one. Two things to watch for on that build are listed below.
 
+**Undo a rating** (2026-08-25). Same terms — JS only, so it rides the same build.
+Worth checking on the binary: the ↺ in the progress row holds a 44pt slot even
+when empty, so the `n / m` count should not shift sideways on the first rating of
+a session. Reasoning in [status.md](status.md).
+
 - **Delete `packages/core/src/writing.ts`, `grammar.ts` and the two API routes
   that keep them alive.** **The gate is open**: it was "once no build predating
   the 2026-08-18 grammar removal is still in use", and 1.4.0 is that build. What
