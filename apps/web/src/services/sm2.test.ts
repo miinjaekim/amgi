@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { getNextReviewData } from './sm2';
-import { isDue } from '@amgi/core';
+import { freshTracking, isDue, legacyNextReview, trackingFor } from '@amgi/core';
 import { Flashcard } from './firestore';
 
 describe('getNextReviewData (SM-2)', () => {
@@ -63,5 +63,86 @@ describe('getNextReviewData (SM-2)', () => {
     const result = getNextReviewData(card, 'good');
     expect(result.interval).toBe(1);
     expect(result.repetitions).toBe(1);
+  });
+});
+
+describe('trackingFor', () => {
+  const card: Flashcard = {
+    id: 'c', uid: 'u', createdAt: new Date(), term: 'x', termLanguage: 'English',
+    korean: '엑스', english: 'x', translation: '엑스', definition: '', examples: [], notes: '',
+  };
+
+  it('prefers the direction’s own tracking', () => {
+    const tracked = { interval: 6, ease: 2.4, repetitions: 2, nextReview: new Date('2026-09-01') };
+    expect(trackingFor({ ...card, frontToBack: tracked }, 'frontToBack')).toEqual(tracked);
+  });
+
+  it('falls back to the pre-bidirectional fields', () => {
+    const legacy = { ...card, interval: 10, ease: 2.1, repetitions: 3, nextReview: new Date('2026-09-02') };
+    expect(trackingFor(legacy, 'backToFront')).toEqual({
+      interval: 10, ease: 2.1, repetitions: 3, nextReview: new Date('2026-09-02'),
+    });
+  });
+
+  it('reads the other direction’s tracking as absent, not as its own', () => {
+    const other = { interval: 6, ease: 2.4, repetitions: 2, nextReview: new Date('2026-09-01') };
+    const now = new Date('2026-08-25T09:00:00Z');
+    expect(trackingFor({ ...card, frontToBack: other }, 'backToFront', now)).toEqual(freshTracking(now));
+  });
+
+  it('gives a never-studied card a fresh start', () => {
+    const now = new Date('2026-08-25T09:00:00Z');
+    expect(trackingFor(card, 'frontToBack', now)).toEqual({
+      interval: 0, ease: 2.5, repetitions: 0, nextReview: now,
+    });
+  });
+});
+
+describe('legacyNextReview', () => {
+  const soon = { interval: 1, ease: 2.5, repetitions: 1, nextReview: new Date('2026-08-26') };
+  const later = { interval: 30, ease: 2.5, repetitions: 5, nextReview: new Date('2026-09-24') };
+
+  it('takes the sooner of the two directions', () => {
+    expect(legacyNextReview(later, soon)).toEqual(new Date('2026-08-26'));
+    expect(legacyNextReview(soon, later)).toEqual(new Date('2026-08-26'));
+  });
+
+  it('is the rated direction when the other has never been studied', () => {
+    expect(legacyNextReview(later)).toEqual(new Date('2026-09-24'));
+  });
+
+  it('accepts a stored ISO string as readily as a Date', () => {
+    const stored = { ...soon, nextReview: '2026-08-26T00:00:00.000Z' };
+    expect(legacyNextReview(later, stored)).toEqual(new Date('2026-08-26T00:00:00.000Z'));
+  });
+});
+
+describe('rating then undoing it', () => {
+  const card: Flashcard = {
+    id: 'c', uid: 'u', createdAt: new Date(), term: 'x', termLanguage: 'English',
+    korean: '엑스', english: 'x', translation: '엑스', definition: '', examples: [], notes: '',
+  };
+
+  it('leaves a studied direction exactly where it started', () => {
+    const studied = {
+      ...card,
+      frontToBack: { interval: 6, ease: 2.4, repetitions: 2, nextReview: new Date('2026-09-01') },
+    };
+    // What the rating reads is what undo writes back.
+    const before = trackingFor(studied, 'frontToBack');
+    const rated = { ...studied, frontToBack: getNextReviewData(before, 'easy') };
+    const undone = { ...rated, frontToBack: before };
+
+    expect(undone.frontToBack).toEqual(studied.frontToBack);
+    expect(isDue(undone, new Date('2026-08-25'))).toEqual(isDue(studied, new Date('2026-08-25')));
+  });
+
+  it('puts a never-studied direction back in the queue', () => {
+    const before = trackingFor(card, 'backToFront');
+    const rated = { ...card, backToFront: getNextReviewData(before, 'easy') };
+    expect(isDue(rated, new Date())).not.toContain('backToFront');
+
+    const undone = { ...rated, backToFront: before };
+    expect(isDue(undone, new Date())).toContain('backToFront');
   });
 });

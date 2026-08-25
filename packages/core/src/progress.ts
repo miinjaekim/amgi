@@ -190,6 +190,34 @@ export function newCardsDelta(
 }
 
 /**
+ * The delta that cancels another one out.
+ *
+ * Undoing a rating has to walk the day's counters back, and every counter here
+ * commutes, so the inverse is simply the negation — `increment()` takes a
+ * negative as happily as a positive. Only the tally is reversed: the streak
+ * fields are not, because a review genuinely happened and correcting which
+ * button it landed on is no reason to put a streak at risk.
+ */
+export function negateDelta(delta: ProgressDelta): ProgressDelta {
+  const negated: ProgressDelta = {};
+  for (const key of ['reviews', 'newCards', 'packCards', 'again', 'hard', 'good', 'easy'] as const) {
+    if (delta[key]) negated[key] = -delta[key]!;
+  }
+  const languages = Object.entries(delta.byLanguage ?? {});
+  if (languages.length > 0) {
+    negated.byLanguage = {};
+    for (const [language, slice] of languages) {
+      const inverse: Partial<LanguageProgress> = {};
+      for (const key of ['reviews', 'newCards', 'packCards'] as const) {
+        if (slice?.[key]) inverse[key] = -slice[key]!;
+      }
+      negated.byLanguage[language as StudyLanguage] = inverse;
+    }
+  }
+  return negated;
+}
+
+/**
  * Add two deltas. Used to collapse a queue of offline deltas into one write —
  * counters commute, so a day's worth of unsent reviews is a single document
  * update on reconnect rather than one per rating.

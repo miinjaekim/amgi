@@ -4,7 +4,7 @@ import {
   type Query,
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
-import { getStudyLanguageConfig } from '@amgi/core';
+import { getStudyLanguageConfig, legacyNextReview } from '@amgi/core';
 import { recordNewCards } from './progress';
 import type { Flashcard, ReviewTracking, StudyLanguage } from '@amgi/core';
 
@@ -249,9 +249,7 @@ export async function updateFlashcardReview(
   otherTracking?: ReviewTracking,
   studyLanguage?: StudyLanguage,
 ): Promise<void> {
-  const otherDate = otherTracking ? new Date(otherTracking.nextReview) : null;
-  const thisDate = new Date(tracking.nextReview);
-  const legacyNext = otherDate && otherDate < thisDate ? otherDate : thisDate;
+  const legacyNext = legacyNextReview(tracking, otherTracking);
   await updateDoc(doc(db, getCardsCollection(studyLanguage), cardId), {
     [direction]: tracking,
     nextReview: legacyNext,

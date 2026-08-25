@@ -4,7 +4,7 @@ import { auth, googleProvider } from '@/config/firebase';
 import { signInWithPopup, signOut, onAuthStateChanged, User } from 'firebase/auth';
 import { getUserPreferences, recordReviewStreak, saveUserPreferences, subscribeToUserPreferences } from '@/services/userPreferences';
 import { recordProgress } from '@/services/progress';
-import { isStudyLanguage, resolveNativeLanguage, resolveStudyLanguage, reviewDelta, type ReviewVerdict, type StudyLanguage } from '@amgi/core';
+import { isStudyLanguage, negateDelta, resolveNativeLanguage, resolveStudyLanguage, reviewDelta, type ReviewVerdict, type StudyLanguage } from '@amgi/core';
 
 const LANG_CACHE_KEY = 'amgi_native_language';
 const STUDY_LANG_CACHE_KEY = 'amgi_study_language';
@@ -22,7 +22,9 @@ interface UserContextType {
   reviewedToday: number;
   setNativeLanguage: (lang: string) => Promise<void>;
   setStudyLanguage: (lang: StudyLanguage) => Promise<void>;
-  recordReview: (verdict: ReviewVerdict) => void;
+  /** Returns the day the rating was counted against, for `undoReview`. */
+  recordReview: (verdict: ReviewVerdict) => string;
+  undoReview: (verdict: ReviewVerdict, date: string) => void;
   handleSignIn: () => Promise<void>;
   handleSignOut: () => Promise<void>;
 }
@@ -170,9 +172,9 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const recordReview = (verdict: ReviewVerdict) => {
-    if (!user) return;
+  const recordReview = (verdict: ReviewVerdict): string => {
     const today = getTodayString();
+    if (!user) return today;
 
     // The day rollup, which is what the progress dashboard reads. Kept separate
     // from the streak fields below rather than folded into them: this one is an
@@ -189,6 +191,28 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     // the number in the document — including whatever another tab just wrote.
     // Fire-and-forget for the same reason as the rollup above.
     recordReviewStreak(user.uid, today, yesterdayStr).catch(() => {});
+    return today;
+  };
+
+  /**
+   * Walk back the counters for a rating the user has undone.
+   *
+   * The day rollup is reversed, because it is what the dashboard reports and a
+   * negative `increment()` is exactly as atomic as a positive one. The streak
+   * fields deliberately are not: `advanceStreak` cannot be inverted — it has no
+   * way to know whether the rating being undone was the one that started today
+   * — and more to the point a review did happen. Correcting which button it
+   * landed on is no reason to put a streak at risk. The cost is that
+   * `reviewedToday` reads one high per undo, for the rest of the day.
+   *
+   * `date` is the day `recordReview` handed back rather than today, so a
+   * session carried across midnight takes the tally mark off the day it was
+   * actually put on.
+   */
+  const undoReview = (verdict: ReviewVerdict, date: string) => {
+    if (!user) return;
+    recordProgress(user.uid, negateDelta(reviewDelta(studyLanguage, verdict)), date)
+      .catch(() => {});
   };
 
   const handleSignIn = async () => {
@@ -200,7 +224,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <UserContext.Provider value={{ user, authLoading, nativeLanguage, studyLanguage, streak, reviewedToday, setNativeLanguage, setStudyLanguage, recordReview, handleSignIn, handleSignOut }}>
+    <UserContext.Provider value={{ user, authLoading, nativeLanguage, studyLanguage, streak, reviewedToday, setNativeLanguage, setStudyLanguage, recordReview, undoReview, handleSignIn, handleSignOut }}>
       {children}
     </UserContext.Provider>
   );

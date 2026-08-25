@@ -104,6 +104,9 @@ const translations = {
     reviewStoppedNone: 'Nothing reviewed this time.',
     reviewStoppedRemaining: '{count} left in this session',
     reviewResume: 'Keep going',
+    // A misclicked rating is the one mistake a review session offers no way
+    // out of, so it gets its own control rather than living under Manage.
+    undoRating: 'Undo last rating',
     // Finished the session, but missed cards are still due
     reviewSessionFinished: 'Session finished',
     reviewMissedStillDue: '{count} you missed are still due.',
@@ -481,6 +484,7 @@ const translations = {
     reviewStoppedNone: '이번엔 복습한 카드가 없어요.',
     reviewStoppedRemaining: '이번 세션에 {count}개 남았어요',
     reviewResume: '이어서 하기',
+    undoRating: '방금 평가 되돌리기',
     // Finished the session, but missed cards are still due
     reviewSessionFinished: '이번 복습 끝!',
     reviewMissedStillDue: '틀린 {count}개가 아직 남아 있어요.',
