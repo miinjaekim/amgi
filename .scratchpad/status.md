@@ -222,11 +222,26 @@ curly apostrophe, and phone keyboards substitute the same character in the other
 direction — so an answer typed on iOS and a card written by the model can
 disagree on a character neither party chose.
 
+**On mobile the input is pinned above the keyboard, not in the card** — _found
+on a device, 2026-08-25._ First cut put it in the card body under the word,
+where it competed with the word, the Check button and the keyboard for the same
+vertical space and lost: the learner had to scroll to see what they were typing
+into. It now sits in the fixed bottom block directly above Check, so it cannot
+scroll out of reach, and the card body scrolls on its own behind it. Web keeps
+its input in the card, where there is room.
+
+**The mobile card no longer spells out the question** — _the user's call, same
+pass._ "이것을 영어로 어떻게 말하나요?" was the third statement of the same
+thing: the direction label sits right above the card, and the front text's own
+language settles it. Worth knowing that removing it **saved no vertical space**
+— the header row it lived in stays for the ⋯ options button, which is taller
+than the text was. It went for redundancy, and the scrolling was fixed by the
+move above.
+
 **Unverified, and both are device-shaped.** The keyboard-avoidance on the review
-session (the bottom action row is otherwise covered on a typed card) has only
-been reasoned and typechecked, not watched on a phone; and nothing has yet
-confirmed what a Korean or Japanese IME actually does to `autoCorrect={false}`
-and `autoCapitalize="none"`. Both are in `backlog.md` under what to watch for.
+session has been watched working; what has not is what a Korean or Japanese IME
+does to `autoCorrect={false}` and `autoCapitalize="none"`. In `backlog.md` under
+what to watch for.
 
 ### Three packs authored; one of them sets a rule aside on purpose (2026-08-24)
 

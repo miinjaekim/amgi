@@ -25,7 +25,7 @@ import {
   buildReviewQueue, collectionKey, dueReviewItems, filterByDirection,
   getBackSide, getCollectionId, getNextReviewDate,
   getNextReviewData, getStudyLangSide, getStudyLanguageConfig, getBackSideConfig,
-  directionLabel, directionPrompt, getCharacterBreakdown, getExampleSides,
+  directionLabel, getCharacterBreakdown, getExampleSides,
   removeCardFromQueue, t,
   gradeTypedAnswer, promptsForTyping, typedAnswerPlaceholder,
 } from '@amgi/core';
@@ -821,7 +821,6 @@ export default function ReviewScreen() {
   const backSide = getBackSide(card, nativeLanguage);
   const frontText = isFront ? studySide : backSide;
   const backText = isFront ? backSide : studySide;
-  const prompt = directionPrompt(nativeLanguage, studyLanguage, isFront ? 'frontToBack' : 'backToFront');
   /** Only `backToFront` is ever typed — see `promptsForTyping`. */
   const typingThisCard = promptsForTyping(typingEnabled, direction);
   // The enriched copy when something was just generated, the queue's otherwise.
@@ -894,9 +893,13 @@ export default function ReviewScreen() {
 
         {/* Card */}
         <View style={s.cardWrap}>
-          {/* Card header: term + options button */}
+          {/* Card header: the options button alone. The question the card is
+              asking used to be spelled out here — "이것을 영어로 어떻게
+              말하나요?" — and it was saying a third time what the direction
+              label above the card already says and what the front text itself
+              makes obvious. On a typed card it also stood between the word and
+              the field. */}
           <View style={s.cardHeader}>
-            <Text style={s.prompt}>{prompt}</Text>
             <TouchableOpacity
               style={s.optionsBtn}
               onPress={() => {
@@ -969,27 +972,6 @@ export default function ReviewScreen() {
               keyboardShouldPersistTaps="handled"
             >
               <Text style={s.frontText}>{frontText}</Text>
-
-              {typingThisCard && !revealed && (
-                <TextInput
-                  // Remounted per card: `autoFocus` fires on mount only, and
-                  // this input holds the same slot from one card to the next.
-                  key={index}
-                  style={s.typedInput}
-                  value={typedAnswer}
-                  onChangeText={setTypedAnswer}
-                  onSubmitEditing={handleSubmitTyped}
-                  placeholder={typedAnswerPlaceholder(nativeLanguage, studyLanguage)}
-                  placeholderTextColor={C.muted}
-                  autoFocus
-                  returnKeyType="done"
-                  // Off on purpose: a phone completing the word being recalled
-                  // does the exercise for the learner.
-                  autoCorrect={false}
-                  autoCapitalize="none"
-                  spellCheck={false}
-                />
-              )}
 
               {revealed && (
                 <Animated.View style={[s.revealWrap, revealStyle]}>
@@ -1125,7 +1107,30 @@ export default function ReviewScreen() {
               ))}
             </View>
           ) : typingThisCard ? (
+            /* The input lives here rather than in the card, so it is pinned
+               above the keyboard with Check and cannot scroll out of reach —
+               the card body scrolls on its own behind it. Inside the card it
+               competed with the word, the button and the keyboard for the same
+               vertical space, and lost. */
             <View style={s.typedActions}>
+              <TextInput
+                // Remounted per card: `autoFocus` fires on mount only, and
+                // this input holds the same slot from one card to the next.
+                key={index}
+                style={s.typedInput}
+                value={typedAnswer}
+                onChangeText={setTypedAnswer}
+                onSubmitEditing={handleSubmitTyped}
+                placeholder={typedAnswerPlaceholder(nativeLanguage, studyLanguage)}
+                placeholderTextColor={C.muted}
+                autoFocus
+                returnKeyType="done"
+                // Off on purpose: a phone completing the word being recalled
+                // does the exercise for the learner.
+                autoCorrect={false}
+                autoCapitalize="none"
+                spellCheck={false}
+              />
               <TouchableOpacity
                 style={[s.showBtn, !typedAnswer.trim() && s.showBtnOff]}
                 onPress={handleSubmitTyped}
@@ -1186,8 +1191,7 @@ function makeStyles(C: Palette, tabBarHeight: number) {
     borderRadius: 20, borderWidth: 1, borderColor: C.border,
     padding: 28,
   },
-  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 },
-  prompt: { fontSize: 13, color: C.muted, flex: 1 },
+  cardHeader: { flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'flex-start', marginBottom: 16 },
   optionsBtn: { paddingHorizontal: 8, paddingVertical: 2, marginLeft: 8 },
   optionsBtnText: { fontSize: 20, color: C.muted, letterSpacing: 2 },
 
@@ -1245,11 +1249,14 @@ function makeStyles(C: Palette, tabBarHeight: number) {
   showBtnOff: { opacity: 0.4 },
 
   // Typed responses
+  // Sits in the bottom block, so it takes that block's gutter rather than the
+  // card's padding, and `surface` to stand off the screen background the way
+  // the card does.
   typedInput: {
-    marginTop: 20,
-    borderWidth: 1, borderColor: C.border, borderRadius: 10,
-    paddingHorizontal: 12, paddingVertical: 12, fontSize: 20, color: C.text,
-    backgroundColor: C.bg,
+    marginHorizontal: 16, marginBottom: 10,
+    borderWidth: 1, borderColor: C.border, borderRadius: 12,
+    paddingHorizontal: 14, paddingVertical: 12, fontSize: 20, color: C.text,
+    backgroundColor: C.surface,
   },
   typedVerdict: { fontSize: 13, color: C.muted, marginTop: 10 },
   typedVerdictOk: { color: C.highlight, fontWeight: '700' },

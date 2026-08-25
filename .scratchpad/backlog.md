@@ -42,11 +42,10 @@ oldest open items in the project — never checked on any release, only in Expo 
 - Three renders never seen on a device: the packs list without per-pack
   descriptions, the "showing results for…" row, the part-of-speech badge.
   Cosmetic risk only — spacing, fit, wrapping.
-- **Typed responses on a phone**, both parts device-shaped: whether the bottom
-  action row actually clears a raised keyboard on a typed card, and what a
-  Korean or Japanese IME does with `autoCorrect={false}` /
-  `autoCapitalize="none"` — an IME that autocorrects the word being recalled
-  does the exercise for the learner.
+- **Typed responses on a phone**: what a Korean or Japanese IME does with
+  `autoCorrect={false}` / `autoCapitalize="none"` — an IME that autocorrects the
+  word being recalled does the exercise for the learner. The keyboard covering
+  the action row was found and fixed in Expo Go, so only this half is left.
 - **Korean date formatting** in the progress day tooltip — nothing else in the
   app formats a date with a locale and options, so Hermes' `Intl` is unproven
   there on a release build.
