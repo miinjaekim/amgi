@@ -92,6 +92,11 @@ const translations = {
     // Offline review — mobile keeps its own card snapshot and rating queue
     offlineReviewBanner: 'Offline — reviewing the cards saved on this device.',
     offlinePendingReviews: '{count} to sync',
+    // Session-sized versions of the two above. A running session has no row to
+    // spare — the banner pushed the card down far enough to overlap the button
+    // under it — so these ride the progress line instead.
+    offlineShort: 'offline',
+    offlinePendingShort: '{count} to sync',
     offlineNoCachedCards: 'No {language} cards saved on this device yet. Reconnect to load them.',
     // Stopping early — deliberately not the same as finishing
     reviewStoppedTitle: 'Stopped here',
@@ -467,6 +472,8 @@ const translations = {
     // Offline review — mobile keeps its own card snapshot and rating queue
     offlineReviewBanner: '오프라인 상태예요. 받아둔 카드로 복습할 수 있어요.',
     offlinePendingReviews: '{count}개 저장 대기 중',
+    offlineShort: '오프라인',
+    offlinePendingShort: '{count}개 대기',
     offlineNoCachedCards: '{language} 카드를 아직 받아두지 않았어요. 연결하면 불러올게요.',
     // Stopping early — deliberately not the same as finishing
     reviewStoppedTitle: '여기까지 했어요',

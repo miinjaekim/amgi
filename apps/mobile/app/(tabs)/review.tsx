@@ -631,6 +631,21 @@ export default function ReviewScreen() {
     </View>
   );
 
+  /**
+   * The same two facts as `offlineNotice`, sized for the progress line.
+   *
+   * A running session has no row to spare. The banner is a bordered block with
+   * its own margins, and with the keyboard up it pushed the card down far
+   * enough that the submit button was drawn over the card's own border. Here
+   * the state rides a line that already exists and costs nothing, and
+   * `numberOfLines={1}` on that line keeps it that way when the count is long
+   * or the collection name is.
+   */
+  const sessionSyncSuffix = [
+    !isOnline ? t(nativeLanguage, 'offlineShort') : null,
+    pendingCount > 0 ? t(nativeLanguage, 'offlinePendingShort', { count: pendingCount }) : null,
+  ].filter(Boolean).join(' · ');
+
   // Your own cards and each pack are reviewed apart — katakana arriving mid-way
   // through Japanese vocabulary is worse review than either done alone — so the
   // landing is a choice of collection, not a filter over one pool.
@@ -878,14 +893,14 @@ export default function ReviewScreen() {
 
   return (
     <SafeAreaView style={s.root} edges={['top']}>
-      {/* Lifts the bottom action row above the keyboard, which otherwise
-          covers both Check and the reveal-instead escape hatch on a typed
-          card. A no-op when nothing is focused, so an untyped session is
-          unaffected. Same shape the Learn screen uses. */}
       {/* `root` already pads for the floating tab bar, so only the difference
           is reserved here — together they come to exactly the keyboard. */}
       <View style={[s.sessionFlex, { paddingBottom: Math.max(0, keyboardHeight - tabBarHeight) }]}>
-        {offlineNotice}
+        {/* No `offlineNotice` here on purpose — it rides the progress line
+            below as `sessionSyncSuffix`. The block form costs a row this
+            screen does not have. The other five render sites keep it: the
+            picker, both start screens and the two end screens all have room,
+            and that is where someone actually goes looking. */}
         {/* Progress */}
         <View style={s.progressBar}>
           <View style={[s.progressFill, { width: `${(index / queue.length) * 100}%` }]} />
@@ -899,12 +914,16 @@ export default function ReviewScreen() {
           <View style={s.progressLabelWrap}>
             {collections.length > 1 ? (
               <TouchableOpacity onPress={() => setSelectedKey(undefined)} hitSlop={8}>
-                <Text style={s.progressText}>
+                <Text style={s.progressText} numberOfLines={1}>
                   {collectionName} · {index + 1} / {queue.length}
+                  {sessionSyncSuffix ? ` · ${sessionSyncSuffix}` : ''}
                 </Text>
               </TouchableOpacity>
             ) : (
-              <Text style={s.progressText}>{index + 1} / {queue.length}</Text>
+              <Text style={s.progressText} numberOfLines={1}>
+                {index + 1} / {queue.length}
+                {sessionSyncSuffix ? ` · ${sessionSyncSuffix}` : ''}
+              </Text>
             )}
           </View>
           <TouchableOpacity

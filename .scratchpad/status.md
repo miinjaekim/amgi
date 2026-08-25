@@ -255,9 +255,18 @@ spacer because the spacer is nearly nothing when the keyboard is up.
 **The typed card's padding is load-bearing, not decoration.** With the keyboard
 up the fixed content ran ~22pt over the screen, and since nothing there scrolls
 or shrinks the overflow was drawn *over* the card. `cardWrapSnug` and
-`cardHeaderSnug` give back ~36pt that was holding nothing. The remaining slack
-is small — a smaller phone or a larger system text size will overflow again, and
-the next lever is dropping the ⋯ row before the reveal, worth ~32pt more.
+`cardHeaderSnug` give back ~36pt that was holding nothing.
+
+**⚠️ The remaining slack is ~20pt, and anything added to that screen spends it.**
+This is not theoretical — the offline/pending banner did exactly that the first
+time it appeared during a typed session, pushing the card down until 확인 was
+drawn across its border again. Which is why the running session shows that state
+as `sessionSyncSuffix`, a suffix on the progress line that already exists,
+rather than the bordered block: the other five render sites keep the block,
+because the picker, the start screens and the end screens all have room and are
+where someone actually looks. **Before adding any chrome to a running session,
+check it with the keyboard up.** The next lever, if one is needed, is dropping
+the ⋯ row before the reveal — worth ~32pt.
 
 Web keeps its input in the card and keeps its direction prompt: there is room,
 and the prompt is filling an otherwise empty answer area rather than restating
