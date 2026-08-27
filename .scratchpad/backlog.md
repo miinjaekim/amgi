@@ -78,28 +78,9 @@ Android is the exception — no review, so a fix there ships the same day._
 
 ## High
 
-Three queued 2026-08-25 for the next working session, in the user's order.
-
-- [ ] **Add Swahili.** A registry entry in `STUDY_LANGUAGE_CONFIGS`
-      (`packages/core/src/types.ts`) + an `/api/explain` prompt branch + i18n
-      keys + the two manual Firestore steps — security rules and the
-      `archived + createdAt` composite index, neither of which lives in the
-      codebase. `cards_swahili`, `studyField: 'swahili'`, `labelNative`
-      **Kiswahili**, and no `characterSectionKey`.
-      *What's already known:* **a voice exists** — `sw-KE` is the one Bantu
-      locale in the live Google TTS list, found while ruling it out as a Kikuyu
-      stand-in. Check *which* voice it has before writing the line: Chirp 3: HD
-      where the locale has one, otherwise the Traditional Chinese fallback
-      applies. No `ttsShortVoiceName` unless single-letter Swahili terms turn
-      out to be a real card, which they aren't.
-      *Verify, don't assume:* that `Intl.Segmenter` accepts `sw` — an
-      unrecognised tag silently falls back to the host locale and mis-segments
-      every writing diff, which is why `ki` was checked rather than trusted.
-      *Open:* Swahili marks **noun class**, not gender, so the `gender` field
-      stays off for the same reason it's off on Kikuyu — the model returned a
-      Swahili plural for a Kikuyu noun, and a wrong class teaches wrong
-      agreement across every sentence built from the card. Ships with no pack,
-      like Swedish and French.
+Two queued 2026-08-25 for the next working session, in the user's order.
+Swahili was the first of the three and is done — see the Decisions entry in
+[status.md](status.md) for what its probes settled.
 
 - [ ] **Audio on mobile review.** Web review has the pronounce button on both
       revealed states (`apps/web/src/app/review/page.tsx:886`, `:949`); mobile

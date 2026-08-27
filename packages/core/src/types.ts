@@ -12,7 +12,8 @@ export type StudyLanguage =
   | 'Japanese'
   | 'TraditionalChinese'
   | 'Spanish'
-  | 'Kikuyu';
+  | 'Kikuyu'
+  | 'Swahili';
 
 /**
  * i18n keys for the character-breakdown section heading. Every Han-script
@@ -28,7 +29,8 @@ export type FieldLabelKey =
   | 'labelJapanese'
   | 'labelTraditionalChinese'
   | 'labelSpanish'
-  | 'labelKikuyu';
+  | 'labelKikuyu'
+  | 'labelSwahili';
 
 export type CardSideField =
   | 'korean'
@@ -38,7 +40,8 @@ export type CardSideField =
   | 'japanese'
   | 'traditionalChinese'
   | 'spanish'
-  | 'kikuyu';
+  | 'kikuyu'
+  | 'swahili';
 
 /**
  * Per-study-language configuration. Adding a language means adding an entry
@@ -175,6 +178,42 @@ export const STUDY_LANGUAGE_CONFIGS: Record<StudyLanguage, StudyLanguageConfig> 
     // agreement across every sentence the learner builds with it, so the field
     // is left off until something better than the model can fill it.
   },
+  Swahili: {
+    code: 'Swahili',
+    label: 'Swahili',
+    labelNative: 'Kiswahili',
+    collection: 'cards_swahili',
+    // `sw` is the ISO 639-1 code, and `Intl.Segmenter` accepts it — verified
+    // the way `ki` was, because an unrecognised tag resolves silently to the
+    // host locale instead of throwing, and every writing diff would mis-segment
+    // with nothing to show that it had.
+    locale: 'sw',
+    studyField: 'swahili',
+    studyLabelKey: 'labelSwahili',
+    // `sw-KE` is the only Swahili locale Google Cloud TTS carries, so the
+    // variety question the Spanish entry raises never arises here — there is no
+    // `sw-TZ` to weigh Kenyan against, and nothing to name a second deck for.
+    // It has 30 voices and every one of them is Chirp 3: HD, so this takes
+    // `Charon` like the rest rather than the WaveNet fallback Traditional
+    // Chinese needs. Checked against the live voice list, and synthesised:
+    // `rafiki`, `kuandika` and `furaha` came back 6–8 kB, well clear of the
+    // silence floor in `/api/pronounce`.
+    ttsLanguageCode: 'sw-KE',
+    ttsVoiceName: 'sw-KE-Chirp3-HD-Charon',
+    // No `ttsShortVoiceName`: that field exists for languages where a lone
+    // character is a normal card, as a kana or a hanja is. Swahili has no
+    // one-letter words worth a card, so the Chirp 3: HD silence bug it works
+    // around is unreachable here.
+    //
+    // No `gender`, for the reason it is off on Kikuyu one entry up: Swahili
+    // marks noun class, not gender. It is the richer system of the two — class
+    // drives agreement on verbs, adjectives and possessives alike — which makes
+    // a wrong one more damaging on a card, not less. The Kikuyu probe is also
+    // evidence *about* Swahili rather than merely next to it: the model reached
+    // for Swahili noun morphology unprompted and got the Kikuyu word wrong with
+    // it, which says the class system is what it pattern-matches, not what it
+    // knows. Left off until something better than the model can fill it.
+  },
   Japanese: {
     code: 'Japanese',
     label: 'Japanese',
@@ -272,6 +311,7 @@ export interface ExamplePair {
   traditionalChinese?: string;
   spanish?: string;
   kikuyu?: string;
+  swahili?: string;
   english: string;
 }
 
@@ -344,6 +384,7 @@ export interface TermCore {
   traditionalChinese?: string;
   spanish?: string;
   kikuyu?: string;
+  swahili?: string;
   english: string;
   translation?: string;
   /**
@@ -545,6 +586,7 @@ export function getDepthTarget(
     | 'traditionalChinese'
     | 'spanish'
     | 'kikuyu'
+    | 'swahili'
     | 'english'
     | 'briefDefinition'
   >,

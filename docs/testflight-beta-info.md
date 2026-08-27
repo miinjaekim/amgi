@@ -29,7 +29,7 @@ Amgi는 언어 학습용 플래시카드 앱입니다.
 
 AI가 만든 설명이라 틀릴 수 있습니다. 어색하거나 잘못된 부분을 알려 주시는 것이 이번 베타에서 가장 도움이 됩니다.
 
-학습 언어: 영어, 일본어, 중국어(번체), 스웨덴어, 프랑스어, 스페인어, 키쿠유어, 한국어
+학습 언어: 영어, 일본어, 중국어(번체), 스웨덴어, 프랑스어, 스페인어, 키쿠유어, 스와힐리어, 한국어
 화면 언어: 한국어 / 영어 (설정에서 변경)
 
 베타 기간 무료. 광고·트래킹 없음.
@@ -46,7 +46,7 @@ Vocabulary packs cover one domain at a time, and the progress screen shows which
 
 The explanations are AI-generated, so they can be wrong. Telling me when they are is the most useful thing you can do in this beta.
 
-Study languages: English, Japanese, Traditional Chinese, Swedish, French, Spanish, Kikuyu, Korean
+Study languages: English, Japanese, Traditional Chinese, Swedish, French, Spanish, Kikuyu, Swahili, Korean
 Display language: Korean or English (change in Settings)
 
 Free during the beta. No ads, no tracking.

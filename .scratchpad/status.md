@@ -46,6 +46,16 @@ _Reconciled against `main` @ `bc8cb97`, 2026-08-21. `npm test` 246/246, measured
   collections drifted into. Both work; only one says what it means. Why, and why
   a new collection needs two indexes rather than one, are in
   [lessons.md](lessons.md).
+- **Swahili is live on web** (2026-08-27), a ninth study language. Registry
+  entry, prompt branch, i18n and example terms merged; `/api/explain`,
+  `/api/explain/depth`, `/api/explain/examples` and `/api/pronounce` all
+  exercised against the live API, in both directions and with a Korean back.
+  ⚠️ **`cards_swahili`'s security rule and both composite indexes are NOT in the
+  console yet** — nothing in the repo catches their absence, and the failure is
+  the one [lessons.md](lessons.md) describes: each missing piece breaks the
+  *next* surface rather than the one just fixed. Lookup and pronunciation work
+  without them; saving a card and loading `/cards` or `/review` will not.
+  Mobile has the code but reaches users only through a build.
 - **Kikuyu is live on web** (2026-08-22), an eighth study language and the first
   with no audio. Registry entry, prompt branch, i18n and example terms merged;
   every route exercised against the live API — lookup both directions, Korean
@@ -147,6 +157,64 @@ separately unverified on Android, where only sign-in has been exercised.
 
 Closed calls, kept with their reasoning — a decision whose reasoning is lost gets
 reopened by the next person to notice the symptom. Newest first.
+
+### Swahili takes the audio and drops the noun class (2026-08-27)
+
+The ninth study language, and the one where the backlog item had already made
+most of the calls. Two it left open were answered by measurement rather than
+assumption, in both cases because the alternative was a silent wrong answer.
+
+**`Intl.Segmenter` accepts `sw`.** Checked, not trusted — the same check `ki`
+got, and for the same reason: an unrecognised tag does not throw, it resolves to
+the host locale, and every writing diff would then mis-segment with nothing on
+screen to say why. `sw` resolves to `sw`.
+
+**It takes audio, and takes the ordinary voice.** This is the interesting
+inversion: `sw-KE` was found while *ruling Swahili out* as a Kikuyu stand-in, so
+the fact a voice existed was already known — what was not known was which kind.
+The live list has 30 `sw-KE` voices and every one is Chirp 3: HD, so Swahili
+takes `Charon` like Korean, Swedish, French and Spanish, and none of the
+Traditional Chinese WaveNet-fallback reasoning applies. Synthesised before
+wiring: `rafiki`, `kuandika`, `furaha` at 6–8 kB, well clear of the 2048-byte
+silence floor `/api/pronounce` enforces. No `ttsShortVoiceName` — that field
+exists for languages where a lone character is a normal card, and Swahili has no
+one-letter words worth one.
+
+**No noun class, same as Kikuyu, and the Kikuyu probe is the evidence.** Swahili
+marks class, not gender, so `gender` stays off. What makes this more than an
+analogy: the Kikuyu probe failed *by returning Swahili morphology* — `ndimi` for
+`thiomi`. That says the model pattern-matches the Bantu class system rather than
+knowing any one language's, which is an argument about Swahili and not merely
+one made next to it. Class also drives agreement on verbs, adjectives and
+possessives, so a wrong one is more damaging here than `el`/`la` ever is.
+
+**The prompt branch is Spanish's, not Kikuyu's.** Kikuyu earned two extra rules
+by failing on orthography and on Swahili contamination; Swahili failed at
+neither, so it inherits neither. In particular there is **no "not Swahili"
+rule** — the contamination runs the other way, Swahili being what leaks into
+its lower-resource neighbours. 45 lookups across both directions came back
+right: loanwords (`kompyuta`, `daktari`, `simu`), plurals (`miti`, `watoto`,
+`vitabu`), and `pole`, `safari` and `jambo` correctly split as ambiguous, which
+is the genuinely hard case since two of those are English words too.
+
+**One rule was added on deliberately thin evidence, and is labelled as such.**
+Verbs are cited with the `ku-` infinitive; one verb in 32 came back as a bare
+stem (`salimu` for "to greet") and it did not reproduce — a re-run with and
+without the line was 12/12 prefixed either way. It stays because it costs one
+line and the failure it prevents is invisible and permanent: a lone bare stem is
+inconsistent with every other verb card in the deck, and `typedAnswer.ts` grades
+strictly, so `kusalimu` against a stored `salimu` is a false miss. **It was never
+measured to help** — the comment in the route says so, and anyone tightening
+that prompt should not read it as load-bearing.
+
+**Unrelated, found while probing and left alone:** in the ambiguous branch the
+model often echoes the placeholder `"Swahili or English"` back as
+`termLanguage` instead of choosing. Reproduced on Spanish (`pan`, `red`),
+French (`pain`, `coin`) and Swedish (`fart`), so it is **pre-existing and
+generic to every Latin-script language**, not Swahili's. It is harmless today:
+`termLanguage` is only ever compared `=== studyLanguage`, so the value falls to
+the English branch, and the ambiguous response carries no side fields for it to
+mis-route. Not fixed here because it was not this item's scope.
 
 ### Undo a rating: scheduling is reversed, the streak is not (2026-08-25)
 
