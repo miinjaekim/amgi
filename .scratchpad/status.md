@@ -46,16 +46,20 @@ _Reconciled against `main` @ `bc8cb97`, 2026-08-21. `npm test` 246/246, measured
   collections drifted into. Both work; only one says what it means. Why, and why
   a new collection needs two indexes rather than one, are in
   [lessons.md](lessons.md).
-- **Swahili is live on web** (2026-08-27), a ninth study language. Registry
-  entry, prompt branch, i18n and example terms merged; `/api/explain`,
-  `/api/explain/depth`, `/api/explain/examples` and `/api/pronounce` all
-  exercised against the live API, in both directions and with a Korean back.
-  ⚠️ **`cards_swahili`'s security rule and both composite indexes are NOT in the
-  console yet** — nothing in the repo catches their absence, and the failure is
-  the one [lessons.md](lessons.md) describes: each missing piece breaks the
-  *next* surface rather than the one just fixed. Lookup and pronunciation work
-  without them; saving a card and loading `/cards` or `/review` will not.
-  Mobile has the code but reaches users only through a build.
+- **Swahili is live on web** (2026-08-27), a ninth study language, and the first
+  Bantu one with audio. Registry entry, prompt branch, i18n and example terms
+  merged; `/api/explain`, `/api/explain/depth`, `/api/explain/examples` and
+  `/api/pronounce` all exercised against the live API, in both directions and
+  with a Korean back. `cards_swahili`'s security rule and **both** composite
+  indexes are in the console, and the save → `/cards` → `/review` loop was
+  walked clean by the user on web *and* in Expo Go on a phone.
+  Both indexes were built **by hand**, not from the console's error link — that
+  link failed with a bare "unknown error" and was not worth diagnosing, since
+  [lessons.md](lessons.md) already prescribes building them by hand and the
+  field shapes are known. Worth remembering the next time a language is added:
+  the link is not the only route, and it is the flakier one.
+  Mobile has the code but reaches users only through a build — the Expo Go check
+  confirms the code, not the binary.
 - **Kikuyu is live on web** (2026-08-22), an eighth study language and the first
   with no audio. Registry entry, prompt branch, i18n and example terms merged;
   every route exercised against the live API — lookup both directions, Korean
