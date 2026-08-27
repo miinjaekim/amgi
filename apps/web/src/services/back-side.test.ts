@@ -54,6 +54,7 @@ describe('getBackSideConfig', () => {
       // language added with no entry here fails rather than being skipped.
       Spanish: 'english',
       Kikuyu: 'english',
+      Swahili: 'english',
     };
     for (const { code } of SUPPORTED_STUDY_LANGUAGES) {
       expect(getBackSideConfig(code, 'English').backField, code).toBe(expected[code]);

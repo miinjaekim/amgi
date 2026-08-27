@@ -265,6 +265,19 @@ Three things worth keeping:
   Create both up front. If a link never arrives, build the second by hand —
   Indexes → Composite, collection `cards_<lang>`, `uid` ASC then `createdAt`
   DESC, scope Collection.
+
+  **The link can also arrive and simply not work.** Adding Swahili (2026-08-27),
+  the console's own creation link failed with a bare "unknown error" — no detail,
+  not retryable. Building both by hand took a couple of minutes and was not worth
+  diagnosing; the usual causes are a browser signed into a different Google
+  account than the project's owner, or the very long `create_composite=` payload
+  getting truncated when the link is copied out of a log. **Don't treat the link
+  as the route and the manual form as the fallback** — the field shapes are
+  known and written down right here, so going straight to Indexes → Composite is
+  the faster path either way. The full spec for both is the two bullets above.
+  Don't reach for `firebase deploy --only firestore:indexes` to get around it:
+  it treats the config file as desired state and will delete indexes the file
+  omits, which against the live database means the other collections'.
 - **Two rule shapes are in use for card collections, and only one says what it
   means.** `cards` and `cards_chinese_traditional` use explicit
   `read, update, delete` + a separate `create`. The middle four (`cards_swedish`,

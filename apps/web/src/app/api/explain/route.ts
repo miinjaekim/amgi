@@ -368,6 +368,91 @@ If NOT ambiguous, respond with only this JSON:
 IMPORTANT for the non-ambiguous case:${kikuyuRules}
 - "briefDefinition" must be a single sentence defining the core meaning. No examples, no cultural context.`;
     }
+  } else if (studyLanguage === 'Swahili') {
+    // Swahili: termLanguage is set by Gemini (Latin script — can't detect client-side)
+    //
+    // Deliberately closer to the Spanish branch than to the Kikuyu one directly
+    // above, despite the two being the Bantu pair here: Kikuyu earned its two
+    // extra rules by failing on orthography and on Swahili contamination, and
+    // Swahili is high-resource enough that it failed at neither, so it does not
+    // inherit them. 45 lookups across both directions came back right —
+    // loanwords (`kompyuta`, `daktari`), plurals (`miti`, `watoto`, `vitabu`),
+    // and the genuinely two-language words `pole` and `safari` correctly split
+    // as ambiguous. In particular there is **no "not Swahili" rule**, because
+    // the contamination the Kikuyu branch guards against runs the other way:
+    // Swahili is what leaks into its lower-resource neighbours, not the reverse.
+    //
+    // The `ku-` line is the one rule probing did earn, and the evidence for it
+    // is deliberately recorded as thin: one verb in 32 came back as a bare stem
+    // (`salimu` for "to greet"), and it did not reproduce — a re-run with and
+    // without this line was 12/12 prefixed either way. It stays because the cost
+    // is one line and the failure is invisible and permanent: a lone bare stem
+    // is inconsistent with every other verb card in the deck, and typed answers
+    // grade strictly, so `kusalimu` against a stored `salimu` is a false miss.
+    // Anyone tightening this prompt should know it was never measured to help.
+    //
+    // No `gender` either — Swahili marks noun class, and the registry entry
+    // says why that is not on the card.
+    const swahiliRules = `
+- "swahili" must always be the Swahili word or phrase, written in standard Swahili (Kiswahili sanifu).
+- Cite Swahili verbs in the infinitive, with the "ku-" prefix — "kusoma", never a bare stem like "soma".
+- "english" must always be the English word or phrase written in English${nativeBackRule}
+- Both fields should use the single best translation. Only use 2-3 words if one word is genuinely insufficient. Never list synonyms with semicolons or slashes.${posRule}`;
+
+    if (context) {
+      prompt = `Provide a concise translation for the Swahili(Kiswahili)/English term "${term}" with this context: "${context}".
+
+Determine whether "${term}" is Swahili or English and set "termLanguage" accordingly.
+
+IMPORTANT:${swahiliRules}
+- "briefDefinition": a single clear sentence defining the term in ${nativeLanguage}.
+
+Respond with only this JSON:
+{
+  "term": "${term}",
+  "termLanguage": "Swahili or English",
+  "swahili": "Swahili word/phrase",
+  "english": "English word/phrase",${nativeBackJson}${posJson}
+  "briefDefinition": "one-sentence definition"
+}`;
+    } else {
+      prompt = `You are a language learning assistant for Swahili(Kiswahili)-English learners.
+
+Given the term "${term}", determine whether it is Swahili or English, then check if it has multiple significantly different meanings.
+
+A term is ambiguous when it has 2 or more distinct common meanings that would confuse a language learner.
+
+A term is NOT ambiguous when:
+- It has one clear primary meaning
+- Secondary meanings are rare or archaic
+- The meanings are closely related variants of the same concept
+
+${spellBlock}
+If AMBIGUOUS, respond with only this JSON:
+{
+  "ambiguous": true,
+  "term": "${term}",${spellJson}
+  "termLanguage": "Swahili or English",
+  "meanings": [
+    { "label": "short label (3-6 words max)", "hint": "one sentence clarifying this meaning" },
+    { "label": "...", "hint": "..." }
+  ]
+}
+
+Every "label" and "hint" must be written in ${nativeLanguage} — the user may not understand any other language.
+
+If NOT ambiguous, respond with only this JSON:
+{
+  "term": "${term}",${spellJson}
+  "termLanguage": "Swahili or English",
+  "swahili": "Swahili word/phrase",
+  "english": "English word/phrase",${nativeBackJson}${posJson}
+  "briefDefinition": "one-sentence definition in ${nativeLanguage}"
+}
+
+IMPORTANT for the non-ambiguous case:${swahiliRules}
+- "briefDefinition" must be a single sentence defining the core meaning. No examples, no cultural context.`;
+    }
   } else if (studyLanguage === 'Japanese') {
     // Japanese: kana/kanji are script-detectable
     const termLanguage = detectJapanese(term) ? 'Japanese' : 'English';
