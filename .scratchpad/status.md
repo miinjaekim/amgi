@@ -162,6 +162,45 @@ separately unverified on Android, where only sign-in has been exercised.
 Closed calls, kept with their reasoning — a decision whose reasoning is lost gets
 reopened by the next person to notice the symptom. Newest first.
 
+### Audio on mobile review hides offline rather than failing (2026-08-28)
+
+The second of the three items queued 2026-08-25, and the smallest: `expo-audio`
+is already in the shipped build and `PronounceButton` was already mounted on
+Learn, decks, drill and card detail, so review was placement, not capability.
+Three calls, two of which the backlog had already made — **study side only**
+(the gloss is in a language you already have) and **press-to-play, not autoplay
+on reveal**, since audio that fires itself on every card is a different feature
+from a playable word.
+
+**The third was the real one: offline it hides.** Review is mobile's
+offline-first surface — cached cards, queued ratings — and `/api/pronounce` is a
+network call with no local cache, which is the one question web never had to
+answer. The precedent decided it: `PronounceButton` already returns `null` for a
+language with no configured voice, on the stated reasoning that it will not
+render a button that can only fail on click. Offline is that same condition,
+temporally. What makes hiding affordable rather than mysterious is that the
+progress line above the card already carries `offlineShort`, so the missing
+button is explained on screen instead of reading as a bug.
+
+**A measurement sharpened it, and is worth keeping.** The backlog assumed the
+button would "spin and land in its error state". It is worse than that:
+`getPronunciationUrl` (`packages/core/src/tts.ts`) is a bare `fetch` with **no
+`withTimeout`** around it, unlike everything else the review screen calls, so the
+spinner has no deadline of the app's own and waits out the platform's. That is a
+latent problem on every surface with a pronounce button, not just this one —
+review is only the surface where being offline is *expected*. Not fixed here,
+because a timeout on `tts.ts` is a shared-code change with its own blast radius.
+
+**Parity turned out to include the examples.** Web puts a `size="sm"` button on
+each example sentence in `ReviewDetailsPanel`, and mobile's Learn and card-detail
+already do the same — review's example list was the actual last divergence, not
+just the term. It takes the same offline gate.
+
+One layout note, learned from drill: the term row is **unconditional**, so the
+word sits in the same place in both directions, offline, and on a language with
+no voice. `flexShrink` on the text is what keeps a long term wrapping inside the
+row instead of pushing the button off the card.
+
 ### Swahili takes the audio and drops the noun class (2026-08-27)
 
 The ninth study language, and the one where the backlog item had already made
