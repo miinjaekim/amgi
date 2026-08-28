@@ -26,6 +26,12 @@ Worth checking on the binary: the ↺ in the progress row holds a 44pt slot even
 when empty, so the `n / m` count should not shift sideways on the first rating of
 a session. Reasoning in [status.md](status.md).
 
+**Audio on mobile review** (2026-08-28). Same terms again — `expo-audio` is
+already in the shipped build, so this is JS only. Worth checking on the binary:
+the button **hides while offline**, so on a subway session the word should lose
+its 🔊 and the progress line should be the thing that says why. Reasoning in
+[status.md](status.md).
+
 - **Delete `packages/core/src/writing.ts`, `grammar.ts` and the two API routes
   that keep them alive.** **The gate is open**: it was "once no build predating
   the 2026-08-18 grammar removal is still in use", and 1.4.0 is that build. What
@@ -78,26 +84,9 @@ Android is the exception — no review, so a fix there ships the same day._
 
 ## High
 
-Two queued 2026-08-25 for the next working session, in the user's order.
-Swahili was the first of the three and is done — see the Decisions entry in
-[status.md](status.md) for what its probes settled.
-
-- [ ] **Audio on mobile review.** Web review has the pronounce button on both
-      revealed states (`apps/web/src/app/review/page.tsx:886`, `:949`); mobile
-      `app/(tabs)/review.tsx` has **none** — the last surface where the two
-      diverge. Learn, decks, drill and card detail already mount
-      `src/components/PronounceButton.tsx`, so this is placement, not a new
-      capability: `expo-audio` is already in the shipped build, so it's JS only
-      and rides the next build free.
-      *The one thing web didn't have to answer:* mobile review is the
-      **offline-first** surface — cached cards, queued ratings — and
-      `/api/pronounce` is a network call with no local cache, so offline the
-      button spins and lands in its error state. Decide whether it hides while
-      `!isOnline` or is allowed to fail; the screen already tracks `isOnline`
-      and shows it in the progress line.
-      *Also decide:* study side only (matching web), and press-to-play rather
-      than autoplay on reveal — the ask was "playable", and audio that fires
-      itself on every card is a different feature.
+Queued 2026-08-25, in the user's order. Two of the three are done — Swahili,
+and audio on mobile review, which is built and waiting on a build rather than on
+work. See the Decisions entry in [status.md](status.md) for what each settled.
 
 - [ ] **Text-based pronunciation aid, per language.** **Plan before code** —
       the seam is cheap and the per-language answer is the whole problem.

@@ -37,6 +37,7 @@ import { useTheme } from '../../src/context/ThemeContext';
 import { useFloatingTabBarHeight } from '../../src/components/FloatingTabBar';
 import PageHeader from '../../src/components/PageHeader';
 import Markdown from '../../src/components/Markdown';
+import PronounceButton from '../../src/components/PronounceButton';
 import { SkeletonBar, SkeletonGroup, SkeletonRows } from '../../src/components/Skeleton';
 import type { Palette } from '../../src/theme';
 
@@ -978,6 +979,26 @@ export default function ReviewScreen() {
   const backSide = getBackSide(card, nativeLanguage);
   const frontText = isFront ? studySide : backSide;
   const backText = isFront ? backSide : studySide;
+  /**
+   * Rides the study side wherever that lands — the front on `frontToBack`, the
+   * revealed back on `backToFront` — which is what web does, and the only
+   * placement that makes sense: the gloss is in a language you already have.
+   *
+   * **Hidden while offline rather than left to fail.** This is the one thing
+   * web never had to answer: review here is the offline-first surface — cached
+   * cards, queued ratings — while `/api/pronounce` is a network call with no
+   * local cache, so offline the button can only fail. And it fails *badly*:
+   * `getPronunciationUrl` (`core/tts.ts`) is a bare `fetch` with no
+   * `withTimeout` around it, unlike everything else this screen calls, so the
+   * spinner has no deadline of our own and waits out the platform's.
+   * `PronounceButton` already declines to render for a language with no voice
+   * on exactly that reasoning; offline is the same condition, temporally. The
+   * progress line above the card carries `offlineShort`, so the missing button
+   * is explained on screen rather than looking like a bug.
+   */
+  const pronounceButton = isOnline ? (
+    <PronounceButton text={studySide} furigana={card.furigana} studyLanguage={studyLanguage} />
+  ) : null;
   /** Only `backToFront` is ever typed — see `promptsForTyping`. */
   const typingThisCard = promptsForTyping(typingEnabled, direction);
   // The enriched copy when something was just generated, the queue's otherwise.
@@ -1184,12 +1205,18 @@ export default function ReviewScreen() {
                 // keyboard raised by the typed-answer field.
                 keyboardShouldPersistTaps="handled"
               >
-                <Text style={s.frontText}>{frontText}</Text>
+                <View style={s.termRow}>
+                  <Text style={[s.frontText, s.rowText]}>{frontText}</Text>
+                  {isFront && pronounceButton}
+                </View>
 
                 {revealed && (
                   <Animated.View style={[s.revealWrap, revealStyle]}>
                     <View style={s.divider} />
-                    <Text style={s.backText}>{backText}</Text>
+                    <View style={s.termRow}>
+                      <Text style={[s.backText, s.rowText]}>{backText}</Text>
+                      {!isFront && pronounceButton}
+                    </View>
 
                     {/* Both strings on screen. This is what lets the grader be
                         strict: the learner is not appealing a judgement they
@@ -1240,7 +1267,18 @@ export default function ReviewScreen() {
                               const sides = getExampleSides(ex, studyLanguage, nativeLanguage);
                               return (
                                 <View key={i} style={s.exampleItem}>
-                                  <Text style={s.exampleStudy}>{sides.study}</Text>
+                                  <View style={s.exampleStudyRow}>
+                                    <Text style={[s.exampleStudy, s.rowText]}>{sides.study}</Text>
+                                    {/* Offline-gated for the same reason as the
+                                        term's button above. */}
+                                    {isOnline && (
+                                      <PronounceButton
+                                        text={sides.study}
+                                        studyLanguage={studyLanguage}
+                                        size="sm"
+                                      />
+                                    )}
+                                  </View>
                                   {sides.back ? <Text style={s.exampleBack}>{sides.back}</Text> : null}
                                 </View>
                               );
@@ -1433,6 +1471,13 @@ function makeStyles(C: Palette, tabBarHeight: number) {
   frontText: { fontSize: 32, fontWeight: '700', color: C.text, lineHeight: 40 },
   divider: { height: 1, backgroundColor: C.border, marginVertical: 20 },
   backText: { fontSize: 22, fontWeight: '600', color: C.highlight, lineHeight: 30 },
+  // Shared by the term rows and the example rows. `flexShrink` is what keeps
+  // a long term wrapping inside its row instead of pushing the pronounce
+  // button off the card. The term row is unconditional so the word sits in
+  // the same place in both directions and on a language with no voice.
+  termRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  rowText: { flexShrink: 1 },
+  exampleStudyRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   detailsBtn: {
     marginTop: 14, borderWidth: 1, borderColor: C.border,
     borderRadius: 8, paddingVertical: 8, paddingHorizontal: 14, alignSelf: 'flex-start',
