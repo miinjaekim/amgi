@@ -88,6 +88,60 @@ Queued 2026-08-25, in the user's order. Two of the three are done — Swahili,
 and audio on mobile review, which is built and waiting on a build rather than on
 work. See the Decisions entry in [status.md](status.md) for what each settled.
 
+**The two mobile review card bugs below were found 2026-08-28 while testing the
+audio change and are not caused by it** — both are reachable on `main` without
+it, and both were introduced by the typed-answer work. They were attempted in
+the audio PR and **backed out on the user's call** so that PR stayed one
+feature; the attempts are recorded here because knowing what has already failed
+is the useful half. Neither has a verified diagnosis. **Start on a device, not
+in the code** — the scroll one was reasoned from source twice and the answer was
+wrong twice.
+
+- [ ] **Review card: the details panel scrolls once, then sticks.** Reported on
+      a device as "it works once and then gets stuck" when opening *dig deeper*
+      details — details being simply the only content tall enough to need
+      scrolling, which is what makes it look local to that panel.
+      *Prime suspect, unconfirmed:* the card's `ScrollView` sits inside the
+      `Pressable` that tap-to-dismisses the keyboard (added with typed answers
+      in `184db17`), and [lessons.md](lessons.md) already records this exact
+      class — an enclosing press handler and a scroll gesture compete for the
+      same touch, so a drag is intermittently resolved as a press.
+      *Two fixes already tried.* `pointerEvents="box-none"` on the `Pressable`
+      **is verified not to fix it** — don't retry it. The likely reason:
+      `pointerEvents` decides which view is hit-tested, but the responder system
+      still bubbles the touch up the React tree and consults every ancestor, so
+      a `box-none` ancestor stays in the negotiation. Swapping the component
+      outright (`Pressable` when the card holds a field, plain `View` otherwise)
+      was written and **never tested** — it was backed out with everything else.
+      That one is still the most promising, and `lessons.md`'s own prescription.
+      *Before writing any more code, answer this on a device:* does it stick
+      **within one card** — scrolls a little, then frozen until you leave it —
+      or does it work on the **session's first card** and not on later ones?
+      Those are different bugs; the first is responder capture, the second is
+      state not resetting per card. Every attempt so far assumed the first.
+
+- [ ] **Review card: a multi-line typed prompt is drawn over the action row.**
+      On a typed card the front is the *gloss*, and a gloss is routinely a
+      phrase — "to be envious of someone's good fortune" runs to three lines at
+      the card's 32pt display size. Check and *Show answer instead* then land
+      across the input. Screenshotted 2026-08-28 on TOPIK 고급, English → Korean.
+      *Root cause is already written down:* [lessons.md](lessons.md) — in a
+      React Native column, content that does not fit is drawn over what is below
+      it. The typed branch has no scroll and no shrink by design (a `ScrollView`
+      there is what carried the word off the top when the field took focus), and
+      `cardWrapSnug` is `flex: 0`, so nothing gives.
+      *Do not re-trim padding.* The previous fix bought ~36pt that way, which
+      resolved a one-line prompt and left the layout exactly as rigid — this is
+      the same bug returning, not a new one.
+      *And `adjustsFontSizeToFit` is a dead end:* tried with `numberOfLines={4}`
+      and `minimumFontScale={0.6}`, and it shrank "accordingly; as a result" to
+      illegible — far past the floor it was given. Verified on a device.
+      *The shape that is likely right:* the prompt in its own bounded, shrinkable
+      area with the field **outside** it, so a long gloss scrolls within its own
+      box and focus cannot scroll the word away. The trap to design around is
+      that a `ScrollView` with no flex and no height collapses to zero in a
+      column, so the bounding has to be explicit.
+
 - [ ] **Text-based pronunciation aid, per language.** **Plan before code** —
       the seam is cheap and the per-language answer is the whole problem.
       *The seam:* `getReading(card)` (`packages/core/src/types.ts:514`) already
