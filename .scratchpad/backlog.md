@@ -88,37 +88,6 @@ Queued 2026-08-25, in the user's order. Two of the three are done — Swahili,
 and audio on mobile review, which is built and waiting on a build rather than on
 work. See the Decisions entry in [status.md](status.md) for what each settled.
 
-**The mobile review card bug below was found 2026-08-28 while testing the audio
-change and is not caused by it** — it is reachable on `main` without it, and was
-introduced by the typed-answer work. It was attempted in the audio PR and
-**backed out on the user's call** so that PR stayed one feature; the attempts
-are recorded here because knowing what has already failed is the useful half. It
-has no verified diagnosis. **Start on a device, not in the code.** The scroll bug
-that used to sit above this one is fixed — see the Decisions entry in
-[status.md](status.md).
-
-- [ ] **Review card: a multi-line typed prompt is drawn over the action row.**
-      On a typed card the front is the *gloss*, and a gloss is routinely a
-      phrase — "to be envious of someone's good fortune" runs to three lines at
-      the card's 32pt display size. Check and *Show answer instead* then land
-      across the input. Screenshotted 2026-08-28 on TOPIK 고급, English → Korean.
-      *Root cause is already written down:* [lessons.md](lessons.md) — in a
-      React Native column, content that does not fit is drawn over what is below
-      it. The typed branch has no scroll and no shrink by design (a `ScrollView`
-      there is what carried the word off the top when the field took focus), and
-      `cardWrapSnug` is `flex: 0`, so nothing gives.
-      *Do not re-trim padding.* The previous fix bought ~36pt that way, which
-      resolved a one-line prompt and left the layout exactly as rigid — this is
-      the same bug returning, not a new one.
-      *And `adjustsFontSizeToFit` is a dead end:* tried with `numberOfLines={4}`
-      and `minimumFontScale={0.6}`, and it shrank "accordingly; as a result" to
-      illegible — far past the floor it was given. Verified on a device.
-      *The shape that is likely right:* the prompt in its own bounded, shrinkable
-      area with the field **outside** it, so a long gloss scrolls within its own
-      box and focus cannot scroll the word away. The trap to design around is
-      that a `ScrollView` with no flex and no height collapses to zero in a
-      column, so the bounding has to be explicit.
-
 - [ ] **Text-based pronunciation aid, per language.** **Plan before code** —
       the seam is cheap and the per-language answer is the whole problem.
       *The seam:* `getReading(card)` (`packages/core/src/types.ts:514`) already

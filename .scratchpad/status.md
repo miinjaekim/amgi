@@ -162,6 +162,43 @@ separately unverified on Android, where only sign-in has been exercised.
 Closed calls, kept with their reasoning — a decision whose reasoning is lost gets
 reopened by the next person to notice the symptom. Newest first.
 
+### The typed card hides its action row while the keyboard is up (2026-08-29)
+
+A multi-line typed prompt was drawn across the input and the buttons under it:
+the front of a typed card is the *gloss*, and a gloss is routinely a phrase —
+three lines at the card's 32pt display size. Fixed in
+`apps/mobile/app/(tabs)/review.tsx` by taking the bottom action row off screen
+for exactly that state, with the keyboard's own return key as the submit path:
+
+```jsx
+const typedKeyboardUp = typingThisCard && !revealed && keyboardHeight > 0;
+```
+
+**The call worth keeping is *fewer things on screen, not tighter ones*.** Both
+tightening levers were already spent and both are recorded as dead ends: trimming
+padding bought ~36pt, resolved a one-line prompt and left the layout exactly as
+rigid — the same bug came back with a longer gloss — and `adjustsFontSizeToFit`
+with `minimumFontScale={0.6}` shrank text to illegible on a device, far past the
+floor it was given. The typed branch has **no scroll and no shrink by design**:
+the `ScrollView` that used to be there is what carried the word off the top when
+the field took focus, and `cardWrapSnug` is `flex: 0`. So the row's ~88pt of
+fixed height was the only slack left on the screen, and it is the one element
+that had somewhere to go.
+
+**Neither control is lost.** Tapping the card puts the keyboard away and the row
+comes back — the same tap-to-dismiss gesture the decision below installs, which
+is why the two changes are worth reading together. `onSubmitEditing` blurring is
+what returns the row for the reveal.
+
+Verified on a device 2026-08-29 against a three-line gloss. Mobile ships by
+build, so it is not in a tester's hands until the next one.
+
+**If a longer prompt ever overruns this too**, the shape to reach for is the
+prompt in its own bounded, shrinkable area with the field *outside* it, so the
+gloss scrolls within its own box and focus cannot scroll the word away. The trap
+to design around is that a `ScrollView` with no flex and no height collapses to
+zero in a column — the bounding has to be explicit.
+
 ### The card's dismiss target is a Pressable only when a keyboard can be up (2026-08-29)
 
 The details panel would not scroll on the mobile review card. Fixed by making
