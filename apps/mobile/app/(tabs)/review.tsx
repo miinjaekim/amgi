@@ -1007,6 +1007,24 @@ export default function ReviewScreen() {
   // ScrollView. So the scrolling card never needs a tap-to-dismiss ancestor —
   // and must not have one.
   const canRaiseKeyboard = (typingThisCard && !revealed) || editing;
+  /**
+   * While the keyboard is up on a typed card, the action row under it is gone
+   * and the keyboard's own return key is what submits.
+   *
+   * The row was the last fixed thing competing for height on a screen that has
+   * none to give: the front of a typed card is the *gloss*, and a gloss is
+   * routinely a phrase — three lines at 32pt — so 확인 and 그냥 정답 보기 ended
+   * up drawn across the card and the input. Nothing in that branch scrolls or
+   * shrinks by design (the ScrollView that used to be there is what carried the
+   * word off the top when the field took focus), so the fix has to be *fewer
+   * things on screen*, not tighter ones — the padding lever was already pulled
+   * and this is the same bug coming back.
+   *
+   * Both controls are still reachable: tapping the card puts the keyboard away
+   * and the row returns, which is the gesture this screen already taught for
+   * dismissing it.
+   */
+  const typedKeyboardUp = typingThisCard && !revealed && keyboardHeight > 0;
   // Module-level component references, so this switches identity only when the
   // branch really changes and does not remount the card on every render.
   const DismissArea = canRaiseKeyboard ? Pressable : View;
@@ -1202,6 +1220,9 @@ export default function ReviewScreen() {
                   style={s.typedInput}
                   value={typedAnswer}
                   onChangeText={setTypedAnswer}
+                  // The submit path whenever the keyboard is up, since 확인 is
+                  // not on screen then — see `typedKeyboardUp`. Blurring on
+                  // submit is what brings the row back for the reveal.
                   onSubmitEditing={handleSubmitTyped}
                   placeholder={typedAnswerPlaceholder(nativeLanguage, studyLanguage)}
                   placeholderTextColor={C.muted}
@@ -1357,8 +1378,11 @@ export default function ReviewScreen() {
           {typingThisCard && !revealed && <View style={s.typedSpacer} />}
         </DismissArea>
 
-        {/* Bottom action row — same position for both show-answer and ratings */}
-        {!editing && (
+        {/* Bottom action row — same position for both show-answer and ratings.
+            Hidden while the typed card's keyboard is up: the return key submits
+            there, and the height this row was holding is what a multi-line
+            gloss needs. */}
+        {!editing && !typedKeyboardUp && (
           revealed ? (
             <View style={s.ratingRow}>
               {RATINGS.map(r => (

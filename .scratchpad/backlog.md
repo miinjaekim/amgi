@@ -113,7 +113,15 @@ that used to sit above this one is fixed — see the Decisions entry in
       *And `adjustsFontSizeToFit` is a dead end:* tried with `numberOfLines={4}`
       and `minimumFontScale={0.6}`, and it shrank "accordingly; as a result" to
       illegible — far past the floor it was given. Verified on a device.
-      *The shape that is likely right:* the prompt in its own bounded, shrinkable
+      *Attempted 2026-08-29, awaiting a device:* neither of the shapes below —
+      **the action row is hidden while the keyboard is up** and the return key
+      submits instead (`typedKeyboardUp` in `review.tsx`). The row was ~88pt of
+      fixed height, better than two lines of prompt, and it is the only thing on
+      that screen that had a place to go. Tapping the card brings it back with
+      the keyboard, which is the gesture the screen already teaches. *Check on a
+      device with a three-line gloss before closing this.*
+      *The shape that is likely right if that is not enough:* the prompt in its own
+      bounded, shrinkable
       area with the field **outside** it, so a long gloss scrolls within its own
       box and focus cannot scroll the word away. The trap to design around is
       that a `ScrollView` with no flex and no height collapses to zero in a
