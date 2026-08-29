@@ -1001,6 +1001,15 @@ export default function ReviewScreen() {
   ) : null;
   /** Only `backToFront` is ever typed — see `promptsForTyping`. */
   const typingThisCard = promptsForTyping(typingEnabled, direction);
+
+  // Only the typed field before the reveal and the edit form can raise the
+  // keyboard, and those are exactly the two branches that render no
+  // ScrollView. So the scrolling card never needs a tap-to-dismiss ancestor —
+  // and must not have one.
+  const canRaiseKeyboard = (typingThisCard && !revealed) || editing;
+  // Module-level component references, so this switches identity only when the
+  // branch really changes and does not remount the card on every render.
+  const DismissArea = canRaiseKeyboard ? Pressable : View;
   // The enriched copy when something was just generated, the queue's otherwise.
   const shownCard = enrichedCard ?? card;
   const definition = shownCard.definition;
@@ -1094,8 +1103,20 @@ export default function ReviewScreen() {
             keyboard up the spacer is nearly nothing, and a keyboard you cannot
             put away is worse than one that covers something. Children with
             their own handlers — the ⋯, the field, the details buttons — still
-            take their taps first, and with no keyboard up this is a no-op. */}
-        <Pressable style={s.dismissArea} onPress={Keyboard.dismiss}>
+            take their taps first.
+
+            **But only while a keyboard can actually be up.** With no keyboard
+            this was a no-op that still cost something: an enclosing press
+            handler and a scroll gesture compete for the same touch, so the
+            details panel inside the card would not scroll (lessons.md records
+            this exact class). `pointerEvents="box-none"` does not settle it —
+            that decides hit-testing, while the responder negotiation still
+            bubbles through every ancestor. Dropping to a plain View when there
+            is nothing to dismiss takes it out of the negotiation entirely. */}
+        <DismissArea
+          style={s.dismissArea}
+          {...(canRaiseKeyboard ? { onPress: Keyboard.dismiss } : null)}
+        >
           {/* Card */}
           <View style={[s.cardWrap, typingThisCard && !revealed && s.cardWrapSnug]}>
             {/* Card header: the options button alone. The question the card is
@@ -1334,7 +1355,7 @@ export default function ReviewScreen() {
               the word keeps its position whether or not the keyboard is up — the
               keyboard eats this, not the card. */}
           {typingThisCard && !revealed && <View style={s.typedSpacer} />}
-        </Pressable>
+        </DismissArea>
 
         {/* Bottom action row — same position for both show-answer and ratings */}
         {!editing && (

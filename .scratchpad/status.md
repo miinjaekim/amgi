@@ -162,6 +162,45 @@ separately unverified on Android, where only sign-in has been exercised.
 Closed calls, kept with their reasoning — a decision whose reasoning is lost gets
 reopened by the next person to notice the symptom. Newest first.
 
+### The card's dismiss target is a Pressable only when a keyboard can be up (2026-08-29)
+
+The details panel would not scroll on the mobile review card. Fixed by making
+the wrapper's *component type* conditional, in `apps/mobile/app/(tabs)/review.tsx`:
+
+```jsx
+const canRaiseKeyboard = (typingThisCard && !revealed) || editing;
+const DismissArea = canRaiseKeyboard ? Pressable : View;
+```
+
+**What made this safe rather than a trade between scrolling and keyboard
+dismissal:** the two branches that can raise a keyboard — the typed field before
+the reveal, and the edit form — are *exactly* the two that render no
+`ScrollView`; the `ScrollView` only renders in the `else`. The features never
+coexist, so tap-to-dismiss keeps full coverage everywhere a keyboard can appear
+while the scrolling card loses its ancestor press handler entirely. That
+mutual exclusivity is the load-bearing fact — **if a future change puts a text
+input in the same branch as the scroll, this fix stops being free** and the
+`StyleSheet.absoluteFill` layer from [lessons.md](lessons.md) is the fallback.
+
+`Pressable` and `View` are module-level references, so the ternary changes
+identity only when the branch does — it does not remount the card each render.
+
+**Two corrections to what was written down before.** The recorded symptom was
+"works once and then gets stuck"; on the device it was **not scrolling at all,
+not even intermittently**, which is the opposite of the intermittent shape
+`lessons.md` gives for responder competition. The fix was tried first anyway —
+cheap, and unlike `pointerEvents="box-none"` it actually removes the suspect
+instead of leaving it in the negotiation — and it worked, so the diagnosis was
+right and only the reported *shape* was off. And the backlog's narrowing
+question ("within one card, or first card only?") turned out not to be the one
+that mattered: `resetCardState()` already clears `showDetails` per card, so the
+state-not-resetting branch was dead from the start.
+
+The one thing that was checked from source and did pay: the height chain is
+bounded end to end — `root` → `sessionFlex` → `dismissArea` → `cardWrap` →
+`cardScroll`, every one `flex: 1` — which ruled out the usual "unbounded
+ScrollView has nothing to scroll" cause before any code was written.
+
 ### Audio on mobile review hides offline rather than failing (2026-08-28)
 
 The second of the three items queued 2026-08-25, and the smallest: `expo-audio`

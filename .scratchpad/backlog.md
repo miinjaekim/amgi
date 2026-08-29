@@ -88,37 +88,14 @@ Queued 2026-08-25, in the user's order. Two of the three are done — Swahili,
 and audio on mobile review, which is built and waiting on a build rather than on
 work. See the Decisions entry in [status.md](status.md) for what each settled.
 
-**The two mobile review card bugs below were found 2026-08-28 while testing the
-audio change and are not caused by it** — both are reachable on `main` without
-it, and both were introduced by the typed-answer work. They were attempted in
-the audio PR and **backed out on the user's call** so that PR stayed one
-feature; the attempts are recorded here because knowing what has already failed
-is the useful half. Neither has a verified diagnosis. **Start on a device, not
-in the code** — the scroll one was reasoned from source twice and the answer was
-wrong twice.
-
-- [ ] **Review card: the details panel scrolls once, then sticks.** Reported on
-      a device as "it works once and then gets stuck" when opening *dig deeper*
-      details — details being simply the only content tall enough to need
-      scrolling, which is what makes it look local to that panel.
-      *Prime suspect, unconfirmed:* the card's `ScrollView` sits inside the
-      `Pressable` that tap-to-dismisses the keyboard (added with typed answers
-      in `184db17`), and [lessons.md](lessons.md) already records this exact
-      class — an enclosing press handler and a scroll gesture compete for the
-      same touch, so a drag is intermittently resolved as a press.
-      *Two fixes already tried.* `pointerEvents="box-none"` on the `Pressable`
-      **is verified not to fix it** — don't retry it. The likely reason:
-      `pointerEvents` decides which view is hit-tested, but the responder system
-      still bubbles the touch up the React tree and consults every ancestor, so
-      a `box-none` ancestor stays in the negotiation. Swapping the component
-      outright (`Pressable` when the card holds a field, plain `View` otherwise)
-      was written and **never tested** — it was backed out with everything else.
-      That one is still the most promising, and `lessons.md`'s own prescription.
-      *Before writing any more code, answer this on a device:* does it stick
-      **within one card** — scrolls a little, then frozen until you leave it —
-      or does it work on the **session's first card** and not on later ones?
-      Those are different bugs; the first is responder capture, the second is
-      state not resetting per card. Every attempt so far assumed the first.
+**The mobile review card bug below was found 2026-08-28 while testing the audio
+change and is not caused by it** — it is reachable on `main` without it, and was
+introduced by the typed-answer work. It was attempted in the audio PR and
+**backed out on the user's call** so that PR stayed one feature; the attempts
+are recorded here because knowing what has already failed is the useful half. It
+has no verified diagnosis. **Start on a device, not in the code.** The scroll bug
+that used to sit above this one is fixed — see the Decisions entry in
+[status.md](status.md).
 
 - [ ] **Review card: a multi-line typed prompt is drawn over the action row.**
       On a typed card the front is the *gloss*, and a gloss is routinely a
