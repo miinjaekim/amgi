@@ -380,6 +380,19 @@ Three things worth keeping:
   - **Fix:** keep the sheet a plain `View` and put tap-to-dismiss on its own
     `Pressable` layer behind it via `StyleSheet.absoluteFill`. The ScrollView
     is then the sole responder for anything starting inside it.
+  - **`pointerEvents="box-none"` on the ancestor does not fix it** — verified on
+    a device, 2026-08-28. `pointerEvents` decides which view is *hit-tested*,
+    but the responder negotiation still bubbles up the React tree and consults
+    every ancestor, so a `box-none` ancestor stays in the running.
+  - **When the press target has to be the sheet itself**, the absoluteFill layer
+    is no help — there is nothing behind to put it on. Then switch the
+    *component type* instead: `const Wrap = canRaiseKeyboard ? Pressable : View`.
+    This works only where the press handler and the scroll can never be needed
+    at once; check that before reaching for it. Mobile review's card is the
+    worked example (2026-08-29) — see [status.md](status.md).
+  - **The symptom is not reliably intermittent.** The line above says "only
+    sometimes", and review's card instead failed to scroll *at all*, every time.
+    Don't rule this cause out because the report says total failure.
   - `CardDetailModal`, `ImportModal` and the first-run tour never had this,
     because all three use plain `View` sheets. The house pattern was already
     right; the bug came from copying the one modal that isn't scrollable.
