@@ -117,13 +117,15 @@ work. See the Decisions entry in [status.md](status.md) for what each settled.
         terms: rules 17/18, Gemini 14/18, and the failure sets barely overlap —
         the model misses regular phonology by returning "no change" (신라, 급행,
         한국말), rules miss only what needs a morpheme boundary (값어치, 솜이불).
-        A working 표준 발음법 prototype scored 37/40; it is in the job scratch
-        dir, not the repo, and would need rewriting against `packages/core`.
+        A working 표준 발음법 prototype scored 37/40 — it is in
+        `docs/pronunciation-research.md` with the numbers behind it, and would
+        need rewriting against `packages/core` before shipping.
       - **Spanish and Swahili** — stress, derivable from spelling alone. A
-        prototype scored 16/16 and 9/9 first try. Cheapest of the five. Caveat:
-        those expectation tables were author-written, so they test the
-        implementation more than they test the assumptions — unlike Korean,
-        which is checkable against 표준국어대사전.
+        prototype scored 16/16 and 9/9 first try (also in
+        `docs/pronunciation-research.md`). Cheapest of the five. Caveat: those
+        expectation tables were author-written, so they test the implementation
+        more than they test the assumptions — unlike Korean, which is checkable
+        against 표준국어대사전.
       - **French and English** — IPA, and the model is *accurate* here (~16/17
         and ~15/15 on content). The defect is **formatting**: half the runs
         wrapped in `/…/` despite the prompt forbidding it, and English drifted

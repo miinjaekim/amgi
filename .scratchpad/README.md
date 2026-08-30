@@ -52,6 +52,13 @@ Related docs outside this folder:
   third), settles the interleaving question, and documents Bunpro as the closest
   prior art — including the failure mode Amgi would inherit by copying it.
   Tracked via an explicit `!docs/grammar-research.md` re-include.
+- `docs/pronunciation-research.md` — the measurement pass behind the
+  pronunciation aid, written 2026-08-30. **Read it before picking up any of the
+  five languages still open**: it carries the per-language numbers, the finding
+  that self-consistency is not evidence of correctness, and two working rule
+  engines (Korean 표준 발음법 at 37/40, Spanish/Swahili stress at 16/16 and 9/9)
+  that are expensive to re-derive. Tracked via an explicit
+  `!docs/pronunciation-research.md` re-include.
 - `docs/testflight-beta-info.md` — TestFlight listing copy, Korean *and*
   English in one file (the `-ko` suffix was dropped 2026-08-02 for that
   reason). Tracked, despite `.gitignore` excluding `docs/*`, via an explicit
