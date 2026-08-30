@@ -108,7 +108,22 @@ Queued 2026-08-25, in the user's order. Two of the three are done — Swahili,
 and audio on mobile review, which is built and waiting on a build rather than on
 work. See the Decisions entry in [status.md](status.md) for what each settled.
 
-- [ ] **Check the corrected Kikuyu respelling against a speaker.** The two
+- [ ] **Find a Kikuyu source reliable enough to decide `ĩ` on.** The `c` and
+      `ũ` fixes shipped because one speaker-reported word settled them; `ĩ` is
+      held at `ee`, merged with `i`, because nothing settles it. Published
+      phonologies say [e] — which would make it `ay` — but that renders `gĩkũyũ`
+      as `gay-ko-yo` against the familiar "gee-koo-yoo", and **the open question
+      is whether that familiar form is the anglicised spelling-reading or the
+      actual pronunciation.** A phoneme chart cannot answer that; it needs a
+      speaker, a pronunciation guide aimed at learners, or a recording.
+      *What has been consulted so far* (none sufficient): the Wikipedia Kikuyu
+      phonology table, a second phonology summary agreeing with it, and the
+      Rice sketch grammar — whose PDF has no extractable text layer and which
+      omits tone anyway. Worth trying: Benson's 1964 dictionary, the
+      Armstrong 1940 phonetic description, or AfriVoices-KE recordings, where a
+      known word could be heard rather than read.
+
+- [ ] **Check the rest of the Kikuyu respelling against a speaker.** The two
       errors a reader caught via `cũcũ` → `choo-choo` are fixed (`c` is [ʃ];
       `ĩ`/`ũ` are the close-mid [e]/[o], so the tilde marks height not laxness),
       and `cũcũ` → `sho-sho` is a regression test. **What has not happened is a
@@ -120,8 +135,11 @@ work. See the Decisions entry in [status.md](status.md) for what each settled.
       *Worth carrying into the five below:* the first version's own header
       ranked six suspicions and put the vowel error fifth, filed as an accepted
       loss rather than a bug. The self-audit reproduced its own blind spot; one
-      word from a speaker did what the ranked list could not. **Prefer a native
-      check before merge over a longer list of suspicions.**
+      word from a speaker did what the ranked list could not — and the *second*
+      attempt then derived `gay-ko-yo` from the same table with the same
+      confidence. **Prefer a native check before merge over a longer list of
+      suspicions**, and treat a phoneme chart as insufficient on its own for a
+      respelling: it fixes what a sound *is*, not how to write it for a reader.
 
 - [ ] **Text-based pronunciation aid — the five languages still open.**
       Japanese and Kikuyu are **done** (2026-08-30); the reasoning, and the two

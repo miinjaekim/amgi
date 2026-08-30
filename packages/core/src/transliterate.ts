@@ -213,16 +213,21 @@ export function kanaToHangul(kana: string): string {
  * word falsified two separate assumptions:
  *
  * 1. **`c` is [ʃ], not [tʃ]** — `sh`, never `ch` and never `k`.
- * 2. **`ĩ` and `ũ` are the close-mid vowels [e] and [o]**, not lax versions of
- *    `i` and `u`. This was the worse error: it put both tilde vowels a full
- *    step too high, so every `ũ` in the language came out `oo` when it wanted
- *    `o`. Kikuyu's seven vowels run i [i], ĩ [e], e [ɛ], a [a], o [ɔ], ũ [o],
- *    u [u] — the tilde marks height, not laxness.
+ * 2. **`ũ` is the close-mid [o]**, not a lax `u` — *shosho*, not *shoosho*. So
+ *    the tilde marks vowel **height**, not laxness, and every `ũ` had been
+ *    respelled a full step too high.
  *
- * Fixing (2) also **removed the vowel collapse** the first version had to
- * apologise for: `ĩ` (`ay`) and `i` (`ee`) are now distinct, as are `ũ` (`o`)
- * and `u` (`oo`). The collapse was never a limit of English, it was a symptom
- * of the wrong table.
+ * **`ĩ` is the same argument and is deliberately not applied.** Published
+ * sources put Kikuyu's seven vowels at i [i], ĩ [e], e [ɛ], a [a], o [ɔ],
+ * ũ [o], u [u], which by symmetry with (2) would make `ĩ` an `ay`. No speaker
+ * has confirmed it, and the output it produces — `gĩkũyũ` as `gay-ko-yo` —
+ * collides with the familiar "gee-koo-yoo" in a way nobody on this project can
+ * adjudicate. It is held at `ee` until there is a source worth deciding on;
+ * see `KIKUYU_VOWEL_SOUND` below.
+ *
+ * So `ũ`/`u` are now distinct and `ĩ`/`i` are still merged. **That asymmetry is
+ * the evidence, not an oversight**: one of the two was checked against someone
+ * who can hear the language and the other was not.
  *
  * **What is still approximate**, and would need a speaker to settle rather than
  * more reasoning:
@@ -242,9 +247,24 @@ const KIKUYU_CONSONANT_SOUND: Record<string, string> = {
   c: 'sh', g: 'g', k: 'k', m: 'm', n: 'n', r: 'r', t: 't', w: 'w', y: 'y',
   h: 'h', b: 'b', d: 'd', j: 'j',
 };
-// i [i], ĩ [e], e [ɛ], a [a], o [ɔ], ũ [o], u [u]. The tilde marks height.
+/**
+ * The back vowels are corrected; the front ones are **deliberately not**.
+ *
+ * `ũ` → `o` is confirmed by a speaker: `cũcũ` sounds like *shosho*, not
+ * *shoosho*. `ĩ` has no such check. Published sources put it at [e], which by
+ * the same logic would make it `ay` — but that reading turns `gĩkũyũ` into
+ * `gay-ko-yo`, which collides with the universally familiar "gee-koo-yoo", and
+ * whether that familiar form is the anglicised spelling-reading or the actual
+ * pronunciation is exactly what nobody here can adjudicate.
+ *
+ * So `ĩ` is held at `ee`, merged with `i`, **pending a source good enough to
+ * decide on**. That merge is a known inaccuracy rather than a claim. Holding it
+ * is the cheaper error: `ee` is at worst imprecise where `ay` would be
+ * confidently wrong, and being confidently wrong is what put `choo-choo` on a
+ * card in the first place.
+ */
 const KIKUYU_VOWEL_SOUND: Record<string, string> = {
-  a: 'a', e: 'eh', i: 'ee', ĩ: 'ay', o: 'o', u: 'oo', ũ: 'o',
+  a: 'a', e: 'e', i: 'ee', ĩ: 'ee', o: 'o', u: 'oo', ũ: 'o',
 };
 type KikuyuSyllable = { onset: string; vowel: string };
 
@@ -306,13 +326,13 @@ const KIKUYU_ONSET_HANGUL: Record<string, { nasal?: string; jamo: string; glide?
   w: { jamo: 'ㅇ', glide: 'w' }, y: { jamo: 'ㅇ', glide: 'y' },
 };
 
-// Korean has no [e]/[ɛ] or [o]/[ɔ] contrast to spend, so ĩ/e both land on 에 and
-// ũ/o both on 오. That merge is Korean's — unlike the English one it replaced,
-// which was the table being wrong.
+// ũ follows the English side onto 오. ĩ stays on 이 for the same reason it
+// stays on `ee` above — held, not decided. Korean would merge [e] with [ɛ]
+// anyway, so this costs less here than it does in the respelling.
 const KIKUYU_NUCLEUS: Record<'plain' | 'y' | 'w', Record<string, string>> = {
-  plain: { a: '아', e: '에', i: '이', 'ĩ': '에', o: '오', u: '우', 'ũ': '오' },
-  y:     { a: '야', e: '예', i: '이', 'ĩ': '예', o: '요', u: '유', 'ũ': '요' },
-  w:     { a: '와', e: '웨', i: '위', 'ĩ': '웨', o: '워', u: '우', 'ũ': '워' },
+  plain: { a: '아', e: '에', i: '이', 'ĩ': '이', o: '오', u: '우', 'ũ': '오' },
+  y:     { a: '야', e: '예', i: '이', 'ĩ': '이', o: '요', u: '유', 'ũ': '요' },
+  w:     { a: '와', e: '웨', i: '위', 'ĩ': '위', o: '워', u: '우', 'ũ': '워' },
 };
 
 const CHO = ['ㄱ','ㄲ','ㄴ','ㄷ','ㄸ','ㄹ','ㅁ','ㅂ','ㅃ','ㅅ','ㅆ','ㅇ','ㅈ','ㅉ','ㅊ','ㅋ','ㅌ','ㅍ','ㅎ'];

@@ -234,11 +234,11 @@ describe('kanaToHangul', () => {
 });
 
 describe('Kikuyu respelling', () => {
-  it('respells cũcũ as sho-sho — the word that caught both original errors', () => {
-    // Reported wrong by a reader on 2026-08-30: it came out `choo-choo`, which
-    // is two mistakes in one four-letter word. `c` is [ʃ] and not [tʃ], and `ũ`
-    // is the close-mid [o] rather than a lax [ʊ]. Kept as the regression guard
-    // because no other single term catches both.
+  it('respells cũcũ as sho-sho — the word a speaker caught both errors with', () => {
+    // Reported wrong on 2026-08-30: it came out `choo-choo`, two mistakes in
+    // one four-letter word. `c` is [ʃ] and not [tʃ], and `ũ` is the close-mid
+    // [o] rather than a lax [ʊ] — *shosho*, not *shoosho*. Kept as the
+    // regression guard because no other single term catches both.
     expect(kikuyuToEnglish('cũcũ')).toBe('sho-sho');
     expect(kikuyuToHangul('cũcũ')).toBe('쇼쇼');
   });
@@ -247,22 +247,27 @@ describe('Kikuyu respelling', () => {
     expect(kikuyuToEnglish('rũciũ')).toBe('ro-shee-o');
   });
 
-  it('keeps ĩ apart from i, and ũ apart from u', () => {
-    // The first version merged both pairs. That was never a limit of English —
-    // it was the tilde vowels being mapped a full step too high.
-    expect(kikuyuToEnglish('kĩrĩma')).toBe('kay-ray-ma');
-    expect(kikuyuToEnglish('irio')).toBe('ee-ree-o');
-    expect(kikuyuToEnglish('gĩkũyũ')).toBe('gay-ko-yo');
+  it('separates ũ from u, which a speaker confirmed', () => {
     expect(kikuyuToEnglish('ũhoro')).toBe('o-ho-ro');
+    expect(kikuyuToEnglish('mũgũnda')).toBe('mo-go-nda');
+  });
+
+  it('leaves ĩ merged with i on purpose, pending a source', () => {
+    // Sources put ĩ at [e], which by symmetry with ũ would make it `ay` — but
+    // that renders gĩkũyũ as `gay-ko-yo`, against the familiar "gee-koo-yoo",
+    // and no speaker has ruled on it. Held at `ee`: imprecise beats
+    // confidently wrong, which is what put `choo-choo` on a card.
+    expect(kikuyuToEnglish('gĩkũyũ')).toBe('gee-ko-yo');
+    expect(kikuyuToEnglish('kĩrĩma')).toBe('kee-ree-ma');
+    expect(kikuyuToEnglish('irio')).toBe('ee-ree-o');
   });
 
   it('treats a prenasalized stop as one onset, so the hyphens mark real syllables', () => {
     expect(splitKikuyuSyllables('mũgũnda')).toHaveLength(3);
-    expect(kikuyuToEnglish('mũgũnda')).toBe('mo-go-nda');
   });
 
   it('keeps the y glide in Hangul, which a bare consonant mapping drops', () => {
-    expect(kikuyuToHangul('gĩkũyũ')).toBe('게코요'); // not 게코오
+    expect(kikuyuToHangul('gĩkũyũ')).toBe('기코요'); // not 기코오
   });
 
   it('hangs a prenasalized nasal on the previous syllable', () => {

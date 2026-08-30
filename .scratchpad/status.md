@@ -213,12 +213,22 @@ That single four-letter word falsified two independent assumptions, and the
 second was the expensive one:
 
 1. **`c` is [ʃ], not [tʃ]** — the letter this table uses most.
-2. **`ĩ` and `ũ` are the close-mid vowels [e] and [o]**, not lax `i` and `u`.
-   The tilde in Kikuyu orthography marks **height**, not laxness, so every
-   tilde vowel in the language was being respelled a full step too high — every
-   `ũ` came out `oo` when it wanted `o`. Confirmed against the phonology table
-   in the Wikipedia Kikuyu article after the report, not reasoned from the one
-   word: i [i], ĩ [e], e [ɛ], a [a], o [ɔ], ũ [o], u [u].
+2. **`ũ` is the close-mid [o]**, not a lax `u`: *shosho*, not *shoosho*. The
+   tilde marks vowel **height**, not laxness, so `ũ` had been respelled a full
+   step too high everywhere it appeared.
+
+**`ĩ` is the same argument and was deliberately left unapplied**, on the user's
+call. Published sources give Kikuyu's seven vowels as i [i], ĩ [e], e [ɛ],
+a [a], o [ɔ], ũ [o], u [u] — so by symmetry with (2), `ĩ` should be `ay`. Two
+things stopped it. No speaker has confirmed any `ĩ` word, where `cũcũ` settled
+`c` and `ũ` outright. And the output it produced, `gĩkũyũ` → `gay-ko-yo`,
+collides with the universally familiar "gee-koo-yoo"; whether that familiar form
+is the anglicised spelling-reading or the real pronunciation is precisely what
+nobody on this project can adjudicate. So `ĩ` stays merged with `i` at `ee`,
+and **the asymmetry in the table is the state of the evidence rather than an
+oversight** — one vowel was checked against someone who can hear the language
+and the other was not. `ee` is at worst imprecise; `ay` would be confidently
+wrong, and confidently wrong is what put `choo-choo` on a card.
 
 **The lesson is about the shape of the evidence, not the vowels.** The first
 version's own header comment listed six candidate causes and ranked `c` first —
@@ -229,9 +239,10 @@ word from someone who can hear the language did what the ranked list could
 not.** For the five languages still open, that argues for a native check before
 merge over a longer list of suspicions.
 
-Fixing (2) also **removed the vowel collapse the first version apologised
-for**: `ĩ`/`i` and `ũ`/`u` are now distinct in the respelling. The collapse was
-never a limit of English — it was the table being wrong, and the apology
+Fixing (2) **half-removed the vowel collapse the first version apologised
+for**: `ũ`/`u` are now distinct, `ĩ`/`i` still are not. Worth correcting the
+record either way — that collapse was presented as a limit of English
+orthography, and it is not one. It was the table being wrong, and the apology
 described the symptom as though it were the constraint.
 
 **What is still approximate** and would need a speaker rather than more
