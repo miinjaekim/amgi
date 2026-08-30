@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, ActivityIndicator,
   ScrollView, StyleSheet, KeyboardAvoidingView, Platform, Keyboard, Pressable,
-  Dimensions,
+  Dimensions, Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams, useNavigation } from 'expo-router';
@@ -15,7 +15,8 @@ import {
 import {
   getCharacterBreakdown, getDepthTarget, getReading, getStudyLanguageConfig, getBackSideConfig,
   getTermBackSide, getExampleSides,
-  parseStreamedDepth, parseStreamedExamples, wordOfTheDayCore,
+  parseStreamedDepth, parseStreamedExamples, pronunciationNote,
+  pronunciationNoteNeedsCredit, wordOfTheDayCore, PITCH_ACCENT_CREDIT,
 } from '@amgi/core';
 import type { StudyLanguage } from '@amgi/core';
 import type { TermCore, TermDepth, TermAmbiguous, ExamplePair, SpellingCorrection, WordOfTheDay } from '../../src/services/gemini';
@@ -525,6 +526,19 @@ export default function LearnScreen() {
                 </TouchableOpacity>
               ))}
             </View>
+            {pronunciationNote(nativeLanguage, studyLanguage) && (
+              <Text style={s.pronunciationNote}>
+                {pronunciationNote(nativeLanguage, studyLanguage)}
+                {pronunciationNoteNeedsCredit(studyLanguage) && (
+                  <Text
+                    style={s.pronunciationCredit}
+                    onPress={() => Linking.openURL(PITCH_ACCENT_CREDIT.href)}
+                  >
+                    {' '}{PITCH_ACCENT_CREDIT.text}
+                  </Text>
+                )}
+              </Text>
+            )}
             <View style={s.searchRow}>
               <TextInput
                 style={s.searchInput}
@@ -835,6 +849,11 @@ function makeStyles(C: Palette, tabBarHeight: number) {
 
   exampleRow: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 8, marginBottom: 12 },
   exampleLabel: { fontSize: 13, color: C.muted, alignSelf: 'center' },
+  pronunciationNote: {
+    fontSize: 12, color: C.muted, lineHeight: 18,
+    textAlign: 'center', marginTop: 12, paddingHorizontal: 8,
+  },
+  pronunciationCredit: { fontSize: 12, color: C.muted, textDecorationLine: 'underline' },
   chip: { borderWidth: 1, borderColor: C.border, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6 },
   chipText: { fontSize: 14, color: C.text },
 

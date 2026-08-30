@@ -56,3 +56,14 @@ describe('wordOfTheDayCore', () => {
     expect(core).not.toHaveProperty('briefDefinition');
   });
 });
+
+it('keeps a 平板 pitch accent, which is 0 and must not be dropped as empty', () => {
+  // `wordOfTheDayCore` strips undefined before the object reaches Firestore.
+  // 0 is a real accent — 端 and 学校 are both 平板 — so a truthiness check here
+  // would silently turn "flat" into "unknown" on every such word.
+  const core = wordOfTheDayCore(
+    { term: '学校', english: 'school', furigana: 'がっこう', pitchAccent: 0 },
+    'Japanese'
+  );
+  expect(core.pitchAccent).toBe(0);
+});

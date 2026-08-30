@@ -14,6 +14,7 @@ export * from './military';
 export * from './drill';
 export * from './typedAnswer';
 export * from './tts';
+export * from './pitchAccent';
 export * from './offlineReview';
 export * from './progress';
 export * from './reminders';

@@ -241,6 +241,12 @@ const translations = {
     tagline: 'Look up any word or phrase.',
     taglineSubtitle: 'Get an instant AI-powered explanation, then save it as a flashcard to review with spaced repetition.',
     exampleTermsLabel: 'Try:',
+    // Pronunciation notes — a rule stated once, for languages where the aid is
+    // a fact about the whole language rather than data on each card.
+    pronunciationNoteKikuyu:
+      'ĩ and ũ are separate vowels, not i and u with a mark on them — swapping them changes the word. Gĩkũyũ has seven vowels.',
+    pronunciationNoteJapanese:
+      'Readings carry pitch accent: は＼し drops after は (箸), はし＼ drops after し (橋), はし stays level (端).',
     wordOfTheDay: 'Word of the day',
     copy: 'Copy',
     copied: 'Copied',
@@ -586,6 +592,10 @@ const translations = {
     tagline: '단어나 표현을 검색해보세요.',
     taglineSubtitle: 'AI로 즉각적인 설명을 받고, 플래시카드로 저장해 간격 반복 학습을 시작하세요.',
     exampleTermsLabel: '예시:',
+    pronunciationNoteKikuyu:
+      'ĩ와 ũ는 i, u에 기호를 붙인 변형이 아니라 별개의 모음입니다. 바꿔 쓰면 다른 단어가 됩니다. 기쿠유어의 모음은 일곱 개입니다.',
+    pronunciationNoteJapanese:
+      '발음 표기에 고저 악센트가 함께 표시됩니다. は＼し는 は 뒤에서 내려가고(箸), はし＼는 し 뒤에서 내려가며(橋), はし는 평판형입니다(端).',
     wordOfTheDay: '오늘의 단어',
     copy: '복사',
     copied: '복사됨',
@@ -780,6 +790,51 @@ export function t(
     }
   }
   return text;
+}
+
+
+/**
+ * A pronunciation rule worth stating once for the whole language, or
+ * `undefined` where there is none.
+ *
+ * This is the third of the three ways a language can get a pronunciation aid,
+ * beside a stored field (Japanese pitch accent, Traditional Chinese pinyin) and
+ * a render-time transform. It exists because for some languages the useful
+ * thing is not per-card data at all:
+ *
+ * - **Kikuyu** has no per-card aid and, measured, cannot have one. It is also
+ *   the language that needs it most — there is no TTS voice for Kikuyu, so text
+ *   is the only pronunciation support it can ever get. Gemini's tone marking
+ *   was self-consistent on 2 of 19 words and respelled ũ/ĩ as ú/í, destroying
+ *   the vowel contrast the deck exists to teach, and no tone-marked
+ *   machine-readable dictionary exists to replace it. So the note teaches the
+ *   orthography instead, which is true, useful, and costs no data.
+ * - **Japanese** *does* have per-card data, and the note is how a learner
+ *   learns to read ＼ at all. A notation nobody explains is not an aid.
+ */
+export function pronunciationNote(
+  nativeLanguage: string | null | undefined,
+  studyLanguage: StudyLanguage | undefined
+): string | undefined {
+  if (studyLanguage === 'Kikuyu') return t(nativeLanguage, 'pronunciationNoteKikuyu');
+  if (studyLanguage === 'Japanese') return t(nativeLanguage, 'pronunciationNoteJapanese');
+  return undefined;
+}
+
+/**
+ * Attribution for the pitch accent table, required by its CC BY-SA 4.0 licence
+ * and therefore **not optional chrome** — it renders wherever the Japanese note
+ * does. Kept out of `translations` because a licence credit is the same in
+ * every language and must not drift between them.
+ */
+export const PITCH_ACCENT_CREDIT = {
+  text: 'kanjium (CC BY-SA 4.0)',
+  href: 'https://github.com/mifunetoshiro/kanjium',
+} as const;
+
+/** True when this language's note carries the pitch accent attribution. */
+export function pronunciationNoteNeedsCredit(studyLanguage: StudyLanguage | undefined): boolean {
+  return studyLanguage === 'Japanese';
 }
 
 /**

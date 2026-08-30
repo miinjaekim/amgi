@@ -79,6 +79,26 @@ Backlog priority mirrors the user's Google Tasks list — `backlog.md` is the
 scoped version of it. Keep entries at the size that says what to do next; the
 argument behind a call goes in `status.md`, not in the item.
 
+_This pass **built the pronunciation aid for Japanese and Kikuyu**, the first
+two of the seven the backlog item covers, and the pairing is sharper than it
+looks: neither language's gap is the *reading*. Japanese already has furigana,
+so what was missing is **pitch accent**; Kikuyu's is **tone**. Both are melody,
+and both were measured before any code — the item said plan first, and the
+measurement is what the plan turned out to be. **The finding worth carrying
+past this feature:** Gemini on Japanese pitch accent is not noisy but *stably
+wrong* — 18 of 27 terms identical across three runs, only 6 correct, defaulting
+to [1] and returning **one** accent for 雨 and 飴, 花 and 鼻. So
+**self-consistency is not evidence of correctness**, which is the standard the
+Kikuyu and Swedish probes had to lean on. Japanese now reads its accent from a
+dictionary (27/27) **inside `/api/explain`** — which keeps the rule that
+readings come from the same route furigana does, while proving "from the route"
+and "from the model" were never the same claim. Kikuyu gets a static rule and
+**no tone at all**, for a sharper reason than its noun class: not merely wrong
+but not self-consistent, and respelling ũ/ĩ as ú/í in a language whose entire
+audio story is that the near neighbour is not an acceptable stand-in. Five
+languages remain, and [backlog.md](backlog.md) now carries what the same
+measurement pass already answered for each._
+
 _Last reviewed against the codebase: 2026-08-22, `main` @ `032cdad`.
 `npm test` 289/289, measured 2026-08-24 on `feat/typed-responses` — 273 of them
 on `main`, which the 252 recorded here had already gone stale against. Mobile has no test script — its half of the

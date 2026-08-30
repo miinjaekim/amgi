@@ -2,6 +2,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/firebaseAdmin';
 import { PART_OF_SPEECH_CODES, getStudyLanguageConfig, getBackSideConfig, isStudyLanguage, normalizePartOfSpeech, parseModelJson, wordOfTheDayCore, type WordOfTheDay } from '@amgi/core';
+import { lookupPitchAccent } from '@/lib/pitchAccentLookup';
 
 /** How far back to look when keeping the daily word from repeating. */
 const EXCLUSION_DAYS = 60;
@@ -207,6 +208,17 @@ Respond with only this JSON:
   // fresh /api/explain call, so the saved card could be worded differently from
   // the panel that was tapped; now the tap is a read of this.
   const stored: WordOfTheDay = { ...parsed };
+  // Filled from the same table `/api/explain` uses, so the badge on a word of
+  // the day reads the same as the badge on the card you get by looking that
+  // word up by hand. Without this the two surfaces disagree on the same word.
+  //
+  // Documents written before this shipped keep no accent, for the reason the
+  // part of speech did: nothing repairs a stored document on read, and doing so
+  // would put work back on the cache-hit path that storing `core` removed.
+  if (studyLanguage === 'Japanese' && stored.term) {
+    const accent = lookupPitchAccent(stored.term, stored.furigana);
+    if (accent !== undefined) stored.pitchAccent = accent;
+  }
   stored.core = wordOfTheDayCore(stored, isStudyLanguage(studyLanguage) ? studyLanguage : 'Korean', nativeLanguage);
 
   if (docRef) {

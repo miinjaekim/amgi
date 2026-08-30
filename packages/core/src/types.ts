@@ -1,3 +1,5 @@
+import { isAllKana, markPitchAccent } from './pitchAccent';
+
 /**
  * Traditional and Simplified Chinese are separate study languages rather than
  * one language with a script preference: the decks stay independent, so
@@ -401,6 +403,16 @@ export interface TermCore {
   gender?: string; // grammatical gender: Swedish 'en'/'ett', French 'le'/'la'
   furigana?: string; // Japanese kana reading, present when the term contains kanji
   pinyin?: string; // Traditional Chinese reading, tone-marked
+  /**
+   * Japanese pitch accent as an アクセント核 position — `0` for 平板, otherwise
+   * the mora after which the pitch falls. Unlike every other field on this
+   * type it is **not** written by the model: `/api/explain` looks it up in a
+   * dictionary, because Gemini scored 6/27 against the dictionary's 27/27 and
+   * failed by flattening 雨/飴 and 花/鼻 into one accent. See
+   * `apps/web/src/data/README.md`. Absent on cards saved before this shipped,
+   * and on any word the dictionary does not carry.
+   */
+  pitchAccent?: number;
   briefDefinition?: string;
 }
 
@@ -551,9 +563,24 @@ export function getExampleStudyLangText(ex: ExamplePair, studyLanguage?: StudyLa
  * only ever carries the field belonging to its own language, so the next
  * reading-bearing language is one entry here rather than another conditional
  * at every render site.
+ *
+ * Japanese pitch accent rides **inside** this one badge rather than beside it:
+ * は＼し already contains the reading, so marking the furigana it was going to
+ * show anyway costs no space and adds the distinction furigana alone cannot
+ * make. A card with no accent — one saved before the field existed, or a word
+ * the dictionary does not carry — falls back to bare furigana, which is what
+ * every Japanese card showed before.
+ *
+ * A kana-only term is its own reading, so it has no furigana by design (the
+ * prompt sets it null when there is no kanji). It still has an accent worth
+ * showing, which is why `japanese` is read here as the fallback source.
  */
-export function getReading(card: Pick<TermCore, 'furigana' | 'pinyin'>): string | undefined {
-  return card.furigana || card.pinyin || undefined;
+export function getReading(
+  card: Pick<TermCore, 'furigana' | 'pinyin' | 'pitchAccent' | 'japanese'>
+): string | undefined {
+  const kana = card.furigana || (card.japanese && isAllKana(card.japanese) ? card.japanese : '');
+  if (kana) return markPitchAccent(kana, card.pitchAccent);
+  return card.pinyin || undefined;
 }
 
 /** Splits an example pair into its study-language and translation sides. */
@@ -621,6 +648,7 @@ export interface WordOfTheDay {
   formality?: string; // Korean
   gender?: string; // Swedish/French
   furigana?: string; // Japanese
+  pitchAccent?: number; // Japanese, looked up rather than generated
   pinyin?: string; // Traditional Chinese
   /**
    * The explanation to show when the card is tapped, generated and stored
@@ -657,6 +685,7 @@ export function wordOfTheDayCore(
     formality: wotd.formality,
     gender: wotd.gender,
     furigana: wotd.furigana,
+    pitchAccent: wotd.pitchAccent,
     pinyin: wotd.pinyin,
   };
   // A field the model left out must be dropped, not carried as undefined:

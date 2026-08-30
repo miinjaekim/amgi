@@ -13,7 +13,7 @@ import {
 } from '@/services/gemini';
 import Markdown from '@/components/Markdown';
 import { saveFlashcardToFirestore, Flashcard } from '@/services/firestore';
-import { getBackSideConfig, getTermBackSide, getCharacterBreakdown, getExampleSides, getReading, getStudyLanguageConfig, parseStreamedExamples, parseStreamedDepth, wordOfTheDayCore } from '@amgi/core';
+import { getBackSideConfig, getTermBackSide, getCharacterBreakdown, getExampleSides, getReading, getStudyLanguageConfig, parseStreamedExamples, parseStreamedDepth, pronunciationNote, pronunciationNoteNeedsCredit, wordOfTheDayCore, PITCH_ACCENT_CREDIT } from '@amgi/core';
 import type { WordOfTheDay } from '@amgi/core';
 import { useUser } from '@/components/UserContext';
 import { t, partOfSpeechLabel } from '@/lib/i18n';
@@ -455,6 +455,24 @@ export default function Home() {
               </button>
             ))}
           </div>
+          {pronunciationNote(nativeLanguage, studyLanguage) && (
+            <p className="mt-3 text-xs text-[var(--color-muted)] max-w-md mx-auto leading-relaxed">
+              {pronunciationNote(nativeLanguage, studyLanguage)}
+              {pronunciationNoteNeedsCredit(studyLanguage) && (
+                <>
+                  {' '}
+                  <a
+                    href={PITCH_ACCENT_CREDIT.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline hover:text-[var(--color-text)]"
+                  >
+                    {PITCH_ACCENT_CREDIT.text}
+                  </a>
+                </>
+              )}
+            </p>
+          )}
         </div>
       )}
 
