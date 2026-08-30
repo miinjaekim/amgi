@@ -7,6 +7,7 @@ import {
   normalizePartOfSpeech,
   parseModelJson,
 } from '@amgi/core';
+import { lookupPitchAccent } from '@/lib/pitchAccentLookup';
 
 function detectKorean(term: string): boolean {
   return /[가-힣ᄀ-ᇿ㄰-㆏]/.test(term);
@@ -734,6 +735,32 @@ IMPORTANT for the non-ambiguous case:
     const pos = normalizePartOfSpeech(record.partOfSpeech);
     if (pos) record.partOfSpeech = pos;
     else delete record.partOfSpeech;
+  }
+
+  // Japanese pitch accent is the one reading field on any language that this
+  // route does **not** ask the model for. It is filled from a dictionary here,
+  // after the model has answered, because the model is measurably bad at it:
+  // 6/27 against the table's 27/27, and wrong in the way that matters — it
+  // returns the same accent for 雨 and 飴, and for 花 and 鼻, erasing the
+  // distinction a pitch badge exists to teach. Numbers in
+  // `apps/web/src/data/README.md`.
+  //
+  // It stays inside this route rather than becoming a second call, so the rule
+  // that readings come from the same place furigana does still holds: what
+  // changed is the source of one field, not the number of round trips.
+  if (
+    studyLanguage === 'Japanese' &&
+    parsed && typeof parsed === 'object' && !('ambiguous' in parsed)
+  ) {
+    const record = parsed as Record<string, unknown>;
+    const japanese = typeof record.japanese === 'string' ? record.japanese : '';
+    const furigana = typeof record.furigana === 'string' ? record.furigana : undefined;
+    if (japanese) {
+      const accent = lookupPitchAccent(japanese, furigana);
+      // Left absent rather than defaulted: 0 is 平板, a real accent, so a
+      // missing word and a flat one must not arrive looking the same.
+      if (accent !== undefined) record.pitchAccent = accent;
+    }
   }
 
   return NextResponse.json(parsed);

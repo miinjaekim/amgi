@@ -162,6 +162,150 @@ separately unverified on Android, where only sign-in has been exercised.
 Closed calls, kept with their reasoning — a decision whose reasoning is lost gets
 reopened by the next person to notice the symptom. Newest first.
 
+### The pronunciation aid is a transliteration, and pitch accent rides along (2026-08-30)
+
+**A correction to the entry below, made after it was built.** The aid asked for
+was the term **respelled in the script the learner already reads** — 寿司 as
+`sushi` to an English native, `스시` to a Korean one — not a linguistic
+notation. Pitch accent is a real aid and the measurement behind it stands, but
+it answers a question a learner further along asks. Both now share one badge,
+reading first: `す＼し · sushi`.
+
+**The transliteration needs no model, no dictionary and no stored field**, which
+is the opposite trade from `pitchAccent` one section down. Accent is a lexical
+fact you cannot read off the spelling, so it has to be looked up. A
+transliteration *is* readable off the spelling, so asking a model for one would
+add error for nothing. Kana → Hepburn scored **10/10** first try; kana → Hangul
+scored 7/10 and reached 10/10 once the rule it was missing went in. Because it
+derives rather than stores, **it needs no backfill and works on every card
+already saved**, including the Japanese cards that will never carry a
+`pitchAccent`.
+
+**It is the first field keyed on `nativeLanguage` rather than on the word.**
+Every other card field is a fact about the term; this one is a fact about who is
+looking at it, which is why it cannot be stored and why `getReading` now takes
+both languages. That also gives **Kikuyu a badge it never had** — it has neither
+furigana nor pinyin, and its spelling hides real sounds (`c` is /ʃ~tʃ/, never
+/k/), so the respelling is the entire aid for the one language with no TTS voice.
+
+**Three rules carry the Hangul, and each was a bug before it was a rule.**
+Long vowels are not written, so `とうきょう` is 도쿄 — the miss a letter-for-letter
+mapping makes most visibly, and the one that took the Japanese score from 7/10 to
+10/10. か/た rows are plain word-initially and aspirated inside, so 京都 is 교토
+off the same kana. And ん/っ are 받침, so `さっぽろ` is three Korean syllables to
+four Japanese morae. For Kikuyu the equivalents are the `y` glide (`gĩkũyũ` is
+기쿠유, not 기쿠우) and prenasalization hanging off the previous syllable
+(`mũgũnda` is 무군다; word-initially it opens a 으, so `ndoto` is 은도토 and not
+느도토).
+
+**A known loss, recorded so it stays a choice.** The English respelling maps both
+`i` and `ĩ` to `ee` and both `u` and `ũ` to `oo` — collapsing the seven-vowel
+distinction that the Kikuyu registry entry, its prompt branch and its
+`pronunciationNote` all exist to protect. English has no unambiguous respelling
+for /ɪ/ and /ʊ/ that a reader will not misread, and the alternative is a
+notation to be taught, which is what this feature exists to avoid. **The note is
+now the only place that distinction is stated**, so it must not be trimmed.
+
+**The Kikuyu respelling shipped known-faulty, on the user's call.** Checked
+against real Kikuyu after the build, some outputs are wrong; the specific words
+were not captured. Japanese was accepted as-is. **This is a deliberate exception
+to the rule that language's own registry entry states** — "silence beats
+confidently wrong pronunciation on a learner's card", the argument that kept
+both the Swahili voice and noun class off Kikuyu — taken because the aid is
+useful in the main and the fault is narrow. It is not a precedent: the next
+language's transliteration should clear the bar before it ships, not after.
+`transliterate.ts` carries the six candidate causes in priority order, the
+likeliest being that `c` is /ʃ/ rather than /tʃ/, which would make `rũciũ`
+`roo-shee-oo`. **Do not extend the table to another language until it is
+settled** — the bug's shape is the shape the next one inherits. Whatever fixes
+it has to be checked against a speaker or a descriptive grammar rather than
+reasoned out, the standard the tone question was held to and for the same
+reason: nobody working on this can hear the mistake.
+
+**Verified on both platforms** (2026-08-30), which closes the "unverified on a
+device" caveat for this feature and not for the ones around it. **Still
+unverified:** the Korean copy in both notes is author-written rather than
+native-checked.
+
+### The pronunciation aid: Japanese from a dictionary, Kikuyu from neither (2026-08-30)
+
+The backlog item asked for a text pronunciation aid per language and said to
+plan before code, because "the reading" is a different job in each language.
+Scoped on the user's call to **Japanese and Kikuyu first** — which is a sharper
+pair than it looks, since neither language's gap is the *reading*. Japanese
+already has furigana; what furigana cannot say is **pitch accent** (箸/橋/端 are
+all はし). Kikuyu's gap is **tone**. Both are melody, and both were measured
+before anything was built.
+
+**Gemini cannot do either, and the Japanese failure is the more instructive
+one.** Probed inside the `/api/explain` prompt shape rather than in isolation,
+three runs per term at the route's own temperature (0.1):
+
+| | correct | self-consistent |
+|---|---|---|
+| Japanese pitch accent, 27 terms with known NHK values | **6/27** | 18/27 |
+| Kikuyu tone, 19 terms | unverifiable | **2/19** |
+
+The Japanese number carries a warning worth more than the feature: **the model
+is not noisy, it is stably wrong.** Eighteen of 27 terms gave the same answer
+all three runs, and only six were right — it defaults to [1] 頭高 and, doing so,
+returns *one* accent for 雨 and 飴, *one* for 花 and 鼻, *one* for 髪·神·紙. It
+erases exactly the minimal pairs that justify a pitch badge. So
+**self-consistency is not evidence of correctness**, which is worth remembering
+against the Swedish and Kikuyu probes, where consistency was all there was to
+measure: inconsistency still proves unreliability, but consistency proves
+nothing.
+
+**Japanese ships from a dictionary, and the lookup lives on the route.**
+[kanjium](https://github.com/mifunetoshiro/kanjium)'s accent table scored
+**27/27** on the same ground truth — written before the file was fetched, so the
+two validate each other — with ~99% coverage on realistic lookups. It sits in
+`apps/web/src/data/` and is read by `/api/explain`, which keeps three promises
+at once: the backlog's rule that readings come from the same route furigana does
+(what changed is one field's *source*, not the number of round trips), 0 bytes
+added to the mobile bundle, and a value stored on the card so review still works
+offline. Provenance, licence and the refresh command are in that folder's
+README. **`outputFileTracingIncludes` in `next.config.ts` is load-bearing** —
+without it the deployed function ships without the file and the only symptom is
+every Japanese card quietly losing its badge, while local dev keeps working.
+
+**The card stores the position, not the mark.** `pitchAccent` is the アクセント核
+— 0 for 平板, otherwise the mora after which the pitch falls — and
+`markPitchAccent` renders は＼し from it. Storing the datum rather than the
+notation is what lets the badge change shape later without a backfill. It also
+rides *inside* the existing furigana badge rather than beside it: は＼し already
+contains the reading, so it costs no space, and a card with no accent falls back
+to bare furigana, which is what every Japanese card showed before.
+
+**Two things that are easy to get wrong and are covered by tests.** A mora is
+not a character — きょう is two morae, so counting characters puts 今日 [1]'s
+fall inside the ようおん. And **0 is a real accent**: 端 and 学校 are 平板, so any
+truthiness check turns "flat" into "unknown". A dictionary *miss* must stay
+`undefined`, which is why the two are kept apart at every hop.
+
+**Kikuyu gets a rule, not tone, and this is the finished state.** Same verdict
+as its noun class and for a sharper reason: the model was not merely wrong but
+not self-consistent, and several runs respelled ũ/ĩ as ú/í — corrupting the two
+vowels the registry entry exists to protect, in a language whose whole audio
+story is that Swahili is not an acceptable stand-in. There is also **no
+alternative source**: no tone-marked machine-readable Kikuyu dictionary exists;
+the Rice sketch grammar omits tone, and AfriVoices-KE is ASR audio, not lexical
+tone. So Kikuyu gets `pronunciationNote` — a static line about the seven-vowel
+system — which is true, useful, and costs no per-card data. **Do not re-probe
+tone against a general model**; the thing that would change this is a lexical
+source or a native reviewer, not a better prompt.
+
+**The note is the third mechanism, and Japanese uses it too.** A notation nobody
+explains is not an aid, so the same slot that teaches Kikuyu's vowels teaches
+the ＼ mark. It also carries the kanjium credit, which CC BY-SA 4.0 makes
+**required rather than decorative** — it renders on the Learn screen, not in a
+licence file nobody opens.
+
+**Not verified on a binary:** mobile shows the badge and the note through
+`@amgi/core`, checked by `tsc` and the shared tests only. And nothing exercised
+`/api/word-of-the-day` end to end — that route writes a real document for the
+day, so it was left to its tests rather than run against production.
+
 ### The typed card hides its action row while the keyboard is up (2026-08-29)
 
 A multi-line typed prompt was drawn across the input and the buttons under it:

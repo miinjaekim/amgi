@@ -32,6 +32,26 @@ the button **hides while offline**, so on a subway session the word should lose
 its 🔊 and the progress line should be the thing that says why. Reasoning in
 [status.md](status.md).
 
+**Pronunciation aid: transliteration + Japanese pitch accent** (2026-08-30).
+Same terms — JS only on mobile. The **transliteration half needs no backfill and
+shows on every existing card at once**, since it derives from the term; the
+pitch accent half only appears on cards saved after deploy. Worth checking on
+the binary: the badge is now two things joined by `·` (`す＼し · sushi`), so it
+is the longest that slot has ever held — watch it at the narrowest phone width,
+and on a long word like とうきょう. Reasoning in [status.md](status.md).
+
+**Japanese pitch accent + the pronunciation notes** (2026-08-30). Same terms —
+JS only on mobile, since the 2.7 MB accent table stays on the server and the
+phone only renders what the card already carries. **Web gets the badge at
+deploy; existing Japanese cards do not** — `pitchAccent` is filled when a card
+is saved, so a card saved before this shipped keeps showing bare furigana until
+it is looked up again. That is the designed fallback, not a bug, but it means
+the feature looks absent on an old deck. Worth checking on the binary: the
+mark is a full-width ＼ inside the badge (は＼し), so the badge should not
+wrap or clip at the narrowest phone width, and the Kikuyu/Japanese note under
+the Try: row should not push the search field off-screen. Reasoning in
+[status.md](status.md).
+
 - **Delete `packages/core/src/writing.ts`, `grammar.ts` and the two API routes
   that keep them alive.** **The gate is open**: it was "once no build predating
   the 2026-08-18 grammar removal is still in use", and 1.4.0 is that build. What
@@ -88,33 +108,77 @@ Queued 2026-08-25, in the user's order. Two of the three are done — Swahili,
 and audio on mobile review, which is built and waiting on a build rather than on
 work. See the Decisions entry in [status.md](status.md) for what each settled.
 
-- [ ] **Text-based pronunciation aid, per language.** **Plan before code** —
-      the seam is cheap and the per-language answer is the whole problem.
-      *The seam:* `getReading(card)` (`packages/core/src/types.ts:514`) already
-      folds Japanese `furigana` and Traditional Chinese `pinyin` into one badge
-      slot across the six Learn/review/detail render sites on web and mobile, so
-      a third reading is one field plus one line there — not a conditional per
-      site.
-      *Why it needs clarification:* "the reading" isn't the same job in each
-      language. Hangul is already phonetic, so romanising Korean teaches
-      nothing — the useful aid there is the **sound change** (좋아요 → [조아요]),
-      which is a different kind of data. French wants liaison/elision or IPA,
-      Swedish pitch accent, English IPA for a Korean native. **Kikuyu has no TTS
-      at all**, so a text aid is the only pronunciation support that language
-      can ever get — likely the highest-value one, and the hardest, since it's
-      tone. Swahili's stress is regular (penultimate), so it may want a rule
-      stated once rather than per-card data.
-      *So the call per language is which of three:* a stored `TermCore` field
-      like furigana/pinyin (costs a field + a prompt branch + a backfill story
-      for existing cards), a render-time transform off the term, or a static
-      rule shown once in the UI. Only the first is expensive.
-      *Two constraints on whatever fills it:* it comes from **`/api/explain`,
-      the same route furigana and pinyin come from** — never a parallel prompt.
-      And a wrong reading is permanent on the card and teaches wrong
-      pronunciation every review, the same failure mode that kept noun class off
-      Kikuyu, so accuracy has to be measured on real terms before it ships.
+- [ ] **Fix the Kikuyu respelling — it shipped wrong.** Merged known-faulty on
+      2026-08-30 rather than gated, so **users are being shown incorrect
+      pronunciations now**, which makes this the first thing to pick up here.
+      The six candidate causes are in the header comment on
+      `packages/core/src/transliterate.ts`, likeliest first: `c` is probably
+      /ʃ/ and not /tʃ/, which would make `rũciũ` `roo-shee-oo` rather than
+      `roo-chee-oo`. Also unresolved there: `th` /ð/ reads as *thin* not *the*,
+      `g` /ɣ/ and `b` /β/ are fricatives respelled as stops, `r` is a tap, the
+      `i`/`ĩ` and `u`/`ũ` collapse, and stress is unmarked.
+      **Check against a speaker or a descriptive grammar, not by reasoning** —
+      the standard the tone question was held to, and for the same reason:
+      nobody on this project can hear the mistake. Capturing which words the
+      reader saw as wrong is the cheapest first step.
+      *Note the precedent this sits against:* the Kikuyu registry entry argues
+      silence beats confidently wrong pronunciation, which is what kept the
+      Swahili voice and noun class off the language. Gating the respelling off
+      until it is right is a one-line change and stays on the table.
+
+- [ ] **Text-based pronunciation aid — the five languages still open.**
+      Japanese and Kikuyu are **done** (2026-08-30); the reasoning, and the two
+      traps worth reading before touching either, are in the Decisions entry in
+      [status.md](status.md). What that pass established is reusable, so this is
+      no longer an open design question — it is five applications of a settled
+      one.
+      **Blocked behind the Kikuyu fix above** — the transliteration table is
+      the mechanism four of these five would reuse, and extending a known-broken
+      one propagates the bug.
+      *The three mechanisms now exist in code:* a stored `TermCore` field filled
+      by `/api/explain` (Japanese `pitchAccent`, and pinyin before it), a static
+      rule via `pronunciationNote` (Kikuyu), and a render-time transform — which
+      is the only one with **no implementation yet**.
+      *What the measurement pass already answered for the rest,* probed three
+      runs per term at the route's own temperature:
+      - **Korean** — the aid is sound change (좋아요 → [조아요]), and it should be
+        a **render-time transform, not a model field**. Head to head on 18
+        terms: rules 17/18, Gemini 14/18, and the failure sets barely overlap —
+        the model misses regular phonology by returning "no change" (신라, 급행,
+        한국말), rules miss only what needs a morpheme boundary (값어치, 솜이불).
+        A working 표준 발음법 prototype scored 37/40 — it is in
+        `docs/pronunciation-research.md` with the numbers behind it, and would
+        need rewriting against `packages/core` before shipping.
+      - **Spanish and Swahili** — stress, derivable from spelling alone. A
+        prototype scored 16/16 and 9/9 first try (also in
+        `docs/pronunciation-research.md`). Cheapest of the five. Caveat: those
+        expectation tables were author-written, so they test the implementation
+        more than they test the assumptions — unlike Korean, which is checkable
+        against 표준국어대사전.
+      - **French and English** — IPA, and the model is *accurate* here (~16/17
+        and ~15/15 on content). The defect is **formatting**: half the runs
+        wrapped in `/…/` despite the prompt forbidding it, and English drifted
+        GA↔RP. So this is a stored field plus a normalizer that strips
+        delimiters and pins the variety, not a new prompt idea.
+      - **Swedish** — pitch accent was unstable on 10 of 16, and `sked` came
+        back `ˈskeːd` with a literal /sk/, which is the beginner error the aid
+        exists to prevent. **Do not ship it off the model.** Japanese is the
+        precedent for what would work: a lexical source. Not yet looked for.
+      *The one rule that outlived the pass:* readings come from **`/api/explain`,
+      the same route furigana comes from** — but "from the route" and "from the
+      model" are not the same thing, which is what the Japanese lookup proved.
 
 ## Medium
+
+- [ ] **Backfill `pitchAccent` onto existing Japanese cards, or decide not to.**
+      New cards get it on save; the ~existing `cards_japanese` deck keeps
+      showing bare furigana until each card is looked up again. Unusually cheap
+      to fix — the lookup is a local table, so a backfill is **zero model calls
+      and zero cost**, unlike every other enrichment this app has considered.
+      Decide first whether it is worth touching production data at all: the
+      fallback is silent and correct, and the deck is small. If yes it is a
+      one-off script over the collection, matching on `(japanese, furigana)`
+      and writing only where the table has an unambiguous answer.
 
 - [ ] **Word of the day returns synonym lists where cards refuse them.** Found
       while verifying Kikuyu, then cross-checked — it is not language-specific:

@@ -894,7 +894,7 @@ export default function ReviewPage() {
 
                           {(partOfSpeechLabel(nativeLanguage, currentReview.card) ||
                             currentReview.card.gender ||
-                            getReading(currentReview.card)) && (
+                            getReading(currentReview.card, studyLanguage, nativeLanguage)) && (
                             <div className="mb-3 flex gap-2 flex-wrap">
                               {partOfSpeechLabel(nativeLanguage, currentReview.card) && (
                                 <span className="px-2 py-0.5 text-xs rounded-full border border-[var(--color-muted)] text-[var(--color-muted)]">
@@ -906,9 +906,9 @@ export default function ReviewPage() {
                                   {currentReview.card.gender}
                                 </span>
                               )}
-                              {getReading(currentReview.card) && (
+                              {getReading(currentReview.card, studyLanguage, nativeLanguage) && (
                                 <span className="px-2 py-0.5 text-xs rounded-full border border-[var(--color-muted)] text-[var(--color-muted)]">
-                                  {getReading(currentReview.card)}
+                                  {getReading(currentReview.card, studyLanguage, nativeLanguage)}
                                 </span>
                               )}
                             </div>
@@ -970,7 +970,7 @@ export default function ReviewPage() {
 
                           {(partOfSpeechLabel(nativeLanguage, currentReview.card) ||
                             currentReview.card.gender ||
-                            getReading(currentReview.card)) && (
+                            getReading(currentReview.card, studyLanguage, nativeLanguage)) && (
                             <div className="mb-3 flex gap-2 flex-wrap">
                               {partOfSpeechLabel(nativeLanguage, currentReview.card) && (
                                 <span className="px-2 py-0.5 text-xs rounded-full border border-[var(--color-muted)] text-[var(--color-muted)]">
@@ -982,9 +982,9 @@ export default function ReviewPage() {
                                   {currentReview.card.gender}
                                 </span>
                               )}
-                              {getReading(currentReview.card) && (
+                              {getReading(currentReview.card, studyLanguage, nativeLanguage) && (
                                 <span className="px-2 py-0.5 text-xs rounded-full border border-[var(--color-muted)] text-[var(--color-muted)]">
-                                  {getReading(currentReview.card)}
+                                  {getReading(currentReview.card, studyLanguage, nativeLanguage)}
                                 </span>
                               )}
                             </div>

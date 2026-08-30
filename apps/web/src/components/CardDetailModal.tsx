@@ -177,9 +177,9 @@ export default function CardDetailModal({
                   {saved.gender}
                 </span>
               )}
-              {saved && getReading(saved) && (
+              {saved && getReading(saved, lang, nativeLanguage) && (
                 <span className="px-2 py-0.5 text-xs rounded-full border" style={{ borderColor: 'var(--color-muted)', color: 'var(--color-muted)' }}>
-                  {getReading(saved)}
+                  {getReading(saved, lang, nativeLanguage)}
                 </span>
               )}
             </div>

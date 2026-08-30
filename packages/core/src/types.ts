@@ -1,3 +1,6 @@
+import { isAllKana, markPitchAccent } from './pitchAccent';
+import { kanaToHangul, kanaToRomaji, kikuyuToEnglish, kikuyuToHangul } from './transliterate';
+
 /**
  * Traditional and Simplified Chinese are separate study languages rather than
  * one language with a script preference: the decks stay independent, so
@@ -401,6 +404,16 @@ export interface TermCore {
   gender?: string; // grammatical gender: Swedish 'en'/'ett', French 'le'/'la'
   furigana?: string; // Japanese kana reading, present when the term contains kanji
   pinyin?: string; // Traditional Chinese reading, tone-marked
+  /**
+   * Japanese pitch accent as an アクセント核 position — `0` for 平板, otherwise
+   * the mora after which the pitch falls. Unlike every other field on this
+   * type it is **not** written by the model: `/api/explain` looks it up in a
+   * dictionary, because Gemini scored 6/27 against the dictionary's 27/27 and
+   * failed by flattening 雨/飴 and 花/鼻 into one accent. See
+   * `apps/web/src/data/README.md`. Absent on cards saved before this shipped,
+   * and on any word the dictionary does not carry.
+   */
+  pitchAccent?: number;
   briefDefinition?: string;
 }
 
@@ -546,14 +559,52 @@ export function getExampleStudyLangText(ex: ExamplePair, studyLanguage?: StudyLa
 }
 
 /**
- * The pronunciation reading to show as a badge beside a term, if the study
- * language has one — Japanese furigana, Traditional Chinese pinyin. A card
- * only ever carries the field belonging to its own language, so the next
- * reading-bearing language is one entry here rather than another conditional
- * at every render site.
+ * The pronunciation aid shown as a badge beside a term.
+ *
+ * Two things share one badge, in the order a learner needs them: the **reading**
+ * (Japanese furigana, with its pitch drop marked; Traditional Chinese pinyin)
+ * and then the **transliteration** — the term respelled in the script the
+ * reader already uses. `すし · sushi` for an English native, `すし · 스시` for a
+ * Korean one, off the same card.
+ *
+ * The transliteration is why this now takes `nativeLanguage`. Every other field
+ * on a card is a fact about the word; this one is a fact about who is looking
+ * at it, so it cannot be stored and must be derived per reader. It is also why
+ * Kikuyu gets a badge at all, having neither furigana nor pinyin: for Kikuyu
+ * the respelling *is* the whole aid, since no TTS voice exists for the language
+ * and its spelling hides real sounds (`c` is /ʃ~tʃ/, never /k/).
+ *
+ * Deriving rather than storing means it needs no backfill and works on every
+ * card already saved — the opposite trade from `pitchAccent`, which has to be
+ * looked up because accent cannot be read off the spelling.
+ *
+ * A card only ever carries the fields belonging to its own language, so the
+ * next reading-bearing language is one branch here rather than a conditional at
+ * each of the six render sites.
  */
-export function getReading(card: Pick<TermCore, 'furigana' | 'pinyin'>): string | undefined {
-  return card.furigana || card.pinyin || undefined;
+export function getReading(
+  card: Pick<TermCore, 'furigana' | 'pinyin' | 'pitchAccent' | 'japanese' | 'kikuyu'>,
+  studyLanguage?: StudyLanguage,
+  nativeLanguage?: string | null
+): string | undefined {
+  const isKorean = nativeLanguage === 'Korean';
+
+  const kana = card.furigana || (card.japanese && isAllKana(card.japanese) ? card.japanese : '');
+  if (kana) {
+    const reading = markPitchAccent(kana, card.pitchAccent);
+    const transliteration = isKorean ? kanaToHangul(kana) : kanaToRomaji(kana);
+    // The transliteration is dropped when it would only repeat the reading,
+    // which is what a Korean native sees on a word already written in kana.
+    return transliteration && transliteration !== reading
+      ? `${reading} · ${transliteration}`
+      : reading;
+  }
+
+  if (studyLanguage === 'Kikuyu' && card.kikuyu) {
+    return (isKorean ? kikuyuToHangul : kikuyuToEnglish)(card.kikuyu) || undefined;
+  }
+
+  return card.pinyin || undefined;
 }
 
 /** Splits an example pair into its study-language and translation sides. */
@@ -621,6 +672,7 @@ export interface WordOfTheDay {
   formality?: string; // Korean
   gender?: string; // Swedish/French
   furigana?: string; // Japanese
+  pitchAccent?: number; // Japanese, looked up rather than generated
   pinyin?: string; // Traditional Chinese
   /**
    * The explanation to show when the card is tapped, generated and stored
@@ -657,6 +709,7 @@ export function wordOfTheDayCore(
     formality: wotd.formality,
     gender: wotd.gender,
     furigana: wotd.furigana,
+    pitchAccent: wotd.pitchAccent,
     pinyin: wotd.pinyin,
   };
   // A field the model left out must be dropped, not carried as undefined:

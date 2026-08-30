@@ -67,6 +67,10 @@ docs/*
 # ...and the grammar research, which the grammar item points at and which the
 # design is now derived from rather than merely informed by.
 !docs/grammar-research.md
+# ...and the pronunciation measurement pass, which the backlog item points at
+# for the five languages still open — it carries the two rule engines that
+# scored well enough to build on, which are expensive to re-derive.
+!docs/pronunciation-research.md
 
 # pronunciation audio test output (throwaway)
 /audio-test/
