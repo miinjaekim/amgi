@@ -89,8 +89,8 @@ describe('getReading', () => {
 
   it('gives Kikuyu a badge it never had, which is the whole aid for that deck', () => {
     // No furigana, no pinyin, and no TTS voice exists for the language.
-    expect(getReading({ kikuyu: 'rũciũ' }, 'Kikuyu', 'English')).toBe('roo-chee-oo');
-    expect(getReading({ kikuyu: 'rũciũ' }, 'Kikuyu', 'Korean')).toBe('루치우');
+    expect(getReading({ kikuyu: 'rũciũ' }, 'Kikuyu', 'English')).toBe('ro-shee-o');
+    expect(getReading({ kikuyu: 'rũciũ' }, 'Kikuyu', 'Korean')).toBe('로시오');
   });
 
   it('leaves pinyin alone', () => {
@@ -234,26 +234,55 @@ describe('kanaToHangul', () => {
 });
 
 describe('Kikuyu respelling', () => {
-  it('says the sounds the spelling hides', () => {
-    // c is /ʃ~tʃ/ and never /k/ — the single most misleading letter for an
-    // English reader, and the reason this exists.
-    expect(kikuyuToEnglish('rũciũ')).toBe('roo-chee-oo');
-    expect(kikuyuToEnglish('gĩkũyũ')).toBe('gee-koo-yoo');
-    expect(kikuyuToEnglish('ũhoro')).toBe('oo-ho-ro');
+  it('respells cũcũ as sho-sho — the word a speaker caught both errors with', () => {
+    // Reported wrong on 2026-08-30: it came out `choo-choo`, two mistakes in
+    // one four-letter word. `c` is [ʃ] and not [tʃ], and `ũ` is the close-mid
+    // [o] rather than a lax [ʊ] — *shosho*, not *shoosho*. Kept as the
+    // regression guard because no other single term catches both.
+    expect(kikuyuToEnglish('cũcũ')).toBe('sho-sho');
+    expect(kikuyuToHangul('cũcũ')).toBe('쇼쇼');
+  });
+
+  it('reads c as sh, never ch and never k', () => {
+    expect(kikuyuToEnglish('rũciũ')).toBe('ro-shee-o');
+  });
+
+  it('respells gĩkũyũ as ge-ko-yo — the word that fixed ĩ', () => {
+    // The correction that mattered was about spelling, not sound: ĩ had already
+    // been identified as [e] from published sources and was still written `ay`,
+    // which is the English diphthong /eɪ/ rather than a pure vowel.
+    expect(kikuyuToEnglish('gĩkũyũ')).toBe('ge-ko-yo');
+    expect(kikuyuToHangul('gĩkũyũ')).toBe('게코요');
+  });
+
+  it('keeps each tilde vowel apart from its plain counterpart', () => {
+    // ĩ [e] against i [i], and ũ [o] against u [u] — the contrasts a learner
+    // needs, and the ones the first version lost by mapping both a step high.
+    expect(kikuyuToEnglish('kĩrĩma')).toBe('ke-re-ma');
+    expect(kikuyuToEnglish('irio')).toBe('ee-ree-o');
+    expect(kikuyuToEnglish('ũhoro')).toBe('o-ho-ro');
+    expect(kikuyuToEnglish('mũgũnda')).toBe('mo-go-nda');
+  });
+
+  it('merges only what English respelling genuinely cannot hold apart', () => {
+    // ĩ/e both on `e` and ũ/o both on `o` — the [e]/[ɛ] and [o]/[ɔ] pairs.
+    // Symmetric front and back, which is the sign it is the orthography's
+    // limit rather than this table's, unlike the collapse it replaced.
+    expect(kikuyuToEnglish('ĩ')).toBe(kikuyuToEnglish('e'));
+    expect(kikuyuToEnglish('ũ')).toBe(kikuyuToEnglish('o'));
   });
 
   it('treats a prenasalized stop as one onset, so the hyphens mark real syllables', () => {
     expect(splitKikuyuSyllables('mũgũnda')).toHaveLength(3);
-    expect(kikuyuToEnglish('mũgũnda')).toBe('moo-goo-nda');
   });
 
   it('keeps the y glide in Hangul, which a bare consonant mapping drops', () => {
-    expect(kikuyuToHangul('gĩkũyũ')).toBe('기쿠유'); // not 기쿠우
+    expect(kikuyuToHangul('gĩkũyũ')).toBe('게코요'); // not 게코오
   });
 
   it('hangs a prenasalized nasal on the previous syllable', () => {
-    expect(kikuyuToHangul('mũgũnda')).toBe('무군다');
-    expect(kikuyuToHangul('nyũmba')).toBe('늄바');
+    expect(kikuyuToHangul('mũgũnda')).toBe('모곤다');
+    expect(kikuyuToHangul('nyũmba')).toBe('뇸바');
   });
 
   it('opens a 으 for a word-initial prenasal rather than inventing an onset', () => {
