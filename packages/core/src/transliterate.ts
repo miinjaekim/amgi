@@ -204,46 +204,34 @@ export function kanaToHangul(kana: string): string {
 }
 
 /**
- * ⚠️ **KNOWN FAULTY — reported wrong on real terms, 2026-08-30, not yet fixed.**
- * The mapping below produces respellings a reader checked against actual Kikuyu
- * and found incorrect in places. The specific words were not captured; what is
- * recorded here are the candidate causes to check first, in rough order of how
- * likely each is to be the culprit. Do not treat any of them as confirmed, and
- * **do not extend this table to another language until it is settled** — the
- * shape of the bug is the shape the next one would inherit.
- *
- * 1. **`c` is probably /ʃ/, not /tʃ/.** Most descriptions of Kikuyu give ⟨c⟩ as
- *    a plain postalveolar fricative, so `rũciũ` would be `roo-shee-oo` rather
- *    than the `roo-chee-oo` produced here. This is the single most-used letter
- *    in the table and the likeliest error.
- * 2. **`th` is /ð/ and the respelling does not say so.** Written `th`, an
- *    English reader will read it as in *thin*, where the word wants *the*.
- * 3. **`g` is /ɣ/ and `b` is /β/** — fricatives, not the stops the letters
- *    suggest. Respelling them `g` and `b` teaches a hard stop.
- * 4. **`r` is a tap /ɾ/**, nearer an English *d* between vowels than an *r*.
- * 5. **The vowel collapse below** — `i`/`ĩ` both to `ee`, `u`/`ũ` both to `oo`.
- *    Known and deliberate, but it is still a place the output says something
- *    the language does not.
- * 6. **Stress is unmarked.** The hyphens show syllables but not which one
- *    carries the beat.
- *
- * Whatever fixes this should be checked against a Kikuyu speaker or a
- * descriptive grammar rather than reasoned out — the same standard the tone
- * question was held to, and for the same reason: nobody working on this can
- * hear the mistake.
- *
  * Kikuyu spelling is phonemic but not transparent to an outside reader, which
- * is the whole reason this exists: `c` is not /k/, `th` is voiced, and `ĩ`/`ũ`
- * are their own vowels rather than decorated `i`/`u`.
+ * is the whole reason this exists.
  *
- * **A known loss, recorded so it is a choice rather than an oversight:** the
- * respelling maps both `i` and `ĩ` to `ee`, and both `u` and `ũ` to `oo`,
- * collapsing the seven-vowel distinction that the Kikuyu registry entry, its
- * prompt branch and its `pronunciationNote` all exist to protect. English has
- * no unambiguous respelling for /ɪ/ and /ʊ/ that a reader will not misread, so
- * the alternative is a notation to be taught — which is what this feature is
- * for avoiding. The spelling beside it still carries the distinction; this only
- * says how to say it aloud.
+ * **The two corrections that made it right** — it shipped wrong on 2026-08-30
+ * and was fixed the next day off one reported word, `cũcũ` "grandmother", which
+ * a reader said should sound like *shosho* and came out `choo-choo`. That one
+ * word falsified two separate assumptions:
+ *
+ * 1. **`c` is [ʃ], not [tʃ]** — `sh`, never `ch` and never `k`.
+ * 2. **`ĩ` and `ũ` are the close-mid vowels [e] and [o]**, not lax versions of
+ *    `i` and `u`. This was the worse error: it put both tilde vowels a full
+ *    step too high, so every `ũ` in the language came out `oo` when it wanted
+ *    `o`. Kikuyu's seven vowels run i [i], ĩ [e], e [ɛ], a [a], o [ɔ], ũ [o],
+ *    u [u] — the tilde marks height, not laxness.
+ *
+ * Fixing (2) also **removed the vowel collapse** the first version had to
+ * apologise for: `ĩ` (`ay`) and `i` (`ee`) are now distinct, as are `ũ` (`o`)
+ * and `u` (`oo`). The collapse was never a limit of English, it was a symptom
+ * of the wrong table.
+ *
+ * **What is still approximate**, and would need a speaker to settle rather than
+ * more reasoning:
+ * - `th` is [ð], but written `th` an English reader may say *thin* for *the*.
+ * - `g` is [ɣ] and `b` is [β] — fricatives respelled as the stops `g` and `b`,
+ *   because English offers nothing closer that a reader will not misread.
+ * - `o` [ɔ] and `ũ` [o] both respell as `o`. Unlike the old collapse this one
+ *   is a real limit of English orthography, not a mistake.
+ * - Stress is unmarked; the hyphens show syllables only.
  */
 const KIKUYU_ONSETS = [
   "ng'", 'mb', 'nd', 'ng', 'nj', 'ny', 'th', 'c', 'g', 'k', 'm', 'n',
@@ -251,11 +239,12 @@ const KIKUYU_ONSETS = [
 ];
 const KIKUYU_CONSONANT_SOUND: Record<string, string> = {
   "ng'": 'ng', mb: 'mb', nd: 'nd', ng: 'ng', nj: 'nj', ny: 'ny', th: 'th',
-  c: 'ch', g: 'g', k: 'k', m: 'm', n: 'n', r: 'r', t: 't', w: 'w', y: 'y',
+  c: 'sh', g: 'g', k: 'k', m: 'm', n: 'n', r: 'r', t: 't', w: 'w', y: 'y',
   h: 'h', b: 'b', d: 'd', j: 'j',
 };
+// i [i], ĩ [e], e [ɛ], a [a], o [ɔ], ũ [o], u [u]. The tilde marks height.
 const KIKUYU_VOWEL_SOUND: Record<string, string> = {
-  a: 'a', e: 'e', i: 'ee', ĩ: 'ee', o: 'o', u: 'oo', ũ: 'oo',
+  a: 'a', e: 'eh', i: 'ee', ĩ: 'ay', o: 'o', u: 'oo', ũ: 'o',
 };
 type KikuyuSyllable = { onset: string; vowel: string };
 
@@ -310,16 +299,20 @@ const KIKUYU_ONSET_HANGUL: Record<string, { nasal?: string; jamo: string; glide?
   nj: { nasal: 'ㄴ', jamo: 'ㅈ' },
   ny: { jamo: 'ㄴ', glide: 'y' },
   th: { jamo: 'ㄷ' },
-  c: { jamo: 'ㅊ' }, g: { jamo: 'ㄱ' }, k: { jamo: 'ㅋ' }, m: { jamo: 'ㅁ' },
+  // [ʃ] takes the y-series in Korean, so cũcũ is 쇼쇼 rather than 추추.
+  c: { jamo: 'ㅅ', glide: 'y' }, g: { jamo: 'ㄱ' }, k: { jamo: 'ㅋ' }, m: { jamo: 'ㅁ' },
   n: { jamo: 'ㄴ' }, r: { jamo: 'ㄹ' }, t: { jamo: 'ㅌ' }, h: { jamo: 'ㅎ' },
   b: { jamo: 'ㅂ' }, d: { jamo: 'ㄷ' }, j: { jamo: 'ㅈ' },
   w: { jamo: 'ㅇ', glide: 'w' }, y: { jamo: 'ㅇ', glide: 'y' },
 };
 
+// Korean has no [e]/[ɛ] or [o]/[ɔ] contrast to spend, so ĩ/e both land on 에 and
+// ũ/o both on 오. That merge is Korean's — unlike the English one it replaced,
+// which was the table being wrong.
 const KIKUYU_NUCLEUS: Record<'plain' | 'y' | 'w', Record<string, string>> = {
-  plain: { a: '아', e: '에', i: '이', 'ĩ': '이', o: '오', u: '우', 'ũ': '우' },
-  y:     { a: '야', e: '예', i: '이', 'ĩ': '이', o: '요', u: '유', 'ũ': '유' },
-  w:     { a: '와', e: '웨', i: '위', 'ĩ': '위', o: '워', u: '우', 'ũ': '우' },
+  plain: { a: '아', e: '에', i: '이', 'ĩ': '에', o: '오', u: '우', 'ũ': '오' },
+  y:     { a: '야', e: '예', i: '이', 'ĩ': '예', o: '요', u: '유', 'ũ': '요' },
+  w:     { a: '와', e: '웨', i: '위', 'ĩ': '웨', o: '워', u: '우', 'ũ': '워' },
 };
 
 const CHO = ['ㄱ','ㄲ','ㄴ','ㄷ','ㄸ','ㄹ','ㅁ','ㅂ','ㅃ','ㅅ','ㅆ','ㅇ','ㅈ','ㅉ','ㅊ','ㅋ','ㅌ','ㅍ','ㅎ'];

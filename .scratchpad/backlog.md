@@ -108,23 +108,20 @@ Queued 2026-08-25, in the user's order. Two of the three are done — Swahili,
 and audio on mobile review, which is built and waiting on a build rather than on
 work. See the Decisions entry in [status.md](status.md) for what each settled.
 
-- [ ] **Fix the Kikuyu respelling — it shipped wrong.** Merged known-faulty on
-      2026-08-30 rather than gated, so **users are being shown incorrect
-      pronunciations now**, which makes this the first thing to pick up here.
-      The six candidate causes are in the header comment on
-      `packages/core/src/transliterate.ts`, likeliest first: `c` is probably
-      /ʃ/ and not /tʃ/, which would make `rũciũ` `roo-shee-oo` rather than
-      `roo-chee-oo`. Also unresolved there: `th` /ð/ reads as *thin* not *the*,
-      `g` /ɣ/ and `b` /β/ are fricatives respelled as stops, `r` is a tap, the
-      `i`/`ĩ` and `u`/`ũ` collapse, and stress is unmarked.
-      **Check against a speaker or a descriptive grammar, not by reasoning** —
-      the standard the tone question was held to, and for the same reason:
-      nobody on this project can hear the mistake. Capturing which words the
-      reader saw as wrong is the cheapest first step.
-      *Note the precedent this sits against:* the Kikuyu registry entry argues
-      silence beats confidently wrong pronunciation, which is what kept the
-      Swahili voice and noun class off the language. Gating the respelling off
-      until it is right is a one-line change and stays on the table.
+- [ ] **Check the corrected Kikuyu respelling against a speaker.** The two
+      errors a reader caught via `cũcũ` → `choo-choo` are fixed (`c` is [ʃ];
+      `ĩ`/`ũ` are the close-mid [e]/[o], so the tilde marks height not laxness),
+      and `cũcũ` → `sho-sho` is a regression test. **What has not happened is a
+      check across a range of words by someone who can hear it** — the fix was
+      confirmed against one reported term plus a published phonology table.
+      Four things stay approximate, listed in `transliterate.ts`: `th` [ð]
+      reads as *thin* not *the*, `g` [ɣ] and `b` [β] are fricatives respelled
+      as stops, `o` [ɔ] and `ũ` [o] both respell `o`, and stress is unmarked.
+      *Worth carrying into the five below:* the first version's own header
+      ranked six suspicions and put the vowel error fifth, filed as an accepted
+      loss rather than a bug. The self-audit reproduced its own blind spot; one
+      word from a speaker did what the ranked list could not. **Prefer a native
+      check before merge over a longer list of suspicions.**
 
 - [ ] **Text-based pronunciation aid — the five languages still open.**
       Japanese and Kikuyu are **done** (2026-08-30); the reasoning, and the two
@@ -132,9 +129,10 @@ work. See the Decisions entry in [status.md](status.md) for what each settled.
       [status.md](status.md). What that pass established is reusable, so this is
       no longer an open design question — it is five applications of a settled
       one.
-      **Blocked behind the Kikuyu fix above** — the transliteration table is
-      the mechanism four of these five would reuse, and extending a known-broken
-      one propagates the bug.
+      **The Kikuyu bug that blocked these is fixed**, so the transliteration
+      mechanism four of them would reuse is sound. Read the item above first
+      anyway: what it says about *how* the bug was found should change how
+      these ship.
       *The three mechanisms now exist in code:* a stored `TermCore` field filled
       by `/api/explain` (Japanese `pitchAccent`, and pinyin before it), a static
       rule via `pronunciationNote` (Kikuyu), and a render-time transform — which

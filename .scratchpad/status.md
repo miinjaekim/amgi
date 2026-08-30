@@ -206,26 +206,45 @@ for /ɪ/ and /ʊ/ that a reader will not misread, and the alternative is a
 notation to be taught, which is what this feature exists to avoid. **The note is
 now the only place that distinction is stated**, so it must not be trimmed.
 
-**The Kikuyu respelling shipped known-faulty, on the user's call.** Checked
-against real Kikuyu after the build, some outputs are wrong; the specific words
-were not captured. Japanese was accepted as-is. **This is a deliberate exception
-to the rule that language's own registry entry states** — "silence beats
-confidently wrong pronunciation on a learner's card", the argument that kept
-both the Swahili voice and noun class off Kikuyu — taken because the aid is
-useful in the main and the fault is narrow. It is not a precedent: the next
-language's transliteration should clear the bar before it ships, not after.
-`transliterate.ts` carries the six candidate causes in priority order, the
-likeliest being that `c` is /ʃ/ rather than /tʃ/, which would make `rũciũ`
-`roo-shee-oo`. **Do not extend the table to another language until it is
-settled** — the bug's shape is the shape the next one inherits. Whatever fixes
-it has to be checked against a speaker or a descriptive grammar rather than
-reasoned out, the standard the tone question was held to and for the same
-reason: nobody working on this can hear the mistake.
+**The Kikuyu respelling shipped wrong and was fixed the next day, off one
+word.** It merged known-faulty on the user's call; a reader then reported that
+`cũcũ` "grandmother" came out `choo-choo` where it should sound like *shosho*.
+That single four-letter word falsified two independent assumptions, and the
+second was the expensive one:
+
+1. **`c` is [ʃ], not [tʃ]** — the letter this table uses most.
+2. **`ĩ` and `ũ` are the close-mid vowels [e] and [o]**, not lax `i` and `u`.
+   The tilde in Kikuyu orthography marks **height**, not laxness, so every
+   tilde vowel in the language was being respelled a full step too high — every
+   `ũ` came out `oo` when it wanted `o`. Confirmed against the phonology table
+   in the Wikipedia Kikuyu article after the report, not reasoned from the one
+   word: i [i], ĩ [e], e [ɛ], a [a], o [ɔ], ũ [o], u [u].
+
+**The lesson is about the shape of the evidence, not the vowels.** The first
+version's own header comment listed six candidate causes and ranked `c` first —
+and `c` was indeed wrong, so the ranking looked vindicated. But the vowel error
+was the larger one and sat at number five, filed as a known-and-accepted loss
+rather than a bug. A self-audit reproduced its own blind spot; **one reported
+word from someone who can hear the language did what the ranked list could
+not.** For the five languages still open, that argues for a native check before
+merge over a longer list of suspicions.
+
+Fixing (2) also **removed the vowel collapse the first version apologised
+for**: `ĩ`/`i` and `ũ`/`u` are now distinct in the respelling. The collapse was
+never a limit of English — it was the table being wrong, and the apology
+described the symptom as though it were the constraint.
+
+**What is still approximate** and would need a speaker rather than more
+reasoning: `th` [ð] written `th` invites *thin* for *the*; `g` [ɣ] and `b` [β]
+are fricatives respelled as stops; `o` [ɔ] and `ũ` [o] both respell `o`, which
+*is* a real limit of English; and stress is unmarked.
 
 **Verified on both platforms** (2026-08-30), which closes the "unverified on a
 device" caveat for this feature and not for the ones around it. **Still
 unverified:** the Korean copy in both notes is author-written rather than
-native-checked.
+native-checked, and the corrected Kikuyu table has been checked against one
+reported word plus a published phonology — not against a speaker across a range
+of terms.
 
 ### The pronunciation aid: Japanese from a dictionary, Kikuyu from neither (2026-08-30)
 
