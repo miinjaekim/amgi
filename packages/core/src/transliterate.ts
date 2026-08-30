@@ -204,9 +204,37 @@ export function kanaToHangul(kana: string): string {
 }
 
 /**
+ * ⚠️ **KNOWN FAULTY — reported wrong on real terms, 2026-08-30, not yet fixed.**
+ * The mapping below produces respellings a reader checked against actual Kikuyu
+ * and found incorrect in places. The specific words were not captured; what is
+ * recorded here are the candidate causes to check first, in rough order of how
+ * likely each is to be the culprit. Do not treat any of them as confirmed, and
+ * **do not extend this table to another language until it is settled** — the
+ * shape of the bug is the shape the next one would inherit.
+ *
+ * 1. **`c` is probably /ʃ/, not /tʃ/.** Most descriptions of Kikuyu give ⟨c⟩ as
+ *    a plain postalveolar fricative, so `rũciũ` would be `roo-shee-oo` rather
+ *    than the `roo-chee-oo` produced here. This is the single most-used letter
+ *    in the table and the likeliest error.
+ * 2. **`th` is /ð/ and the respelling does not say so.** Written `th`, an
+ *    English reader will read it as in *thin*, where the word wants *the*.
+ * 3. **`g` is /ɣ/ and `b` is /β/** — fricatives, not the stops the letters
+ *    suggest. Respelling them `g` and `b` teaches a hard stop.
+ * 4. **`r` is a tap /ɾ/**, nearer an English *d* between vowels than an *r*.
+ * 5. **The vowel collapse below** — `i`/`ĩ` both to `ee`, `u`/`ũ` both to `oo`.
+ *    Known and deliberate, but it is still a place the output says something
+ *    the language does not.
+ * 6. **Stress is unmarked.** The hyphens show syllables but not which one
+ *    carries the beat.
+ *
+ * Whatever fixes this should be checked against a Kikuyu speaker or a
+ * descriptive grammar rather than reasoned out — the same standard the tone
+ * question was held to, and for the same reason: nobody working on this can
+ * hear the mistake.
+ *
  * Kikuyu spelling is phonemic but not transparent to an outside reader, which
- * is the whole reason this exists: `c` is /ʃ~tʃ/ and never /k/, `th` is voiced,
- * and `ĩ`/`ũ` are their own vowels rather than decorated `i`/`u`.
+ * is the whole reason this exists: `c` is not /k/, `th` is voiced, and `ĩ`/`ũ`
+ * are their own vowels rather than decorated `i`/`u`.
  *
  * **A known loss, recorded so it is a choice rather than an oversight:** the
  * respelling maps both `i` and `ĩ` to `ee`, and both `u` and `ũ` to `oo`,

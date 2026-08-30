@@ -206,8 +206,26 @@ for /ɪ/ and /ʊ/ that a reader will not misread, and the alternative is a
 notation to be taught, which is what this feature exists to avoid. **The note is
 now the only place that distinction is stated**, so it must not be trimmed.
 
-**Unverified:** all of it on a device, and the Korean copy in both notes is
-author-written rather than native-checked.
+**The Kikuyu respelling shipped known-faulty, on the user's call.** Checked
+against real Kikuyu after the build, some outputs are wrong; the specific words
+were not captured. Japanese was accepted as-is. **This is a deliberate exception
+to the rule that language's own registry entry states** — "silence beats
+confidently wrong pronunciation on a learner's card", the argument that kept
+both the Swahili voice and noun class off Kikuyu — taken because the aid is
+useful in the main and the fault is narrow. It is not a precedent: the next
+language's transliteration should clear the bar before it ships, not after.
+`transliterate.ts` carries the six candidate causes in priority order, the
+likeliest being that `c` is /ʃ/ rather than /tʃ/, which would make `rũciũ`
+`roo-shee-oo`. **Do not extend the table to another language until it is
+settled** — the bug's shape is the shape the next one inherits. Whatever fixes
+it has to be checked against a speaker or a descriptive grammar rather than
+reasoned out, the standard the tone question was held to and for the same
+reason: nobody working on this can hear the mistake.
+
+**Verified on both platforms** (2026-08-30), which closes the "unverified on a
+device" caveat for this feature and not for the ones around it. **Still
+unverified:** the Korean copy in both notes is author-written rather than
+native-checked.
 
 ### The pronunciation aid: Japanese from a dictionary, Kikuyu from neither (2026-08-30)
 

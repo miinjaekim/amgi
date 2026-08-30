@@ -108,12 +108,33 @@ Queued 2026-08-25, in the user's order. Two of the three are done — Swahili,
 and audio on mobile review, which is built and waiting on a build rather than on
 work. See the Decisions entry in [status.md](status.md) for what each settled.
 
+- [ ] **Fix the Kikuyu respelling — it shipped wrong.** Merged known-faulty on
+      2026-08-30 rather than gated, so **users are being shown incorrect
+      pronunciations now**, which makes this the first thing to pick up here.
+      The six candidate causes are in the header comment on
+      `packages/core/src/transliterate.ts`, likeliest first: `c` is probably
+      /ʃ/ and not /tʃ/, which would make `rũciũ` `roo-shee-oo` rather than
+      `roo-chee-oo`. Also unresolved there: `th` /ð/ reads as *thin* not *the*,
+      `g` /ɣ/ and `b` /β/ are fricatives respelled as stops, `r` is a tap, the
+      `i`/`ĩ` and `u`/`ũ` collapse, and stress is unmarked.
+      **Check against a speaker or a descriptive grammar, not by reasoning** —
+      the standard the tone question was held to, and for the same reason:
+      nobody on this project can hear the mistake. Capturing which words the
+      reader saw as wrong is the cheapest first step.
+      *Note the precedent this sits against:* the Kikuyu registry entry argues
+      silence beats confidently wrong pronunciation, which is what kept the
+      Swahili voice and noun class off the language. Gating the respelling off
+      until it is right is a one-line change and stays on the table.
+
 - [ ] **Text-based pronunciation aid — the five languages still open.**
       Japanese and Kikuyu are **done** (2026-08-30); the reasoning, and the two
       traps worth reading before touching either, are in the Decisions entry in
       [status.md](status.md). What that pass established is reusable, so this is
       no longer an open design question — it is five applications of a settled
       one.
+      **Blocked behind the Kikuyu fix above** — the transliteration table is
+      the mechanism four of these five would reuse, and extending a known-broken
+      one propagates the bug.
       *The three mechanisms now exist in code:* a stored `TermCore` field filled
       by `/api/explain` (Japanese `pitchAccent`, and pinyin before it), a static
       rule via `pronunciationNote` (Kikuyu), and a render-time transform — which
