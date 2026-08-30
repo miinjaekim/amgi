@@ -32,6 +32,14 @@ the button **hides while offline**, so on a subway session the word should lose
 its 🔊 and the progress line should be the thing that says why. Reasoning in
 [status.md](status.md).
 
+**Pronunciation aid: transliteration + Japanese pitch accent** (2026-08-30).
+Same terms — JS only on mobile. The **transliteration half needs no backfill and
+shows on every existing card at once**, since it derives from the term; the
+pitch accent half only appears on cards saved after deploy. Worth checking on
+the binary: the badge is now two things joined by `·` (`す＼し · sushi`), so it
+is the longest that slot has ever held — watch it at the narrowest phone width,
+and on a long word like とうきょう. Reasoning in [status.md](status.md).
+
 **Japanese pitch accent + the pronunciation notes** (2026-08-30). Same terms —
 JS only on mobile, since the 2.7 MB accent table stays on the server and the
 phone only renders what the card already carries. **Web gets the badge at

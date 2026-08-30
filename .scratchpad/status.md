@@ -162,6 +162,53 @@ separately unverified on Android, where only sign-in has been exercised.
 Closed calls, kept with their reasoning — a decision whose reasoning is lost gets
 reopened by the next person to notice the symptom. Newest first.
 
+### The pronunciation aid is a transliteration, and pitch accent rides along (2026-08-30)
+
+**A correction to the entry below, made after it was built.** The aid asked for
+was the term **respelled in the script the learner already reads** — 寿司 as
+`sushi` to an English native, `스시` to a Korean one — not a linguistic
+notation. Pitch accent is a real aid and the measurement behind it stands, but
+it answers a question a learner further along asks. Both now share one badge,
+reading first: `す＼し · sushi`.
+
+**The transliteration needs no model, no dictionary and no stored field**, which
+is the opposite trade from `pitchAccent` one section down. Accent is a lexical
+fact you cannot read off the spelling, so it has to be looked up. A
+transliteration *is* readable off the spelling, so asking a model for one would
+add error for nothing. Kana → Hepburn scored **10/10** first try; kana → Hangul
+scored 7/10 and reached 10/10 once the rule it was missing went in. Because it
+derives rather than stores, **it needs no backfill and works on every card
+already saved**, including the Japanese cards that will never carry a
+`pitchAccent`.
+
+**It is the first field keyed on `nativeLanguage` rather than on the word.**
+Every other card field is a fact about the term; this one is a fact about who is
+looking at it, which is why it cannot be stored and why `getReading` now takes
+both languages. That also gives **Kikuyu a badge it never had** — it has neither
+furigana nor pinyin, and its spelling hides real sounds (`c` is /ʃ~tʃ/, never
+/k/), so the respelling is the entire aid for the one language with no TTS voice.
+
+**Three rules carry the Hangul, and each was a bug before it was a rule.**
+Long vowels are not written, so `とうきょう` is 도쿄 — the miss a letter-for-letter
+mapping makes most visibly, and the one that took the Japanese score from 7/10 to
+10/10. か/た rows are plain word-initially and aspirated inside, so 京都 is 교토
+off the same kana. And ん/っ are 받침, so `さっぽろ` is three Korean syllables to
+four Japanese morae. For Kikuyu the equivalents are the `y` glide (`gĩkũyũ` is
+기쿠유, not 기쿠우) and prenasalization hanging off the previous syllable
+(`mũgũnda` is 무군다; word-initially it opens a 으, so `ndoto` is 은도토 and not
+느도토).
+
+**A known loss, recorded so it stays a choice.** The English respelling maps both
+`i` and `ĩ` to `ee` and both `u` and `ũ` to `oo` — collapsing the seven-vowel
+distinction that the Kikuyu registry entry, its prompt branch and its
+`pronunciationNote` all exist to protect. English has no unambiguous respelling
+for /ɪ/ and /ʊ/ that a reader will not misread, and the alternative is a
+notation to be taught, which is what this feature exists to avoid. **The note is
+now the only place that distinction is stated**, so it must not be trimmed.
+
+**Unverified:** all of it on a device, and the Korean copy in both notes is
+author-written rather than native-checked.
+
 ### The pronunciation aid: Japanese from a dictionary, Kikuyu from neither (2026-08-30)
 
 The backlog item asked for a text pronunciation aid per language and said to

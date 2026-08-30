@@ -10,6 +10,7 @@ import {
   getReading, markPitchAccent, splitMorae, isAllKana,
   pronunciationNote, pronunciationNoteNeedsCredit,
 } from '@amgi/core';
+import { kanaToRomaji, kanaToHangul, kikuyuToEnglish, kikuyuToHangul, splitKikuyuSyllables } from '@amgi/core';
 import { lookupPitchAccent } from '@/lib/pitchAccentLookup';
 
 describe('splitMorae', () => {
@@ -63,22 +64,38 @@ describe('isAllKana', () => {
 });
 
 describe('getReading', () => {
-  it('folds pitch accent into the furigana badge rather than beside it', () => {
-    expect(getReading({ furigana: 'はし', pitchAccent: 1 })).toBe('は＼し');
+  const ja = (card: Parameters<typeof getReading>[0], native: string) =>
+    getReading(card, 'Japanese', native);
+
+  it('shows the reading first, then the transliteration', () => {
+    expect(ja({ furigana: 'はし', pitchAccent: 1 }, 'English')).toBe('は＼し · hashi');
+    expect(ja({ furigana: 'はし', pitchAccent: 1 }, 'Korean')).toBe('は＼し · 하시');
   });
 
-  it('falls back to bare furigana for a card with no accent', () => {
-    // Every Japanese card saved before this field existed takes this path.
-    expect(getReading({ furigana: 'はし' })).toBe('はし');
+  it('gives each native language its own script off the same card', () => {
+    expect(ja({ furigana: 'すし' }, 'English')).toBe('すし · sushi');
+    expect(ja({ furigana: 'すし' }, 'Korean')).toBe('すし · 스시');
+  });
+
+  it('falls back to bare furigana plus a transliteration when there is no accent', () => {
+    // Every Japanese card saved before pitchAccent existed takes this path —
+    // and still gains the transliteration, which is derived rather than stored.
+    expect(ja({ furigana: 'はし' }, 'English')).toBe('はし · hashi');
   });
 
   it('reads a kana-only term as its own reading, since it has no furigana', () => {
-    expect(getReading({ japanese: 'ありがとう', pitchAccent: 2 })).toBe('あり＼がとう');
+    expect(ja({ japanese: 'ありがとう', pitchAccent: 2 }, 'English')).toBe('あり＼がとう · arigatō');
+  });
+
+  it('gives Kikuyu a badge it never had, which is the whole aid for that deck', () => {
+    // No furigana, no pinyin, and no TTS voice exists for the language.
+    expect(getReading({ kikuyu: 'rũciũ' }, 'Kikuyu', 'English')).toBe('roo-chee-oo');
+    expect(getReading({ kikuyu: 'rũciũ' }, 'Kikuyu', 'Korean')).toBe('루치우');
   });
 
   it('leaves pinyin alone', () => {
-    expect(getReading({ pinyin: 'yuánfèn' })).toBe('yuánfèn');
-    expect(getReading({})).toBeUndefined();
+    expect(getReading({ pinyin: 'yuánfèn' }, 'TraditionalChinese', 'English')).toBe('yuánfèn');
+    expect(getReading({}, 'Korean', 'English')).toBeUndefined();
   });
 });
 
@@ -160,5 +177,86 @@ describe('pronunciationNote', () => {
     // CC BY-SA 4.0 makes this required, not decorative.
     expect(pronunciationNoteNeedsCredit('Japanese')).toBe(true);
     expect(pronunciationNoteNeedsCredit('Kikuyu')).toBe(false);
+  });
+});
+
+describe('kanaToRomaji', () => {
+  it('uses Hepburn, which is what an English reader will sound out', () => {
+    expect(kanaToRomaji('すし')).toBe('sushi');   // not "susi"
+    expect(kanaToRomaji('ちず')).toBe('chizu');   // not "tizu"
+  });
+
+  it('doubles the consonant after っ', () => {
+    expect(kanaToRomaji('さっぽろ')).toBe('sapporo');
+    expect(kanaToRomaji('がっこう')).toBe('gakkō');
+  });
+
+  it('writes ん as m before a labial, the one place Hepburn is not letter-for-letter', () => {
+    expect(kanaToRomaji('てんぷら')).toBe('tempura');
+    expect(kanaToRomaji('しんかんせん')).toBe('shinkansen');
+  });
+
+  it('macrons a long vowel, including the ou spelling Japanese actually uses', () => {
+    expect(kanaToRomaji('とうきょう')).toBe('tōkyō');
+    expect(kanaToRomaji('ラーメン')).toBe('rāmen');
+  });
+
+  it('leaves ei alone, because sensei is not written sensē', () => {
+    expect(kanaToRomaji('せんせい')).toBe('sensei');
+  });
+
+  it('reads katakana through the same table', () => {
+    expect(kanaToRomaji('コーヒー')).toBe('kōhī');
+  });
+});
+
+describe('kanaToHangul', () => {
+  it('does not write long vowels, per 국립국어원', () => {
+    // The rule a letter-for-letter mapping misses most visibly: 도우쿄우 is wrong.
+    expect(kanaToHangul('とうきょう')).toBe('도쿄');
+    expect(kanaToHangul('がっこう')).toBe('갓코');
+  });
+
+  it('keeps えい, which is not a long vowel for this purpose', () => {
+    expect(kanaToHangul('せんせい')).toBe('센세이');
+  });
+
+  it('is plain word-initially and aspirated inside', () => {
+    // 京都: ㄱ at the front, ㅌ in the middle, off the same か/た rows.
+    expect(kanaToHangul('きょうと')).toBe('교토');
+    expect(kanaToHangul('とうきょう')).toBe('도쿄');
+  });
+
+  it('writes ん as a ㄴ 받침 and っ as a ㅅ 받침', () => {
+    expect(kanaToHangul('しんかんせん')).toBe('신칸센');
+    expect(kanaToHangul('さっぽろ')).toBe('삿포로');
+  });
+});
+
+describe('Kikuyu respelling', () => {
+  it('says the sounds the spelling hides', () => {
+    // c is /ʃ~tʃ/ and never /k/ — the single most misleading letter for an
+    // English reader, and the reason this exists.
+    expect(kikuyuToEnglish('rũciũ')).toBe('roo-chee-oo');
+    expect(kikuyuToEnglish('gĩkũyũ')).toBe('gee-koo-yoo');
+    expect(kikuyuToEnglish('ũhoro')).toBe('oo-ho-ro');
+  });
+
+  it('treats a prenasalized stop as one onset, so the hyphens mark real syllables', () => {
+    expect(splitKikuyuSyllables('mũgũnda')).toHaveLength(3);
+    expect(kikuyuToEnglish('mũgũnda')).toBe('moo-goo-nda');
+  });
+
+  it('keeps the y glide in Hangul, which a bare consonant mapping drops', () => {
+    expect(kikuyuToHangul('gĩkũyũ')).toBe('기쿠유'); // not 기쿠우
+  });
+
+  it('hangs a prenasalized nasal on the previous syllable', () => {
+    expect(kikuyuToHangul('mũgũnda')).toBe('무군다');
+    expect(kikuyuToHangul('nyũmba')).toBe('늄바');
+  });
+
+  it('opens a 으 for a word-initial prenasal rather than inventing an onset', () => {
+    expect(kikuyuToHangul('ndoto')).toBe('은도토'); // not 느도토
   });
 });

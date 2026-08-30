@@ -93,7 +93,7 @@ export default function CardDetailModal({
     saved ? partOfSpeechLabel(nativeLanguage, saved) : undefined,
     saved?.formality && saved.formality !== 'N/A' ? saved.formality : null,
     saved?.gender,
-    saved ? getReading(saved) : undefined,
+    saved ? getReading(saved, lang, nativeLanguage) : undefined,
   ].filter(Boolean) as string[];
 
   /**

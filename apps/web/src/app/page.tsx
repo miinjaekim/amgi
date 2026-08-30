@@ -552,9 +552,9 @@ export default function Home() {
                 {core.gender}
               </span>
             )}
-            {getReading(core) && (
+            {getReading(core, studyLanguage, nativeLanguage) && (
               <span className="px-2 py-0.5 text-xs rounded-full border border-[var(--color-muted)] text-[var(--color-muted)]">
-                {getReading(core)}
+                {getReading(core, studyLanguage, nativeLanguage)}
               </span>
             )}
           </div>

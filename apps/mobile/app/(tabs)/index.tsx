@@ -694,9 +694,9 @@ export default function LearnScreen() {
                     <Text style={s.formalityText}>{core.gender}</Text>
                   </View>
                 )}
-                {getReading(core) && (
+                {getReading(core, studyLanguage, nativeLanguage) && (
                   <View style={s.formalityBadge}>
-                    <Text style={s.formalityText}>{getReading(core)}</Text>
+                    <Text style={s.formalityText}>{getReading(core, studyLanguage, nativeLanguage)}</Text>
                   </View>
                 )}
               </View>

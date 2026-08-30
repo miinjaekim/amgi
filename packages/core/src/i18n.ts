@@ -802,15 +802,17 @@ export function t(
  * a render-time transform. It exists because for some languages the useful
  * thing is not per-card data at all:
  *
- * - **Kikuyu** has no per-card aid and, measured, cannot have one. It is also
- *   the language that needs it most — there is no TTS voice for Kikuyu, so text
- *   is the only pronunciation support it can ever get. Gemini's tone marking
- *   was self-consistent on 2 of 19 words and respelled ũ/ĩ as ú/í, destroying
- *   the vowel contrast the deck exists to teach, and no tone-marked
- *   machine-readable dictionary exists to replace it. So the note teaches the
- *   orthography instead, which is true, useful, and costs no data.
- * - **Japanese** *does* have per-card data, and the note is how a learner
- *   learns to read ＼ at all. A notation nobody explains is not an aid.
+ * - **Kikuyu** gets a respelling on the card (`kikuyuToEnglish`), but no
+ *   *tone* — Gemini's tone marking was self-consistent on 2 of 19 words and
+ *   respelled ũ/ĩ as ú/í, and no tone-marked machine-readable dictionary exists
+ *   to replace it. The note carries the vowel rule instead, and it earns its
+ *   place twice over now that the card shows a respelling: that respelling
+ *   deliberately maps both `i` and `ĩ` to `ee`, so **this note is the only
+ *   place the seven-vowel distinction is stated at all**. Weakening it would
+ *   leave the collapse unexplained.
+ * - **Japanese** has per-card data, and the note is how a learner learns to
+ *   read ＼ at all. A notation nobody explains is not an aid. The romaji or
+ *   Hangul beside it needs no note, which is the point of a transliteration.
  */
 export function pronunciationNote(
   nativeLanguage: string | null | undefined,

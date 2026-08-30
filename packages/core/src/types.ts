@@ -1,4 +1,5 @@
 import { isAllKana, markPitchAccent } from './pitchAccent';
+import { kanaToHangul, kanaToRomaji, kikuyuToEnglish, kikuyuToHangul } from './transliterate';
 
 /**
  * Traditional and Simplified Chinese are separate study languages rather than
@@ -558,28 +559,51 @@ export function getExampleStudyLangText(ex: ExamplePair, studyLanguage?: StudyLa
 }
 
 /**
- * The pronunciation reading to show as a badge beside a term, if the study
- * language has one — Japanese furigana, Traditional Chinese pinyin. A card
- * only ever carries the field belonging to its own language, so the next
- * reading-bearing language is one entry here rather than another conditional
- * at every render site.
+ * The pronunciation aid shown as a badge beside a term.
  *
- * Japanese pitch accent rides **inside** this one badge rather than beside it:
- * は＼し already contains the reading, so marking the furigana it was going to
- * show anyway costs no space and adds the distinction furigana alone cannot
- * make. A card with no accent — one saved before the field existed, or a word
- * the dictionary does not carry — falls back to bare furigana, which is what
- * every Japanese card showed before.
+ * Two things share one badge, in the order a learner needs them: the **reading**
+ * (Japanese furigana, with its pitch drop marked; Traditional Chinese pinyin)
+ * and then the **transliteration** — the term respelled in the script the
+ * reader already uses. `すし · sushi` for an English native, `すし · 스시` for a
+ * Korean one, off the same card.
  *
- * A kana-only term is its own reading, so it has no furigana by design (the
- * prompt sets it null when there is no kanji). It still has an accent worth
- * showing, which is why `japanese` is read here as the fallback source.
+ * The transliteration is why this now takes `nativeLanguage`. Every other field
+ * on a card is a fact about the word; this one is a fact about who is looking
+ * at it, so it cannot be stored and must be derived per reader. It is also why
+ * Kikuyu gets a badge at all, having neither furigana nor pinyin: for Kikuyu
+ * the respelling *is* the whole aid, since no TTS voice exists for the language
+ * and its spelling hides real sounds (`c` is /ʃ~tʃ/, never /k/).
+ *
+ * Deriving rather than storing means it needs no backfill and works on every
+ * card already saved — the opposite trade from `pitchAccent`, which has to be
+ * looked up because accent cannot be read off the spelling.
+ *
+ * A card only ever carries the fields belonging to its own language, so the
+ * next reading-bearing language is one branch here rather than a conditional at
+ * each of the six render sites.
  */
 export function getReading(
-  card: Pick<TermCore, 'furigana' | 'pinyin' | 'pitchAccent' | 'japanese'>
+  card: Pick<TermCore, 'furigana' | 'pinyin' | 'pitchAccent' | 'japanese' | 'kikuyu'>,
+  studyLanguage?: StudyLanguage,
+  nativeLanguage?: string | null
 ): string | undefined {
+  const isKorean = nativeLanguage === 'Korean';
+
   const kana = card.furigana || (card.japanese && isAllKana(card.japanese) ? card.japanese : '');
-  if (kana) return markPitchAccent(kana, card.pitchAccent);
+  if (kana) {
+    const reading = markPitchAccent(kana, card.pitchAccent);
+    const transliteration = isKorean ? kanaToHangul(kana) : kanaToRomaji(kana);
+    // The transliteration is dropped when it would only repeat the reading,
+    // which is what a Korean native sees on a word already written in kana.
+    return transliteration && transliteration !== reading
+      ? `${reading} · ${transliteration}`
+      : reading;
+  }
+
+  if (studyLanguage === 'Kikuyu' && card.kikuyu) {
+    return (isKorean ? kikuyuToHangul : kikuyuToEnglish)(card.kikuyu) || undefined;
+  }
+
   return card.pinyin || undefined;
 }
 
