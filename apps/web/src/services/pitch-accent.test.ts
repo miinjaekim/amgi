@@ -247,19 +247,29 @@ describe('Kikuyu respelling', () => {
     expect(kikuyuToEnglish('rũciũ')).toBe('ro-shee-o');
   });
 
-  it('separates ũ from u, which a speaker confirmed', () => {
+  it('respells gĩkũyũ as ge-ko-yo — the word that fixed ĩ', () => {
+    // The correction that mattered was about spelling, not sound: ĩ had already
+    // been identified as [e] from published sources and was still written `ay`,
+    // which is the English diphthong /eɪ/ rather than a pure vowel.
+    expect(kikuyuToEnglish('gĩkũyũ')).toBe('ge-ko-yo');
+    expect(kikuyuToHangul('gĩkũyũ')).toBe('게코요');
+  });
+
+  it('keeps each tilde vowel apart from its plain counterpart', () => {
+    // ĩ [e] against i [i], and ũ [o] against u [u] — the contrasts a learner
+    // needs, and the ones the first version lost by mapping both a step high.
+    expect(kikuyuToEnglish('kĩrĩma')).toBe('ke-re-ma');
+    expect(kikuyuToEnglish('irio')).toBe('ee-ree-o');
     expect(kikuyuToEnglish('ũhoro')).toBe('o-ho-ro');
     expect(kikuyuToEnglish('mũgũnda')).toBe('mo-go-nda');
   });
 
-  it('leaves ĩ merged with i on purpose, pending a source', () => {
-    // Sources put ĩ at [e], which by symmetry with ũ would make it `ay` — but
-    // that renders gĩkũyũ as `gay-ko-yo`, against the familiar "gee-koo-yoo",
-    // and no speaker has ruled on it. Held at `ee`: imprecise beats
-    // confidently wrong, which is what put `choo-choo` on a card.
-    expect(kikuyuToEnglish('gĩkũyũ')).toBe('gee-ko-yo');
-    expect(kikuyuToEnglish('kĩrĩma')).toBe('kee-ree-ma');
-    expect(kikuyuToEnglish('irio')).toBe('ee-ree-o');
+  it('merges only what English respelling genuinely cannot hold apart', () => {
+    // ĩ/e both on `e` and ũ/o both on `o` — the [e]/[ɛ] and [o]/[ɔ] pairs.
+    // Symmetric front and back, which is the sign it is the orthography's
+    // limit rather than this table's, unlike the collapse it replaced.
+    expect(kikuyuToEnglish('ĩ')).toBe(kikuyuToEnglish('e'));
+    expect(kikuyuToEnglish('ũ')).toBe(kikuyuToEnglish('o'));
   });
 
   it('treats a prenasalized stop as one onset, so the hyphens mark real syllables', () => {
@@ -267,7 +277,7 @@ describe('Kikuyu respelling', () => {
   });
 
   it('keeps the y glide in Hangul, which a bare consonant mapping drops', () => {
-    expect(kikuyuToHangul('gĩkũyũ')).toBe('기코요'); // not 기코오
+    expect(kikuyuToHangul('gĩkũyũ')).toBe('게코요'); // not 게코오
   });
 
   it('hangs a prenasalized nasal on the previous syllable', () => {

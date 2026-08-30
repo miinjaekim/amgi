@@ -217,17 +217,18 @@ export function kanaToHangul(kana: string): string {
  *    the tilde marks vowel **height**, not laxness, and every `ũ` had been
  *    respelled a full step too high.
  *
- * **`ĩ` is the same argument and is deliberately not applied.** Published
- * sources put Kikuyu's seven vowels at i [i], ĩ [e], e [ɛ], a [a], o [ɔ],
- * ũ [o], u [u], which by symmetry with (2) would make `ĩ` an `ay`. No speaker
- * has confirmed it, and the output it produces — `gĩkũyũ` as `gay-ko-yo` —
- * collides with the familiar "gee-koo-yoo" in a way nobody on this project can
- * adjudicate. It is held at `ee` until there is a source worth deciding on;
- * see `KIKUYU_VOWEL_SOUND` below.
+ * 3. **`ĩ` is [e] and respells as `e`, not `ay`** — `gĩkũyũ` is *ge-ko-yo*.
+ *    Reported separately by someone familiar with the language, after a first
+ *    attempt shipped `ay`.
  *
- * So `ũ`/`u` are now distinct and `ĩ`/`i` are still merged. **That asymmetry is
- * the evidence, not an oversight**: one of the two was checked against someone
- * who can hear the language and the other was not.
+ * **(3) is the one worth learning from.** The phoneme was already identified
+ * correctly from published sources; it was still written wrong, because English
+ * `ay` is the diphthong /eɪ/ and [e] is a pure vowel. Twice now the table has
+ * been fixed by someone who can hear the language after being derived
+ * confidently from a chart — first `choo-choo`, then `gay-ko-yo`. **A phoneme
+ * inventory settles what a sound is and says nothing about how to spell it for
+ * a reader**, and every remaining item in the list below sits on exactly that
+ * unverified half.
  *
  * **What is still approximate**, and would need a speaker to settle rather than
  * more reasoning:
@@ -248,23 +249,26 @@ const KIKUYU_CONSONANT_SOUND: Record<string, string> = {
   h: 'h', b: 'b', d: 'd', j: 'j',
 };
 /**
- * The back vowels are corrected; the front ones are **deliberately not**.
+ * Both tilde vowels are the close-mid ones, and both respell as pure vowels.
  *
- * `ũ` → `o` is confirmed by a speaker: `cũcũ` sounds like *shosho*, not
- * *shoosho*. `ĩ` has no such check. Published sources put it at [e], which by
- * the same logic would make it `ay` — but that reading turns `gĩkũyũ` into
- * `gay-ko-yo`, which collides with the universally familiar "gee-koo-yoo", and
- * whether that familiar form is the anglicised spelling-reading or the actual
- * pronunciation is exactly what nobody here can adjudicate.
+ * `ũ` → `o` came from `cũcũ` sounding like *shosho*. `ĩ` → `e` came separately,
+ * from someone familiar with the language: `gĩkũyũ` is *ge-ko-yo*.
  *
- * So `ĩ` is held at `ee`, merged with `i`, **pending a source good enough to
- * decide on**. That merge is a known inaccuracy rather than a claim. Holding it
- * is the cheaper error: `ee` is at worst imprecise where `ay` would be
- * confidently wrong, and being confidently wrong is what put `choo-choo` on a
- * card in the first place.
+ * **That second correction was about spelling, not about sound.** The phoneme
+ * had been identified right — sources agree `ĩ` is [e] — and it was still
+ * rendered wrong, as `ay`, because English `ay` is the diphthong /eɪ/ where [e]
+ * is a pure vowel. A phoneme chart fixes what a sound *is*; it does not say how
+ * to write it for a reader, and the gap between those two is where this table
+ * has gone wrong every time.
+ *
+ * So `ĩ` (`e`) and `i` (`ee`) are now distinct, as are `ũ` (`o`) and `u` (`oo`).
+ * What remains merged is `ĩ`/`e` on `e` and `ũ`/`o` on `o` — the close-mid and
+ * open-mid pairs, [e]/[ɛ] and [o]/[ɔ]. **That merge is a real limit of English
+ * respelling** rather than a mistake, and it is symmetric front and back, which
+ * is the sign it is the orthography's constraint and not this table's.
  */
 const KIKUYU_VOWEL_SOUND: Record<string, string> = {
-  a: 'a', e: 'e', i: 'ee', ĩ: 'ee', o: 'o', u: 'oo', ũ: 'o',
+  a: 'a', e: 'e', i: 'ee', ĩ: 'e', o: 'o', u: 'oo', ũ: 'o',
 };
 type KikuyuSyllable = { onset: string; vowel: string };
 
@@ -326,13 +330,14 @@ const KIKUYU_ONSET_HANGUL: Record<string, { nasal?: string; jamo: string; glide?
   w: { jamo: 'ㅇ', glide: 'w' }, y: { jamo: 'ㅇ', glide: 'y' },
 };
 
-// ũ follows the English side onto 오. ĩ stays on 이 for the same reason it
-// stays on `ee` above — held, not decided. Korean would merge [e] with [ɛ]
-// anyway, so this costs less here than it does in the respelling.
+// Both tilde vowels follow the English side: ĩ [e] onto 에, ũ [o] onto 오. That
+// merges them with e and o respectively, which Korean would do anyway — it has
+// no [e]/[ɛ] or [o]/[ɔ] contrast to spend. The distinction Korean *does* keep
+// is the one that matters here: ĩ 에 against i 이, ũ 오 against u 우.
 const KIKUYU_NUCLEUS: Record<'plain' | 'y' | 'w', Record<string, string>> = {
-  plain: { a: '아', e: '에', i: '이', 'ĩ': '이', o: '오', u: '우', 'ũ': '오' },
-  y:     { a: '야', e: '예', i: '이', 'ĩ': '이', o: '요', u: '유', 'ũ': '요' },
-  w:     { a: '와', e: '웨', i: '위', 'ĩ': '위', o: '워', u: '우', 'ũ': '워' },
+  plain: { a: '아', e: '에', i: '이', 'ĩ': '에', o: '오', u: '우', 'ũ': '오' },
+  y:     { a: '야', e: '예', i: '이', 'ĩ': '예', o: '요', u: '유', 'ũ': '요' },
+  w:     { a: '와', e: '웨', i: '위', 'ĩ': '웨', o: '워', u: '우', 'ũ': '워' },
 };
 
 const CHO = ['ㄱ','ㄲ','ㄴ','ㄷ','ㄸ','ㄹ','ㅁ','ㅂ','ㅃ','ㅅ','ㅆ','ㅇ','ㅈ','ㅉ','ㅊ','ㅋ','ㅌ','ㅍ','ㅎ'];

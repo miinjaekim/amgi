@@ -217,18 +217,24 @@ second was the expensive one:
    tilde marks vowel **height**, not laxness, so `ũ` had been respelled a full
    step too high everywhere it appeared.
 
-**`ĩ` is the same argument and was deliberately left unapplied**, on the user's
-call. Published sources give Kikuyu's seven vowels as i [i], ĩ [e], e [ɛ],
-a [a], o [ɔ], ũ [o], u [u] — so by symmetry with (2), `ĩ` should be `ay`. Two
-things stopped it. No speaker has confirmed any `ĩ` word, where `cũcũ` settled
-`c` and `ũ` outright. And the output it produced, `gĩkũyũ` → `gay-ko-yo`,
-collides with the universally familiar "gee-koo-yoo"; whether that familiar form
-is the anglicised spelling-reading or the real pronunciation is precisely what
-nobody on this project can adjudicate. So `ĩ` stays merged with `i` at `ee`,
-and **the asymmetry in the table is the state of the evidence rather than an
-oversight** — one vowel was checked against someone who can hear the language
-and the other was not. `ee` is at worst imprecise; `ay` would be confidently
-wrong, and confidently wrong is what put `choo-choo` on a card.
+3. **`ĩ` is [e] and respells `e`, not `ay`** — `gĩkũyũ` is *ge-ko-yo*. Reported
+   by someone familiar with the language, after a first attempt had shipped
+   `ay` and a second had held `ĩ` at `ee` for want of a source.
+
+**(3) is the entry worth keeping.** The phoneme was already right: published
+sources give the seven vowels as i [i], ĩ [e], e [ɛ], a [a], o [ɔ], ũ [o], u [u],
+and that is what was implemented. It was still *written* wrong, because English
+`ay` is the diphthong /eɪ/ where [e] is a pure vowel. **A phoneme inventory
+settles what a sound is and says nothing about how to spell it for a reader** —
+and this table has now been corrected twice by someone who can hear the language
+after being derived confidently from a chart. `choo-choo` was the sound being
+wrong; `gay-ko-yo` was the sound being right and the spelling wrong. The second
+is the harder failure to catch, because everything upstream of it checks out.
+
+What remains merged is `ĩ`/`e` on `e` and `ũ`/`o` on `o` — the [e]/[ɛ] and
+[o]/[ɔ] pairs. That one **is** a limit of English respelling, and the tell is
+that it is symmetric front and back rather than landing on whichever vowel had
+been reasoned about most recently.
 
 **The lesson is about the shape of the evidence, not the vowels.** The first
 version's own header comment listed six candidate causes and ranked `c` first —
@@ -239,11 +245,11 @@ word from someone who can hear the language did what the ranked list could
 not.** For the five languages still open, that argues for a native check before
 merge over a longer list of suspicions.
 
-Fixing (2) **half-removed the vowel collapse the first version apologised
-for**: `ũ`/`u` are now distinct, `ĩ`/`i` still are not. Worth correcting the
-record either way — that collapse was presented as a limit of English
-orthography, and it is not one. It was the table being wrong, and the apology
-described the symptom as though it were the constraint.
+**The collapse the first version apologised for is now fully gone**: `ĩ`/`i`
+and `ũ`/`u` are both distinct. Worth correcting the record, because that
+collapse was presented as a limit of English orthography and it was not one —
+it was the table being wrong, and the apology described the symptom as though it
+were the constraint. The merge that *is* a real limit sits one pair over.
 
 **What is still approximate** and would need a speaker rather than more
 reasoning: `th` [ð] written `th` invites *thin* for *the*; `g` [ɣ] and `b` [β]

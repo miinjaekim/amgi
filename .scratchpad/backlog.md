@@ -108,30 +108,20 @@ Queued 2026-08-25, in the user's order. Two of the three are done — Swahili,
 and audio on mobile review, which is built and waiting on a build rather than on
 work. See the Decisions entry in [status.md](status.md) for what each settled.
 
-- [ ] **Find a Kikuyu source reliable enough to decide `ĩ` on.** The `c` and
-      `ũ` fixes shipped because one speaker-reported word settled them; `ĩ` is
-      held at `ee`, merged with `i`, because nothing settles it. Published
-      phonologies say [e] — which would make it `ay` — but that renders `gĩkũyũ`
-      as `gay-ko-yo` against the familiar "gee-koo-yoo", and **the open question
-      is whether that familiar form is the anglicised spelling-reading or the
-      actual pronunciation.** A phoneme chart cannot answer that; it needs a
-      speaker, a pronunciation guide aimed at learners, or a recording.
-      *What has been consulted so far* (none sufficient): the Wikipedia Kikuyu
-      phonology table, a second phonology summary agreeing with it, and the
-      Rice sketch grammar — whose PDF has no extractable text layer and which
-      omits tone anyway. Worth trying: Benson's 1964 dictionary, the
-      Armstrong 1940 phonetic description, or AfriVoices-KE recordings, where a
-      known word could be heard rather than read.
-
-- [ ] **Check the rest of the Kikuyu respelling against a speaker.** The two
-      errors a reader caught via `cũcũ` → `choo-choo` are fixed (`c` is [ʃ];
-      `ĩ`/`ũ` are the close-mid [e]/[o], so the tilde marks height not laxness),
-      and `cũcũ` → `sho-sho` is a regression test. **What has not happened is a
-      check across a range of words by someone who can hear it** — the fix was
-      confirmed against one reported term plus a published phonology table.
-      Four things stay approximate, listed in `transliterate.ts`: `th` [ð]
-      reads as *thin* not *the*, `g` [ɣ] and `b` [β] are fricatives respelled
-      as stops, `o` [ɔ] and `ũ` [o] both respell `o`, and stress is unmarked.
+- [ ] **Check the rest of the Kikuyu respelling against a speaker.** Three
+      errors have been caught this way and none any other way: `c` is [ʃ] and
+      `ũ` is [o] (both from `cũcũ` → *shosho*), and `ĩ` respells `e` rather than
+      `ay` (from `gĩkũyũ` → *ge-ko-yo*). Each is a regression test.
+      **The rest of the table has had no such check**, and the third catch is
+      the reason that matters: the phoneme was already identified correctly from
+      published sources and was still written wrong. A phoneme chart cannot
+      settle a respelling, so the remaining items cannot be closed by reading
+      more of them:
+      `th` [ð] reads as *thin* not *the*; `g` [ɣ] and `b` [β] are fricatives
+      respelled as stops; long vowels (written doubled in Kikuyu) split into
+      separate syllables, so `nĩĩ` comes out `ne-e`; and stress is unmarked.
+      The `ĩ`/`e` and `ũ`/`o` merges are believed to be genuine limits of
+      English respelling, but that too is unchecked.
       *Worth carrying into the five below:* the first version's own header
       ranked six suspicions and put the vowel error fifth, filed as an accepted
       loss rather than a bug. The self-audit reproduced its own blind spot; one
