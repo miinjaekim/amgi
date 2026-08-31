@@ -119,26 +119,39 @@ pronunciation items that used to sit here were **cancelled** — reasoning in th
 [status.md](status.md), and the Kikuyu one's durable half moved to
 [lessons.md](lessons.md) rather than closing with the item.
 
-- [ ] **Basic Kikuyu packs** — greetings, numbers, family members, actions.
-      Same mechanism as the Spanish item, same draft-then-approve order, and
-      **three differences that are not cosmetic**:
-  - **No voice.** Kikuyu is the one registry entry with no `ttsLanguageCode`, so
-    `pronounceable` stays off and the deck page has no audio to fall back on
-    when a gloss reads thin.
-  - **This is the language where model output was measured unreliable.** The
-    noun class was refused for that reason (2026-08-22) and the respelling was
-    wrong three times (see [lessons.md](lessons.md)). A generated word list here
-    carries more risk than a Spanish one, and it is the draft where **a
-    speaker's read before merge is worth the most**.
-  - **The diacritics are load-bearing.** `ĩ`/`i` and `ũ`/`u` are word
-    distinctions, and the typed-answer grader matches accents *strictly* on
-    purpose — so a misauthored vowel marks a correct answer wrong rather than
-    merely reading oddly.
+- [ ] **Basic Kikuyu packs** — greetings, numbers, family, actions.
+      **The draft exists and is deliberately not approvable yet**:
+      `docs/packs/kikuyu-basics-pack-draft.md`, 59 entries, every row carrying a
+      source tier. Of them 15 are corroborated twice, 33 rest on a single source,
+      8 are derived from a stem plus a rule, and 3 have none — **the gate is a
+      speaker, not a read.** This repo has measured the model wrong on Kikuyu
+      twice (noun class 3/8, tone 2/19) and the respelling shipped wrong three
+      times, each caught by a speaker and none by review.
+      Blocked behind the syllabifier item below — 11 of the 59 entries render
+      with a stranded consonant today, including the words for "hello" and "one".
+      Three open content calls are in the draft: whether numerals belong in a
+      pack at all when they agree with a noun class the app refuses to teach,
+      whether kinship terms are inherently possessed (`baba` = "my father"?), and
+      a `guka`/`wagui` conflict left unresolved on purpose.
 
-      One knock-on: every entry renders through the Kikuyu respelling, whose
-      remaining rules are unchecked (the list is in [lessons.md](lessons.md)). A
-      pack is the first thing that would put that table in front of a learner at
-      volume.
+- [ ] **A consonant before `w` is stranded as its own syllable in the Kikuyu
+      respelling.** `KIKUYU_ONSETS` has `m`, `k`, `g` and `w` separately and no
+      `mw`/`kw`/`gw`/`hw`, so `mwarĩ` splits `m.wa.rĩ` and renders `m-wa-re`. The
+      Hangul path is worse: a vowelless onset falls through to
+      `withOnset(jamo, '으')` and **invents a syllable**, so `mwarĩ` is 므와레 —
+      three syllables for a two-syllable word. Affects every existing Kikuyu card
+      with a `Cw`, not just the pack.
+      The fix is `mw`/`kw`/`gw`/`hw` in `KIKUYU_ONSETS` and
+      `KIKUYU_ONSET_HANGUL` with `glide: 'w'`, which the Hangul table already
+      supports for `y`. **It is a respelling change on a shipped feature**, so
+      [lessons.md](lessons.md) puts a native check in front of the merge — the
+      confidence here is that the module's own docstring states Kikuyu syllables
+      are open CV, so a bare consonant violates the invariant the file asserts
+      about itself. That is an internal-consistency argument, not a phonetics
+      claim, which is exactly the distinction that lesson turns on.
+      *While in there:* three docstring examples (lines 299, 315, 373) still show
+      the **pre-correction** mapping — `rũciũ` → `roo-chee-oo`/`루치우`,
+      `mũgũnda` → 무군다 — so the file hands a reader the two errors #105 fixed.
 
 - [ ] **A pronunciation speed dial in settings** — one control over both term
       and example-sentence audio.

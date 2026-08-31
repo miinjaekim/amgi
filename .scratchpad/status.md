@@ -173,6 +173,55 @@ separately unverified on Android, where only sign-in has been exercised.
 Closed calls, kept with their reasoning — a decision whose reasoning is lost gets
 reopened by the next person to notice the symptom. Newest first.
 
+### Vocab packs are sourced, and the model is not a source (2026-08-31)
+
+_The user's call, made while the Kikuyu draft was being written._ The standard
+itself is `docs/packs/README.md`, next to the drafts it governs; this is why.
+
+**The Spanish pack was authored from the model's own knowledge and it mostly
+worked** — the vocabulary was never in doubt, and review caught the two things
+that were wrong (a gloss that interpreted, an article in two places). Kikuyu is
+the case that breaks that method, and the repo had already measured why: noun
+class 3 of 8 (2026-08-22), tone self-consistent on 2 of 19
+(`docs/pronunciation-research.md`), and a respelling table wrong three times.
+**Same source, three failures, all caught by a speaker and none by review.**
+
+So the rule is one line — **the model is not a source, and asking it to check
+itself is not corroboration.** Self-consistency was measured as no evidence of
+correctness on Japanese pitch accent (18 of 27 stable, 6 correct), which is the
+finding that generalises: a second pass over a generated list launders the first
+one rather than testing it.
+
+**Three of the draft's own guesses were caught by the sources on the first
+pass** — `mĩrongo ĩĩrĩ` for `mĩrongo ĩrĩ`, bare `igana`/`ngiri` where the
+numeral is part of the word, and `mũrũ wa maitũ` for `mũrũ wa nyina`. That is
+the standard paying for itself before it was finished being written.
+
+**Tiers rather than a bibliography.** A/B/C/D per entry as table columns, because
+a paragraph of sources at the bottom lets a reviewer trust the whole list
+equally — and the point is the opposite, that they can see which rows are
+load-bearing guesses without reading all of it. The Kikuyu draft is 15/33/3/8,
+and stating that in its first paragraph is more useful than any of the entries.
+
+**Sources are ranked, because the bottom of the range is contaminated rather
+than merely thin.** lughayangu returned `Nakupenda` as Kikuyu — that is Swahili,
+and it is the same confusion `STUDY_LANGUAGE_CONFIGS` already refuses a Swahili
+TTS voice over. It also drops the diacritics, which on a language whose `ĩ`/`ũ`
+distinguish words means it corroborates the word and not the spelling. So
+**orthography is part of the citation**, and a source that loses it is cited for
+less than it appears to give.
+
+**Conflicts are recorded, not resolved quietly** — `guka` against `wagui` for
+grandfather stays visible in the draft, because a draft that picks one silently
+has spent the reviewer's only chance to catch it.
+
+**And render the list before believing it.** Not a sourcing rule, but it belongs
+in the same standard because it is the same mistake in a different place: a word
+list is not what the learner sees. Running the Kikuyu entries through
+`kikuyuToEnglish` and `kikuyuToHangul` found a syllabifier bug in ten minutes —
+in the word for "hello" — that no amount of rereading the table would have
+surfaced.
+
 ### The Spanish pack: an article is a field, and a gloss is not an explanation (2026-08-31)
 
 The app's first elementary deck, 153 entries in five sections, and a second
