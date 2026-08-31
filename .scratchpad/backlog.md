@@ -52,6 +52,15 @@ wrap or clip at the narrowest phone width, and the Kikuyu/Japanese note under
 the Try: row should not push the search field off-screen. Reasoning in
 [status.md](status.md).
 
+**Spanish Basics pack** (2026-08-31). Web gets it at deploy, mobile at the next
+build — no native module, so it rides whatever build comes next. **Nothing
+existing changes**: it is a new registry key, a new module and one optional field
+on `PackEntry` that no other pack sets. Worth checking on the binary: this is the
+first `layout: 'list'` pack where entries carry an **article badge**, and the
+first whose rows can be a **whole question** (`¿cómo está usted?`), so the deck
+row is the longest that layout has had to hold — watch it at the narrowest phone
+width. Reasoning in [status.md](status.md).
+
 - **Delete `packages/core/src/writing.ts`, `grammar.ts` and the two API routes
   that keep them alive.** **The gate is open**: it was "once no build predating
   the 2026-08-18 grammar removal is still in use", and 1.4.0 is that build. What
@@ -104,43 +113,11 @@ Android is the exception — no review, so a fix there ships the same day._
 
 ## High
 
-Queued 2026-08-31, in the user's order. The two pronunciation items that used to
-sit here were **cancelled** — reasoning in the Decisions entry in
+Queued 2026-08-31, in the user's order. **Basic Spanish packs has left this
+section** — the pack is built and in review; see the build queue above. The two
+pronunciation items that used to sit here were **cancelled** — reasoning in the Decisions entry in
 [status.md](status.md), and the Kikuyu one's durable half moved to
 [lessons.md](lessons.md) rather than closing with the item.
-
-- [ ] **Basic Spanish packs** — greetings/introductions, numbers, ordering food,
-      asking for directions, useful verbs.
-      **The draft is written and waiting on you**:
-      `docs/packs/spanish-basics-pack-draft.md`, 153 entries in five sections,
-      word list *and* both backs in one file. Nothing has been written to
-      `packages/core` — read and mark up the draft first, the way the three
-      packs added 2026-08-24 went. It leads with the calls that need a decision
-      (one pack or five, the beginner exception, European Spanish) and six open
-      questions; **two of those need an answer before any code**, because they
-      are not content questions:
-  - **`PackEntry` carries no `gender`, so every noun in the pack would save
-    without its article** — while the same word looked up by hand gets `el`/`la`
-    from `/api/explain` and renders a badge on lookup, review and card detail.
-    Not a Spanish problem; the registry has never had a Latin-script pack to
-    expose it. The fix is ~3 lines (optional `gender` on `PackEntry`, written
-    through by `buildPackCardDraft`) and pays twice, since `acceptedAnswers`
-    then takes both `baño` and `el baño` in typed review. The draft's gender
-    column assumes yes.
-  - **Typed review misses on phrases and accented numbers.** `foldText` strips
-    neither punctuation nor diacritics on purpose, so `¿cómo te llamas?` and
-    `dieciséis` have to be typed exactly. It is a false miss the rating row
-    corrects in one tap, but this is the first pack to hit it at volume. The
-    draft **keeps the punctuation** — dropping it would put wrong Spanish on the
-    card, which is the argument `foldText` already won — and instead splits
-    entries into complete questions (`¿dónde está el baño?`) and bare frames the
-    learner finishes (`me llamo`). Confirm or overrule; it comes off in one pass.
-
-      Once the list is approved: `packages/core/src/spanishBasics.ts`,
-      `layout: 'list'`, `pronounceable: true`, registered as the fourth
-      `VOCAB_PACKS` key — plus a test file on the pattern of
-      `english-packs.test.ts` (no duplicate study text across sections, clean
-      Spanish on the study side, one `buildPackCardDraft` round-trip).
 
 - [ ] **Basic Kikuyu packs** — greetings, numbers, family members, actions.
       Same mechanism as the Spanish item, same draft-then-approve order, and

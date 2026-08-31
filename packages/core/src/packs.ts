@@ -10,6 +10,7 @@ import {
   MILITARY_UNIT_PACK_EN,
   MILITARY_UNIT_PACK_KO,
 } from './military';
+import { SPANISH_BASICS_PACK } from './spanishBasics';
 import { TOPIK_ADVANCED_PACK } from './topik';
 
 /**
@@ -57,6 +58,22 @@ export interface PackEntry {
   /** The study-language text — the front of the card. */
   study: string;
   back: PackBack;
+  /**
+   * The article this noun takes — Spanish `el`/`la`, and whatever a future
+   * gendered language names.
+   *
+   * Its own field rather than part of `study`, matching what `/api/explain`
+   * already returns for a looked-up Spanish, French or Swedish noun. That
+   * symmetry is the whole point: without it a pack noun saves bare while the
+   * same word looked up by hand carries its article and renders a badge on
+   * lookup, review and the card detail — two cards for one word that disagree
+   * about how much they know. It also reaches `acceptedAnswers`, which takes
+   * both `baño` and `el baño` from a learner who learned the noun with its
+   * article.
+   *
+   * Absent on everything that is not a noun, and on the packs that predate it.
+   */
+  gender?: string;
   /**
    * Which sense this entry means, when the word alone is ambiguous.
    *
@@ -221,6 +238,9 @@ export function buildPackCardDraft(
     // later — from the deck, the card list, or mid-review — explain the meaning
     // the pack intended rather than the word's most common one.
     ...(entry.context ? { briefDefinition: entry.context } : {}),
+    // The article, where the entry names one — same field a looked-up noun
+    // fills, so the two paths produce the same card.
+    ...(entry.gender ? { gender: entry.gender } : {}),
     // Last, because on an English or Korean deck the study side is one of the
     // two slots above and has to win — a back never replaces the front.
     [config.studyField]: entry.study,
@@ -433,6 +453,10 @@ const TOEIC_PACK: VocabPack = {
  * to say "either, depending". Listed after the exam packs because those are
  * what most of each language's users came for.
  *
+ * Spanish is one pack and needs no order. It is also the first registry entry
+ * whose pack is elementary rather than a domain opened for someone already
+ * fluent — the exception is argued in `spanishBasics.ts`, not here.
+ *
  * English runs exam → everyday → idioms → job, which is register order rather
  * than difficulty order: TOEIC is what most English users arrived for, Everyday
  * English is the plainest thing here and Idioms the least literal, and the two
@@ -444,6 +468,7 @@ export const VOCAB_PACKS: Partial<Record<StudyLanguage, VocabPack[]>> = {
   English: [TOEIC_PACK, DAILY_LIFE_PACK, IDIOMS_PACK, MILITARY_UNIT_PACK_EN, MILITARY_AFFAIRS_PACK_EN],
   Japanese: [HIRAGANA_PACK, KATAKANA_PACK, KANJI_GRADE_1_2_PACK],
   Korean: [TOPIK_ADVANCED_PACK, MILITARY_UNIT_PACK_KO, MILITARY_AFFAIRS_PACK_KO],
+  Spanish: [SPANISH_BASICS_PACK],
 };
 
 export function getVocabPacks(studyLanguage: StudyLanguage): VocabPack[] {

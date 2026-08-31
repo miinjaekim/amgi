@@ -1,9 +1,10 @@
 # Spanish Basics Pack — Draft for Review
 
-**⏳ Not approved.** Nothing has been written to `packages/core` yet — this is the
-list to read and mark up first, the way
-[daily-life-pack-draft.md](daily-life-pack-draft.md) was. Word list *and* backs
-are both here, so a review of this file is a review of the whole pack.
+**✅ Word list approved 2026-08-31**, with two changes made on review — see
+*What review changed* below. Kept as the record of what was authored and why, and
+still the place to read before changing an entry or a gloss, since the sections
+lead with the calls a bare source diff would not explain. The pack lives in
+`packages/core/src/spanishBasics.ts`.
 
 **153 entries · one pack · 5 sections · English *and* Korean backs ·
 `layout: 'list'` · `pronounceable: true`**
@@ -38,8 +39,8 @@ with words that carry no information — `casa`, `grande`, `bueno` — which fee
 comprehensive and teaches nothing you would not absorb in a week anyway. So the
 filter here is **the word you are stuck without**: the thing you cannot mime, the
 distinction that is invisible from English, and the peninsular form a Latin
-American phrasebook would get wrong for you. `caña`, `la carta`, `todo recto`,
-`la planta baja`, `ser`/`estar`, `pedir`/`preguntar`.
+American phrasebook would get wrong for you. `caña`, `carta`, `todo recto`,
+`planta baja`, `ser`/`estar`, `pedir`/`preguntar`.
 
 **3. Both backs are authored.** Unlike every list pack so far. On a Spanish deck
 the study side is the `spanish` slot, so `getBackSideConfig` hands an
@@ -50,8 +51,8 @@ as itself.
 **4. European Spanish, and these five topics are exactly where it shows.**
 Decided 2026-08-21 (`es-ES`, `es-ES-Chirp3-HD-Charon`). Ordering food and asking
 directions are not neutral ground, so the draft commits rather than averaging:
-`la caña`, `el zumo`, `la patata`, `la tortilla` as the potato omelette, `el
-billete`, `todo recto`, `los servicios`, `la planta baja`, `coger`,
+`caña`, `zumo`, `patata`, `tortilla` as the potato omelette, `billete`,
+`todo recto`, `servicios`, `planta baja`, `coger`,
 and `vosotros` named in the greetings note. **`coger` is the one to look at
 twice** — it is the ordinary verb for catching a bus in Spain and vulgar across
 much of Latin America. It is in the deck because the deck is European Spanish and
@@ -78,6 +79,62 @@ is carried onto the card as `briefDefinition` and steers every later depth call.
 
 ---
 
+## What review changed (2026-08-31)
+
+**1. Terms carry their gender, and the study column lost its articles.**
+`PackEntry` gains an optional `gender`, written through by
+`buildPackCardDraft`, so a pack noun saves with `el`/`la` the same way a
+looked-up one does. This was open question 2; it is now decided.
+
+**The article then had to come *out* of the study text**, which the first version
+of this table had it in — `la carta` with `gender: 'la'` beside it makes the
+grader accept `la la carta`, and it makes a pack card and a looked-up card two
+different strings for the same word, which is the exact problem the field was
+added to prevent. `/api/explain` returns the bare noun plus its article, so the
+pack now does too: 41 entries were rewritten from `la carta` to `carta` + `la`.
+Nothing changes on screen — the badge renders the article either way — and
+typed review now takes `carta` and `la carta` both. Caught by the test, not by
+reading.
+
+**2. `el menú del día` was glossed "the set lunch", which interprets instead of
+translating.** You caught it, and it was not the only one — the same defect ran
+through three more entries in the same section, so the class is fixed rather than
+the instance:
+
+| entry | was | now |
+|---|---|---|
+| menú del día | the set lunch | the menu of the day |
+| primer plato | the starter | the first course |
+| segundo plato | the main course | the second course |
+| ración | a full sharing plate | a portion |
+
+**3. `tapas` was glossed "tapas", which is not a card.** English borrowed the
+word unchanged and Korean transliterated it, so both backs said the front back to
+the learner — and `pack-cards.test.ts` already had the guard that catches it,
+which is how it was found rather than by reading. Where the target language has
+no *other* word, the back has to define rather than translate: now "a small plate
+of food" / 작은 안주 한 접시, with the borrowing noted in the hint. This is the one
+principled exception to the rule in (2) — a definition stands in only when a
+translation does not exist.
+
+The rule they now follow: **where the Spanish has a plain English reading that is
+also correct, the back uses it and the context hint carries the institution.**
+That is what `context` is for — it survives onto the card as `briefDefinition`,
+so "a fixed price for starter, main, drink and dessert" is not lost, it has just
+moved to where a hint belongs rather than standing in for the words.
+
+Entries that keep a functional gloss, because the Spanish is a lexical item with
+no compositional reading to give: `caña`, `servicios`, `manzana`, `todo recto`,
+`planta baja`.
+
+**Worth noting for the next pack:** the Korean column had already got this right
+— `el primer plato` was 첫 번째 요리 while the English said "the starter". The two
+back columns were written independently and drifted, and the English one drifted
+toward explaining. A pack with two backs can disagree with itself, and nothing in
+the code would ever catch it.
+
+---
+
 ## Open questions for you
 
 1. **Typed review will miss on the phrase entries and on half the numbers.**
@@ -98,7 +155,11 @@ is carried onto the card as `briefDefinition` and steers every later depth call.
    not — a half-sentence also makes the pronounce button read a fragment aloud,
    which on a `pronounceable: true` pack is its own bug.
    Overrule me and every `¿…?` comes off in one pass.
-2. **Pack cards carry no gender, and looked-up cards do.** `/api/explain` returns
+2. **✅ Decided: `PackEntry` gains a `gender` field.** _Your call, 2026-08-31._
+   The three-line fix below was taken, so pack nouns save with their article and
+   typed review accepts both `baño` and `el baño`. Question kept for the
+   reasoning.
+   Pack cards carried no gender, and looked-up cards did. `/api/explain` returns
    `el`/`la` for Spanish nouns and the app renders it as a badge on lookup,
    review and the card detail — but `buildPackCardDraft` writes no `gender`
    field, so **every noun in this pack would show without its article** while the
@@ -242,37 +303,37 @@ noun is what makes it copyable._
 
 | entry | gender | English back | Korean back | when it means (context hint) |
 |---|---|---|---|---|
-| la carta | la | the menu | 메뉴판 | the list you order from — not el menú, which is the set meal |
-| el menú del día | el | the set lunch | 오늘의 정식 | starter, main, drink and dessert at one weekday price |
-| el camarero | el | the waiter | 종업원 | la camarera for a woman |
+| carta | la | the menu | 메뉴판 | the list you order from — not el menú, which is the set meal |
+| menú del día | el | the menu of the day | 오늘의 메뉴 | a fixed price for starter, main, drink and dessert — weekday lunches |
+| camarero | el | the waiter | 종업원 | la camarera for a woman |
 | una mesa para dos |  | a table for two | 두 명이요 |  |
-| el primer plato | el | the starter | 첫 번째 요리 | the first of the two courses a Spanish lunch comes in |
-| el segundo plato | el | the main course | 두 번째 요리, 메인 요리 |  |
-| el postre | el | dessert | 후식 |  |
-| la bebida | la | the drink | 음료 |  |
-| el agua | el | water | 물 | feminine, but takes el — el agua fría |
-| la caña | la | a small draught beer | 생맥주 한 잔 | about 200 ml, and the default beer order in Spain |
-| el vino tinto | el | red wine | 레드 와인 | tinto for wine, never rojo |
-| el zumo | el | juice | 주스 | jugo across most of Latin America |
-| el café con leche | el | coffee with milk | 밀크 커피 | the standard morning coffee |
-| las tapas | las | tapas | 타파스 | small plates that come alongside drinks |
-| la ración | la | a full sharing plate | 큰 접시 | the same food as a tapa, plate-sized, meant for the table |
-| el pan | el | bread | 빵 |  |
-| la tortilla | la | Spanish omelette | 감자 오믈렛 | potato and egg — not the Mexican flatbread |
-| el jamón | el | cured ham | 하몽 |  |
-| la patata | la | potato | 감자 | papa across most of Latin America |
-| el pollo | el | chicken | 닭고기 |  |
-| la ternera | la | beef | 소고기 |  |
-| el pescado | el | fish | 생선 | the fish you eat — el pez is the one still swimming |
-| las gambas | las | prawns | 새우 |  |
-| la ensalada | la | salad | 샐러드 |  |
+| primer plato | el | the first course | 첫 번째 요리 | the first of the two a Spanish lunch comes in — soup, salad, something light |
+| segundo plato | el | the second course | 두 번째 요리 | the second of the two, and the main one — meat or fish |
+| postre | el | dessert | 후식 |  |
+| bebida | la | the drink | 음료 |  |
+| agua | el | water | 물 | feminine, but takes el — el agua fría |
+| caña | la | a small draught beer | 생맥주 한 잔 | about 200 ml, and the default beer order in Spain |
+| vino tinto | el | red wine | 레드 와인 | tinto for wine, never rojo |
+| zumo | el | juice | 주스 | jugo across most of Latin America |
+| café con leche | el | coffee with milk | 밀크 커피 | the standard morning coffee |
+| tapas | las | a small plate of food | 작은 안주 한 접시 | ordered a few at a time alongside drinks — English borrowed the word unchanged |
+| ración | la | a portion | 한 접시 분량 | the same food as a tapa, plate-sized and meant for the table to share |
+| pan | el | bread | 빵 |  |
+| tortilla | la | Spanish omelette | 감자 오믈렛 | potato and egg — not the Mexican flatbread |
+| jamón | el | cured ham | 하몽 |  |
+| patata | la | potato | 감자 | papa across most of Latin America |
+| pollo | el | chicken | 닭고기 |  |
+| ternera | la | beef | 소고기 |  |
+| pescado | el | fish | 생선 | the fish you eat — el pez is the one still swimming |
+| gambas | las | prawns | 새우 |  |
+| ensalada | la | salad | 샐러드 |  |
 | picante |  | spicy | 매운 |  |
 | sin |  | without | ~ 빼고, ~ 없이 | sin cebolla, sin gluten — the word an allergy depends on |
 | soy alérgico a |  | I'm allergic to | ~ 알레르기가 있어요 | alérgica if you are a woman |
 | ¿me pone una caña? |  | could I have a small beer? | 생맥주 한 잔 주세요 | the frame every bar in Spain runs on — swap in anything |
 | para mí |  | for me | 저는 ~로 할게요 | how you claim your dish when the waiter goes round the table |
 | para llevar |  | to take away | 포장이요 |  |
-| la cuenta | la | the bill | 계산서 | la cuenta, por favor |
+| cuenta | la | the bill | 계산서 | la cuenta, por favor |
 
 ### Cómo llegar — 길 찾기 (28)
 
@@ -290,24 +351,24 @@ is Spain's "straight on"; elsewhere it is `derecho`, which collides with
 | a la derecha |  | on the right | 오른쪽에 |  |
 | a la izquierda |  | on the left | 왼쪽에 |  |
 | todo recto |  | straight ahead | 쭉 직진 | Spain's form — derecho elsewhere, which sounds like derecha |
-| la calle | la | the street | 거리, 길 |  |
-| la plaza | la | the square | 광장 |  |
-| la esquina | la | the corner | 모퉁이 | where two streets meet — en la esquina |
-| la manzana | la | the block | 한 블록 | a block of buildings; the same word as apple |
-| el cruce | el | the crossroads | 교차로 |  |
-| el semáforo | el | the traffic light | 신호등 |  |
-| el paso de peatones | el | the pedestrian crossing | 횡단보도 |  |
-| la acera | la | the pavement | 인도, 보도 |  |
-| la parada | la | the stop | 정류장 | where a bus or tram stops |
-| la estación | la | the station | 역 |  |
-| el metro | el | the underground | 지하철 |  |
-| el autobús | el | the bus | 버스 |  |
+| calle | la | the street | 거리, 길 |  |
+| plaza | la | the square | 광장 |  |
+| esquina | la | the corner | 모퉁이 | where two streets meet — en la esquina |
+| manzana | la | the block | 한 블록 | a block of buildings; the same word as apple |
+| cruce | el | the crossroads | 교차로 |  |
+| semáforo | el | the traffic light | 신호등 |  |
+| paso de peatones | el | the pedestrian crossing | 횡단보도 |  |
+| acera | la | the pavement | 인도, 보도 |  |
+| parada | la | the stop | 정류장 | where a bus or tram stops |
+| estación | la | the station | 역 |  |
+| metro | el | the underground | 지하철 |  |
+| autobús | el | the bus | 버스 |  |
 | coger |  | to catch, to take | (교통편을) 타다 | coger el autobús — ordinary in Spain, vulgar in much of Latin America |
-| el billete | el | the ticket | 표, 승차권 | boleto across most of Latin America |
-| el barrio | el | the neighbourhood | 동네 |  |
-| el ascensor | el | the lift | 엘리베이터 |  |
-| la planta baja | la | the ground floor | 1층 | Spain's ground floor — la primera planta is Korea's 2층 |
-| los servicios | los | the toilets | 화장실 | what the sign in a bar says; el baño at home |
+| billete | el | the ticket | 표, 승차권 | boleto across most of Latin America |
+| barrio | el | the neighbourhood | 동네 |  |
+| ascensor | el | the lift | 엘리베이터 |  |
+| planta baja | la | the ground floor | 1층 | Spain's ground floor — la primera planta is Korea's 2층 |
+| servicios | los | the toilets | 화장실 | what the sign in a bar says; el baño at home |
 | seguir |  | to carry on, to keep going | 계속 가다 | siga todo recto — carry straight on |
 | cruzar |  | to cross | 건너다 | cruzar la calle |
 

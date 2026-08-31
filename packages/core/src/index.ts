@@ -9,6 +9,7 @@ export * from './kana';
 export * from './kanji';
 export * from './dailyLife';
 export * from './idioms';
+export * from './spanishBasics';
 export * from './topik';
 export * from './military';
 export * from './drill';

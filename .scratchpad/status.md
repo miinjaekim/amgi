@@ -46,6 +46,17 @@ _Reconciled against `main` @ `bc8cb97`, 2026-08-21. `npm test` 246/246, measured
   collections drifted into. Both work; only one says what it means. Why, and why
   a new collection needs two indexes rather than one, are in
   [lessons.md](lessons.md).
+- **The Spanish Basics pack is built** (2026-08-31) — 153 entries in five
+  sections, the fourth `VOCAB_PACKS` key and the app's first elementary deck.
+  Web gets it at deploy, mobile at the next build. **No console step is needed**,
+  unlike adding a language: `cards_spanish` and both its indexes have been live
+  since 2026-08-22, and a pack writes into the collection that already exists.
+  `npm test` on web is 383/383 with the twelve new assertions in it.
+  Not yet seen by a signed-in user on either platform — the deck route serves
+  and the entries are asserted, but the rendered row is unverified, and it is the
+  longest that layout has had to hold (an article badge, and rows that are whole
+  questions).
+
 - **Swahili is live on web** (2026-08-27), a ninth study language, and the first
   Bantu one with audio. Registry entry, prompt branch, i18n and example terms
   merged; `/api/explain`, `/api/explain/depth`, `/api/explain/examples` and
@@ -161,6 +172,78 @@ separately unverified on Android, where only sign-in has been exercised.
 
 Closed calls, kept with their reasoning — a decision whose reasoning is lost gets
 reopened by the next person to notice the symptom. Newest first.
+
+### The Spanish pack: an article is a field, and a gloss is not an explanation (2026-08-31)
+
+The app's first elementary deck, 153 entries in five sections, and a second
+deliberate exception to the "audience is not beginners" rule after the everyday
+English pack — a bigger one, since that pack's learners had school English to
+filter against and a Spanish learner starting at `hola` has nothing. The
+argument is in `spanishBasics.ts`; the list and its review are in
+`docs/packs/spanish-basics-pack-draft.md`. What follows is only what a source
+diff would not explain.
+
+**`PackEntry` gained a `gender` field** — _the user's call, 2026-08-31._ Pack
+cards were the only path that could not carry an article: `/api/explain` returns
+`el`/`la` for a looked-up Spanish noun and three surfaces render it as a badge,
+while `buildPackCardDraft` wrote nothing, so the same word saved two ways
+produced two cards that disagreed about how much they knew. Three lines, and it
+reaches the typed grader as well — `acceptedAnswers` takes the article the
+learner learned the noun with. The registry had simply never had a Latin-script
+pack to expose the gap.
+
+**The article then had to come *out* of the study text, and that is the trap.**
+The list was first authored `study: 'la carta'` *with* `gender: 'la'` beside it,
+which is the obvious-looking shape and is wrong twice: `acceptedAnswers` emits
+`la la carta`, and a pack card and a looked-up card hold different strings for
+one word — the exact divergence the field was added to close. 41 entries were
+rewritten to the bare noun. **A test caught it, not a reread**, which is the
+argument for the round-trip assertion that now sits in
+`spanish-pack.test.ts`: build the draft, read it back through the grader, and
+assert on what a learner could actually type.
+
+**A gloss translates; a `context` explains.** `el menú del día` was authored as
+"the set lunch" and the user pushed back — it means the menu of the day, and the
+fixed price and four courses are an institution. The rule that came out of it,
+and that the pack now follows: **where the Spanish has a plain reading that is
+also correct, the back uses it and the hint carries the institution.** Three more
+entries had the same defect (`primer plato`, `segundo plato`, `ración`), so the
+class was fixed rather than the instance. `briefDefinition` is where an
+institution belongs — it is also what steers every later depth call, so nothing
+is lost by moving it there.
+
+**One principled exception, found by an existing guard.** `tapas` was glossed
+"tapas" and 타파스: English borrowed the word unchanged and Korean transliterated
+it, so both backs said the front back to the learner. `pack-cards.test.ts`
+already refused a back equal to its front, which is how it surfaced. **Where no
+translation exists, a definition is the only honest back** — "a small plate of
+food" — and that does not reopen the rule above, because there is no plain
+reading to prefer.
+
+**Two authored back columns can disagree with each other, and nothing catches
+it.** This is the first pack where both `English` and `Korean` are live, since a
+Spanish deck puts neither in the study slot. They were written independently and
+drifted: the Korean side already said 첫 번째 요리 while the English said "the
+starter". Worth knowing before the next two-back pack — and the reason
+`spanish-pack.test.ts` asserts no two entries share a back **in either
+language**, since two cards with one back cannot be reviewed in the
+back→study direction at all.
+
+**Phrases are entries, under one rule.** A question is authored complete and
+with its punctuation (`¿dónde está el baño?`); a frame the learner finishes is
+authored bare (`me llamo`). Never a half-sentence. `foldText` folds away neither
+the `¿` nor the accents — deliberately, and Kikuyu's `ĩ`/`ũ` is why — so a bare
+`cómo te llamas` would teach the learner to write Spanish wrong to save them one
+tap on the rating row. It would also have the pronounce button read a fragment
+aloud on a pack that declares `pronounceable`.
+
+**European Spanish is load-bearing here in a way it has not been yet.** The
+2026-08-21 decision named the variety; ordering food and asking directions are
+the first content where it changes the words rather than the accent. `caña`,
+`zumo`, `patata`, `billete`, `todo recto`, `servicios`, `planta baja` — and
+`coger`, which is ordinary in Spain and vulgar across much of Latin America. It
+is in the deck because the deck is European Spanish, and its `context` says so
+rather than leaving a learner to find out.
 
 ### Both remaining pronunciation items are cancelled (2026-08-31)
 
