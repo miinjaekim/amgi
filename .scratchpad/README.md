@@ -40,10 +40,11 @@ Related docs outside this folder:
   ranked before they are trusted, conflicts are recorded rather than resolved
   quietly, and the list is **rendered through the app's own transforms** before
   anyone believes it — which is what found the Kikuyu syllabifier bug.
-- `docs/packs/kikuyu-basics-pack-draft.md` — 59 entries, **written 2026-08-31 and
-  deliberately not approvable**: the gate is a speaker, not a read, and the draft
-  says why in its first paragraph. Also the record of two code blockers found by
-  rendering it.
+- `docs/packs/kikuyu-basics-pack-draft.md` — 59 entries, **approved 2026-08-31
+  with a speaker's check still outstanding**, which the header says plainly and
+  the per-entry tiers make visible. Also the record of two code bugs found by
+  rendering it rather than reading it, one of which reached every existing
+  Kikuyu card.
 - `docs/packs/spanish-basics-pack-draft.md` — the Spanish starter pack, 153
   entries in five sections, **approved 2026-08-31** (referenced from
   `spanishBasics.ts`). Same one-file shape as the three above, and the first pack

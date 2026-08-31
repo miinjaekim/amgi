@@ -10,6 +10,7 @@ import {
   MILITARY_UNIT_PACK_EN,
   MILITARY_UNIT_PACK_KO,
 } from './military';
+import { KIKUYU_BASICS_PACK } from './kikuyuBasics';
 import { SPANISH_BASICS_PACK } from './spanishBasics';
 import { TOPIK_ADVANCED_PACK } from './topik';
 
@@ -453,9 +454,11 @@ const TOEIC_PACK: VocabPack = {
  * to say "either, depending". Listed after the exam packs because those are
  * what most of each language's users came for.
  *
- * Spanish is one pack and needs no order. It is also the first registry entry
- * whose pack is elementary rather than a domain opened for someone already
- * fluent — the exception is argued in `spanishBasics.ts`, not here.
+ * Spanish and Kikuyu are one pack each and need no order. They are also the
+ * first registry entries whose packs are elementary rather than a domain opened
+ * for someone already fluent — the exception is argued in `spanishBasics.ts`.
+ * Kikuyu goes further and could not be otherwise: there is no pool of learners
+ * further along to write a domain pack for.
  *
  * English runs exam → everyday → idioms → job, which is register order rather
  * than difficulty order: TOEIC is what most English users arrived for, Everyday
@@ -469,6 +472,7 @@ export const VOCAB_PACKS: Partial<Record<StudyLanguage, VocabPack[]>> = {
   Japanese: [HIRAGANA_PACK, KATAKANA_PACK, KANJI_GRADE_1_2_PACK],
   Korean: [TOPIK_ADVANCED_PACK, MILITARY_UNIT_PACK_KO, MILITARY_AFFAIRS_PACK_KO],
   Spanish: [SPANISH_BASICS_PACK],
+  Kikuyu: [KIKUYU_BASICS_PACK],
 };
 
 export function getVocabPacks(studyLanguage: StudyLanguage): VocabPack[] {

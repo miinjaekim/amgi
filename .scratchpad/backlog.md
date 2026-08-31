@@ -61,6 +61,20 @@ first whose rows can be a **whole question** (`¿cómo está usted?`), so the de
 row is the longest that layout has had to hold — watch it at the narrowest phone
 width. Reasoning in [status.md](status.md).
 
+**Kikuyu Basics pack, and the `Cw` respelling fix** (2026-08-31). Web at deploy,
+mobile at the next build — JS only. **The respelling fix reaches every existing
+Kikuyu card**, not just the pack: a consonant before `w` was stranded as its own
+syllable, so `mwarĩ` rendered `m-wa-re` and 므와레 rather than `mwa-re` and 뫄레.
+Worth checking on the binary: the Korean side now uses the `w`-series syllables
+(뫄, 뭬, 콰, 과, 화), which no other language in the app produces, so it is the
+first time those glyphs render in the badge at phone width.
+⚠️ **A speaker has still not read the Kikuyu list** — shipped that way knowingly,
+with a source tier on every entry (16 corroborated twice, 36 on one source, 7
+derived). The verb section is where a check is worth the most: seven of ten are
+Dahl's Law applied to sourced stems rather than attested infinitives. The
+`guka`/`wagui` conflict and whether kinship is inherently possessed are both
+still open in `docs/packs/kikuyu-basics-pack-draft.md`.
+
 - **Delete `packages/core/src/writing.ts`, `grammar.ts` and the two API routes
   that keep them alive.** **The gate is open**: it was "once no build predating
   the 2026-08-18 grammar removal is still in use", and 1.4.0 is that build. What
@@ -113,45 +127,11 @@ Android is the exception — no review, so a fix there ships the same day._
 
 ## High
 
-Queued 2026-08-31, in the user's order. **Basic Spanish packs has left this
-section** — the pack is built and in review; see the build queue above. The two
+Queued 2026-08-31, in the user's order. **Both pack items have left this
+section** — Spanish and Kikuyu are built; see the build queue above. The two
 pronunciation items that used to sit here were **cancelled** — reasoning in the Decisions entry in
 [status.md](status.md), and the Kikuyu one's durable half moved to
 [lessons.md](lessons.md) rather than closing with the item.
-
-- [ ] **Basic Kikuyu packs** — greetings, numbers, family, actions.
-      **The draft exists and is deliberately not approvable yet**:
-      `docs/packs/kikuyu-basics-pack-draft.md`, 59 entries, every row carrying a
-      source tier. Of them 15 are corroborated twice, 33 rest on a single source,
-      8 are derived from a stem plus a rule, and 3 have none — **the gate is a
-      speaker, not a read.** This repo has measured the model wrong on Kikuyu
-      twice (noun class 3/8, tone 2/19) and the respelling shipped wrong three
-      times, each caught by a speaker and none by review.
-      Blocked behind the syllabifier item below — 11 of the 59 entries render
-      with a stranded consonant today, including the words for "hello" and "one".
-      Three open content calls are in the draft: whether numerals belong in a
-      pack at all when they agree with a noun class the app refuses to teach,
-      whether kinship terms are inherently possessed (`baba` = "my father"?), and
-      a `guka`/`wagui` conflict left unresolved on purpose.
-
-- [ ] **A consonant before `w` is stranded as its own syllable in the Kikuyu
-      respelling.** `KIKUYU_ONSETS` has `m`, `k`, `g` and `w` separately and no
-      `mw`/`kw`/`gw`/`hw`, so `mwarĩ` splits `m.wa.rĩ` and renders `m-wa-re`. The
-      Hangul path is worse: a vowelless onset falls through to
-      `withOnset(jamo, '으')` and **invents a syllable**, so `mwarĩ` is 므와레 —
-      three syllables for a two-syllable word. Affects every existing Kikuyu card
-      with a `Cw`, not just the pack.
-      The fix is `mw`/`kw`/`gw`/`hw` in `KIKUYU_ONSETS` and
-      `KIKUYU_ONSET_HANGUL` with `glide: 'w'`, which the Hangul table already
-      supports for `y`. **It is a respelling change on a shipped feature**, so
-      [lessons.md](lessons.md) puts a native check in front of the merge — the
-      confidence here is that the module's own docstring states Kikuyu syllables
-      are open CV, so a bare consonant violates the invariant the file asserts
-      about itself. That is an internal-consistency argument, not a phonetics
-      claim, which is exactly the distinction that lesson turns on.
-      *While in there:* three docstring examples (lines 299, 315, 373) still show
-      the **pre-correction** mapping — `rũciũ` → `roo-chee-oo`/`루치우`,
-      `mũgũnda` → 무군다 — so the file hands a reader the two errors #105 fixed.
 
 - [ ] **A pronunciation speed dial in settings** — one control over both term
       and example-sentence audio.
