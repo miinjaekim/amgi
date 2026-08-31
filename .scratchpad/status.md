@@ -162,6 +162,34 @@ separately unverified on Android, where only sign-in has been exercised.
 Closed calls, kept with their reasoning — a decision whose reasoning is lost gets
 reopened by the next person to notice the symptom. Newest first.
 
+### Both remaining pronunciation items are cancelled (2026-08-31)
+
+The user's call, and it clears High. Two items left [backlog.md](backlog.md);
+neither was closed by being finished, so the reasoning matters more than usual.
+
+**"Check the rest of the Kikuyu respelling against a speaker" — not needed.**
+The three errors that were found are fixed and each carries a regression test.
+What remained was a ranked list of *suspicions* with no speaker available to
+check them against, and a section held open for a check nobody can currently
+perform is not a plan. The item's real content was a lesson rather than a task,
+so it moved to [lessons.md](lessons.md) rather than closing silently — including
+the known-unchecked list, so a speaker turning up later has something to work
+from. The pack item that replaced it in High is where this comes back: a Kikuyu
+pack is the first thing that would put the unchecked half of that table in front
+of a learner at volume.
+
+**The languages still open for the text-based pronunciation aid — deferred
+until a user asks.** Not cancelled on doubt: the design question is settled,
+Japanese and Kikuyu shipped, and the measurement behind the rest does not go
+stale. `docs/pronunciation-research.md` holds the per-language numbers, two
+working rule engines (Korean 표준 발음법 at 37/40, Spanish/Swahili stress at
+16/16 and 9/9) and the finding that Swedish must not ship off the model. That is
+precisely the argument for closing it: **it is cheap to reopen and costs nothing
+to leave closed.** Japanese and Kikuyu were built because those two languages
+had a gap someone had named; nobody has named one for the others. Reopen on a
+user request rather than on a tidiness impulse, and read the research doc first
+instead of re-probing — the probes were the expensive part.
+
 ### The pronunciation aid is a transliteration, and pitch accent rides along (2026-08-30)
 
 **A correction to the entry below, made after it was built.** The aid asked for

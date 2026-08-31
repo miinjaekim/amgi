@@ -86,6 +86,27 @@ Backlog priority mirrors the user's Google Tasks list — `backlog.md` is the
 scoped version of it. Keep entries at the size that says what to do next; the
 argument behind a call goes in `status.md`, not in the item.
 
+_This pass **re-cut the High section** on the user's call. Both pronunciation
+items were cancelled — the Kikuyu speaker check because no speaker is available
+and what the item really held was a lesson (now in [lessons.md](lessons.md),
+with the known-unchecked list preserved), and the five remaining languages
+because the measurement behind them does not go stale, which makes deferring
+them until a user asks cheap in both directions. Four product items replaced
+them: basic Spanish packs, basic Kikuyu packs, a pronunciation speed dial, and a
+shareable stats asset. **The scoping is most of the value here** and three
+findings are worth knowing before picking any of them up. The **speed dial is a
+playback change, not a synthesis one**: `SPEAKING_RATE` is baked into the
+pronounce route's cache path, so a per-rate request multiplies the TTS bill and
+the bucket, while both players already expose a client-side rate — with one
+caveat that has to be settled by ear, since time-stretching a clip is not the
+same as synthesizing slowly. **"Cards learned" does not exist in the codebase**
+— `sm2.ts` stores `repetitions`/`interval`/`ease` and nothing derives maturity —
+so it needs a definition, and it reads from the card documents rather than the
+daily rollups, which makes it the one stat on that asset that works
+retroactively. And the **Kikuyu pack inherits the item just cancelled**: it
+would be the first thing to put the unchecked half of the respelling table in
+front of a learner at volume._
+
 _This pass **built the pronunciation aid for Japanese and Kikuyu**, the first
 two of the seven the backlog item covers, and the pairing is sharper than it
 looks: neither language's gap is the *reading*. Japanese already has furigana,
