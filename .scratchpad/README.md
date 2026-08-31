@@ -34,6 +34,17 @@ Related docs outside this folder:
   not-for-beginners rule, the idioms pack's Korean 관용구 matches are judgement
   calls, and the kanji pack trades the kana grid for a list to fit readings on the
   back. Hand *these* to a reviewer, not the TS.
+- `docs/packs/README.md` — **how a vocab pack gets built**, set 2026-08-31.
+  Read it before authoring any pack. The rule it exists for: **the model is not a
+  source**, so every entry carries a tier (A/B/C/D) and a citation, sources are
+  ranked before they are trusted, conflicts are recorded rather than resolved
+  quietly, and the list is **rendered through the app's own transforms** before
+  anyone believes it — which is what found the Kikuyu syllabifier bug.
+- `docs/packs/kikuyu-basics-pack-draft.md` — 59 entries, **approved 2026-08-31
+  with a speaker's check still outstanding**, which the header says plainly and
+  the per-entry tiers make visible. Also the record of two code bugs found by
+  rendering it rather than reading it, one of which reached every existing
+  Kikuyu card.
 - `docs/packs/spanish-basics-pack-draft.md` — the Spanish starter pack, 153
   entries in five sections, **approved 2026-08-31** (referenced from
   `spanishBasics.ts`). Same one-file shape as the three above, and the first pack

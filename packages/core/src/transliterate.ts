@@ -239,14 +239,29 @@ export function kanaToHangul(kana: string): string {
  *   is a real limit of English orthography, not a mistake.
  * - Stress is unmarked; the hyphens show syllables only.
  */
+/**
+ * Longest first — the scan takes the first match, so `mw` has to be tried
+ * before `m` or `mwarĩ` splits `m.wa.rĩ` and grows a syllable that is not there.
+ *
+ * **The `Cw` onsets read the orthography rather than asserting a phonology.**
+ * Kikuyu writes the vowel when the nasal is its own syllable (`mũndũ`,
+ * `mũrata`) and leaves it out when `w` is a glide on the consonant (`mwana`,
+ * `mwarĩ`) — so a written `mw` already *is* the spelling for one syllable, and
+ * splitting it contradicted the spelling in front of us. It is also what the
+ * docstring above means by syllables being open CV: a bare `m` carrying no
+ * vowel was never a syllable this module claimed existed.
+ */
 const KIKUYU_ONSETS = [
-  "ng'", 'mb', 'nd', 'ng', 'nj', 'ny', 'th', 'c', 'g', 'k', 'm', 'n',
-  'r', 't', 'w', 'y', 'h', 'b', 'd', 'j',
+  "ng'", 'ngw', 'njw', 'nyw', 'thw', 'mb', 'nd', 'ng', 'nj', 'ny', 'th',
+  'cw', 'gw', 'hw', 'kw', 'mw', 'rw', 'tw',
+  'c', 'g', 'k', 'm', 'n', 'r', 't', 'w', 'y', 'h', 'b', 'd', 'j',
 ];
 const KIKUYU_CONSONANT_SOUND: Record<string, string> = {
   "ng'": 'ng', mb: 'mb', nd: 'nd', ng: 'ng', nj: 'nj', ny: 'ny', th: 'th',
   c: 'sh', g: 'g', k: 'k', m: 'm', n: 'n', r: 'r', t: 't', w: 'w', y: 'y',
   h: 'h', b: 'b', d: 'd', j: 'j',
+  ngw: 'ngw', njw: 'njw', nyw: 'nyw', thw: 'thw',
+  cw: 'shw', gw: 'gw', hw: 'hw', kw: 'kw', mw: 'mw', rw: 'rw', tw: 'tw',
 };
 /**
  * Both tilde vowels are the close-mid ones, and both respell as pure vowels.
@@ -296,7 +311,7 @@ export function splitKikuyuSyllables(word: string): KikuyuSyllable[] {
   return syllables;
 }
 
-/** `rũciũ` → `roo-chee-oo`. Hyphens mark the syllables, which also carry stress. */
+/** `rũciũ` → `ro-shee-o`, `mwarĩ` → `mwa-re`. Hyphens mark the syllables. */
 export function kikuyuToEnglish(word: string): string {
   return splitKikuyuSyllables(word)
     .map(({ onset, vowel }) =>
@@ -312,7 +327,7 @@ export function kikuyuToEnglish(word: string): string {
  *
  * `nasal` is set for the prenasalized stops (mb, nd, ng, nj), which Hangul
  * cannot write as one onset — the nasal becomes a 받침 on the syllable before,
- * so `mũgũnda` is 무군다 rather than an invented cluster. `glide` picks the
+ * so `mũgũnda` is 모곤다 rather than an invented cluster. `glide` picks the
  * y-/w-series vowel, without which `gĩkũyũ` loses its `y` entirely.
  */
 const KIKUYU_ONSET_HANGUL: Record<string, { nasal?: string; jamo: string; glide?: 'y' | 'w' }> = {
@@ -328,6 +343,17 @@ const KIKUYU_ONSET_HANGUL: Record<string, { nasal?: string; jamo: string; glide?
   n: { jamo: 'ㄴ' }, r: { jamo: 'ㄹ' }, t: { jamo: 'ㅌ' }, h: { jamo: 'ㅎ' },
   b: { jamo: 'ㅂ' }, d: { jamo: 'ㄷ' }, j: { jamo: 'ㅈ' },
   w: { jamo: 'ㅇ', glide: 'w' }, y: { jamo: 'ㅇ', glide: 'y' },
+  // Labialized onsets. Korean writes every one of these as a single syllable
+  // off the w-series nuclei below — 뫄, 콰, 과, 화 — so the glide costs nothing
+  // here. It was the syllabifier that could not hold them, not Hangul.
+  ngw: { nasal: 'ㅇ', jamo: 'ㄱ', glide: 'w' },
+  njw: { nasal: 'ㄴ', jamo: 'ㅈ', glide: 'w' },
+  nyw: { jamo: 'ㄴ', glide: 'w' },
+  thw: { jamo: 'ㄷ', glide: 'w' },
+  cw: { jamo: 'ㅅ', glide: 'w' }, gw: { jamo: 'ㄱ', glide: 'w' },
+  hw: { jamo: 'ㅎ', glide: 'w' }, kw: { jamo: 'ㅋ', glide: 'w' },
+  mw: { jamo: 'ㅁ', glide: 'w' }, rw: { jamo: 'ㄹ', glide: 'w' },
+  tw: { jamo: 'ㅌ', glide: 'w' },
 };
 
 // Both tilde vowels follow the English side: ĩ [e] onto 에, ũ [o] onto 오. That
@@ -370,7 +396,7 @@ function attachNasal(out: string[], nasal: string): void {
   out.push(String.fromCharCode('으'.charCodeAt(0) + jong));
 }
 
-/** `rũciũ` → `루치우`, `mũgũnda` → `무군다`. */
+/** `rũciũ` → `로시오`, `mũgũnda` → `모곤다`, `mwarĩ` → `뫄레`. */
 export function kikuyuToHangul(word: string): string {
   const out: string[] = [];
   for (const { onset, vowel } of splitKikuyuSyllables(word)) {

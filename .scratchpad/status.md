@@ -46,6 +46,16 @@ _Reconciled against `main` @ `bc8cb97`, 2026-08-21. `npm test` 246/246, measured
   collections drifted into. Both work; only one says what it means. Why, and why
   a new collection needs two indexes rather than one, are in
   [lessons.md](lessons.md).
+- **The Kikuyu Basics pack is built** (2026-08-31) — 59 entries, the fifth
+  `VOCAB_PACKS` key, shipped **with no speaker check on the list** and a source
+  tier on every entry so that stays visible. No console step: `cards_kikuyu` and
+  both indexes have been live since 2026-08-22.
+  It carries a fix to the Kikuyu respelling that **reaches every existing card,
+  not just the pack** — a consonant before `w` was stranded as its own syllable
+  in both the English and the Hangul path. `npm test` on web is 397/397.
+  Unverified on a device: the Korean respelling now emits the `w`-series
+  syllables (뫄, 뭬, 콰, 과, 화), which nothing else in the app produces.
+
 - **The Spanish Basics pack is built** (2026-08-31) — 153 entries in five
   sections, the fourth `VOCAB_PACKS` key and the app's first elementary deck.
   Web gets it at deploy, mobile at the next build. **No console step is needed**,
@@ -172,6 +182,103 @@ separately unverified on Android, where only sign-in has been exercised.
 
 Closed calls, kept with their reasoning — a decision whose reasoning is lost gets
 reopened by the next person to notice the symptom. Newest first.
+
+### The Kikuyu pack, and a syllable Hangul could write all along (2026-08-31)
+
+59 entries, the fifth registry key, and the first pack built under the sourcing
+standard one entry down. Shipped **without a speaker having read the list** —
+knowingly, with the tier on every entry so what is unverified stays visible: 16
+corroborated twice, 36 on a single source, 7 derived from a sourced stem plus a
+sourced rule. Two entries with no source at all were cut, which is what tier C
+is for.
+
+**The finding worth keeping is a correction to a reasonable-sounding read.** The
+respelling stranded a consonant before `w`: `mwarĩ` split `m.wa.rĩ` and rendered
+`m-wa-re`, and the Hangul path fell through to `withOnset(jamo, '으')` and
+**invented a syllable** — 므와레, three for a two-syllable word. The natural
+reading of that is that Hangul cannot hold a `Cw` in one syllable and a
+transliteration is a lossy reading aid anyway. **Both halves are wrong, and the
+check took one line:** Korean writes 뫄, 뭬, 콰, 퀘, 과 and 화, the last two among
+the commonest syllables in the language, and the `w`-series nuclei were already
+in `KIKUYU_NUCLEUS`. Only the onset list was missing them. **And the English path
+had the identical fault**, where no Hangul constraint applies at all.
+
+**The distinction is worth holding onto, because the principle it was confused
+with is correct.** A respelling *is* a reading aid and is allowed to lose things
+— `ĩ`/`e` and `ũ`/`o` merge onto one letter, stress is unmarked, `th` cannot say
+*the* rather than *thin*. Those are losses of information, argued and accepted.
+A syllable the word does not have is not a lossy approximation of anything.
+
+**Why deriving this fix did not violate the lesson about deriving respellings.**
+It is not a phonological claim: Kikuyu orthography already marks the split,
+writing the vowel when the nasal is its own syllable (`mũndũ`, `mũrata`) and
+omitting it when `w` is a glide (`mwana`, `mwarĩ`). Reading `mw` as one onset
+reads the spelling as written. It is also what the module's own docstring means
+by syllables being open CV — a bare `m` with no vowel was never a syllable the
+file claimed existed. An internal-consistency argument, not a chart. Three stale
+docstring examples were fixed alongside it: they still showed the
+*pre-correction* `rũciũ` → `roo-chee-oo`/`루치우` and `mũgũnda` → 무군다, handing
+a reader the two errors #105 fixed.
+
+**The fix reaches every existing Kikuyu card**, not only the pack — 11 of the
+pack's 59 entries were affected, including the words for "hello" and "one".
+
+**Kikuyu could not have had a different kind of pack.** The Spanish pack's
+beginner exception was argued as a deliberate departure; here there is no pool
+of learners further along to write a domain deck for. And because the language
+has no synthesised voice, **the respelling on the card is the only pronunciation
+aid this deck has** — which is why building it started by rendering every entry
+rather than by reading the list, and why a test now asserts that no entry
+renders a vowelless syllable.
+
+### Vocab packs are sourced, and the model is not a source (2026-08-31)
+
+_The user's call, made while the Kikuyu draft was being written._ The standard
+itself is `docs/packs/README.md`, next to the drafts it governs; this is why.
+
+**The Spanish pack was authored from the model's own knowledge and it mostly
+worked** — the vocabulary was never in doubt, and review caught the two things
+that were wrong (a gloss that interpreted, an article in two places). Kikuyu is
+the case that breaks that method, and the repo had already measured why: noun
+class 3 of 8 (2026-08-22), tone self-consistent on 2 of 19
+(`docs/pronunciation-research.md`), and a respelling table wrong three times.
+**Same source, three failures, all caught by a speaker and none by review.**
+
+So the rule is one line — **the model is not a source, and asking it to check
+itself is not corroboration.** Self-consistency was measured as no evidence of
+correctness on Japanese pitch accent (18 of 27 stable, 6 correct), which is the
+finding that generalises: a second pass over a generated list launders the first
+one rather than testing it.
+
+**Three of the draft's own guesses were caught by the sources on the first
+pass** — `mĩrongo ĩĩrĩ` for `mĩrongo ĩrĩ`, bare `igana`/`ngiri` where the
+numeral is part of the word, and `mũrũ wa maitũ` for `mũrũ wa nyina`. That is
+the standard paying for itself before it was finished being written.
+
+**Tiers rather than a bibliography.** A/B/C/D per entry as table columns, because
+a paragraph of sources at the bottom lets a reviewer trust the whole list
+equally — and the point is the opposite, that they can see which rows are
+load-bearing guesses without reading all of it. The Kikuyu draft is 15/33/3/8,
+and stating that in its first paragraph is more useful than any of the entries.
+
+**Sources are ranked, because the bottom of the range is contaminated rather
+than merely thin.** lughayangu returned `Nakupenda` as Kikuyu — that is Swahili,
+and it is the same confusion `STUDY_LANGUAGE_CONFIGS` already refuses a Swahili
+TTS voice over. It also drops the diacritics, which on a language whose `ĩ`/`ũ`
+distinguish words means it corroborates the word and not the spelling. So
+**orthography is part of the citation**, and a source that loses it is cited for
+less than it appears to give.
+
+**Conflicts are recorded, not resolved quietly** — `guka` against `wagui` for
+grandfather stays visible in the draft, because a draft that picks one silently
+has spent the reviewer's only chance to catch it.
+
+**And render the list before believing it.** Not a sourcing rule, but it belongs
+in the same standard because it is the same mistake in a different place: a word
+list is not what the learner sees. Running the Kikuyu entries through
+`kikuyuToEnglish` and `kikuyuToHangul` found a syllabifier bug in ten minutes —
+in the word for "hello" — that no amount of rereading the table would have
+surfaced.
 
 ### The Spanish pack: an article is a field, and a gloss is not an explanation (2026-08-31)
 

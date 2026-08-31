@@ -61,6 +61,20 @@ first whose rows can be a **whole question** (`¿cómo está usted?`), so the de
 row is the longest that layout has had to hold — watch it at the narrowest phone
 width. Reasoning in [status.md](status.md).
 
+**Kikuyu Basics pack, and the `Cw` respelling fix** (2026-08-31). Web at deploy,
+mobile at the next build — JS only. **The respelling fix reaches every existing
+Kikuyu card**, not just the pack: a consonant before `w` was stranded as its own
+syllable, so `mwarĩ` rendered `m-wa-re` and 므와레 rather than `mwa-re` and 뫄레.
+Worth checking on the binary: the Korean side now uses the `w`-series syllables
+(뫄, 뭬, 콰, 과, 화), which no other language in the app produces, so it is the
+first time those glyphs render in the badge at phone width.
+⚠️ **A speaker has still not read the Kikuyu list** — shipped that way knowingly,
+with a source tier on every entry (16 corroborated twice, 36 on one source, 7
+derived). The verb section is where a check is worth the most: seven of ten are
+Dahl's Law applied to sourced stems rather than attested infinitives. The
+`guka`/`wagui` conflict and whether kinship is inherently possessed are both
+still open in `docs/packs/kikuyu-basics-pack-draft.md`.
+
 - **Delete `packages/core/src/writing.ts`, `grammar.ts` and the two API routes
   that keep them alive.** **The gate is open**: it was "once no build predating
   the 2026-08-18 grammar removal is still in use", and 1.4.0 is that build. What
@@ -113,32 +127,11 @@ Android is the exception — no review, so a fix there ships the same day._
 
 ## High
 
-Queued 2026-08-31, in the user's order. **Basic Spanish packs has left this
-section** — the pack is built and in review; see the build queue above. The two
+Queued 2026-08-31, in the user's order. **Both pack items have left this
+section** — Spanish and Kikuyu are built; see the build queue above. The two
 pronunciation items that used to sit here were **cancelled** — reasoning in the Decisions entry in
 [status.md](status.md), and the Kikuyu one's durable half moved to
 [lessons.md](lessons.md) rather than closing with the item.
-
-- [ ] **Basic Kikuyu packs** — greetings, numbers, family members, actions.
-      Same mechanism as the Spanish item, same draft-then-approve order, and
-      **three differences that are not cosmetic**:
-  - **No voice.** Kikuyu is the one registry entry with no `ttsLanguageCode`, so
-    `pronounceable` stays off and the deck page has no audio to fall back on
-    when a gloss reads thin.
-  - **This is the language where model output was measured unreliable.** The
-    noun class was refused for that reason (2026-08-22) and the respelling was
-    wrong three times (see [lessons.md](lessons.md)). A generated word list here
-    carries more risk than a Spanish one, and it is the draft where **a
-    speaker's read before merge is worth the most**.
-  - **The diacritics are load-bearing.** `ĩ`/`i` and `ũ`/`u` are word
-    distinctions, and the typed-answer grader matches accents *strictly* on
-    purpose — so a misauthored vowel marks a correct answer wrong rather than
-    merely reading oddly.
-
-      One knock-on: every entry renders through the Kikuyu respelling, whose
-      remaining rules are unchecked (the list is in [lessons.md](lessons.md)). A
-      pack is the first thing that would put that table in front of a learner at
-      volume.
 
 - [ ] **A pronunciation speed dial in settings** — one control over both term
       and example-sentence audio.
