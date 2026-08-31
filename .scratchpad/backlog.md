@@ -111,32 +111,36 @@ sit here were **cancelled** — reasoning in the Decisions entry in
 
 - [ ] **Basic Spanish packs** — greetings/introductions, numbers, ordering food,
       asking for directions, useful verbs.
-      `VOCAB_PACKS` keys English, Japanese and Korean today, so **Spanish is the
-      fourth registry entry**. The shape is settled by precedent:
-      `layout: 'list'`, `pronounceable: true` (Spanish has a voice), and backs
-      authored in **both** `English` and `Korean` — `resolvePackBack` picks by
-      the language *pair*, not by the native language alone.
-      **Author the draft and get it approved before any TS.** That is how the
-      three packs added 2026-08-24 went, and
-      `docs/packs/daily-life-pack-draft.md` is the format to copy: word list and
-      backs in one file, leading with the calls that need a decision. Hand the
-      reviewer *that*, not the TypeScript. Three calls belong in its header:
-  - **One pack with five sections, or five packs?** Default to one
-    (`spanish-basics`). `PackSection` exists for exactly this — "160 words is
-    not one decision" — and five one-topic packs put five rows on the deck list
-    where TOEIC gets one. Propose it and let the user overrule.
-  - **These are beginner packs**, which sets aside the "audience isn't
-    beginners, packs are domains not starters" rule. There is precedent — the
-    daily-life pack set the same rule aside on purpose — so record the exception
-    in the draft rather than sliding past it.
-  - **European Spanish**, decided 2026-08-21, and not a detail for these five:
-    ordering food and directions are exactly where peninsular vocabulary and
-    *vosotros* surface, so the draft has to commit rather than average.
+      **The draft is written and waiting on you**:
+      `docs/packs/spanish-basics-pack-draft.md`, 153 entries in five sections,
+      word list *and* both backs in one file. Nothing has been written to
+      `packages/core` — read and mark up the draft first, the way the three
+      packs added 2026-08-24 went. It leads with the calls that need a decision
+      (one pack or five, the beginner exception, European Spanish) and six open
+      questions; **two of those need an answer before any code**, because they
+      are not content questions:
+  - **`PackEntry` carries no `gender`, so every noun in the pack would save
+    without its article** — while the same word looked up by hand gets `el`/`la`
+    from `/api/explain` and renders a badge on lookup, review and card detail.
+    Not a Spanish problem; the registry has never had a Latin-script pack to
+    expose it. The fix is ~3 lines (optional `gender` on `PackEntry`, written
+    through by `buildPackCardDraft`) and pays twice, since `acceptedAnswers`
+    then takes both `baño` and `el baño` in typed review. The draft's gender
+    column assumes yes.
+  - **Typed review misses on phrases and accented numbers.** `foldText` strips
+    neither punctuation nor diacritics on purpose, so `¿cómo te llamas?` and
+    `dieciséis` have to be typed exactly. It is a false miss the rating row
+    corrects in one tap, but this is the first pack to hit it at volume. The
+    draft **keeps the punctuation** — dropping it would put wrong Spanish on the
+    card, which is the argument `foldText` already won — and instead splits
+    entries into complete questions (`¿dónde está el baño?`) and bare frames the
+    learner finishes (`me llamo`). Confirm or overrule; it comes off in one pass.
 
-      Also: two of the five topics are **phrase-shaped**. A `PackEntry.study` of
-      `¿Dónde está el baño?` is legal and reviewable, but it puts a phrase card
-      in a deck of word cards — decide whether those sections carry the phrases
-      or the words phrases are built from.
+      Once the list is approved: `packages/core/src/spanishBasics.ts`,
+      `layout: 'list'`, `pronounceable: true`, registered as the fourth
+      `VOCAB_PACKS` key — plus a test file on the pattern of
+      `english-packs.test.ts` (no duplicate study text across sections, clean
+      Spanish on the study side, one `buildPackCardDraft` round-trip).
 
 - [ ] **Basic Kikuyu packs** — greetings, numbers, family members, actions.
       Same mechanism as the Spanish item, same draft-then-approve order, and

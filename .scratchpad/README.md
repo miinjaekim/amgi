@@ -34,6 +34,15 @@ Related docs outside this folder:
   not-for-beginners rule, the idioms pack's Korean 관용구 matches are judgement
   calls, and the kanji pack trades the kana grid for a list to fit readings on the
   back. Hand *these* to a reviewer, not the TS.
+- `docs/packs/spanish-basics-pack-draft.md` — the Spanish starter pack, 153
+  entries in five sections, **written 2026-08-31 and not yet approved**. Same
+  one-file shape as the three above (list *and* both backs together), and the
+  first pack authored with **English and Korean backs both live**, since on a
+  Spanish deck neither slot is the front. Read its header before the list: it
+  carries the beginner exception, the European-Spanish commitments, and two open
+  questions that are **code** rather than content — `PackEntry` has no `gender`,
+  so pack nouns would save without their article, and typed review misses on
+  accented and punctuated entries by design.
 - `docs/packs/toeic-backs-draft.md`, `docs/packs/topik-backs-draft.md` — the 293
   card backs, approved 2026-08-02. Kept as the record of what was authored and
   why; still the place to read before changing a gloss, since each leads with
