@@ -52,6 +52,15 @@ wrap or clip at the narrowest phone width, and the Kikuyu/Japanese note under
 the Try: row should not push the search field off-screen. Reasoning in
 [status.md](status.md).
 
+**Spanish Basics pack** (2026-08-31). Web gets it at deploy, mobile at the next
+build — no native module, so it rides whatever build comes next. **Nothing
+existing changes**: it is a new registry key, a new module and one optional field
+on `PackEntry` that no other pack sets. Worth checking on the binary: this is the
+first `layout: 'list'` pack where entries carry an **article badge**, and the
+first whose rows can be a **whole question** (`¿cómo está usted?`), so the deck
+row is the longest that layout has had to hold — watch it at the narrowest phone
+width. Reasoning in [status.md](status.md).
+
 - **Delete `packages/core/src/writing.ts`, `grammar.ts` and the two API routes
   that keep them alive.** **The gate is open**: it was "once no build predating
   the 2026-08-18 grammar removal is still in use", and 1.4.0 is that build. What
@@ -104,75 +113,101 @@ Android is the exception — no review, so a fix there ships the same day._
 
 ## High
 
-Queued 2026-08-25, in the user's order. Two of the three are done — Swahili,
-and audio on mobile review, which is built and waiting on a build rather than on
-work. See the Decisions entry in [status.md](status.md) for what each settled.
+Queued 2026-08-31, in the user's order. **Basic Spanish packs has left this
+section** — the pack is built and in review; see the build queue above. The two
+pronunciation items that used to sit here were **cancelled** — reasoning in the Decisions entry in
+[status.md](status.md), and the Kikuyu one's durable half moved to
+[lessons.md](lessons.md) rather than closing with the item.
 
-- [ ] **Check the rest of the Kikuyu respelling against a speaker.** Three
-      errors have been caught this way and none any other way: `c` is [ʃ] and
-      `ũ` is [o] (both from `cũcũ` → *shosho*), and `ĩ` respells `e` rather than
-      `ay` (from `gĩkũyũ` → *ge-ko-yo*). Each is a regression test.
-      **The rest of the table has had no such check**, and the third catch is
-      the reason that matters: the phoneme was already identified correctly from
-      published sources and was still written wrong. A phoneme chart cannot
-      settle a respelling, so the remaining items cannot be closed by reading
-      more of them:
-      `th` [ð] reads as *thin* not *the*; `g` [ɣ] and `b` [β] are fricatives
-      respelled as stops; long vowels (written doubled in Kikuyu) split into
-      separate syllables, so `nĩĩ` comes out `ne-e`; and stress is unmarked.
-      The `ĩ`/`e` and `ũ`/`o` merges are believed to be genuine limits of
-      English respelling, but that too is unchecked.
-      *Worth carrying into the five below:* the first version's own header
-      ranked six suspicions and put the vowel error fifth, filed as an accepted
-      loss rather than a bug. The self-audit reproduced its own blind spot; one
-      word from a speaker did what the ranked list could not — and the *second*
-      attempt then derived `gay-ko-yo` from the same table with the same
-      confidence. **Prefer a native check before merge over a longer list of
-      suspicions**, and treat a phoneme chart as insufficient on its own for a
-      respelling: it fixes what a sound *is*, not how to write it for a reader.
+- [ ] **Basic Kikuyu packs** — greetings, numbers, family members, actions.
+      Same mechanism as the Spanish item, same draft-then-approve order, and
+      **three differences that are not cosmetic**:
+  - **No voice.** Kikuyu is the one registry entry with no `ttsLanguageCode`, so
+    `pronounceable` stays off and the deck page has no audio to fall back on
+    when a gloss reads thin.
+  - **This is the language where model output was measured unreliable.** The
+    noun class was refused for that reason (2026-08-22) and the respelling was
+    wrong three times (see [lessons.md](lessons.md)). A generated word list here
+    carries more risk than a Spanish one, and it is the draft where **a
+    speaker's read before merge is worth the most**.
+  - **The diacritics are load-bearing.** `ĩ`/`i` and `ũ`/`u` are word
+    distinctions, and the typed-answer grader matches accents *strictly* on
+    purpose — so a misauthored vowel marks a correct answer wrong rather than
+    merely reading oddly.
 
-- [ ] **Text-based pronunciation aid — the five languages still open.**
-      Japanese and Kikuyu are **done** (2026-08-30); the reasoning, and the two
-      traps worth reading before touching either, are in the Decisions entry in
-      [status.md](status.md). What that pass established is reusable, so this is
-      no longer an open design question — it is five applications of a settled
-      one.
-      **The Kikuyu bug that blocked these is fixed**, so the transliteration
-      mechanism four of them would reuse is sound. Read the item above first
-      anyway: what it says about *how* the bug was found should change how
-      these ship.
-      *The three mechanisms now exist in code:* a stored `TermCore` field filled
-      by `/api/explain` (Japanese `pitchAccent`, and pinyin before it), a static
-      rule via `pronunciationNote` (Kikuyu), and a render-time transform — which
-      is the only one with **no implementation yet**.
-      *What the measurement pass already answered for the rest,* probed three
-      runs per term at the route's own temperature:
-      - **Korean** — the aid is sound change (좋아요 → [조아요]), and it should be
-        a **render-time transform, not a model field**. Head to head on 18
-        terms: rules 17/18, Gemini 14/18, and the failure sets barely overlap —
-        the model misses regular phonology by returning "no change" (신라, 급행,
-        한국말), rules miss only what needs a morpheme boundary (값어치, 솜이불).
-        A working 표준 발음법 prototype scored 37/40 — it is in
-        `docs/pronunciation-research.md` with the numbers behind it, and would
-        need rewriting against `packages/core` before shipping.
-      - **Spanish and Swahili** — stress, derivable from spelling alone. A
-        prototype scored 16/16 and 9/9 first try (also in
-        `docs/pronunciation-research.md`). Cheapest of the five. Caveat: those
-        expectation tables were author-written, so they test the implementation
-        more than they test the assumptions — unlike Korean, which is checkable
-        against 표준국어대사전.
-      - **French and English** — IPA, and the model is *accurate* here (~16/17
-        and ~15/15 on content). The defect is **formatting**: half the runs
-        wrapped in `/…/` despite the prompt forbidding it, and English drifted
-        GA↔RP. So this is a stored field plus a normalizer that strips
-        delimiters and pins the variety, not a new prompt idea.
-      - **Swedish** — pitch accent was unstable on 10 of 16, and `sked` came
-        back `ˈskeːd` with a literal /sk/, which is the beginner error the aid
-        exists to prevent. **Do not ship it off the model.** Japanese is the
-        precedent for what would work: a lexical source. Not yet looked for.
-      *The one rule that outlived the pass:* readings come from **`/api/explain`,
-      the same route furigana comes from** — but "from the route" and "from the
-      model" are not the same thing, which is what the Japanese lookup proved.
+      One knock-on: every entry renders through the Kikuyu respelling, whose
+      remaining rules are unchecked (the list is in [lessons.md](lessons.md)). A
+      pack is the first thing that would put that table in front of a learner at
+      volume.
+
+- [ ] **A pronunciation speed dial in settings** — one control over both term
+      and example-sentence audio.
+      **One control already covers both.** `PronounceButton` is the single
+      component behind the term, the translation and the example sentences, so
+      nothing here needs a second setting.
+      **Do it at playback, not at synthesis.** `SPEAKING_RATE = 0.85` in
+      `apps/web/src/app/api/pronounce/route.ts` is baked into the **cache path**
+      (`pronunciation/{lang}/{voice}-r{rate}/{hash}.mp3`), so making it a request
+      parameter means a fresh Google TTS call *and* a fresh stored object per
+      rate per term — an unbounded multiple of the bill and the bucket, for a
+      preference most users set once. Both players already do it client-side:
+      web `HTMLAudioElement.playbackRate` (with `preservesPitch`), mobile
+      `expo-audio`'s `player.playbackRate` / `setPlaybackRate(rate, quality)`
+      plus `shouldCorrectPitch`. One cached file per term, any rate, and **JS
+      only on mobile** — it rides whatever build comes next.
+      ⚠️ **Verify by ear before committing to that.** Time-stretching a clip is
+      not the same as synthesizing slowly, and the reason the server rate is
+      0.85 at all is that learners need to hear individual sounds. If a
+      pitch-corrected 0.6× on the generative voice sounds like an artifact
+      rather than a slow speaker, the fallback is a **small fixed set** of
+      server rates (say 0.7 / 0.85 / 1.0), which keeps the cache bounded at
+      three objects per term instead of unbounded.
+      Where the preference lives: **device-local**, following theme's precedent
+      (`localStorage` / `AsyncStorage`), not a `users/{uid}` field. Study and
+      native language are on the account because they must follow it; a playback
+      rate does not.
+      One asymmetry to decide: mobile has a settings **tab** with sections and
+      room for a slider; web's is a dropdown `SettingsMenu` that has none. Web
+      may need a row that opens something, or the menu may need to grow.
+
+- [ ] **A shareable stats asset — and the stats behind it.** An image a user can
+      post to their stories: cards reviewed, new cards added, cards learned. Two
+      halves, and the second is the one with a clock on it.
+      **What exists already:** `summarizeProgress` gives `totalReviews`,
+      `totalNewCards`, `totalPackCards`, `activeDays` and `averagePerActiveDay`
+      over a window; `deriveStreak` gives the streak; `buildHeatmap` gives the
+      calendar. Two of the three numbers asked for are already there.
+      **"Cards learned" does not exist anywhere.** `sm2.ts` stores
+      `repetitions`, `interval` and `ease`; nothing derives maturity from them.
+      It needs a definition (the Anki convention is `interval >= 21` days) and —
+      unlike everything else on the dashboard — it reads from the **card
+      documents**, not the daily rollups. Which is the good news: it is
+      **retroactive**, needing no write-path change and no waiting.
+      ⚠️ **`reviews` counts directions, not cards**, and always has, matching
+      `reviewedToday`. A dashboard tile is read in context; an image posted
+      publicly saying "1,204 cards reviewed" is simply wrong for a two-direction
+      learner. Settle the wording or the arithmetic before the asset is designed.
+      ⚠️ **Decide any new counter now, inside this item.** Daily rollups discard
+      what they didn't count in advance, and a field added later collects only
+      from the day it ships — so anything the asset should be able to show in
+      six months has to start being written before the asset is built, not after.
+      ⚠️ **History began 2026-08-20 and cannot be backfilled**, so a "total" is
+      a total since then, not since the user joined. Label the window, or scope
+      the asset to one (last 30 days, this year).
+      Also decide whether the asset counts `newCards` alone or `+ packCards` —
+      they are counted apart deliberately, and one 474-card pack import dwarfs
+      every real study day.
+      **Render it server-side.** Mobile cannot rasterize a view without
+      `react-native-view-shot`, a native module, which would cost a build. A
+      Next route returning a PNG (Next 16 ships `next/og` — no new dependency)
+      is one implementation for both platforms: web links it, mobile downloads
+      it with `expo-file-system` and hands it to `expo-sharing`, **both already
+      in the shipped build** and `expo-sharing` already carrying the CSV export.
+      So this stays JS-only on mobile too. Story format is 1080×1920.
+      **Privacy, because the output is meant to be posted publicly:** no email,
+      no uid, no card content on the image — numbers and the app name. And the
+      route must not let anyone render anyone else's stats from a uid in a URL;
+      authenticate it, or pass the numbers in rather than looking them up.
 
 ## Medium
 

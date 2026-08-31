@@ -34,6 +34,15 @@ Related docs outside this folder:
   not-for-beginners rule, the idioms pack's Korean 관용구 matches are judgement
   calls, and the kanji pack trades the kana grid for a list to fit readings on the
   back. Hand *these* to a reviewer, not the TS.
+- `docs/packs/spanish-basics-pack-draft.md` — the Spanish starter pack, 153
+  entries in five sections, **approved 2026-08-31** (referenced from
+  `spanishBasics.ts`). Same one-file shape as the three above, and the first pack
+  with **English and Korean backs both live**, since on a Spanish deck neither
+  slot is the front. Read its header before the list: the beginner exception, the
+  European-Spanish commitments, and the phrase rule. It also carries a **What
+  review changed** section, which is the part worth reading twice — three
+  defects were found *after* the list was written, and two of them by a test
+  rather than by rereading.
 - `docs/packs/toeic-backs-draft.md`, `docs/packs/topik-backs-draft.md` — the 293
   card backs, approved 2026-08-02. Kept as the record of what was authored and
   why; still the place to read before changing a gloss, since each leads with
@@ -85,6 +94,27 @@ lives outside the repo, and what is currently unverified.
 Backlog priority mirrors the user's Google Tasks list — `backlog.md` is the
 scoped version of it. Keep entries at the size that says what to do next; the
 argument behind a call goes in `status.md`, not in the item.
+
+_This pass **re-cut the High section** on the user's call. Both pronunciation
+items were cancelled — the Kikuyu speaker check because no speaker is available
+and what the item really held was a lesson (now in [lessons.md](lessons.md),
+with the known-unchecked list preserved), and the five remaining languages
+because the measurement behind them does not go stale, which makes deferring
+them until a user asks cheap in both directions. Four product items replaced
+them: basic Spanish packs, basic Kikuyu packs, a pronunciation speed dial, and a
+shareable stats asset. **The scoping is most of the value here** and three
+findings are worth knowing before picking any of them up. The **speed dial is a
+playback change, not a synthesis one**: `SPEAKING_RATE` is baked into the
+pronounce route's cache path, so a per-rate request multiplies the TTS bill and
+the bucket, while both players already expose a client-side rate — with one
+caveat that has to be settled by ear, since time-stretching a clip is not the
+same as synthesizing slowly. **"Cards learned" does not exist in the codebase**
+— `sm2.ts` stores `repetitions`/`interval`/`ease` and nothing derives maturity —
+so it needs a definition, and it reads from the card documents rather than the
+daily rollups, which makes it the one stat on that asset that works
+retroactively. And the **Kikuyu pack inherits the item just cancelled**: it
+would be the first thing to put the unchecked half of the respelling table in
+front of a learner at volume._
 
 _This pass **built the pronunciation aid for Japanese and Kikuyu**, the first
 two of the seven the backlog item covers, and the pairing is sharper than it

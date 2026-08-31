@@ -1,5 +1,35 @@
 # Lessons
 
+## A phoneme chart cannot settle a respelling (2026-08-31)
+
+The pronunciation aid respells a term in the script the reader already reads.
+Kikuyu's table was wrong three times, and **all three were caught the same way:
+one word from a speaker.** `c` is [ʃ] and `ũ` is [o] (both fell out of `cũcũ` →
+*shosho*); `ĩ` respells `e` rather than `ay` (from `gĩkũyũ` → *ge-ko-yo*). None
+was caught by reading more sources.
+
+The third is the one worth keeping. **The phoneme had already been identified
+correctly from published sources and was still written wrong** — a chart fixes
+what a sound *is*, not how to write it for a reader. And the self-audits between
+the errors reproduced their own blind spot rather than closing it: the first
+ranked six suspicions and filed the vowel error fifth as an accepted loss, and
+the second then derived `gay-ko-yo` from the same table with the same
+confidence.
+
+So: **prefer one native check before merge over a longer list of suspicions**,
+and treat self-consistency as no evidence of correctness — which is where the
+Japanese pitch-accent probe landed from the other direction
+(`docs/pronunciation-research.md`).
+
+The rest of the table has had no such check, and the backlog item asking for one
+was cancelled 2026-08-31 (see Decisions in [status.md](status.md)) because there
+is no speaker to hand. If one ever is, this is the known-unchecked list: `th` [ð]
+reads as *thin* rather than *the*; `g` [ɣ] and `b` [β] are fricatives respelled
+as stops; long vowels are written doubled in Kikuyu and split into separate
+syllables, so `nĩĩ` comes out `ne-e`; stress is unmarked; and the `ĩ`/`e` and
+`ũ`/`o` merges are *believed* to be genuine limits of English respelling, which
+is itself unchecked.
+
 ## Google sign-in on Android: three traps, and none of them in our code (2026-08-22)
 
 The first Android build reached Google, got a code back, and still signed
