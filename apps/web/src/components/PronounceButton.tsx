@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { getPronunciationUrl, getSpokenText, getStudyLanguageConfig } from '@amgi/core';
 import type { StudyLanguage } from '@amgi/core';
+import { usePronunciation } from '@/components/PronunciationContext';
 
 interface Props {
   text: string;
@@ -17,6 +18,7 @@ type Status = 'idle' | 'loading' | 'playing' | 'error';
 
 export default function PronounceButton({ text, furigana, studyLanguage, className = '', size = 'md' }: Props) {
   const [status, setStatus] = useState<Status>('idle');
+  const { rate } = usePronunciation();
 
   const disabled = !text.trim() || status === 'loading' || status === 'playing';
 
@@ -25,6 +27,11 @@ export default function PronounceButton({ text, furigana, studyLanguage, classNa
     try {
       const url = await getPronunciationUrl(getSpokenText(text, furigana), studyLanguage);
       const audio = new Audio(url);
+      // Time-stretch rather than resample. Without pitch correction a slowed
+      // clip also drops in pitch, which stops sounding like a careful speaker
+      // and starts sounding like the wrong voice.
+      audio.preservesPitch = true;
+      audio.playbackRate = rate;
       audio.onended = () => setStatus('idle');
       audio.onerror = () => setStatus('error');
       await audio.play();

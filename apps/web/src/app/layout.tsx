@@ -3,6 +3,7 @@ import { Source_Code_Pro } from "next/font/google";
 import "./globals.css";
 import { UserProvider } from "@/components/UserContext";
 import { ThemeProvider } from "@/components/ThemeContext";
+import { PronunciationProvider } from "@/components/PronunciationContext";
 import LayoutWithUser from "./LayoutWithUser";
 
 // Source Code Pro is a clean, modern coding font with excellent readability
@@ -36,7 +37,9 @@ export default function RootLayout({
         />
         <ThemeProvider>
           <UserProvider>
-            <LayoutWithUser>{children}</LayoutWithUser>
+            <PronunciationProvider>
+              <LayoutWithUser>{children}</LayoutWithUser>
+            </PronunciationProvider>
           </UserProvider>
         </ThemeProvider>
       </body>

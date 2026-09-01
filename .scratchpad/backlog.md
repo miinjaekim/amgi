@@ -32,6 +32,14 @@ the button **hides while offline**, so on a subway session the word should lose
 its 🔊 and the progress line should be the thing that says why. Reasoning in
 [status.md](status.md).
 
+**Pronunciation speed dial** (2026-09-01). Same terms — the rate is applied at
+playback with `expo-audio`'s `setPlaybackRate`, which is already in the shipped
+build, so this is JS only. ⚠️ **The one thing to check on the binary is the ear
+test the plan deferred**: Slow is a pitch-corrected 0.7× stretch of a clip
+synthesized at 0.85, not a natively slow synthesis. If it sounds like an
+artifact rather than a careful speaker, the fallback is server-side rates behind
+the same three chips — no UI change. Reasoning in [status.md](status.md).
+
 **Pronunciation aid: transliteration + Japanese pitch accent** (2026-08-30).
 Same terms — JS only on mobile. The **transliteration half needs no backfill and
 shows on every existing card at once**, since it derives from the term; the
@@ -127,41 +135,12 @@ Android is the exception — no review, so a fix there ships the same day._
 
 ## High
 
-Queued 2026-08-31, in the user's order. **Both pack items have left this
-section** — Spanish and Kikuyu are built; see the build queue above. The two
-pronunciation items that used to sit here were **cancelled** — reasoning in the Decisions entry in
+Queued 2026-08-31, in the user's order. **Both pack items and the speed dial
+have left this section** — Spanish and Kikuyu are built, and the pronunciation
+speed dial shipped 2026-09-01; see the build queue above. The two pronunciation
+items that used to sit here were **cancelled** — reasoning in the Decisions entry in
 [status.md](status.md), and the Kikuyu one's durable half moved to
 [lessons.md](lessons.md) rather than closing with the item.
-
-- [ ] **A pronunciation speed dial in settings** — one control over both term
-      and example-sentence audio.
-      **One control already covers both.** `PronounceButton` is the single
-      component behind the term, the translation and the example sentences, so
-      nothing here needs a second setting.
-      **Do it at playback, not at synthesis.** `SPEAKING_RATE = 0.85` in
-      `apps/web/src/app/api/pronounce/route.ts` is baked into the **cache path**
-      (`pronunciation/{lang}/{voice}-r{rate}/{hash}.mp3`), so making it a request
-      parameter means a fresh Google TTS call *and* a fresh stored object per
-      rate per term — an unbounded multiple of the bill and the bucket, for a
-      preference most users set once. Both players already do it client-side:
-      web `HTMLAudioElement.playbackRate` (with `preservesPitch`), mobile
-      `expo-audio`'s `player.playbackRate` / `setPlaybackRate(rate, quality)`
-      plus `shouldCorrectPitch`. One cached file per term, any rate, and **JS
-      only on mobile** — it rides whatever build comes next.
-      ⚠️ **Verify by ear before committing to that.** Time-stretching a clip is
-      not the same as synthesizing slowly, and the reason the server rate is
-      0.85 at all is that learners need to hear individual sounds. If a
-      pitch-corrected 0.6× on the generative voice sounds like an artifact
-      rather than a slow speaker, the fallback is a **small fixed set** of
-      server rates (say 0.7 / 0.85 / 1.0), which keeps the cache bounded at
-      three objects per term instead of unbounded.
-      Where the preference lives: **device-local**, following theme's precedent
-      (`localStorage` / `AsyncStorage`), not a `users/{uid}` field. Study and
-      native language are on the account because they must follow it; a playback
-      rate does not.
-      One asymmetry to decide: mobile has a settings **tab** with sections and
-      room for a slider; web's is a dropdown `SettingsMenu` that has none. Web
-      may need a row that opens something, or the menu may need to grow.
 
 - [ ] **A shareable stats asset — and the stats behind it.** An image a user can
       post to their stories: cards reviewed, new cards added, cards learned. Two
