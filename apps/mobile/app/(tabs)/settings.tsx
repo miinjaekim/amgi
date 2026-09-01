@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as WebBrowser from 'expo-web-browser';
 import { useUser } from '../../src/context/UserContext';
 import { useTheme } from '../../src/context/ThemeContext';
+import { usePronunciation } from '../../src/context/PronunciationContext';
 import { useFloatingTabBarHeight } from '../../src/components/FloatingTabBar';
 import { clearAllLocalData } from '../../src/services/offlineReview';
 import {
@@ -26,6 +27,7 @@ const PRIVACY_URL_BASE = 'https://amgi-iota.vercel.app/privacy';
 
 export default function SettingsScreen() {
   const { C, theme, setTheme } = useTheme();
+  const { speed, setSpeed, speeds } = usePronunciation();
   const tabBarHeight = useFloatingTabBarHeight();
   const s = useMemo(() => makeStyles(C, tabBarHeight), [C, tabBarHeight]);
   const { user, authLoading, nativeLanguage, studyLanguage, setNativeLanguage, setStudyLanguage, deleteAccount, handleSignIn, handleSignOut } = useUser();
@@ -208,6 +210,32 @@ export default function SettingsScreen() {
                   key={value}
                   style={[s.langChip, active && s.langChipActive]}
                   onPress={() => setTheme(value)}
+                >
+                  <Text style={[s.langChipText, active && s.langChipTextActive]}>
+                    {t(nativeLanguage, labelKey)}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+
+        {/* Pronunciation speed. One control for every play button in the app —
+            term, translation and example sentences all render the same
+            PronounceButton, so a second setting would have nothing to name. */}
+        <Text style={s.sectionLabel}>{t(nativeLanguage, 'settingsPronunciationSpeed')}</Text>
+        <View style={s.card}>
+          <Text style={s.settingDescription}>
+            {t(nativeLanguage, 'settingsPronunciationSpeedDesc')}
+          </Text>
+          <View style={s.langRow}>
+            {speeds.map(({ value, labelKey }) => {
+              const active = speed === value;
+              return (
+                <TouchableOpacity
+                  key={value}
+                  style={[s.langChip, active && s.langChipActive]}
+                  onPress={() => setSpeed(value)}
                 >
                   <Text style={[s.langChipText, active && s.langChipTextActive]}>
                     {t(nativeLanguage, labelKey)}

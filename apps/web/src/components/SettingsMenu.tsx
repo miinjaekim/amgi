@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { useUser } from '@/components/UserContext';
 import { useTheme } from '@/components/ThemeContext';
+import { usePronunciation } from '@/components/PronunciationContext';
 import { SUPPORTED_NATIVE_LANGUAGES, SUPPORTED_STUDY_LANGUAGES } from '@/services/userPreferences';
 import { t } from '@/lib/i18n';
 import DeleteAccountModal from '@/components/DeleteAccountModal';
@@ -41,6 +42,7 @@ export function StudyLanguageList({ onSelect }: { onSelect?: () => void }) {
 export default function SettingsMenu({ onClose }: { onClose: () => void }) {
   const { user, nativeLanguage, studyLanguage, setNativeLanguage, handleSignOut } = useUser();
   const { theme, setTheme, themes } = useTheme();
+  const { speed, setSpeed, speeds } = usePronunciation();
   const [langListOpen, setLangListOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
 
@@ -121,6 +123,31 @@ export default function SettingsMenu({ onClose }: { onClose: () => void }) {
               }
             >
               {th.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Pronunciation speed. One control for every play button in the app —
+          term, translation and example sentences all render the same
+          PronounceButton, so a second setting would have nothing to name. */}
+      <div className="px-4 py-3 border-b border-[var(--color-muted)]/50">
+        <p className="text-xs font-mono uppercase tracking-widest" style={{ color: 'var(--color-muted)' }}>
+          {t(nativeLanguage, 'settingsPronunciationSpeed')}
+        </p>
+        <div className="grid grid-cols-3 gap-2 mt-2">
+          {speeds.map((sp) => (
+            <button
+              key={sp.value}
+              onClick={() => setSpeed(sp.value)}
+              className="py-2.5 rounded-lg text-sm font-mono border transition-colors"
+              style={
+                speed === sp.value
+                  ? { background: 'var(--color-highlight)', color: 'var(--color-bg)', borderColor: 'var(--color-highlight)' }
+                  : { background: 'transparent', color: 'var(--color-text)', borderColor: 'var(--color-muted)' }
+              }
+            >
+              {t(nativeLanguage, sp.labelKey)}
             </button>
           ))}
         </div>

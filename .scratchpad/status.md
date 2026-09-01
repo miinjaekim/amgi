@@ -183,6 +183,51 @@ separately unverified on Android, where only sign-in has been exercised.
 Closed calls, kept with their reasoning — a decision whose reasoning is lost gets
 reopened by the next person to notice the symptom. Newest first.
 
+### Pronunciation speed is a playback rate, not a synthesis rate (2026-09-01)
+
+The speed dial is built. The question it turns on is whether choosing a speed
+regenerates audio, and the answer is **no** — nothing about the server changed.
+
+**Why not.** `SPEAKING_RATE = 0.85` in `apps/web/src/app/api/pronounce/route.ts`
+is baked into the cache path
+(`pronunciation/{lang}/{voice}-r{rate}/{hash}.mp3`). Making the rate a request
+parameter means a fresh Google TTS call *and* a permanent stored object per rate
+per term — an unbounded multiple of both the bill and the bucket, for a
+preference most users set once and never touch. Stretching at playback keeps
+**one cached file per term at any speed**, and changing speed costs no round
+trip at all. Web uses `HTMLAudioElement.playbackRate` with `preservesPitch`;
+mobile uses `expo-audio`'s `setPlaybackRate(rate, 'high')` with
+`shouldCorrectPitch`. Both are pitch-corrected on purpose: a slowed clip that
+also drops in pitch stops sounding like a careful speaker and starts sounding
+like the wrong voice.
+
+**Three named chips, not a slider.** Slow (0.7×) / Normal (1.0×) / Fast (1.2×),
+defined once in `packages/core/src/tts.ts`. This settles the asymmetry the plan
+flagged — mobile has a settings tab with room for a slider, web has a narrow
+dropdown with none — because **both surfaces already speak in chip rows** for
+theme and language, so the same control fits each without either growing. It
+also keeps the fallback cheap: a fixed set maps onto server-side rates (three
+objects per term, still bounded) without the UI changing at all.
+
+`normal` is **1.0, not natural speech** — a multiplier on a clip already
+synthesized at 0.85. That is what keeps every existing user at the pace they
+have always heard, and it is asserted in a test rather than left to a comment.
+
+**One control covers everything.** `PronounceButton` is the single component
+behind the term, the translation and the example sentences, so a second setting
+would have had nothing to name.
+
+**Device-local**, following theme's precedent (`localStorage` / `AsyncStorage`),
+not a `users/{uid}` field. Study and native language are on the account because
+they must follow the user everywhere; a playback rate is a property of the
+speakers you happen to be listening through.
+
+⚠️ **The ear test was deferred, deliberately.** Time-stretching is not the same
+as synthesizing slowly, and 0.85 was chosen in the first place because learners
+need to hear individual sounds. Nobody has yet heard a pitch-corrected 0.7× on
+the generative voice. If it reads as an artifact, the fallback above is a small
+change behind an unchanged UI.
+
 ### The Kikuyu pack, and a syllable Hangul could write all along (2026-08-31)
 
 59 entries, the fifth registry key, and the first pack built under the sourcing

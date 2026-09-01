@@ -5,6 +5,7 @@ import { getSpokenText, getStudyLanguageConfig } from '@amgi/core';
 import type { StudyLanguage } from '@amgi/core';
 import { getPronunciationUrl } from '../services/gemini';
 import { useTheme } from '../context/ThemeContext';
+import { usePronunciation } from '../context/PronunciationContext';
 
 interface Props {
   text: string;
@@ -27,6 +28,7 @@ function ensureAudioMode() {
 
 export default function PronounceButton({ text, furigana, studyLanguage, size = 'md', style }: Props) {
   const { C } = useTheme();
+  const { rate } = usePronunciation();
   const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('idle');
 
   // No voice configured for this language yet — don't render a button that
@@ -44,6 +46,12 @@ export default function PronounceButton({ text, furigana, studyLanguage, size = 
       player.addListener('playbackStatusUpdate', s => {
         if (s.didJustFinish) player.remove();
       });
+      // Time-stretch rather than resample. Without pitch correction a slowed
+      // clip also drops in pitch, which stops sounding like a careful speaker
+      // and starts sounding like the wrong voice. Set before play() so the
+      // first moment of audio is already at the chosen speed.
+      player.shouldCorrectPitch = true;
+      player.setPlaybackRate(rate, 'high');
       player.play();
       setStatus('idle');
     } catch {
