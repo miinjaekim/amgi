@@ -1,5 +1,27 @@
 # Lessons
 
+## App Store Connect rejects non-BMP characters, and says so with blank bullets (2026-09-02)
+
+Pasting 1.5.0's What to Test returned **"You have one or more errors on this
+page"** above two empty bullets — no field named, no message text. The blank
+bullets are a rendering bug on Apple's side, not an empty error, so the form
+tells you nothing about what it objected to.
+
+What it objected to was **🔊 (U+1F50A)**, which sits outside the Basic
+Multilingual Plane and so is a surrogate pair in UTF-16. `↺` (U+21BA) went out
+with it as a precaution and was never separately cleared.
+
+**How it was found, which is the transferable part.** The copy was diffed
+against the version that had pasted cleanly for 1.4.0, comparing *character
+sets* rather than reading it: `·` (U+00B7) and `—` (U+2014) were in both, and
+exactly two characters were new. Two new characters, two error bullets, two
+localizations — one each. That narrowed it without a single trial paste.
+
+So: **before pasting metadata, diff its characters against copy that Apple has
+already accepted**, and keep the listing text inside the BMP. Emoji that read
+fine in the app do not survive App Store Connect — name the control in words
+("a speaker button") rather than drawing it.
+
 ## A phoneme chart cannot settle a respelling (2026-08-31)
 
 The pronunciation aid respells a term in the script the reader already reads.

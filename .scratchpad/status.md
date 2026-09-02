@@ -12,20 +12,22 @@ _Reconciled against `main` @ `bc8cb97`, 2026-08-21. `npm test` 246/246, measured
 
 ## Now
 
-- **1.3.0 (build 11) is live in TestFlight and approved for external testing**
-  (2026-08-12) — the first external approval the project has had. External
-  testers can be invited without another review as long as the version doesn't
-  change; the next version bump queues for Beta App Review again, so batching
-  changes into a build beats cutting one per feature.
-- ⚠️ **Nothing in 1.3.0 has been checked on the binary yet**, and the native
-  paths under Builds have never been verified on *any* build. Three renders have
-  additionally never been seen on a device at all: the packs list without
-  per-pack descriptions, the "showing results for…" row, and the part-of-speech
-  badge. 1.3.0's What to Test asks testers for both sets by name — reading what
-  comes back is cheaper than testing it all by hand.
+- **1.5.0 (build 14) is built and submitted** (2026-09-02), carrying eight
+  merges since build 13 — typed responses, undo a rating, audio and a speed dial
+  in review, the reading aid with Japanese pitch accent, and the Spanish and
+  Kikuyu Basics packs. All JS: no dependency or `app.json` native change since
+  1.4.0, which is why one build covers the lot.
+  ⚠️ **The version bump re-queues Beta App Review.** 1.4.0's external approval
+  (08-24) does not carry to 1.5.0, so external testers see nothing until this
+  clears. That is the standing cost of a version bump and the reason to batch.
+- ⚠️ **Nothing in 1.5.0 has been checked on a binary**, and the native paths
+  under Builds have never been verified on *any* build. **This build is the
+  first with no route through testers**: What to Test was cut to what's new on
+  2026-09-02, so nothing asks for that list by name any more — it gets checked
+  by hand or not at all. The Slow speed is the one worth an ear first, being a
+  pitch-corrected stretch rather than a slow synthesis.
 - **Mobile merges are unblocked.** The freeze held only until submission; the
-  next mobile change waits for the build after this one. Anything merged since
-  1.3.0 is JS-only, so it rides along rather than earning a build of its own.
+  next mobile change waits for the build after this one.
 - **The progress dashboard is on both platforms** (2026-08-20) but only in users'
   hands on web, since mobile ships by build. Daily rollups are written on every
   rating and every card save. The Firestore security rule for
@@ -120,6 +122,7 @@ No OTA, so every mobile change reaches users through one of these.
 
 | Version | Build | Date | Cut from |
 |---|---|---|---|
+| 1.5.0 | 14 | 2026-09-02 | `84be8af` on `release/1.5.0` (version bump + TestFlight copy) — **awaiting Beta App Review** |
 | 1.4.0 | 13 | 2026-08-22 | `dedcdd6` on `release/1.4.0` (version bump + TestFlight copy) — external testing approved 08-24 |
 | 1.3.0 | 11 | 2026-08-11 | `86c2c5a` on `release/1.3.0` (version bump) — **first build approved for external testing**, 08-12 |
 | 1.2.0 | 9 | 2026-08-02 | `51a53e9` (PR #76, version bump) |
@@ -131,7 +134,16 @@ No OTA, so every mobile change reaches users through one of these.
 
 The table is **iOS only**. Android ships as a sideloaded APK on its own cadence
 with no review, so its builds are not release events worth recording — see the
-Decisions entry for how it is distributed.
+Decisions entry for how it is distributed. 1.5.0's Android APK is `versionCode`
+4, cut the same day from `d25b544`.
+
+⚠️ **1.5.0's two builds carry different commit hashes and the same app.** EAS
+logged `84be8af` for iOS and `d25b544` for Android; the delta between them is
+`backlog.md` and `testflight-beta-info.md` only, `app.json` is byte-identical,
+and neither file is bundled. `84be8af` was then **amended away** — it is
+unreachable from any branch and survives only until `git gc`, so if build 14
+ever has to be reproduced exactly, resolve it from the EAS build record rather
+than from the branch.
 
 Build numbers live in EAS (`appVersionSource: remote`), not the repo, so they
 have to be read off the console and recorded here. Gaps are normal: the number is
