@@ -2,7 +2,7 @@
 
 _한국어와 영어 문구가 모두 이 파일에 있습니다. Both languages live here._
 
-_마지막 갱신: 2026-08-22, 1.4.0용._
+_마지막 갱신: 2026-09-02, 1.5.0용._
 
 App Store Connect → TestFlight → **Test Information**에 붙여넣는 문구 모음입니다.
 Test Information은 로컬라이제이션을 지원하므로, 언어 목록에 **Korean (ko)** 과
@@ -25,7 +25,7 @@ Amgi는 언어 학습용 플래시카드 앱입니다.
 
 단어를 찾아보면 뜻과 뉘앙스, 격식, 예문이 나옵니다. 한자어는 한자 풀이도 함께요. 그대로 카드로 저장하면 간격 반복 일정에 맞춰 다시 나타납니다.
 
-단어팩으로 한 분야의 어휘를 한번에 담을 수 있고, 학습 기록에서 어느 날 복습했는지 돌아볼 수 있습니다.
+단어팩으로 한 분야의 어휘나 한 언어의 기초를 한번에 담을 수 있고, 학습 기록에서 어느 날 복습했는지 돌아볼 수 있습니다.
 
 AI가 만든 설명이라 틀릴 수 있습니다. 어색하거나 잘못된 부분을 알려 주시는 것이 이번 베타에서 가장 도움이 됩니다.
 
@@ -42,7 +42,7 @@ Amgi is a flashcard app for language learners.
 
 Look up a word and you get its meaning, nuance, register and example sentences — plus a character breakdown for anything written in Chinese characters. Save that as a card and it comes back on a spaced-repetition schedule.
 
-Vocabulary packs cover one domain at a time, and the progress screen shows which days you actually reviewed.
+Vocabulary packs cover one domain — or one language's basics — a deck at a time, and the progress screen shows which days you actually reviewed.
 
 The explanations are AI-generated, so they can be wrong. Telling me when they are is the most useful thing you can do in this beta.
 
@@ -77,16 +77,14 @@ kenyamjkim@gmail.com
 ### 한국어
 
 ```
-며칠 편하게 써 보시고 이상한 점을 알려 주세요. AI 설명이 틀린 경우, 앱이 멈추는 경우, 화면 언어가 설정과 다른 경우가 특히 도움이 됩니다.
+이번 빌드에 새로 들어간 것:
 
-이번 빌드에서 새로 볼 것:
-
-· 학습 기록 — 새 화면입니다. 연속 학습 표시를 누르면 열려요. 복습한 날이 달력에 채워지는데, 오늘 복습했는데 비어 있거나 숫자가 안 맞으면 알려 주세요.
-· 오프라인 복습 — 비행기 모드에서 복습하고, 앱을 완전히 종료한 다음 다시 연결해 보세요. 복습한 기록이 사라지면 알려 주세요. 이번 빌드에서 가장 확인이 필요한 부분입니다.
-· 스페인어와 키쿠유어 — 학습 언어로 추가했습니다. 키쿠유어는 발음 듣기가 없는 것이 정상입니다.
-· 문법 연습과 글 첨삭은 없어졌습니다 — 의도한 변경입니다. 흔적이 남아 있거나, 눌러도 아무 일도 일어나지 않는 버튼이 있으면 알려 주세요.
-
-아직 실제 앱에서 확인하지 못한 것들이 있습니다. 발음 듣기, 내보내기, 공유, 계정 삭제, 복습 알림 — 안 되는 게 있으면 알려 주세요.
+· 답 입력하기 — 복습에서 뜻을 보고 단어를 직접 입력할 수 있습니다.
+· 발음 속도 — 느리게·보통·빠르게 중에 고를 수 있습니다.
+· 복습 중 발음 듣기 — 복습 화면에도 🔊가 생겼습니다.
+· 되돌리기 — 평가를 잘못 눌렀으면 ↺로 취소할 수 있습니다.
+· 읽는 법 — 단어를 읽는 이의 문자로 다시 적어 줍니다. 일본어는 억양 표시도 함께요.
+· 새 단어팩 — 스페인어 기초 153개, 키쿠유어 기초 59개. 키쿠유어는 원어민 확인 전이라 뜻이 틀릴 수 있습니다.
 
 피드백은 TestFlight의 '피드백 보내기' 또는 kenyamjkim@gmail.com으로.
 ```
@@ -94,16 +92,14 @@ kenyamjkim@gmail.com
 ### English
 
 ```
-Use the app for a few days and flag anything odd. Wrong AI explanations, freezes, or a screen in the wrong language are the most useful reports.
-
 New in this build:
 
-· Progress — a new screen, opened by tapping the streak badge. The calendar fills in the days you reviewed. Tell me if today is blank after you've reviewed, or if the counts look wrong.
-· Offline review — review in airplane mode, force-quit the app, then reconnect. Tell me if the reviews you did go missing. This is the one thing I most need checked in this build.
-· Spanish and Kikuyu — both added as study languages. Kikuyu having no pronunciation audio is expected.
-· Grammar practice and writing review are gone — that's deliberate. Tell me if you find a leftover trace, or a button that does nothing when tapped.
-
-Some things still haven't been checked on a real install: pronunciation audio, export, sharing, account deletion, and review reminders. Let me know if any fall over.
+· Type your answer — in review, type the word instead of grading yourself.
+· Pronunciation speed — Slow, Normal or Fast.
+· Audio in review — review cards have a 🔊 now.
+· Undo — ↺ takes back a rating you tapped by mistake.
+· Reading aid — words respelled in your own script, with pitch marks on Japanese.
+· New packs — Spanish Basics (153 words) and Kikuyu Basics (59). No native speaker has checked the Kikuyu list yet, so meanings may be wrong.
 
 Send feedback via TestFlight's "Send Beta Feedback" or to kenyamjkim@gmail.com.
 ```

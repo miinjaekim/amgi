@@ -93,9 +93,12 @@ still open in `docs/packs/kikuyu-basics-pack-draft.md`.
   this** — `grammar.ts` imports its folding rules rather than owning them now,
   so the deletion takes the importer and leaves the module.
 
-⚠️ **Read what testers report, rather than testing by hand.** These are the
-oldest open items in the project — never checked on any release, only in Expo Go
-— and 1.4.0's What to Test asks for them by name, with **offline review first**:
+⚠️ **These no longer have a route through testers.** They are the oldest open
+items in the project — never checked on any release, only in Expo Go. 1.3.0 and
+1.4.0's What to Test asked for them by name and the answer was to read what came
+back; **1.5.0's does not**, because What to Test was cut to what's new on the
+user's call (2026-09-02) so testers would actually skim it. Nothing is asking for
+the list below any more, so it gets verified by hand on a build or not at all:
 
 - Native paths: pronunciation audio, CSV/Anki export, sharing, offline review
   across a force-kill and reconnect, account deletion against the production
@@ -124,6 +127,13 @@ config --type introspect` if any native module was added**, which is where an
 unasked-for entitlement shows up before a cloud build finds it → submit
 (`ascAppId` is in `eas.json`) → paste the listing copy into Test Information,
 **both ko and en**.
+
+⚠️ **What to Test is a skimmable list of what's new and nothing else** (set
+2026-09-02, on the user's call). No "use it for a few days" opener, no roll-call
+of what hasn't been verified, one short clause per bullet — the 1.4.0 form was
+long enough that a tester would bounce off it. A caveat about *shipped content*
+still earns its clause (the Kikuyu list has had no speaker check); a request to
+go and test something does not, which is what the section above is about.
 
 ⚠️ **Cut the build without `--non-interactive`.** It does not skip prompts, it
 turns one into an error — 1.4.0 died on an unanswerable Apple Team ID question
