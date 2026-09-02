@@ -81,8 +81,8 @@ kenyamjkim@gmail.com
 
 · 답 입력하기 — 복습에서 뜻을 보고 단어를 직접 입력할 수 있습니다.
 · 발음 속도 — 느리게·보통·빠르게 중에 고를 수 있습니다.
-· 복습 중 발음 듣기 — 복습 화면에도 🔊가 생겼습니다.
-· 되돌리기 — 평가를 잘못 눌렀으면 ↺로 취소할 수 있습니다.
+· 복습 중 발음 듣기 — 복습 화면에도 발음 듣기 버튼이 생겼습니다.
+· 되돌리기 — 평가를 잘못 눌렀으면 되돌리기 버튼으로 취소할 수 있습니다.
 · 읽는 법 — 단어를 읽는 이의 문자로 다시 적어 줍니다. 일본어는 억양 표시도 함께요.
 · 새 단어팩 — 스페인어 기초 153개, 키쿠유어 기초 59개. 키쿠유어는 원어민 확인 전이라 뜻이 틀릴 수 있습니다.
 
@@ -96,8 +96,8 @@ New in this build:
 
 · Type your answer — in review, type the word instead of grading yourself.
 · Pronunciation speed — Slow, Normal or Fast.
-· Audio in review — review cards have a 🔊 now.
-· Undo — ↺ takes back a rating you tapped by mistake.
+· Audio in review — review cards have a speaker button now.
+· Undo — takes back a rating you tapped by mistake.
 · Reading aid — words respelled in your own script, with pitch marks on Japanese.
 · New packs — Spanish Basics (153 words) and Kikuyu Basics (59). No native speaker has checked the Kikuyu list yet, so meanings may be wrong.
 
