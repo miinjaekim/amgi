@@ -12,20 +12,20 @@ _Reconciled against `main` @ `bc8cb97`, 2026-08-21. `npm test` 246/246, measured
 
 ## Now
 
-- **1.5.0 (build 14) is built and submitted** (2026-09-02), carrying eight
-  merges since build 13 — typed responses, undo a rating, audio and a speed dial
-  in review, the reading aid with Japanese pitch accent, and the Spanish and
-  Kikuyu Basics packs. All JS: no dependency or `app.json` native change since
-  1.4.0, which is why one build covers the lot.
-  ⚠️ **The version bump re-queues Beta App Review.** 1.4.0's external approval
-  (08-24) does not carry to 1.5.0, so external testers see nothing until this
-  clears. That is the standing cost of a version bump and the reason to batch.
+- **1.5.0 (build 14) is live in TestFlight and approved for external testing**
+  (2026-09-02), approved the same day it was submitted. It carries eight merges
+  since build 13 — typed responses, undo a rating, audio and a speed dial in
+  review, the reading aid with Japanese pitch accent, and the Spanish and Kikuyu
+  Basics packs. All JS: no dependency or `app.json` native change since 1.4.0,
+  which is why one build covers the lot. External testers can now be invited
+  without another review as long as the version doesn't change.
 - ⚠️ **Nothing in 1.5.0 has been checked on a binary**, and the native paths
   under Builds have never been verified on *any* build. **This build is the
   first with no route through testers**: What to Test was cut to what's new on
   2026-09-02, so nothing asks for that list by name any more — it gets checked
-  by hand or not at all. The Slow speed is the one worth an ear first, being a
-  pitch-corrected stretch rather than a slow synthesis.
+  by hand or not at all. The ranked list is in [backlog.md](backlog.md); the
+  Slow speed is worth an ear first, being a pitch-corrected stretch rather than
+  a slow synthesis, and it is the one item with a decision hanging on it.
 - **Mobile merges are unblocked.** The freeze held only until submission; the
   next mobile change waits for the build after this one.
 - **The progress dashboard is on both platforms** (2026-08-20) but only in users'
@@ -41,8 +41,7 @@ _Reconciled against `main` @ `bc8cb97`, 2026-08-21. `npm test` 246/246, measured
   and example terms merged; lookup verified against the live API in both
   directions. `cards_spanish`'s security rule and **both** composite indexes are
   in the console, and `/cards` and `/review` load clean against them. Mobile has
-  the code but reaches users only through a build, and nothing has been cut since
-  1.3.0 — see Builds.
+  the code, and 1.5.0 (build 14) is the build that carries it to users.
   The rule uses the explicit `read, update, delete` + `create` form that `cards`
   and `cards_chinese_traditional` use, not the `read, write` form the middle four
   collections drifted into. Both work; only one says what it means. Why, and why
@@ -60,7 +59,7 @@ _Reconciled against `main` @ `bc8cb97`, 2026-08-21. `npm test` 246/246, measured
 
 - **The Spanish Basics pack is built** (2026-08-31) — 153 entries in five
   sections, the fourth `VOCAB_PACKS` key and the app's first elementary deck.
-  Web gets it at deploy, mobile at the next build. **No console step is needed**,
+  Live on web at deploy and on mobile in 1.5.0. **No console step is needed**,
   unlike adding a language: `cards_spanish` and both its indexes have been live
   since 2026-08-22, and a pack writes into the collection that already exists.
   `npm test` on web is 383/383 with the twelve new assertions in it.
@@ -81,15 +80,15 @@ _Reconciled against `main` @ `bc8cb97`, 2026-08-21. `npm test` 246/246, measured
   [lessons.md](lessons.md) already prescribes building them by hand and the
   field shapes are known. Worth remembering the next time a language is added:
   the link is not the only route, and it is the flakier one.
-  Mobile has the code but reaches users only through a build — the Expo Go check
-  confirms the code, not the binary.
+  Mobile carries it as of 1.5.0 (build 14); the Expo Go check confirmed the
+  code, and the binary is still unconfirmed.
 - **Kikuyu is live on web** (2026-08-22), an eighth study language and the first
   with no audio. Registry entry, prompt branch, i18n and example terms merged;
   every route exercised against the live API — lookup both directions, Korean
   back, examples, depth, word of the day. `cards_kikuyu`'s security rule and
   **both** composite indexes are in the console, and saving a card then seeing it
   on `/cards` was confirmed end to end. Mobile has the code but reaches users
-  only through a build, and nothing has been cut since 1.3.0 — see Builds.
+  only through a build, and 1.5.0 (build 14) is that build.
   Both console steps went in one at a time and each failed the *next* surface
   rather than the one just fixed, which is the whole of what
   [lessons.md](lessons.md) now says about ordering them.
@@ -122,7 +121,7 @@ No OTA, so every mobile change reaches users through one of these.
 
 | Version | Build | Date | Cut from |
 |---|---|---|---|
-| 1.5.0 | 14 | 2026-09-02 | `84be8af` on `release/1.5.0` (version bump + TestFlight copy) — **awaiting Beta App Review** |
+| 1.5.0 | 14 | 2026-09-02 | `84be8af` on `release/1.5.0` (PR #109, version bump + TestFlight copy) — external testing approved 09-02, same day |
 | 1.4.0 | 13 | 2026-08-22 | `dedcdd6` on `release/1.4.0` (version bump + TestFlight copy) — external testing approved 08-24 |
 | 1.3.0 | 11 | 2026-08-11 | `86c2c5a` on `release/1.3.0` (version bump) — **first build approved for external testing**, 08-12 |
 | 1.2.0 | 9 | 2026-08-02 | `51a53e9` (PR #76, version bump) |

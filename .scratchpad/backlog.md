@@ -15,107 +15,78 @@ costs ~20 minutes rather than an App Review cycle.
 
 ---
 
-## Queued for the next build
+## Verify on the 1.5.0 build
 
-**Typed responses during review** (2026-08-24). Web gets it at deploy, mobile at
-the next build — no native module, so it rides whatever build comes next rather
-than earning one. Two things to watch for on that build are listed below.
+**Nothing is queued for a build.** 1.5.0 (build 14) carries everything merged
+since build 13 and was **approved for external testing 2026-09-02**, so the eight
+items that lived here have shipped and left the file. What replaces them is the
+checking, and it is now the oldest open work in the project.
 
-**Undo a rating** (2026-08-25). Same terms — JS only, so it rides the same build.
-Worth checking on the binary: the ↺ in the progress row holds a 44pt slot even
-when empty, so the `n / m` count should not shift sideways on the first rating of
-a session. Reasoning in [status.md](status.md).
+⚠️ **This is the first build with no route through testers.** 1.3.0 and 1.4.0's
+What to Test asked for this list by name and the plan was to read what came back.
+1.5.0's does not — it was cut to what's new on the user's call (2026-09-02) so
+testers would actually skim it. Nothing asks for any of this now, so it gets
+checked by hand or not at all. Ranked, because it has outlived four releases and
+will not be worked through in one sitting:
 
-**Audio on mobile review** (2026-08-28). Same terms again — `expo-audio` is
-already in the shipped build, so this is JS only. Worth checking on the binary:
-the button **hides while offline**, so on a subway session the word should lose
-its 🔊 and the progress line should be the thing that says why. Reasoning in
-[status.md](status.md).
+1. **The Slow pronunciation speed** — the ear test the plan deferred, and the
+   only item here with a decision hanging on it. Slow is a pitch-corrected 0.7×
+   stretch of a clip synthesized at 0.85, not a natively slow synthesis. If it
+   sounds like an artifact rather than a careful speaker, the fallback is
+   server-side rates behind the same three chips — no UI change.
+2. **Offline review** across a force-kill and reconnect. Never checked on any
+   release; it was first on 1.4.0's list and nobody reported back.
+3. **Typed responses on a phone** — what a Korean or Japanese IME does with
+   `autoCorrect={false}` / `autoCapitalize="none"`. An IME that autocorrects the
+   word being recalled does the exercise for the learner. The keyboard covering
+   the action row was already found and fixed in Expo Go, so only this half is
+   left.
+4. **The badge at the narrowest phone width**, which three separate changes all
+   made longer and none has been seen on a device:
+   - Kikuyu's Korean side now emits the `w`-series syllables (뫄, 뭬, 콰, 과, 화),
+     which nothing else in the app produces.
+   - Japanese pitch accent is a full-width ＼ inside the badge (は＼し), joined
+     to the romanisation by `·` (`す＼し · sushi`) — the longest that slot has
+     ever held. Try とうきょう.
+   - The Kikuyu/Japanese note under the Try: row should not push the search
+     field off-screen.
+5. **The rest of the native paths**: pronunciation audio, CSV/Anki export,
+   sharing, account deletion against the production `EXPO_PUBLIC_API_BASE_URL`,
+   and the review reminder firing *and then disappearing* once you review.
+6. **The Spanish Basics deck row** — the first `layout: 'list'` pack with an
+   article badge, and the first whose rows can be a whole question
+   (`¿cómo está usted?`), so it is the longest that layout has had to hold.
+7. **Renders never seen on a device**, cosmetic risk only: the packs list
+   without per-pack descriptions, the "showing results for…" row, the
+   part-of-speech badge, and the ↺ slot — it holds 44pt even when empty, so the
+   `n / m` count should not shift sideways on the first rating of a session.
+8. **Korean date formatting** in the progress day tooltip — nothing else in the
+   app formats a date with a locale and options, so Hermes' `Intl` is unproven
+   there on a release build.
 
-**Pronunciation speed dial** (2026-09-01). Same terms — the rate is applied at
-playback with `expo-audio`'s `setPlaybackRate`, which is already in the shipped
-build, so this is JS only. ⚠️ **The one thing to check on the binary is the ear
-test the plan deferred**: Slow is a pitch-corrected 0.7× stretch of a clip
-synthesized at 0.85, not a natively slow synthesis. If it sounds like an
-artifact rather than a careful speaker, the fallback is server-side rates behind
-the same three chips — no UI change. Reasoning in [status.md](status.md).
+All of the above is **separately unverified on Android**, where only sign-in has
+ever been exercised.
 
-**Pronunciation aid: transliteration + Japanese pitch accent** (2026-08-30).
-Same terms — JS only on mobile. The **transliteration half needs no backfill and
-shows on every existing card at once**, since it derives from the term; the
-pitch accent half only appears on cards saved after deploy. Worth checking on
-the binary: the badge is now two things joined by `·` (`す＼し · sushi`), so it
-is the longest that slot has ever held — watch it at the narrowest phone width,
-and on a long word like とうきょう. Reasoning in [status.md](status.md).
-
-**Japanese pitch accent + the pronunciation notes** (2026-08-30). Same terms —
-JS only on mobile, since the 2.7 MB accent table stays on the server and the
-phone only renders what the card already carries. **Web gets the badge at
-deploy; existing Japanese cards do not** — `pitchAccent` is filled when a card
-is saved, so a card saved before this shipped keeps showing bare furigana until
-it is looked up again. That is the designed fallback, not a bug, but it means
-the feature looks absent on an old deck. Worth checking on the binary: the
-mark is a full-width ＼ inside the badge (は＼し), so the badge should not
-wrap or clip at the narrowest phone width, and the Kikuyu/Japanese note under
-the Try: row should not push the search field off-screen. Reasoning in
-[status.md](status.md).
-
-**Spanish Basics pack** (2026-08-31). Web gets it at deploy, mobile at the next
-build — no native module, so it rides whatever build comes next. **Nothing
-existing changes**: it is a new registry key, a new module and one optional field
-on `PackEntry` that no other pack sets. Worth checking on the binary: this is the
-first `layout: 'list'` pack where entries carry an **article badge**, and the
-first whose rows can be a **whole question** (`¿cómo está usted?`), so the deck
-row is the longest that layout has had to hold — watch it at the narrowest phone
-width. Reasoning in [status.md](status.md).
-
-**Kikuyu Basics pack, and the `Cw` respelling fix** (2026-08-31). Web at deploy,
-mobile at the next build — JS only. **The respelling fix reaches every existing
-Kikuyu card**, not just the pack: a consonant before `w` was stranded as its own
-syllable, so `mwarĩ` rendered `m-wa-re` and 므와레 rather than `mwa-re` and 뫄레.
-Worth checking on the binary: the Korean side now uses the `w`-series syllables
-(뫄, 뭬, 콰, 과, 화), which no other language in the app produces, so it is the
-first time those glyphs render in the badge at phone width.
-⚠️ **A speaker has still not read the Kikuyu list** — shipped that way knowingly,
-with a source tier on every entry (16 corroborated twice, 36 on one source, 7
-derived). The verb section is where a check is worth the most: seven of ten are
-Dahl's Law applied to sourced stems rather than attested infinitives. The
-`guka`/`wagui` conflict and whether kinship is inherently possessed are both
-still open in `docs/packs/kikuyu-basics-pack-draft.md`.
+⚠️ **A speaker has still not read the Kikuyu Basics list** — shipped that way
+knowingly, with a source tier on every entry (16 corroborated twice, 36 on one
+source, 7 derived). Not a build check and not blocked on one: the verb section is
+where a check is worth the most, since seven of ten are Dahl's Law applied to
+sourced stems rather than attested infinitives. The `guka`/`wagui` conflict and
+whether kinship is inherently possessed are open in
+`docs/packs/kikuyu-basics-pack-draft.md`; the wider known-unchecked list is in
+[lessons.md](lessons.md).
 
 - **Delete `packages/core/src/writing.ts`, `grammar.ts` and the two API routes
   that keep them alive.** **The gate is open**: it was "once no build predating
-  the 2026-08-18 grammar removal is still in use", and 1.4.0 is that build. What
-  is left is not a condition but a fact to check — that testers have actually
-  updated, since an un-updated 1.3.0 device still has the UI compiled in and
-  calls those routes. Both files carry a `DO NOT DELETE AS DEAD CODE` header;
-  the reasoning is in [status.md](status.md). **`typedAnswer.ts` is not part of
-  this** — `grammar.ts` imports its folding rules rather than owning them now,
-  so the deletion takes the importer and leaves the module.
-
-⚠️ **These no longer have a route through testers.** They are the oldest open
-items in the project — never checked on any release, only in Expo Go. 1.3.0 and
-1.4.0's What to Test asked for them by name and the answer was to read what came
-back; **1.5.0's does not**, because What to Test was cut to what's new on the
-user's call (2026-09-02) so testers would actually skim it. Nothing is asking for
-the list below any more, so it gets verified by hand on a build or not at all:
-
-- Native paths: pronunciation audio, CSV/Anki export, sharing, offline review
-  across a force-kill and reconnect, account deletion against the production
-  `EXPO_PUBLIC_API_BASE_URL`, and the review reminder firing *and then
-  disappearing* once you review.
-- Three renders never seen on a device: the packs list without per-pack
-  descriptions, the "showing results for…" row, the part-of-speech badge.
-  Cosmetic risk only — spacing, fit, wrapping.
-- **Typed responses on a phone**: what a Korean or Japanese IME does with
-  `autoCorrect={false}` / `autoCapitalize="none"` — an IME that autocorrects the
-  word being recalled does the exercise for the learner. The keyboard covering
-  the action row was found and fixed in Expo Go, so only this half is left.
-- **Korean date formatting** in the progress day tooltip — nothing else in the
-  app formats a date with a locale and options, so Hermes' `Intl` is unproven
-  there on a release build.
-- All of the above is **separately unverified on Android**, where only sign-in
-  has been exercised.
+  the 2026-08-18 grammar removal is still in use". What is left is not a
+  condition but a fact to check — that testers have actually updated, since an
+  un-updated 1.3.0 device still has the UI compiled in and calls those routes.
+  Two releases now sit between them and it, which makes this cheaper to believe
+  than it was, but it is still console state rather than a repo fact. Both files
+  carry a `DO NOT DELETE AS DEAD CODE` header; the reasoning is in
+  [status.md](status.md). **`typedAnswer.ts` is not part of this** — `grammar.ts`
+  imports its folding rules rather than owning them now, so the deletion takes
+  the importer and leaves the module.
 
 **Pre-flight:** smoke-test in Expo Go → verify the native-adjacent things on the
 build itself → bump `version` in `app.json` **before** starting the build (EAS
