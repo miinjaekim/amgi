@@ -198,6 +198,60 @@ Android, where only sign-in has been exercised.
 Closed calls, kept with their reasoning — a decision whose reasoning is lost gets
 reopened by the next person to notice the symptom. Newest first.
 
+### Mobile navigation, and verdicts per language (2026-09-04)
+
+Four of the six mobile-UI-redesign items shipped together. Three of the calls
+behind them are worth keeping; the fourth is a data decision that cannot be
+reopened for free.
+
+**The fifth tab is Progress, and Settings left the bar.** The ask was framed as
+a "Profile" tab. Progress is the better name on three counts: it names the
+screen rather than the account it belongs to, `navProgress` already existed in
+both locales so it cost no new copy, and it makes mobile's fifth tab and web's
+fifth sidebar item the same word for the same thing — closing a parity gap
+rather than opening one. The account block became a header row on that screen,
+not its subject. What actually drove the swap is reachability: `/progress` was
+reachable only from the streak badge, which renders only while `streak > 0`, so
+**breaking a streak hid the screen that would have told you**. Settings, by
+contrast, is visited a handful of times ever and now sits behind a gear.
+
+**Review is the initial route.** The order is Review · Cards · Learn · Packs ·
+Progress, and the decision that mattered was not the order but what a cold open
+lands on — the first tab is the app's own answer to "what is this for", given
+on every launch, and the answer is *remember*. Lookup is intent-driven and one
+tap away; reviewing is what a returning learner skips when it isn't in front of
+them. ⚠️ **`unstable_settings.initialRouteName` is what enforces it.**
+Declaration order sets the bar only; `/` still resolves to the tab group's
+`index`, so without that export the bar reads Review-first while a launch still
+opens on Learn. Web was deliberately **not** reordered: `/` is Learn there, and
+a vertical sidebar has no leftmost, so "first" makes less of a claim.
+
+**Verdict counts moved inside `byLanguage`, before the screen that wants them.**
+`again`/`hard`/`good`/`easy` were whole-day, which made retention per language
+underivable. A daily rollup keeps only what it counted in advance and cannot be
+backfilled, so the choice was not "now or later" but "from today or from
+whenever someone asks" — every day it went unshipped was a day permanently
+without the number. Shipped ahead of any surface for it. Retention counts three
+of the four buttons (`hard` is a recall that hurt, not a miss, matching
+`getNextReviewData`, which resets only on `again`), and `retentionRate` returns
+`null` rather than `100%` for a slice with no verdicts so a pre-2026-09-04 day
+reads as *not recorded* instead of *perfect*.
+
+**The one-tap language switch confirms before it moves your native language.**
+`setStudyLanguage` runs `resolveNativeLanguage`, so choosing the language Amgi
+currently speaks to you in relocates your native language and changes the whole
+interface. That is defensible behind a settings screen and alarming from a chip
+in a header. The alternative on the table — dropping your own language from the
+quick list — was not taken: it removes a legitimate choice to avoid explaining
+it. The confirm lives in the shared `StudyLanguageList`, so **settings inherited
+a guard it never had**, which is the argument for sharing the list at all.
+
+⚠️ Two things this pass did **not** do, both deliberate and both still in
+[backlog.md](backlog.md): per-context pronunciation speed, and the shareable
+stats asset. The stats asset's presentation half is now largely answered by the
+Progress tab; what remains there is the "cards learned" definition and the
+render.
+
 ### Checking a build is not tracked work (2026-09-04)
 
 The ranked list of what a release has never been exercised on — eight items on

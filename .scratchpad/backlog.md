@@ -66,71 +66,21 @@ used to sit here were **cancelled** — reasoning in the Decisions entry in
 [status.md](status.md), and the Kikuyu one's durable half moved to
 [lessons.md](lessons.md) rather than closing with the item.
 
-### Mobile UI redesign — queued 2026-09-01, ahead of the stats asset
+### What is left of the mobile UI redesign — queued 2026-09-01
 
-Five items from one session's thinking, ordered so the shape is settled before
-anything is styled. **All five are JS-only** — no native module, so the batch
-rides whatever build comes next rather than earning one. Three of them (profile,
-settings, switcher) move pieces of the same screen; build them together or the
-second one rewrites the first.
+Four of the six items shipped 2026-09-04: the tab rearrange, the Progress tab,
+the settings redesign and the quick study-language switcher. They moved pieces
+of the same screen and were built together for that reason. **Two remain**, and
+neither depends on the other or on anything above.
 
-**Web is already most of the way to the shape being asked for**, which is the
-cheapest fact in this cluster. Web nav is Learn / Review / Cards / Packs /
-**Progress** (`nav-items.tsx`) with settings in a popover; mobile's fifth tab is
-Settings and `/progress` is reachable only from the streak badge. So most of
-this is mobile catching up, not a new design — and [ui-ux.md](ui-ux.md) still
-says nav is "Learn / Review / Cards / Packs on both platforms", which stopped
-being true when web gained Progress. Fix that line with the change.
-
-- [ ] **Rearrange the tabs; make the fifth one Profile rather than Settings.**
-      Two orders on the table: **Review · Packs · Learn · Cards · Profile**, or
-      the same with **Cards second and Packs left where it is** (Review · Cards ·
-      Learn · Packs · Profile). Order lives in `(tabs)/_layout.tsx`.
-      ⚠️ **The real decision is not the order, it is what the app opens on.** The
-      first tab is the initial route, so "Review leftmost" makes Amgi a
-      review-first app on launch rather than a lookup-first one. Worth choosing
-      on purpose, since it is the answer to "what is this app for" that every
-      cold open gives.
-      `FloatingTabBar` is **icon-only**, so position and glyph are the only
-      affordances a reorder has — nothing labels the change for a tester who
-      already has muscle memory. Settings leaving the bar means the route moves
-      out of `(tabs)`; nothing deep-links to it.
-      Decide whether web reorders too. It shares the concept, not the file
-      (`nav-items.tsx`), and a vertical sidebar has no leftmost — "first" reads
-      as less of a claim there.
-
-- [ ] **Profile screen — the progress data, actually visualized.**
-      What exists: `/progress` on both platforms (`app/progress.tsx`,
-      `app/progress/page.tsx`) with a heatmap, 30/90/364 range chips,
-      `summarizeProgress` totals, and a **per-language breakdown that already
-      ships** (`summary.byLanguage`, sorted by reviews). So "which languages am I
-      learning and how far along" is a **presentation upgrade, not a data
-      change** — `DailyProgress.byLanguage` has been written since rollups began.
-      Reachability is the other half of the win: the streak badge is the only way
-      in and it renders only when `streak > 0` (`(tabs)/index.tsx:477`), so
-      breaking a streak hides the screen that would tell you. A tab fixes that by
-      construction.
-      ⚠️ **Two limits to design inside rather than around.** Verdict counts
-      (again/hard/good/easy) are **whole-day, not per language**
-      (`progress.ts:65`), so accuracy-per-language is not derivable from history —
-      it needs a write-path change **decided now**, because a field added later
-      collects only from the day it ships. And **history began 2026-08-20 and
-      cannot be backfilled**, so every "total" is a total since then: label the
-      window or scope the design to one.
-      "Cards learned" still does not exist anywhere — the shareable stats asset
-      below needs the same definition, so settle it once, in whichever ships first.
-
-- [ ] **Settings redesign — collapse the language lists.**
-      Nine study languages (`STUDY_LANGUAGE_CONFIGS`) render as a flat wrapping
-      chip row, and so do native languages, themes and speeds: four chip rows down
-      one scroll, growing with every language added. **Web already solved this** —
-      `SettingsMenu.tsx:56` shows the current study language as a single row that
-      discloses the list on tap. Port that rather than inventing a mobile pattern.
-      Includes where settings lives once it is not a tab: a button on the Profile
-      header (top right, per the proposal) opening the same screen.
+⚠️ **The per-language write-path decision was taken with them** and is not
+reopenable cheaply — verdict counts now live inside `byLanguage`, so retention
+per language is derivable from 2026-09-04 onward and from no earlier date.
+Reasoning in the Decisions entry in [status.md](status.md); the shape is in
+[data-model.md](data-model.md).
 
 - [ ] **Per-context pronunciation speed.** One setting drives every play button
-      today, and the comment at `(tabs)/settings.tsx:225` says why: term,
+      today, and the comment at `app/settings.tsx:248` says why: term,
       translation and example all render the same `PronounceButton`, so a second
       setting had nothing to name. The ask names two things it could split on —
       **content** (term vs example sentence) and **surface** (browsing vs
@@ -140,30 +90,20 @@ being true when web gained Progress. Fix that line with the change.
       Mechanically cheap: rate is applied at playback (`setPlaybackRate` native,
       `playbackRate` web), so **no re-synthesis and no cache churn**. The work is
       a `kind` prop at the call sites — example sentences are the `sides.study`
-      ones (`index.tsx:760`, `review.tsx:1317`, `CardDetailModal.tsx:303`),
+      ones (`index.tsx:763`, `review.tsx:1318`, `CardDetailModal.tsx:303`),
       everything else is the term — plus a second AsyncStorage key, with the
       existing `amgi_pronunciation_speed` read as the default for both so nobody's
       setting resets.
       Web has the same button and the same context, so this lands on both. And
       `settingsPronunciationSpeedDesc` ("applies to terms, translations, and
-      example sentences", `i18n.ts:158`/`:518`) becomes false the moment it ships.
-
-- [ ] **Quick study-language switcher, off the settings screen.** Web has one —
-      the sidebar's language chip opens `StudyLanguageList` (`SideNav.tsx:205`) —
-      and mobile has nothing, so changing language is a trip to a tab. The
-      argument is not just relocation: study language changes often and native
-      language rarely, so the two controls do not belong at the same weight.
-      ⚠️ **A fast switch is not a small write.** `setStudyLanguage` runs
-      `resolveNativeLanguage`: choosing the language you are native in moves your
-      **native** language, which changes the UI language. Defensible behind a
-      settings screen, alarming from a one-tap chip — either drop the native
-      language from the quick list or confirm before that particular switch.
-      Placement open: a header chip on Learn and Review, or on the Profile header
-      beside the settings button.
+      example sentences", `i18n.ts:169`/`:531`) becomes false the moment it ships.
 
 - [ ] **A shareable stats asset — and the stats behind it.** An image a user can
       post to their stories: cards reviewed, new cards added, cards learned. Two
       halves, and the second is the one with a clock on it.
+      **The Progress tab now answers the presentation half** — per-language
+      bars, retention, a labelled window — so what is left here is genuinely the
+      numbers and the render, not the design.
       **What exists already:** `summarizeProgress` gives `totalReviews`,
       `totalNewCards`, `totalPackCards`, `activeDays` and `averagePerActiveDay`
       over a window; `deriveStreak` gives the streak; `buildHeatmap` gives the
@@ -308,7 +248,7 @@ being true when web gained Progress. Fix that line with the change.
 
 ## Housekeeping — tooling that hides signal
 
-`npm test` (252/252, measured 2026-08-22) and `npx eslint .` (0 errors) are
+`npm test` (407/407, measured 2026-09-04) and `npx eslint .` (0 errors) are
 green. What's left is what those two now *show*.
 
 - [ ] **The Google consent screen says "Amgi AI".** Rename it to **Amgi** in the

@@ -528,9 +528,20 @@ users/{uid}/progress/2026-08-19
   reviews     ratings submitted — counts *directions*, like `reviewedToday`
   newCards    cards added one at a time (lookup, import, enrichment)
   packCards   cards added by enrolling in a pack
-  again/hard/good/easy   verdict counts, whole-day
-  byLanguage  { [StudyLanguage]: { reviews, newCards, packCards } }
+  again/hard/good/easy   verdict counts
+  byLanguage  { [StudyLanguage]: { reviews, newCards, packCards,
+                                   again, hard, good, easy } }
 ```
+
+⚠️ **The verdicts moved inside `byLanguage` on 2026-09-04** and were whole-day
+before that, so **retention per language is honest only from that date on** —
+days written earlier carry the whole-day counts and zeroes in every slice, and
+there is nothing to backfill from. `retentionRate` returns `null` rather than
+`0` or `100%` for a slice with no verdicts, which is what keeps an old day
+reading as "not recorded" instead of "perfect". A day and a language slice now
+count exactly the same seven things, which is why `DailyProgress` extends
+`LanguageProgress` rather than redeclaring them, and why `COUNTER_KEYS` is the
+one list every merge/negate/apply/parse/`increment()` path walks.
 
 Four calls, all deliberate:
 
@@ -539,7 +550,10 @@ Four calls, all deliberate:
   The cost is that a rollup discards anything it didn't count in advance —
   time-of-day and per-card history are unrecoverable once a day is summed. That
   is why the field list is wider than the first screen renders: a field added
-  later only collects from the day it ships.
+  later only collects from the day it ships. **The per-language verdicts are
+  what that warning looks like when it comes true** — they were added before
+  the screen that wanted them, because the alternative was starting the clock
+  later, not filling in the past.
 - **The day is per user; the language detail lives inside it.** The habit is
   "studied today", not "studied Korean today", so reviewing Japanese keeps the
   streak — but a day can still be broken down.

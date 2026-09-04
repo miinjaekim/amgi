@@ -106,6 +106,33 @@ Backlog priority mirrors the user's Google Tasks list — `backlog.md` is the
 scoped version of it. Keep entries at the size that says what to do next; the
 argument behind a call goes in `status.md`, not in the item.
 
+_This pass **rebuilt mobile navigation** and closed four of the six
+mobile-UI-redesign items in one go — they moved pieces of the same screen, so
+building them apart would have meant building the first one twice. Settings left
+the tab bar and Progress took its place, which is the whole point: `/progress`
+was reachable only from a streak badge that **hides itself when the streak
+breaks**, so the screen that would tell you was gone exactly when you needed it.
+Settings is now a pushed screen behind a gear. **Read the Decisions entry in
+[status.md](status.md) before touching the tabs**, for two reasons. The fifth
+tab is named **Progress, not Profile** as the item proposed — it names the
+screen rather than the account, costs no new copy, and makes it the same word
+web already uses. And the real decision in a reorder is **not the order but the
+initial route**: the first tab is what every cold open answers "what is this
+for" with, which is why Review leads — and `unstable_settings.initialRouteName`
+is load-bearing, since declaration order sets the bar while `/` still resolves
+to the group's `index`._
+
+_The half that could not have waited is in [data-model.md](data-model.md).
+**Verdict counts moved inside `byLanguage` before any screen wanted them**,
+because a daily rollup keeps only what it counted in advance: the choice was
+never "now or later" but "from today or from never", and every unshipped day was
+a day permanently without the number. So **retention per language is honest only
+from 2026-09-04 on** — `retentionRate` returns `null` rather than `100%` for the
+days before, which is what stops an unrecorded slice from reading as a perfect
+one. Two items remain in [backlog.md](backlog.md): per-context pronunciation
+speed, and the stats asset — whose presentation half the Progress tab has now
+largely answered._
+
 _This pass **re-cut the High section** on the user's call. Both pronunciation
 items were cancelled — the Kikuyu speaker check because no speaker is available
 and what the item really held was a lesson (now in [lessons.md](lessons.md),
@@ -147,10 +174,10 @@ audio story is that the near neighbour is not an acceptable stand-in. Five
 languages remain, and [backlog.md](backlog.md) now carries what the same
 measurement pass already answered for each._
 
-_Last reviewed against the codebase: 2026-08-22, `main` @ `032cdad`.
-`npm test` 289/289, measured 2026-08-24 on `feat/typed-responses` — 273 of them
-on `main`, which the 252 recorded here had already gone stale against. Mobile has no test script — its half of the
-freshness work is covered by `tsc` and a bundle, not by tests._
+_Last reviewed against the codebase: 2026-09-04, `main` @ `e79a60c`.
+`npm test` 407/407, measured on `feat/mobile-ui-redesign`. Mobile has no test
+script — its half of the freshness work is covered by `tsc --noEmit` and an
+`expo export`, not by tests, and both were run on this pass._
 
 _This pass **built typed responses during review**, the last starred item —
 `backlog.md`'s High section is empty again. It was designed before any code, as
