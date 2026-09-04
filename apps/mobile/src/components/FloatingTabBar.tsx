@@ -3,7 +3,9 @@ import { View, TouchableOpacity, StyleSheet } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
+// SDK 57 vendored react-navigation into expo-router and dropped the
+// `@react-navigation/*` packages; `expo-router/tabs` is the public re-export.
+import type { BottomTabBarProps } from 'expo-router/tabs';
 import { t } from '@amgi/core';
 import type { TranslationKey } from '@amgi/core';
 import { useTheme } from '../context/ThemeContext';

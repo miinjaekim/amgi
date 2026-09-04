@@ -60,7 +60,7 @@ bite.
 
 ## Mobile (`apps/mobile`)
 
-- **Framework:** Expo SDK 54 / React Native 0.81, Expo Router (file-based)
+- **Framework:** Expo SDK 57 / React Native 0.86, Expo Router (file-based)
 - **Auth:** Firebase Auth via `expo-auth-session` + `expo-web-browser` (Google OAuth)
 - **Storage:** Firebase Firestore + `@react-native-async-storage/async-storage`.
   Firestore's persistent cache is IndexedDB-backed and so unavailable here —

@@ -57,6 +57,13 @@ _A version bump queues another Beta App Review; 1.5.0's external approval covers
 1.5.0 only. Batch changes into a build rather than cutting one per feature.
 Android is the exception — no review, so a fix there ships the same day._
 
+⚠️ **The next build is the first on Expo SDK 57** (upgraded from 54 on
+2026-09-04, because Expo Go auto-updated and stopped opening the project).
+Every native module moved with it, so `expo config --type introspect` is not
+optional on this one, and the native-adjacent paths — audio, notifications,
+sharing, file system, auth redirect — are worth exercising on the build rather
+than trusting the Expo Go pass. Upgrade notes in [lessons.md](lessons.md)._
+
 ## High
 
 Queued 2026-08-31, in the user's order. **Both pack items and the speed dial

@@ -6,7 +6,9 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams, useNavigation } from 'expo-router';
-import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
+// SDK 57 vendored react-navigation into expo-router and dropped the
+// `@react-navigation/*` packages; `expo-router/tabs` is the public re-export.
+import type { BottomTabNavigationProp } from 'expo-router/tabs';
 import { useUser } from '../../src/context/UserContext';
 import {
   getTermExplanation, getTermDepth, getTermExamples, getWordOfTheDay,
