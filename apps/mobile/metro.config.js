@@ -17,11 +17,13 @@ config.resolver.nodeModulesPaths = [
   path.resolve(monorepoRoot, 'node_modules'),
 ];
 
-// Force "react" to always resolve from the local workspace copy (react@19.1.0).
+// Force "react" to always resolve from the local workspace copy — SDK 57 pins
+// react@19.2.3 where the web app floats on ^19.0.0 and currently installs
+// 19.2.8, so the two still diverge and the renderer still has to match.
 // extraNodeModules is only a fallback and loses to standard node_modules walk,
 // so we use resolveRequest to intercept at the highest priority.
-// Without this, react-native (installed at root) resolves "react" to the web
-// app's react@19.2.7, which mismatches react-native-renderer@19.1.0.
+// Don't delete this because the numbers happen to agree after an install: web
+// floats, so they will disagree again on its next one.
 const localReact = path.resolve(projectRoot, 'node_modules/react');
 config.resolver.resolveRequest = (context, moduleName, platform) => {
   if (moduleName === 'react') {

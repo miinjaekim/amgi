@@ -3,7 +3,9 @@ import { View, TouchableOpacity, StyleSheet } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
+// SDK 57 vendored react-navigation into expo-router and dropped the
+// `@react-navigation/*` packages; `expo-router/tabs` is the public re-export.
+import type { BottomTabBarProps } from 'expo-router/tabs';
 import { t } from '@amgi/core';
 import type { TranslationKey } from '@amgi/core';
 import { useTheme } from '../context/ThemeContext';
@@ -12,11 +14,11 @@ import { useUser } from '../context/UserContext';
 type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
 
 const ICONS: Record<string, { on: IoniconsName; off: IoniconsName }> = {
-  index:    { on: 'search',    off: 'search-outline'   },
-  review:   { on: 'layers',   off: 'layers-outline'   },
-  cards:    { on: 'albums',   off: 'albums-outline'   },
-  decks:    { on: 'library',  off: 'library-outline'  },
-  settings: { on: 'settings', off: 'settings-outline' },
+  index:    { on: 'search',      off: 'search-outline'      },
+  review:   { on: 'layers',      off: 'layers-outline'      },
+  cards:    { on: 'albums',      off: 'albums-outline'      },
+  decks:    { on: 'library',     off: 'library-outline'     },
+  progress: { on: 'stats-chart', off: 'stats-chart-outline' },
 };
 
 // The bar is icon-only, so these surface only to screen readers.
@@ -25,7 +27,7 @@ const LABEL_KEYS: Record<string, TranslationKey> = {
   review:   'navReview',
   cards:    'navCards',
   decks:    'navDecks',
-  settings: 'navSettings',
+  progress: 'navProgress',
 };
 
 export function useFloatingTabBarHeight() {

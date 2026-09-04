@@ -31,10 +31,13 @@ export default function RootLayout() {
                 that wants the whole screen, and inside the group the tab bar
                 would no longer give way to it. */}
             <Stack.Screen name="decks/[packId]/drill" />
-            {/* Outside the tab group deliberately: the bar already carries five
-                tabs, and a sixth would crowd them for a screen you visit to look
-                back rather than to study. Reached by tapping the streak badge. */}
-            <Stack.Screen name="progress" />
+            {/* Settings left the tab bar 2026-09-04, trading places with
+                progress: a screen visited a handful of times ever does not earn
+                a fifth of the bar, while the one that says how you are doing
+                was reachable only from a streak badge that hides itself when
+                the streak breaks. Reached from the gear on the Progress
+                header; nothing deep-links to it. */}
+            <Stack.Screen name="settings" />
           </Stack>
           <FirstRun />
         </PronunciationProvider>

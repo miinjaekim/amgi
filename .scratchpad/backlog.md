@@ -15,78 +15,21 @@ costs ~20 minutes rather than an App Review cycle.
 
 ---
 
-## Verify on the 1.5.0 build
+## Cutting a build
 
-**Nothing is queued for a build.** 1.5.0 (build 14) carries everything merged
-since build 13 and was **approved for external testing 2026-09-02**, so the eight
-items that lived here have shipped and left the file. What replaces them is the
-checking, and it is now the oldest open work in the project.
+**Nothing is queued.** 1.5.0 (build 14) carries everything merged since build 13
+and was **approved for external testing 2026-09-02**, so mobile merges are
+unblocked and the next build is whatever the next batch turns out to be.
 
-⚠️ **This is the first build with no route through testers.** 1.3.0 and 1.4.0's
-What to Test asked for this list by name and the plan was to read what came back.
-1.5.0's does not — it was cut to what's new on the user's call (2026-09-02) so
-testers would actually skim it. Nothing asks for any of this now, so it gets
-checked by hand or not at all. Ranked, because it has outlived four releases and
-will not be worked through in one sitting:
-
-1. **The Slow pronunciation speed** — the ear test the plan deferred, and the
-   only item here with a decision hanging on it. Slow is a pitch-corrected 0.7×
-   stretch of a clip synthesized at 0.85, not a natively slow synthesis. If it
-   sounds like an artifact rather than a careful speaker, the fallback is
-   server-side rates behind the same three chips — no UI change.
-2. **Offline review** across a force-kill and reconnect. Never checked on any
-   release; it was first on 1.4.0's list and nobody reported back.
-3. **Typed responses on a phone** — what a Korean or Japanese IME does with
-   `autoCorrect={false}` / `autoCapitalize="none"`. An IME that autocorrects the
-   word being recalled does the exercise for the learner. The keyboard covering
-   the action row was already found and fixed in Expo Go, so only this half is
-   left.
-4. **The badge at the narrowest phone width**, which three separate changes all
-   made longer and none has been seen on a device:
-   - Kikuyu's Korean side now emits the `w`-series syllables (뫄, 뭬, 콰, 과, 화),
-     which nothing else in the app produces.
-   - Japanese pitch accent is a full-width ＼ inside the badge (は＼し), joined
-     to the romanisation by `·` (`す＼し · sushi`) — the longest that slot has
-     ever held. Try とうきょう.
-   - The Kikuyu/Japanese note under the Try: row should not push the search
-     field off-screen.
-5. **The rest of the native paths**: pronunciation audio, CSV/Anki export,
-   sharing, account deletion against the production `EXPO_PUBLIC_API_BASE_URL`,
-   and the review reminder firing *and then disappearing* once you review.
-6. **The Spanish Basics deck row** — the first `layout: 'list'` pack with an
-   article badge, and the first whose rows can be a whole question
-   (`¿cómo está usted?`), so it is the longest that layout has had to hold.
-7. **Renders never seen on a device**, cosmetic risk only: the packs list
-   without per-pack descriptions, the "showing results for…" row, the
-   part-of-speech badge, and the ↺ slot — it holds 44pt even when empty, so the
-   `n / m` count should not shift sideways on the first rating of a session.
-8. **Korean date formatting** in the progress day tooltip — nothing else in the
-   app formats a date with a locale and options, so Hermes' `Intl` is unproven
-   there on a release build.
-
-All of the above is **separately unverified on Android**, where only sign-in has
-ever been exercised.
-
-⚠️ **A speaker has still not read the Kikuyu Basics list** — shipped that way
-knowingly, with a source tier on every entry (16 corroborated twice, 36 on one
-source, 7 derived). Not a build check and not blocked on one: the verb section is
-where a check is worth the most, since seven of ten are Dahl's Law applied to
-sourced stems rather than attested infinitives. The `guka`/`wagui` conflict and
-whether kinship is inherently possessed are open in
-`docs/packs/kikuyu-basics-pack-draft.md`; the wider known-unchecked list is in
-[lessons.md](lessons.md).
-
-- **Delete `packages/core/src/writing.ts`, `grammar.ts` and the two API routes
-  that keep them alive.** **The gate is open**: it was "once no build predating
-  the 2026-08-18 grammar removal is still in use". What is left is not a
-  condition but a fact to check — that testers have actually updated, since an
-  un-updated 1.3.0 device still has the UI compiled in and calls those routes.
-  Two releases now sit between them and it, which makes this cheaper to believe
-  than it was, but it is still console state rather than a repo fact. Both files
-  carry a `DO NOT DELETE AS DEAD CODE` header; the reasoning is in
-  [status.md](status.md). **`typedAnswer.ts` is not part of this** — `grammar.ts`
-  imports its folding rules rather than owning them now, so the deletion takes
-  the importer and leaves the module.
+⚠️ **Checking a build is no longer tracked here** (2026-09-04). The ranked list
+of what 1.5.0 had never been exercised on — the Slow speed, offline review,
+typed responses under an IME, the badge at the narrowest phone width, the native
+paths, the renders never seen on a device — came off this file: all of it is
+reached by using the app, so it surfaces in use rather than in a sitting spent
+working down a list. What is durable about it stayed elsewhere: the
+never-verified-on-a-binary caveat under Builds in [status.md](status.md), and
+the Slow speed's fallback in that file's Decisions entry, which is the one item
+that had a decision hanging on it. Reasoning in Decisions there too.
 
 **Pre-flight:** smoke-test in Expo Go → verify the native-adjacent things on the
 build itself → bump `version` in `app.json` **before** starting the build (EAS
@@ -104,90 +47,47 @@ unasked-for entitlement shows up before a cloud build finds it → submit
 of what hasn't been verified, one short clause per bullet — the 1.4.0 form was
 long enough that a tester would bounce off it. A caveat about *shipped content*
 still earns its clause (the Kikuyu list has had no speaker check); a request to
-go and test something does not, which is what the section above is about.
+go and test something does not.
 
 ⚠️ **Cut the build without `--non-interactive`.** It does not skip prompts, it
 turns one into an error — 1.4.0 died on an unanswerable Apple Team ID question
 and burned build 12. The flag is for CI.
 
-_A version bump queues another Beta App Review; 1.4.0's external approval covers
-1.4.0 only. Batch changes into a build rather than cutting one per feature.
+_A version bump queues another Beta App Review; 1.5.0's external approval covers
+1.5.0 only. Batch changes into a build rather than cutting one per feature.
 Android is the exception — no review, so a fix there ships the same day._
+
+⚠️ **The next build is the first on Expo SDK 57** (upgraded from 54 on
+2026-09-04, because Expo Go auto-updated and stopped opening the project).
+Every native module moved with it, so `expo config --type introspect` is not
+optional on this one, and the native-adjacent paths — audio, notifications,
+sharing, file system, auth redirect — are worth exercising on the build rather
+than trusting the Expo Go pass. Upgrade notes in [lessons.md](lessons.md)._
 
 ## High
 
 Queued 2026-08-31, in the user's order. **Both pack items and the speed dial
 have left this section** — Spanish and Kikuyu are built, and the pronunciation
-speed dial shipped 2026-09-01; see the build queue above. The two pronunciation
-items that used to sit here were **cancelled** — reasoning in the Decisions entry in
+speed dial shipped 2026-09-01 in build 14. The two pronunciation items that
+used to sit here were **cancelled** — reasoning in the Decisions entry in
 [status.md](status.md), and the Kikuyu one's durable half moved to
 [lessons.md](lessons.md) rather than closing with the item.
 
-### Mobile UI redesign — queued 2026-09-01, ahead of the stats asset
+### What is left of the mobile UI redesign — queued 2026-09-01
 
-Five items from one session's thinking, ordered so the shape is settled before
-anything is styled. **All five are JS-only** — no native module, so the batch
-rides whatever build comes next rather than earning one. Three of them (profile,
-settings, switcher) move pieces of the same screen; build them together or the
-second one rewrites the first.
+Four of the six items shipped 2026-09-04: the tab rearrange, the Progress tab,
+the settings redesign and the quick study-language switcher. They moved pieces
+of the same screen and were built together for that reason. **Two remain**, and
+neither depends on the other or on anything above.
 
-**Web is already most of the way to the shape being asked for**, which is the
-cheapest fact in this cluster. Web nav is Learn / Review / Cards / Packs /
-**Progress** (`nav-items.tsx`) with settings in a popover; mobile's fifth tab is
-Settings and `/progress` is reachable only from the streak badge. So most of
-this is mobile catching up, not a new design — and [ui-ux.md](ui-ux.md) still
-says nav is "Learn / Review / Cards / Packs on both platforms", which stopped
-being true when web gained Progress. Fix that line with the change.
-
-- [ ] **Rearrange the tabs; make the fifth one Profile rather than Settings.**
-      Two orders on the table: **Review · Packs · Learn · Cards · Profile**, or
-      the same with **Cards second and Packs left where it is** (Review · Cards ·
-      Learn · Packs · Profile). Order lives in `(tabs)/_layout.tsx`.
-      ⚠️ **The real decision is not the order, it is what the app opens on.** The
-      first tab is the initial route, so "Review leftmost" makes Amgi a
-      review-first app on launch rather than a lookup-first one. Worth choosing
-      on purpose, since it is the answer to "what is this app for" that every
-      cold open gives.
-      `FloatingTabBar` is **icon-only**, so position and glyph are the only
-      affordances a reorder has — nothing labels the change for a tester who
-      already has muscle memory. Settings leaving the bar means the route moves
-      out of `(tabs)`; nothing deep-links to it.
-      Decide whether web reorders too. It shares the concept, not the file
-      (`nav-items.tsx`), and a vertical sidebar has no leftmost — "first" reads
-      as less of a claim there.
-
-- [ ] **Profile screen — the progress data, actually visualized.**
-      What exists: `/progress` on both platforms (`app/progress.tsx`,
-      `app/progress/page.tsx`) with a heatmap, 30/90/364 range chips,
-      `summarizeProgress` totals, and a **per-language breakdown that already
-      ships** (`summary.byLanguage`, sorted by reviews). So "which languages am I
-      learning and how far along" is a **presentation upgrade, not a data
-      change** — `DailyProgress.byLanguage` has been written since rollups began.
-      Reachability is the other half of the win: the streak badge is the only way
-      in and it renders only when `streak > 0` (`(tabs)/index.tsx:477`), so
-      breaking a streak hides the screen that would tell you. A tab fixes that by
-      construction.
-      ⚠️ **Two limits to design inside rather than around.** Verdict counts
-      (again/hard/good/easy) are **whole-day, not per language**
-      (`progress.ts:65`), so accuracy-per-language is not derivable from history —
-      it needs a write-path change **decided now**, because a field added later
-      collects only from the day it ships. And **history began 2026-08-20 and
-      cannot be backfilled**, so every "total" is a total since then: label the
-      window or scope the design to one.
-      "Cards learned" still does not exist anywhere — the shareable stats asset
-      below needs the same definition, so settle it once, in whichever ships first.
-
-- [ ] **Settings redesign — collapse the language lists.**
-      Nine study languages (`STUDY_LANGUAGE_CONFIGS`) render as a flat wrapping
-      chip row, and so do native languages, themes and speeds: four chip rows down
-      one scroll, growing with every language added. **Web already solved this** —
-      `SettingsMenu.tsx:56` shows the current study language as a single row that
-      discloses the list on tap. Port that rather than inventing a mobile pattern.
-      Includes where settings lives once it is not a tab: a button on the Profile
-      header (top right, per the proposal) opening the same screen.
+⚠️ **The per-language write-path decision was taken with them** and is not
+reopenable cheaply — verdict counts now live inside `byLanguage`, so retention
+per language is derivable from 2026-09-04 onward and from no earlier date.
+Reasoning in the Decisions entry in [status.md](status.md); the shape is in
+[data-model.md](data-model.md).
 
 - [ ] **Per-context pronunciation speed.** One setting drives every play button
-      today, and the comment at `(tabs)/settings.tsx:225` says why: term,
+      today, and the comment at `app/settings.tsx:248` says why: term,
       translation and example all render the same `PronounceButton`, so a second
       setting had nothing to name. The ask names two things it could split on —
       **content** (term vs example sentence) and **surface** (browsing vs
@@ -197,30 +97,20 @@ being true when web gained Progress. Fix that line with the change.
       Mechanically cheap: rate is applied at playback (`setPlaybackRate` native,
       `playbackRate` web), so **no re-synthesis and no cache churn**. The work is
       a `kind` prop at the call sites — example sentences are the `sides.study`
-      ones (`index.tsx:760`, `review.tsx:1317`, `CardDetailModal.tsx:303`),
+      ones (`index.tsx:763`, `review.tsx:1318`, `CardDetailModal.tsx:303`),
       everything else is the term — plus a second AsyncStorage key, with the
       existing `amgi_pronunciation_speed` read as the default for both so nobody's
       setting resets.
       Web has the same button and the same context, so this lands on both. And
       `settingsPronunciationSpeedDesc` ("applies to terms, translations, and
-      example sentences", `i18n.ts:158`/`:518`) becomes false the moment it ships.
-
-- [ ] **Quick study-language switcher, off the settings screen.** Web has one —
-      the sidebar's language chip opens `StudyLanguageList` (`SideNav.tsx:205`) —
-      and mobile has nothing, so changing language is a trip to a tab. The
-      argument is not just relocation: study language changes often and native
-      language rarely, so the two controls do not belong at the same weight.
-      ⚠️ **A fast switch is not a small write.** `setStudyLanguage` runs
-      `resolveNativeLanguage`: choosing the language you are native in moves your
-      **native** language, which changes the UI language. Defensible behind a
-      settings screen, alarming from a one-tap chip — either drop the native
-      language from the quick list or confirm before that particular switch.
-      Placement open: a header chip on Learn and Review, or on the Profile header
-      beside the settings button.
+      example sentences", `i18n.ts:169`/`:531`) becomes false the moment it ships.
 
 - [ ] **A shareable stats asset — and the stats behind it.** An image a user can
       post to their stories: cards reviewed, new cards added, cards learned. Two
       halves, and the second is the one with a clock on it.
+      **The Progress tab now answers the presentation half** — per-language
+      bars, retention, a labelled window — so what is left here is genuinely the
+      numbers and the render, not the design.
       **What exists already:** `summarizeProgress` gives `totalReviews`,
       `totalNewCards`, `totalPackCards`, `activeDays` and `averagePerActiveDay`
       over a window; `deriveStreak` gives the streak; `buildHeatmap` gives the
@@ -258,6 +148,16 @@ being true when web gained Progress. Fix that line with the change.
       authenticate it, or pass the numbers in rather than looking them up.
 
 ## Medium
+
+- [ ] **A speaker has still not read the Kikuyu Basics list.** Shipped that way
+      knowingly, with a source tier on every entry (16 corroborated twice, 36 on
+      one source, 7 derived) — and unlike the build checks, this one does not
+      happen by using the app. The verb section is where a check is worth the
+      most, since seven of ten are Dahl's Law applied to sourced stems rather
+      than attested infinitives. The `guka`/`wagui` conflict and whether kinship
+      is inherently possessed are open in
+      `docs/packs/kikuyu-basics-pack-draft.md`; the wider known-unchecked list is
+      in [lessons.md](lessons.md).
 
 - [ ] **Backfill `pitchAccent` onto existing Japanese cards, or decide not to.**
       New cards get it on save; the ~existing `cards_japanese` deck keeps
@@ -355,13 +255,25 @@ being true when web gained Progress. Fix that line with the change.
 
 ## Housekeeping — tooling that hides signal
 
-`npm test` (252/252, measured 2026-08-22) and `npx eslint .` (0 errors) are
+`npm test` (407/407, measured 2026-09-04) and `npx eslint .` (0 errors) are
 green. What's left is what those two now *show*.
 
 - [ ] **The Google consent screen says "Amgi AI".** Rename it to **Amgi** in the
       Google Cloud OAuth consent screen → Branding → App name. Console-side, no
       build, no code — but it is shown to **every** user signing in, on iOS and
       web as much as Android.
+
+- [ ] **Delete `packages/core/src/writing.ts`, `grammar.ts` and the two API
+      routes that keep them alive.** **The gate is open**: it was "once no build
+      predating the 2026-08-18 grammar removal is still in use". What is left is
+      not a condition but a fact to check — that testers have actually updated,
+      since an un-updated 1.3.0 device still has the UI compiled in and calls
+      those routes. Two releases now sit between them and it, which makes this
+      cheaper to believe than it was, but it is still console state rather than a
+      repo fact. Both files carry a `DO NOT DELETE AS DEAD CODE` header; the
+      reasoning is in [status.md](status.md). **`typedAnswer.ts` is not part of
+      this** — `grammar.ts` imports its folding rules rather than owning them
+      now, so the deletion takes the importer and leaves the module.
 
 - [ ] **Two callerless functions in `apps/web/src/services/firestore.ts`** —
       `countUserFlashcards` and `fetchArchivedFlashcards`, neither imported

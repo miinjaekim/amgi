@@ -7,6 +7,18 @@ import { useUser } from '../context/UserContext';
 import { useTheme } from '../context/ThemeContext';
 import type { Palette } from '../theme';
 
+/**
+ * The size of a tab's page title.
+ *
+ * Exported because `cards.tsx` cannot use this component — it carries
+ * Import/Export buttons and a subtitle, neither of which this shape supports —
+ * so it renders its own title and would otherwise drift. It already had: it sat
+ * at 24 against this file's 21 until 2026-09-04. A shared constant is the only
+ * thing that keeps two headers the same size without either one knowing about
+ * the other.
+ */
+export const PAGE_TITLE_SIZE = 21;
+
 interface Props {
   titleKey: TranslationKey;
   helpTitleKey: TranslationKey;
@@ -109,7 +121,7 @@ function makeStyles(C: Palette) {
       flexDirection: 'row', alignItems: 'center', gap: 8,
       paddingHorizontal: 20, paddingVertical: 12,
     },
-    title: { fontSize: 21, fontWeight: '700', color: C.highlight },
+    title: { fontSize: PAGE_TITLE_SIZE, fontWeight: '700', color: C.highlight },
     helpBtn: { padding: 2 },
     backdrop: {
       flex: 1, backgroundColor: 'rgba(0,0,0,0.6)',

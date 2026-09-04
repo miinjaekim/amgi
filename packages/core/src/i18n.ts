@@ -145,6 +145,11 @@ const translations = {
     progressMore: 'More',
     progressByLanguage: 'By language',
     progressLanguageReviews: '{count} reviews',
+    // Rollups began 2026-08-20 and cannot be reconstructed, so a window
+    // reaching further back is shorter than it looks. Say so rather than
+    // showing a total that quietly means something narrower.
+    progressHistoryNote: 'Recorded from {date} onwards.',
+    progressRetention: '{percent}% recalled',
     progressCardsFromPacks: '{count} from packs',
     progressTooltipReviews: '{count} reviews',
     progressTooltipOneReview: '1 review',
@@ -152,6 +157,12 @@ const translations = {
     progressTooltipCards: '{count} cards added',
     progressTooltipOneCard: '1 card added',
     settingsStudyLanguage: 'Learning',
+    // Shown only when the language being chosen is the one Amgi is currently
+    // speaking to the user in — picking it moves their native language, which
+    // is defensible from a settings screen and alarming from a one-tap chip.
+    switchNativeWarningTitle: 'Change your interface language?',
+    switchNativeWarningBody: 'Amgi speaks to you in {study}. Studying {study} moves that to {native}.',
+    switchNativeWarningConfirm: 'Switch',
     settingsLanguage: 'Language',
     settingsTheme: 'Theme',
     settingsPronunciationSpeed: 'Pronunciation speed',
@@ -161,7 +172,6 @@ const translations = {
     speedFast: 'Fast',
     signOut: 'Sign out',
     signIn: 'Sign in',
-    navSettings: 'Settings',
     // Settings screen (mobile)
     settingsTitle: 'Settings',
     settingsAccount: 'Account',
@@ -512,6 +522,9 @@ const translations = {
     navLearn: '학습',
     navReview: '복습',
     settingsStudyLanguage: '학습 언어',
+    switchNativeWarningTitle: '화면 언어를 바꿀까요?',
+    switchNativeWarningBody: 'Amgi 화면은 지금 {study}로 표시됩니다. {study}를 학습 언어로 고르면 화면 언어는 {native}로 바뀝니다.',
+    switchNativeWarningConfirm: '바꾸기',
     settingsLanguage: '언어',
     settingsTheme: '테마',
     settingsPronunciationSpeed: '발음 속도',
@@ -521,7 +534,6 @@ const translations = {
     speedFast: '빠르게',
     signOut: '로그아웃',
     signIn: '로그인',
-    navSettings: '설정',
     // Settings screen (mobile)
     settingsTitle: '설정',
     settingsAccount: '계정',
@@ -649,6 +661,8 @@ const translations = {
     progressStatActiveDays: '공부한 날',
     progressStatAverage: '하루 평균',
     progressStatNewCards: '담은 카드',
+    progressHistoryNote: '{date}부터의 기록입니다.',
+    progressRetention: '{percent}% 기억',
     progressStreak: '연속 학습',
     progressStreakDays: '{count}일',
     progressStreakDay: '1일',

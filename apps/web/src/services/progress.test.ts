@@ -5,19 +5,31 @@ import {
   dateRange,
   deriveStreak,
   emptyDailyProgress,
+  emptyLanguageProgress,
+  historyStartsMidWindow,
   localDateString,
   mergeDeltas,
   negateDelta,
   newCardsDelta,
+  parseDailyProgress,
+  ratedTotal,
+  retentionRate,
   reviewDelta,
+  PROGRESS_HISTORY_START,
   shiftDate,
   summarizeProgress,
   type DailyProgress,
+  type LanguageProgress,
 } from '@amgi/core';
 
 /** A day with only the fields a test cares about; the rest stay zero. */
 function day(date: string, patch: Partial<DailyProgress> = {}): DailyProgress {
   return { ...emptyDailyProgress(date), ...patch };
+}
+
+/** A *stored* language slice — all seven counters, so a `toEqual` matches. */
+function lang(patch: Partial<LanguageProgress> = {}): LanguageProgress {
+  return { ...emptyLanguageProgress(), ...patch };
 }
 
 describe('date helpers', () => {
@@ -53,7 +65,7 @@ describe('deltas', () => {
     expect(reviewDelta('Korean', 'good')).toEqual({
       reviews: 1,
       good: 1,
-      byLanguage: { Korean: { reviews: 1 } },
+      byLanguage: { Korean: { reviews: 1, good: 1 } },
     });
   });
 
@@ -74,14 +86,17 @@ describe('deltas', () => {
       reviews: 2,
       good: 1,
       again: 1,
-      byLanguage: { Korean: { reviews: 2 } },
+      byLanguage: { Korean: { reviews: 2, good: 1, again: 1 } },
     });
   });
 
   it('keeps languages apart when merging', () => {
     const merged = mergeDeltas(reviewDelta('Korean', 'good'), reviewDelta('French', 'good'));
     expect(merged.reviews).toBe(2);
-    expect(merged.byLanguage).toEqual({ Korean: { reviews: 1 }, French: { reviews: 1 } });
+    expect(merged.byLanguage).toEqual({
+      Korean: { reviews: 1, good: 1 },
+      French: { reviews: 1, good: 1 },
+    });
   });
 
   it('collapses a whole offline session into one delta', () => {
@@ -99,24 +114,24 @@ describe('deltas', () => {
       newCards: 2,
       good: 2,
       hard: 1,
-      byLanguage: { Korean: { reviews: 3, newCards: 2 } },
+      byLanguage: { Korean: { reviews: 3, newCards: 2, good: 2, hard: 1 } },
     });
   });
 
   it('applies a delta onto a day without mutating it', () => {
-    const before = day('2026-08-19', { reviews: 5, good: 5, byLanguage: { Korean: { reviews: 5, newCards: 0, packCards: 0 } } });
+    const before = day('2026-08-19', { reviews: 5, good: 5, byLanguage: { Korean: lang({ reviews: 5, good: 5 }) } });
     const after = applyDelta(before, reviewDelta('Korean', 'again'));
 
     expect(after.reviews).toBe(6);
     expect(after.again).toBe(1);
-    expect(after.byLanguage.Korean).toEqual({ reviews: 6, newCards: 0, packCards: 0 });
+    expect(after.byLanguage.Korean).toEqual(lang({ reviews: 6, good: 5, again: 1 }));
     expect(before.reviews).toBe(5);
     expect(before.byLanguage.Korean?.reviews).toBe(5);
   });
 
   it('applies a delta for a language the day has never seen', () => {
     const after = applyDelta(day('2026-08-19'), newCardsDelta('Swedish', 3, 'lookup'));
-    expect(after.byLanguage.Swedish).toEqual({ reviews: 0, newCards: 3, packCards: 0 });
+    expect(after.byLanguage.Swedish).toEqual(lang({ newCards: 3 }));
   });
 });
 
@@ -154,9 +169,9 @@ describe('deriveStreak', () => {
 describe('summarizeProgress', () => {
   it('totals reviews, cards and active days', () => {
     const days = [
-      day('2026-08-17', { reviews: 10, newCards: 2, byLanguage: { Korean: { reviews: 10, newCards: 2, packCards: 0 } } }),
-      day('2026-08-18', { newCards: 5, byLanguage: { Korean: { reviews: 0, newCards: 5, packCards: 0 } } }),
-      day('2026-08-19', { reviews: 30, packCards: 100, byLanguage: { Japanese: { reviews: 30, newCards: 0, packCards: 100 } } }),
+      day('2026-08-17', { reviews: 10, newCards: 2, byLanguage: { Korean: lang({ reviews: 10, newCards: 2 }) } }),
+      day('2026-08-18', { newCards: 5, byLanguage: { Korean: lang({ newCards: 5 }) } }),
+      day('2026-08-19', { reviews: 30, packCards: 100, byLanguage: { Japanese: lang({ reviews: 30, packCards: 100 }) } }),
     ];
     const summary = summarizeProgress(days);
 
@@ -170,8 +185,8 @@ describe('summarizeProgress', () => {
 
   it('ranks languages by reviews', () => {
     const days = [
-      day('2026-08-18', { reviews: 5, byLanguage: { Korean: { reviews: 2, newCards: 0, packCards: 0 }, Japanese: { reviews: 3, newCards: 0, packCards: 0 } } }),
-      day('2026-08-19', { reviews: 4, byLanguage: { Japanese: { reviews: 4, newCards: 0, packCards: 0 } } }),
+      day('2026-08-18', { reviews: 5, byLanguage: { Korean: lang({ reviews: 2 }), Japanese: lang({ reviews: 3 }) } }),
+      day('2026-08-19', { reviews: 4, byLanguage: { Japanese: lang({ reviews: 4 }) } }),
     ];
     const summary = summarizeProgress(days);
 
@@ -226,18 +241,76 @@ describe('negateDelta', () => {
   it('cancels a rating out exactly', () => {
     const delta = reviewDelta('Japanese', 'easy');
     expect(applyDelta(applyDelta(day('2026-08-25'), delta), negateDelta(delta)))
-      .toEqual(day('2026-08-25', { byLanguage: { Japanese: { reviews: 0, newCards: 0, packCards: 0 } } }));
+      .toEqual(day('2026-08-25', { byLanguage: { Japanese: lang() } }));
   });
 
   it('negates every counter that is present and invents none', () => {
     expect(negateDelta(reviewDelta('Korean', 'again'))).toEqual({
       reviews: -1,
       again: -1,
-      byLanguage: { Korean: { reviews: -1 } },
+      byLanguage: { Korean: { reviews: -1, again: -1 } },
     });
   });
 
   it('leaves an empty delta empty', () => {
     expect(negateDelta({})).toEqual({});
+  });
+});
+
+describe('per-language verdicts', () => {
+  // Added 2026-09-04. Before that the four verdict counters were whole-day
+  // only, which made retention-per-language underivable — and a rollup keeps
+  // only what it counted in advance, so there was nothing to backfill from.
+  it('reads a document written before the split without inventing counts', () => {
+    const parsed = parseDailyProgress('2026-08-25', {
+      reviews: 9, again: 2, good: 7,
+      byLanguage: { Korean: { reviews: 9 } },
+    });
+
+    expect(parsed.again).toBe(2);
+    // The day knows it had two lapses; the language slice genuinely does not.
+    expect(parsed.byLanguage.Korean).toEqual(lang({ reviews: 9 }));
+    expect(retentionRate(parsed.byLanguage.Korean!)).toBeNull();
+  });
+
+  it('sums verdicts per language across a window', () => {
+    const days = [
+      day('2026-09-04', {
+        reviews: 3, again: 1, good: 2,
+        byLanguage: { Korean: lang({ reviews: 2, again: 1, good: 1 }), French: lang({ reviews: 1, good: 1 }) },
+      }),
+      day('2026-09-05', {
+        reviews: 2, hard: 1, good: 1,
+        byLanguage: { Korean: lang({ reviews: 2, hard: 1, good: 1 }) },
+      }),
+    ];
+    const summary = summarizeProgress(days);
+    const korean = summary.byLanguage.find(entry => entry.studyLanguage === 'Korean')!;
+
+    expect(korean.progress).toEqual(lang({ reviews: 4, again: 1, hard: 1, good: 2 }));
+    // `hard` is a recall that hurt, not a miss — three of four buttons count.
+    expect(retentionRate(korean.progress)).toBe(0.75);
+    expect(ratedTotal(korean.progress)).toBe(4);
+  });
+
+  it('reports no retention rather than 100% when nothing has been rated', () => {
+    expect(retentionRate(emptyLanguageProgress())).toBeNull();
+    expect(retentionRate(lang({ newCards: 12 }))).toBeNull();
+  });
+
+  it('survives an undo, which negates the verdict on both levels', () => {
+    const delta = reviewDelta('Korean', 'again');
+    const after = applyDelta(applyDelta(day('2026-09-04'), delta), negateDelta(delta));
+
+    expect(after.again).toBe(0);
+    expect(after.byLanguage.Korean).toEqual(lang());
+  });
+});
+
+describe('history window', () => {
+  it('flags a window that starts before anything was recorded', () => {
+    expect(historyStartsMidWindow(shiftDate(PROGRESS_HISTORY_START, -1))).toBe(true);
+    expect(historyStartsMidWindow(PROGRESS_HISTORY_START)).toBe(false);
+    expect(historyStartsMidWindow(shiftDate(PROGRESS_HISTORY_START, 1))).toBe(false);
   });
 });

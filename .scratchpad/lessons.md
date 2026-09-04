@@ -394,11 +394,57 @@ Three things worth keeping:
 
 ## Expo / React Native monorepo
 
-- **Hermes error** — caused by a root-level `babel-preset-expo@56`. Fix: pin
-  `babel-preset-expo@~54.0.11` in `apps/mobile/`.
+- **Hermes error** — caused by a `babel-preset-expo` whose major doesn't match
+  the SDK. Fix: keep it pinned to the SDK's own major in `apps/mobile/`
+  (`~57.0.0` today). `expo install --fix` maintains this for you.
 - **React version conflict** — use `config.resolver.resolveRequest` in
   `metro.config.js` to force all `react` imports to the local version. Also mind
-  `nodeModulesPaths` order.
+  `nodeModulesPaths` order. **This does not go away**: mobile pins react exactly
+  (SDK 57 → 19.2.3) while web floats on `^19.0.0`, so they re-diverge on web's
+  next install even when a given install happens to agree. `expo-doctor` reports
+  the split as a duplicate-native-module failure — it is the one check that
+  fails here, and react is not a native module, so the warning is expected.
+
+### Upgrading the Expo SDK — 54 → 57, 2026-09-04
+
+Prompted by Expo Go auto-updating to SDK 57 on a phone and refusing to open the
+project. **This will recur**: Expo Go on iOS only ever ships the current SDK,
+and there is no way to install an older one from the App Store.
+
+- ⚠️ **Delete `sdkVersion` from `app.json`.** It was hardcoded to `"54.0.0"`,
+  and `expo install --fix` reads it rather than the installed `expo` — so after
+  installing `expo@^57` the fix pass still resolved every package against SDK
+  54's module map and reported success. Expo derives the SDK from the package;
+  the hand-written field can only ever go stale.
+- **A wall of "major" bumps is a renumbering, not API churn.** SDK 55 moved
+  every `expo-*` package onto the SDK's own major, so `expo-audio ~1.1.1 →
+  ~57.0.4` looks like 56 majors and is three SDKs of change. What actually
+  moved across 54→57: RN 0.81.5 → 0.86.3, react 19.1 → 19.2.3, everything else
+  inside its major. With no `ios/`/`android/` directories — this app is pure
+  CNG — there is nothing to merge.
+- **`@expo/vector-icons` stopped arriving transitively** and has to be an
+  explicit dependency (`^15.0.2` per `bundledNativeModules`). It is still a
+  supported package; nothing in SDK 57 pulls it for you.
+- **expo-router 57 vendored react-navigation and dropped the
+  `@react-navigation/*` packages entirely.** `BottomTabBarProps` and
+  `BottomTabNavigationProp` now come from **`expo-router/tabs`**, which is the
+  public re-export of `build/react-navigation/bottom-tabs`. Don't import from
+  `build/` — `expo-router/react-navigation` exists but only re-exports `native`
+  and `elements`, not the tab types.
+- ⚠️ **Do not delete `package-lock.json` to fix a mobile problem.** A
+  from-scratch install renests the *whole* workspace, and `eslint-config-next`
+  `require()`s `next/dist/compiled/babel/eslint-parser` while declaring **no
+  dependency or peer on `next`** — so it works only while `next` is hoisted to
+  the root. A clean install nested `next` under `apps/web` and `npx eslint .`
+  died with `Cannot find module`, in a workspace the upgrade never touched.
+  `npm dedupe` does not fix it. **Reinstall against the committed lockfile**
+  (`git checkout HEAD -- package-lock.json`, remove `node_modules`,
+  `npm install`) so only the workspace whose `package.json` changed moves.
+- **The entitlement plugin survived**, and `expo config --type introspect` is
+  how you know — `entitlements: {}`. `expo install --fix` appended
+  `expo-sharing` and `expo-status-bar` to the `plugins` array, which is safe
+  only because it appends: `withoutPushEntitlement` has to stay **first** to
+  run last.
 - **`initializeAuth` already-initialized on fast refresh** — wrap in try/catch
   and fall back to `getAuth(app)`.
 - **Mobile OAuth redirect** — `makeRedirectUri()` always returns `exp://...`,
