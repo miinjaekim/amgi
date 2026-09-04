@@ -15,78 +15,21 @@ costs ~20 minutes rather than an App Review cycle.
 
 ---
 
-## Verify on the 1.5.0 build
+## Cutting a build
 
-**Nothing is queued for a build.** 1.5.0 (build 14) carries everything merged
-since build 13 and was **approved for external testing 2026-09-02**, so the eight
-items that lived here have shipped and left the file. What replaces them is the
-checking, and it is now the oldest open work in the project.
+**Nothing is queued.** 1.5.0 (build 14) carries everything merged since build 13
+and was **approved for external testing 2026-09-02**, so mobile merges are
+unblocked and the next build is whatever the next batch turns out to be.
 
-⚠️ **This is the first build with no route through testers.** 1.3.0 and 1.4.0's
-What to Test asked for this list by name and the plan was to read what came back.
-1.5.0's does not — it was cut to what's new on the user's call (2026-09-02) so
-testers would actually skim it. Nothing asks for any of this now, so it gets
-checked by hand or not at all. Ranked, because it has outlived four releases and
-will not be worked through in one sitting:
-
-1. **The Slow pronunciation speed** — the ear test the plan deferred, and the
-   only item here with a decision hanging on it. Slow is a pitch-corrected 0.7×
-   stretch of a clip synthesized at 0.85, not a natively slow synthesis. If it
-   sounds like an artifact rather than a careful speaker, the fallback is
-   server-side rates behind the same three chips — no UI change.
-2. **Offline review** across a force-kill and reconnect. Never checked on any
-   release; it was first on 1.4.0's list and nobody reported back.
-3. **Typed responses on a phone** — what a Korean or Japanese IME does with
-   `autoCorrect={false}` / `autoCapitalize="none"`. An IME that autocorrects the
-   word being recalled does the exercise for the learner. The keyboard covering
-   the action row was already found and fixed in Expo Go, so only this half is
-   left.
-4. **The badge at the narrowest phone width**, which three separate changes all
-   made longer and none has been seen on a device:
-   - Kikuyu's Korean side now emits the `w`-series syllables (뫄, 뭬, 콰, 과, 화),
-     which nothing else in the app produces.
-   - Japanese pitch accent is a full-width ＼ inside the badge (は＼し), joined
-     to the romanisation by `·` (`す＼し · sushi`) — the longest that slot has
-     ever held. Try とうきょう.
-   - The Kikuyu/Japanese note under the Try: row should not push the search
-     field off-screen.
-5. **The rest of the native paths**: pronunciation audio, CSV/Anki export,
-   sharing, account deletion against the production `EXPO_PUBLIC_API_BASE_URL`,
-   and the review reminder firing *and then disappearing* once you review.
-6. **The Spanish Basics deck row** — the first `layout: 'list'` pack with an
-   article badge, and the first whose rows can be a whole question
-   (`¿cómo está usted?`), so it is the longest that layout has had to hold.
-7. **Renders never seen on a device**, cosmetic risk only: the packs list
-   without per-pack descriptions, the "showing results for…" row, the
-   part-of-speech badge, and the ↺ slot — it holds 44pt even when empty, so the
-   `n / m` count should not shift sideways on the first rating of a session.
-8. **Korean date formatting** in the progress day tooltip — nothing else in the
-   app formats a date with a locale and options, so Hermes' `Intl` is unproven
-   there on a release build.
-
-All of the above is **separately unverified on Android**, where only sign-in has
-ever been exercised.
-
-⚠️ **A speaker has still not read the Kikuyu Basics list** — shipped that way
-knowingly, with a source tier on every entry (16 corroborated twice, 36 on one
-source, 7 derived). Not a build check and not blocked on one: the verb section is
-where a check is worth the most, since seven of ten are Dahl's Law applied to
-sourced stems rather than attested infinitives. The `guka`/`wagui` conflict and
-whether kinship is inherently possessed are open in
-`docs/packs/kikuyu-basics-pack-draft.md`; the wider known-unchecked list is in
-[lessons.md](lessons.md).
-
-- **Delete `packages/core/src/writing.ts`, `grammar.ts` and the two API routes
-  that keep them alive.** **The gate is open**: it was "once no build predating
-  the 2026-08-18 grammar removal is still in use". What is left is not a
-  condition but a fact to check — that testers have actually updated, since an
-  un-updated 1.3.0 device still has the UI compiled in and calls those routes.
-  Two releases now sit between them and it, which makes this cheaper to believe
-  than it was, but it is still console state rather than a repo fact. Both files
-  carry a `DO NOT DELETE AS DEAD CODE` header; the reasoning is in
-  [status.md](status.md). **`typedAnswer.ts` is not part of this** — `grammar.ts`
-  imports its folding rules rather than owning them now, so the deletion takes
-  the importer and leaves the module.
+⚠️ **Checking a build is no longer tracked here** (2026-09-04). The ranked list
+of what 1.5.0 had never been exercised on — the Slow speed, offline review,
+typed responses under an IME, the badge at the narrowest phone width, the native
+paths, the renders never seen on a device — came off this file: all of it is
+reached by using the app, so it surfaces in use rather than in a sitting spent
+working down a list. What is durable about it stayed elsewhere: the
+never-verified-on-a-binary caveat under Builds in [status.md](status.md), and
+the Slow speed's fallback in that file's Decisions entry, which is the one item
+that had a decision hanging on it. Reasoning in Decisions there too.
 
 **Pre-flight:** smoke-test in Expo Go → verify the native-adjacent things on the
 build itself → bump `version` in `app.json` **before** starting the build (EAS
@@ -104,22 +47,22 @@ unasked-for entitlement shows up before a cloud build finds it → submit
 of what hasn't been verified, one short clause per bullet — the 1.4.0 form was
 long enough that a tester would bounce off it. A caveat about *shipped content*
 still earns its clause (the Kikuyu list has had no speaker check); a request to
-go and test something does not, which is what the section above is about.
+go and test something does not.
 
 ⚠️ **Cut the build without `--non-interactive`.** It does not skip prompts, it
 turns one into an error — 1.4.0 died on an unanswerable Apple Team ID question
 and burned build 12. The flag is for CI.
 
-_A version bump queues another Beta App Review; 1.4.0's external approval covers
-1.4.0 only. Batch changes into a build rather than cutting one per feature.
+_A version bump queues another Beta App Review; 1.5.0's external approval covers
+1.5.0 only. Batch changes into a build rather than cutting one per feature.
 Android is the exception — no review, so a fix there ships the same day._
 
 ## High
 
 Queued 2026-08-31, in the user's order. **Both pack items and the speed dial
 have left this section** — Spanish and Kikuyu are built, and the pronunciation
-speed dial shipped 2026-09-01; see the build queue above. The two pronunciation
-items that used to sit here were **cancelled** — reasoning in the Decisions entry in
+speed dial shipped 2026-09-01 in build 14. The two pronunciation items that
+used to sit here were **cancelled** — reasoning in the Decisions entry in
 [status.md](status.md), and the Kikuyu one's durable half moved to
 [lessons.md](lessons.md) rather than closing with the item.
 
@@ -259,6 +202,16 @@ being true when web gained Progress. Fix that line with the change.
 
 ## Medium
 
+- [ ] **A speaker has still not read the Kikuyu Basics list.** Shipped that way
+      knowingly, with a source tier on every entry (16 corroborated twice, 36 on
+      one source, 7 derived) — and unlike the build checks, this one does not
+      happen by using the app. The verb section is where a check is worth the
+      most, since seven of ten are Dahl's Law applied to sourced stems rather
+      than attested infinitives. The `guka`/`wagui` conflict and whether kinship
+      is inherently possessed are open in
+      `docs/packs/kikuyu-basics-pack-draft.md`; the wider known-unchecked list is
+      in [lessons.md](lessons.md).
+
 - [ ] **Backfill `pitchAccent` onto existing Japanese cards, or decide not to.**
       New cards get it on save; the ~existing `cards_japanese` deck keeps
       showing bare furigana until each card is looked up again. Unusually cheap
@@ -362,6 +315,18 @@ green. What's left is what those two now *show*.
       Google Cloud OAuth consent screen → Branding → App name. Console-side, no
       build, no code — but it is shown to **every** user signing in, on iOS and
       web as much as Android.
+
+- [ ] **Delete `packages/core/src/writing.ts`, `grammar.ts` and the two API
+      routes that keep them alive.** **The gate is open**: it was "once no build
+      predating the 2026-08-18 grammar removal is still in use". What is left is
+      not a condition but a fact to check — that testers have actually updated,
+      since an un-updated 1.3.0 device still has the UI compiled in and calls
+      those routes. Two releases now sit between them and it, which makes this
+      cheaper to believe than it was, but it is still console state rather than a
+      repo fact. Both files carry a `DO NOT DELETE AS DEAD CODE` header; the
+      reasoning is in [status.md](status.md). **`typedAnswer.ts` is not part of
+      this** — `grammar.ts` imports its folding rules rather than owning them
+      now, so the deletion takes the importer and leaves the module.
 
 - [ ] **Two callerless functions in `apps/web/src/services/firestore.ts`** —
       `countUserFlashcards` and `fetchArchivedFlashcards`, neither imported

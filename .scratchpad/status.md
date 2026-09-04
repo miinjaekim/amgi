@@ -22,10 +22,12 @@ _Reconciled against `main` @ `bc8cb97`, 2026-08-21. `npm test` 246/246, measured
 - ⚠️ **Nothing in 1.5.0 has been checked on a binary**, and the native paths
   under Builds have never been verified on *any* build. **This build is the
   first with no route through testers**: What to Test was cut to what's new on
-  2026-09-02, so nothing asks for that list by name any more — it gets checked
-  by hand or not at all. The ranked list is in [backlog.md](backlog.md); the
-  Slow speed is worth an ear first, being a pitch-corrected stretch rather than
-  a slow synthesis, and it is the one item with a decision hanging on it.
+  2026-09-02, so nothing asks for that list by name any more. As of 2026-09-04
+  it is **not tracked as work either** — the checks come from using the app
+  (Decisions, below). The one item with a decision hanging on it is the **Slow
+  speed**, a pitch-corrected 0.7× stretch rather than a slow synthesis: if it
+  reads as an artifact the fallback is server-side rates behind the same three
+  chips, and that is written down in its Decisions entry, not waiting on a list.
 - **Mobile merges are unblocked.** The freeze held only until submission; the
   next mobile change waits for the build after this one.
 - **The progress dashboard is on both platforms** (2026-08-20) but only in users'
@@ -169,10 +171,12 @@ sharing, offline review across a force-kill and reconnect, the review reminder
 firing *and* disappearing once you review, and account deletion against the
 production `EXPO_PUBLIC_API_BASE_URL`. (The 1.3.0 copy button left this list
 with the writing rewrite it belonged to.) 1.4.0's What to Test asks for these by
-name and puts **offline review first**. **This is the caveat to retire first**:
-it has outlived every release, and 1.4.0 is approved for external testing, so
-reading what testers report beats a dedicated session. Everything here is
-separately unverified on Android, where only sign-in has been exercised.
+name and puts **offline review first**; **1.5.0's does not** — it was cut to
+what's new, so no release now asks for this list. **This paragraph is where the
+list lives**: tracking it as work was dropped 2026-09-04 (Decisions), so what
+retires a line here is somebody hitting the path in normal use, not a session
+spent working down the list. Everything here is separately unverified on
+Android, where only sign-in has been exercised.
 
 ## Known Issues
 
@@ -193,6 +197,43 @@ separately unverified on Android, where only sign-in has been exercised.
 
 Closed calls, kept with their reasoning — a decision whose reasoning is lost gets
 reopened by the next person to notice the symptom. Newest first.
+
+### Checking a build is not tracked work (2026-09-04)
+
+The ranked list of what a release has never been exercised on — eight items on
+1.5.0, some of them carried since 1.3.0 — is **off [backlog.md](backlog.md)**.
+It had become the oldest open work in the project by outliving four releases,
+which is the tell: nothing on it was ever going to be worked through as a
+sitting.
+
+**Why.** Every item on it is reached by using the app — playing a clip at Slow,
+reviewing on a phone, typing an answer, opening the packs list. A user of the
+app finds them; a list of them only accumulates. Two releases' worth of asking
+testers to go and check (1.3.0 and 1.4.0's What to Test) returned nothing
+either, and 1.5.0's copy deliberately stopped asking. Keeping a queue nobody
+works and nobody reports against costs the file's credibility: a backlog whose
+oldest section never moves reads as a backlog nobody trusts.
+
+**What was kept, and where.** The facts outlive the tracking, so none of them
+were deleted:
+- **What has never run on a binary** — pronunciation audio, CSV/Anki export,
+  sharing, offline review across a force-kill, the review reminder, account
+  deletion against production — stays in the ⚠️ under Builds above, which is now
+  the single home for it. Android is still separately unexercised beyond sign-in.
+- **The Slow speed's fallback** (server-side rates behind an unchanged UI) is in
+  its own Decisions entry, 2026-09-01, where the ear test was deferred on
+  purpose. That was the only item with a decision hanging on it and it needs no
+  backlog line to survive.
+- **The Kikuyu speaker check** stayed *as work*, moved to Medium in the backlog.
+  It is the one thing on the old list that using the app cannot surface: no
+  amount of review tells you whether a sourced Kikuyu stem is an attested
+  infinitive.
+- **Deleting `writing.ts`/`grammar.ts`** was never a check — it moved to
+  Housekeeping, where the rest of the dead-code cleanup already sits.
+
+The backlog section that held all this is now **Cutting a build**: the pre-flight
+order, the What to Test rule, and the `--non-interactive` warning — the things
+you need at the moment you cut one.
 
 ### Pronunciation speed is a playback rate, not a synthesis rate (2026-09-01)
 
