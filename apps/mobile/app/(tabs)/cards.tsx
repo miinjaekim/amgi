@@ -16,6 +16,7 @@ import { t, DEFAULT_DECK_FILTER, buildDeckFilters, filterCardsByDeck, getCharact
 import type { CardSideField, DeckFilterId } from '@amgi/core';
 import { useTheme } from '../../src/context/ThemeContext';
 import { useFloatingTabBarHeight } from '../../src/components/FloatingTabBar';
+import { PAGE_TITLE_SIZE } from '../../src/components/PageHeader';
 import CardDetailModal from '../../src/components/CardDetailModal';
 import ImportModal from '../../src/components/ImportModal';
 import FilterSheet from '../../src/components/FilterSheet';
@@ -599,7 +600,9 @@ function makeStyles(C: Palette, tabBarHeight: number) {
   root: { flex: 1, backgroundColor: C.bg },
   header: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 4 },
   headerTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  title: { fontSize: 24, fontWeight: '700', color: C.highlight },
+  // Shared with PageHeader, which this screen can't use: it has no help copy
+  // and carries Import/Export plus a subtitle.
+  title: { fontSize: PAGE_TITLE_SIZE, fontWeight: '700', color: C.highlight },
   subtitle: { fontSize: 13, color: C.muted, marginTop: 2 },
   headerActions: { flexDirection: 'row', gap: 8 },
   headerBtn: { borderWidth: 1, borderColor: C.border, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5 },
