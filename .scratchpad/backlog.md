@@ -17,9 +17,11 @@ costs ~20 minutes rather than an App Review cycle.
 
 ## Cutting a build
 
-**Nothing is queued.** 1.5.0 (build 14) carries everything merged since build 13
-and was **approved for external testing 2026-09-02**, so mobile merges are
-unblocked and the next build is whatever the next batch turns out to be.
+**Queued: the mobile UI redesign and Expo SDK 57** (PR #111, merged
+2026-09-04). 1.5.0 (build 14) is on SDK 54 and predates all of it, so **testers
+are running none of this** — the tab bar they have is still Learn-first with a
+Settings tab. The batch is worth a release on its own; nothing needs to wait for
+a second feature.
 
 ⚠️ **Checking a build is no longer tracked here** (2026-09-04). The ranked list
 of what 1.5.0 had never been exercised on — the Slow speed, offline review,
@@ -57,12 +59,20 @@ _A version bump queues another Beta App Review; 1.5.0's external approval covers
 1.5.0 only. Batch changes into a build rather than cutting one per feature.
 Android is the exception — no review, so a fix there ships the same day._
 
-⚠️ **The next build is the first on Expo SDK 57** (upgraded from 54 on
-2026-09-04, because Expo Go auto-updated and stopped opening the project).
-Every native module moved with it, so `expo config --type introspect` is not
-optional on this one, and the native-adjacent paths — audio, notifications,
-sharing, file system, auth redirect — are worth exercising on the build rather
-than trusting the Expo Go pass. Upgrade notes in [lessons.md](lessons.md)._
+⚠️ **This build is the first on Expo SDK 57**, so two pre-flight steps stop
+being optional. `expo config --type introspect` — every native module moved,
+and that is where an unasked-for entitlement shows up before a cloud build finds
+it. And the **native-adjacent paths on the binary itself**: audio,
+notifications, sharing, file system, the auth redirect. Expo Go runs the SDK's
+own bundled native modules, so a clean Expo Go pass says nothing about them.
+Upgrade notes in [lessons.md](lessons.md)._
+
+⚠️ **Do not hand-run the OTA workflow before that build ships.**
+`.github/workflows/mobile-ota-update.yml` is `workflow_dispatch`-only and its
+push trigger is commented out, which is the only thing that stopped the #111
+merge from publishing. `runtimeVersion` is `appVersion`, so an update published
+now would target 1.5.0 — an **SDK 54 binary being handed an SDK 57 bundle**,
+which does not degrade gracefully._
 
 ## High
 
@@ -87,23 +97,23 @@ Reasoning in the Decisions entry in [status.md](status.md); the shape is in
 [data-model.md](data-model.md).
 
 - [ ] **Per-context pronunciation speed.** One setting drives every play button
-      today, and the comment at `app/settings.tsx:248` says why: term,
-      translation and example all render the same `PronounceButton`, so a second
-      setting had nothing to name. The ask names two things it could split on —
-      **content** (term vs example sentence) and **surface** (browsing vs
-      learn/review).
+      today, and the comment above the speed selector in `app/settings.tsx` says
+      why: term, translation and example all render the same `PronounceButton`,
+      so a second setting had nothing to name. The ask names two things it could
+      split on — **content** (term vs example sentence) and **surface**
+      (browsing vs learn/review).
       ⚠️ **Pick one axis.** Both is a 2×2 — four controls for something a user
       sets once and forgets.
       Mechanically cheap: rate is applied at playback (`setPlaybackRate` native,
       `playbackRate` web), so **no re-synthesis and no cache churn**. The work is
-      a `kind` prop at the call sites — example sentences are the `sides.study`
-      ones (`index.tsx:763`, `review.tsx:1318`, `CardDetailModal.tsx:303`),
+      a `kind` prop at the call sites — example sentences are the ones passing
+      `sides.study` (grep it: `index.tsx`, `review.tsx`, `CardDetailModal.tsx`),
       everything else is the term — plus a second AsyncStorage key, with the
       existing `amgi_pronunciation_speed` read as the default for both so nobody's
       setting resets.
       Web has the same button and the same context, so this lands on both. And
       `settingsPronunciationSpeedDesc` ("applies to terms, translations, and
-      example sentences", `i18n.ts:169`/`:531`) becomes false the moment it ships.
+      example sentences", both locales) becomes false the moment it ships.
 
 - [ ] **A shareable stats asset — and the stats behind it.** An image a user can
       post to their stories: cards reviewed, new cards added, cards learned. Two
@@ -280,6 +290,17 @@ green. What's left is what those two now *show*.
       anywhere. Unlike `writing.ts`/`grammar.ts` these have **no build to keep
       alive**: they are web-only, so nothing pins them. Left in place while the
       subscribe change was landing to keep that diff to one subject.
+- [ ] **The mobile screen gutter is 20, hardcoded in four stylesheets.** Cards
+      sat at 16 until 2026-09-04, so tabbing to it shifted every left edge by
+      four pixels; that is fixed, but by editing six numbers rather than by
+      sharing one. ⚠️ **A shared constant needs a decision first**, which is why
+      it wasn't taken then: `review.tsx` is **not uniformly 20** — `ratingRow`
+      is 16 where `reviewScroll` is 20, so the rating buttons sit four pixels
+      wider than the card above them. Either that is deliberate (a wider tap
+      target on the row you hit most) or it is the same bug Cards had. Settle
+      that, then a constant can cover all four screens; skipping review would
+      leave the thing a constant exists to prevent.
+
 - [ ] **20 lint warnings.** 13 React Compiler
       (`react-hooks/set-state-in-effect` ×11, `react-hooks/immutability` ×2) and
       they're real: a `useEffect` calling `setState` synchronously renders twice
@@ -293,6 +314,10 @@ green. What's left is what those two now *show*.
       `turbo lint` runs one package and reports success. Honest today, misleading
       the moment it gates CI. Mobile needs `eslint-config-expo`, core a small flat
       config. Do it with the CI gate, not before.
+      _Concrete cost, found by hand 2026-09-04:_ `app/settings.tsx` imports
+      `cancelAllReminders` and never calls it. `tsc` doesn't flag an unused
+      import and nothing else looks, so mobile accumulates exactly the class of
+      dead code web's lint catches on the next commit.
 
 ## Needs clarification
 

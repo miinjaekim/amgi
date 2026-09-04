@@ -174,7 +174,7 @@ audio story is that the near neighbour is not an acceptable stand-in. Five
 languages remain, and [backlog.md](backlog.md) now carries what the same
 measurement pass already answered for each._
 
-_Last reviewed against the codebase: 2026-09-04, `main` @ `e79a60c`.
+_Last reviewed against the codebase: 2026-09-04, `main` @ `7ca9271` (PR #111).
 `npm test` 407/407, measured on `feat/mobile-ui-redesign`. Mobile has no test
 script — its half of the freshness work is covered by `tsc --noEmit` and an
 `expo export`, not by tests, and both were run on this pass._

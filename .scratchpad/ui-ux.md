@@ -90,6 +90,17 @@ stored-preference reason.
   "?" pull help on Learn, Packs and Review is the answer, and any surface still
   needing explanation gets another "?" rather than a pushed tip. See Decisions
   in [status.md](status.md).
+- **Progress is the one tab that doesn't say its own name.** Learn, Review,
+  Cards and Packs each open with a title; Progress opens with the account
+  header instead — avatar, display name, language chip, gear. That was
+  deliberate (the account block had to land somewhere once Settings left the
+  bar, and a title above it would push the data down a line), but it does mean
+  the only label is the tab glyph, and the bar is icon-only. Leave it, or give
+  it a title and move the account row under it?
+- **The "?" help is on Learn, Review and Packs but not Cards or Progress.** Not
+  an oversight — those two have no help copy written. Worth deciding whether
+  that stays the answer now that Progress is a tab rather than a screen you
+  reached on purpose from a streak badge.
 - Packs: should section themes (verbs / familiar-words-new-meanings /
   adjectives / nouns) surface as filter chips, or stay an editorial convenience?
 - Daily-draw UX for packs: swipeable word feed, checklist, or "show me N I
