@@ -41,6 +41,44 @@ export type ReviewVerdict = 'again' | 'hard' | 'good' | 'easy';
  */
 export type CardSource = 'lookup' | 'pack';
 
+/**
+ * The first day a rollup was ever written.
+ *
+ * Nothing before this exists and nothing before it can be reconstructed —
+ * review history was not recorded in any form until the day the write path
+ * shipped. So every "total" is a total *since then*, not since the account was
+ * created, and a window reaching further back is shorter than it looks. Any
+ * surface showing a total over a range that starts before this has to say so;
+ * `historyStartsMidWindow` is the check.
+ */
+export const PROGRESS_HISTORY_START = '2026-08-20';
+
+/** Whether a window reaches back past the day history begins. */
+export function historyStartsMidWindow(windowStart: string): boolean {
+  return windowStart < PROGRESS_HISTORY_START;
+}
+
+/** Ratings with a verdict recorded. Zero for every day before 2026-09-04. */
+export function ratedTotal(progress: LanguageProgress): number {
+  return progress.again + progress.hard + progress.good + progress.easy;
+}
+
+/**
+ * The share of ratings that were *not* a lapse, 0–1, or `null` when nothing
+ * has been rated.
+ *
+ * `again` is the only verdict that means the card was missed — `hard` is a
+ * recall that hurt, not a failure — so this counts three of the four buttons,
+ * matching what SM-2 itself does with them (`getNextReviewData` resets the
+ * interval on `again` alone). Naming it retention rather than accuracy is
+ * deliberate: nothing here was marked right or wrong, the learner graded
+ * themselves.
+ */
+export function retentionRate(progress: LanguageProgress): number | null {
+  const total = ratedTotal(progress);
+  return total === 0 ? null : (total - progress.again) / total;
+}
+
 /** One language's slice of a day. */
 export interface LanguageProgress {
   /** Ratings submitted. Counts *directions*, matching `reviewedToday`. */
@@ -49,6 +87,32 @@ export interface LanguageProgress {
   newCards: number;
   /** Cards added by enrolling in a pack. */
   packCards: number;
+  /**
+   * Which button each of those ratings landed on.
+   *
+   * Per language rather than whole-day since 2026-09-04. They were whole-day
+   * before that, which made accuracy-per-language underivable — and a rollup
+   * discards what it didn't count in advance, so the fix could only ever start
+   * collecting from the day it shipped, never backfill. Days before then carry
+   * the whole-day counts and zeroes in every language slice; a per-language
+   * accuracy is therefore honest only over a window that starts after.
+   */
+  again: number;
+  hard: number;
+  good: number;
+  easy: number;
+}
+
+/** Every counter on a `LanguageProgress`, in one place — the day totals and the
+ *  per-language slices carry the same set, so a field added here reaches the
+ *  merge, negate, apply, parse and `increment()` paths on both platforms
+ *  without any of them being edited. */
+export const COUNTER_KEYS = [
+  'reviews', 'newCards', 'packCards', 'again', 'hard', 'good', 'easy',
+] as const;
+
+export function emptyLanguageProgress(): LanguageProgress {
+  return { reviews: 0, newCards: 0, packCards: 0, again: 0, hard: 0, good: 0, easy: 0 };
 }
 
 /**
@@ -56,20 +120,12 @@ export interface LanguageProgress {
  *
  * The top-level counters are the sum across languages, stored rather than
  * derived so the common read (a heatmap of 365 days) doesn't have to walk every
- * language map on every document.
+ * language map on every document. They are inherited rather than redeclared:
+ * a day and a language slice count exactly the same things.
  */
 export interface DailyProgress extends LanguageProgress {
   /** `YYYY-MM-DD` in the device's local timezone. Also the document id. */
   date: string;
-  /**
-   * Verdict counts, whole-day and not per language. Accuracy isn't on the
-   * dashboard yet; these are here because four integers are cheap and a day
-   * that goes by uncounted is gone for good.
-   */
-  again: number;
-  hard: number;
-  good: number;
-  easy: number;
   byLanguage: Partial<Record<StudyLanguage, LanguageProgress>>;
 }
 
@@ -82,14 +138,7 @@ export interface DailyProgress extends LanguageProgress {
  * AsyncStorage while offline. The platform layer maps each leaf to an
  * `increment()` on the way out.
  */
-export interface ProgressDelta {
-  reviews?: number;
-  newCards?: number;
-  packCards?: number;
-  again?: number;
-  hard?: number;
-  good?: number;
-  easy?: number;
+export interface ProgressDelta extends Partial<LanguageProgress> {
   byLanguage?: Partial<Record<StudyLanguage, Partial<LanguageProgress>>>;
 }
 
@@ -114,12 +163,7 @@ export function dateRange(start: string, end: string): string[] {
 }
 
 export function emptyDailyProgress(date: string): DailyProgress {
-  return {
-    date,
-    reviews: 0, newCards: 0, packCards: 0,
-    again: 0, hard: 0, good: 0, easy: 0,
-    byLanguage: {},
-  };
+  return { date, ...emptyLanguageProgress(), byLanguage: {} };
 }
 
 /**
@@ -136,27 +180,19 @@ export function parseDailyProgress(date: string, raw: unknown): DailyProgress {
   const data = (raw ?? {}) as Record<string, unknown>;
   const count = (value: unknown): number => (typeof value === 'number' && Number.isFinite(value) ? value : 0);
 
+  const readCounters = (source: Record<string, unknown> | undefined): LanguageProgress => {
+    const counters = emptyLanguageProgress();
+    for (const key of COUNTER_KEYS) counters[key] = count(source?.[key]);
+    return counters;
+  };
+
   const byLanguage: Partial<Record<StudyLanguage, LanguageProgress>> = {};
   const storedLanguages = (data.byLanguage ?? {}) as Record<string, Record<string, unknown>>;
   for (const [language, slice] of Object.entries(storedLanguages)) {
-    byLanguage[language as StudyLanguage] = {
-      reviews: count(slice?.reviews),
-      newCards: count(slice?.newCards),
-      packCards: count(slice?.packCards),
-    };
+    byLanguage[language as StudyLanguage] = readCounters(slice);
   }
 
-  return {
-    date,
-    reviews: count(data.reviews),
-    newCards: count(data.newCards),
-    packCards: count(data.packCards),
-    again: count(data.again),
-    hard: count(data.hard),
-    good: count(data.good),
-    easy: count(data.easy),
-    byLanguage,
-  };
+  return { date, ...readCounters(data), byLanguage };
 }
 
 /**
@@ -172,7 +208,7 @@ export function reviewDelta(studyLanguage: StudyLanguage, verdict: ReviewVerdict
   return {
     reviews: 1,
     [verdict]: 1,
-    byLanguage: { [studyLanguage]: { reviews: 1 } },
+    byLanguage: { [studyLanguage]: { reviews: 1, [verdict]: 1 } },
   };
 }
 
@@ -200,7 +236,7 @@ export function newCardsDelta(
  */
 export function negateDelta(delta: ProgressDelta): ProgressDelta {
   const negated: ProgressDelta = {};
-  for (const key of ['reviews', 'newCards', 'packCards', 'again', 'hard', 'good', 'easy'] as const) {
+  for (const key of COUNTER_KEYS) {
     if (delta[key]) negated[key] = -delta[key]!;
   }
   const languages = Object.entries(delta.byLanguage ?? {});
@@ -208,7 +244,7 @@ export function negateDelta(delta: ProgressDelta): ProgressDelta {
     negated.byLanguage = {};
     for (const [language, slice] of languages) {
       const inverse: Partial<LanguageProgress> = {};
-      for (const key of ['reviews', 'newCards', 'packCards'] as const) {
+      for (const key of COUNTER_KEYS) {
         if (slice?.[key]) inverse[key] = -slice[key]!;
       }
       negated.byLanguage[language as StudyLanguage] = inverse;
@@ -224,8 +260,7 @@ export function negateDelta(delta: ProgressDelta): ProgressDelta {
  */
 export function mergeDeltas(a: ProgressDelta, b: ProgressDelta): ProgressDelta {
   const merged: ProgressDelta = {};
-  const scalars = ['reviews', 'newCards', 'packCards', 'again', 'hard', 'good', 'easy'] as const;
-  for (const key of scalars) {
+  for (const key of COUNTER_KEYS) {
     const sum = (a[key] ?? 0) + (b[key] ?? 0);
     if (sum !== 0) merged[key] = sum;
   }
@@ -240,7 +275,7 @@ export function mergeDeltas(a: ProgressDelta, b: ProgressDelta): ProgressDelta {
       const left = a.byLanguage?.[language] ?? {};
       const right = b.byLanguage?.[language] ?? {};
       const slice: Partial<LanguageProgress> = {};
-      for (const key of ['reviews', 'newCards', 'packCards'] as const) {
+      for (const key of COUNTER_KEYS) {
         const sum = (left[key] ?? 0) + (right[key] ?? 0);
         if (sum !== 0) slice[key] = sum;
       }
@@ -258,16 +293,14 @@ export function mergeDeltas(a: ProgressDelta, b: ProgressDelta): ProgressDelta {
  */
 export function applyDelta(day: DailyProgress, delta: ProgressDelta): DailyProgress {
   const next: DailyProgress = { ...day, byLanguage: { ...day.byLanguage } };
-  for (const key of ['reviews', 'newCards', 'packCards', 'again', 'hard', 'good', 'easy'] as const) {
+  for (const key of COUNTER_KEYS) {
     next[key] = day[key] + (delta[key] ?? 0);
   }
   for (const [language, slice] of Object.entries(delta.byLanguage ?? {})) {
-    const existing = day.byLanguage[language as StudyLanguage] ?? { reviews: 0, newCards: 0, packCards: 0 };
-    next.byLanguage[language as StudyLanguage] = {
-      reviews: existing.reviews + (slice.reviews ?? 0),
-      newCards: existing.newCards + (slice.newCards ?? 0),
-      packCards: existing.packCards + (slice.packCards ?? 0),
-    };
+    const existing = day.byLanguage[language as StudyLanguage] ?? emptyLanguageProgress();
+    const updated = emptyLanguageProgress();
+    for (const key of COUNTER_KEYS) updated[key] = existing[key] + (slice[key] ?? 0);
+    next.byLanguage[language as StudyLanguage] = updated;
   }
   return next;
 }
@@ -324,12 +357,10 @@ export function summarizeProgress(days: DailyProgress[]): ProgressSummary {
     totals.totalPackCards += day.packCards;
     if (isStudyDay(day)) totals.activeDays += 1;
     for (const [language, slice] of Object.entries(day.byLanguage)) {
-      const existing = languages.get(language as StudyLanguage) ?? { reviews: 0, newCards: 0, packCards: 0 };
-      languages.set(language as StudyLanguage, {
-        reviews: existing.reviews + (slice?.reviews ?? 0),
-        newCards: existing.newCards + (slice?.newCards ?? 0),
-        packCards: existing.packCards + (slice?.packCards ?? 0),
-      });
+      const existing = languages.get(language as StudyLanguage) ?? emptyLanguageProgress();
+      const summed = emptyLanguageProgress();
+      for (const key of COUNTER_KEYS) summed[key] = existing[key] + (slice?.[key] ?? 0);
+      languages.set(language as StudyLanguage, summed);
     }
   }
 

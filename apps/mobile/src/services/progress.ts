@@ -19,8 +19,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { collection, doc, documentId, getDocs, increment, query, setDoc, where } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import {
-  applyDelta, emptyDailyProgress, localDateString, mergeDeltas, newCardsDelta,
-  parseDailyProgress, shiftDate,
+  COUNTER_KEYS, applyDelta, emptyDailyProgress, localDateString, mergeDeltas,
+  newCardsDelta, parseDailyProgress, shiftDate,
   type CardSource, type DailyProgress, type ProgressDelta, type StudyLanguage,
 } from '@amgi/core';
 import { withTimeout } from './withTimeout';
@@ -106,7 +106,7 @@ function progressRef(uid: string, date: string) {
 /** Every leaf becomes an `increment()`, so two devices on one day add up. */
 function toIncrements(delta: ProgressDelta): Record<string, unknown> {
   const update: Record<string, unknown> = {};
-  for (const key of ['reviews', 'newCards', 'packCards', 'again', 'hard', 'good', 'easy'] as const) {
+  for (const key of COUNTER_KEYS) {
     if (delta[key]) update[key] = increment(delta[key]!);
   }
 
@@ -117,7 +117,7 @@ function toIncrements(delta: ProgressDelta): Record<string, unknown> {
     const byLanguage: Record<string, Record<string, unknown>> = {};
     for (const [language, slice] of languages) {
       const fields: Record<string, unknown> = {};
-      for (const key of ['reviews', 'newCards', 'packCards'] as const) {
+      for (const key of COUNTER_KEYS) {
         if (slice?.[key]) fields[key] = increment(slice[key]!);
       }
       if (Object.keys(fields).length > 0) byLanguage[language] = fields;
