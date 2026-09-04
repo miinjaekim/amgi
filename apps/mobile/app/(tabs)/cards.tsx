@@ -598,7 +598,10 @@ export default function CardsScreen() {
 function makeStyles(C: Palette, tabBarHeight: number) {
   return StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
-  header: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 4 },
+  // 20 is the screen gutter Learn, Review and Packs use (see `PageHeader`).
+  // Every horizontal value below that sets a content edge matches it; the
+  // smaller ones left alone are padding *inside* a control, not a gutter.
+  header: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 4 },
   headerTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   // Shared with PageHeader, which this screen can't use: it has no help copy
   // and carries Import/Export plus a subtitle.
@@ -610,10 +613,10 @@ function makeStyles(C: Palette, tabBarHeight: number) {
 
   headerBtnText: { fontSize: 12, color: C.muted },
 
-  successBanner: { marginHorizontal: 16, marginTop: 8, backgroundColor: C.border, borderRadius: 10, padding: 12 },
+  successBanner: { marginHorizontal: 20, marginTop: 8, backgroundColor: C.border, borderRadius: 10, padding: 12 },
   successText: { color: C.text, fontSize: 13, fontWeight: '600' },
 
-  controls: { paddingHorizontal: 16, paddingBottom: 8, gap: 8 },
+  controls: { paddingHorizontal: 20, paddingBottom: 8, gap: 8 },
   searchInput: {
     borderWidth: 1, borderColor: C.border, borderRadius: 12, backgroundColor: C.surface,
     paddingHorizontal: 14, paddingVertical: 10, fontSize: 15, color: C.text, marginTop: 8,
@@ -633,7 +636,7 @@ function makeStyles(C: Palette, tabBarHeight: number) {
   selectBtn: { borderWidth: 1, borderColor: C.border, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 },
   selectBtnText: { fontSize: 12, color: C.muted },
 
-  errorBanner: { marginHorizontal: 16, backgroundColor: '#fde8e8', borderRadius: 10, padding: 12, marginBottom: 8 },
+  errorBanner: { marginHorizontal: 20, backgroundColor: '#fde8e8', borderRadius: 10, padding: 12, marginBottom: 8 },
   errorText: { color: C.error, fontSize: 13, fontWeight: '600' },
 
   skelGap: { marginTop: 6 },
@@ -642,7 +645,7 @@ function makeStyles(C: Palette, tabBarHeight: number) {
   emptyState: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 },
   emptyText: { color: C.muted, fontSize: 15, textAlign: 'center' },
 
-  list: { paddingHorizontal: 16, paddingBottom: tabBarHeight + 72, gap: 10 },
+  list: { paddingHorizontal: 20, paddingBottom: tabBarHeight + 72, gap: 10 },
   cardRow: {
     backgroundColor: C.surface, borderRadius: 14, padding: 14,
     borderWidth: 1, borderColor: C.border,
@@ -680,7 +683,7 @@ function makeStyles(C: Palette, tabBarHeight: number) {
   bulkBar: {
     position: 'absolute', left: 0, right: 0, bottom: tabBarHeight,
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingHorizontal: 16, paddingVertical: 12,
+    paddingHorizontal: 20, paddingVertical: 12,
     backgroundColor: C.surface, borderTopWidth: 1, borderTopColor: C.border,
   },
   bulkCount: { fontSize: 13, color: C.muted },
