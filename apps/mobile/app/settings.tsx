@@ -1,26 +1,28 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, Image,
-  ScrollView, ActivityIndicator, Alert, Switch, Modal, Linking,
+  ScrollView, ActivityIndicator, Alert, Switch, Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
-import { useUser } from '../../src/context/UserContext';
-import { useTheme } from '../../src/context/ThemeContext';
-import { usePronunciation } from '../../src/context/PronunciationContext';
-import { useFloatingTabBarHeight } from '../../src/components/FloatingTabBar';
-import { clearAllLocalData } from '../../src/services/offlineReview';
+import { useUser } from '../src/context/UserContext';
+import { useTheme } from '../src/context/ThemeContext';
+import { usePronunciation } from '../src/context/PronunciationContext';
+import BottomSheet, { SheetRow } from '../src/components/BottomSheet';
+import StudyLanguageList from '../src/components/StudyLanguageList';
+import { clearAllLocalData } from '../src/services/offlineReview';
 import {
   cancelAllReminders, ensureNotificationPermission, hasNotificationPermission,
   readReminderPreferences, refreshReminders, writeReminderPreferences,
-} from '../../src/services/reminders';
+} from '../src/services/reminders';
 import {
   SUPPORTED_LANGUAGES, SUPPORTED_STUDY_LANGUAGES, formatReminderTime,
   reminderTimeOptions, t, type ReminderPreferences,
 } from '@amgi/core';
-import { THEMES } from '../../src/theme';
-import type { Palette } from '../../src/theme';
+import { THEMES } from '../src/theme';
+import type { Palette } from '../src/theme';
 
 // The policy is hosted on the web app; Korean speakers get the Korean version.
 const PRIVACY_URL_BASE = 'https://amgi-iota.vercel.app/privacy';
@@ -28,13 +30,13 @@ const PRIVACY_URL_BASE = 'https://amgi-iota.vercel.app/privacy';
 export default function SettingsScreen() {
   const { C, theme, setTheme } = useTheme();
   const { speed, setSpeed, speeds } = usePronunciation();
-  const tabBarHeight = useFloatingTabBarHeight();
-  const s = useMemo(() => makeStyles(C, tabBarHeight), [C, tabBarHeight]);
-  const { user, authLoading, nativeLanguage, studyLanguage, setNativeLanguage, setStudyLanguage, deleteAccount, handleSignIn, handleSignOut } = useUser();
+  const s = useMemo(() => makeStyles(C), [C]);
+  const { user, authLoading, nativeLanguage, studyLanguage, setNativeLanguage, deleteAccount, handleSignIn, handleSignOut } = useUser();
   const [deleting, setDeleting] = useState(false);
   const [reminders, setReminders] = useState<ReminderPreferences | null>(null);
   const [remindersBlocked, setRemindersBlocked] = useState(false);
   const [timePickerOpen, setTimePickerOpen] = useState(false);
+  const [studyListOpen, setStudyListOpen] = useState(false);
 
   useEffect(() => {
     readReminderPreferences().then(setReminders);
@@ -58,6 +60,13 @@ export default function SettingsScreen() {
     await writeReminderPreferences(next);
     await refreshReminders(user?.uid, nativeLanguage);
   }, [reminders, user, nativeLanguage]);
+
+  const currentStudy = SUPPORTED_STUDY_LANGUAGES.find(lang => lang.code === studyLanguage);
+  const studyLanguageLabel = currentStudy
+    ? (currentStudy.label !== currentStudy.labelNative
+        ? `${currentStudy.label} · ${currentStudy.labelNative}`
+        : currentStudy.label)
+    : studyLanguage;
 
   const openPrivacyPolicy = () => {
     const url = nativeLanguage === 'Korean' ? `${PRIVACY_URL_BASE}/ko` : PRIVACY_URL_BASE;
@@ -111,19 +120,30 @@ export default function SettingsScreen() {
     }
   };
 
+  // Its own header now that it is a pushed screen rather than a tab. Same
+  // shape as the one the progress screen carried before it took the tab slot.
+  const header = (
+    <View style={s.header}>
+      <TouchableOpacity onPress={() => router.back()} hitSlop={12} accessibilityRole="button">
+        <Text style={s.back}>←</Text>
+      </TouchableOpacity>
+      <Text style={s.headerLabel}>{t(nativeLanguage, 'settingsTitle')}</Text>
+    </View>
+  );
+
   if (authLoading) {
     return (
-      <SafeAreaView style={s.center} edges={['top']}>
-        <ActivityIndicator color={C.highlight} />
+      <SafeAreaView style={s.safe} edges={['top', 'bottom']}>
+        {header}
+        <View style={s.center}><ActivityIndicator color={C.highlight} /></View>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={s.safe} edges={['top']}>
+    <SafeAreaView style={s.safe} edges={['top', 'bottom']}>
+      {header}
       <ScrollView contentContainerStyle={s.scroll}>
-        <Text style={s.heading}>{t(nativeLanguage, 'settingsTitle')}</Text>
-
         {/* Account */}
         <Text style={s.sectionLabel}>{t(nativeLanguage, 'settingsAccount')}</Text>
         <View style={s.card}>
@@ -175,28 +195,33 @@ export default function SettingsScreen() {
           </View>
         </View>
 
-        {/* Study language */}
+        {/* Study language. A disclosure row rather than the chip grid the
+            rows below still use: nine languages wrapped to three lines and grow
+            with every one added, where native/theme/speed are bounded at two or
+            three and will stay that way. Web made the same split. */}
         <Text style={s.sectionLabel}>{t(nativeLanguage, 'settingsStudyLanguage')}</Text>
         <View style={s.card}>
           <Text style={s.settingDescription}>
             {t(nativeLanguage, 'settingsStudyLanguageDesc')}
           </Text>
-          <View style={s.langRow}>
-            {SUPPORTED_STUDY_LANGUAGES.map(({ code, label, labelNative }) => {
-              const active = studyLanguage === code;
-              return (
-                <TouchableOpacity
-                  key={code}
-                  style={[s.langChip, active && s.langChipActive]}
-                  onPress={() => setStudyLanguage(code)}
-                >
-                  <Text style={[s.langChipText, active && s.langChipTextActive]}>
-                    {label !== labelNative ? `${label} · ${labelNative}` : label}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
+          <TouchableOpacity
+            style={s.disclosure}
+            onPress={() => setStudyListOpen(open => !open)}
+            accessibilityRole="button"
+            accessibilityState={{ expanded: studyListOpen }}
+          >
+            <Text style={s.disclosureValue}>{studyLanguageLabel}</Text>
+            <Ionicons
+              name={studyListOpen ? 'chevron-up' : 'chevron-down'}
+              size={18}
+              color={C.muted}
+            />
+          </TouchableOpacity>
+          {studyListOpen && (
+            <View style={s.disclosureList}>
+              <StudyLanguageList onSelect={() => setStudyListOpen(false)} />
+            </View>
+          )}
         </View>
 
         {/* Theme */}
@@ -344,43 +369,36 @@ export default function SettingsScreen() {
       </ScrollView>
 
       {reminders && (
-        <Modal visible={timePickerOpen} transparent animationType="slide" onRequestClose={() => setTimePickerOpen(false)}>
-          <TouchableOpacity style={s.sheetBackdrop} activeOpacity={1} onPress={() => setTimePickerOpen(false)}>
-            <View style={s.sheet}>
-              <Text style={s.sheetTitle}>{t(nativeLanguage, 'reminderTime')}</Text>
-              <ScrollView>
-                {reminderTimeOptions().map(({ hour, minute }) => {
-                  const selected = hour === reminders.reviewHour && minute === reminders.reviewMinute;
-                  return (
-                    <TouchableOpacity
-                      key={`${hour}:${minute}`}
-                      style={s.sheetRow}
-                      onPress={() => {
-                        setTimePickerOpen(false);
-                        updateReminders({ ...reminders, reviewHour: hour, reviewMinute: minute });
-                      }}
-                    >
-                      <Text style={[s.sheetRowText, selected && s.sheetRowSelected]}>
-                        {formatReminderTime(hour, minute)}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </ScrollView>
-            </View>
-          </TouchableOpacity>
-        </Modal>
+        <BottomSheet
+          visible={timePickerOpen}
+          title={t(nativeLanguage, 'reminderTime')}
+          onClose={() => setTimePickerOpen(false)}
+        >
+          {reminderTimeOptions().map(({ hour, minute }) => (
+            <SheetRow
+              key={`${hour}:${minute}`}
+              label={formatReminderTime(hour, minute)}
+              selected={hour === reminders.reviewHour && minute === reminders.reviewMinute}
+              onPress={() => {
+                setTimePickerOpen(false);
+                updateReminders({ ...reminders, reviewHour: hour, reviewMinute: minute });
+              }}
+            />
+          ))}
+        </BottomSheet>
       )}
     </SafeAreaView>
   );
 }
 
-function makeStyles(C: Palette, tabBarHeight: number) {
+function makeStyles(C: Palette) {
   return StyleSheet.create({
   safe: { flex: 1, backgroundColor: C.bg },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: C.bg },
-  scroll: { padding: 20, paddingBottom: tabBarHeight },
-  heading: { fontSize: 28, fontWeight: '700', color: C.text, marginBottom: 28 },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  scroll: { padding: 20, paddingTop: 8, paddingBottom: 40 },
+  header: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 12 },
+  back: { color: C.highlight, fontSize: 22 },
+  headerLabel: { color: C.text, fontSize: 17, fontWeight: '700' },
 
   sectionLabel: {
     fontSize: 11, fontWeight: '700', color: C.muted,
@@ -412,6 +430,20 @@ function makeStyles(C: Palette, tabBarHeight: number) {
   langChipText: { fontSize: 15, color: C.text, fontWeight: '500' },
   langChipTextActive: { color: C.bg, fontWeight: '700' },
 
+  // Disclosure (study language)
+  disclosure: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    gap: 12, paddingHorizontal: 14, paddingVertical: 12,
+    borderRadius: 12, borderWidth: 1, borderColor: C.border, backgroundColor: C.bg,
+  },
+  disclosureValue: { flex: 1, fontSize: 15, color: C.text, fontWeight: '500' },
+  // Negative side margins so the list's own row padding lines up with the card
+  // edge rather than sitting inset twice over.
+  disclosureList: {
+    marginTop: 10, marginHorizontal: -18, borderTopWidth: 1, borderTopColor: C.border,
+    paddingTop: 6,
+  },
+
   // About
   linkRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   linkRowText: { fontSize: 15, color: C.text, fontWeight: '500' },
@@ -429,20 +461,6 @@ function makeStyles(C: Palette, tabBarHeight: number) {
   timeValue: { fontSize: 15, color: C.highlight, fontWeight: '700' },
   blockedRow: { marginTop: 12 },
   blockedText: { fontSize: 12, color: C.error, lineHeight: 17, textDecorationLine: 'underline' },
-
-  // Time sheet
-  sheetBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  sheet: {
-    backgroundColor: C.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20,
-    paddingTop: 16, paddingBottom: 24, maxHeight: '60%',
-  },
-  sheetTitle: {
-    fontSize: 13, color: C.muted, textTransform: 'uppercase', letterSpacing: 1,
-    paddingHorizontal: 20, marginBottom: 8,
-  },
-  sheetRow: { paddingVertical: 12, paddingHorizontal: 20 },
-  sheetRowText: { fontSize: 16, color: C.text, textAlign: 'center' },
-  sheetRowSelected: { color: C.highlight, fontWeight: '700' },
 
   // Auth
   authSection: { marginTop: 8 },

@@ -473,12 +473,15 @@ export default function LearnScreen() {
     />
   );
 
-  // The badge is the way into the progress screen — it is already the thing on
-  // screen that means "how am I doing", and promoting it beats a sixth tab.
+  // A shortcut into the progress screen rather than the only door — progress
+  // took a tab of its own 2026-09-04, precisely because this badge hides
+  // itself the moment a streak breaks. `navigate` rather than `push`: the
+  // destination is a sibling tab, and pushing it would stack a second copy
+  // over Learn instead of switching to the one already mounted.
   const streakBadge = user && streak > 0 ? (
     <TouchableOpacity
       style={s.streakBadge}
-      onPress={() => router.push('/progress')}
+      onPress={() => router.navigate('/progress')}
       accessibilityRole="button"
       accessibilityLabel={t(nativeLanguage, 'progressTitle')}
       hitSlop={8}

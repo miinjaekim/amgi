@@ -12,11 +12,11 @@ import { useUser } from '../context/UserContext';
 type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
 
 const ICONS: Record<string, { on: IoniconsName; off: IoniconsName }> = {
-  index:    { on: 'search',    off: 'search-outline'   },
-  review:   { on: 'layers',   off: 'layers-outline'   },
-  cards:    { on: 'albums',   off: 'albums-outline'   },
-  decks:    { on: 'library',  off: 'library-outline'  },
-  settings: { on: 'settings', off: 'settings-outline' },
+  index:    { on: 'search',      off: 'search-outline'      },
+  review:   { on: 'layers',      off: 'layers-outline'      },
+  cards:    { on: 'albums',      off: 'albums-outline'      },
+  decks:    { on: 'library',     off: 'library-outline'     },
+  progress: { on: 'stats-chart', off: 'stats-chart-outline' },
 };
 
 // The bar is icon-only, so these surface only to screen readers.
@@ -25,7 +25,7 @@ const LABEL_KEYS: Record<string, TranslationKey> = {
   review:   'navReview',
   cards:    'navCards',
   decks:    'navDecks',
-  settings: 'navSettings',
+  progress: 'navProgress',
 };
 
 export function useFloatingTabBarHeight() {
