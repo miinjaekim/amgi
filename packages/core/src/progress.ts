@@ -59,6 +59,27 @@ export function historyStartsMidWindow(windowStart: string): boolean {
 }
 
 /**
+ * The first day the *detailed* counters were written: `cardsMatured`,
+ * `studySeconds` and `byHour`.
+ *
+ * A second boundary, sixteen days after `PROGRESS_HISTORY_START`, and the
+ * reason there has to be one is that the two fail differently. A window
+ * reaching past the first has no rows at all, which is visible. A window
+ * reaching past *this* one has rows that simply read zero for these three
+ * fields — an undercount that looks exactly like a quiet fortnight.
+ *
+ * `reviews`, `newCards`, `packCards` and the four verdicts are **not** subject
+ * to it; they have been written since rollups began. Only the three added on
+ * this date are.
+ */
+export const DETAILED_HISTORY_START = '2026-09-06';
+
+/** Whether a window reaches back past the day the detailed counters begin. */
+export function detailedHistoryStartsMidWindow(windowStart: string): boolean {
+  return windowStart < DETAILED_HISTORY_START;
+}
+
+/**
  * The most one card can contribute to `studySeconds`.
  *
  * A card left revealed while its reader answers the door is not thirty minutes
