@@ -198,6 +198,58 @@ Android, where only sign-in has been exercised.
 Closed calls, kept with their reasoning — a decision whose reasoning is lost gets
 reopened by the next person to notice the symptom. Newest first.
 
+### The share asset's counters, decided before its picture (2026-09-06)
+
+The stats half of the shareable-asset item shipped alone, ahead of the render
+and ahead of any surface at all. The reason is the one the item itself carried:
+a daily rollup keeps only what it counted in advance, so the choice for each
+counter was never "now or later" but **"from today or from never"**.
+
+**"Cards learned" is either direction past 21 days.** Anki's convention, and the
+looser of the two readings on purpose. `both` is arguably more honest — you can
+recognise *and* produce it — but the review screen has a direction filter, so a
+recognition-only learner would score a permanent zero, and a counter that reads
+zero for a whole class of user reads as broken rather than as strict. The unit
+is *cards*, so unlike `reviews` it double-counts nothing.
+
+**`maturityChange` takes both directions, which is the whole point of it.** A
+second direction reaching 21 days on an already-mature card must count nothing.
+Without that check the counter would inherit exactly the doubling `reviews`
+has — and the reason a new counter was needed at all is that `reviews` counts
+directions and cannot be relabelled into a card count. **A lapse subtracts**, so
+a window sums to a net figure: someone who forgets a word and relearns it has
+not learned two cards.
+
+**Study time is per card, not per session** — and this is the finding that made
+the item affordable. It was scoped as the expensive counter, needing a session
+timer that survives backgrounding, a force-kill and a phone left face-up on a
+table; it would still have been wrong in all three. Anki's measurement —
+question shown to rating submitted, capped at 60s — attaches to a rating that
+already exists, needs no lifecycle, negates cleanly, and rides the offline queue
+untouched. Both it and the maturity crossing are **free at the rating**:
+`trackingFor` and `getNextReviewData` were already computed there for the write.
+
+**`byHour` is the one addition that does not ride `COUNTER_KEYS`**, because it
+is a map rather than a counter — it needs its own line in merge, negate, apply
+and parse, the same four `byLanguage` gets. It is **day-level, not
+per-language**: 24 keys times nine languages to answer a question that was never
+per-language.
+
+⚠️ **Undo changed shape, and had to.** It rebuilt the delta from the verdict,
+which was exact only while the verdict *was* the delta's entire content. Think
+time and a maturity crossing are not recoverable from it, so a rebuild would
+have subtracted numbers the rating never added. `recordReview` now returns a
+`RecordedReview` and `undoReview` takes it back — undo is exact by construction
+rather than by two call sites continuing to agree. `reviewDelta`'s context stays
+optional throughout, so a caller measuring nothing produces a byte-identical
+delta to before, which is why the existing 32 progress tests passed untouched.
+
+**What this means for reading the numbers.** `PROGRESS_HISTORY_START` is
+2026-08-20 and `historyStartsMidWindow` guards *that* boundary only. These three
+begin **2026-09-06** and have their own, unguarded: a window reaching back
+further undercounts rather than being wrong in an interesting way. Any surface
+showing them over a long window has to say which boundary it means.
+
 ### Mobile navigation, and verdicts per language (2026-09-04)
 
 Four of the six mobile-UI-redesign items shipped together. Three of the calls

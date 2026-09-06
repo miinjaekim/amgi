@@ -115,47 +115,70 @@ Reasoning in the Decisions entry in [status.md](status.md); the shape is in
       `settingsPronunciationSpeedDesc` ("applies to terms, translations, and
       example sentences", both locales) becomes false the moment it ships.
 
-- [ ] **A shareable stats asset — and the stats behind it.** An image a user can
-      post to their stories: cards reviewed, new cards added, cards learned. Two
-      halves, and the second is the one with a clock on it.
-      **The Progress tab now answers the presentation half** — per-language
-      bars, retention, a labelled window — so what is left here is genuinely the
-      numbers and the render, not the design.
-      **What exists already:** `summarizeProgress` gives `totalReviews`,
-      `totalNewCards`, `totalPackCards`, `activeDays` and `averagePerActiveDay`
-      over a window; `deriveStreak` gives the streak; `buildHeatmap` gives the
-      calendar. Two of the three numbers asked for are already there.
-      **"Cards learned" does not exist anywhere.** `sm2.ts` stores
-      `repetitions`, `interval` and `ease`; nothing derives maturity from them.
-      It needs a definition (the Anki convention is `interval >= 21` days) and —
-      unlike everything else on the dashboard — it reads from the **card
-      documents**, not the daily rollups. Which is the good news: it is
-      **retroactive**, needing no write-path change and no waiting.
+- [ ] **A shareable stats asset — the render.** An image a user can post to
+      their stories. **The counters half shipped 2026-09-06** and its reasoning
+      is in the Decisions entry in [status.md](status.md) — read that before
+      changing what any of these numbers mean.
+      **What the asset shows, decided:** reviews, current streak, cards learned,
+      days studied, retention. Five is a lot for something read at thumbnail
+      size, so the plan is one hero (the heatmap — `buildHeatmap` already
+      computes it, it is pure flexbox rectangles, and people read it as a
+      contribution graph instantly), one large number, and the rest as a small
+      row.
+      **Everything it needs now exists.** `summarizeProgress` gained
+      `totalCardsMatured`, `totalStudySeconds` and `byHour` alongside the
+      totals it already had; `deriveStreak` and the stored `streak` give the
+      streak; `retentionRate` gives the stick-rate.
       ⚠️ **`reviews` counts directions, not cards**, and always has, matching
-      `reviewedToday`. A dashboard tile is read in context; an image posted
-      publicly saying "1,204 cards reviewed" is simply wrong for a two-direction
-      learner. Settle the wording or the arithmetic before the asset is designed.
-      ⚠️ **Decide any new counter now, inside this item.** Daily rollups discard
-      what they didn't count in advance, and a field added later collects only
-      from the day it ships — so anything the asset should be able to show in
-      six months has to start being written before the asset is built, not after.
-      ⚠️ **History began 2026-08-20 and cannot be backfilled**, so a "total" is
-      a total since then, not since the user joined. Label the window, or scope
-      the asset to one (last 30 days, this year).
-      Also decide whether the asset counts `newCards` alone or `+ packCards` —
-      they are counted apart deliberately, and one 474-card pack import dwarfs
-      every real study day.
+      `reviewedToday`. The asset must say "reviews", never "cards reviewed" —
+      it is simply wrong for a two-direction learner. **`cardsMatured` is the
+      one that counts cards**, which is why the two cannot share a label.
+      ⚠️ **Every number on the image should share one window**, and say which.
+      "412 cards learned" beside "1,204 reviews in 30 days" lies by
+      juxtaposition — a reader takes both as 30-day figures. This is what
+      `cardsMatured` was added for: prefer the windowed figure over the
+      all-time stock derived from card documents.
+      ⚠️ **Two history boundaries, not one.** `PROGRESS_HISTORY_START` is
+      2026-08-20 and `historyStartsMidWindow` guards only that. The three new
+      counters begin **2026-09-06** and have no guard — a window reaching
+      further back undercounts them silently. A 30-day window is honest from
+      2026-10-06 on; before that the asset either says so or waits.
+      Still open: whether it counts `newCards` alone or `+ packCards` — they are
+      counted apart deliberately, and one 474-card pack import dwarfs every real
+      study day. Not needed for the five numbers above, so it may simply not
+      arise.
       **Render it server-side.** Mobile cannot rasterize a view without
-      `react-native-view-shot`, a native module, which would cost a build. A
-      Next route returning a PNG (Next 16 ships `next/og` — no new dependency)
-      is one implementation for both platforms: web links it, mobile downloads
-      it with `expo-file-system` and hands it to `expo-sharing`, **both already
-      in the shipped build** and `expo-sharing` already carrying the CSV export.
-      So this stays JS-only on mobile too. Story format is 1080×1920.
+      `react-native-view-shot`, a native module — which costs a build *and*
+      stops the feature working in Expo Go, so the whole dev loop would go
+      through EAS. A Next route returning a PNG (Next 16 ships `next/og` — no
+      new dependency, Node runtime, not Edge) is one implementation for both
+      platforms: web links it, mobile fetches it with
+      `File.downloadFileAsync` and hands the local uri to `Sharing.shareAsync`
+      (`image/png`, UTI `public.png`). Both modules are **already in the shipped
+      build** and `expo-sharing` already carries the CSV export, so no binary
+      write path is needed either. Story format is 1080×1920.
+      ⚠️ **`next/og` is Satori, not a browser**, and the surprises are all
+      front-loaded: **flexbox only** (any container with >1 child needs an
+      explicit `display: flex` or it throws), **inline style objects only** — no
+      Tailwind, no `globals.css`, no CSS variables — and **there is no system
+      font**. Hangul renders as blank boxes unless a font buffer is passed.
+      Amgi is Korean-first, so this is load-bearing: colocate a **subsetted**
+      Hangul face with the route and read it via `import.meta.url`. Full Noto
+      Sans KR is ~5.7MB, which works but is worth subsetting since the labels
+      are a fixed string set plus digits. Corollary: **keep per-language rows
+      off the image** or `日本語` drags in a CJK font too.
       **Privacy, because the output is meant to be posted publicly:** no email,
-      no uid, no card content on the image — numbers and the app name. And the
-      route must not let anyone render anyone else's stats from a uid in a URL;
-      authenticate it, or pass the numbers in rather than looking them up.
+      no uid, no card content on the image — numbers and the app name.
+      **Pass the numbers in the query string rather than authenticating the
+      route.** The client already has them; the route becomes a pure function
+      from params to picture, which makes rendering someone else's stats
+      structurally impossible rather than merely forbidden, needs no token
+      plumbing on mobile, and is trivially cacheable and testable. The cost is
+      that `?reviews=999999` is forgeable — a vanity forgery with no victim,
+      which authentication would not prevent anyway (screenshot, edit).
+      **Keep the number-picking in `@amgi/core`** as a pure function and leave
+      the route as layout: Satori output is not pixel-stable enough to snapshot,
+      so the route test can only assert "a PNG of plausible size".
 
 ## Medium
 
