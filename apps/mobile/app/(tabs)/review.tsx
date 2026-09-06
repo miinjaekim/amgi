@@ -26,12 +26,12 @@ import {
   getBackSide, getCollectionId, getNextReviewDate,
   getNextReviewData, getStudyLangSide, getStudyLanguageConfig, getBackSideConfig,
   directionLabel, getCharacterBreakdown, getExampleSides,
-  removeCardFromQueue, t, trackingFor,
+  maturityChange, removeCardFromQueue, t, trackingFor,
   gradeTypedAnswer, promptsForTyping, typedAnswerPlaceholder,
 } from '@amgi/core';
 import type {
-  CardSideField, DirectionFilter, PendingReview, ReviewDirection, ReviewQueueItem,
-  TypedAnswerGrade,
+  CardSideField, DirectionFilter, PendingReview, RecordedReview, ReviewDirection,
+  ReviewQueueItem, TypedAnswerGrade,
 } from '@amgi/core';
 import { useTheme } from '../../src/context/ThemeContext';
 import { useFloatingTabBarHeight } from '../../src/components/FloatingTabBar';
@@ -62,8 +62,13 @@ interface UndoableRating {
   /** The other direction, which the legacy top-level `nextReview` derives from. */
   otherTracking?: ReviewTracking;
   verdict: Rating;
-  /** The day the tally mark went on, which may not be today by now. */
-  countedOn: string;
+  /**
+   * The receipt from `recordReview` — the day the tally mark went on, which may
+   * not be today by now, and the exact delta it wrote, which is what undo has
+   * to subtract. Rebuilding that delta from `verdict` would miss the think time
+   * and the maturity crossing this rating carried.
+   */
+  recorded: RecordedReview;
   typedAnswer: string;
   typedGrade: TypedAnswerGrade | null;
 }
@@ -434,6 +439,29 @@ export default function ReviewScreen() {
     setDirectionFilter('both');
   }, [collectionId, endSession]);
 
+  /**
+   * When the card currently on screen was put there, for `studySeconds`.
+   *
+   * Stamped from an effect on the position rather than inside `resetCardState`
+   * so that every way a card can appear restarts it — advancing, deleting the
+   * one in front, rebuilding the session, and undoing, which puts a card back
+   * without resetting anything else. A card re-rated after an undo is charged
+   * only for the second look.
+   *
+   * A ref rather than state: nothing renders from it, and making the clock a
+   * dependency of anything would restart it on every keystroke of a typed
+   * answer. Backgrounding the app mid-card inflates it, which is what
+   * `THINK_TIME_CAP_SECONDS` is for.
+   *
+   * Starts at 0 — "never stamped" — rather than at `Date.now()`, both because
+   * reading the clock during render is impure and because it makes the
+   * unstamped case answer 0 seconds instead of the full cap.
+   */
+  const cardShownAt = useRef(0);
+  useEffect(() => { cardShownAt.current = Date.now(); }, [index, queue]);
+  const thinkTimeSeconds = () =>
+    (cardShownAt.current ? (Date.now() - cardShownAt.current) / 1000 : 0);
+
   const resetCardState = () => {
     setRevealed(false);
     setTypedAnswer('');
@@ -462,7 +490,6 @@ export default function ReviewScreen() {
     const item = queue[index];
     const cardId = item?.card.id;
     if (!item || !cardId || !user) return;
-    const countedOn = recordReview(rating);
     setSubmitting(rating);
     const { card, direction } = item;
     // What the rating reads from is also what undoing it puts back, so it is
@@ -471,6 +498,15 @@ export default function ReviewScreen() {
     const tracking = trackingFor(card, direction);
     const next = getNextReviewData(tracking, rating);
     const otherDir = direction === 'frontToBack' ? 'backToFront' : 'frontToBack';
+
+    // Counted *after* SM-2 has run, not before: the rollup wants to know
+    // whether this rating took the card over the maturity line, which is a
+    // comparison between the interval going in and the one coming out. Nothing
+    // here is an extra read — both trackings were already needed for the write.
+    const recorded = recordReview(rating, {
+      seconds: thinkTimeSeconds(),
+      matured: maturityChange(tracking, next, card[otherDir]),
+    });
 
     const entry: PendingReview = {
       cardId,
@@ -487,7 +523,7 @@ export default function ReviewScreen() {
       tracking,
       otherTracking: card[otherDir],
       verdict: rating,
-      countedOn,
+      recorded,
       typedAnswer,
       typedGrade: grade,
     });
@@ -537,7 +573,7 @@ export default function ReviewScreen() {
    */
   const handleUndo = async () => {
     if (!lastRating || submitting || !user) return;
-    const { cardId, direction, tracking, otherTracking, verdict, countedOn } = lastRating;
+    const { cardId, direction, tracking, otherTracking, recorded } = lastRating;
 
     const entry: PendingReview = {
       cardId,
@@ -550,7 +586,7 @@ export default function ReviewScreen() {
     // Durable before anything else, on the same terms as a rating.
     await enqueueReview(user.uid, entry);
     setSessionRatings(prev => [...prev, entry]);
-    undoReview(verdict, countedOn);
+    undoReview(recorded);
     setReviewedCount(n => Math.max(0, n - 1));
     void sync();
     // The card is due again, so what the reminders were planned around has

@@ -55,6 +55,56 @@ export function getNextReviewDate(cards: CardForDueCheck[], now: Date = new Date
   return earliest === null ? null : new Date(earliest);
 }
 
+/**
+ * The interval, in days, at which a direction counts as learned rather than
+ * still being drilled.
+ *
+ * 21 is Anki's convention for a "mature" card. Nothing in SM-2 uses it — this
+ * is a reporting line only, adopted because it is the one learners arriving
+ * from another tool already have an intuition for.
+ */
+export const MATURE_INTERVAL_DAYS = 21;
+
+/**
+ * Whether a card counts as learned: **either** direction at or past the mature
+ * interval.
+ *
+ * Either rather than both, because the review screen has a direction filter —
+ * someone who only ever drills recognition would score a permanent zero under
+ * the stricter rule, which reads as a broken counter rather than as a strict
+ * one. Either way the unit is *cards*, so unlike `reviews` this double-counts
+ * nothing: a card over the line in both directions is still one card.
+ */
+export function isCardMature(intervals: (number | undefined)[]): boolean {
+  return intervals.some(interval => (interval ?? 0) >= MATURE_INTERVAL_DAYS);
+}
+
+/**
+ * What one rating did to a card's maturity: `1` if it took the card over the
+ * line, `-1` if it knocked it back under, `0` if nothing changed.
+ *
+ * Both directions are needed because the rule is about the card, not the
+ * direction being rated — a second direction reaching 21 days on a card already
+ * mature is not a card learned, and it is the difference between this and a
+ * naive per-direction check that keeps the counter honest.
+ *
+ * `-1` exists because `again` resets an interval to 1 (`getNextReviewData`), so
+ * a mature card genuinely can lapse. Letting it subtract makes the day rollups
+ * sum to a *net* figure over any window, which is what a "cards learned" claim
+ * should mean — the alternative silently counts the same card twice for anyone
+ * who forgets one and relearns it.
+ */
+export function maturityChange(
+  before: ReviewTracking,
+  after: Pick<ReviewTracking, 'interval'>,
+  other?: ReviewTracking,
+): -1 | 0 | 1 {
+  const wasMature = isCardMature([before.interval, other?.interval]);
+  const isMature = isCardMature([after.interval, other?.interval]);
+  if (wasMature === isMature) return 0;
+  return isMature ? 1 : -1;
+}
+
 export function getNextReviewData(card: CardForReview, response: 'again' | 'hard' | 'good' | 'easy') {
   let interval = card.interval ?? 0;
   let ease = card.ease ?? 2.5;

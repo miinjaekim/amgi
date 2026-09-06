@@ -1,6 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { getNextReviewData } from './sm2';
-import { freshTracking, isDue, legacyNextReview, trackingFor } from '@amgi/core';
+import {
+  MATURE_INTERVAL_DAYS, freshTracking, isCardMature, isDue, legacyNextReview,
+  maturityChange, trackingFor,
+} from '@amgi/core';
 import { Flashcard } from './firestore';
 
 describe('getNextReviewData (SM-2)', () => {
@@ -144,5 +147,69 @@ describe('rating then undoing it', () => {
 
     const undone = { ...rated, backToFront: before };
     expect(isDue(undone, new Date())).toContain('backToFront');
+  });
+});
+
+describe('maturity', () => {
+  const tracking = (interval: number) => ({ ...freshTracking(), interval });
+
+  it('counts a card mature when either direction is over the line', () => {
+    // Either rather than both, because the review screen has a direction
+    // filter: a recognition-only learner would score a permanent zero under
+    // the stricter rule, which reads as a broken counter rather than a strict
+    // one.
+    expect(isCardMature([MATURE_INTERVAL_DAYS, 0])).toBe(true);
+    expect(isCardMature([0, MATURE_INTERVAL_DAYS])).toBe(true);
+    expect(isCardMature([MATURE_INTERVAL_DAYS - 1, MATURE_INTERVAL_DAYS - 1])).toBe(false);
+  });
+
+  it('treats an untracked direction as zero rather than as missing', () => {
+    expect(isCardMature([undefined, undefined])).toBe(false);
+    expect(isCardMature([undefined, MATURE_INTERVAL_DAYS])).toBe(true);
+  });
+
+  it('reports the crossing, not the state', () => {
+    expect(maturityChange(tracking(6), tracking(MATURE_INTERVAL_DAYS))).toBe(1);
+    expect(maturityChange(tracking(6), tracking(15))).toBe(0);
+  });
+
+  it('does not count a card twice when its second direction catches up', () => {
+    // The reason `maturityChange` needs the other direction at all. Without it
+    // this rating would look exactly like a card being learned, and the counter
+    // would read roughly double for any two-direction learner — the same defect
+    // `reviews` already has and the asset cannot afford twice.
+    const other = tracking(40);
+    expect(maturityChange(tracking(6), tracking(MATURE_INTERVAL_DAYS), other)).toBe(0);
+  });
+
+  it('subtracts when a mature card lapses', () => {
+    // `again` resets the interval to 1, so a learned card genuinely can come
+    // back under the line.
+    const lapsed = getNextReviewData(tracking(60), 'again');
+    expect(maturityChange(tracking(60), lapsed)).toBe(-1);
+  });
+
+  it('holds steady when a mature card lapses in one direction but not the other', () => {
+    const lapsed = getNextReviewData(tracking(60), 'again');
+    expect(maturityChange(tracking(60), lapsed, tracking(90))).toBe(0);
+  });
+
+  it('is zero for a rating that changes nothing about maturity', () => {
+    expect(maturityChange(tracking(1), getNextReviewData(tracking(1), 'again'))).toBe(0);
+  });
+
+  it('matches what SM-2 actually schedules, not a hand-picked interval', () => {
+    // Walks a card up through real ratings rather than asserting against a
+    // number typed into the test: 1, 6, then ease-multiplied. The crossing has
+    // to fall on the rating that genuinely takes the interval past 21.
+    let current = freshTracking();
+    const crossings: number[] = [];
+    for (let i = 0; i < 6; i += 1) {
+      const next = getNextReviewData(current, 'good');
+      crossings.push(maturityChange(current, next));
+      current = { ...next, nextReview: next.nextReview };
+    }
+    expect(crossings.filter(c => c === 1)).toHaveLength(1);
+    expect(current.interval).toBeGreaterThanOrEqual(MATURE_INTERVAL_DAYS);
   });
 });

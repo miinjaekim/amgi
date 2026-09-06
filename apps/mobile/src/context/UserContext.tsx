@@ -17,9 +17,10 @@ import {
 } from '../services/offlineReview';
 import { recordProgress } from '../services/progress';
 import {
-  advanceStreak, isStudyLanguage, mergeStreakState, negateDelta, resolveNativeLanguage,
+  advanceStreak, hourKey, isStudyLanguage, mergeStreakState, negateDelta, resolveNativeLanguage,
   resolveStudyLanguage, reviewDelta,
-  type ReviewVerdict, type StreakState, type StudyLanguage, type UserPreferences,
+  type RatingContext, type RecordedReview, type ReviewVerdict, type StreakState,
+  type StudyLanguage, type UserPreferences,
 } from '@amgi/core';
 
 WebBrowser.maybeCompleteAuthSession();
@@ -102,9 +103,9 @@ interface UserContextType {
   reviewedToday: number;
   setNativeLanguage: (lang: string) => Promise<void>;
   setStudyLanguage: (lang: StudyLanguage) => Promise<void>;
-  /** Returns the day the rating was counted against, for `undoReview`. */
-  recordReview: (verdict: ReviewVerdict) => string;
-  undoReview: (verdict: ReviewVerdict, date: string) => void;
+  /** Returns the receipt `undoReview` needs — the day counted and what was written. */
+  recordReview: (verdict: ReviewVerdict, context?: RatingContext) => RecordedReview;
+  undoReview: (recorded: RecordedReview) => void;
   deleteAccount: () => Promise<void>;
   handleSignIn: () => Promise<void>;
   handleSignOut: () => Promise<void>;
@@ -378,15 +379,20 @@ export function UserProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const recordReview = (verdict: ReviewVerdict): string => {
+  const recordReview = (verdict: ReviewVerdict, context: RatingContext = {}): RecordedReview => {
     const today = getTodayString();
-    if (!user) return today;
+    if (!user) return { date: today, delta: {} };
+
+    // Built once and handed back rather than rebuilt by undo: `context` carries
+    // think time and a maturity crossing, neither of which the verdict alone
+    // could reconstruct.
+    const delta = reviewDelta(studyLanguage, verdict, { hour: hourKey(), ...context });
 
     // The day rollup the progress dashboard reads. It has its own AsyncStorage
     // queue rather than riding on the streak's `dirty` flag, because the two
     // fail differently: the streak can be reconstructed from the server's copy
     // on the next launch, where an uncounted day is uncounted forever.
-    void recordProgress(user.uid, reviewDelta(studyLanguage, verdict), today);
+    void recordProgress(user.uid, delta, today);
 
     // `advanceStreak` is the same pure rule web runs inside its transaction —
     // including restarting `reviewedToday` on a new day rather than
@@ -412,7 +418,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     })
       .then(() => markStreakSynced(uid, next))
       .catch(() => { /* Stays dirty; reconciled on the next launch that connects. */ });
-    return today;
+    return { date: today, delta };
   };
 
   /**
@@ -428,13 +434,14 @@ export function UserProvider({ children }: { children: ReactNode }) {
    * it landed on is no reason to put a streak at risk. The cost is that
    * `reviewedToday` reads one high per undo, for the rest of the day.
    *
-   * `date` is the day `recordReview` handed back rather than today, so a
-   * session carried across midnight takes the tally mark off the day it was
-   * actually put on.
+   * The `date` on the receipt is the day `recordReview` counted the rating on
+   * rather than today, so a session carried across midnight takes the tally
+   * mark off the day it was actually put on. The `delta` is the one that was
+   * written, not one rebuilt from the verdict — see `RecordedReview`.
    */
-  const undoReview = (verdict: ReviewVerdict, date: string) => {
+  const undoReview = ({ date, delta }: RecordedReview) => {
     if (!user) return;
-    void recordProgress(user.uid, negateDelta(reviewDelta(studyLanguage, verdict)), date);
+    void recordProgress(user.uid, negateDelta(delta), date);
   };
 
   const handleSignIn = async () => {

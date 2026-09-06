@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   applyDelta,
   buildHeatmap,
+  clampThinkTime,
   dateRange,
   deriveStreak,
   emptyDailyProgress,
@@ -16,6 +17,7 @@ import {
   retentionRate,
   reviewDelta,
   PROGRESS_HISTORY_START,
+  THINK_TIME_CAP_SECONDS,
   shiftDate,
   summarizeProgress,
   type DailyProgress,
@@ -27,7 +29,7 @@ function day(date: string, patch: Partial<DailyProgress> = {}): DailyProgress {
   return { ...emptyDailyProgress(date), ...patch };
 }
 
-/** A *stored* language slice — all seven counters, so a `toEqual` matches. */
+/** A *stored* language slice — every counter, so a `toEqual` matches. */
 function lang(patch: Partial<LanguageProgress> = {}): LanguageProgress {
   return { ...emptyLanguageProgress(), ...patch };
 }
@@ -312,5 +314,143 @@ describe('history window', () => {
     expect(historyStartsMidWindow(shiftDate(PROGRESS_HISTORY_START, -1))).toBe(true);
     expect(historyStartsMidWindow(PROGRESS_HISTORY_START)).toBe(false);
     expect(historyStartsMidWindow(shiftDate(PROGRESS_HISTORY_START, 1))).toBe(false);
+  });
+});
+
+describe('think time', () => {
+  it('rounds to whole seconds and caps a card left on screen', () => {
+    expect(clampThinkTime(4.4)).toBe(4);
+    expect(clampThinkTime(4.6)).toBe(5);
+    expect(clampThinkTime(THINK_TIME_CAP_SECONDS + 900)).toBe(THINK_TIME_CAP_SECONDS);
+  });
+
+  it('treats a missing or nonsensical duration as no time at all', () => {
+    // A clock that ran backwards, or a caller that measured nothing. Recording
+    // the review is worth more than refusing it over an unusable duration.
+    expect(clampThinkTime(0)).toBe(0);
+    expect(clampThinkTime(-3)).toBe(0);
+    expect(clampThinkTime(NaN)).toBe(0);
+    // Not the cap: an infinite duration is a broken clock, not a very long
+    // look at a card, and guessing 60s for it would quietly inflate the total.
+    expect(clampThinkTime(Infinity)).toBe(0);
+  });
+});
+
+describe('rating context', () => {
+  it('degrades to the old delta when a caller measures nothing', () => {
+    // The contract that let both `recordReview` call sites be migrated one at a
+    // time. A surface that cannot time a card still records the review.
+    expect(reviewDelta('Korean', 'good')).toEqual({
+      reviews: 1,
+      good: 1,
+      byLanguage: { Korean: { reviews: 1, good: 1 } },
+    });
+  });
+
+  it('carries think time, a maturity crossing and the hour', () => {
+    expect(reviewDelta('Korean', 'good', { seconds: 12.4, matured: 1, hour: '23' })).toEqual({
+      reviews: 1,
+      good: 1,
+      studySeconds: 12,
+      cardsMatured: 1,
+      byLanguage: { Korean: { reviews: 1, good: 1, studySeconds: 12, cardsMatured: 1 } },
+      byHour: { '23': 1 },
+    });
+  });
+
+  it('omits a zeroed counter rather than writing a 0', () => {
+    // Day documents carry only the counters that moved, so a rating with no
+    // measurable think time must not start writing `studySeconds: 0` into every
+    // one of them.
+    const delta = reviewDelta('Korean', 'again', { seconds: 0.2, matured: 0, hour: '9' });
+    expect(delta.studySeconds).toBeUndefined();
+    expect(delta.cardsMatured).toBeUndefined();
+    expect(delta.byLanguage?.Korean?.studySeconds).toBeUndefined();
+  });
+
+  it('lets a lapse subtract from cardsMatured', () => {
+    const delta = reviewDelta('Korean', 'again', { matured: -1, hour: '9' });
+    expect(delta.cardsMatured).toBe(-1);
+    expect(delta.byLanguage?.Korean?.cardsMatured).toBe(-1);
+  });
+
+  it('leaves byHour off entirely when the hour is unknown', () => {
+    expect(reviewDelta('Korean', 'good', { seconds: 5 }).byHour).toBeUndefined();
+  });
+});
+
+describe('byHour', () => {
+  const rated = (hour: string) => reviewDelta('Korean', 'good', { seconds: 10, hour });
+
+  it('sums across ratings in the same hour and keeps other hours apart', () => {
+    const merged = mergeDeltas(mergeDeltas(rated('23'), rated('23')), rated('7'));
+    expect(merged.byHour).toEqual({ '23': 2, '7': 1 });
+  });
+
+  it('negates, so an undo takes the rating back off its hour', () => {
+    expect(negateDelta(rated('23')).byHour).toEqual({ '23': -1 });
+  });
+
+  it('round-trips a rating and its undo back to an empty day', () => {
+    // The property that matters most: undo has to be exact across every field
+    // the delta grew, not just the ones it had when undo was written.
+    const delta = reviewDelta('Korean', 'good', { seconds: 30, matured: 1, hour: '14' });
+    const after = applyDelta(applyDelta(day('2026-09-06'), delta), negateDelta(delta));
+    // The zeroed language slice is `applyDelta`'s existing behaviour, asserted
+    // by the `negateDelta` suite above; what is new here is that every counter
+    // inside it, and the hour, came back to zero.
+    expect(after).toEqual(day('2026-09-06', { byLanguage: { Korean: lang() } }));
+    // The hour drops its key rather than keeping a 0, matching what
+    // `parseDailyProgress` does with the same document — so the local mirror
+    // and a refetch agree.
+    expect(after.byHour).toEqual({});
+  });
+
+  it('reads back sparse, dropping zeroes a negated write left in the document', () => {
+    expect(parseDailyProgress('2026-09-06', { reviews: 2, byHour: { '9': 2, '10': 0 } }).byHour)
+      .toEqual({ '9': 2 });
+  });
+
+  it('defaults to an empty map on a day written before it existed', () => {
+    expect(parseDailyProgress('2026-08-21', { reviews: 5 }).byHour).toEqual({});
+  });
+
+  it('sums across the days of a window', () => {
+    const summary = summarizeProgress([
+      day('2026-09-05', { reviews: 3, byHour: { '22': 2, '23': 1 } }),
+      day('2026-09-06', { reviews: 1, byHour: { '23': 1 } }),
+    ]);
+    expect(summary.byHour).toEqual({ '22': 2, '23': 2 });
+  });
+});
+
+describe('the new totals', () => {
+  it('sums cardsMatured and studySeconds over a window', () => {
+    const summary = summarizeProgress([
+      day('2026-09-05', { reviews: 10, cardsMatured: 3, studySeconds: 240 }),
+      day('2026-09-06', { reviews: 4, cardsMatured: 1, studySeconds: 96 }),
+    ]);
+    expect(summary.totalCardsMatured).toBe(4);
+    expect(summary.totalStudySeconds).toBe(336);
+  });
+
+  it('nets a card that matured and then lapsed back out of the total', () => {
+    // Why `maturityChange` returns -1 rather than clamping at 0: a learner who
+    // forgets a word and relearns it has not learned two cards.
+    const summary = summarizeProgress([
+      day('2026-09-05', { reviews: 1, cardsMatured: 1 }),
+      day('2026-09-06', { reviews: 1, cardsMatured: -1 }),
+    ]);
+    expect(summary.totalCardsMatured).toBe(0);
+  });
+
+  it('reads zero for the days before either counter was written', () => {
+    // 2026-08-20 through 2026-09-05 have reviews and no maturity data at all,
+    // which is why a "cards learned" over a long window is not the same number
+    // as the all-time count derived from the cards themselves.
+    const summary = summarizeProgress([day('2026-08-21', { reviews: 40 })]);
+    expect(summary.totalCardsMatured).toBe(0);
+    expect(summary.totalStudySeconds).toBe(0);
+    expect(summary.totalReviews).toBe(40);
   });
 });

@@ -55,6 +55,17 @@ function toIncrements(delta: ProgressDelta): Record<string, unknown> {
     }
     if (Object.keys(byLanguage).length > 0) update.byLanguage = byLanguage;
   }
+
+  // Nested and merged for the same reason as `byLanguage` above: an hour is a
+  // sibling key that must survive a write touching a different hour.
+  const hours = Object.entries(delta.byHour ?? {});
+  if (hours.length > 0) {
+    const byHour: Record<string, unknown> = {};
+    for (const [hour, count] of hours) {
+      if (count) byHour[hour] = increment(count);
+    }
+    if (Object.keys(byHour).length > 0) update.byHour = byHour;
+  }
   return update;
 }
 

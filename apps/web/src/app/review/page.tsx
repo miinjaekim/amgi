@@ -16,6 +16,7 @@ import {
   getReading,
   getStudyLanguageConfig,
   legacyNextReview,
+  maturityChange,
   trackingFor,
   removeCardFromQueue,
   getBackSideConfig,
@@ -27,6 +28,7 @@ import {
 } from '@amgi/core';
 import type {
   DirectionFilter,
+  RecordedReview,
   ReviewCollection,
   ReviewDirection,
   ReviewQueueItem,
@@ -72,8 +74,13 @@ interface UndoableRating {
   /** The other direction, which the legacy top-level `nextReview` derives from. */
   otherTracking?: ReviewTracking;
   verdict: ReviewVerdict;
-  /** The day the tally mark went on, which may not be today by now. */
-  countedOn: string;
+  /**
+   * The receipt from `recordReview` — the day the tally mark went on, which may
+   * not be today by now, and the exact delta it wrote, which is what undo has
+   * to subtract. Rebuilding that delta from `verdict` would miss the think time
+   * and the maturity crossing this rating carried.
+   */
+  recorded: RecordedReview;
   typedAnswer: string;
   typedGrade: TypedAnswerGrade | null;
 }
@@ -280,6 +287,28 @@ export default function ReviewPage() {
    * know the answer was also right — so it reveals both strings and keeps the
    * full rating row, which is where the override lives.
    */
+  /**
+   * When the card currently on screen was put there, for `studySeconds`.
+   *
+   * Keyed on the position and the queue so that every way a card can appear
+   * restarts it — advancing, rebuilding the session, and undoing, which puts a
+   * card back without resetting anything else. A card re-rated after an undo is
+   * charged only for the second look.
+   *
+   * A ref rather than state: nothing renders from it, and making the clock a
+   * dependency of anything would restart it on every keystroke of a typed
+   * answer. A tab left open on a card inflates it, which is what
+   * `THINK_TIME_CAP_SECONDS` is for.
+   *
+   * Starts at 0 — "never stamped" — rather than at `Date.now()`, both because
+   * reading the clock during render is impure and because it makes the
+   * unstamped case answer 0 seconds instead of the full cap.
+   */
+  const cardShownAt = React.useRef(0);
+  React.useEffect(() => { cardShownAt.current = Date.now(); }, [currentReviewIdx, activeQueue]);
+  const thinkTimeSeconds = () =>
+    (cardShownAt.current ? (Date.now() - cardShownAt.current) / 1000 : 0);
+
   const handleSubmitTypedAnswer = () => {
     const { card } = activeQueue[currentReviewIdx] ?? {};
     if (!card || !typedAnswer.trim()) return;
@@ -314,7 +343,14 @@ export default function ReviewPage() {
     const otherTracking = card[direction === 'frontToBack' ? 'backToFront' : 'frontToBack'];
     const { interval, ease, repetitions, nextReview } = getNextReviewData(previous, response);
 
-    const countedOn = recordReview(response);
+    // Counted after SM-2 has run, not before: the rollup wants to know whether
+    // this rating took the card over the maturity line, which is a comparison
+    // between the interval going in and the one coming out. Nothing here is an
+    // extra read — both trackings were already needed for the write below.
+    const recorded = recordReview(response, {
+      seconds: thinkTimeSeconds(),
+      matured: maturityChange(previous, { interval }, otherTracking),
+    });
     setLastRating({
       index: currentReviewIdx,
       cardId: card.id,
@@ -322,7 +358,7 @@ export default function ReviewPage() {
       tracking: previous,
       otherTracking,
       verdict: response,
-      countedOn,
+      recorded,
       typedAnswer,
       typedGrade: grade,
     });
@@ -381,7 +417,7 @@ export default function ReviewPage() {
    */
   const handleUndoRating = () => {
     if (!lastRating) return;
-    const { cardId, direction, tracking, otherTracking, verdict, countedOn } = lastRating;
+    const { cardId, direction, tracking, otherTracking, recorded } = lastRating;
 
     const update: Record<string, unknown> = {
       [`${direction}.interval`]: tracking.interval,
@@ -397,7 +433,7 @@ export default function ReviewPage() {
     setUserFlashcards(prev => prev.map(existing => existing.id === cardId
       ? { ...existing, [direction]: { ...tracking, nextReview: new Date(tracking.nextReview) } }
       : existing));
-    undoReview(verdict, countedOn);
+    undoReview(recorded);
     setReviewedCount(n => Math.max(0, n - 1));
 
     // Back onto the card, flipped, with the typed answer and its grade as they

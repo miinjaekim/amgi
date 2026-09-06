@@ -4,7 +4,7 @@ import { auth, googleProvider } from '@/config/firebase';
 import { signInWithPopup, signOut, onAuthStateChanged, User } from 'firebase/auth';
 import { getUserPreferences, recordReviewStreak, saveUserPreferences, subscribeToUserPreferences } from '@/services/userPreferences';
 import { recordProgress } from '@/services/progress';
-import { isStudyLanguage, negateDelta, resolveNativeLanguage, resolveStudyLanguage, reviewDelta, type ReviewVerdict, type StudyLanguage } from '@amgi/core';
+import { hourKey, isStudyLanguage, negateDelta, resolveNativeLanguage, resolveStudyLanguage, reviewDelta, type RatingContext, type RecordedReview, type ReviewVerdict, type StudyLanguage } from '@amgi/core';
 
 const LANG_CACHE_KEY = 'amgi_native_language';
 const STUDY_LANG_CACHE_KEY = 'amgi_study_language';
@@ -22,9 +22,9 @@ interface UserContextType {
   reviewedToday: number;
   setNativeLanguage: (lang: string) => Promise<void>;
   setStudyLanguage: (lang: StudyLanguage) => Promise<void>;
-  /** Returns the day the rating was counted against, for `undoReview`. */
-  recordReview: (verdict: ReviewVerdict) => string;
-  undoReview: (verdict: ReviewVerdict, date: string) => void;
+  /** Returns the receipt `undoReview` needs — the day counted and what was written. */
+  recordReview: (verdict: ReviewVerdict, context?: RatingContext) => RecordedReview;
+  undoReview: (recorded: RecordedReview) => void;
   handleSignIn: () => Promise<void>;
   handleSignOut: () => Promise<void>;
 }
@@ -172,16 +172,21 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const recordReview = (verdict: ReviewVerdict): string => {
+  const recordReview = (verdict: ReviewVerdict, context: RatingContext = {}): RecordedReview => {
     const today = getTodayString();
-    if (!user) return today;
+    if (!user) return { date: today, delta: {} };
+
+    // Built once and handed back rather than rebuilt by undo: `context` carries
+    // think time and a maturity crossing, neither of which the verdict alone
+    // could reconstruct.
+    const delta = reviewDelta(studyLanguage, verdict, { hour: hourKey(), ...context });
 
     // The day rollup, which is what the progress dashboard reads. Kept separate
     // from the streak fields below rather than folded into them: this one is an
     // atomic increment on its own document, so two devices reviewing the same
     // day add up instead of overwriting each other. Fire-and-forget — a lost
     // tally mark must never cost a card its scheduling.
-    recordProgress(user.uid, reviewDelta(studyLanguage, verdict), today).catch(() => {});
+    recordProgress(user.uid, delta, today).catch(() => {});
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
     const yesterdayStr = yesterday.toLocaleDateString('en-CA');
@@ -191,7 +196,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     // the number in the document — including whatever another tab just wrote.
     // Fire-and-forget for the same reason as the rollup above.
     recordReviewStreak(user.uid, today, yesterdayStr).catch(() => {});
-    return today;
+    return { date: today, delta };
   };
 
   /**
@@ -205,14 +210,14 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
    * landed on is no reason to put a streak at risk. The cost is that
    * `reviewedToday` reads one high per undo, for the rest of the day.
    *
-   * `date` is the day `recordReview` handed back rather than today, so a
-   * session carried across midnight takes the tally mark off the day it was
-   * actually put on.
+   * The `date` on the receipt is the day `recordReview` counted the rating on
+   * rather than today, so a session carried across midnight takes the tally
+   * mark off the day it was actually put on. The `delta` is the one that was
+   * written, not one rebuilt from the verdict — see `RecordedReview`.
    */
-  const undoReview = (verdict: ReviewVerdict, date: string) => {
+  const undoReview = ({ date, delta }: RecordedReview) => {
     if (!user) return;
-    recordProgress(user.uid, negateDelta(reviewDelta(studyLanguage, verdict)), date)
-      .catch(() => {});
+    recordProgress(user.uid, negateDelta(delta), date).catch(() => {});
   };
 
   const handleSignIn = async () => {
