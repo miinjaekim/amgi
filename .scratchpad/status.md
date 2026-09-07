@@ -198,6 +198,52 @@ Android, where only sign-in has been exercised.
 Closed calls, kept with their reasoning — a decision whose reasoning is lost gets
 reopened by the next person to notice the symptom. Newest first.
 
+### The stats image: one window, and a heatmap ramp that measures wrong (2026-09-07)
+
+The render half, shipped the day after its counters. The design calls are in
+the commits; three things outlive them.
+
+**Every figure shares one window, or is withheld.** An image is read all at once
+and out of context, so "412 cards learned" beside "1,204 reviews in 30 days" is
+taken as two 30-day figures — a lie told by juxtaposition rather than by either
+number. `buildShareStats` returns `null` for a figure the window cannot honestly
+cover and the image drops it, following what `retentionRate` already does with
+an unrated slice. **Concretely: `cardsLearned` is `null` until 2026-10-06**, so
+the image shows four numbers for the first month and five after, with no code
+change. That is the design working, not a gap to patch.
+
+⚠️ **The app's own heatmap ramp is measurably wrong, and was left alone.**
+Running the palette validator against `levelColor` — which alpha-blends the
+highlight over the background — found two defects. Its lightness is **not
+monotonic**: the lightest studied day renders *darker* than an unstudied one.
+And empty versus level-1 are **ΔE 1.4 apart under deuteranopia** (4.7 with
+normal vision), so "did not study" and "studied a little" are one colour to a
+red-green colourblind reader. The image ships a corrected ramp — one hue,
+lightness climbing, empty put ΔE 24 below level 1, since no-data versus
+some-data is a *categorical* distinction rather than a step on the magnitude
+scale, and lightness is the channel that survives every kind of CVD.
+**`levelColor` itself is untouched on both platforms.** It matters less there —
+a dashboard cell is tappable and carries a tooltip — but it is the same defect,
+and fixing it is a visible restyle of a shipped screen, which is a product call
+rather than a side effect of this feature.
+
+**Two findings about the render stack, both of which cost an hour.** Satori has
+no system font and the bundled Geist has no Hangul, so Korean renders as blank
+boxes unless a face is passed — and the documented way to load one,
+`fetch(new URL(..., import.meta.url))`, **fails under Turbopack in dev**, where
+undici refuses the `file:` URL outright. The fonts are base64 in source instead,
+which is only affordable because they are Google Fonts `text=` subsets: ~10KB
+each against ~5.7MB for a full weight. **Regenerate them if the image gains a
+character** — a glyph outside the subset draws as nothing, silently.
+
+And **the route's raster cannot be unit-tested**: resvg's wasm does not
+initialise under vitest, so `GET` fails on the raster step regardless of its
+inputs. Parsing and layout were split out and tested instead, which immediately
+earned itself by catching two real bugs — a missing `w` produced a *one-day*
+window, because `Number(null)` is `0` and finite so the fallback never fired;
+and a 364-day window overflowed the canvas, because cell size was derived from
+width alone.
+
 ### The share asset's counters, decided before its picture (2026-09-06)
 
 The stats half of the shareable-asset item shipped alone, ahead of the render
@@ -298,11 +344,10 @@ quick list — was not taken: it removes a legitimate choice to avoid explaining
 it. The confirm lives in the shared `StudyLanguageList`, so **settings inherited
 a guard it never had**, which is the argument for sharing the list at all.
 
-⚠️ Two things this pass did **not** do, both deliberate and both still in
-[backlog.md](backlog.md): per-context pronunciation speed, and the shareable
-stats asset. The stats asset's presentation half is now largely answered by the
-Progress tab; what remains there is the "cards learned" definition and the
-render.
+⚠️ One thing this pass did **not** do, deliberate and still in
+[backlog.md](backlog.md): per-context pronunciation speed. The shareable stats
+asset that sat beside it here **shipped 2026-09-07** — see the two Decisions
+entries above it.
 
 ### Checking a build is not tracked work (2026-09-04)
 
