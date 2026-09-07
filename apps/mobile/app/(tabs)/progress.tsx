@@ -1,11 +1,14 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Image } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Image, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
+import { File, Paths } from 'expo-file-system';
+import * as Sharing from 'expo-sharing';
 import {
-  PROGRESS_HISTORY_START, SUPPORTED_STUDY_LANGUAGES, buildHeatmap,
-  historyStartsMidWindow, localDateString, retentionRate, shiftDate,
+  PROGRESS_HISTORY_START, SUPPORTED_STUDY_LANGUAGES, buildHeatmap, buildShareStats,
+  hasShareableHistory, historyStartsMidWindow, localDateString, retentionRate,
+  shareImageFilename, shareImagePath, shiftDate,
   summarizeProgress, t,
   type DailyProgress, type HeatmapCell, type LanguageProgress,
   type StudyLanguage, type TranslationKey,
@@ -17,6 +20,9 @@ import StudyLanguageList from '../../src/components/StudyLanguageList';
 import { useFloatingTabBarHeight } from '../../src/components/FloatingTabBar';
 import { fetchRecentProgress } from '../../src/services/progress';
 import type { Palette } from '../../src/theme';
+
+/** The web deployment that renders the share image, same host as every AI route. */
+const API_BASE_URL = (process.env.EXPO_PUBLIC_API_BASE_URL ?? '').replace(/\/$/, '');
 
 /** 364 rather than 365 so the calendar is a whole number of weeks. */
 const RANGES = [
@@ -43,6 +49,7 @@ export default function ProgressScreen() {
   const [days, setDays] = useState<DailyProgress[] | null>(null);
   const [rangeDays, setRangeDays] = useState<number>(90);
   const [switcherOpen, setSwitcherOpen] = useState(false);
+  const [sharing, setSharing] = useState(false);
 
   // Refetch on focus, matching every other mobile screen — the review tab is
   // where these numbers change, and it is one tap away.
@@ -59,6 +66,65 @@ export default function ProgressScreen() {
       return () => { cancelled = true; };
     }, [user, rangeDays]),
   );
+
+  /**
+   * The numbers the shareable image is built from — the same window the screen
+   * is showing, so what someone posts matches what they were looking at.
+   *
+   * Derived rather than fetched: `buildShareStats` reads the rollups already in
+   * hand, so opening the share sheet costs no reads.
+   */
+  const shareStats = useMemo(
+    () => buildShareStats(days ?? [], {
+      streak,
+      endDate: localDateString(),
+      windowDays: rangeDays,
+    }),
+    [days, streak, rangeDays],
+  );
+
+  /**
+   * Fetch the rendered PNG and hand it to the OS share sheet.
+   *
+   * **No new native module.** `expo-file-system` and `expo-sharing` are both
+   * already in the shipped build — `expo-sharing` carries the CSV export — so
+   * this needs no config plugin and keeps working in Expo Go, which
+   * `react-native-view-shot` would not.
+   *
+   * `downloadFileAsync` rather than fetch-then-write because `shareAsync` needs
+   * a local uri and cannot take a remote one; going through the download path
+   * also avoids handling the image bytes in JS at all.
+   */
+  const handleShare = async () => {
+    if (sharing) return;
+    setSharing(true);
+    try {
+      if (!API_BASE_URL) throw new Error('no API base url configured');
+      if (!(await Sharing.isAvailableAsync())) throw new Error('sharing unavailable');
+
+      const target = new File(Paths.cache, shareImageFilename(shareStats));
+      // A cached file from an earlier share would be silently reused, so the
+      // window's own numbers could go out under a newer window's filename.
+      if (target.exists) target.delete();
+
+      const file = await File.downloadFileAsync(
+        `${API_BASE_URL}${shareImagePath(shareStats, nativeLanguage)}`,
+        target,
+        { idempotent: true },
+      );
+      await Sharing.shareAsync(file.uri, {
+        mimeType: 'image/png',
+        UTI: 'public.png',
+        dialogTitle: t(nativeLanguage, 'shareTitle'),
+      });
+    } catch {
+      // Cancelling the sheet is not a failure and does not reject here, so
+      // anything reaching this really did go wrong.
+      Alert.alert(t(nativeLanguage, 'shareFailed'));
+    } finally {
+      setSharing(false);
+    }
+  };
 
   const summary = useMemo(() => summarizeProgress(days ?? []), [days]);
   const cells = useMemo(
@@ -176,6 +242,8 @@ export default function ProgressScreen() {
       <ScrollView contentContainerStyle={s.content}>
         <Text style={s.description}>{t(nativeLanguage, 'progressDescription')}</Text>
 
+        {/* Share sits in the range row rather than in the header, so the window
+            being shared is the one selected right beside it. */}
         <View style={s.rangeRow}>
           {RANGES.map(range => {
             const selected = rangeDays === range.days;
@@ -191,6 +259,30 @@ export default function ProgressScreen() {
               </TouchableOpacity>
             );
           })}
+          {/* Offered only once there is something on the image. A zeroed story
+              asset is not a modest result, it is a broken-looking one. */}
+          {hasShareableHistory(shareStats) && (
+            <TouchableOpacity
+              onPress={handleShare}
+              disabled={sharing}
+              // The drawn chip is about 36×28, under the 44pt minimum, and it
+              // sits at the very edge of the screen where a thumb is least
+              // precise. The slop is asymmetric for that reason — more of it on
+              // the right, where there is nothing to steal a tap from.
+              hitSlop={{ top: 10, bottom: 10, left: 6, right: 16 }}
+              style={[s.rangeBtn, s.shareBtn, sharing && s.shareBtnBusy]}
+              accessibilityRole="button"
+              accessibilityLabel={t(nativeLanguage, 'shareTitle')}
+            >
+              {/* Icon only, unlike web. Three labelled range chips plus a
+                  labelled Share overflow the row on a phone — and because the
+                  row's intrinsic width already exceeds the screen,
+                  `marginLeft: 'auto'` pushes the button off the edge rather
+                  than wrapping it. An icon survives any width and any locale,
+                  and the accessibility label carries the name. */}
+              <Ionicons name="share-outline" size={16} color={C.highlight} />
+            </TouchableOpacity>
+          )}
         </View>
 
         {partialWindow && (
@@ -502,6 +594,11 @@ function makeStyles(C: Palette, tabBarHeight: number) {
     rangeBtn: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10, borderWidth: 1, borderColor: C.border },
     rangeBtnOn: { borderColor: C.highlight },
     rangeText: { color: C.muted, fontSize: 13 },
+    // `flexShrink: 0` so the icon keeps its box if the range labels grow; the
+    // horizontal padding is trimmed from `rangeBtn`'s 12 because there is no
+    // text beside the icon to balance it.
+    shareBtn: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, marginLeft: 'auto', flexShrink: 0, borderColor: C.highlight },
+    shareBtnBusy: { opacity: 0.5 },
     rangeTextOn: { color: C.highlight, fontWeight: '700' },
     empty: { color: C.muted, fontSize: 14, paddingHorizontal: 16 },
     emptyBody: { color: C.muted, fontSize: 13, opacity: 0.7, marginTop: 8, paddingHorizontal: 16 },

@@ -58,6 +58,43 @@ export function historyStartsMidWindow(windowStart: string): boolean {
   return windowStart < PROGRESS_HISTORY_START;
 }
 
+/**
+ * The first day the *detailed* counters were written: `cardsMatured`,
+ * `studySeconds` and `byHour`.
+ *
+ * A second boundary, sixteen days after `PROGRESS_HISTORY_START`, and the
+ * reason there has to be one is that the two fail differently. A window
+ * reaching past the first has no rows at all, which is visible. A window
+ * reaching past *this* one has rows that simply read zero for these three
+ * fields — an undercount that looks exactly like a quiet fortnight.
+ *
+ * `reviews`, `newCards`, `packCards` and the four verdicts are **not** subject
+ * to it; they have been written since rollups began. Only the three added on
+ * this date are.
+ */
+export const DETAILED_HISTORY_START = '2026-09-06';
+
+/** Whether a window reaches back past the day the detailed counters begin. */
+export function detailedHistoryStartsMidWindow(windowStart: string): boolean {
+  return windowStart < DETAILED_HISTORY_START;
+}
+
+/**
+ * The most one card can contribute to `studySeconds`.
+ *
+ * A card left revealed while its reader answers the door is not thirty minutes
+ * of study. Anki caps the same measurement at 60s for the same reason; a cap
+ * biases the total low on genuinely hard cards, which is the right direction to
+ * be wrong on a number a user is going to post publicly.
+ */
+export const THINK_TIME_CAP_SECONDS = 60;
+
+/** A think time clamped into what a day's total will accept: 0…the cap. */
+export function clampThinkTime(seconds: number): number {
+  if (!Number.isFinite(seconds) || seconds <= 0) return 0;
+  return Math.min(Math.round(seconds), THINK_TIME_CAP_SECONDS);
+}
+
 /** Ratings with a verdict recorded. Zero for every day before 2026-09-04. */
 export function ratedTotal(progress: LanguageProgress): number {
   return progress.again + progress.hard + progress.good + progress.easy;
@@ -101,6 +138,32 @@ export interface LanguageProgress {
   hard: number;
   good: number;
   easy: number;
+  /**
+   * Cards that crossed into maturity on this day — see `MATURE_INTERVAL_DAYS`.
+   *
+   * Counts **cards, not directions**, unlike `reviews`: the rating path knows
+   * both directions of the card it is rating, so it can tell a card crossing
+   * the line from a second direction catching up to one already over it. That
+   * is the whole reason this is written rather than derived — a card's maturity
+   * is readable from the card document at any time, but *the day it happened*
+   * is not, and a rollup cannot be backfilled.
+   *
+   * Written from 2026-09-06. Zero on every day before that, which is why a
+   * "cards learned" over a window starting earlier is not the same number as
+   * the all-time count derived from the cards themselves.
+   */
+  cardsMatured: number;
+  /**
+   * Seconds spent with a card on screen, summed over the day's ratings.
+   *
+   * Measured per card — revealed to rated, clamped by `THINK_TIME_CAP_SECONDS`
+   * — rather than as a session wall-clock. A session timer would have to
+   * survive backgrounding, a force-kill and a phone left face-up on a table,
+   * and would still be wrong in all three; a per-card duration attaches to the
+   * rating that already exists, needs no lifecycle, and negates cleanly on undo
+   * because the delta carries the number it added.
+   */
+  studySeconds: number;
 }
 
 /** Every counter on a `LanguageProgress`, in one place — the day totals and the
@@ -109,10 +172,14 @@ export interface LanguageProgress {
  *  without any of them being edited. */
 export const COUNTER_KEYS = [
   'reviews', 'newCards', 'packCards', 'again', 'hard', 'good', 'easy',
+  'cardsMatured', 'studySeconds',
 ] as const;
 
 export function emptyLanguageProgress(): LanguageProgress {
-  return { reviews: 0, newCards: 0, packCards: 0, again: 0, hard: 0, good: 0, easy: 0 };
+  return {
+    reviews: 0, newCards: 0, packCards: 0, again: 0, hard: 0, good: 0, easy: 0,
+    cardsMatured: 0, studySeconds: 0,
+  };
 }
 
 /**
@@ -127,6 +194,26 @@ export interface DailyProgress extends LanguageProgress {
   /** `YYYY-MM-DD` in the device's local timezone. Also the document id. */
   date: string;
   byLanguage: Partial<Record<StudyLanguage, LanguageProgress>>;
+  /**
+   * Ratings by local hour of day, `'0'`–`'23'`, sparse — only hours with a
+   * rating in them appear.
+   *
+   * Deliberately **not** part of `COUNTER_KEYS` and deliberately **not** inside
+   * the language slices. It is a map rather than a counter, so it needs its own
+   * line in merge, negate, apply and parse; and putting it per-language would
+   * multiply 24 keys by nine languages on every document to answer a question
+   * ("when do you study") that was never per-language.
+   *
+   * Sparse rather than a fixed 24 because these documents are written with
+   * `increment()` on a `merge: true` write — an hour nobody studied in has no
+   * key, exactly like a day nobody added a card on has no `newCards`.
+   */
+  byHour: Record<string, number>;
+}
+
+/** The local hour of a rating, as the key `byHour` stores it under. */
+export function hourKey(date: Date = new Date()): string {
+  return String(date.getHours());
 }
 
 /**
@@ -140,6 +227,7 @@ export interface DailyProgress extends LanguageProgress {
  */
 export interface ProgressDelta extends Partial<LanguageProgress> {
   byLanguage?: Partial<Record<StudyLanguage, Partial<LanguageProgress>>>;
+  byHour?: Record<string, number>;
 }
 
 /** `YYYY-MM-DD` in local time. `en-CA` is the shortest way to get ISO order. */
@@ -163,7 +251,7 @@ export function dateRange(start: string, end: string): string[] {
 }
 
 export function emptyDailyProgress(date: string): DailyProgress {
-  return { date, ...emptyLanguageProgress(), byLanguage: {} };
+  return { date, ...emptyLanguageProgress(), byLanguage: {}, byHour: {} };
 }
 
 /**
@@ -192,7 +280,35 @@ export function parseDailyProgress(date: string, raw: unknown): DailyProgress {
     byLanguage[language as StudyLanguage] = readCounters(slice);
   }
 
-  return { date, ...readCounters(data), byLanguage };
+  // Hours are kept sparse on the way back in as well as on the way out: an
+  // absent hour and a zeroed one mean the same thing, and filling 24 keys per
+  // day would make every heatmap read carry them.
+  const byHour: Record<string, number> = {};
+  const storedHours = (data.byHour ?? {}) as Record<string, unknown>;
+  for (const [hour, value] of Object.entries(storedHours)) {
+    const counted = count(value);
+    if (counted !== 0) byHour[hour] = counted;
+  }
+
+  return { date, ...readCounters(data), byLanguage, byHour };
+}
+
+/**
+ * What a rating knew about itself beyond which button was pressed.
+ *
+ * Every field is optional and omitting one costs only that counter — a caller
+ * that cannot measure think time still records the review. That matters
+ * because these are read at the two `recordReview` call sites, and a surface
+ * added later should degrade to the old behaviour rather than to a wrong
+ * number.
+ */
+export interface RatingContext {
+  /** Seconds the card was on screen. Clamped by `clampThinkTime`. */
+  seconds?: number;
+  /** `maturityChange`'s verdict for this rating: 1, 0 or -1. */
+  matured?: number;
+  /** Local hour of the rating, from `hourKey`. */
+  hour?: string;
 }
 
 /**
@@ -202,13 +318,32 @@ export function parseDailyProgress(date: string, raw: unknown): DailyProgress {
  * two. That is deliberate and matches what `reviewedToday` has always counted,
  * so the dashboard and the streak chip cannot disagree about what "47 reviews"
  * means. It does read roughly double what a learner pictures; changing it is a
- * separate, user-visible call.
+ * separate, user-visible call. **`cardsMatured` is the opposite** and counts
+ * cards, which is why the two cannot share a label on any surface.
+ *
+ * The returned delta is the *only* record of what this rating added. Undo
+ * negates this object rather than rebuilding one from the verdict, because
+ * `seconds` and `matured` are not recoverable from the verdict alone — a
+ * rebuild would subtract a different number than the rating added.
  */
-export function reviewDelta(studyLanguage: StudyLanguage, verdict: ReviewVerdict): ProgressDelta {
+export function reviewDelta(
+  studyLanguage: StudyLanguage,
+  verdict: ReviewVerdict,
+  context: RatingContext = {},
+): ProgressDelta {
+  const seconds = clampThinkTime(context.seconds ?? 0);
+  const matured = context.matured ?? 0;
+
+  // Zeroes are left out rather than written as 0, so a day document keeps
+  // carrying only the counters that actually moved.
+  const counters: Partial<LanguageProgress> = { reviews: 1, [verdict]: 1 };
+  if (seconds > 0) counters.studySeconds = seconds;
+  if (matured !== 0) counters.cardsMatured = matured;
+
   return {
-    reviews: 1,
-    [verdict]: 1,
-    byLanguage: { [studyLanguage]: { reviews: 1, [verdict]: 1 } },
+    ...counters,
+    byLanguage: { [studyLanguage]: { ...counters } },
+    ...(context.hour === undefined ? {} : { byHour: { [context.hour]: 1 } }),
   };
 }
 
@@ -223,6 +358,24 @@ export function newCardsDelta(
     [field]: count,
     byLanguage: { [studyLanguage]: { [field]: count } },
   };
+}
+
+/**
+ * What one rating actually wrote — the receipt undo hands back.
+ *
+ * Undo used to take a verdict and a date and rebuild the delta from them, which
+ * worked only while the verdict was the delta's entire content. Think time and
+ * a maturity crossing are not recoverable from the verdict, so a rebuild would
+ * subtract numbers the rating never added. Carrying the delta makes undo exact
+ * by construction rather than by two call sites continuing to agree.
+ *
+ * A signed-out rating writes nothing and reports an empty delta, which negates
+ * to nothing — so undo needs no separate signed-out branch.
+ */
+export interface RecordedReview {
+  /** The day the rating was counted on, which a session across midnight needs. */
+  date: string;
+  delta: ProgressDelta;
 }
 
 /**
@@ -248,6 +401,13 @@ export function negateDelta(delta: ProgressDelta): ProgressDelta {
         if (slice?.[key]) inverse[key] = -slice[key]!;
       }
       negated.byLanguage[language as StudyLanguage] = inverse;
+    }
+  }
+  const hours = Object.entries(delta.byHour ?? {});
+  if (hours.length > 0) {
+    negated.byHour = {};
+    for (const [hour, count] of hours) {
+      if (count) negated.byHour[hour] = -count;
     }
   }
   return negated;
@@ -282,6 +442,15 @@ export function mergeDeltas(a: ProgressDelta, b: ProgressDelta): ProgressDelta {
       merged.byLanguage[language] = slice;
     }
   }
+
+  const hours = new Set([...Object.keys(a.byHour ?? {}), ...Object.keys(b.byHour ?? {})]);
+  if (hours.size > 0) {
+    merged.byHour = {};
+    for (const hour of hours) {
+      const sum = (a.byHour?.[hour] ?? 0) + (b.byHour?.[hour] ?? 0);
+      if (sum !== 0) merged.byHour[hour] = sum;
+    }
+  }
   return merged;
 }
 
@@ -292,7 +461,11 @@ export function mergeDeltas(a: ProgressDelta, b: ProgressDelta): ProgressDelta {
  * submitted shows on the dashboard without a refetch.
  */
 export function applyDelta(day: DailyProgress, delta: ProgressDelta): DailyProgress {
-  const next: DailyProgress = { ...day, byLanguage: { ...day.byLanguage } };
+  const next: DailyProgress = {
+    ...day,
+    byLanguage: { ...day.byLanguage },
+    byHour: { ...day.byHour },
+  };
   for (const key of COUNTER_KEYS) {
     next[key] = day[key] + (delta[key] ?? 0);
   }
@@ -301,6 +474,13 @@ export function applyDelta(day: DailyProgress, delta: ProgressDelta): DailyProgr
     const updated = emptyLanguageProgress();
     for (const key of COUNTER_KEYS) updated[key] = existing[key] + (slice[key] ?? 0);
     next.byLanguage[language as StudyLanguage] = updated;
+  }
+  for (const [hour, count] of Object.entries(delta.byHour ?? {})) {
+    const sum = (day.byHour[hour] ?? 0) + count;
+    // An hour undone back to nothing loses its key rather than keeping a 0, so
+    // the local mirror matches what a fresh parse of the document would give.
+    if (sum === 0) delete next.byHour[hour];
+    else next.byHour[hour] = sum;
   }
   return next;
 }
@@ -338,29 +518,54 @@ export interface ProgressSummary {
   totalReviews: number;
   totalNewCards: number;
   totalPackCards: number;
+  /**
+   * Net cards that crossed into maturity in the window — see `maturityChange`.
+   *
+   * Written only from 2026-09-06, so a window reaching back further undercounts
+   * rather than being wrong in an interesting way. `historyStartsMidWindow` is
+   * the existing check for the *older* boundary and does not cover this one;
+   * any surface that shows this over a long window has to say which it means.
+   */
+  totalCardsMatured: number;
+  /** Seconds with a card on screen, summed. Also only written from 2026-09-06. */
+  totalStudySeconds: number;
   /** Days with at least one rating. */
   activeDays: number;
   /** Mean reviews across *active* days — averaging in rest days flatters nothing. */
   averagePerActiveDay: number;
   /** Descending by reviews, so the dashboard can render it in order. */
   byLanguage: { studyLanguage: StudyLanguage; progress: LanguageProgress }[];
+  /**
+   * Ratings by local hour across the window, sparse — the same shape a single
+   * day carries, summed. Empty for any window before 2026-09-06.
+   */
+  byHour: Record<string, number>;
 }
 
 /** Totals over a window of days. */
 export function summarizeProgress(days: DailyProgress[]): ProgressSummary {
-  const totals = { totalReviews: 0, totalNewCards: 0, totalPackCards: 0, activeDays: 0 };
+  const totals = {
+    totalReviews: 0, totalNewCards: 0, totalPackCards: 0,
+    totalCardsMatured: 0, totalStudySeconds: 0, activeDays: 0,
+  };
   const languages = new Map<StudyLanguage, LanguageProgress>();
+  const byHour: Record<string, number> = {};
 
   for (const day of days) {
     totals.totalReviews += day.reviews;
     totals.totalNewCards += day.newCards;
     totals.totalPackCards += day.packCards;
+    totals.totalCardsMatured += day.cardsMatured;
+    totals.totalStudySeconds += day.studySeconds;
     if (isStudyDay(day)) totals.activeDays += 1;
     for (const [language, slice] of Object.entries(day.byLanguage)) {
       const existing = languages.get(language as StudyLanguage) ?? emptyLanguageProgress();
       const summed = emptyLanguageProgress();
       for (const key of COUNTER_KEYS) summed[key] = existing[key] + (slice?.[key] ?? 0);
       languages.set(language as StudyLanguage, summed);
+    }
+    for (const [hour, count] of Object.entries(day.byHour)) {
+      byHour[hour] = (byHour[hour] ?? 0) + count;
     }
   }
 
@@ -372,6 +577,7 @@ export function summarizeProgress(days: DailyProgress[]): ProgressSummary {
     byLanguage: [...languages.entries()]
       .map(([studyLanguage, progress]) => ({ studyLanguage, progress }))
       .sort((a, b) => b.progress.reviews - a.progress.reviews),
+    byHour,
   };
 }
 

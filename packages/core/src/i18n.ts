@@ -156,6 +156,21 @@ const translations = {
     progressTooltipNoReviews: 'No reviews',
     progressTooltipCards: '{count} cards added',
     progressTooltipOneCard: '1 card added',
+    // Shareable stats image. Deliberately short — these are read at story
+    // size and sometimes at thumbnail size, where a two-word label is already
+    // at the limit.
+    shareTitle: 'Share',
+    shareStatReviews: 'Reviews',
+    shareStatStreak: 'Day streak',
+    // Never "cards reviewed": `reviews` counts directions, so only this label
+    // is a card count. See `ShareStats.reviews`.
+    shareStatLearned: 'Cards learned',
+    shareStatDays: 'Days studied',
+    shareStatRetention: 'Retention',
+    shareWindowDays: 'Last {count} days',
+    shareFooter: 'Amgi',
+    shareNothingYet: 'Study a little first — there is nothing to share yet.',
+    shareFailed: 'Could not build the image.',
     settingsStudyLanguage: 'Learning',
     // Shown only when the language being chosen is the one Amgi is currently
     // speaking to the user in — picking it moves their native language, which
@@ -677,6 +692,19 @@ const translations = {
     progressTooltipNoReviews: '복습 없음',
     progressTooltipCards: '카드 {count}개 추가',
     progressTooltipOneCard: '카드 1개 추가',
+    // Shareable stats image. Reuses the dashboard's own words where they fit
+    // ('복습', '공부한 날', '연속 학습') so the image and the screen behind it
+    // cannot describe the same number differently.
+    shareTitle: '공유',
+    shareStatReviews: '복습',
+    shareStatStreak: '연속 학습',
+    shareStatLearned: '익힌 카드',
+    shareStatDays: '공부한 날',
+    shareStatRetention: '기억률',
+    shareWindowDays: '지난 {count}일',
+    shareFooter: 'Amgi',
+    shareNothingYet: '아직 공유할 기록이 없습니다. 조금만 더 공부해 보세요.',
+    shareFailed: '이미지를 만들지 못했습니다.',
     cardsPageTitle: '내 카드',
     cardsPageDescription: '가지고 있는 카드를 모두 검색하고 관리하세요. 직접 저장한 카드도, 단어팩에서 담은 카드도요.',
     cardsSearchPlaceholder: '카드 검색...',

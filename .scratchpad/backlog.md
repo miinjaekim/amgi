@@ -17,11 +17,20 @@ costs ~20 minutes rather than an App Review cycle.
 
 ## Cutting a build
 
-**Queued: the mobile UI redesign and Expo SDK 57** (PR #111, merged
-2026-09-04). 1.5.0 (build 14) is on SDK 54 and predates all of it, so **testers
-are running none of this** — the tab bar they have is still Learn-first with a
-Settings tab. The batch is worth a release on its own; nothing needs to wait for
-a second feature.
+**Queued: the mobile UI redesign, Expo SDK 57, and the shareable stats asset**
+(PR #111 merged 2026-09-04; the asset landed 2026-09-07). 1.5.0 (build 14) is on
+SDK 54 and predates all of it, so **testers are running none of this** — the tab
+bar they have is still Learn-first with a Settings tab. The batch is worth a
+release on its own; nothing needs to wait for a second feature.
+
+⚠️ **Two things about the stats asset to check on the build, not in Expo Go.**
+The Share control needs `EXPO_PUBLIC_API_BASE_URL` pointing at a deployment that
+*has* `/api/stats-image` — against an older deployment the button fetches a 404
+and reports a failure, which will read as a broken feature rather than a stale
+backend. And the share path itself (`File.downloadFileAsync` →
+`Sharing.shareAsync`) has **never run end to end**: no new native module is
+involved, so Expo Go exercises the same code, but sharing is already on the
+never-verified-on-a-binary list under Builds below.
 
 ⚠️ **Checking a build is no longer tracked here** (2026-09-04). The ranked list
 of what 1.5.0 had never been exercised on — the Slow speed, offline review,
@@ -76,9 +85,11 @@ which does not degrade gracefully._
 
 ## High
 
-Queued 2026-08-31, in the user's order. **Both pack items and the speed dial
-have left this section** — Spanish and Kikuyu are built, and the pronunciation
-speed dial shipped 2026-09-01 in build 14. The two pronunciation items that
+Queued 2026-08-31, in the user's order. **Both pack items, the speed dial and
+the stats asset have left this section** — Spanish and Kikuyu are built, the
+pronunciation speed dial shipped 2026-09-01 in build 14, and the shareable stats
+asset shipped 2026-09-07 across four commits (counters, derivation, render, both
+Share controls). The two pronunciation items that
 used to sit here were **cancelled** — reasoning in the Decisions entry in
 [status.md](status.md), and the Kikuyu one's durable half moved to
 [lessons.md](lessons.md) rather than closing with the item.
@@ -114,48 +125,6 @@ Reasoning in the Decisions entry in [status.md](status.md); the shape is in
       Web has the same button and the same context, so this lands on both. And
       `settingsPronunciationSpeedDesc` ("applies to terms, translations, and
       example sentences", both locales) becomes false the moment it ships.
-
-- [ ] **A shareable stats asset — and the stats behind it.** An image a user can
-      post to their stories: cards reviewed, new cards added, cards learned. Two
-      halves, and the second is the one with a clock on it.
-      **The Progress tab now answers the presentation half** — per-language
-      bars, retention, a labelled window — so what is left here is genuinely the
-      numbers and the render, not the design.
-      **What exists already:** `summarizeProgress` gives `totalReviews`,
-      `totalNewCards`, `totalPackCards`, `activeDays` and `averagePerActiveDay`
-      over a window; `deriveStreak` gives the streak; `buildHeatmap` gives the
-      calendar. Two of the three numbers asked for are already there.
-      **"Cards learned" does not exist anywhere.** `sm2.ts` stores
-      `repetitions`, `interval` and `ease`; nothing derives maturity from them.
-      It needs a definition (the Anki convention is `interval >= 21` days) and —
-      unlike everything else on the dashboard — it reads from the **card
-      documents**, not the daily rollups. Which is the good news: it is
-      **retroactive**, needing no write-path change and no waiting.
-      ⚠️ **`reviews` counts directions, not cards**, and always has, matching
-      `reviewedToday`. A dashboard tile is read in context; an image posted
-      publicly saying "1,204 cards reviewed" is simply wrong for a two-direction
-      learner. Settle the wording or the arithmetic before the asset is designed.
-      ⚠️ **Decide any new counter now, inside this item.** Daily rollups discard
-      what they didn't count in advance, and a field added later collects only
-      from the day it ships — so anything the asset should be able to show in
-      six months has to start being written before the asset is built, not after.
-      ⚠️ **History began 2026-08-20 and cannot be backfilled**, so a "total" is
-      a total since then, not since the user joined. Label the window, or scope
-      the asset to one (last 30 days, this year).
-      Also decide whether the asset counts `newCards` alone or `+ packCards` —
-      they are counted apart deliberately, and one 474-card pack import dwarfs
-      every real study day.
-      **Render it server-side.** Mobile cannot rasterize a view without
-      `react-native-view-shot`, a native module, which would cost a build. A
-      Next route returning a PNG (Next 16 ships `next/og` — no new dependency)
-      is one implementation for both platforms: web links it, mobile downloads
-      it with `expo-file-system` and hands it to `expo-sharing`, **both already
-      in the shipped build** and `expo-sharing` already carrying the CSV export.
-      So this stays JS-only on mobile too. Story format is 1080×1920.
-      **Privacy, because the output is meant to be posted publicly:** no email,
-      no uid, no card content on the image — numbers and the app name. And the
-      route must not let anyone render anyone else's stats from a uid in a URL;
-      authenticate it, or pass the numbers in rather than looking them up.
 
 ## Medium
 

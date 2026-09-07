@@ -20,6 +20,7 @@ export * from './pitchAccent';
 export * from './transliterate';
 export * from './offlineReview';
 export * from './progress';
+export * from './shareStats';
 export * from './reminders';
 // Retained for `/api/writing` and `/api/grammar/exercise` only — see the header
 // comment on each module. Nothing in the current app imports them.

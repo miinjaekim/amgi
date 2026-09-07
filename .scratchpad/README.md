@@ -106,6 +106,29 @@ Backlog priority mirrors the user's Google Tasks list — `backlog.md` is the
 scoped version of it. Keep entries at the size that says what to do next; the
 argument behind a call goes in `status.md`, not in the item.
 
+_This pass **shipped the shareable stats asset**, in four commits that are
+worth keeping in that order: the counters, the derivation, the render, then both
+Share controls. **The counters went first and alone** for the reason the item
+itself carried — a rollup keeps only what it counted in advance, so the choice
+was "from today or from never" — and the sharpest thing learned is that
+**`historyStartsMidWindow` now guards only one of two boundaries**. Rollups
+begin 2026-08-20; `cardsMatured`, `studySeconds` and `byHour` begin 2026-09-06,
+and a window reaching past *that* has rows that look complete while reading zero
+for three fields. `buildShareStats` returns `null` rather than an undercount, so
+**the image shows four numbers until 2026-10-06 and five after**, with no code
+change._
+
+_Two things to read before touching it. **Study time turned out to be the cheap
+counter, not the expensive one** — measured per card (shown to rated, capped at
+60s) rather than as a session wall-clock, it attaches to a rating that already
+exists and needs no lifecycle, which is why all three counters fit one
+additive delta. And **the app's heatmap ramp is measurably wrong** — not
+monotonic in lightness, with empty and level-1 ΔE 1.4 apart under deuteranopia.
+The image ships a corrected ramp; `levelColor` is deliberately untouched, since
+fixing it is a visible restyle of a shipped screen. Both in the Decisions
+entries in [status.md](status.md)._
+
+
 _This pass **rebuilt mobile navigation** and closed four of the six
 mobile-UI-redesign items in one go — they moved pieces of the same screen, so
 building them apart would have meant building the first one twice. Settings left
@@ -174,10 +197,10 @@ audio story is that the near neighbour is not an acceptable stand-in. Five
 languages remain, and [backlog.md](backlog.md) now carries what the same
 measurement pass already answered for each._
 
-_Last reviewed against the codebase: 2026-09-04, `main` @ `7ca9271` (PR #111).
-`npm test` 407/407, measured on `feat/mobile-ui-redesign`. Mobile has no test
-script — its half of the freshness work is covered by `tsc --noEmit` and an
-`expo export`, not by tests, and both were run on this pass._
+_Last reviewed against the codebase: 2026-09-07, `feat/share-stats-counters`.
+`npm test` 482/482. Mobile has no test script — its half of the freshness work
+is covered by `tsc --noEmit` and an `expo export`, not by tests, and both were
+run on this pass._
 
 _This pass **built typed responses during review**, the last starred item —
 `backlog.md`'s High section is empty again. It was designed before any code, as
