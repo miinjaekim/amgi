@@ -4,10 +4,12 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useUser } from '@/components/UserContext';
 import { fetchRecentProgress } from '@/services/progress';
 import {
-  buildHeatmap, localDateString, summarizeProgress,
+  buildHeatmap, buildShareStats, hasShareableHistory, localDateString,
+  summarizeProgress,
   type DailyProgress, type StudyLanguage,
 } from '@amgi/core';
 import { t } from '@/lib/i18n';
+import ShareStatsButton from '@/components/ShareStatsButton';
 
 /**
  * The windows on offer. 364 rather than 365 so the calendar is a whole number
@@ -84,6 +86,22 @@ export default function ProgressPage() {
     [days],
   );
 
+  /**
+   * The numbers the shareable image is built from — the same window the page is
+   * showing, so what someone posts matches what they were looking at.
+   *
+   * Derived rather than fetched: `buildShareStats` reads the rollups already in
+   * hand, so opening the share sheet costs no reads.
+   */
+  const shareStats = useMemo(
+    () => buildShareStats(days ?? [], {
+      streak,
+      endDate: localDateString(),
+      windowDays: rangeDays,
+    }),
+    [days, streak, rangeDays],
+  );
+
   if (authLoading) return null;
 
   if (!user) {
@@ -108,7 +126,9 @@ export default function ProgressPage() {
         {t(nativeLanguage, 'progressDescription')}
       </p>
 
-      <div className="flex gap-2 mb-6">
+      {/* Share sits in the range row rather than by the title, so the window
+          being shared is the one selected right next to it. */}
+      <div className="flex gap-2 mb-6 items-start">
         {RANGES.map(range => (
           <button
             key={range.days}
@@ -121,6 +141,13 @@ export default function ProgressPage() {
             {t(nativeLanguage, range.key)}
           </button>
         ))}
+        {/* Offered only once there is something on the image. A zeroed story
+            asset is not a modest result, it is a broken-looking one. */}
+        {hasShareableHistory(shareStats) && (
+          <div className="ml-auto">
+            <ShareStatsButton stats={shareStats} nativeLanguage={nativeLanguage} />
+          </div>
+        )}
       </div>
 
       {days === null ? (

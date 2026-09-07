@@ -196,3 +196,41 @@ export function fullyCoveredWindow(endDate: string, preferred: number): number {
 export function hasShareableHistory(stats: ShareStats): boolean {
   return stats.reviews > 0 && stats.heatmap.some(cell => cell.reviews > 0);
 }
+
+/**
+ * The query string the image route is called with.
+ *
+ * Shared because both platforms build the same URL and a drifting parameter
+ * name would fail as a *wrong picture* rather than as an error — a missing `l`
+ * silently drops the tile, a missing `s` silently draws a zero streak.
+ *
+ * **A withheld figure is omitted, never sent as 0.** That is the whole contract
+ * between this and the route: `null` means the window cannot honestly cover it,
+ * and a 0 on a shared image is a claim rather than a gap.
+ */
+export function shareImageQuery(stats: ShareStats, nativeLanguage?: string | null): string {
+  const q = new URLSearchParams();
+  q.set('w', String(stats.windowDays));
+  q.set('r', String(stats.reviews));
+  q.set('s', String(stats.streak));
+  q.set('d', String(stats.daysStudied));
+  if (stats.cardsLearned !== null) q.set('l', String(stats.cardsLearned));
+  // Sent as whole percent, which is what the image draws — rounding here rather
+  // than in the route keeps the URL the same length whatever the ratio is.
+  if (stats.retention !== null) q.set('ret', String(Math.round(stats.retention * 100)));
+  // One character per day, oldest first. A year is 364 characters, which is
+  // well inside any URL limit and far shorter than sending counts.
+  q.set('h', stats.heatmap.map(cell => cell.level).join(''));
+  if (nativeLanguage) q.set('lang', nativeLanguage);
+  return q.toString();
+}
+
+/** The full path to the rendered image, relative to whatever host serves it. */
+export function shareImagePath(stats: ShareStats, nativeLanguage?: string | null): string {
+  return `/api/stats-image?${shareImageQuery(stats, nativeLanguage)}`;
+}
+
+/** The filename a share sheet or download offers it under. */
+export function shareImageFilename(stats: ShareStats): string {
+  return `amgi-${stats.windowEnd}-${stats.windowDays}d.png`;
+}

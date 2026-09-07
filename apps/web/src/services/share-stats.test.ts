@@ -6,9 +6,12 @@ import {
   emptyDailyProgress,
   fullyCoveredWindow,
   hasShareableHistory,
+  shareImageFilename,
+  shareImageQuery,
   shiftDate,
   type DailyProgress,
 } from '@amgi/core';
+import { readShareImageParams } from '@/app/api/stats-image/route';
 
 /** A day with only the fields a test cares about; the rest stay zero. */
 function day(date: string, patch: Partial<DailyProgress> = {}): DailyProgress {
@@ -198,5 +201,93 @@ describe('hasShareableHistory', () => {
   it('is false when the only reviews fall outside the window', () => {
     expect(hasShareableHistory(statsFor([day(shiftDate(LATER, -40), { reviews: 90 })])))
       .toBe(false);
+  });
+});
+
+describe('shareImageQuery', () => {
+  const query = (days: DailyProgress[], windowDays = 30, lang?: string) =>
+    new URLSearchParams(
+      shareImageQuery(buildShareStats(days, { streak: 7, endDate: LATER, windowDays }), lang),
+    );
+
+  it('carries every figure the image draws', () => {
+    const q = query([day(LATER, { reviews: 40, again: 1, good: 9, cardsMatured: 3 })], 30, 'Korean');
+    expect(q.get('w')).toBe('30');
+    expect(q.get('r')).toBe('40');
+    expect(q.get('s')).toBe('7');
+    expect(q.get('l')).toBe('3');
+    expect(q.get('lang')).toBe('Korean');
+  });
+
+  it('omits a withheld figure rather than sending zero', () => {
+    // The contract between `buildShareStats` and the route. Sending `l=0` would
+    // draw a "0 cards learned" tile, which is a claim the data cannot support.
+    const endDate = shiftDate(DETAILED_HISTORY_START, 2);
+    const stats = buildShareStats([day(endDate, { reviews: 5 })], {
+      streak: 1, endDate, windowDays: 30,
+    });
+    expect(stats.cardsLearned).toBeNull();
+    const q = new URLSearchParams(shareImageQuery(stats));
+    expect(q.has('l')).toBe(false);
+    expect(q.has('r')).toBe(true);
+  });
+
+  it('sends retention as a whole percent', () => {
+    const q = query([day(LATER, { reviews: 4, again: 1, hard: 1, good: 1, easy: 1 })]);
+    expect(q.get('ret')).toBe('75');
+  });
+
+  it('omits retention when nothing was rated', () => {
+    expect(query([day(LATER, { newCards: 3 })]).has('ret')).toBe(false);
+  });
+
+  it('sends one heat character per day in the window', () => {
+    for (const windowDays of [7, 30, 364]) {
+      expect(query([day(LATER, { reviews: 5 })], windowDays).get('h')).toHaveLength(windowDays);
+    }
+  });
+
+  it('sends only level digits, which is what the route parses', () => {
+    expect(query([day(LATER, { reviews: 9 })], 30).get('h')).toMatch(/^[0-4]{30}$/);
+  });
+
+  it('omits the language rather than sending an empty one', () => {
+    // `t` falls back to English on anything unrecognised, but an empty `lang=`
+    // in the URL is noise on a link a user may well look at.
+    expect(query([day(LATER, { reviews: 1 })], 30, undefined).has('lang')).toBe(false);
+  });
+
+  it('round-trips through the route parser to the same numbers', () => {
+    // The property that keeps the two halves from drifting: whatever the
+    // builder puts in, the route must read back out.
+    const stats = buildShareStats(
+      [day(LATER, { reviews: 40, again: 1, good: 9, cardsMatured: 3 })],
+      { streak: 7, endDate: LATER, windowDays: 30 },
+    );
+    const parsed = readShareImageParams(new URLSearchParams(shareImageQuery(stats, 'Korean')));
+    expect(parsed.reviews).toBe(stats.reviews);
+    expect(parsed.streak).toBe(stats.streak);
+    expect(parsed.daysStudied).toBe(stats.daysStudied);
+    expect(parsed.learned).toBe(stats.cardsLearned);
+    expect(parsed.retention).toBe(Math.round((stats.retention ?? 0) * 100));
+    expect(parsed.cells).toEqual(stats.heatmap.map(c => c.level));
+  });
+
+  it('round-trips a withheld figure as withheld', () => {
+    const endDate = shiftDate(DETAILED_HISTORY_START, 2);
+    const stats = buildShareStats([day(endDate, { reviews: 5 })], {
+      streak: 1, endDate, windowDays: 30,
+    });
+    const parsed = readShareImageParams(new URLSearchParams(shareImageQuery(stats)));
+    expect(parsed.learned).toBeNull();
+  });
+});
+
+describe('shareImageFilename', () => {
+  it('names the window it covers, so two exports do not collide', () => {
+    const a = buildShareStats([], { streak: 0, endDate: LATER, windowDays: 30 });
+    const b = buildShareStats([], { streak: 0, endDate: LATER, windowDays: 364 });
+    expect(shareImageFilename(a)).not.toBe(shareImageFilename(b));
+    expect(shareImageFilename(a)).toMatch(/^amgi-\d{4}-\d{2}-\d{2}-30d\.png$/);
   });
 });
