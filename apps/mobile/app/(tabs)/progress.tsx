@@ -265,12 +265,22 @@ export default function ProgressScreen() {
             <TouchableOpacity
               onPress={handleShare}
               disabled={sharing}
+              // The drawn chip is about 36×28, under the 44pt minimum, and it
+              // sits at the very edge of the screen where a thumb is least
+              // precise. The slop is asymmetric for that reason — more of it on
+              // the right, where there is nothing to steal a tap from.
+              hitSlop={{ top: 10, bottom: 10, left: 6, right: 16 }}
               style={[s.rangeBtn, s.shareBtn, sharing && s.shareBtnBusy]}
               accessibilityRole="button"
               accessibilityLabel={t(nativeLanguage, 'shareTitle')}
             >
-              <Ionicons name="share-outline" size={13} color={C.highlight} />
-              <Text style={[s.rangeText, s.shareText]}>{t(nativeLanguage, 'shareTitle')}</Text>
+              {/* Icon only, unlike web. Three labelled range chips plus a
+                  labelled Share overflow the row on a phone — and because the
+                  row's intrinsic width already exceeds the screen,
+                  `marginLeft: 'auto'` pushes the button off the edge rather
+                  than wrapping it. An icon survives any width and any locale,
+                  and the accessibility label carries the name. */}
+              <Ionicons name="share-outline" size={16} color={C.highlight} />
             </TouchableOpacity>
           )}
         </View>
@@ -584,9 +594,11 @@ function makeStyles(C: Palette, tabBarHeight: number) {
     rangeBtn: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10, borderWidth: 1, borderColor: C.border },
     rangeBtnOn: { borderColor: C.highlight },
     rangeText: { color: C.muted, fontSize: 13 },
-    shareBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, marginLeft: 'auto', borderColor: C.highlight },
+    // `flexShrink: 0` so the icon keeps its box if the range labels grow; the
+    // horizontal padding is trimmed from `rangeBtn`'s 12 because there is no
+    // text beside the icon to balance it.
+    shareBtn: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, marginLeft: 'auto', flexShrink: 0, borderColor: C.highlight },
     shareBtnBusy: { opacity: 0.5 },
-    shareText: { color: C.highlight },
     rangeTextOn: { color: C.highlight, fontWeight: '700' },
     empty: { color: C.muted, fontSize: 14, paddingHorizontal: 16 },
     emptyBody: { color: C.muted, fontSize: 13, opacity: 0.7, marginTop: 8, paddingHorizontal: 16 },
