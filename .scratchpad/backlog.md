@@ -128,6 +128,97 @@ Reasoning in the Decisions entry in [status.md](status.md); the shape is in
 
 ## Medium
 
+- [ ] **The signed-out save button is styled as disabled but is not.** Reported
+      as "looks like it isn't clickable", and the cause is one line in
+      `app/(tabs)/index.tsx`: the button carries
+      `[s.saveBtn, !user && s.saveBtnDisabled]` while its `onPress` is
+      `user ? handleOpenSave : handleSignIn`. So signed out it is painted
+      `C.border` — the disabled treatment — and **it still works**. The label
+      already says what it does ("Sign in to save flashcards."); only the paint
+      disagrees.
+      ⚠️ **Do not fix this by dimming it less.** A button that is enabled should
+      not wear the disabled style at all — `saveBtnDisabled` has no other user
+      on this screen, so the question is whether it should exist rather than
+      what shade it should be. Signed out this is a *primary* action: it is how
+      an account gets created.
+      **Web already does something different and arguably better** — a filled
+      primary button plus a separate underlined "Sign in to save flashcards."
+      link beneath it (`app/page.tsx`), so it never paints one control two ways.
+      Decide whether mobile adopts that shape or just stops lying about being
+      disabled; the two platforms should not diverge further.
+      Also worth checking the *contrast* while in there: `saveBtnText` is
+      `C.bg` on `C.border`, which on the forest palette is a dark-on-dark pair
+      that would likely fail a contrast check even if it were genuinely
+      disabled.
+
+- [ ] **Military specialties pack (병과 / 주특기, "MOS").** Infantry, engineer,
+      signal, artillery, armor, logistics, medical, and the rest — the branch a
+      soldier belongs to, which the two shipped military packs do not cover.
+      **English *and* Korean study languages, like the others**: it is a
+      `BilingualPack` in `packages/core/src/military.ts`, so it derives both
+      directions from one pair list via `derivePack(PACK, 'Korean' | 'English')`
+      — follow `MILITARY_UNIT` / `MILITARY_AFFAIRS` exactly rather than
+      authoring two packs.
+      ⚠️ **The naming is itself a content decision.** 병과 (branch/corps) and
+      주특기 (primary specialty) are **not the same thing** — 병과 is the corps
+      you are commissioned or assigned into, 주특기 is the specific job code
+      within it — and US "MOS" maps cleanly to neither: the US Army splits
+      *branch* from *MOS*, and the Marine Corps, Navy and Air Force each use a
+      different scheme again. Settle in the draft which of the two the pack is
+      about, or section it explicitly into both, before writing entries.
+      ⚠️ **ROK and US structures do not line up one-to-one**, which is exactly
+      the failure mode the existing military packs were built to avoid — a
+      correct-looking translation that misleads the listener. Expect `context`
+      notes to do heavy lifting here.
+      Follow `docs/packs/README.md`: **the model is not a source**, so every
+      entry carries a tier and a citation, and the list is rendered through the
+      app's own transforms before anyone believes it. The two existing military
+      drafts are **bilingual pair lists** rather than a study side plus glosses
+      — match that shape, and hand the draft to a reviewer rather than the TS.
+      Needs user approval on the word list before shipping.
+
+- [ ] **Readings are missing from mobile review — and then: what belongs on the
+      review screen versus in settings.** Two halves, and the first is a plain
+      parity bug rather than the design question it arrived as.
+      **The bug.** `getReading` is what renders Kikuyu respelling, Japanese
+      furigana + pitch accent, and Chinese pinyin. Web's review screen calls it
+      (`app/review/page.tsx`, both faces of the card); **mobile's review screen
+      does not call it at all** — mobile only uses it in `(tabs)/index.tsx` and
+      `CardDetailModal.tsx`. So a Kikuyu learner reviewing on a phone sees the
+      bare orthography, which for Kikuyu is the whole point of the aid. This is
+      **not Kikuyu-specific**: Japanese and Traditional Chinese lose their
+      readings on that screen too.
+      ⚠️ **Ship the parity first and decide the setting after.** The ask arrived
+      as "let users see Kikuyu pronunciation during review", but nothing is
+      gated today — the render is simply absent. Adding a toggle first would be
+      building a switch for a feature that does not exist on that screen yet.
+      **Then the design question**, which is the item's real content. There is
+      already an unstated rule worth making explicit: **the review screen holds
+      session properties, settings holds durable preferences.** `directionFilter`
+      and `typingEnabled` live in `review.tsx` state, reset every session, and
+      the typed-answers Decisions entry in [status.md](status.md) argues that
+      deliberately. Native language, study language, theme, pronunciation speed
+      and reminders persist and live in `app/settings.tsx`.
+      By that rule "show readings" is a durable preference and belongs in
+      settings — *if* it needs to be optional at all, which is a real question:
+      a reading is an aid, not a spoiler, and web has shown them unconditionally
+      without anyone asking for a switch. **The cheapest correct answer may be
+      no setting.**
+      A second axis worth naming before building anything: a control can be
+      *durable but scoped to review* (a default direction, whether typing starts
+      on), which is neither of the two homes above and is the case that would
+      justify a **Review section inside settings** rather than more controls on
+      the review screen itself — where every added control costs the card its
+      space on a phone.
+      **And the settings screen itself is the third piece.** It is a flat list
+      of unrelated rows — account, languages, theme, speed, reminders, privacy,
+      data — with no grouping beyond the section headings it already has. If a
+      Review group is being added, that is the moment to look at the whole
+      screen rather than appending one more row.
+      ⚠️ `settingsPronunciationSpeedDesc` is already load-bearing copy in both
+      locales, and the per-context speed item above would change it. These two
+      items touch the same screen — **read that one before starting this**.
+
 - [ ] **A speaker has still not read the Kikuyu Basics list.** Shipped that way
       knowingly, with a source tier on every entry (16 corroborated twice, 36 on
       one source, 7 derived) — and unlike the build checks, this one does not
@@ -187,7 +278,9 @@ Reasoning in the Decisions entry in [status.md](status.md); the shape is in
       daily-life pack, deliberate and not a precedent**; packs unlock domains,
       never "starter" anything; curated from real sources, not AI-generated; word
       lists need user approval before shipping.
-      *Next:* **TOEFL**, now that the Japanese gap is answered by the kanji pack
+      *Next:* **a military specialties pack (병과/주특기) has its own item above**,
+      and is the only pack currently scoped. Then **TOEFL**, now that the
+      Japanese gap is answered by the kanji pack
       (教育漢字 1–2 rather than JLPT — N5 is a subset of it, so an exam-ladder
       pack is a re-sectioning, not a re-authoring). Swedish, French and
       Traditional Chinese still have **no pack at all**.
