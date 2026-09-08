@@ -40,8 +40,18 @@ const WORD_DOMAINS = [
  * single gloss `/api/explain` asks for. A word of the day *is* a card back — it
  * is what you get when you save the card — and forcing one gloss onto a term no
  * single word covers makes the card wrong rather than clean.
+ *
+ * **The rule counts glosses; it does not legislate punctuation.** A first pass
+ * banned the semicolon outright, which was the wrong lever twice over. The
+ * reported failure was a *count* — "many synonyms" — and a ban on the mark is
+ * only a proxy for it, one a model satisfies while still answering "to return,
+ * to do again, to recover". Worse, it forbade the mark that carries the most
+ * information: a comma joins near-synonyms inside one sense, a semicolon
+ * separates two senses. 迷う is "to get lost; to be undecided", and comma-joining
+ * those reads as though they were one idea — the exact misleading back the
+ * second gloss is allowed in order to prevent.
  */
-const GLOSS_RULE = `Translate it with ONE gloss — the single best translation. Give a second, after a comma, only when one gloss would genuinely mislead because no single word covers the term. Never answer with a list of near-synonyms, and never separate glosses with a semicolon or a slash: "deadline" is a gloss, "deadline, time limit, period" is a list. A gloss running to two or three words, where one word is genuinely insufficient, is still one gloss.`;
+const GLOSS_RULE = `Translate it with ONE gloss — the single best translation. Give a second only when one gloss would genuinely mislead, and let the punctuation say which kind it is: a comma between two near-synonyms for one sense ("atmosphere, mood"), a semicolon between two genuinely distinct senses ("to get lost; to be undecided"). Never a third, under any punctuation — "deadline" is a gloss, "deadline, time limit, period" is a list, and the list is the failure to avoid. Never a slash: "energy/strength" is not a distinction, it is a refusal to pick one, so commit to a word or use the comma. A gloss running to two or three words, where one word is genuinely insufficient, is still one gloss.`;
 
 function domainFor(date: string): string {
   const days = Math.floor(Date.parse(`${date}T00:00:00Z`) / 86_400_000);

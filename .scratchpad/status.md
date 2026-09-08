@@ -220,6 +220,35 @@ also names the failure it is correcting, because the model's default reading of
 "the best translation" was a list: `"deadline"` is a gloss, `"deadline, time
 limit, period"` is a list.
 
+**The rule counts glosses; it does not legislate punctuation** — corrected the
+same day, again on the user's call: *"i think using a semicolon can still be
+alright though (?) i can imagine scenarios where it's necessary."* The first
+pass banned the semicolon outright, copying `/api/explain`'s "never list
+synonyms with semicolons or slashes", and that was the wrong lever twice. The
+reported failure is a **count**, and a ban on the mark is only a proxy for it —
+one the model satisfies while still answering "to return, to do again, to
+recover". And it forbade the mark carrying the most information: a comma joins
+near-synonyms inside one sense, a semicolon separates two senses. 迷う is "to get
+lost; to be undecided", and comma-joining those reads as one idea — the exact
+misleading back the second gloss exists to prevent. So the rule now sets the
+count (never a third) and lets the punctuation *say which kind of pair it is*.
+
+**The slash stayed banned, and that clause is not the same kind of rule.**
+Dropping the punctuation sentence dropped the slash with it, and one word in 24
+came back as `orka` "to have the energy/strength". A slash is not a sense
+distinction, it is a comma the model declined to commit to, so it is named
+explicitly. With it back, `orka` returns as "to have the energy, strength".
+
+**Measured twice, 24 words across six languages each.** Before the punctuation
+correction and after: zero three-item lists both times, so relaxing the
+semicolon did not reopen the failure. What changed is that the semicolons which
+appear are genuine sense splits — 거리 "street; distance", 驕傲 "proud; arrogant",
+마감 "deadline; closing" — while near-synonyms take the comma (ambiance
+"atmosphere, mood"). **A two-sense back is still a weaker card than a one-sense
+back**, since it asks two questions at once; it is accepted here because the
+alternative is a back that silently hides a meaning, and `briefDefinition` sits
+directly beneath it to disambiguate.
+
 **`/api/explain` did not move, and the Bigger bets item stays open.** The user
 named Learn's lookup as the thing that already behaves, so changing it would
 have been changing the one surface that wasn't reported. The two rules now
