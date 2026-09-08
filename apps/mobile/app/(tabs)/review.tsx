@@ -25,7 +25,7 @@ import {
   buildReviewQueue, collectionKey, dueReviewItems, filterByDirection,
   getBackSide, getCollectionId, getNextReviewDate,
   getNextReviewData, getStudyLangSide, getStudyLanguageConfig, getBackSideConfig,
-  directionLabel, getCharacterBreakdown, getExampleSides,
+  directionLabel, getCharacterBreakdown, getExampleSides, getReading,
   maturityChange, removeCardFromQueue, t, trackingFor,
   gradeTypedAnswer, promptsForTyping, typedAnswerPlaceholder,
 } from '@amgi/core';
@@ -1035,6 +1035,32 @@ export default function ReviewScreen() {
   const pronounceButton = isOnline ? (
     <PronounceButton text={studySide} furigana={card.furigana} studyLanguage={studyLanguage} />
   ) : null;
+  /**
+   * Kikuyu respelling, Japanese furigana + pitch accent, Chinese pinyin — the
+   * written half of what the button above says aloud, and for Kikuyu the whole
+   * point of the aid, since the spelling hides real sounds.
+   *
+   * **This screen was the one surface missing it.** Web renders it on both
+   * faces of the review card and mobile already renders it on Learn and in the
+   * card modal; only here was it absent — so a Kikuyu, Japanese or Traditional
+   * Chinese learner reviewing on a phone read bare orthography.
+   *
+   * Derived from `card`, not `shownCard`: enrichment writes depth and examples,
+   * never `furigana` or `pitchAccent`, so the reading cannot change mid-card —
+   * the same reason the pronounce button reads `card.furigana`.
+   *
+   * Reveal-gated in both directions, matching web. It is an aid rather than a
+   * spoiler, so the gating is not what protects the exercise — but the reading
+   * belongs beside the study word, and on `backToFront` the study word is not
+   * on screen until the reveal. Showing it early on one direction only would
+   * put it in two different places depending on the draw.
+   */
+  const reading = getReading(card, studyLanguage, nativeLanguage);
+  const readingBadge = reading ? (
+    <View style={s.readingBadge}>
+      <Text style={s.readingText}>{reading}</Text>
+    </View>
+  ) : null;
   /** Only `backToFront` is ever typed — see `promptsForTyping`. */
   const typingThisCard = promptsForTyping(typingEnabled, direction);
 
@@ -1290,11 +1316,16 @@ export default function ReviewScreen() {
 
                 {revealed && (
                   <Animated.View style={[s.revealWrap, revealStyle]}>
+                    {/* Rides the study side wherever it landed, like the
+                        pronounce button: above the divider on `frontToBack`,
+                        under the revealed word on `backToFront`. */}
+                    {isFront && readingBadge}
                     <View style={s.divider} />
                     <View style={s.termRow}>
                       <Text style={[s.backText, s.rowText]}>{backText}</Text>
                       {!isFront && pronounceButton}
                     </View>
+                    {!isFront && readingBadge}
 
                     {/* Both strings on screen. This is what lets the grader be
                         strict: the learner is not appealing a judgement they
@@ -1558,6 +1589,15 @@ function makeStyles(C: Palette, tabBarHeight: number) {
   // the same place in both directions and on a language with no voice.
   termRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   rowText: { flexShrink: 1 },
+  // The pill Learn and the card modal already put a reading in, so the same
+  // string looks the same on all three surfaces. `alignSelf` keeps it the
+  // width of its own text instead of the card's.
+  readingBadge: {
+    alignSelf: 'flex-start', marginTop: 10,
+    borderWidth: 1, borderColor: C.border, borderRadius: 12,
+    paddingHorizontal: 8, paddingVertical: 2,
+  },
+  readingText: { fontSize: 12, color: C.muted },
   exampleStudyRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   detailsBtn: {
     marginTop: 14, borderWidth: 1, borderColor: C.border,

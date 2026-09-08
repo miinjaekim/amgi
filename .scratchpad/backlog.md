@@ -178,39 +178,25 @@ Reasoning in the Decisions entry in [status.md](status.md); the shape is in
       — match that shape, and hand the draft to a reviewer rather than the TS.
       Needs user approval on the word list before shipping.
 
-- [ ] **Readings are missing from mobile review — and then: what belongs on the
-      review screen versus in settings.** Two halves, and the first is a plain
-      parity bug rather than the design question it arrived as.
-      **The bug.** `getReading` is what renders Kikuyu respelling, Japanese
-      furigana + pitch accent, and Chinese pinyin. Web's review screen calls it
-      (`app/review/page.tsx`, both faces of the card); **mobile's review screen
-      does not call it at all** — mobile only uses it in `(tabs)/index.tsx` and
-      `CardDetailModal.tsx`. So a Kikuyu learner reviewing on a phone sees the
-      bare orthography, which for Kikuyu is the whole point of the aid. This is
-      **not Kikuyu-specific**: Japanese and Traditional Chinese lose their
-      readings on that screen too.
-      ⚠️ **Ship the parity first and decide the setting after.** The ask arrived
-      as "let users see Kikuyu pronunciation during review", but nothing is
-      gated today — the render is simply absent. Adding a toggle first would be
-      building a switch for a feature that does not exist on that screen yet.
-      **Then the design question**, which is the item's real content. There is
-      already an unstated rule worth making explicit: **the review screen holds
-      session properties, settings holds durable preferences.** `directionFilter`
-      and `typingEnabled` live in `review.tsx` state, reset every session, and
-      the typed-answers Decisions entry in [status.md](status.md) argues that
+- [ ] **What belongs on the review screen versus in settings.** Arrived as
+      "let users see Kikuyu pronunciation during review" and was two halves; the
+      parity half — mobile's review screen never called `getReading` at all —
+      shipped 2026-09-08 with **no setting**, and the reasoning is in the
+      Decisions entry in [status.md](status.md). What is left is the design
+      question it was really about.
+      There is an unstated rule here worth making explicit: **the review screen
+      holds session properties, settings holds durable preferences.**
+      `directionFilter` and `typingEnabled` live in `review.tsx` state, reset
+      every session, and the typed-answers Decisions entry argues that
       deliberately. Native language, study language, theme, pronunciation speed
-      and reminders persist and live in `app/settings.tsx`.
-      By that rule "show readings" is a durable preference and belongs in
-      settings — *if* it needs to be optional at all, which is a real question:
-      a reading is an aid, not a spoiler, and web has shown them unconditionally
-      without anyone asking for a switch. **The cheapest correct answer may be
-      no setting.**
-      A second axis worth naming before building anything: a control can be
-      *durable but scoped to review* (a default direction, whether typing starts
-      on), which is neither of the two homes above and is the case that would
-      justify a **Review section inside settings** rather than more controls on
-      the review screen itself — where every added control costs the card its
-      space on a phone.
+      and reminders persist and live in `app/settings.tsx`. Neither home is
+      written down anywhere a third control would find it.
+      The axis that rule does not cover, and the reason this is still open: a
+      control can be *durable but scoped to review* (a default direction,
+      whether typing starts on), which is neither of the two above and is the
+      case that would justify a **Review section inside settings** rather than
+      more controls on the review screen itself — where every added control
+      costs the card its space on a phone.
       **And the settings screen itself is the third piece.** It is a flat list
       of unrelated rows — account, languages, theme, speed, reminders, privacy,
       data — with no grouping beyond the section headings it already has. If a
