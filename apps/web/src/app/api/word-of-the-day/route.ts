@@ -26,6 +26,23 @@ const WORD_DOMAINS = [
   'the body, health, and energy',
 ];
 
+/**
+ * The gloss ceiling for the day's word.
+ *
+ * The translation fields used to be asked for as "the best translation" and
+ * nothing else, so the model routinely answered with a list — `délai` as
+ * "deadline, time limit, period", `gũcoka` as "to return; to do again; to
+ * recover". Looking the same word up by hand never did that: `/api/explain`
+ * states the rule in every one of its prompts, and this route was the one place
+ * it went unsaid.
+ *
+ * The ceiling is the one a card back already carries rather than the strict
+ * single gloss `/api/explain` asks for. A word of the day *is* a card back — it
+ * is what you get when you save the card — and forcing one gloss onto a term no
+ * single word covers makes the card wrong rather than clean.
+ */
+const GLOSS_RULE = `Translate it with ONE gloss — the single best translation. Give a second, after a comma, only when one gloss would genuinely mislead because no single word covers the term. Never answer with a list of near-synonyms, and never separate glosses with a semicolon or a slash: "deadline" is a gloss, "deadline, time limit, period" is a list. A gloss running to two or three words, where one word is genuinely insufficient, is still one gloss.`;
+
 function domainFor(date: string): string {
   const days = Math.floor(Date.parse(`${date}T00:00:00Z`) / 86_400_000);
   const index = ((days % WORD_DOMAINS.length) + WORD_DOMAINS.length) % WORD_DOMAINS.length;
@@ -167,6 +184,8 @@ Today's domain is: ${domainFor(date)}. Pick a word that belongs to it. If that d
 Also vary the part of speech from the recent picks below, rather than returning another word of the same kind.
 
 Do not pick a word because of the time of year. Seasons, weather, and holidays are not reasons to prefer a word.
+
+${GLOSS_RULE}
 ${exclusionBlock}${insist ? '\nYour previous answer was on the already-used list. Pick a genuinely different word this time.\n' : ''}
 Respond with only this JSON:
 {

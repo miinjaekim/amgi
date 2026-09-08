@@ -201,6 +201,38 @@ Android, where only sign-in has been exercised.
 Closed calls, kept with their reasoning — a decision whose reasoning is lost gets
 reopened by the next person to notice the symptom. Newest first.
 
+### The word of the day gets a gloss ceiling of its own (2026-09-08)
+
+**This reverses the cancellation three entries down, on the user's call the same
+day.** That entry read the divergence as a question the core lookup had to
+answer first — one gloss or two — and parked it behind "Should `/api/explain`
+allow two glosses?". The user answered it directly for this surface: *"i don't
+like how i find it oftentimes produces translations with many synonyms. i would
+rather it translates with one or two only when it's necessary like how we have
+our learn search work."* A ceiling nobody had to derive is not a bigger bet, so
+the route stopped waiting on one.
+
+**The ceiling is one gloss, a second only when one would mislead** — the card
+back's rule, not `/api/explain`'s strict single. A word of the day *is* a card
+back, since saving it is what the card is made from, and forcing one gloss onto
+a term no single word covers makes the card wrong rather than clean. The prompt
+also names the failure it is correcting, because the model's default reading of
+"the best translation" was a list: `"deadline"` is a gloss, `"deadline, time
+limit, period"` is a list.
+
+**`/api/explain` did not move, and the Bigger bets item stays open.** The user
+named Learn's lookup as the thing that already behaves, so changing it would
+have been changing the one surface that wasn't reported. The two rules now
+differ on purpose — strict single on the lookup, one-or-two on the day's word —
+and that difference is the open question, not a drift to reconcile.
+
+**Nothing repairs a document already written.** The word for a (date, language
+pair) is generated once and read back by everyone after, so every day already
+stored keeps the gloss it was given; the fix reaches tomorrow's word, and
+today's only if its document is deleted. Same shape as the `pitchAccent`
+decision above — this route has never repaired a stored document on read, and
+the CDN TTL was already shortened so a deletion takes effect the same day.
+
 ### The save button is one live control, and web moved too (2026-09-08)
 
 Mobile's signed-out save button was painted `saveBtnDisabled` while its

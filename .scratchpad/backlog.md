@@ -210,10 +210,12 @@ Reasoning in the Decisions entry in [status.md](status.md); the shape is in
       allowed up to two when one would mislead. Changing the core lookup loop has
       a bigger blast radius than a new surface, so decide deliberately — and if
       yes, all branches move together.
-      **This is now the only place the gloss ceiling is tracked.** The
-      word-of-the-day divergence was cancelled 2026-09-08 (Decisions in
-      [status.md](status.md)); if the ceiling here moves, that route is the next
-      thing to look at, since its prompt is a single line missing the rule.
+      **Word of the day no longer waits on this.** Its cancellation was
+      reversed the same day on the user's call — that route now asks for one
+      gloss, a second only when one would mislead (Decisions in
+      [status.md](status.md)). So the two rules differ on purpose, and this item
+      is now the question of whether the lookup should join it rather than a
+      question nothing has answered.
 
 ## Parked
 
