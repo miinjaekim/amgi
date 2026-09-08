@@ -50,8 +50,11 @@ _Reconciled against `main` @ `bc8cb97`, 2026-08-21. `npm test` 246/246, measured
   a new collection needs two indexes rather than one, are in
   [lessons.md](lessons.md).
 - **The Kikuyu Basics pack is built** (2026-08-31) — 59 entries, the fifth
-  `VOCAB_PACKS` key, shipped **with no speaker check on the list** and a source
-  tier on every entry so that stays visible. No console step: `cards_kikuyu` and
+  `VOCAB_PACKS` key, shipped **ahead of a speaker check** with a source tier on
+  every entry so that stayed visible. **A speaker read the list 2026-09-08 and
+  it stands as written**; the tiers remain as the record of where each entry
+  came from. The respelling *table* beyond those 59 entries is still unchecked
+  — see the Decisions entry for that date. No console step: `cards_kikuyu` and
   both indexes have been live since 2026-08-22.
   It carries a fix to the Kikuyu respelling that **reaches every existing card,
   not just the pack** — a consonant before `w` was stranded as its own syllable
@@ -197,6 +200,90 @@ Android, where only sign-in has been exercised.
 
 Closed calls, kept with their reasoning — a decision whose reasoning is lost gets
 reopened by the next person to notice the symptom. Newest first.
+
+### Seven backlog items close, and one of them closes a reopen path (2026-09-08)
+
+A cleanup pass on the user's call rather than a build pass. Six items were
+cancelled and one was finished; what follows is the part that would otherwise be
+lost, since none of these leaves a commit behind.
+
+**A speaker has read the Kikuyu Basics list, and it stands as written.** The
+first native check on pack *content* at volume, and the item that asked for it
+is closed rather than cancelled. It settles the two questions the draft was
+holding open — the `guka`/`wagui` conflict, and whether kinship is inherently
+possessed — as written, and it covers the verb section, which was where a check
+was worth the most: seven of ten were Dahl's Law applied to sourced stems rather
+than attested infinitives. **The per-entry tiers stay** (16 corroborated twice,
+36 on one source, 7 derived); they are now the record of where each entry came
+from rather than the only assurance behind it.
+
+⚠️ **This does not clear the respelling table.** The known-unchecked list in
+[lessons.md](lessons.md) — `th` [ð] read as *thin*, `g` [ɣ] and `b` [β]
+respelled as stops, doubled vowels split into separate syllables, unmarked
+stress, the `ĩ`/`e` and `ũ`/`o` merges — is a claim about the *table*, and a
+speaker reading 59 entries checks only the rows those entries exercise. The
+2026-08-31 cancellation of the respelling item stands for the rest.
+Three documents said the check was outstanding and all three are corrected: the
+draft header, the pointer in [README.md](README.md), and — the one that mattered
+— **`docs/testflight-beta-info.md`, where it was tester-facing copy in both
+locales** saying the Kikuyu meanings may be wrong.
+
+**The word learning surface is cancelled: review is the first encounter.** The
+user's call and their reason — a word can be learned while reviewing it. The
+item's premise is unchanged and was never a bug: a new card is due in *both*
+directions at once (`isDue` returns both when neither is tracked, `sm2.ts:23`),
+so saved goes straight to graded. That is the loop working rather than a gap to
+fill, and the cheap thing this avoids is exactly what the item warned about —
+a presentation step that starts writing scheduling becomes an `sm2.ts` change.
+
+**`pitchAccent` is not backfilled.** The item was written as "or decide not to"
+and this is that decision. The existing `cards_japanese` deck keeps showing bare
+furigana, and **it does not self-heal** — nothing re-runs the lookup on a saved
+card. Accepted because the fallback is silent and correct, the deck is small,
+and the alternative is a one-off script writing to production data to improve a
+display detail. The lookup being a local table made this cheap in *cost*; it
+never made it cheap in *risk*, which is the half that decided it.
+
+**Word of the day's synonym lists: cancelled, and the gloss ceiling moves up a
+level.** The divergence is real and stays true —
+`word-of-the-day/route.ts:138` asks for "the best English translation" with no
+anti-synonym rule, so it produces backs `/api/explain` explicitly forbids
+("Never list synonyms with semicolons or slashes"): `gũcoka` as "to return; to
+do again; to recover", `délai` as "deadline, time limit, period". Cancelled
+because fixing it means picking a ceiling — one gloss or the two a card back
+already allows — and that question belongs to the core lookup, not to one route.
+It now lives entirely in **Bigger bets** as "Should `/api/explain` allow two
+glosses?"; when that moves, this route is a single prompt line behind it.
+
+**The pack roadmap closes; packs get scoped one at a time.** TOEFL, and the
+Swedish / French / Traditional Chinese gaps, stop being tracked as a list to
+work down. **The MOS pack is unaffected** and is now the only pack tracked at
+all. Nothing about the standard changed, and none of the principles the item
+carried are lost with it: audience-is-not-beginners and domains-not-starters
+are in [vision.md](vision.md), with the kana exception amended there
+2026-07-24; sourcing, tiers, citations and render-it-before-you-believe-it are
+in `docs/packs/README.md`. What the item actually held beyond those was a
+queue, and a queue nobody has asked to work down is not a plan.
+
+**The shared term cache is cancelled — and it takes the local-model reopen
+condition with it.** This is the consequence worth writing down. The
+2026-08-08 decision closed on-device inference with a *specific* reopen
+condition: "when the term cache is live and has a measured hit rate, *and*
+there is an eval set to score a candidate on". The first half is now
+unreachable, so **on-device is closed rather than waiting** — reopening it
+means re-arguing the cache first, from `docs/local-model.md` §8, which remains
+accurate as analysis and is no longer a plan.
+
+**Precompute depth and examples falls with it**, and always would have: the
+item said it was best done *after* the cache "which is where the results would
+live". ~600 model calls with no store behind them is a one-off spend that
+expires when the deck changes.
+
+**What the file looks like now.** High holds one item (per-context pronunciation
+speed); Medium holds seven; the rest is Bigger bets, Parked, Housekeeping and
+one clarification. Two long meta-notes were compressed rather than kept —
+why build-checking is not tracked, and what left the High section — since both
+were already recorded here in full.
 
 ### The stats image: one window, and a heatmap ramp that measures wrong (2026-09-07)
 

@@ -32,15 +32,12 @@ backend. And the share path itself (`File.downloadFileAsync` →
 involved, so Expo Go exercises the same code, but sharing is already on the
 never-verified-on-a-binary list under Builds below.
 
-⚠️ **Checking a build is no longer tracked here** (2026-09-04). The ranked list
-of what 1.5.0 had never been exercised on — the Slow speed, offline review,
-typed responses under an IME, the badge at the narrowest phone width, the native
-paths, the renders never seen on a device — came off this file: all of it is
-reached by using the app, so it surfaces in use rather than in a sitting spent
-working down a list. What is durable about it stayed elsewhere: the
-never-verified-on-a-binary caveat under Builds in [status.md](status.md), and
-the Slow speed's fallback in that file's Decisions entry, which is the one item
-that had a decision hanging on it. Reasoning in Decisions there too.
+⚠️ **Checking a build is not tracked here** (2026-09-04). The ranked list of what
+1.5.0 had never been exercised on came off this file — all of it is reached by
+using the app, so it surfaces in use rather than in a sitting spent working down
+a list. The durable halves stayed elsewhere: the never-verified-on-a-binary
+caveat under Builds in [status.md](status.md), and the Slow speed's fallback in
+that file's Decisions entry. Reasoning in Decisions there too.
 
 **Pre-flight:** smoke-test in Expo Go → verify the native-adjacent things on the
 build itself → bump `version` in `app.json` **before** starting the build (EAS
@@ -57,8 +54,10 @@ unasked-for entitlement shows up before a cloud build finds it → submit
 2026-09-02, on the user's call). No "use it for a few days" opener, no roll-call
 of what hasn't been verified, one short clause per bullet — the 1.4.0 form was
 long enough that a tester would bounce off it. A caveat about *shipped content*
-still earns its clause (the Kikuyu list has had no speaker check); a request to
-go and test something does not.
+still earns its clause; a request to go and test something does not. **The
+Kikuyu clause is no longer one of them** — a speaker read the list 2026-09-08,
+and the sentence saying otherwise has already been cut from both locales rather
+than carried forward a third build.
 
 ⚠️ **Cut the build without `--non-interactive`.** It does not skip prompts, it
 turns one into an error — 1.4.0 died on an unanswerable Apple Team ID question
@@ -85,21 +84,20 @@ which does not degrade gracefully._
 
 ## High
 
-Queued 2026-08-31, in the user's order. **Both pack items, the speed dial and
-the stats asset have left this section** — Spanish and Kikuyu are built, the
-pronunciation speed dial shipped 2026-09-01 in build 14, and the shareable stats
-asset shipped 2026-09-07 across four commits (counters, derivation, render, both
-Share controls). The two pronunciation items that
-used to sit here were **cancelled** — reasoning in the Decisions entry in
-[status.md](status.md), and the Kikuyu one's durable half moved to
-[lessons.md](lessons.md) rather than closing with the item.
+Queued 2026-08-31, in the user's order. **One item is left of it.** Everything
+else in this section either shipped — Spanish and Kikuyu packs, the pronunciation
+speed dial in build 14, the shareable stats asset across four commits on
+2026-09-07 — or was cancelled, with the reasoning in the Decisions entries in
+[status.md](status.md) and the Kikuyu respelling item's durable half in
+[lessons.md](lessons.md).
 
 ### What is left of the mobile UI redesign — queued 2026-09-01
 
-Four of the six items shipped 2026-09-04: the tab rearrange, the Progress tab,
-the settings redesign and the quick study-language switcher. They moved pieces
-of the same screen and were built together for that reason. **Two remain**, and
-neither depends on the other or on anything above.
+Five of the six items have shipped: the tab rearrange, the Progress tab, the
+settings redesign and the quick study-language switcher on 2026-09-04, which
+moved pieces of the same screen and were built together for that reason, then
+the shareable stats asset on 2026-09-07. **One remains**, and it depends on
+nothing above.
 
 ⚠️ **The per-language write-path decision was taken with them** and is not
 reopenable cheaply — verdict counts now live inside `byLanguage`, so retention
@@ -154,6 +152,9 @@ Reasoning in the Decisions entry in [status.md](status.md); the shape is in
 - [ ] **Military specialties pack (병과 / 주특기, "MOS").** Infantry, engineer,
       signal, artillery, armor, logistics, medical, and the rest — the branch a
       soldier belongs to, which the two shipped military packs do not cover.
+      **This is the only pack currently scoped**, and since the pack roadmap
+      closed 2026-09-08 it is the only one tracked at all — a further pack now
+      needs its own case made rather than a slot on a list.
       **English *and* Korean study languages, like the others**: it is a
       `BilingualPack` in `packages/core/src/military.ts`, so it derives both
       directions from one pair list via `derivePack(PACK, 'Korean' | 'English')`
@@ -219,46 +220,6 @@ Reasoning in the Decisions entry in [status.md](status.md); the shape is in
       locales, and the per-context speed item above would change it. These two
       items touch the same screen — **read that one before starting this**.
 
-- [ ] **A speaker has still not read the Kikuyu Basics list.** Shipped that way
-      knowingly, with a source tier on every entry (16 corroborated twice, 36 on
-      one source, 7 derived) — and unlike the build checks, this one does not
-      happen by using the app. The verb section is where a check is worth the
-      most, since seven of ten are Dahl's Law applied to sourced stems rather
-      than attested infinitives. The `guka`/`wagui` conflict and whether kinship
-      is inherently possessed are open in
-      `docs/packs/kikuyu-basics-pack-draft.md`; the wider known-unchecked list is
-      in [lessons.md](lessons.md).
-
-- [ ] **Backfill `pitchAccent` onto existing Japanese cards, or decide not to.**
-      New cards get it on save; the ~existing `cards_japanese` deck keeps
-      showing bare furigana until each card is looked up again. Unusually cheap
-      to fix — the lookup is a local table, so a backfill is **zero model calls
-      and zero cost**, unlike every other enrichment this app has considered.
-      Decide first whether it is worth touching production data at all: the
-      fallback is silent and correct, and the deck is small. If yes it is a
-      one-off script over the collection, matching on `(japanese, furigana)`
-      and writing only where the table has an unambiguous answer.
-
-- [ ] **Word of the day returns synonym lists where cards refuse them.** Found
-      while verifying Kikuyu, then cross-checked — it is not language-specific:
-      `gũcoka` came back as "to return; to do again; to recover", `délai` as
-      "deadline, time limit, period", `sedan` as "since, then, ago". `/api/explain`
-      forbids exactly this ("Never list synonyms with semicolons or slashes") and
-      the two-gloss rule allows a *second* gloss only where one would mislead;
-      `word-of-the-day/route.ts:138` just asks for "the best English translation"
-      with no such rule, so a saved word-of-the-day card gets a back the lookup
-      path would never have produced. The fix is the missing rule, not a new one —
-      but decide first whether the ceiling is one gloss or the two the card rule
-      already allows.
-
-- [ ] **Word learning surface — meet a word before it's due.** A new card is
-      immediately due in *both* directions (`isDue` returns both when neither is
-      tracked, `sm2.ts:23`), so a word goes from saved to graded review with no
-      first encounter in between. This is the surface for that: see it, hear it,
-      use it once, *then* let SM-2 have it.
-      Open before building: whether it writes scheduling at all or is purely a
-      presentation step. If it writes, it is an `sm2.ts` change.
-
 - [ ] **Watch the kanji deck on the "All" chip.** The kanji pack is the first
       single-glyph pack laid out as a `list`, because its back carries readings
       that do not fit a tile — and `isGridDeck` exempts only *grid* decks from
@@ -270,37 +231,6 @@ Reasoning in the Decisions entry in [status.md](status.md); the shape is in
       flag — not a layout change**, since layout is keyed on content shape so a
       future single-character pack inherits the grid without being asked. Needs a
       real account with the deck enrolled before deciding.
-
-- [ ] **Vocabulary packs — iterate beyond v1.** Shipped: TOEIC, kana, TOPIK 고급,
-      two military packs, all one pre-authored kind. Authored and awaiting
-      approval: Everyday English, English Idioms, Kanji 1–2 (see High).
-      *Principles:* audience is not beginners — **one recorded exception, the
-      daily-life pack, deliberate and not a precedent**; packs unlock domains,
-      never "starter" anything; curated from real sources, not AI-generated; word
-      lists need user approval before shipping.
-      *Next:* **a military specialties pack (병과/주특기) has its own item above**,
-      and is the only pack currently scoped. Then **TOEFL**, now that the
-      Japanese gap is answered by the kanji pack
-      (教育漢字 1–2 rather than JLPT — N5 is a subset of it, so an exam-ladder
-      pack is a re-sectioning, not a re-authoring). Swedish, French and
-      Traditional Chinese still have **no pack at all**.
-      A new pack needs backs drafted alongside its word list; drafts live in
-      `docs/packs/`. Section themes as `/cards` filters are a third rung on the
-      deck axis that already shipped, not a new control.
-
-- [ ] **Shared term cache** — a `terms` collection keyed by normalized term +
-      language, so a word looked up once is free for everyone after.
-      `docs/local-model.md` §8 names it the cheapest useful first step, ahead of
-      any model work: it buys instant lookups, an offline story and near-zero
-      marginal cost with **no build, no native module and no quality risk**, and
-      unlike on-device it works on web too. Copies `/api/pronounce`'s
-      content-hash pattern **including its lesson that a bad generation becomes
-      permanent** — decide the invalidation story before writing the first
-      document.
-
-- [ ] **Precompute depth and examples for the packs** — ~600 model calls, an
-      afternoon, one throwaway script. Best done *after* the term cache, which is
-      where the results would live.
 
 - [ ] **`/api/explain` has no `try`/`catch`**, so an outage or a malformed
       response is a 500 rather than a handled error.
@@ -317,6 +247,10 @@ Reasoning in the Decisions entry in [status.md](status.md); the shape is in
       allowed up to two when one would mislead. Changing the core lookup loop has
       a bigger blast radius than a new surface, so decide deliberately — and if
       yes, all branches move together.
+      **This is now the only place the gloss ceiling is tracked.** The
+      word-of-the-day divergence was cancelled 2026-09-08 (Decisions in
+      [status.md](status.md)); if the ceiling here moves, that route is the next
+      thing to look at, since its prompt is a single line missing the rule.
 
 ## Parked
 
@@ -352,6 +286,7 @@ green. What's left is what those two now *show*.
       anywhere. Unlike `writing.ts`/`grammar.ts` these have **no build to keep
       alive**: they are web-only, so nothing pins them. Left in place while the
       subscribe change was landing to keep that diff to one subject.
+
 - [ ] **The mobile screen gutter is 20, hardcoded in four stylesheets.** Cards
       sat at 16 until 2026-09-04, so tabbing to it shifted every left edge by
       four pixels; that is fixed, but by editing six numbers rather than by
@@ -372,6 +307,7 @@ green. What's left is what those two now *show*.
       **don't silence them further**. The other five: two dead bindings in
       `decks/[packId]/{page,drill/page}.tsx`, two `<img>` that should be
       `next/image` (`Header`, `SideNav`), one missing dep in `cards/page.tsx`.
+
 - [ ] **Lint covers `apps/web` only** — core and mobile have no `lint` script, so
       `turbo lint` runs one package and reports success. Honest today, misleading
       the moment it gates CI. Mobile needs `eslint-config-expo`, core a small flat

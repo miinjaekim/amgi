@@ -84,7 +84,7 @@ kenyamjkim@gmail.com
 · 복습 중 발음 듣기 — 복습 화면에도 발음 듣기 버튼이 생겼습니다.
 · 되돌리기 — 평가를 잘못 눌렀으면 되돌리기 버튼으로 취소할 수 있습니다.
 · 읽는 법 — 단어를 읽는 이의 문자로 다시 적어 줍니다. 일본어는 억양 표시도 함께요.
-· 새 단어팩 — 스페인어 기초 153개, 키쿠유어 기초 59개. 키쿠유어는 원어민 확인 전이라 뜻이 틀릴 수 있습니다.
+· 새 단어팩 — 스페인어 기초 153개, 키쿠유어 기초 59개.
 
 피드백은 TestFlight의 '피드백 보내기' 또는 kenyamjkim@gmail.com으로.
 ```
@@ -99,7 +99,7 @@ New in this build:
 · Audio in review — review cards have a speaker button now.
 · Undo — takes back a rating you tapped by mistake.
 · Reading aid — words respelled in your own script, with pitch marks on Japanese.
-· New packs — Spanish Basics (153 words) and Kikuyu Basics (59). No native speaker has checked the Kikuyu list yet, so meanings may be wrong.
+· New packs — Spanish Basics (153 words) and Kikuyu Basics (59).
 
 Send feedback via TestFlight's "Send Beta Feedback" or to kenyamjkim@gmail.com.
 ```

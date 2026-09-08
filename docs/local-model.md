@@ -276,6 +276,15 @@ opposite directions here, and quality wins — grade with Flash.
 
 The backlog asks for this by name. It is not a model.
 
+> ⚠️ **Cancelled 2026-09-08 — both steps.** The shared term cache and the pack
+> precompute were dropped from the backlog on the user's call, so what follows
+> is the argument for them, not a plan to execute. It matters beyond this
+> section: the reopen condition this spike set for on-device — a live term cache
+> with a measured hit rate, *plus* an eval set — can no longer be met, so
+> **on-device is closed rather than waiting**, and §9's first cache question is
+> unanswerable with it. Reasoning in the Decisions entry for that date in
+> `.scratchpad/status.md`.
+
 ### Step 1 — A shared term cache. No build, no native module, no model risk.
 
 A `terms` collection keyed by normalized term + study language + native

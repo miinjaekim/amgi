@@ -40,11 +40,12 @@ Related docs outside this folder:
   ranked before they are trusted, conflicts are recorded rather than resolved
   quietly, and the list is **rendered through the app's own transforms** before
   anyone believes it — which is what found the Kikuyu syllabifier bug.
-- `docs/packs/kikuyu-basics-pack-draft.md` — 59 entries, **approved 2026-08-31
-  with a speaker's check still outstanding**, which the header says plainly and
-  the per-entry tiers make visible. Also the record of two code bugs found by
-  rendering it rather than reading it, one of which reached every existing
-  Kikuyu card.
+- `docs/packs/kikuyu-basics-pack-draft.md` — 59 entries, approved 2026-08-31
+  ahead of a speaker's check and **read by a speaker 2026-09-08, unchanged**;
+  the per-entry tiers stay as the record of where each entry came from. The
+  respelling *table* beyond these entries is still unchecked — that list is in
+  [lessons.md](lessons.md). Also the record of two code bugs found by rendering
+  it rather than reading it, one of which reached every existing Kikuyu card.
 - `docs/packs/spanish-basics-pack-draft.md` — the Spanish starter pack, 153
   entries in five sections, **approved 2026-08-31** (referenced from
   `spanishBasics.ts`). Same one-file shape as the three above, and the first pack
@@ -61,9 +62,11 @@ Related docs outside this folder:
 - `docs/local-model.md` — the written answer to the "Local model spike" item:
   the three meanings of "local", what a local model could and couldn't replace
   route by route, size/RAM limits, fine-tuning vs prompting, and the recommended
-  first step (a shared term cache, not a model). **The item is closed** — read
-  this and the Decisions entry in `status.md` before reopening the on-device
-  question.
+  first step (a shared term cache, not a model). **The item is closed, and so is
+  that first step** — the term cache was cancelled 2026-09-08, which makes the
+  reopen condition the spike set unreachable. §8 is analysis now, not a plan.
+  Read this and both Decisions entries in `status.md` before reopening the
+  on-device question.
 - `docs/grammar-research.md` — what SLA research says about how grammar is
   learned and practised, written 2026-08-08 after the first grammar-patterns
   trial failed. **Read it before touching the grammar design**: it confirms
@@ -105,6 +108,20 @@ lives outside the repo, and what is currently unverified.
 Backlog priority mirrors the user's Google Tasks list — `backlog.md` is the
 scoped version of it. Keep entries at the size that says what to do next; the
 argument behind a call goes in `status.md`, not in the item.
+
+_This pass **cleaned out the backlog** on the user's call — no code, seven items
+gone. One closed by being finished: **a speaker read the Kikuyu Basics list and
+it stands as written**, which also cut a false clause from tester-facing copy in
+both locales. The other six were cancelled, and two of them are worth knowing
+about before anyone re-derives them. **The shared term cache going takes the
+local-model reopen condition with it**, since that condition was "when the cache
+is live and has a measured hit rate" — so on-device is closed rather than
+waiting, and `docs/local-model.md` §8 is now analysis rather than a plan. And
+**the word-of-the-day gloss divergence is real but no longer tracked on its own**
+— the one-gloss-or-two ceiling belongs to `/api/explain`, where it sits in Bigger
+bets. The pack roadmap closed too; the MOS pack is untouched and is now the only
+pack tracked. Full reasoning, item by item, in the 2026-09-08 Decisions entry in
+[status.md](status.md)._
 
 _This pass **shipped the shareable stats asset**, in four commits that are
 worth keeping in that order: the counters, the derivation, the render, then both

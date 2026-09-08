@@ -43,9 +43,14 @@ and treat self-consistency as no evidence of correctness — which is where the
 Japanese pitch-accent probe landed from the other direction
 (`docs/pronunciation-research.md`).
 
-The rest of the table has had no such check, and the backlog item asking for one
-was cancelled 2026-08-31 (see Decisions in [status.md](status.md)) because there
-is no speaker to hand. If one ever is, this is the known-unchecked list: `th` [ð]
+**A speaker did read the Kikuyu Basics list on 2026-09-08** and it stands as
+written — the first native check on pack content at volume. Note carefully what
+that does and does not settle: the 59 entries are checked, including whatever
+respellings they happen to render, but the list below is a claim about the
+*table*, so a row those entries never exercise is exactly as unchecked as it
+was. The backlog item asking for a check of the table was cancelled 2026-08-31
+(see Decisions in [status.md](status.md)) because there was no speaker to hand;
+for whoever has one next, this is the known-unchecked list: `th` [ð]
 reads as *thin* rather than *the*; `g` [ɣ] and `b` [β] are fricatives respelled
 as stops; long vowels are written doubled in Kikuyu and split into separate
 syllables, so `nĩĩ` comes out `ne-e`; stress is unmarked; and the `ĩ`/`e` and

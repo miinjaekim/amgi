@@ -1,10 +1,17 @@
 # Kikuyu Basics Pack — Draft for Review
 
-**✅ Approved for implementation 2026-08-31 — with a speaker's check still
-outstanding, deliberately.** That is not the Spanish pack's gate and it is worth
-being plain about: this repo has measured the model wrong on Kikuyu twice — noun
-class 3 of 8, tone self-consistent on 2 of 19 — and the respelling table shipped
-wrong three times, each caught by someone who can hear the language and none by
+**✅ Approved for implementation 2026-08-31 — and read by a speaker 2026-09-08,
+who found nothing to change.** The list below stands as written, including the
+two open questions this header used to hold: `guka`/`wagui`, and whether kinship
+is inherently possessed. The tiers on every row stay as the record of where each
+entry came from rather than as the assurance behind it, and the respelling
+*table* beyond these 59 entries is still unchecked (`lessons.md`). The paragraph
+that follows is why it shipped ahead of that check, kept because the reasoning
+outlives the gap.
+
+That was not the Spanish pack's gate and it was worth being plain about: this
+repo has measured the model wrong on Kikuyu twice — noun class 3 of 8, tone
+self-consistent on 2 of 19 — and the respelling table shipped wrong three times, each caught by someone who can hear the language and none by
 review. Every row carries a tier and a citation per the standard in
 [README.md](README.md), so what is unverified is visible rather than blended in:
 of 59 entries, **16 are corroborated by two sources, 36 rest on one, and 7 are
