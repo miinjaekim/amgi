@@ -775,7 +775,7 @@ export default function LearnScreen() {
 
               <View style={s.divider} />
               <TouchableOpacity
-                style={[s.saveBtn, !user && s.saveBtnDisabled]}
+                style={s.saveBtn}
                 onPress={user ? handleOpenSave : handleSignIn}
               >
                 <Text style={s.saveBtnText}>
@@ -922,7 +922,6 @@ function makeStyles(C: Palette, tabBarHeight: number) {
 
   divider: { height: 1, backgroundColor: C.border, marginVertical: 16 },
   saveBtn: { backgroundColor: C.highlight, borderRadius: 10, paddingVertical: 12, alignItems: 'center' },
-  saveBtnDisabled: { backgroundColor: C.border },
   saveBtnText: { color: C.bg, fontWeight: '700', fontSize: 15 },
 
   contextSection: { marginTop: 16 },
