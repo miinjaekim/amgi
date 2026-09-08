@@ -205,17 +205,8 @@ Reasoning in the Decisions entry in [status.md](status.md); the shape is in
 
 ## Bigger bets
 
-- [ ] **Should `/api/explain` allow two glosses?** It still says "single best
-      translation" across six prompt branches (12 templates), while a card back is
-      allowed up to two when one would mislead. Changing the core lookup loop has
-      a bigger blast radius than a new surface, so decide deliberately — and if
-      yes, all branches move together.
-      **Word of the day no longer waits on this.** Its cancellation was
-      reversed the same day on the user's call — that route now asks for one
-      gloss, a second only when one would mislead (Decisions in
-      [status.md](status.md)). So the two rules differ on purpose, and this item
-      is now the question of whether the lookup should join it rather than a
-      question nothing has answered.
+_Empty as of 2026-09-08 — the gloss ceiling was the only item here, and it
+closed (Decisions in [status.md](status.md))._
 
 ## Parked
 

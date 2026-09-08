@@ -201,6 +201,56 @@ Android, where only sign-in has been exercised.
 Closed calls, kept with their reasoning — a decision whose reasoning is lost gets
 reopened by the next person to notice the symptom. Newest first.
 
+### The gloss ceiling is one rule, and the semicolon knows about disambiguation (2026-09-08)
+
+**Closes "Should `/api/explain` allow two glosses?"** — the only item that was
+in Bigger bets, answered by the user directly rather than derived: *"so this
+semicolon thing is now only applied for the word of the day? can we have it
+also for the explain."* Yes. The entry below had left the two routes differing
+on purpose; that difference lasted about an hour.
+
+**Seventeen hand-written copies became one import.** `/api/explain` stated the
+rule sixteen times as a bullet plus once as a fragment on the native back, in
+four cosmetic wordings, covering eighteen templates (nine languages ×
+context/no-context; Kikuyu and Swahili share one rules constant across both of
+theirs). It now reads `GLOSS_RULE` from `apps/web/src/lib/glossRule.ts`, and so
+does `/api/word-of-the-day`. This is `characterBreakdownInstruction`'s argument
+applied to the thing that had already drifted: the day's word stated **no rule
+at all**, which is how it shipped "deadline, time limit, period".
+
+**The ceiling had to be restated as a total.** "Never a third" has a loophole —
+the model reads it as *never a third within one sense* and nests the marks.
+Measured on the lookup: 시원하다 came back "cool, refreshing; relieved, satisfied"
+and 微妙 "subtle, delicate; questionable, iffy", four glosses each, both obeying
+the rule as written. The sentence now names the whole field and forbids using
+both marks at once.
+
+**The semicolon is branch-aware, and that came from the user asking whether the
+ambiguity checker was relevant.** It is, decisively. A no-context lookup can
+answer `ambiguous: true` with `meanings`; the chip the learner taps comes back
+as the `context` of a second lookup (`page.tsx:200` → `handleDisambiguate`). So
+the same mark means different things on the two sides:
+
+- **Context template** — the sense is already pinned, so a semicolon does not
+  say the word has two senses, it says the prompt ignored the one it was given.
+  Comma only. Measured 0 semicolons in 8 pinned re-lookups.
+- **No-context template** — a semicolon competes with `meanings`. Two senses far
+  enough apart to need one are two chips, not one back. What is left for it is
+  the band the ambiguity bar deliberately excludes ("closely related variants of
+  the same concept"): 迷う's "get lost" and "be undecided", one idea applied to a
+  place and to a decision.
+
+**The disambiguation flow absorbed the offenders, at no extra friction.** Every
+word that had produced a four-gloss back — 微妙, 시원하다, 답답하다, 거리, 迷う —
+routes to chips instead. And the **chip rate did not move**: 13/30 under the old
+strict-single rule, 13/30 under the new one, so the clause redirects which words
+disambiguate without sending more of them there. That was the risk worth
+measuring, since a chip is an extra tap before a card.
+
+**Known leak, not fixed:** 1 in 28 still breaks the ceiling — Swedish `orka` as
+"to have the energy/strength; to cope", which manages a slash *and* a semicolon.
+It is left as measured rather than chased with a fourth wording pass.
+
 ### The word of the day gets a gloss ceiling of its own (2026-09-08)
 
 **This reverses the cancellation three entries down, on the user's call the same

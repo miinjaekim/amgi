@@ -8,6 +8,7 @@ import {
   parseModelJson,
 } from '@amgi/core';
 import { lookupPitchAccent } from '@/lib/pitchAccentLookup';
+import { glossRuleBullet } from '@/lib/glossRule';
 
 function detectKorean(term: string): boolean {
   return /[가-힣ᄀ-ᇿ㄰-㆏]/.test(term);
@@ -46,7 +47,7 @@ export async function POST(req: NextRequest) {
   // one response, not a second call.
   const back = getBackSideConfig(studyLanguage, nativeLanguage);
   const nativeBackRule = back.backField === 'english' ? '' :
-    `\n- "${back.backField}" must always be the ${back.backLanguage} word or phrase for that same meaning, written in ${back.backLanguage}. Single best translation — never list synonyms with semicolons or slashes.`;
+    `\n- "${back.backField}" must always be the ${back.backLanguage} word or phrase for that same meaning, written in ${back.backLanguage}.`;
   const nativeBackJson = back.backField === 'english' ? '' :
     `\n  "${back.backField}": "${back.backLanguage} word/phrase",`;
 
@@ -108,7 +109,7 @@ Determine whether "${term}" is Swedish or English and set "termLanguage" accordi
 IMPORTANT:
 - "swedish" must always be the Swedish word or phrase written in Swedish
 - "english" must always be the English word or phrase written in English${nativeBackRule}
-- Both fields should use the single best translation. Only use 2-3 words if one word is genuinely insufficient. Never list synonyms with semicolons or slashes.
+${glossRuleBullet(true)}
 - "gender": if the Swedish term is a noun, set to "en" or "ett". Otherwise set to null.${posRule}
 - "briefDefinition": a single clear sentence defining the term in ${nativeLanguage}.
 
@@ -160,7 +161,7 @@ If NOT ambiguous, respond with only this JSON:
 IMPORTANT for the non-ambiguous case:
 - "swedish" must always be written in Swedish
 - "english" must always be written in English${nativeBackRule}
-- Both should be the single best translation. Never list synonyms with semicolons or slashes.
+${glossRuleBullet(false)}
 - "gender": if the Swedish term is a noun, set to "en" or "ett". Otherwise set to null.${posRule}
 - "briefDefinition" must be a single sentence defining the core meaning. No examples, no cultural context.`;
     }
@@ -174,7 +175,7 @@ Determine whether "${term}" is French or English and set "termLanguage" accordin
 IMPORTANT:
 - "french" must always be the French word or phrase written in French
 - "english" must always be the English word or phrase written in English${nativeBackRule}
-- Both fields should use the single best translation. Only use 2-3 words if one word is genuinely insufficient. Never list synonyms with semicolons or slashes.
+${glossRuleBullet(true)}
 - "gender": if the French term is a noun, set to "le" or "la". Otherwise set to null.${posRule}
 - "briefDefinition": a single clear sentence defining the term in ${nativeLanguage}.
 
@@ -226,7 +227,7 @@ If NOT ambiguous, respond with only this JSON:
 IMPORTANT for the non-ambiguous case:
 - "french" must always be written in French
 - "english" must always be written in English${nativeBackRule}
-- Both should be the single best translation. Never list synonyms with semicolons or slashes.
+${glossRuleBullet(false)}
 - "gender": if the French term is a noun, set to "le" or "la". Otherwise set to null.${posRule}
 - "briefDefinition" must be a single sentence defining the core meaning. No examples, no cultural context.`;
     }
@@ -240,7 +241,7 @@ Determine whether "${term}" is Spanish or English and set "termLanguage" accordi
 IMPORTANT:
 - "spanish" must always be the Spanish word or phrase written in Spanish
 - "english" must always be the English word or phrase written in English${nativeBackRule}
-- Both fields should use the single best translation. Only use 2-3 words if one word is genuinely insufficient. Never list synonyms with semicolons or slashes.
+${glossRuleBullet(true)}
 - "gender": if the Spanish term is a noun, set to "el" or "la". Otherwise set to null.${posRule}
 - "briefDefinition": a single clear sentence defining the term in ${nativeLanguage}.
 
@@ -292,7 +293,7 @@ If NOT ambiguous, respond with only this JSON:
 IMPORTANT for the non-ambiguous case:
 - "spanish" must always be written in Spanish
 - "english" must always be written in English${nativeBackRule}
-- Both should be the single best translation. Never list synonyms with semicolons or slashes.
+${glossRuleBullet(false)}
 - "gender": if the Spanish term is a noun, set to "el" or "la". Otherwise set to null.${posRule}
 - "briefDefinition" must be a single sentence defining the core meaning. No examples, no cultural context.`;
     }
@@ -309,18 +310,18 @@ IMPORTANT for the non-ambiguous case:
     //
     // No `gender`, unlike the three Latin-script languages above — see the
     // registry entry for why noun class is not on the card.
-    const kikuyuRules = `
+    const kikuyuRules = (sensePinned: boolean) => `
 - "kikuyu" must always be the Kikuyu word or phrase, written in standard Kikuyu orthography. Kikuyu has seven vowels: "ĩ" and "ũ" are their own letters, not decorated "i" and "u", and must be written wherever the word has them.
 - Kikuyu (Gĩkũyũ) is not Swahili. Never answer with a Swahili word, and never borrow Swahili grammar or spelling.
 - "english" must always be the English word or phrase written in English${nativeBackRule}
-- Both fields should use the single best translation. Only use 2-3 words if one word is genuinely insufficient. Never list synonyms with semicolons or slashes.${posRule}`;
+${glossRuleBullet(sensePinned)}${posRule}`;
 
     if (context) {
       prompt = `Provide a concise translation for the Kikuyu(Gĩkũyũ)/English term "${term}" with this context: "${context}".
 
 Determine whether "${term}" is Kikuyu or English and set "termLanguage" accordingly.
 
-IMPORTANT:${kikuyuRules}
+IMPORTANT:${kikuyuRules(true)}
 - "briefDefinition": a single clear sentence defining the term in ${nativeLanguage}.
 
 Respond with only this JSON:
@@ -366,7 +367,7 @@ If NOT ambiguous, respond with only this JSON:
   "briefDefinition": "one-sentence definition in ${nativeLanguage}"
 }
 
-IMPORTANT for the non-ambiguous case:${kikuyuRules}
+IMPORTANT for the non-ambiguous case:${kikuyuRules(false)}
 - "briefDefinition" must be a single sentence defining the core meaning. No examples, no cultural context.`;
     }
   } else if (studyLanguage === 'Swahili') {
@@ -394,18 +395,18 @@ IMPORTANT for the non-ambiguous case:${kikuyuRules}
     //
     // No `gender` either — Swahili marks noun class, and the registry entry
     // says why that is not on the card.
-    const swahiliRules = `
+    const swahiliRules = (sensePinned: boolean) => `
 - "swahili" must always be the Swahili word or phrase, written in standard Swahili (Kiswahili sanifu).
 - Cite Swahili verbs in the infinitive, with the "ku-" prefix — "kusoma", never a bare stem like "soma".
 - "english" must always be the English word or phrase written in English${nativeBackRule}
-- Both fields should use the single best translation. Only use 2-3 words if one word is genuinely insufficient. Never list synonyms with semicolons or slashes.${posRule}`;
+${glossRuleBullet(sensePinned)}${posRule}`;
 
     if (context) {
       prompt = `Provide a concise translation for the Swahili(Kiswahili)/English term "${term}" with this context: "${context}".
 
 Determine whether "${term}" is Swahili or English and set "termLanguage" accordingly.
 
-IMPORTANT:${swahiliRules}
+IMPORTANT:${swahiliRules(true)}
 - "briefDefinition": a single clear sentence defining the term in ${nativeLanguage}.
 
 Respond with only this JSON:
@@ -451,7 +452,7 @@ If NOT ambiguous, respond with only this JSON:
   "briefDefinition": "one-sentence definition in ${nativeLanguage}"
 }
 
-IMPORTANT for the non-ambiguous case:${swahiliRules}
+IMPORTANT for the non-ambiguous case:${swahiliRules(false)}
 - "briefDefinition" must be a single sentence defining the core meaning. No examples, no cultural context.`;
     }
   } else if (studyLanguage === 'Japanese') {
@@ -464,7 +465,7 @@ IMPORTANT for the non-ambiguous case:${swahiliRules}
 IMPORTANT: The "japanese" and "english" fields must ALWAYS be in their respective languages:
 - "japanese" must always be the Japanese word or phrase written the way it is naturally written (kanji where usual)
 - "english" must always be the English word or phrase written in English${nativeBackRule}
-- Both fields should use the single best translation. Only use 2-3 words if one word is genuinely insufficient. Never list synonyms with semicolons or slashes.
+${glossRuleBullet(true)}
 - "furigana": if "japanese" contains kanji, give its full reading in hiragana. Otherwise set to null.${posRule}
 
 For "briefDefinition", write a single clear sentence defining the term in ${nativeLanguage}. No examples, no cultural context — just the core meaning.
@@ -517,7 +518,7 @@ If NOT ambiguous, respond with only this JSON:
 IMPORTANT for the non-ambiguous case:
 - "japanese" must always be written the way it is naturally written in Japanese (kanji where usual)
 - "english" must always be written in English${nativeBackRule}
-- Both should be the single best translation. Only use 2-3 words if truly necessary. Never list synonyms with semicolons or slashes.
+${glossRuleBullet(false)}
 - "furigana": if "japanese" contains kanji, give its full reading in hiragana. Otherwise null.${posRule}
 - "briefDefinition" must be a single sentence defining the core meaning. No examples, no cultural context.`;
     }
@@ -531,7 +532,7 @@ IMPORTANT for the non-ambiguous case:
 IMPORTANT: The "traditionalChinese" and "english" fields must ALWAYS be in their respective languages:
 - "traditionalChinese" must always be the Mandarin word or phrase written in Traditional characters (繁體字) as used in Taiwan. Never return Simplified characters (简体字) — convert them if the input used them.
 - "english" must always be the English word or phrase written in English${nativeBackRule}
-- Both fields should use the single best translation. Only use 2-3 words if one word is genuinely insufficient. Never list synonyms with semicolons or slashes.
+${glossRuleBullet(true)}
 - "pinyin": the full Hanyu Pinyin reading of "traditionalChinese", with tone marks (e.g. "dōngxi"), spaced by word.${posRule}
 
 For "briefDefinition", write a single clear sentence defining the term in ${nativeLanguage}. No examples, no cultural context — just the core meaning.
@@ -584,7 +585,7 @@ If NOT ambiguous, respond with only this JSON:
 IMPORTANT for the non-ambiguous case:
 - "traditionalChinese" must always be written in Traditional characters (繁體字) as used in Taiwan. Never return Simplified characters (简体字) — convert them if the input used them.
 - "english" must always be written in English${nativeBackRule}
-- Both should be the single best translation. Only use 2-3 words if truly necessary. Never list synonyms with semicolons or slashes.
+${glossRuleBullet(false)}
 - "pinyin": the full Hanyu Pinyin reading of "traditionalChinese", with tone marks (e.g. "dōngxi"), spaced by word.${posRule}
 - "briefDefinition" must be a single sentence defining the core meaning. No examples, no cultural context.`;
     }
@@ -599,7 +600,7 @@ IMPORTANT for the non-ambiguous case:
 IMPORTANT: The "english" and "korean" fields must ALWAYS be in their respective languages:
 - "english" must always be the English word or phrase written in English
 - "korean" must always be the Korean word or phrase written in Korean script (한국어)
-- Both fields should use the single best translation. Only use 2-3 words if one word is genuinely insufficient. Never list synonyms with semicolons or slashes.${posRule}
+${glossRuleBullet(true)}${posRule}
 
 For "briefDefinition", write a single clear sentence defining the term in ${nativeLanguage}. No examples, no cultural context — just the core meaning.
 
@@ -649,7 +650,7 @@ If NOT ambiguous, respond with only this JSON:
 IMPORTANT for the non-ambiguous case:
 - "english" must always be written in English
 - "korean" must always be written in Korean script (한국어)
-- Both should be the single best translation. Only use 2-3 words if truly necessary. Never list synonyms with semicolons or slashes.${posRule}
+${glossRuleBullet(false)}${posRule}
 - "briefDefinition" must be a single sentence defining the core meaning. No examples, no cultural context.`;
     }
   } else {
@@ -662,7 +663,7 @@ IMPORTANT for the non-ambiguous case:
 IMPORTANT: The "korean" and "english" fields must ALWAYS be in their respective languages:
 - "korean" must always be the Korean word or phrase written in Korean script (한국어)
 - "english" must always be the English word or phrase written in English
-- Both fields should use the single best translation. Only use 2-3 words if one word is genuinely insufficient. Never list synonyms with semicolons or slashes.${posRule}
+${glossRuleBullet(true)}${posRule}
 
 For "formality", if the term is Korean, classify it as one of: Casual, Standard, Formal, Honorific, Slang. If the term is English, use "N/A".
 
@@ -716,7 +717,7 @@ If NOT ambiguous, respond with only this JSON:
 IMPORTANT for the non-ambiguous case:
 - "korean" must always be written in Korean script (한국어)
 - "english" must always be written in English
-- Both "korean" and "english" should be the single best translation. Only use 2-3 words if truly necessary. Never list synonyms with semicolons or slashes.
+${glossRuleBullet(false)}
 - For "formality", if the term is Korean use one of: Casual, Standard, Formal, Honorific, Slang. If English, use "N/A".${posRule}
 - "briefDefinition" must be a single sentence defining the core meaning. No examples, no cultural context.`;
     }

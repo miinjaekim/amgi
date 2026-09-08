@@ -3,6 +3,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/firebaseAdmin';
 import { PART_OF_SPEECH_CODES, getStudyLanguageConfig, getBackSideConfig, isStudyLanguage, normalizePartOfSpeech, parseModelJson, wordOfTheDayCore, type WordOfTheDay } from '@amgi/core';
 import { lookupPitchAccent } from '@/lib/pitchAccentLookup';
+// The day's word is a card back, so it takes the shared gloss ceiling. It used
+// to ask for "the best English translation" and nothing else — the one prompt in
+// the app that stated no rule — so the model answered with a list: `délai` as
+// "deadline, time limit, period", `gũcoka` as "to return; to do again; to
+// recover". The same word looked up by hand never did, because `/api/explain`
+// stated a rule in all eighteen of its templates. Both read from `GLOSS_RULE`
+// now, so there is nothing left to keep in step.
+import { GLOSS_RULE } from '@/lib/glossRule';
 
 /** How far back to look when keeping the daily word from repeating. */
 const EXCLUSION_DAYS = 60;
@@ -25,33 +33,6 @@ const WORD_DOMAINS = [
   'money, shopping, and value',
   'the body, health, and energy',
 ];
-
-/**
- * The gloss ceiling for the day's word.
- *
- * The translation fields used to be asked for as "the best translation" and
- * nothing else, so the model routinely answered with a list — `délai` as
- * "deadline, time limit, period", `gũcoka` as "to return; to do again; to
- * recover". Looking the same word up by hand never did that: `/api/explain`
- * states the rule in every one of its prompts, and this route was the one place
- * it went unsaid.
- *
- * The ceiling is the one a card back already carries rather than the strict
- * single gloss `/api/explain` asks for. A word of the day *is* a card back — it
- * is what you get when you save the card — and forcing one gloss onto a term no
- * single word covers makes the card wrong rather than clean.
- *
- * **The rule counts glosses; it does not legislate punctuation.** A first pass
- * banned the semicolon outright, which was the wrong lever twice over. The
- * reported failure was a *count* — "many synonyms" — and a ban on the mark is
- * only a proxy for it, one a model satisfies while still answering "to return,
- * to do again, to recover". Worse, it forbade the mark that carries the most
- * information: a comma joins near-synonyms inside one sense, a semicolon
- * separates two senses. 迷う is "to get lost; to be undecided", and comma-joining
- * those reads as though they were one idea — the exact misleading back the
- * second gloss is allowed in order to prevent.
- */
-const GLOSS_RULE = `Translate it with ONE gloss — the single best translation. Give a second only when one gloss would genuinely mislead, and let the punctuation say which kind it is: a comma between two near-synonyms for one sense ("atmosphere, mood"), a semicolon between two genuinely distinct senses ("to get lost; to be undecided"). Never a third, under any punctuation — "deadline" is a gloss, "deadline, time limit, period" is a list, and the list is the failure to avoid. Never a slash: "energy/strength" is not a distinction, it is a refusal to pick one, so commit to a word or use the comma. A gloss running to two or three words, where one word is genuinely insufficient, is still one gloss.`;
 
 function domainFor(date: string): string {
   const days = Math.floor(Date.parse(`${date}T00:00:00Z`) / 86_400_000);
