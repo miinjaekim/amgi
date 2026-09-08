@@ -653,8 +653,13 @@ export default function Home() {
 
           {/* Save button */}
           <button
-            className="px-4 py-2 rounded-lg bg-[var(--color-muted)] text-[var(--color-text)] font-bold hover:bg-[var(--color-highlight)] hover:text-[var(--color-bg)] focus:outline-none focus:ring-2 focus:ring-[var(--color-highlight)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="px-4 py-2 rounded-lg bg-[var(--color-muted)] text-[var(--color-text)] font-bold hover:bg-[var(--color-highlight)] hover:text-[var(--color-bg)] focus:outline-none focus:ring-2 focus:ring-[var(--color-highlight)] transition-colors"
             onClick={() => {
+              if (!user) {
+                handleSignIn();
+                return;
+              }
+
               const studySide = core.termLanguage === studyLanguage ? core.term : (core[langConfig.studyField] || '');
               const backSide =
                 core.termLanguage === backConfig.backLanguage
@@ -672,18 +677,9 @@ export default function Home() {
               setShowFlashcardForm(true);
               setSaveSuccess(false);
             }}
-            disabled={!user}
           >
-            {t(nativeLanguage, 'saveAsFlashcard')}
+            {user ? t(nativeLanguage, 'saveAsFlashcard') : t(nativeLanguage, 'signInToSave')}
           </button>
-          {!user && (
-            <button
-              onClick={handleSignIn}
-              className="mt-2 block text-sm text-[var(--color-muted)] hover:text-[var(--color-text)] transition-colors underline underline-offset-2"
-            >
-              {t(nativeLanguage, 'signInToSave')}
-            </button>
-          )}
 
           {/* Not what you meant? */}
           <div className="mt-5 pt-4 border-t border-[var(--color-muted)]/40">

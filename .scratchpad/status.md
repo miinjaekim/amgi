@@ -201,6 +201,46 @@ Android, where only sign-in has been exercised.
 Closed calls, kept with their reasoning — a decision whose reasoning is lost gets
 reopened by the next person to notice the symptom. Newest first.
 
+### The save button is one live control, and web moved too (2026-09-08)
+
+Mobile's signed-out save button was painted `saveBtnDisabled` while its
+`onPress` ran `handleSignIn` — reported as "looks like it isn't clickable",
+and it was clickable the whole time. Fixed by **deleting `saveBtnDisabled`**
+rather than by dimming it less: signed out, this is the primary action on the
+screen, because it is how an account gets created. The style had no other user,
+so the question was whether it should exist, not what shade it should be.
+
+**Web changed too, and it is the half of this that wasn't in the report.** The
+backlog described web as a filled primary button plus a separate underlined
+sign-in link, and treated that as the better shape to copy. Web was actually
+running `disabled={!user}` on the save button, so signed out it was *genuinely*
+inert and the small underlined link was the only live control. That is honest —
+it never painted one control two ways — but it makes the primary action the
+least prominent thing in the group and leaves a dead button sitting on top of
+it. Copying it onto mobile would have converged the platforms on the weaker
+shape.
+
+So both platforms now render **one control that is always live**, with the
+label carrying the state: "Save as flashcard" signed in, "Sign in to save
+flashcards." signed out. Web's `disabled={!user}`, its `disabled:` utilities,
+and its separate link are gone; the click handler returns early into
+`handleSignIn` when there is no user.
+
+⚠️ **The disabled paint was unreadable, not merely dim.** `saveBtnText` is
+`C.bg` on `C.border`, which is `#173F35` on `#2D6355` (~1.6:1) on forest and
+`#2C2E34` on `#414550` (~1.4:1) on Sonokai — both far under any threshold, so
+even a genuinely-disabled button could not have kept that pairing. Deleting the
+style resolved the contrast question rather than answering it; if a disabled
+save state is ever needed, it needs a new colour pair, not this one.
+
+**The two platforms still differ in fill, and that is pre-existing.** Mobile
+fills with `C.highlight`; web fills with `--color-muted` and goes to highlight
+on hover. This change aligned the *shape* — one control, one meaning, label
+switches — and deliberately did not repaint web's button, which would have
+changed the signed-in state nobody complained about. Web's generate button on
+`page.tsx` keeps its `disabled:` utilities: it really does disable while a
+lookup is in flight.
+
 ### Readings reach mobile review, and no setting comes with them (2026-09-08)
 
 `getReading` renders Kikuyu respelling, Japanese furigana + pitch accent and

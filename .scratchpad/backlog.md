@@ -126,29 +126,6 @@ Reasoning in the Decisions entry in [status.md](status.md); the shape is in
 
 ## Medium
 
-- [ ] **The signed-out save button is styled as disabled but is not.** Reported
-      as "looks like it isn't clickable", and the cause is one line in
-      `app/(tabs)/index.tsx`: the button carries
-      `[s.saveBtn, !user && s.saveBtnDisabled]` while its `onPress` is
-      `user ? handleOpenSave : handleSignIn`. So signed out it is painted
-      `C.border` — the disabled treatment — and **it still works**. The label
-      already says what it does ("Sign in to save flashcards."); only the paint
-      disagrees.
-      ⚠️ **Do not fix this by dimming it less.** A button that is enabled should
-      not wear the disabled style at all — `saveBtnDisabled` has no other user
-      on this screen, so the question is whether it should exist rather than
-      what shade it should be. Signed out this is a *primary* action: it is how
-      an account gets created.
-      **Web already does something different and arguably better** — a filled
-      primary button plus a separate underlined "Sign in to save flashcards."
-      link beneath it (`app/page.tsx`), so it never paints one control two ways.
-      Decide whether mobile adopts that shape or just stops lying about being
-      disabled; the two platforms should not diverge further.
-      Also worth checking the *contrast* while in there: `saveBtnText` is
-      `C.bg` on `C.border`, which on the forest palette is a dark-on-dark pair
-      that would likely fail a contrast check even if it were genuinely
-      disabled.
-
 - [ ] **Military specialties pack (병과 / 주특기, "MOS").** Infantry, engineer,
       signal, artillery, armor, logistics, medical, and the rest — the branch a
       soldier belongs to, which the two shipped military packs do not cover.
