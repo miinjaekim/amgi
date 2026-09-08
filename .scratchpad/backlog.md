@@ -205,15 +205,8 @@ Reasoning in the Decisions entry in [status.md](status.md); the shape is in
 
 ## Bigger bets
 
-- [ ] **Should `/api/explain` allow two glosses?** It still says "single best
-      translation" across six prompt branches (12 templates), while a card back is
-      allowed up to two when one would mislead. Changing the core lookup loop has
-      a bigger blast radius than a new surface, so decide deliberately — and if
-      yes, all branches move together.
-      **This is now the only place the gloss ceiling is tracked.** The
-      word-of-the-day divergence was cancelled 2026-09-08 (Decisions in
-      [status.md](status.md)); if the ceiling here moves, that route is the next
-      thing to look at, since its prompt is a single line missing the rule.
+_Empty as of 2026-09-08 — the gloss ceiling was the only item here, and it
+closed (Decisions in [status.md](status.md))._
 
 ## Parked
 

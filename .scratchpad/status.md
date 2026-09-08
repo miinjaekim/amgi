@@ -201,6 +201,117 @@ Android, where only sign-in has been exercised.
 Closed calls, kept with their reasoning — a decision whose reasoning is lost gets
 reopened by the next person to notice the symptom. Newest first.
 
+### The gloss ceiling is one rule, and the semicolon knows about disambiguation (2026-09-08)
+
+**Closes "Should `/api/explain` allow two glosses?"** — the only item that was
+in Bigger bets, answered by the user directly rather than derived: *"so this
+semicolon thing is now only applied for the word of the day? can we have it
+also for the explain."* Yes. The entry below had left the two routes differing
+on purpose; that difference lasted about an hour.
+
+**Seventeen hand-written copies became one import.** `/api/explain` stated the
+rule sixteen times as a bullet plus once as a fragment on the native back, in
+four cosmetic wordings, covering eighteen templates (nine languages ×
+context/no-context; Kikuyu and Swahili share one rules constant across both of
+theirs). It now reads `GLOSS_RULE` from `apps/web/src/lib/glossRule.ts`, and so
+does `/api/word-of-the-day`. This is `characterBreakdownInstruction`'s argument
+applied to the thing that had already drifted: the day's word stated **no rule
+at all**, which is how it shipped "deadline, time limit, period".
+
+**The ceiling had to be restated as a total.** "Never a third" has a loophole —
+the model reads it as *never a third within one sense* and nests the marks.
+Measured on the lookup: 시원하다 came back "cool, refreshing; relieved, satisfied"
+and 微妙 "subtle, delicate; questionable, iffy", four glosses each, both obeying
+the rule as written. The sentence now names the whole field and forbids using
+both marks at once.
+
+**The semicolon is branch-aware, and that came from the user asking whether the
+ambiguity checker was relevant.** It is, decisively. A no-context lookup can
+answer `ambiguous: true` with `meanings`; the chip the learner taps comes back
+as the `context` of a second lookup (`page.tsx:200` → `handleDisambiguate`). So
+the same mark means different things on the two sides:
+
+- **Context template** — the sense is already pinned, so a semicolon does not
+  say the word has two senses, it says the prompt ignored the one it was given.
+  Comma only. Measured 0 semicolons in 8 pinned re-lookups.
+- **No-context template** — a semicolon competes with `meanings`. Two senses far
+  enough apart to need one are two chips, not one back. What is left for it is
+  the band the ambiguity bar deliberately excludes ("closely related variants of
+  the same concept"): 迷う's "get lost" and "be undecided", one idea applied to a
+  place and to a decision.
+
+**The disambiguation flow absorbed the offenders, at no extra friction.** Every
+word that had produced a four-gloss back — 微妙, 시원하다, 답답하다, 거리, 迷う —
+routes to chips instead. And the **chip rate did not move**: 13/30 under the old
+strict-single rule, 13/30 under the new one, so the clause redirects which words
+disambiguate without sending more of them there. That was the risk worth
+measuring, since a chip is an extra tap before a card.
+
+**Known leak, not fixed:** 1 in 28 still breaks the ceiling — Swedish `orka` as
+"to have the energy/strength; to cope", which manages a slash *and* a semicolon.
+It is left as measured rather than chased with a fourth wording pass.
+
+### The word of the day gets a gloss ceiling of its own (2026-09-08)
+
+**This reverses the cancellation three entries down, on the user's call the same
+day.** That entry read the divergence as a question the core lookup had to
+answer first — one gloss or two — and parked it behind "Should `/api/explain`
+allow two glosses?". The user answered it directly for this surface: *"i don't
+like how i find it oftentimes produces translations with many synonyms. i would
+rather it translates with one or two only when it's necessary like how we have
+our learn search work."* A ceiling nobody had to derive is not a bigger bet, so
+the route stopped waiting on one.
+
+**The ceiling is one gloss, a second only when one would mislead** — the card
+back's rule, not `/api/explain`'s strict single. A word of the day *is* a card
+back, since saving it is what the card is made from, and forcing one gloss onto
+a term no single word covers makes the card wrong rather than clean. The prompt
+also names the failure it is correcting, because the model's default reading of
+"the best translation" was a list: `"deadline"` is a gloss, `"deadline, time
+limit, period"` is a list.
+
+**The rule counts glosses; it does not legislate punctuation** — corrected the
+same day, again on the user's call: *"i think using a semicolon can still be
+alright though (?) i can imagine scenarios where it's necessary."* The first
+pass banned the semicolon outright, copying `/api/explain`'s "never list
+synonyms with semicolons or slashes", and that was the wrong lever twice. The
+reported failure is a **count**, and a ban on the mark is only a proxy for it —
+one the model satisfies while still answering "to return, to do again, to
+recover". And it forbade the mark carrying the most information: a comma joins
+near-synonyms inside one sense, a semicolon separates two senses. 迷う is "to get
+lost; to be undecided", and comma-joining those reads as one idea — the exact
+misleading back the second gloss exists to prevent. So the rule now sets the
+count (never a third) and lets the punctuation *say which kind of pair it is*.
+
+**The slash stayed banned, and that clause is not the same kind of rule.**
+Dropping the punctuation sentence dropped the slash with it, and one word in 24
+came back as `orka` "to have the energy/strength". A slash is not a sense
+distinction, it is a comma the model declined to commit to, so it is named
+explicitly. With it back, `orka` returns as "to have the energy, strength".
+
+**Measured twice, 24 words across six languages each.** Before the punctuation
+correction and after: zero three-item lists both times, so relaxing the
+semicolon did not reopen the failure. What changed is that the semicolons which
+appear are genuine sense splits — 거리 "street; distance", 驕傲 "proud; arrogant",
+마감 "deadline; closing" — while near-synonyms take the comma (ambiance
+"atmosphere, mood"). **A two-sense back is still a weaker card than a one-sense
+back**, since it asks two questions at once; it is accepted here because the
+alternative is a back that silently hides a meaning, and `briefDefinition` sits
+directly beneath it to disambiguate.
+
+**`/api/explain` did not move, and the Bigger bets item stays open.** The user
+named Learn's lookup as the thing that already behaves, so changing it would
+have been changing the one surface that wasn't reported. The two rules now
+differ on purpose — strict single on the lookup, one-or-two on the day's word —
+and that difference is the open question, not a drift to reconcile.
+
+**Nothing repairs a document already written.** The word for a (date, language
+pair) is generated once and read back by everyone after, so every day already
+stored keeps the gloss it was given; the fix reaches tomorrow's word, and
+today's only if its document is deleted. Same shape as the `pitchAccent`
+decision above — this route has never repaired a stored document on read, and
+the CDN TTL was already shortened so a deletion takes effect the same day.
+
 ### The save button is one live control, and web moved too (2026-09-08)
 
 Mobile's signed-out save button was painted `saveBtnDisabled` while its

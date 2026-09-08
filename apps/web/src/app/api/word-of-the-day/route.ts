@@ -3,6 +3,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/firebaseAdmin';
 import { PART_OF_SPEECH_CODES, getStudyLanguageConfig, getBackSideConfig, isStudyLanguage, normalizePartOfSpeech, parseModelJson, wordOfTheDayCore, type WordOfTheDay } from '@amgi/core';
 import { lookupPitchAccent } from '@/lib/pitchAccentLookup';
+// The day's word is a card back, so it takes the shared gloss ceiling. It used
+// to ask for "the best English translation" and nothing else — the one prompt in
+// the app that stated no rule — so the model answered with a list: `délai` as
+// "deadline, time limit, period", `gũcoka` as "to return; to do again; to
+// recover". The same word looked up by hand never did, because `/api/explain`
+// stated a rule in all eighteen of its templates. Both read from `GLOSS_RULE`
+// now, so there is nothing left to keep in step.
+import { GLOSS_RULE } from '@/lib/glossRule';
 
 /** How far back to look when keeping the daily word from repeating. */
 const EXCLUSION_DAYS = 60;
@@ -167,6 +175,8 @@ Today's domain is: ${domainFor(date)}. Pick a word that belongs to it. If that d
 Also vary the part of speech from the recent picks below, rather than returning another word of the same kind.
 
 Do not pick a word because of the time of year. Seasons, weather, and holidays are not reasons to prefer a word.
+
+${GLOSS_RULE}
 ${exclusionBlock}${insist ? '\nYour previous answer was on the already-used list. Pick a genuinely different word this time.\n' : ''}
 Respond with only this JSON:
 {

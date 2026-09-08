@@ -117,9 +117,10 @@ about before anyone re-derives them. **The shared term cache going takes the
 local-model reopen condition with it**, since that condition was "when the cache
 is live and has a measured hit rate" — so on-device is closed rather than
 waiting, and `docs/local-model.md` §8 is now analysis rather than a plan. And
-**the word-of-the-day gloss divergence is real but no longer tracked on its own**
-— the one-gloss-or-two ceiling belongs to `/api/explain`, where it sits in Bigger
-bets. The pack roadmap closed too; the MOS pack is untouched and is now the only
+**the word-of-the-day gloss divergence was cancelled and then reversed the same
+day** — the user set the ceiling directly (one gloss, a second only when one
+would mislead), so that route is fixed and `/api/explain`'s strict single is now
+the open half of the question. The pack roadmap closed too; the MOS pack is untouched and is now the only
 pack tracked. Full reasoning, item by item, in the 2026-09-08 Decisions entry in
 [status.md](status.md)._
 
