@@ -201,6 +201,46 @@ Android, where only sign-in has been exercised.
 Closed calls, kept with their reasoning — a decision whose reasoning is lost gets
 reopened by the next person to notice the symptom. Newest first.
 
+### Readings reach mobile review, and no setting comes with them (2026-09-08)
+
+`getReading` renders Kikuyu respelling, Japanese furigana + pitch accent and
+Chinese pinyin. Web's review screen called it on both faces; **mobile's called
+it nowhere** — mobile used it only on Learn and in `CardDetailModal`. So a
+Kikuyu learner reviewing on a phone read bare orthography, which for Kikuyu is
+the whole point of the aid, and Japanese and Traditional Chinese lost their
+readings on that screen too. A parity bug, not a missing feature.
+
+**No setting shipped with it, and that is the decision.** The ask arrived as
+"let users *see* Kikuyu pronunciation during review", which reads as a request
+for a toggle — but nothing was gated: the render was simply absent. A toggle
+would have been a switch for a feature that did not exist on that screen yet.
+A reading is an aid rather than a spoiler, and web has shown them
+unconditionally since they existed without anyone asking for a switch. Shipping
+the parity with no control is the cheap experiment that finds out; an actual
+complaint reopens it. The homes-for-controls question the item was really about
+stays in [backlog.md](backlog.md), unanswered on purpose.
+
+⚠️ **Reveal-gated on both directions, which is web's placement and not the
+obvious one.** The pronounce button on this screen rides the study side
+wherever it lands — visible immediately on `frontToBack`, at the reveal on
+`backToFront` — so the consistent-looking choice would have been to show the
+reading early on `frontToBack` too, and it would not have spoiled anything. It
+is gated anyway because the alternative puts the badge *above* the divider on
+one draw and *below* the answer on the other with no shared moment of
+appearance; a learner would find it in a different place depending on the
+direction they drew. Web already resolved this the same way by bundling the
+reading into a chip row that only exists after the answer.
+
+Styled as the bordered pill Learn and `CardDetailModal` already put a reading
+in, so the same string looks the same on all three mobile surfaces. Derived
+from `card` rather than `shownCard`: enrichment writes depth and examples,
+never `furigana` or `pitchAccent`, so the reading cannot change mid-card — the
+same reason the pronounce button reads `card.furigana`.
+
+**The drill screen is not affected and is not a gap.** It works on `PackEntry`,
+which carries no `furigana`/`pinyin`/`kikuyu` fields for `getReading` to read,
+and web has no drill to be out of parity with.
+
 ### Seven backlog items close, and one of them closes a reopen path (2026-09-08)
 
 A cleanup pass on the user's call rather than a build pass. Six items were
