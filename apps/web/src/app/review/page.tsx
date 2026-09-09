@@ -22,6 +22,7 @@ import {
   trackingFor,
   removeCardFromQueue,
   getBackSideConfig,
+  hanjaFaces,
   directionLabel,
   directionPrompt,
   gradeTypedAnswer,
@@ -88,7 +89,7 @@ interface UndoableRating {
 }
 
 export default function ReviewPage() {
-  const { user, nativeLanguage, studyLanguage, recordReview, undoReview } = useUser();
+  const { user, nativeLanguage, studyLanguage, hanjaPartition, recordReview, undoReview } = useUser();
   const langConfig = getStudyLanguageConfig(studyLanguage);
   const backConfig = getBackSideConfig(studyLanguage, nativeLanguage);
   const [userFlashcards, setUserFlashcards] = useState<Flashcard[]>([]);
@@ -491,6 +492,33 @@ export default function ReviewPage() {
     card[langConfig.studyField] ?? card.term ?? '';
 
   /**
+   * The two faces of the card being reviewed.
+   *
+   * Everywhere but Hanja these are the study side and the back, which is what
+   * this screen has always shown. A hanja card has three parts and the learner
+   * chose which one leads, so its faces come from the partition instead —
+   * `frontToBack` and `backToFront` still mean forward and reverse, they are
+   * just forward and reverse over a different split.
+   *
+   * Not `getStudySide`, which stays the character: that one is identity — it
+   * feeds the edit draft, and a card renamed to its 훈 would stop matching its
+   * own deck.
+   */
+  const faces = (card: Flashcard) =>
+    studyLanguage === 'Hanja'
+      ? hanjaFaces(card, hanjaPartition)
+      : { front: getStudySide(card), back: getBackSide(card, nativeLanguage) };
+
+  /**
+   * The English meaning of a hanja, for a reader who does not read 훈음 as
+   * their own language. Shown *with* the 훈음 and never instead of it: 水 is
+   * 물 수 to every learner, and "water" is a second fact about the character
+   * rather than a translation of the first.
+   */
+  const hanjaGloss = (card: Flashcard) =>
+    studyLanguage === 'Hanja' && nativeLanguage !== 'Korean' ? card.english : undefined;
+
+  /**
    * A ring on the rating the typed answer earned. Emphasis only — every button
    * stays live, because the point is that the learner can disagree. Neutral
    * rather than tinted, so it reads the same on the red `again` and the pale
@@ -600,7 +628,7 @@ export default function ReviewPage() {
   const currentReview = activeQueue[currentReviewIdx];
   /** Only `backToFront` is ever typed — see `promptsForTyping`. */
   const typingThisCard = currentReview
-    ? promptsForTyping(typingEnabled, currentReview.direction)
+    ? promptsForTyping(typingEnabled, currentReview.direction, studyLanguage)
     : false;
 
   // Only offered when there is something else to change to — a single
@@ -887,7 +915,7 @@ export default function ReviewPage() {
                   <h2 className="text-xl font-bold">
                     {reviewCardProgressLabel}
                     <span className="ml-2 px-2 py-1 text-sm bg-[var(--color-muted)] rounded-md">
-                      {directionLabel(nativeLanguage, studyLanguage, currentReview.direction)}
+                      {directionLabel(nativeLanguage, studyLanguage, currentReview.direction, hanjaPartition)}
                     </span>
                   </h2>
                   <div className="flex items-center gap-2">
@@ -992,14 +1020,18 @@ export default function ReviewPage() {
                   {currentReview.direction === 'frontToBack' ? (
                     <>
                       <div className="flex items-center gap-2 mb-2">
-                        <div className="font-semibold text-2xl text-[var(--color-highlight)]">{getStudySide(currentReview.card)}</div>
-                        <PronounceButton text={getStudySide(currentReview.card)} furigana={currentReview.card.furigana} studyLanguage={studyLanguage} />
+                        <div className="font-semibold text-2xl text-[var(--color-highlight)]">{faces(currentReview.card).front}</div>
+                        <PronounceButton text={faces(currentReview.card).front} furigana={currentReview.card.furigana} studyLanguage={studyLanguage} />
                       </div>
 
                       {showAnswer ? (
                         <>
-                          {getBackSide(currentReview.card, nativeLanguage) && (
-                            <div className="text-lg mb-3 text-[var(--color-text)] font-semibold">{getBackSide(currentReview.card, nativeLanguage)}</div>
+                          {faces(currentReview.card).back && (
+                            <div className="text-lg mb-3 text-[var(--color-text)] font-semibold">{faces(currentReview.card).back}</div>
+                          )}
+
+                          {hanjaGloss(currentReview.card) && (
+                            <div className="text-base mb-3 text-[var(--color-muted)]">{hanjaGloss(currentReview.card)}</div>
                           )}
 
                           {(partOfSpeechLabel(nativeLanguage, currentReview.card) ||
@@ -1042,22 +1074,26 @@ export default function ReviewPage() {
                         </>
                       ) : (
                         <div className="text-[var(--color-muted)] text-lg mt-4 italic">
-                          {directionPrompt(nativeLanguage, studyLanguage, 'frontToBack')}
+                          {directionPrompt(nativeLanguage, studyLanguage, 'frontToBack', hanjaPartition)}
                         </div>
                       )}
                     </>
                   ) : (
                     <>
-                      {getBackSide(currentReview.card, nativeLanguage) && (
-                        <div className="text-lg mb-2 text-[var(--color-text)]">{getBackSide(currentReview.card, nativeLanguage)}</div>
+                      {faces(currentReview.card).back && (
+                        <div className="text-lg mb-2 text-[var(--color-text)]">{faces(currentReview.card).back}</div>
                       )}
 
                       {showAnswer ? (
                         <>
                           <div className="flex items-center gap-2 mb-3 mt-4">
-                            <div className="font-semibold text-2xl text-[var(--color-highlight)]">{getStudySide(currentReview.card)}</div>
-                            <PronounceButton text={getStudySide(currentReview.card)} furigana={currentReview.card.furigana} studyLanguage={studyLanguage} />
+                            <div className="font-semibold text-2xl text-[var(--color-highlight)]">{faces(currentReview.card).front}</div>
+                            <PronounceButton text={faces(currentReview.card).front} furigana={currentReview.card.furigana} studyLanguage={studyLanguage} />
                           </div>
+
+                          {hanjaGloss(currentReview.card) && (
+                            <div className="text-base mb-3 text-[var(--color-muted)]">{hanjaGloss(currentReview.card)}</div>
+                          )}
 
                           {/* The two strings side by side. This is what makes
                               a strict grader honest: the learner is not
@@ -1119,7 +1155,7 @@ export default function ReviewPage() {
                       ) : (
                         <>
                           <div className="text-[var(--color-muted)] text-lg mt-4 italic">
-                            {directionPrompt(nativeLanguage, studyLanguage, 'backToFront')}
+                            {directionPrompt(nativeLanguage, studyLanguage, 'backToFront', hanjaPartition)}
                           </div>
                           {typingThisCard && (
                             <input
@@ -1233,7 +1269,7 @@ export default function ReviewPage() {
                   >
                     {dir === 'both'
                       ? t(nativeLanguage, 'directionBoth')
-                      : directionLabel(nativeLanguage, studyLanguage, dir)}
+                      : directionLabel(nativeLanguage, studyLanguage, dir, hanjaPartition)}
                   </button>
                 ))}
               </div>

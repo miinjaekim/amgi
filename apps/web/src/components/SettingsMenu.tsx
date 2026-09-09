@@ -4,6 +4,7 @@ import { useUser } from '@/components/UserContext';
 import { useTheme } from '@/components/ThemeContext';
 import { usePronunciation } from '@/components/PronunciationContext';
 import { SUPPORTED_NATIVE_LANGUAGES, SUPPORTED_STUDY_LANGUAGES } from '@/services/userPreferences';
+import { HANJA_PARTITIONS, type HanjaPartition } from '@amgi/core';
 import { t } from '@/lib/i18n';
 import DeleteAccountModal from '@/components/DeleteAccountModal';
 
@@ -37,10 +38,23 @@ export function StudyLanguageList({ onSelect }: { onSelect?: () => void }) {
   );
 }
 
+/** i18n keys for a partition, kept next to each other so neither is guessed. */
+function partitionLabelKey(partition: HanjaPartition) {
+  if (partition === 'hun') return 'hanjaPartitionHun' as const;
+  if (partition === 'eum') return 'hanjaPartitionEum' as const;
+  return 'hanjaPartitionCharacter' as const;
+}
+
+function partitionDescKey(partition: HanjaPartition) {
+  if (partition === 'hun') return 'hanjaPartitionHunDesc' as const;
+  if (partition === 'eum') return 'hanjaPartitionEumDesc' as const;
+  return 'hanjaPartitionCharacterDesc' as const;
+}
+
 /** Shared settings panel body — rendered inside the header dropdown (mobile)
  *  and the sidebar popover (desktop). The container provides positioning. */
 export default function SettingsMenu({ onClose }: { onClose: () => void }) {
-  const { user, nativeLanguage, studyLanguage, setNativeLanguage, handleSignOut } = useUser();
+  const { user, nativeLanguage, studyLanguage, hanjaPartition, setNativeLanguage, setHanjaPartition, handleSignOut } = useUser();
   const { theme, setTheme, themes } = useTheme();
   const { speed, setSpeed, speeds } = usePronunciation();
   const [langListOpen, setLangListOpen] = useState(false);
@@ -104,6 +118,41 @@ export default function SettingsMenu({ onClose }: { onClose: () => void }) {
           ))}
         </div>
       </div>
+
+      {/* The hanja partition — which part of the card is on the front.
+          Shown only on the deck it describes, and only here: a control that
+          reaches into the review session would become a per-session toggle,
+          and every switch inherits intervals earned answering a different
+          question. Chosen once, like the study language above it. */}
+      {studyLanguage === 'Hanja' && (
+        <div className="px-4 py-3 border-b border-[var(--color-muted)]/50">
+          <p className="text-xs font-mono uppercase tracking-widest" style={{ color: 'var(--color-muted)' }}>
+            {t(nativeLanguage, 'settingsHanjaPartition')}
+          </p>
+          <p className="text-xs mt-1 leading-snug" style={{ color: 'var(--color-muted)' }}>
+            {t(nativeLanguage, 'settingsHanjaPartitionDesc')}
+          </p>
+          <div className="flex flex-col gap-2 mt-2">
+            {HANJA_PARTITIONS.map((partition) => (
+              <button
+                key={partition}
+                onClick={() => setHanjaPartition(partition)}
+                className="w-full text-left px-3 py-2.5 rounded-lg text-sm font-mono border transition-colors"
+                style={
+                  hanjaPartition === partition
+                    ? { background: 'var(--color-highlight)', color: 'var(--color-bg)', borderColor: 'var(--color-highlight)' }
+                    : { background: 'transparent', color: 'var(--color-text)', borderColor: 'var(--color-muted)' }
+                }
+              >
+                <span className="block">{t(nativeLanguage, partitionLabelKey(partition))}</span>
+                <span className="block text-xs opacity-70 mt-0.5">
+                  {t(nativeLanguage, partitionDescKey(partition))}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Theme selector */}
       <div className="px-4 py-3 border-b border-[var(--color-muted)]/50">

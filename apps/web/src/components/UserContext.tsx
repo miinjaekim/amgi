@@ -4,10 +4,11 @@ import { auth, googleProvider } from '@/config/firebase';
 import { signInWithPopup, signOut, onAuthStateChanged, User } from 'firebase/auth';
 import { getUserPreferences, recordReviewStreak, saveUserPreferences, subscribeToUserPreferences } from '@/services/userPreferences';
 import { recordProgress } from '@/services/progress';
-import { hourKey, isStudyLanguage, negateDelta, resolveNativeLanguage, resolveStudyLanguage, reviewDelta, type RatingContext, type RecordedReview, type ReviewVerdict, type StudyLanguage } from '@amgi/core';
+import { DEFAULT_HANJA_PARTITION, hourKey, isHanjaPartition, isStudyLanguage, negateDelta, resolveNativeLanguage, resolveStudyLanguage, reviewDelta, type HanjaPartition, type RatingContext, type RecordedReview, type ReviewVerdict, type StudyLanguage } from '@amgi/core';
 
 const LANG_CACHE_KEY = 'amgi_native_language';
 const STUDY_LANG_CACHE_KEY = 'amgi_study_language';
+const HANJA_PARTITION_CACHE_KEY = 'amgi_hanja_partition';
 
 function getTodayString(): string {
   return new Date().toLocaleDateString('en-CA');
@@ -18,10 +19,13 @@ interface UserContextType {
   authLoading: boolean;
   nativeLanguage: string | null | undefined;
   studyLanguage: StudyLanguage;
+  /** Which part of a hanja card is on the front. Meaningless on other decks. */
+  hanjaPartition: HanjaPartition;
   streak: number;
   reviewedToday: number;
   setNativeLanguage: (lang: string) => Promise<void>;
   setStudyLanguage: (lang: StudyLanguage) => Promise<void>;
+  setHanjaPartition: (partition: HanjaPartition) => Promise<void>;
   /** Returns the receipt `undoReview` needs — the day counted and what was written. */
   recordReview: (verdict: ReviewVerdict, context?: RatingContext) => RecordedReview;
   undoReview: (recorded: RecordedReview) => void;
@@ -36,6 +40,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   const [authLoading, setAuthLoading] = useState(true);
   const [nativeLanguage, setNativeLanguageState] = useState<string | null | undefined>(undefined);
   const [studyLanguage, setStudyLanguageState] = useState<StudyLanguage>('Korean');
+  const [hanjaPartition, setHanjaPartitionState] = useState<HanjaPartition>(DEFAULT_HANJA_PARTITION);
   const [streak, setStreak] = useState(0);
   const [reviewedToday, setReviewedToday] = useState(0);
 
@@ -44,6 +49,8 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     if (cached) setNativeLanguageState(cached);
     const cachedStudy = localStorage.getItem(STUDY_LANG_CACHE_KEY);
     if (isStudyLanguage(cachedStudy)) setStudyLanguageState(cachedStudy);
+    const cachedPartition = localStorage.getItem(HANJA_PARTITION_CACHE_KEY);
+    if (isHanjaPartition(cachedPartition)) setHanjaPartitionState(cachedPartition);
   }, []);
 
   useEffect(() => {
@@ -124,6 +131,12 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
         const today = getTodayString();
         setStreak(prefs?.streak ?? 0);
         setReviewedToday(prefs?.lastReviewDate === today ? (prefs?.reviewedToday ?? 0) : 0);
+        // Read live like the streak beside it, and for the same reason: this is
+        // a durable choice a learner makes once, so the copy in the document is
+        // the only copy. A document with no field means unset, which is the
+        // default rather than whatever this tab last cached.
+        const partition = prefs?.hanjaPartition;
+        setHanjaPartitionState(isHanjaPartition(partition) ? partition : DEFAULT_HANJA_PARTITION);
       },
       error => console.error('[UserContext] preferences subscription failed:', error),
     );
@@ -170,6 +183,12 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
         ...(nativeChanged ? { nativeLanguage: nextNative } : {}),
       });
     }
+  };
+
+  const setHanjaPartition = async (partition: HanjaPartition) => {
+    setHanjaPartitionState(partition);
+    localStorage.setItem(HANJA_PARTITION_CACHE_KEY, partition);
+    if (user) await saveUserPreferences(user.uid, { hanjaPartition: partition });
   };
 
   const recordReview = (verdict: ReviewVerdict, context: RatingContext = {}): RecordedReview => {
@@ -229,7 +248,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <UserContext.Provider value={{ user, authLoading, nativeLanguage, studyLanguage, streak, reviewedToday, setNativeLanguage, setStudyLanguage, recordReview, undoReview, handleSignIn, handleSignOut }}>
+    <UserContext.Provider value={{ user, authLoading, nativeLanguage, studyLanguage, hanjaPartition, streak, reviewedToday, setNativeLanguage, setStudyLanguage, setHanjaPartition, recordReview, undoReview, handleSignIn, handleSignOut }}>
       {children}
     </UserContext.Provider>
   );

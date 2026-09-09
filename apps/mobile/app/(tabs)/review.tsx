@@ -25,7 +25,7 @@ import {
   DIRECTION_FILTERS, applyPendingReviews, buildReviewCollections,
   buildReviewQueue, cardsInCollection, collectionKey, dueReviewItems,
   filterByDirection, findCollection, flattenCollections,
-  getBackSide, getNextReviewDate,
+  getBackSide, getNextReviewDate, hanjaFaces,
   getNextReviewData, getStudyLangSide, getStudyLanguageConfig, getBackSideConfig,
   directionLabel, getCharacterBreakdown, getExampleSides, getReading,
   maturityChange, removeCardFromQueue, t, trackingFor,
@@ -79,7 +79,7 @@ export default function ReviewScreen() {
   const { C } = useTheme();
   const tabBarHeight = useFloatingTabBarHeight();
   const s = useMemo(() => makeStyles(C, tabBarHeight), [C, tabBarHeight]);
-  const { user, nativeLanguage, studyLanguage, recordReview, undoReview } = useUser();
+  const { user, nativeLanguage, studyLanguage, hanjaPartition, recordReview, undoReview } = useUser();
   const config = getStudyLanguageConfig(studyLanguage);
   const backConfig = getBackSideConfig(studyLanguage, nativeLanguage);
   const { isOnline, pendingCount, sync } = usePendingReviewSync(user?.uid);
@@ -979,7 +979,7 @@ export default function ReviewScreen() {
                 <Text style={[s.pillText, directionFilter === dir && s.pillTextOn]}>
                   {dir === 'both'
                     ? t(nativeLanguage, 'directionBoth')
-                    : directionLabel(nativeLanguage, studyLanguage, dir)}
+                    : directionLabel(nativeLanguage, studyLanguage, dir, hanjaPartition)}
                 </Text>
               </TouchableOpacity>
             ))}
@@ -1099,8 +1099,29 @@ export default function ReviewScreen() {
   const isFront = direction === 'frontToBack';
   const studySide = getStudyLangSide(card);
   const backSide = getBackSide(card, nativeLanguage);
-  const frontText = isFront ? studySide : backSide;
-  const backText = isFront ? backSide : studySide;
+  /**
+   * The two faces of the card, which on Hanja are not the study side and the
+   * back. A hanja card has three parts and the learner chose which one leads,
+   * so the split comes from the partition; `frontToBack` and `backToFront`
+   * still mean forward and reverse, over a different split.
+   *
+   * `studySide` and `backSide` stay as they are underneath, because the edit
+   * draft below writes through them: editing a card renamed to its 훈 would
+   * put the 훈 in the field the deck matches on.
+   */
+  const faces = studyLanguage === 'Hanja'
+    ? hanjaFaces(card, hanjaPartition)
+    : { front: studySide, back: backSide };
+  const frontText = isFront ? faces.front : faces.back;
+  const backText = isFront ? faces.back : faces.front;
+  /**
+   * The English meaning of a hanja, for a reader who does not read 훈음 as
+   * their own language. Shown *with* the 훈음, never instead of it: 水 is 물 수
+   * to every learner, and "water" is a second fact rather than a translation
+   * of the first.
+   */
+  const hanjaGloss =
+    studyLanguage === 'Hanja' && nativeLanguage !== 'Korean' ? card.english : undefined;
   /**
    * Rides the study side wherever that lands — the front on `frontToBack`, the
    * revealed back on `backToFront` — which is what web does, and the only
@@ -1148,7 +1169,7 @@ export default function ReviewScreen() {
     </View>
   ) : null;
   /** Only `backToFront` is ever typed — see `promptsForTyping`. */
-  const typingThisCard = promptsForTyping(typingEnabled, direction);
+  const typingThisCard = promptsForTyping(typingEnabled, direction, studyLanguage);
 
   // Only the typed field before the reveal and the edit form can raise the
   // keyboard, and those are exactly the two branches that render no
@@ -1261,7 +1282,7 @@ export default function ReviewScreen() {
 
         {/* Direction label */}
         <Text style={s.directionLabel}>
-          {directionLabel(nativeLanguage, studyLanguage, isFront ? 'frontToBack' : 'backToFront')}
+          {directionLabel(nativeLanguage, studyLanguage, isFront ? 'frontToBack' : 'backToFront', hanjaPartition)}
         </Text>
 
         {/* The card and the space under it are one dismiss target, the way
@@ -1411,6 +1432,7 @@ export default function ReviewScreen() {
                       <Text style={[s.backText, s.rowText]}>{backText}</Text>
                       {!isFront && pronounceButton}
                     </View>
+                    {hanjaGloss && <Text style={s.hanjaGloss}>{hanjaGloss}</Text>}
                     {!isFront && readingBadge}
 
                     {/* Both strings on screen. This is what lets the grader be
@@ -1669,6 +1691,9 @@ function makeStyles(C: Palette, tabBarHeight: number) {
   frontText: { fontSize: 32, fontWeight: '700', color: C.text, lineHeight: 40 },
   divider: { height: 1, backgroundColor: C.border, marginVertical: 20 },
   backText: { fontSize: 22, fontWeight: '600', color: C.highlight, lineHeight: 30 },
+  // Quieter than the 훈음 above it: a second fact about the character, not the
+  // answer the deck is asking for.
+  hanjaGloss: { fontSize: 16, color: C.muted, marginTop: 6 },
   // Shared by the term rows and the example rows. `flexShrink` is what keeps
   // a long term wrapping inside its row instead of pushing the pronounce
   // button off the card. The term row is unconditional so the word sits in
