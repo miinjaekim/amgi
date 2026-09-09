@@ -155,9 +155,9 @@ wildcard support — add them in the console) and the composite index on
 `archived + createdAt`, which Firebase offers a creation link for on the first
 failing query.
 
-#### 2. Three-sided cards
+#### 2. Three-sided cards — ✅ shipped 2026-09-09
 
-- [ ] **Store 훈 and 음 as separate fields; let the learner choose the split.**
+- [x] **Store 훈 and 음 as separate fields; let the learner choose the split.**
 
 A card holds three parts — 한자 (水), 훈, the meaning (물), and 음, the sound
 (수). 훈음 is the two read together (물 수); 독음 is the sound a character takes
@@ -218,14 +218,46 @@ and an English gloss is *additional*. So the shape a pack entry needs is four
 authored parts — 한자, 훈, 음, and an English meaning — not two backs. The
 lookup route already returns exactly that quartet.
 
-⚠️ **A two-part back breaks the typed-answer grader's assumption.**
-`typedAnswer.ts` grades input against *a* side. With 훈 and 음 both behind the
-card, does a correct answer need both, either, or is typing disabled for this
-deck? Cheapest honest answer is probably to leave typed answers off Hanja until
-someone asks.
+⚠️ **A two-part back breaks the typed-answer grader's assumption**, so
+**typing is off on Hanja in both directions** — the cheapest honest answer, and
+`promptsForTyping` now takes the study language to say so. Two reasons rather
+than one: `gradeTypedAnswer` grades against *a* side, so a typed 물 against a
+back of 물 수 is neither right nor wrong until someone decides whether both
+parts are required; and on the default partition the expected answer is a glyph
+most learners cannot type at all. Additive if anyone asks for it.
 
 Progress rolls up verdict counts per language (`byLanguage`, 2026-09-04) and
 that keeps working unchanged — another consequence of not growing the union.
+
+**What shipped, beyond the two bullets above:**
+
+- `hun` and `eum` on `TermCore`, beside `furigana` and `pinyin` rather than as
+  `CardSideField`s — those name the *languages* a card has sides in, and both
+  of these are Korean.
+- `hanjaFaces(card, partition)` is the **only** place the three parts are ever
+  joined, and the back keeps 한자 · 훈 · 음 order whichever part was lifted out.
+  It falls back to the character partition on a card that cannot be split, so
+  the part-1 cards that carry the 훈음 assembled in `korean` still review.
+- `korean` is still written on save, derived through `hunEum()` — so the card
+  list, the detail modal, CSV and Anki export need no idea partitions exist.
+  Derived at the one point a card is written, never authored.
+- `directionLabel` and `directionPrompt` name the *parts* on Hanja (한자 → 훈 ·
+  음), composed from three short part names rather than six hand-written pairs.
+- The picker is in settings on both platforms and **only there**, shown only
+  when the study language is Hanja.
+- An English native gets the gloss under the 훈음 on the reveal, in both
+  directions — the 2026-09-09 decision, rendered.
+
+Verified against Gemini: 水 → 물 / 수, 學 → 배울 / 학, and 物 → 만물 / 물, which
+is the case worth having — the 훈 and the 음 are different words that both
+contain 물, and one pre-assembled string would have to be taken apart by a
+parser guessing where the 훈 ends.
+
+⚠️ **One prompt-adherence miss, not fixed here.** 物 came back with
+`english: "thing, object, matter"` — three glosses, where the shared
+`GLOSS_RULE` caps the field at two. The rule is one shared string across every
+prompt on purpose, so this wants fixing there or not at all; a Hanja-specific
+gloss rule is exactly the fork that rule exists to prevent.
 
 #### 3. 급수 packs from 전국한자능력검정시험 배정한자
 

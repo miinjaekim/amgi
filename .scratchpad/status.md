@@ -44,8 +44,12 @@ _Reconciled against `main` @ `bc8cb97`, 2026-08-21. `npm test` 246/246, measured
   of example terms per app. Lookup verified against the live API, six probes:
   水 → 물 수 / water, 學 → 배울 학, 樂 → ambiguous across its three 훈음, the
   Japanese form 学 → corrected to 學, 물 → 水, and a bare 음 (수) → ambiguous
-  across five characters. The deck itself does not exist yet: three-sided cards
-  and the 급수 packs are the next two items in [backlog.md](backlog.md).
+  across five characters.
+  **Three-sided cards landed the same day**: 훈 and 음 are separate fields, the
+  learner picks which part leads from settings, and review reads its two faces
+  through `hanjaFaces()`. Typing is off on this deck. What is left is the 급수
+  packs — item 3 in [backlog.md](backlog.md) — so there is still nothing to
+  enrol; cards come from looking a character up.
   ⚠️ **Neither console step is done.** `cards_hanja` has **no security rule**,
   so every read and write fails `permission-denied`, and **both** composite
   indexes are missing — see the two-indexes lesson in [lessons.md](lessons.md),
@@ -234,6 +238,43 @@ Android, where only sign-in has been exercised.
 
 Closed calls, kept with their reasoning — a decision whose reasoning is lost gets
 reopened by the next person to notice the symptom. Newest first.
+
+### Three-sided hanja cards cost a setting, not a scheduling axis (2026-09-09)
+
+**Shipped as scoped**, and the scoping is the whole story: the first read of
+"three-sided" looked like a third `ReviewDirection`, which is a two-member union
+read in 92 places across 24 files and written into every card document in every
+language. It is not that. Three parts split into a front and a back is six
+configurations, and those six are three partitions × the two directions that
+already exist — so `sm2.ts`, `reviewQueue.ts`, `offlineReview.ts` and the
+direction filter were **not touched at all**.
+
+**`hanjaFaces()` is the only place the parts are joined**, and that is the rule
+worth keeping. `hun` and `eum` are stored apart because the split moves; any
+surface that assembles its own 훈음 is a second opinion about the separator.
+The back also keeps 한자 · 훈 · 음 order whichever part was lifted out of it, so
+水 물 and 물 水 never appear as the same fact in two orders.
+
+**`korean` is still written, and derived.** Every surface keyed on the language
+pair — the card list, the detail modal, CSV and Anki export, `getBackSide` —
+reads `korean` and now gets the assembled 훈음 without knowing partitions exist.
+It is filled from `hunEum()` at the one point a card is written, so it cannot
+drift from the two fields it comes from. The alternative was making six generic
+surfaces Hanja-aware to avoid storing a derived string; this is the smaller
+change and the drift risk is contained to one line per platform.
+
+**Typing is off on Hanja, in both directions.** `gradeTypedAnswer` grades
+against *a* side, and a typed 물 against a back of 물 수 is neither right nor
+wrong until someone decides whether both parts are required — and on the default
+partition the expected answer is a glyph most learners cannot type. Left off
+rather than guessed at; `promptsForTyping` takes the study language to say so.
+
+⚠️ **The accepted cost stands: switching partition inherits intervals earned
+answering a different question.** The control lives in settings on both
+platforms and **nowhere else** — in the review session it would drift into a
+per-session toggle and make those inherited intervals meaningless. Reopen with
+partition-keyed tracking if switching turns out to be common; it is additive and
+invalidates nothing stored.
 
 ### Hanja's card back, and the `hanja` name it had to take (2026-09-09)
 

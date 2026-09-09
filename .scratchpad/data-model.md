@@ -28,6 +28,8 @@ interface TermCore {
   gender?: string;      // grammatical gender: Swedish en/ett, French le/la
   furigana?: string;    // Japanese kana reading, when the term contains kanji
   pinyin?: string;      // Traditional Chinese, tone-marked
+  hun?: string;         // Hanja 훈 — the native-Korean meaning (물)
+  eum?: string;         // Hanja 음 — the Korean sound (수)
   briefDefinition?: string;
   translation?: string; // legacy only — cards pre-dating the korean/english fields
 }
@@ -618,6 +620,36 @@ schema change plus offline-write handling for a one-second choice (PR #65).
   through `getCharacterBreakdown()` with no migration. That ended 2026-09-09,
   when `hanja` became the *front* of a Hanja card: `migrate:legacy-hanja` moved
   them onto `characterBreakdown` and the deprecated field is gone.
+## The hanja partition
+
+`HanjaPartition = 'character' | 'hun' | 'eum'` in `types.ts` — which part of a
+hanja card is on the front. Stored on `UserPreferences.hanjaPartition`, absent
+meaning `DEFAULT_HANJA_PARTITION` (`'character'`, the question the 급수 exam
+asks). One setting, not one per deck: there is one Hanja deck.
+
+**It is a display setting, not a scheduling axis.** Three partitions × the two
+existing `ReviewDirection`s covers all six front/back configurations, so nothing
+under `sm2.ts` / `reviewQueue.ts` / `offlineReview.ts` changed:
+
+| partition | frontToBack | backToFront |
+|---|---|---|
+| `character` | 水 → 물 수 | 물 수 → 水 |
+| `hun` | 물 → 水 수 | 水 수 → 물 |
+| `eum` | 수 → 水 물 | 水 물 → 수 |
+
+`hanjaFaces(card, partition)` is **the only place the three parts are joined**,
+and the back keeps 한자 · 훈 · 음 order whichever part came out of it. It falls
+back to the character partition on a card with no `hun`/`eum` to split.
+
+`hunEum(card)` assembles the same string for `korean`, which `buildFlashcardDoc`
+writes on save so the card list, detail modal and export stay partition-blind.
+**Derived, never authored** — one line per platform, at the one point a card is
+written.
+
+⚠️ **The control belongs in settings and nowhere else.** In the review session
+it becomes a per-session toggle, and switching inherits intervals earned
+answering a different question.
+
 ## Packs
 
 `packages/core/src/packs.ts`. **One kind, since 2026-08-02** — the `lookup` /
