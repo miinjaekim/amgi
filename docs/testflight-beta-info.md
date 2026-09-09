@@ -2,7 +2,7 @@
 
 _한국어와 영어 문구가 모두 이 파일에 있습니다. Both languages live here._
 
-_마지막 갱신: 2026-09-02, 1.5.0용._
+_마지막 갱신: 2026-09-09, 1.6.0용._
 
 App Store Connect → TestFlight → **Test Information**에 붙여넣는 문구 모음입니다.
 Test Information은 로컬라이제이션을 지원하므로, 언어 목록에 **Korean (ko)** 과
@@ -29,7 +29,7 @@ Amgi는 언어 학습용 플래시카드 앱입니다.
 
 AI가 만든 설명이라 틀릴 수 있습니다. 어색하거나 잘못된 부분을 알려 주시는 것이 이번 베타에서 가장 도움이 됩니다.
 
-학습 언어: 영어, 일본어, 중국어(번체), 스웨덴어, 프랑스어, 스페인어, 키쿠유어, 스와힐리어, 한국어
+학습 언어: 영어, 일본어, 중국어(번체), 스웨덴어, 프랑스어, 스페인어, 키쿠유어, 스와힐리어, 한국어, 한자
 화면 언어: 한국어 / 영어 (설정에서 변경)
 
 베타 기간 무료. 광고·트래킹 없음.
@@ -46,7 +46,7 @@ Vocabulary packs cover one domain — or one language's basics — a deck at a t
 
 The explanations are AI-generated, so they can be wrong. Telling me when they are is the most useful thing you can do in this beta.
 
-Study languages: English, Japanese, Traditional Chinese, Swedish, French, Spanish, Kikuyu, Swahili, Korean
+Study languages: English, Japanese, Traditional Chinese, Swedish, French, Spanish, Kikuyu, Swahili, Korean, Hanja (the Chinese characters used in Korean)
 Display language: Korean or English (change in Settings)
 
 Free during the beta. No ads, no tracking.
@@ -79,12 +79,12 @@ kenyamjkim@gmail.com
 ```
 이번 빌드에 새로 들어간 것:
 
-· 답 입력하기 — 복습에서 뜻을 보고 단어를 직접 입력할 수 있습니다.
-· 발음 속도 — 느리게·보통·빠르게 중에 고를 수 있습니다.
-· 복습 중 발음 듣기 — 복습 화면에도 발음 듣기 버튼이 생겼습니다.
-· 되돌리기 — 평가를 잘못 눌렀으면 되돌리기 버튼으로 취소할 수 있습니다.
-· 읽는 법 — 단어를 읽는 이의 문자로 다시 적어 줍니다. 일본어는 억양 표시도 함께요.
-· 새 단어팩 — 스페인어 기초 153개, 키쿠유어 기초 59개.
+· 새 화면 구성 — 앱을 열면 복습부터 나오고, 설정 탭이 학습 기록으로 바뀌었습니다. 설정은 학습 기록 오른쪽 위 톱니바퀴에 있어요.
+· 한자 — 새 학습 언어입니다. 한자·훈·음 중 무엇을 앞면으로 볼지 고르고, 8급부터 6급까지 300자 급수 팩이 함께 들어갑니다.
+· 단어팩 섹션 — 큰 팩이 섹션으로 나뉘어, 한 섹션만 따로 복습할 수 있습니다.
+· 학습 기록 공유 — 학습 기록을 이미지로 만들어 공유할 수 있습니다.
+· 복습 중 읽는 법 — 복습 화면에도 읽는 법이 나옵니다.
+· 병과와 주특기 — 부대·참모 팩에 24개 용어가 늘었습니다.
 
 피드백은 TestFlight의 '피드백 보내기' 또는 kenyamjkim@gmail.com으로.
 ```
@@ -94,12 +94,12 @@ kenyamjkim@gmail.com
 ```
 New in this build:
 
-· Type your answer — in review, type the word instead of grading yourself.
-· Pronunciation speed — Slow, Normal or Fast.
-· Audio in review — review cards have a speaker button now.
-· Undo — takes back a rating you tapped by mistake.
-· Reading aid — words respelled in your own script, with pitch marks on Japanese.
-· New packs — Spanish Basics (153 words) and Kikuyu Basics (59).
+· New layout — the app opens on Review, and the Settings tab became Progress. Settings is now the gear at its top right.
+· Hanja — a new study language: pick whether the character, the 훈 or the 음 leads, with a 300-character 급수 pack from 8급 to 6급.
+· Sections in packs — a big pack splits into sections you can review one at a time.
+· Share your progress — the progress screen makes an image you can share.
+· Readings in review — the reading aid shows on review cards now.
+· Branches and specialties — 24 new terms in the military units pack.
 
 Send feedback via TestFlight's "Send Beta Feedback" or to kenyamjkim@gmail.com.
 ```
@@ -129,9 +129,11 @@ Sign-in: The app uses Google Sign-In (Firebase Authentication) only. Demo creden
 
 How to test: On first launch the app asks for a native language and a study language before anything else, and cannot be used until both are answered. This is required because explanations are written in the native language, and a learner cannot study the language they already speak. Both can be changed later in Settings.
 
-On the Learn tab, type any word or phrase and tap Learn to get an explanation, then save it as a flashcard. The Review tab runs the spaced-repetition session over saved cards. The Cards tab lists, edits, and exports saved cards. The Packs tab holds pre-made decks that can be saved as cards or drilled directly. Tapping the streak badge opens a progress screen showing which days were reviewed.
+The app has five tabs, icon-only, left to right: Review, Cards, Learn, Packs, Progress. Review, where the app opens, runs the spaced-repetition session over saved cards. Cards lists, edits, and exports saved cards. Learn, in the middle, is where you type any word or phrase and tap Learn to get an explanation, then save it as a flashcard. Packs holds pre-made decks that can be saved as cards or drilled directly. Progress shows which days were reviewed.
 
-Account deletion: Settings → Delete account, at the bottom of the screen. This permanently deletes the account and all associated data from within the app, as required by guideline 5.1.1(v). It asks for confirmation and may re-prompt for Google sign-in, because deleting an account requires a recent authentication.
+Settings: the gear icon at the top right of the Progress tab. There is no Settings tab — that gear is the only route in, and it is present whether or not anyone is signed in.
+
+Account deletion: Progress tab → the gear icon at its top right → Delete account, at the bottom of the Settings screen. This permanently deletes the account and all associated data from within the app, as required by guideline 5.1.1(v). It asks for confirmation and may re-prompt for Google sign-in, because deleting an account requires a recent authentication.
 
 Notifications: The app can schedule local reminders for the word of the day and for due reviews. Both are off by default and are turned on individually in Settings; the permission prompt appears only when one is enabled. These are local notifications scheduled on the device — the app sends no remote push and stores no push tokens.
 

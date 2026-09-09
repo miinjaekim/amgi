@@ -72,14 +72,16 @@ _Reconciled against `main` @ `bc8cb97`, 2026-08-21. `npm test` 246/246, measured
   subpacks. Typing is off on this deck.
   Audio landed the same day: the button speaks the 음 (수), never the glyph, and
   refuses to render without one.
-  ⚠️ **Nothing has been enrolled or reviewed on a real account yet** — the
-  console steps above are what stand between the pack and a saved card.
-  ⚠️ **Neither console step is done.** `cards_hanja` has **no security rule**,
-  so every read and write fails `permission-denied`, and **both** composite
-  indexes are missing — see the two-indexes lesson in [lessons.md](lessons.md),
-  since the link in the first error only builds one of them and `/review`
-  coming back to life makes it look finished while `/cards` is still broken.
-  Nothing can be saved to the deck until the rule is in.
+  **Both console steps are done** (2026-09-09, reported by the user while
+  preparing build 15): `cards_hanja` has its security rule and **both**
+  composite indexes. `migrate:legacy-hanja` has also been run against
+  production, so the deprecated `hanja` depth field is off Korean cards and
+  their breakdown now lives in `characterBreakdown` — which build 14 reads too
+  (`characterBreakdown || hanja`), so that migration was safe in both
+  directions, unlike the subpack remap under Known Issues.
+  ⚠️ **Nothing has been enrolled or reviewed on a real account yet** — that is
+  now the only thing between the pack and a saved card, and it is a use check,
+  not a console step.
 - **Spanish is live on web** (2026-08-22). Registry entry, prompt branch, i18n
   and example terms merged; lookup verified against the live API in both
   directions. `cards_spanish`'s security rule and **both** composite indexes are
