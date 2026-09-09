@@ -407,6 +407,34 @@ Reasoning in the Decisions entry in [status.md](status.md); the shape is in
 
 - [ ] **Grid view for cards** — denser scanning of a large deck. Nobody's blocked.
 
+- [ ] **The sidebar's bottom button should open a menu, not the whole settings
+      panel** — queued 2026-09-09.
+      Today it toggles `SettingsMenu` inline in a 16rem popover, and that
+      component *is* the settings screen: study language, native language,
+      theme, pronunciation speed, the hanja partition, sign out and delete
+      account, all stacked in one column. The wanted shape is Claude's account
+      menu — the button opens a short list of **rows** (Settings · Language ·
+      Sign out, with the account email at the top), and Settings opens a real
+      settings surface from there.
+      ⚠️ **This is not only a menu; web has no settings *page*.** Mobile does
+      (`apps/mobile/app/settings.tsx`), and web's settings exist only inside
+      that popover — so the Settings row needs somewhere to go. Deciding
+      between a `/settings` route and a modal is the real content of this item:
+      a route is the same surface mobile already has and is linkable, a modal
+      keeps the user where they were. Don't pick it here.
+      **It supersedes a stopgap.** Both popovers were given a viewport max
+      height and scroll on 2026-09-09, after the hanja partition section pushed
+      the panel off screen — the sidebar one grows *upward* from `bottom-4`, so
+      it ran off the top. A four-row menu cannot overflow by construction, and
+      the scroll bound stops being load-bearing.
+      **Two entry points, one treatment.** `Header.tsx` renders the same
+      `SettingsMenu` in a dropdown on narrow screens. `StudyLanguageList` is
+      already extracted from it for exactly this kind of reuse; follow that
+      rather than forking the panel per entry point.
+      Convention to follow, from the user 2026-09-09: an image of Claude's
+      account menu — rows with leading icons, thin separators grouping them,
+      the destructive action last and alone.
+
 ## Bigger bets
 
 _Empty as of 2026-09-08 — the gloss ceiling was the only item here, and it
