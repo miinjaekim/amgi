@@ -285,6 +285,21 @@ Three things worth keeping:
   and propagates slowly — so the error means "not ready yet" at least as often
   as it means "missing". **Retry before changing anything**; the temptation is
   to start editing config that had nothing to do with it.
+- **A hanja that renders correctly can still be the wrong character.** Four rows
+  of the 어문회 배정한자 arrived as **CJK Compatibility Ideographs** — 金 as
+  U+F90A rather than U+91D1, and 車 不 樂 likewise. They are pixel-identical to
+  the unified forms and they are not the same character, so a card front stored
+  that way silently matches nothing: not a learner typing 金, not the kanji
+  pack, not the pack's own already-saved marking, not Firestore dedupe. Nothing
+  errors; the deck just behaves as though those cards were never saved.
+  **They are exactly the four characters carrying two Korean readings** (금/김,
+  거/차, 불/부, 락/악/요), which is what that Unicode block exists to encode — so
+  this is a property of Korean hanja data, not of one dataset, and **the next
+  source will have them too**. `docs/packs/hanja-geupsu-ingest.py` NFC-normalises
+  at ingest and asserts that nothing survived; `hanja-pack.test.ts` guards the
+  shipped list. Normalise any Han-script list at the boundary, and assert it —
+  eyeballing the table cannot find this.
+
 - **Security rules are manual** (Firebase console), not in the codebase. Add
   rules for every new collection — there is no wildcard support.
 - **Composite indexes** are required for multi-field filter+sort queries (e.g.

@@ -45,11 +45,12 @@ _Reconciled against `main` @ `bc8cb97`, 2026-08-21. `npm test` 246/246, measured
   水 → 물 수 / water, 學 → 배울 학, 樂 → ambiguous across its three 훈음, the
   Japanese form 学 → corrected to 學, 물 → 水, and a bare 음 (수) → ambiguous
   across five characters.
-  **Three-sided cards landed the same day**: 훈 and 음 are separate fields, the
-  learner picks which part leads from settings, and review reads its two faces
-  through `hanjaFaces()`. Typing is off on this deck. What is left is the 급수
-  packs — item 3 in [backlog.md](backlog.md) — so there is still nothing to
-  enrol; cards come from looking a character up.
+  **All three parts landed the same day.** 훈 and 음 are separate fields, the
+  learner picks which part leads from settings, review reads its two faces
+  through `hanjaFaces()`, and the 급수 pack is 300 characters over five
+  subpacks. Typing is off on this deck.
+  ⚠️ **Nothing has been enrolled or reviewed on a real account yet** — the
+  console steps above are what stand between the pack and a saved card.
   ⚠️ **Neither console step is done.** `cards_hanja` has **no security rule**,
   so every read and write fails `permission-denied`, and **both** composite
   indexes are missing — see the two-indexes lesson in [lessons.md](lessons.md),
@@ -238,6 +239,47 @@ Android, where only sign-in has been exercised.
 
 Closed calls, kept with their reasoning — a decision whose reasoning is lost gets
 reopened by the next person to notice the symptom. Newest first.
+
+### The 급수 pack was sourced, not recalled — and how (2026-09-09)
+
+**Approved by the user 2026-09-09.** 300 characters, five subpacks, 8급 through
+6급. The item budgeted for sourcing being the hard part and it was, but it came
+out better than expected: the 배정한자 is published as an XLS in 어문회's own
+learning-materials section, and a transcription of it carries the levels *and*
+the 대표훈음 with 훈 and 음 already apart — the shape three-sided cards need.
+
+**Fetched as bytes, not as prose, and that is the transferable part.**
+`raw.githubusercontent.com` is blocked from the sandbox, so the CSVs came
+through the GitHub *contents* API and were base64-decoded locally. The available
+alternative was a fetch-and-summarise tool, which puts a **model** between the
+source and the file — and a model transcribing 300 hanja is precisely what
+"the model is not a source" forbids. It is not a hypothetical: it is how the
+四 compatibility-ideograph rows would have been silently normalised away, or
+not, with no way to tell which. **When a pack rule says a model is not a source,
+that includes the model inside the fetch tool.**
+
+**Two independent sources on the half that matters.** Unihan's `kHangul`
+corroborates all 300 음 with no exceptions, and ko.wikipedia's cumulative counts
+(8급 50, 7급 150, 6급 300) match at the three rungs it names — which also
+settles the per-level figures the backlog had carried as unverified: 50 / 50 /
+50 / 75 / 75 newly assigned.
+
+**The kanji-pack question is answered: neither reads from the other.** 151 of
+the 300 overlap, and the two decks deliberately answer different questions —
+the kanji pack authored *modern Korean* glosses (女 → 여자, 大 → 크다) where a
+hanja deck needs the 대표훈음 (계집 녀, 큰 대). So there is no shared source to
+keep in step, and the drift risk the backlog flagged does not exist. The kanji
+pack corroborates the character and the English; never the 훈.
+
+⚠️ **One row ships knowingly wrong.** 省 is 살필 성 — *examine* — and Unihan
+carries only "province" and "save, economize". Writing "examine" would be a tier
+C assertion with no source, which `docs/packs/README.md` says to cut or get
+checked rather than ship quietly. It is flagged in the draft and tracked in the
+backlog as the one open row.
+
+**The ingest script is committed beside the draft** because the draft's tier
+column is a claim about provenance, and a description of a method is not
+evidence of it — re-running it reproduces all 300 rows exactly.
 
 ### Three-sided hanja cards cost a setting, not a scheduling axis (2026-09-09)
 
