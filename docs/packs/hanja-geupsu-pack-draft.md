@@ -29,7 +29,7 @@ same in both decks. `GLOSS_RULE` caps a field at two; these are three. Keep them
   - 合 — `fit, match, join`
   - 行 — `go; carry out; line`
 
-**2. 137 English glosses are tier D** — cut from Unihan's definition, listed in
+**2. 136 English glosses are tier D** — cut from Unihan's definition, listed in
 full in each table's *source* column so the cut is visible. That is the weakest
 tier here and the rows most worth skimming.
 
@@ -53,13 +53,26 @@ itself; it reads no Korean. They are listed in `OVERRIDES` in
   - 使 하여금, 부릴 사 — `cause, order`, from _cause, send on a mission, order; envoy, messenger, ambassador_
   - 習 익힐 습 — `practice`, from _practice; flapping wings_
 
-⚠️ **One row is still wrong and shipped that way on purpose.** 省 is 살필 성 —
-*examine*, as in 반성 and 성찰 — and Unihan carries only "province" and "save,
-economize". Neither is that sense. Writing "examine" would be tier C, an
-assertion with no source, which this repo says to cut or get checked rather
-than ship quietly. **It needs a Korean-English hanja dictionary, or your call.**
+**3. 省 now reads `examine, inspect`, off a source that is not Unihan.**
+_Resolved 2026-09-09 — the call was made, and then sourced rather than asserted._
+省 is 살필 성 — examine, as in 반성 and 성찰 — and Unihan's `kDefinition` is
+"province; save, economize", neither of which is that sense. It is not that
+Unihan disagrees: its own `kJapaneseKun` for 省 is `KAERIMIRU` — 省みる, *to
+reflect on* — so the sense is in the character and simply missing from the
+definition field. The gloss is [Wiktionary's](https://en.wiktionary.org/wiki/省)
+own wording for the xǐng reading, _to examine; to inspect_, minus the "to" the
+rest of the pack drops too.
 
-**3. Section names are user-facing copy now.** They are the level names — 8급,
+⚠️ **Tier B, and worth knowing why it is not A.** The one source is a community
+wiki, the bottom rank in [README](README.md). CC-CEDICT corroborates the sense —
+省 [xing3] _to scrutinize; to reflect (on one's conduct)_ — but not word for
+word, and A wants two sources agreeing spelling included. A published
+Korean-English hanja dictionary would settle it; 네이버 한자사전 refuses
+automated fetches and 다음's is JS-only, both checked 2026-09-09. **It is the
+one row in the pack whose English comes from outside Unihan, and it has its own
+table (`OFF_UNIHAN`) in the ingest script so it cannot be mistaken for one.**
+
+**4. Section names are user-facing copy now.** They are the level names — 8급,
 7급Ⅱ — which `docs/packs/README.md` allows only because a 급수 is a real rung a
 learner can ask for, not a "Group 3".
 
@@ -73,7 +86,8 @@ learner can ask for, not a "Group 3".
 | the 음, independently | Unicode Unihan `kHangul` — **300/300 agree, no exceptions** | → A |
 | per-level counts | [ko.wikipedia 한자능력검정시험](https://ko.wikipedia.org/wiki/한자능력검정시험) gives 8급 50, 7급 150, 6급 300 cumulative, matching three of the five rungs | → A |
 | English, 163 of them | `docs/packs/kanji-pack-draft.md` — already authored and reviewed in this repo | A / B |
-| English, the other 137 | Unicode Unihan `kDefinition`, trimmed | D |
+| English, another 136 | Unicode Unihan `kDefinition`, trimmed | D |
+| English, 省 alone | [Wiktionary 省](https://en.wiktionary.org/wiki/省) (xǐng) — the only row Unihan cannot supply | B |
 
 **The official 어문회 site refuses connections from here**, and namu.wiki 403s to
 automated fetches — both checked 2026-09-09. The dataset above is the official
@@ -99,8 +113,8 @@ script.
 | tier | count | means |
 |---|---|---|
 | A | 151 | two independent sources agree |
-| B | 12 | one source — the kanji pack's English, where Unihan words it differently enough not to corroborate literally |
-| D | 137 | Unihan's definition, cut down by a stated rule |
+| B | 13 | one source — the kanji pack's English where Unihan words it differently enough not to corroborate literally (12), and 省 off Wiktionary (1) |
+| D | 136 | Unihan's definition, cut down by a stated rule |
 
 ⚠️ The trimming rule is `GLOSS_RULE`, **this repo's own** — so "cite both" is
 only half satisfied on the D rows. The stem is sourced; the rule is ours.
@@ -356,7 +370,7 @@ gloss over the two-gloss ceiling.
 | 線 | 줄 | 선 | line | A | kanji pack + Unihan |
 | 雪 | 눈 | 설 | snow | A | kanji pack + Unihan |
 | 成 | 이룰 | 성 | completed, finished | D | Unihan: _completed, finished, fixed_ |
-| 省 | 살필 | 성 | province ⚠ **no source for this sense** | D | Unihan: _province; save, economize_ |
+| 省 | 살필 | 성 | examine, inspect | B | Wiktionary 省 (xǐng): _to examine; to inspect_ — Unihan has none of this sense, only _province; save, economize_ |
 | 消 | 사라질 | 소 | vanish, die out | D | Unihan: _vanish, die out; melt away_ |
 | 術 | 재주 | 술 | art, skill | D | Unihan: _art, skill, special feat; method, technique_ |
 | 始 | 비로소 | 시 | begin, start | D | Unihan: _begin, start; then, only then_ |
@@ -477,5 +491,10 @@ gloss over the two-gloss ceiling.
 
 ## What review changed
 
-_Nothing yet — this draft has not been reviewed._
+- **省 no longer says "province."** The draft shipped it wrong on purpose and
+  asked for the call; the call was *examine*, and the row was then sourced
+  rather than asserted — Wiktionary's own wording for the xǐng reading, with
+  CC-CEDICT and Unihan's `kJapaneseKun` かえりみる agreeing on the sense. It
+  moved from D to B and out of Unihan's reach entirely, into `OFF_UNIHAN` in
+  the ingest script. Tier counts: A 151, B 13, D 136.
 
