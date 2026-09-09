@@ -300,6 +300,18 @@ Three things worth keeping:
   shipped list. Normalise any Han-script list at the boundary, and assert it —
   eyeballing the table cannot find this.
 
+- **An optional parameter that has a plausible default is a bug waiting to be
+  silent.** `getBackSide(card, nativeLanguage?)` resolved a missing native
+  language to the English back, because `getBackSideConfig` reads anything that
+  is not `'Korean'` — `undefined` included — as "not a Korean native". Both
+  card-detail modals dropped the argument, so **every Korean native saw an
+  English gloss on every deck's card detail**, with the correct text two lines
+  away in the same function. Nothing threw, nothing rendered blank, and the
+  neighbouring unsaved-entry path was right, which is what made it survive:
+  the deck tile showed Korean and the modal showed English. The parameter is
+  required now, which turns the omission into a compile error. **Where a
+  default is indistinguishable from a real answer, do not have one.**
+
 - **Security rules are manual** (Firebase console), not in the codebase. Add
   rules for every new collection — there is no wildcard support.
 - **Composite indexes** are required for multi-field filter+sort queries (e.g.

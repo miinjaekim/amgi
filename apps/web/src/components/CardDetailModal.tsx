@@ -12,6 +12,7 @@ import {
   getBackSide,
   getBackSideConfig,
   getCharacterBreakdown,
+  hunEum,
   getExampleSides,
   getReading,
   getStudyLangSide,
@@ -85,8 +86,21 @@ export default function CardDetailModal({
   // unsaved entry is projected onto the two fields it can fill.
   const studySide = saved ? getStudyLangSide(saved) : entry?.study ?? '';
   const backSide = saved
-    ? getBackSide(saved)
+    ? getBackSide(saved, nativeLanguage)
     : entry ? resolvePackBack(entry.back, lang, nativeLanguage) : '';
+
+  /**
+   * A hanja card's back is 훈음 for every reader, and an English native gets
+   * the gloss *in addition* — the rule the review screen already follows. Here
+   * that needs saying explicitly, because `getBackSide` answers with the slot
+   * the language *pair* points at: 물 수 for a Korean native, "water" for an
+   * English one, which silently drops the 훈음 for the reader least able to
+   * supply it themselves.
+   */
+  const hunEumLine = lang === 'Hanja'
+    ? (saved ? hunEum(saved) : entry?.back.Korean ?? '')
+    : '';
+  const glossLine = lang === 'Hanja' && nativeLanguage !== 'Korean' ? backSide : '';
 
   const { backField } = getBackSideConfig(lang, nativeLanguage);
   const characterBreakdown = saved ? getCharacterBreakdown(saved) : undefined;
@@ -183,7 +197,12 @@ export default function CardDetailModal({
                 </span>
               )}
             </div>
-            <p className="text-base mt-1" style={{ color: 'var(--color-text)' }}>{backSide}</p>
+            <p className="text-base mt-1" style={{ color: 'var(--color-text)' }}>
+              {lang === 'Hanja' ? hunEumLine : backSide}
+            </p>
+            {glossLine && (
+              <p className="text-sm mt-0.5" style={{ color: 'var(--color-muted)' }}>{glossLine}</p>
+            )}
             {/* The hint an unsaved entry carries, which is also the sense any
                 generated depth will be pinned to. */}
             {!saved && entry?.context && (

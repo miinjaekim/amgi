@@ -704,8 +704,16 @@ export function getStudyLangSide(card: CardSides): string {
  * had saved cards: every document written before that carries its back there
  * and nowhere else. A Korean native sees English on those rather than a blank
  * card, until the card is next saved and gains a Korean side.
+ *
+ * ⚠️ **`nativeLanguage` is required, and that is a fix rather than a style.**
+ * It was optional, and omitting it does not fail — it quietly resolves to the
+ * English back, because `getBackSideConfig` reads any non-Korean value as "not
+ * a Korean native". Both card-detail modals dropped it and showed every Korean
+ * native an English gloss on every deck, on a screen where the correct text was
+ * two lines away in the same function. A required parameter turns that from a
+ * wrong answer into a compile error.
  */
-export function getBackSide(card: CardSides, nativeLanguage?: string | null): string {
+export function getBackSide(card: CardSides, nativeLanguage: string | null | undefined): string {
   const { backField } = getBackSideConfig(card.studyLanguage, nativeLanguage);
   return card[backField] || card.english || card.translation || '';
 }
