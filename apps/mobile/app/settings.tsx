@@ -28,10 +28,10 @@ import type { Palette } from '../src/theme';
 const PRIVACY_URL_BASE = 'https://amgi-iota.vercel.app/privacy';
 
 /** Each partition's two i18n keys, together so neither can be guessed apart. */
-const PARTITION_KEYS: Record<HanjaPartition, { label: 'hanjaPartitionCharacter' | 'hanjaPartitionHun' | 'hanjaPartitionEum'; desc: 'hanjaPartitionCharacterDesc' | 'hanjaPartitionHunDesc' | 'hanjaPartitionEumDesc' }> = {
-  character: { label: 'hanjaPartitionCharacter', desc: 'hanjaPartitionCharacterDesc' },
-  hun: { label: 'hanjaPartitionHun', desc: 'hanjaPartitionHunDesc' },
-  eum: { label: 'hanjaPartitionEum', desc: 'hanjaPartitionEumDesc' },
+const PARTITION_KEYS: Record<HanjaPartition, { label: 'hanjaPartitionCharacter' | 'hanjaPartitionHun' | 'hanjaPartitionEum'; example: 'hanjaPartitionCharacterExample' | 'hanjaPartitionHunExample' | 'hanjaPartitionEumExample' }> = {
+  character: { label: 'hanjaPartitionCharacter', example: 'hanjaPartitionCharacterExample' },
+  hun: { label: 'hanjaPartitionHun', example: 'hanjaPartitionHunExample' },
+  eum: { label: 'hanjaPartitionEum', example: 'hanjaPartitionEumExample' },
 };
 
 export default function SettingsScreen() {
@@ -260,7 +260,7 @@ export default function SettingsScreen() {
                       {t(nativeLanguage, PARTITION_KEYS[partition].label)}
                     </Text>
                     <Text style={[s.partitionDesc, active && s.partitionDescActive]}>
-                      {t(nativeLanguage, PARTITION_KEYS[partition].desc)}
+                      {t(nativeLanguage, PARTITION_KEYS[partition].example)}
                     </Text>
                   </TouchableOpacity>
                 );

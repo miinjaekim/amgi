@@ -45,10 +45,10 @@ function partitionLabelKey(partition: HanjaPartition) {
   return 'hanjaPartitionCharacter' as const;
 }
 
-function partitionDescKey(partition: HanjaPartition) {
-  if (partition === 'hun') return 'hanjaPartitionHunDesc' as const;
-  if (partition === 'eum') return 'hanjaPartitionEumDesc' as const;
-  return 'hanjaPartitionCharacterDesc' as const;
+function partitionExampleKey(partition: HanjaPartition) {
+  if (partition === 'hun') return 'hanjaPartitionHunExample' as const;
+  if (partition === 'eum') return 'hanjaPartitionEumExample' as const;
+  return 'hanjaPartitionCharacterExample' as const;
 }
 
 /** Shared settings panel body — rendered inside the header dropdown (mobile)
@@ -144,9 +144,14 @@ export default function SettingsMenu({ onClose }: { onClose: () => void }) {
                     : { background: 'transparent', color: 'var(--color-text)', borderColor: 'var(--color-muted)' }
                 }
               >
-                <span className="block">{t(nativeLanguage, partitionLabelKey(partition))}</span>
-                <span className="block text-xs opacity-70 mt-0.5">
-                  {t(nativeLanguage, partitionDescKey(partition))}
+                <span className="flex items-baseline justify-between gap-2">
+                  <span>{t(nativeLanguage, partitionLabelKey(partition))}</span>
+                  {/* The example on the same line rather than under it. Three
+                      two-line rows made this the tallest control in a panel
+                      that has five other sections. */}
+                  <span className="text-xs opacity-70 shrink-0">
+                    {t(nativeLanguage, partitionExampleKey(partition))}
+                  </span>
                 </span>
               </button>
             ))}

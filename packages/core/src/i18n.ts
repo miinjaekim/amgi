@@ -203,13 +203,16 @@ const translations = {
     // that is the choice being made; the direction chips already say which way
     // round a given card is being asked.
     settingsHanjaPartition: 'Front of a hanja card',
-    settingsHanjaPartitionDesc: 'Which part you see first. The other two go on the back. Changing this later keeps each card’s existing schedule.',
+    settingsHanjaPartitionDesc: 'Which part you see first; the other two go on the back. The character is what the 급수 exam asks. Changing this later keeps each card’s existing schedule.',
     hanjaPartitionCharacter: 'The character',
-    hanjaPartitionCharacterDesc: '水 → 물 수 — what the 급수 exam asks',
     hanjaPartitionHun: '훈 — the meaning',
-    hanjaPartitionHunDesc: '물 → 水 수',
     hanjaPartitionEum: '음 — the sound',
-    hanjaPartitionEumDesc: '수 → 水 물',
+    // Bare examples, because they render inline beside the label. The reason
+    // to prefer one lives in the section description above, once, rather than
+    // in the option that happens to be the default.
+    hanjaPartitionCharacterExample: '水 → 물 수',
+    hanjaPartitionHunExample: '물 → 水 수',
+    hanjaPartitionEumExample: '수 → 水 물',
     signOut: 'Sign out',
     signIn: 'Sign in',
     // Settings screen (mobile)
@@ -588,13 +591,13 @@ const translations = {
     speedNormal: '보통',
     speedFast: '빠르게',
     settingsHanjaPartition: '한자 카드 앞면',
-    settingsHanjaPartitionDesc: '먼저 보이는 부분이에요. 나머지 둘은 뒷면으로 갑니다. 나중에 바꿔도 카드마다 쌓인 복습 일정은 그대로예요.',
+    settingsHanjaPartitionDesc: '먼저 보이는 부분이에요. 나머지 둘은 뒷면으로 갑니다. 급수 시험이 묻는 방식은 한자고요. 나중에 바꿔도 카드마다 쌓인 복습 일정은 그대로예요.',
     hanjaPartitionCharacter: '한자',
-    hanjaPartitionCharacterDesc: '水 → 물 수 — 급수 시험이 묻는 방식',
     hanjaPartitionHun: '훈 (뜻)',
-    hanjaPartitionHunDesc: '물 → 水 수',
     hanjaPartitionEum: '음 (소리)',
-    hanjaPartitionEumDesc: '수 → 水 물',
+    hanjaPartitionCharacterExample: '水 → 물 수',
+    hanjaPartitionHunExample: '물 → 水 수',
+    hanjaPartitionEumExample: '수 → 水 물',
     signOut: '로그아웃',
     signIn: '로그인',
     // Settings screen (mobile)

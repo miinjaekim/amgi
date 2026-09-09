@@ -105,9 +105,12 @@ const Header: React.FC = () => {
               </svg>
             </button>
 
+            {/* Bounded to what is left below the header, and scrollable — the
+                panel grows with every setting added and had no ceiling of its
+                own. */}
             {open && (
               <div
-                className="absolute right-0 mt-2 w-64 rounded-xl shadow-xl border border-[var(--color-muted)] z-50 overflow-hidden"
+                className="absolute right-0 mt-2 w-64 max-h-[calc(100vh-5rem)] overflow-y-auto rounded-xl shadow-xl border border-[var(--color-muted)] z-50"
                 style={{ background: 'var(--color-surface)' }}
               >
                 <SettingsMenu onClose={() => setOpen(false)} />
