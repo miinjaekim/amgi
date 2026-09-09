@@ -10,8 +10,9 @@ import {
   packRefId,
   parentPackId,
   resolvePackRef,
+  VOCAB_PACKS,
 } from '@amgi/core';
-import type { Flashcard } from '@amgi/core';
+import type { Flashcard, StudyLanguage, VocabPack } from '@amgi/core';
 
 const DUE = new Date('2026-01-01');
 const LATER = new Date('2027-01-01');
@@ -199,5 +200,51 @@ describe('buildDeckFilters', () => {
     );
     expect(filters.map(f => f.id)).toEqual(['all', 'mine', 'kikuyu-basics']);
     expect(filters.find(f => f.id === 'kikuyu-basics')!.count).toBe(2);
+  });
+});
+
+/**
+ * What every pack has to keep true for subpack ids to work at all. These are
+ * about the registry rather than about one pack, so a new pack inherits them
+ * without anyone remembering to ask.
+ */
+describe('the registry, for subpacks', () => {
+  const packs = (Object.entries(VOCAB_PACKS) as [StudyLanguage, VocabPack[]][])
+    .flatMap(([studyLanguage, list]) => list.map(pack => ({ studyLanguage, pack })));
+
+  // A slash in either half would make `parentPackId` cut in the wrong place,
+  // silently filing cards under a pack that does not exist.
+  it('has no slash in any pack or section id', () => {
+    for (const { pack } of packs) {
+      expect(pack.id).not.toContain('/');
+      for (const section of pack.sections) expect(section.id).not.toContain('/');
+    }
+  });
+
+  it('round-trips every section through its subpack id', () => {
+    for (const { studyLanguage, pack } of packs) {
+      for (const section of pack.sections) {
+        const id = packRefId(pack.id, section.id);
+        expect(parentPackId(id)).toBe(pack.id);
+        expect(resolvePackRef(studyLanguage, id)?.section?.id).toBe(section.id);
+      }
+    }
+  });
+
+  it('gives each section of a pack a distinct id', () => {
+    for (const { pack } of packs) {
+      const ids = pack.sections.map(section => section.id);
+      expect(new Set(ids).size).toBe(ids.length);
+    }
+  });
+
+  // What the remap script derives from: a term in two sections of one pack
+  // would name no single subpack, so those cards would have to stay at pack
+  // level. True today across every pack; the script reports any that appear.
+  it('puts each term in exactly one section of its pack', () => {
+    for (const { pack } of packs) {
+      const terms = pack.sections.flatMap(s => s.entries.map(e => e.study.toLowerCase()));
+      expect(new Set(terms).size).toBe(terms.length);
+    }
   });
 });

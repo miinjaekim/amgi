@@ -126,99 +126,36 @@ Reasoning in the Decisions entry in [status.md](status.md); the shape is in
 
 ## Medium
 
-- [ ] **Subpacks: a section you can review on its own** — queued 2026-09-09.
-      A pack stays one collection. Clicking into it gives a second level —
-      Military Terms → Ranks, Kikuyu Basics → Greetings — and a subpack is a
-      thing you can save, drill and review by itself. On the **review page you
-      still pick the pack group first**, and inside it see per-subpack progress
-      and a review for any one of them.
-      **The point:** sometimes you want to sit down with greetings, or with
-      family names, and not with the other 40 words. That is what a "Basics" pack
-      makes impossible today.
-
-      **Why it isn't possible now.** Section enrolment split the *sitting*, not
-      the *deck*. `buildPackCardDraft` writes `packId` and nothing about the
-      section, so `getCollectionId` — the single grouping every surface reads —
-      always answers with the whole pack. It is thrown away later than you would
-      guess: `enrol(section.id, section.entries)` in
-      `apps/web/src/app/decks/[packId]/page.tsx` **already receives the section
-      id** and then drops it two lines apart, at
-      `buildPackCardDraft(entry, pack.id, …)` and
-      `router.push('/review?collection=' + pack.id)`. Mobile does the same.
-
-      **What a card stores: the leaf, namespaced** — `kikuyu-basics/greetings`,
-      not `greetings`. The parent is read back from the registry, so the card
-      keeps one field and there is no schema change.
-      ⚠️ **The composite is not optional.** Section ids are only unique within a
-      pack today, and the collisions are everywhere: `verbs` is in `toeic-core`,
-      `daily-life`, `spanish-basics` and `topik-advanced`; `greetings` and
-      `numbers` in both `kikuyu-basics` and `spanish-basics`; `people` in
-      `daily-life` and `english-idioms`; both kana packs share all three; and
-      `military-unit-en` / `military-unit-ko` share all ten.
-
-      ⚠️ **This is the same card-level migration as splitting the packs outright,
-      and strictly the safer one** — which is the reason to prefer it beyond the
-      navigation. Under a flat split the parent id retires, so every card already
-      saved under `kikuyu-basics` orphans and `buildDeckFilters` /
-      `buildReviewCollections` fall back to `name: id`, showing a chip wearing a
-      raw slug. Here the parent **stays in the registry**, so an un-remapped card
-      still resolves and still renders under the pack's real name — it just sits
-      at the parent level instead of in a subpack. That turns the remap from
-      same-PR-mandatory into something that can run later.
-      The remap itself is derivable and unchanged: study side + old `packId`
-      identifies the entry, and the entry sits in exactly one section, which
-      names its subpack. `apps/web/scripts/backfill-pack-backs.ts` is the
-      precedent and already keys on that pair.
-
-      **Every pack gets subpacks, not a chosen few.** The earlier rule — a pack
-      keeps subgroups only when the subgroups are related to each other — was a
-      rule about when a separate *pack* should exist, and a container makes it
-      stop binding: Kikuyu Basics is allowed to stay a pack precisely because
-      Greetings is now reachable inside it. All twelve packs already carry
-      semantic sections (79 of them, 5 to 46 entries each), so there is nothing
-      to author.
-
-      **Where the work actually is:**
-      • **One resolver, then the grouping layer is done.** Every pack lookup
-        outside `packs.ts` goes through `getVocabPack` — three call sites in
-        `collections.ts` (`isGridDeck`, `buildDeckFilters`,
-        `buildReviewCollections`) and the four deck/drill routes. Teach it the
-        `parent/leaf` form and `byRegistryOrder` how to rank a leaf, and
-        filtering, counting and naming follow.
-      • **The review picker becomes two levels**, which is new UI on both
-        platforms (`apps/web/src/app/review/page.tsx`,
-        `apps/mobile/app/(tabs)/review.tsx`) and a shape change to
-        `buildReviewCollections` — a parent row carrying subpack rows. The rows
-        are the same shape nested: `dueCount`, `cardCount` and `nextReview`
-        already are the per-subpack progress the second level needs.
-      • **The `?collection=` handoff** carries a pack id today and would carry a
-        leaf id; `collectionKey` has to stay unique across both levels.
-      • **The deck page** grows a per-subpack review alongside each existing
-        "save this section" — or a `decks/[packId]/[sectionId]` route, if the
-        subpack deserves a page of its own. Decide which before building.
-
-      **Two calls to make first:**
-      ⚠️ **Can you still review a whole pack?** `ReviewCollection`'s header says
-      there is **deliberately no "everything" collection** — pooling things
-      learned for different reasons makes worse review. A parent review is that
-      same shape one scope down. The counter-argument is that a pack's sections
-      were always meant to be one deck, and "see my progress across the pack" is
-      half of what the second level is for. Probably yes, but it is a decision
-      that contradicts a written one, so it goes in Decisions with its reasoning.
-      ⚠️ **The deck chips on the Cards page can't go to 79.** That row is already
-      a third axis on mobile's filter sheet. Parent chips only loses the point;
-      leaf chips only is unusable; two-level is a control that row has no space
-      for. This is the one place the design does not fall out for free.
-
-      **Also on the checklist:** per-pack tests pin counts and ids
-      (`kikuyu-pack.test.ts`, `spanish-pack.test.ts`, `english-packs.test.ts`,
-      `kanji-pack.test.ts`, `military-packs.test.ts`), `deck-filters.test.ts`
-      pins registry order, and `docs/packs/README.md` makes the draft the source
-      of record — if a subpack becomes a unit a learner picks, its name is
-      user-facing copy and the drafts want the same headings.
-      _Reopens nothing: no new content is authored, and section enrolment stays
-      exactly as the daily-draw decision left it — this makes the section survive
-      the save._
+- [x] **Subpacks: a section you can review on its own** — shipped 2026-09-09.
+      A pack stays one collection and gained a second level inside it. A subpack
+      is a thing you save, drill and review by itself, from its own section
+      header on the deck page; the review picker drills into a pack to offer the
+      whole pack plus each subpack with its own progress.
+      **Cards store `pack/section`** — namespaced because section ids are only
+      unique within a pack, and the collisions are everywhere (`verbs` in four
+      packs, ten shared ids between the two military packs). One field, no
+      schema change.
+      **`cardInCollection` is the whole second level**, and it is asymmetric: a
+      subpack takes only its own cards, a pack takes its own and every
+      subpack's. Reasoning for keeping the whole-pack review — it contradicts
+      `ReviewCollection`'s "deliberately no everything collection" — is in
+      Decisions in [status.md](status.md).
+      **The Cards page chip row stayed at one chip per pack.** The other call
+      the item flagged; a chip per subpack would be 89 of them, and a two-level
+      chip control has nowhere to go in a row that is already a third axis on
+      mobile's filter sheet.
+      **The migration ships separately and is optional**, which is what choosing
+      subpacks over a flat split bought: the parent stays in the registry, so an
+      un-remapped card still resolves and still wears its pack's real name — it
+      just sits at pack level rather than in a subpack, where a pack review
+      still reaches it. `apps/web/scripts/remap-pack-subpacks.ts`
+      (`npm run remap:subpacks --workspace @amgi/web`) derives each card's
+      subpack from study side + pack id; dry-run by default. **Not yet run
+      against production.**
+      Registry invariants the ids depend on — no `/` in any id, each term in
+      exactly one section of its pack — are pinned in `collections.test.ts` and
+      documented in `docs/packs/README.md`, which now also says section names
+      are user-facing copy.
 
 - [ ] **Military specialties pack (병과 / 주특기, "MOS").** Infantry, engineer,
       signal, artillery, armor, logistics, medical, and the rest — the branch a

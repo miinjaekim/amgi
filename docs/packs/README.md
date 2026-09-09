@@ -71,3 +71,29 @@ transforms the app applies — `kikuyuToEnglish`, `kikuyuToHangul`, the furigana
 path — and put the **actual output** in the draft beside each entry. Building
 the Kikuyu draft that way surfaced a syllabification bug in ten minutes, in the
 word for "hello", that reading the table would never have shown.
+
+## Section names are user-facing copy now
+
+_Added 2026-09-09, with subpacks._
+
+A section used to be a heading on the deck page and an enrolment button. It is
+now a **subpack** — a thing a learner saves, drills and reviews on its own, and
+picks by name from the review picker with its own progress beside it. Both its
+`name` sides are copy someone chooses from a list without the pack's description
+in front of them, so they want the same care as the pack's own name: short,
+concrete, and true on its own. "Familiar words, second meanings" survives that;
+"Group 3" does not.
+
+Two mechanical rules the id has to keep, both pinned in
+`apps/web/src/services/collections.test.ts`:
+
+- **No `/` in a section id.** Cards store `pack/section`, and `parentPackId`
+  splits on the first slash.
+- **A term appears in exactly one section of its pack.** That is what lets
+  `scripts/remap-pack-subpacks.ts` derive a card's subpack from its study side.
+  A term in two sections is not fatal — those cards stay at pack level and the
+  script reports them — but it is a section boundary worth looking at again.
+
+Section ids only have to be unique *within* their pack: `verbs` is in four packs
+and the two military packs share all ten of theirs, which is why the stored id
+carries the pack.
