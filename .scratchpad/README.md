@@ -20,11 +20,18 @@ Related docs outside this folder:
 - `docs/packs/topik-pack-draft.md` — source draft for the TOPIK 고급 pack
   (referenced from `packages/core/src/topik.ts`)
 - `docs/packs/military-unit-pack-draft.md`,
-  `docs/packs/military-affairs-pack-draft.md` — the two military packs, 474
+  `docs/packs/military-affairs-pack-draft.md` — the two military packs, 498
   pairs (referenced from `packages/core/src/military.ts`). Unlike the drafts
   above these are **bilingual pair lists**, not a study side plus glosses, and
   they still carry live open questions — read them before changing a term or a
   hint, and hand *these* to a reviewer rather than the TS.
+- `docs/packs/military-branches-subpack-draft.md` — 병과와 주특기, the 24-pair
+  eleventh section of 부대·참모, added 2026-09-09 and **awaiting approval on the
+  word list**. It is the first military content authored under the sourcing
+  standard, so unlike its parent every row carries a tier and a citation, and it
+  leads with why a branch is written 보병과 rather than 보병. It also records
+  what was cut and why — it started as a whole pack and was reduced to a
+  subpack.
 - `docs/packs/hanja-geupsu-pack-draft.md` — the 급수 pack, 300 characters over
   five subpacks, **awaiting approval on the word list**. Unlike every draft
   above it, its rows are *generated* rather than typed:

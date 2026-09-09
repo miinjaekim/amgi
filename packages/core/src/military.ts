@@ -9,9 +9,11 @@ import type { PackSection, VocabPack } from './packs';
  * beginner one:
  *
  * - **부대·참모** (`military-unit`): a unit and a combined staff. Ranks,
- *   echelons, orders, radio procedure, supply, casualty handling, barracks
- *   life. The failure mode is stumbling.
- *   Draft review: docs/packs/military-unit-pack-draft.md
+ *   echelons, branches, orders, radio procedure, supply, casualty handling,
+ *   barracks life. The failure mode is stumbling.
+ *   Draft review: docs/packs/military-unit-pack-draft.md, and
+ *   docs/packs/military-branches-subpack-draft.md for the `branches` section,
+ *   which was added later and under the sourcing standard.
  * - **안보·정세** (`military-affairs`): a briefing and a press statement. The
  *   alliance, the North Korean threat picture, missiles and nuclear, named
  *   organizations, maritime sovereignty, commemoration. The failure mode is
@@ -32,9 +34,9 @@ import type { PackSection, VocabPack } from './packs';
  * **Four ids, not two.** A collection id is the pack's own id, so the two
  * directions of one pack cannot share one — cards saved from the Korean deck
  * and the English deck would collapse into a single collection on `/cards`.
- * The same holds one level down, and more sharply: these two packs share all
- * ten section ids between them, which is why a subpack id is namespaced under
- * its pack rather than being the bare section id. They are genuinely different cards (producing `battalion` from 대대
+ * The same holds one level down, and more sharply: these two packs share ten
+ * section ids between them, which is why a subpack id is namespaced under its
+ * pack rather than being the bare section id. They are genuinely different cards (producing `battalion` from 대대
  * is not the same skill as the reverse, and drilling both is the whole premise),
  * so the id carries the direction and the display name does not.
  *
@@ -50,7 +52,10 @@ import type { PackSection, VocabPack } from './packs';
  * and in both directions — otherwise two cards would share a front or an
  * answer and back-to-front review would be unanswerable. Three traps live in
  * 안보·정세 for this reason alone (취역식/임관식, the 전역 homograph, and
- * 제병협동), even though they belong to 부대·참모 §10 by nature.
+ * 제병협동), even though they belong to 부대·참모 §10 by nature. It is also why
+ * `branches` names branches the way the statute does — 보병과, 수송과,
+ * 군사경찰과 — rather than bare: 보병, 수송 and 군사경찰 are cards elsewhere in
+ * this pack, and a branch is not the same thing as the arm anyway.
  *
  * Sources: 합동참모본부 「합동·연합작전 군사용어사전」; the 국문·영문 editions
  * of 국방부's 국방백서 read side by side; the US DoD Dictionary of Military and
@@ -60,6 +65,14 @@ import type { PackSection, VocabPack } from './packs';
  * someone who has served recently reviews it. The 2020 renames (헌병 →
  * 군사경찰, the abolition of 영창) are in; 안보·정세's `rok-defense-systems`
  * will go stale first.
+ *
+ * The `branches` section came later and under the sourcing standard in
+ * `docs/packs/README.md`, so its draft carries a tier and a citation on every
+ * row. The branch inventory is 「군인사법」 제5조; the back is the US counterpart
+ * branch, with the hint carrying 법제처's official English wherever the two
+ * disagree — which is the reason the section is worth having, since 병참과 is
+ * the Quartermaster Corps and the official English calls it "logistics", which
+ * in the ROK Army is a different branch again.
  */
 
 /** One term in both languages, with neither side treated as the front. */
@@ -159,6 +172,42 @@ const UNIT_SECTIONS: readonly BilingualSection[] = [
       { korean: '합동참모본부', english: 'Joint Chiefs of Staff', context: 'the ROK JCS — 합참 for short' },
       { korean: '예비군', english: 'reserve forces' },
       { korean: '전투근무지원', english: 'combat service support', context: 'supply, maintenance, medical and transport' },
+    ],
+  },
+  {
+    id: 'branches',
+    name: { English: 'Branches and specialties', Korean: '병과와 주특기' },
+    note: {
+      English:
+        'The third question after what unit and what rank: what do you do. The branch names are written the way the statute writes them — 보병과, not 보병.',
+      Korean:
+        '부대와 계급 다음에 오는 질문 — 무슨 일을 하는가. 병과 이름은 법령이 쓰는 「보병과」 형태 그대로예요.',
+    },
+    pairs: [
+      { korean: '병과', english: 'branch', context: 'the corps you belong to for a career — not the job you do today' },
+      { korean: '주특기', english: 'primary military occupational specialty (MOS)', context: 'the specific job inside a branch — US "MOS" maps to this, never to 병과' },
+      { korean: '기본병과', english: 'basic branch', context: 'the ones anyone can be assigned to' },
+      { korean: '특수병과', english: 'special branch', context: 'medicine, law and the chaplaincy — entered with a civilian qualification' },
+      { korean: '전과', english: 'branch transfer', context: 'moving to another branch — approved, not chosen' },
+      { korean: '보병과', english: 'Infantry Branch', context: 'the branch — 보병 on its own is the arm' },
+      { korean: '기갑과', english: 'Armor Branch' },
+      { korean: '포병과', english: 'Field Artillery Branch', context: 'the US splits artillery in two and this is the field half — say "field", or a US listener hears air defense as well' },
+      { korean: '방공과', english: 'Air Defense Artillery Branch', context: 'the other half of that split, and a branch of its own on both sides' },
+      { korean: '정보과', english: 'Military Intelligence Corps', context: 'the branch; 정보 alone is the information itself' },
+      { korean: '공병과', english: 'Corps of Engineers', context: 'an officer branches "Engineer"; the organization is the Corps of Engineers' },
+      { korean: '정보통신과', english: 'Signal Corps', context: 'the official English is the literal "information and communications" — the counterpart branch is the Signal Corps' },
+      { korean: '항공과', english: 'Aviation Branch', context: 'Army aviation, which is helicopters — not the Air Force' },
+      { korean: '화생방과', english: 'Chemical Corps', context: 'the branch; the hazard set itself is 화생방, and the US adds nuclear and says CBRN' },
+      { korean: '병참과', english: 'Quartermaster Corps', context: 'supply and field services — the official English says "logistics", which in the ROK Army is a different branch' },
+      { korean: '군수과', english: 'Logistics Branch', context: 'sits over 병기·병참·수송, which are still branches of their own' },
+      { korean: '수송과', english: 'Transportation Corps', context: 'the branch; 수송 on its own is the activity' },
+      { korean: '인사과', english: "Adjutant General's Corps", context: 'personnel; it was 부관과 until recently, and the old official English rendered that "aide-de-camp" — a person, not a branch' },
+      { korean: '군사경찰과', english: 'Military Police Corps', context: 'the branch; renamed from 헌병과 in 2020' },
+      { korean: '군의과', english: 'Medical Corps', context: 'physicians in uniform — one of them is a 군의관' },
+      { korean: '법무과', english: "Judge Advocate General's Corps (JAG)", context: 'say "JAG" — it is what gets said on both sides' },
+      { korean: '군종과', english: 'Chaplain Corps', context: 'clergy commissioned as officers' },
+      { korean: '어학병', english: 'language soldier', context: 'recruited by language exam for interpretation and translation — the official term since the Army and Air Force stopped saying 통역병' },
+      { korean: '통역병', english: 'interpreter soldier', context: 'the former name for 어학병, and still what everyone says' },
     ],
   },
   {

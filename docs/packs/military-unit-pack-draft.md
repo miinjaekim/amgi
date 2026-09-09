@@ -390,11 +390,19 @@ trap has a home elsewhere, the home wins and the hint travels with it.
 
 ---
 
-**Total: 220 terms** (26 + 21 + 20 + 26 + 23 + 21 + 24 + 24 + 14 + 21)
+**Total: 244 terms** (26 + 21 + 24 + 20 + 26 + 23 + 21 + 24 + 24 + 14 + 21)
 
-Larger than TOEIC (133) and TOPIK (160), and ten sections against their four
+Larger than TOEIC (133) and TOPIK (160), and eleven sections against their four
 and six. Both numbers are arguable and §10 is where I would cut first if the
 answer is that this should be smaller.
+
+**An eleventh section was added 2026-09-09**: `branches`, 병과와 주특기, 24
+pairs, placed third — the branch a soldier belongs to and the job inside it,
+which this draft never covered. It was authored under the sourcing standard set
+after this file was written, so it has a draft of its own with a tier and a
+citation on every row: [military-branches-subpack-draft.md](military-branches-subpack-draft.md).
+Read that one before changing a branch name; the section numbering above is
+unshifted, so §3–§10 here are §4–§11 in the pack.
 
 ## Open questions
 

@@ -13,8 +13,8 @@ import {
 import type { VocabPack } from '@amgi/core';
 
 const PAIRS = [
-  { ko: MILITARY_UNIT_PACK_KO, en: MILITARY_UNIT_PACK_EN, base: 'military-unit', size: 220 },
-  { ko: MILITARY_AFFAIRS_PACK_KO, en: MILITARY_AFFAIRS_PACK_EN, base: 'military-affairs', size: 254 },
+  { ko: MILITARY_UNIT_PACK_KO, en: MILITARY_UNIT_PACK_EN, base: 'military-unit', size: 244, sections: 11 },
+  { ko: MILITARY_AFFAIRS_PACK_KO, en: MILITARY_AFFAIRS_PACK_EN, base: 'military-affairs', size: 254, sections: 10 },
 ];
 
 const koreanPacks = [MILITARY_UNIT_PACK_KO, MILITARY_AFFAIRS_PACK_KO];
@@ -67,10 +67,10 @@ describe('military packs', () => {
   // and not the other is not a thing that can happen — this is the check that
   // nobody has hand-edited the derived output back apart.
   it('derives both directions from the same sections', () => {
-    for (const { ko, en, size } of PAIRS) {
+    for (const { ko, en, size, sections } of PAIRS) {
       expect(ko.sections.map(s => s.id)).toEqual(en.sections.map(s => s.id));
       expect(new Set(ko.sections.map(s => s.id)).size).toBe(ko.sections.length);
-      expect(ko.sections).toHaveLength(10);
+      expect(ko.sections).toHaveLength(sections);
       expect(getPackEntries(ko)).toHaveLength(size);
       expect(getPackEntries(en)).toHaveLength(size);
       for (const section of ko.sections) {
@@ -196,6 +196,36 @@ describe('military packs', () => {
       // say "howitzer" out loud, an English native has to say 곡사포.
       expect(pack.pronounceable).toBe(true);
     }
+  });
+
+  // The `branches` section says 보병과 where the rest of the pack says 보병, and
+  // that is not a stylistic choice: the bare forms are already cards in §2, §7
+  // and §8, and a branch is not the same thing as the arm. The uniqueness test
+  // above passes either way once the words differ, so this is the check that
+  // the *reason* survives — that branch names keep the statute's 「-과」 form.
+  it('names branches in the statutory form, not the bare one', () => {
+    const section = MILITARY_UNIT_PACK_KO.sections.find(s => s.id === 'branches');
+    expect(section, 'the branches section is missing').toBeDefined();
+    const branches = section!.entries.filter(e => e.study.endsWith('과'));
+    expect(branches.length).toBeGreaterThan(14);
+    for (const bare of ['보병', '수송', '방공', '화생방', '군사경찰']) {
+      expect(
+        section!.entries.some(e => e.study === bare),
+        `${bare} is already a card elsewhere in this pack`,
+      ).toBe(false);
+    }
+  });
+
+  // The section's whole reason to exist is that 법제처's official English lands
+  // on the wrong branch, so the entries where it does must keep their hint — a
+  // back with no warning attached is the failure being avoided.
+  it('warns wherever the official English lands on another branch', () => {
+    const byTerm = new Map(getPackEntries(MILITARY_UNIT_PACK_KO).map(e => [e.study, e]));
+    for (const term of ['병참과', '군수과', '인사과', '정보통신과']) {
+      expect(byTerm.get(term)?.context, `${term} needs its hint`).toBeTruthy();
+    }
+    expect(byTerm.get('병참과')?.back.English).toBe('Quartermaster Corps');
+    expect(byTerm.get('군수과')?.back.English).toBe('Logistics Branch');
   });
 
   // The name is shared across a direction pair and has to work in both UIs, so
