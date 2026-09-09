@@ -29,12 +29,35 @@ same in both decks. `GLOSS_RULE` caps a field at two; these are three. Keep them
   - 合 — `fit, match, join`
   - 行 — `go; carry out; line`
 
-**2. 137 English glosses are tier D** — cut by me from Unihan's definition, listed
-in full in each table's *source* column so the cut is visible. That is the
-weakest tier here and the rows most worth skimming.
-⚠️ **Watch for the Chinese sense.** Unihan is a Chinese-first dictionary and the
-훈 is Korean, so a few disagree in emphasis: 省 is 살필 성 — *examine* — where
-Unihan leads with "province". Those are the ones to catch.
+**2. 137 English glosses are tier D** — cut from Unihan's definition, listed in
+full in each table's *source* column so the cut is visible. That is the weakest
+tier here and the rows most worth skimming.
+
+Unihan is a Chinese-first dictionary and the 훈 is Korean, so its leading sense
+is sometimes not what the character means here. **12 rows take a different
+sense group of the same entry** — every one still Unihan's own wording, chosen
+because the 훈 says which sense the card means. The rule cannot make that call
+itself; it reads no Korean. They are listed in `OVERRIDES` in
+[the ingest script](hanja-geupsu-ingest.py), and marked ◆ below:
+
+  - 韓 한국, 나라 한 — `Korea`, from _fence; surname; Korea_
+  - 江 강 강 — `large river`, from _large river; the Yangzi; surname_
+  - 住 살 주 — `reside, live at`, from _reside, live at, dwell, lodge; stop_
+  - 代 대신할 대 — `replace`, from _replace, replacement (of person or generation); era, generation_
+  - 對 대할 대 — `facing, opposed`, from _correct, right; facing, opposed_
+  - 庭 뜰 정 — `courtyard`, from _courtyard; spacious hall or yard_
+  - 題 제목 제 — `title, headline`, from _forehead; title, headline; theme_
+  - 待 기다릴 대 — `wait`, from _treat, entertain, receive; wait_
+  - 綠 푸를 록 — `green`, from _green; chlorine_
+  - 李 오얏, 성(姓) 리 — `plum`, from _plum; judge; surname_
+  - 使 하여금, 부릴 사 — `cause, order`, from _cause, send on a mission, order; envoy, messenger, ambassador_
+  - 習 익힐 습 — `practice`, from _practice; flapping wings_
+
+⚠️ **One row is still wrong and shipped that way on purpose.** 省 is 살필 성 —
+*examine*, as in 반성 and 성찰 — and Unihan carries only "province" and "save,
+economize". Neither is that sense. Writing "examine" would be tier C, an
+assertion with no source, which this repo says to cut or get checked rather
+than ship quietly. **It needs a Korean-English hanja dictionary, or your call.**
 
 **3. Section names are user-facing copy now.** They are the level names — 8급,
 7급Ⅱ — which `docs/packs/README.md` allows only because a 급수 is a real rung a
@@ -62,13 +85,6 @@ this sandbox, so the CSVs came through the GitHub *contents* API and were
 base64-decoded locally. That detail matters: the other route was WebFetch, which
 puts a summarising model between the source and the file — and a model
 transcribing 300 hanja is the exact thing "the model is not a source" forbids.
-
-**The derivation is a script, not a description.**
-[`hanja-geupsu-ingest.py`](hanja-geupsu-ingest.py) beside this file produces
-every row below from the two sources, and carries the header that says how to
-fetch them. The `tier` column is a claim about provenance; that script is what
-backs it, and re-running it is how a reviewer checks the cut rather than taking
-it on faith.
 
 ⚠️ **Four rows arrived as CJK Compatibility Ideographs** — 金 車 不 樂, U+F90A
 rather than U+91D1 and so on. They are visually identical and they are not the
@@ -183,7 +199,7 @@ gloss over the two-gloss ceiling.
 | 土 | 흙 | 토 | earth, soil | A | kanji pack + Unihan |
 | 八 | 여덟 | 팔 | eight | A | kanji pack + Unihan |
 | 學 | 배울 | 학 | study, learning | A | kanji pack + Unihan (as 学) |
-| 韓 | 한국, 나라 | 한 | fence; surname | D | Unihan: _fence; surname; Korea_ |
+| 韓 | 한국, 나라 | 한 | Korea ◆ | D | Unihan: _fence; surname; Korea_ |
 | 兄 | 형 | 형 | older brother | A | kanji pack + Unihan |
 | 火 | 불 | 화 | fire | A | kanji pack + Unihan |
 
@@ -193,7 +209,7 @@ gloss over the two-gloss ceiling.
 |---|---|---|---|---|---|
 | 家 | 집 | 가 | house, home; family ⚠ | A | kanji pack + Unihan |
 | 間 | 사이 | 간 | interval, between | A | kanji pack + Unihan |
-| 江 | 강 | 강 | large river; the Yangzi | D | Unihan: _large river; the Yangzi; surname_ |
+| 江 | 강 | 강 | large river ◆ | D | Unihan: _large river; the Yangzi; surname_ |
 | 車 | 수레 | 거 | vehicle, car | A | kanji pack + Unihan |
 | 工 | 장인 | 공 | craft, construction | B | kanji pack; Unihan says _labor, work; worker, laborer_ |
 | 空 | 빌 | 공 | sky; empty | A | kanji pack + Unihan |
@@ -260,7 +276,7 @@ gloss over the two-gloss ceiling.
 | 面 | 낯 | 면 | face; surface | D | Unihan: _face; surface; plane; side, dimension; Kangxi radical 176_ |
 | 命 | 목숨 | 명 | life | D | Unihan: _life; destiny, fate, luck; an order, instruction_ |
 | 文 | 글월 | 문 | writing, sentence | A | kanji pack + Unihan |
-| 問 | 물을 | 문 | ask (about), inquire after | D | Unihan: _ask (about), inquire after_ |
+| 問 | 물을 | 문 | ask, inquire after | D | Unihan: _ask (about), inquire after_ |
 | 百 | 일백 | 백 | hundred | A | kanji pack + Unihan |
 | 夫 | 지아비 | 부 | man, male adult | D | Unihan: _man, male adult, husband; those_ |
 | 算 | 셈 | 산 | calculate, arithmetic | A | kanji pack + Unihan |
@@ -279,7 +295,7 @@ gloss over the two-gloss ceiling.
 | 入 | 들 | 입 | enter, put in | A | kanji pack + Unihan |
 | 字 | 글자 | 자 | character, letter | A | kanji pack + Unihan |
 | 祖 | 할아비 | 조 | ancestor, forefather | D | Unihan: _ancestor, forefather; grandfather_ |
-| 住 | 살 | 주 | stop | D | Unihan: _reside, live at, dwell, lodge; stop_ |
+| 住 | 살 | 주 | reside, live at ◆ | D | Unihan: _reside, live at, dwell, lodge; stop_ |
 | 主 | 임금, 주인 | 주 | master, chief owner | D | Unihan: _master, chief owner; host; lord_ |
 | 重 | 무거울 | 중 | heavy, weighty | D | Unihan: _heavy, weighty; double_ |
 | 紙 | 종이 | 지 | paper | A | kanji pack + Unihan |
@@ -317,8 +333,8 @@ gloss over the two-gloss ceiling.
 | 急 | 급할 | 급 | quick, quickly | D | Unihan: _quick, quickly; urgent, pressing_ |
 | 短 | 짧을 | 단 | short; brief | D | Unihan: _short; brief; deficient, lacking_ |
 | 堂 | 집 | 당 | hall; government office | D | Unihan: _hall; government office_ |
-| 代 | 대신할 | 대 | era, generation | D | Unihan: _replace, replacement (of person or generation); era, generation_ |
-| 對 | 대할 | 대 | correct, right | D | Unihan: _correct, right; facing, opposed_ |
+| 代 | 대신할 | 대 | replace ◆ | D | Unihan: _replace, replacement (of person or generation); era, generation_ |
+| 對 | 대할 | 대 | facing, opposed ◆ | D | Unihan: _correct, right; facing, opposed_ |
 | 圖 | 그림 | 도 | diagram | D | Unihan: _diagram; chart, map, picture_ |
 | 讀 | 읽을 | 독 | read, study | D | Unihan: _read, study; pronounce_ |
 | 童 | 아이 | 동 | child, boy | D | Unihan: _child, boy, servant boy; virgin_ |
@@ -340,7 +356,7 @@ gloss over the two-gloss ceiling.
 | 線 | 줄 | 선 | line | A | kanji pack + Unihan |
 | 雪 | 눈 | 설 | snow | A | kanji pack + Unihan |
 | 成 | 이룰 | 성 | completed, finished | D | Unihan: _completed, finished, fixed_ |
-| 省 | 살필 | 성 | province | D | Unihan: _province; save, economize_ |
+| 省 | 살필 | 성 | province ⚠ **no source for this sense** | D | Unihan: _province; save, economize_ |
 | 消 | 사라질 | 소 | vanish, die out | D | Unihan: _vanish, die out; melt away_ |
 | 術 | 재주 | 술 | art, skill | D | Unihan: _art, skill, special feat; method, technique_ |
 | 始 | 비로소 | 시 | begin, start | D | Unihan: _begin, start; then, only then_ |
@@ -361,9 +377,9 @@ gloss over the two-gloss ceiling.
 | 昨 | 어제 | 작 | yesterday | D | Unihan: _yesterday; in former times, past_ |
 | 才 | 재주 | 재 | talent; years of age | A | kanji pack + Unihan |
 | 戰 | 싸움 | 전 | war, fighting | D | Unihan: _war, fighting, battle_ |
-| 庭 | 뜰 | 정 | courtyard; spacious hall or yard | D | Unihan: _courtyard; spacious hall or yard_ |
+| 庭 | 뜰 | 정 | courtyard ◆ | D | Unihan: _courtyard; spacious hall or yard_ |
 | 第 | 차례 | 제 | sequence, number | D | Unihan: _sequence, number; grade, degree_ |
-| 題 | 제목 | 제 | forehead | D | Unihan: _forehead; title, headline; theme_ |
+| 題 | 제목 | 제 | title, headline ◆ | D | Unihan: _forehead; title, headline; theme_ |
 | 注 | 부을 | 주 | concentrate, focus | D | Unihan: _concentrate, focus, direct_ |
 | 集 | 모을 | 집 | assemble, collect together | D | Unihan: _assemble, collect together_ |
 | 窓 | 창 | 창 | window | D | Unihan: _window_ |
@@ -371,7 +387,7 @@ gloss over the two-gloss ceiling.
 | 體 | 몸 | 체 | body | A | kanji pack + Unihan (as 体) |
 | 表 | 겉 | 표 | show, express | D | Unihan: _show, express, manifest, display_ |
 | 風 | 바람 | 풍 | wind | A | kanji pack + Unihan |
-| 幸 | 다행 | 행 | luck(ily), favor | D | Unihan: _luck(ily), favor, fortunately_ |
+| 幸 | 다행 | 행 | luck, favor | D | Unihan: _luck(ily), favor, fortunately_ |
 | 現 | 나타날 | 현 | appear, manifest | D | Unihan: _appear, manifest, become visible_ |
 | 形 | 모양 | 형 | shape, form | A | kanji pack + Unihan |
 | 和 | 화할 | 화 | harmony, peace | D | Unihan: _harmony, peace; peaceful, calm_ |
@@ -390,18 +406,18 @@ gloss over the two-gloss ceiling.
 | 交 | 사귈 | 교 | mix, associate, exchange ⚠ | A | kanji pack + Unihan |
 | 區 | 구분할, 지경 | 구 | area, district | D | Unihan: _area, district, region, ward; surname_ |
 | 郡 | 고을 | 군 | administrative division | D | Unihan: _administrative division_ |
-| 根 | 뿌리 | 근 | root, base(d on) | D | Unihan: _root, base(d on); foundation_ |
+| 根 | 뿌리 | 근 | root, base | D | Unihan: _root, base(d on); foundation_ |
 | 近 | 가까울 | 근 | near | A | kanji pack + Unihan |
 | 級 | 등급 | 급 | level, rank | D | Unihan: _level, rank, class; grade_ |
 | 多 | 많을 | 다 | many, much | A | kanji pack + Unihan |
-| 待 | 기다릴 | 대 | treat, entertain | D | Unihan: _treat, entertain, receive; wait_ |
+| 待 | 기다릴 | 대 | wait ◆ | D | Unihan: _treat, entertain, receive; wait_ |
 | 度 | 법도 | 도 | degree, system | D | Unihan: _degree, system; manner; to consider_ |
 | 頭 | 머리 | 두 | head | A | kanji pack + Unihan |
 | 例 | 법식 | 례 | precedent, example | D | Unihan: _precedent, example; regulation_ |
 | 禮 | 예도 | 례 | social custom; manners | D | Unihan: _social custom; manners; courtesy; rites_ |
 | 路 | 길 | 로 | road, path | D | Unihan: _road, path, street; journey_ |
-| 綠 | 푸를 | 록 | green; chlorine | D | Unihan: _green; chlorine_ |
-| 李 | 오얏, 성(姓) | 리 | plum; judge | D | Unihan: _plum; judge; surname_ |
+| 綠 | 푸를 | 록 | green ◆ | D | Unihan: _green; chlorine_ |
+| 李 | 오얏, 성(姓) | 리 | plum ◆ | D | Unihan: _plum; judge; surname_ |
 | 目 | 눈 | 목 | eye | A | kanji pack + Unihan |
 | 美 | 아름다울 | 미 | beautiful, pretty | D | Unihan: _beautiful, pretty; pleasing_ |
 | 米 | 쌀 | 미 | rice; America | A | kanji pack + Unihan |
@@ -411,14 +427,14 @@ gloss over the two-gloss ceiling.
 | 病 | 병 | 병 | illness, sickness | D | Unihan: _illness, sickness, disease_ |
 | 服 | 옷 | 복 | clothes | D | Unihan: _clothes; wear, dress_ |
 | 本 | 근본 | 본 | book; origin | A | kanji pack + Unihan |
-| 使 | 하여금, 부릴 | 사 | envoy, messenger | D | Unihan: _cause, send on a mission, order; envoy, messenger, ambassador_ |
+| 使 | 하여금, 부릴 | 사 | cause, order ◆ | D | Unihan: _cause, send on a mission, order; envoy, messenger, ambassador_ |
 | 死 | 죽을 | 사 | die; dead | D | Unihan: _die; dead; death_ |
 | 席 | 자리 | 석 | seat; mat | D | Unihan: _seat; mat; take seat; banquet_ |
 | 石 | 돌 | 석 | stone | A | kanji pack + Unihan |
 | 速 | 빠를 | 속 | quick, prompt | D | Unihan: _quick, prompt, speedy_ |
 | 孫 | 손자 | 손 | grandchild, descendent | D | Unihan: _grandchild, descendent; surname_ |
 | 樹 | 나무 | 수 | tree; plant | D | Unihan: _tree; plant; set up, establish_ |
-| 習 | 익힐 | 습 | practice; flapping wings | D | Unihan: _practice; flapping wings_ |
+| 習 | 익힐 | 습 | practice ◆ | D | Unihan: _practice; flapping wings_ |
 | 勝 | 이길 | 승 | victory | D | Unihan: _victory; excel, be better than_ |
 | 式 | 법 | 식 | style, system | D | Unihan: _style, system, formula, rule_ |
 | 失 | 잃을 | 실 | lose | D | Unihan: _lose; make mistake, neglect_ |
@@ -435,7 +451,7 @@ gloss over the two-gloss ceiling.
 | 遠 | 멀 | 원 | far | A | kanji pack + Unihan |
 | 由 | 말미암을 | 유 | cause, reason | D | Unihan: _cause, reason; from_ |
 | 油 | 기름 | 유 | oil, fat | D | Unihan: _oil, fat, grease, lard; paints_ |
-| 銀 | 은 | 은 | silver (element 47, Ag) | D | Unihan: _silver (element 47, Ag); cash, money, wealth_ |
+| 銀 | 은 | 은 | silver | D | Unihan: _silver (element 47, Ag); cash, money, wealth_ |
 | 醫 | 의원 | 의 | medicine | D | Unihan: _medicine; to cure, heal; physician_ |
 | 衣 | 옷 | 의 | clothes, clothing | D | Unihan: _clothes, clothing; cover, skin; Kangxi radical 145_ |
 | 者 | 놈 | 자 | that which; he who | D | Unihan: _that which; he who; those who_ |

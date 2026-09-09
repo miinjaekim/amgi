@@ -77,7 +77,44 @@ NOISE = re.compile(r'(kangxi radical|radical number|\d+(st|nd|rd|th) lunar mansi
                    r'|determinative star|abbreviation for|variant of|same as|a surname'
                    r'|earthly branch|celestial stem)', re.I)
 
+# Unihan parenthesises encyclopedia: "silver (element 47, Ag)", "replacement
+# (of person or generation)". Never the gloss, always the footnote.
+PAREN = re.compile(r'\s*\([^)]*\)')
+
+# Where the rule below picks a sense the Korean 훈 does not mean.
+#
+# **Every value here is Unihan's own wording**, from a different sense group of
+# the same entry — this table chooses among the source's senses, it does not
+# write new ones. That is the whole licence tier D gives, and listing the
+# choices is what keeps it checkable: 韓 is 한국 한, so "fence; surname" is the
+# wrong half of "fence; surname; Korea".
+#
+# The rule cannot make these calls itself. It reads no Korean, and the 훈 is
+# the only thing that says which sense a hanja card means.
+OVERRIDES = {
+    '韓': 'Korea',            # was 'fence; surname' — 훈 한국, 나라
+    '住': 'reside, live at',  # was 'stop' — 훈 살
+    '代': 'replace',          # was 'era, generation' — 훈 대신할
+    '對': 'facing, opposed',  # was 'correct, right' — 훈 대할
+    '題': 'title, headline',  # was 'forehead' — 훈 제목
+    '使': 'cause, order',     # was 'envoy, messenger' — 훈 하여금, 부릴
+    '習': 'practice',         # was 'practice; flapping wings' — the second half is not a gloss
+    '李': 'plum',             # was 'plum; judge' — 훈 오얏
+    '庭': 'courtyard',        # was three glosses, over the ceiling
+    '待': 'wait',             # was 'treat, entertain' — 훈 기다릴
+    '綠': 'green',            # was 'green; chlorine'
+    '江': 'large river',      # was 'large river; the Yangzi'
+}
+
+# ⚠️ Unresolved, and left sourced-but-wrong on purpose rather than invented.
+# 省 is 살필 성 — *examine*, as in 반성 and 성찰 — and Unihan carries only
+# "province" and "save, economize", neither of which is that sense. Writing
+# "examine" here would be tier C, an assertion with no source, which
+# `docs/packs/README.md` says to cut or get checked rather than ship quietly.
+NEEDS_A_SOURCE = {'省'}
+
 def trim(defn):
+    defn = PAREN.sub('', defn)
     groups = [g.strip() for g in defn.split(';') if g.strip()]
     kept = [g for g in groups if not NOISE.search(g)] or groups
     short = [g for g in kept if len(g.replace(',', ' ').split()) <= 4]
@@ -99,13 +136,16 @@ for ch in order:
         ok = bool(words & set(re.findall(r'[a-z]+', defn.lower())))
         tier = 'A' if ok else 'B'
         source = ('kanji pack + Unihan' if ok else 'kanji pack') + (f' (as {form})' if form != ch else '')
+    elif ch in OVERRIDES:
+        english, tier, source = OVERRIDES[ch], 'D', 'Unihan, sense chosen to match the 훈'
     else:
         english, tier, source = trim(defn), 'D', 'Unihan, trimmed'
     entries.append({'level': info['level'], 'hanja': ch, 'hun': hun, 'eum': eum,
                     'english': english, 'tier': tier, 'source': source,
                     'secondary': secondary, 'unihan': defn,
                     'hangul': uni[ch].get('kHangul', ''),
-                    'strokes': info['strokes'], 'radical': info['radical']})
+                    'strokes': info['strokes'], 'radical': info['radical'],
+                    'unsourced': ch in NEEDS_A_SOURCE})
 
 json.dump(entries, sys.stdout, ensure_ascii=False, indent=1)
 

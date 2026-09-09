@@ -2,6 +2,7 @@ import type { CardSides, StudyLanguage } from './types';
 import { getBackSideConfig, getStudyLanguageConfig } from './types';
 import { DAILY_LIFE_PACK } from './dailyLife';
 import { IDIOMS_PACK } from './idioms';
+import { HANJA_GEUPSU_PACK } from './hanja';
 import { HIRAGANA_PACK, KATAKANA_PACK } from './kana';
 import { KANJI_GRADE_1_2_PACK } from './kanji';
 import {
@@ -494,6 +495,7 @@ export const VOCAB_PACKS: Partial<Record<StudyLanguage, VocabPack[]>> = {
   Korean: [TOPIK_ADVANCED_PACK, MILITARY_UNIT_PACK_KO, MILITARY_AFFAIRS_PACK_KO],
   Spanish: [SPANISH_BASICS_PACK],
   Kikuyu: [KIKUYU_BASICS_PACK],
+  Hanja: [HANJA_GEUPSU_PACK],
 };
 
 export function getVocabPacks(studyLanguage: StudyLanguage): VocabPack[] {
