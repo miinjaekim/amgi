@@ -62,9 +62,7 @@ export default function PageHeader({ titleKey, helpTitleKey, helpLeadKey, helpPo
   return (
     <>
       <View style={s.header}>
-        {/* The title shrinks and the badge does not: a long title is still
-            readable clipped, where a streak reading "12 d…" is not. */}
-        <Text style={s.title} numberOfLines={1}>{t(nativeLanguage, titleKey)}</Text>
+        <Text style={s.title}>{t(nativeLanguage, titleKey)}</Text>
         <TouchableOpacity
           style={s.helpBtn}
           onPress={() => setHelpOpen(true)}
@@ -75,11 +73,19 @@ export default function PageHeader({ titleKey, helpTitleKey, helpLeadKey, helpPo
         >
           <Ionicons name="help-circle-outline" size={20} color={C.muted} />
         </TouchableOpacity>
-        {/* Pushed to the far edge, so it lands in the same corner on every
-            screen that carries it — the help button stays beside the title it
-            explains. */}
-        {streak && <StreakBadge style={s.streakSlot} />}
       </View>
+
+      {/* Under the title, not beside it. Sharing the row cost the title the
+          space it needed — "Review" clipped on a normal phone once a streak
+          long enough to be worth showing sat next to it, and shrinking the
+          badge instead would have made the streak the unreadable one.
+          Left-aligned on the header's own gutter, so the flame lines up under
+          the first letter of the title.
+
+          On the badge rather than a wrapper `View`: `StreakBadge` renders null
+          without a streak, and a wrapper would leave its padding behind as a
+          gap on every account that has not started one. */}
+      {streak && <StreakBadge style={s.streakRow} />}
 
       <Modal
         visible={helpOpen}
@@ -139,8 +145,10 @@ function makeStyles(C: Palette) {
       flexDirection: 'row', alignItems: 'center', gap: 8,
       paddingHorizontal: 20, paddingVertical: 12,
     },
-    title: { fontSize: PAGE_TITLE_SIZE, fontWeight: '700', color: C.highlight, flexShrink: 1 },
-    streakSlot: { marginLeft: 'auto', flexShrink: 0 },
+    title: { fontSize: PAGE_TITLE_SIZE, fontWeight: '700', color: C.highlight },
+    // `flex-start` keeps the tap target on the badge itself; stretched, the
+    // whole width of the row would navigate to Progress.
+    streakRow: { alignSelf: 'flex-start', paddingHorizontal: 20, paddingBottom: 10 },
     helpBtn: { padding: 2 },
     backdrop: {
       flex: 1, backgroundColor: 'rgba(0,0,0,0.6)',

@@ -66,10 +66,16 @@ function makeStyles(C: Palette) {
   });
 }
 
-/** Padding for the badge standing on its own, matching a page header's row. */
+/**
+ * Padding for the badge standing on its own, with no page title above it.
+ *
+ * 16 rather than the 20 a `PageHeader` uses: the only screen in this shape is
+ * Learn's results state, where what it has to line up with is the search row
+ * below it, and that sits on a 16 gutter.
+ */
 export const streakRowStyle: ViewStyle = {
-  alignSelf: 'flex-end',
-  paddingHorizontal: 20,
+  alignSelf: 'flex-start',
+  paddingHorizontal: 16,
   paddingTop: 8,
   paddingBottom: 4,
 };
