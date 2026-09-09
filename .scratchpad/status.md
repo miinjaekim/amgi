@@ -196,10 +196,92 @@ Android, where only sign-in has been exercised.
   docs name subscribing-in-an-effect as the intended use. Scoped under
   Housekeeping in [backlog.md](backlog.md).
 
+- ⚠️ **The subpack remap ran ahead of the code that reads it** (2026-09-09).
+  `remap:subpacks` moved 2218 cards across 12 accounts to `pack/section` ids
+  while PR #116 was still open — so deployed web and TestFlight build 14, which
+  only understand a bare pack id, now fall back to `name: id` for every pack
+  card. **Every pack shows as raw slugs** (`toeic-core/verbs`) in the review
+  picker and the deck chips, one row per section, sorted last.
+  Cosmetic and reversible — nothing is lost, every card still reviews — but it
+  is live for real accounts until the code catches up. The safety the design
+  was built around runs one way only: *new* code reads old cards fine, and that
+  is not the same claim as old code reading new cards.
+  Web clears on merge and deploy; **mobile cannot clear until the next build**,
+  which is the argument for reverting the remap and re-running it after that
+  build rather than waiting. `remap:subpacks --revert` undoes it exactly, and
+  re-running the forward pass afterwards costs nothing — the feature works on
+  un-remapped cards, they just sit at pack level.
+
 ## Decisions
 
 Closed calls, kept with their reasoning — a decision whose reasoning is lost gets
 reopened by the next person to notice the symptom. Newest first.
+
+### No Review group in settings — subpacks answered it instead (2026-09-09)
+
+**Closes "What belongs on the review screen versus in settings"**, removed from
+the backlog rather than built. The user's call, on seeing subpacks working:
+*"i think we managed to remove the need for a review screen settings by adding
+subpacks."*
+
+**What the item was actually stuck on.** The rule it named — *the review screen
+holds session properties, settings holds durable preferences* — covered
+everything except one axis: a control that is **durable but scoped to review**.
+That axis was the only argument for a Review group inside settings, and the
+whole item was waiting on it.
+
+**Subpacks removed the pressure by making the scoping structural.** The thing
+you would have reached for a persisted setting to do — sit down with part of a
+deck rather than all of it — is now a thing you *pick*, in the place you pick
+what you are reviewing. A remembered preference would be a worse version of
+that: it answers once, invisibly, where the picker answers every session and
+shows you the state it is in.
+
+**The rule stands and is now written down**, which was half the item's value:
+session properties on the review screen, durable preferences in settings, and
+nothing in between needing a third home.
+
+⚠️ **What this does not decide.** Default direction and whether typing starts on
+are still session state that resets, and nobody has asked for them to persist.
+If someone does, this entry is the thing to reopen — the answer then is a Review
+group in settings, and the settings screen's own flat-list problem (noted with
+the per-context pronunciation speed item) becomes the same piece of work.
+
+### A pack is reviewable as a whole, and that narrows an older rule (2026-09-09)
+
+**Closes the first of the two calls the subpacks item left open**, answered by
+the user directly: *"i still want to be able to review a whole pack; i think
+it's relevant when i've already studied all the subsections i wouldn't need to
+review the sections separately."*
+
+**It contradicts something written down, which is why it is here.**
+`ReviewCollection`'s header says there is *deliberately no "everything"
+collection* — a pack and your own words are learned for different reasons, and
+katakana arriving mid-way through Japanese vocabulary is worse review than
+either done alone. A whole-pack review is that same shape one scope down, so it
+needed an argument rather than a shrug.
+
+**The argument is that the rule was never about scope, it was about provenance.**
+Two collections are kept apart when they were learned for *different reasons*. A
+pack's sections were authored as one deck for one purpose — Greetings and
+Numbers are both "the Kikuyu you start with" — so pooling them is not the mixing
+the rule rejects. The rule stands unchanged for everything above the pack. What
+it gains is a boundary: **a pack is the largest thing that pools.**
+
+**And the user's case is the one the second level would otherwise break.** Once
+every section is studied, reviewing them one at a time is six sittings of the
+same material — so a design where the only scopes are subpacks would have made
+finishing a pack *worse*. The second level is additive: the pack row is first in
+its group and stays a real sitting.
+
+**Mechanically it is one asymmetry**, `cardInCollection`: a subpack takes only
+its own cards, a pack takes its own *and* every subpack's. Cards saved before
+subpacks carry a bare pack id and land in the pack with no subpack, which is why
+the migration could ship after the feature rather than inside it.
+
+**One knock-on:** a pack with a single subpack holding all of it renders flat,
+because "the whole pack" and "the one section" would be the same sitting offered
+twice.
 
 ### The gloss ceiling is one rule, and the semicolon knows about disambiguation (2026-09-08)
 

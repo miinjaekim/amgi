@@ -5,6 +5,7 @@ import { t } from '@amgi/core';
 import type { TranslationKey } from '@amgi/core';
 import { useUser } from '../context/UserContext';
 import { useTheme } from '../context/ThemeContext';
+import StreakBadge from './StreakBadge';
 import type { Palette } from '../theme';
 
 /**
@@ -26,6 +27,17 @@ interface Props {
   helpLeadKey: TranslationKey;
   /** The non-obvious mechanics, one per line, split on `\n`. */
   helpPointsKey: TranslationKey;
+  /**
+   * Show the streak at the right end of the title row.
+   *
+   * Opt-in rather than always-on: it belongs on the tabs where you *do* the
+   * work — Learn and Review — and not on Packs or Cards, which are for browsing
+   * what you already have. A number that only moves on the other two tabs is
+   * decoration there.
+   *
+   * Costs nothing on an account without a streak; `StreakBadge` renders null.
+   */
+  streak?: boolean;
 }
 
 /**
@@ -41,7 +53,7 @@ interface Props {
  * asked. Unsolicited, the same text would be the lecture that the first-run
  * checklist was rejected for being.
  */
-export default function PageHeader({ titleKey, helpTitleKey, helpLeadKey, helpPointsKey }: Props) {
+export default function PageHeader({ titleKey, helpTitleKey, helpLeadKey, helpPointsKey, streak }: Props) {
   const { nativeLanguage } = useUser();
   const { C } = useTheme();
   const s = useMemo(() => makeStyles(C), [C]);
@@ -62,6 +74,18 @@ export default function PageHeader({ titleKey, helpTitleKey, helpLeadKey, helpPo
           <Ionicons name="help-circle-outline" size={20} color={C.muted} />
         </TouchableOpacity>
       </View>
+
+      {/* Under the title, not beside it. Sharing the row cost the title the
+          space it needed — "Review" clipped on a normal phone once a streak
+          long enough to be worth showing sat next to it, and shrinking the
+          badge instead would have made the streak the unreadable one.
+          Left-aligned on the header's own gutter, so the flame lines up under
+          the first letter of the title.
+
+          On the badge rather than a wrapper `View`: `StreakBadge` renders null
+          without a streak, and a wrapper would leave its padding behind as a
+          gap on every account that has not started one. */}
+      {streak && <StreakBadge style={s.streakRow} />}
 
       <Modal
         visible={helpOpen}
@@ -122,6 +146,9 @@ function makeStyles(C: Palette) {
       paddingHorizontal: 20, paddingVertical: 12,
     },
     title: { fontSize: PAGE_TITLE_SIZE, fontWeight: '700', color: C.highlight },
+    // `flex-start` keeps the tap target on the badge itself; stretched, the
+    // whole width of the row would navigate to Progress.
+    streakRow: { alignSelf: 'flex-start', paddingHorizontal: 20, paddingBottom: 10 },
     helpBtn: { padding: 2 },
     backdrop: {
       flex: 1, backgroundColor: 'rgba(0,0,0,0.6)',

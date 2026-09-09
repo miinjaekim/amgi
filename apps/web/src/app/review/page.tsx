@@ -7,11 +7,13 @@ import {
   DIRECTION_FILTERS,
   buildReviewCollections,
   buildReviewQueue,
+  cardsInCollection,
   collectionKey,
   dueReviewItems,
+  findCollection,
+  flattenCollections,
   filterByDirection,
   getBackSide,
-  getCollectionId,
   getNextReviewDate,
   getReading,
   getStudyLanguageConfig,
@@ -156,7 +158,19 @@ export default function ReviewPage() {
     [userFlashcards, studyLanguage, nativeLanguage]
   );
 
-  const selected = collections.find(c => collectionKey(c) === selectedKey);
+  /**
+   * The pack whose subpacks the picker is showing, or null at the top level.
+   *
+   * A drill-down rather than an accordion: you pick the pack group first, and a
+   * pack's sections are a choice you make *inside* it. Expanding them in place
+   * would put 11 kanji sections between TOEIC and Everyday English on a list
+   * whose whole job is the first choice.
+   */
+  const [openPack, setOpenPack] = useState<string | null>(null);
+
+  const selected = findCollection(collections, selectedKey);
+  /** Every row that can be picked, both levels, for the counts below. */
+  const pickableCollections = useMemo(() => flattenCollections(collections), [collections]);
 
   // One collection means there is no choice to make — every Korean-only session
   // — so nobody pays a tap for it. Coming from a deck's "Review this deck", the
@@ -165,7 +179,7 @@ export default function ReviewPage() {
   // a handoff the user has already moved past.
   const requestedCollection = React.useRef<string | null | undefined>(undefined);
   useEffect(() => {
-    if (selectedKey !== undefined || collections.length === 0) return;
+    if (selectedKey !== undefined || pickableCollections.length === 0) return;
     if (requestedCollection.current === undefined) {
       requestedCollection.current = new URLSearchParams(window.location.search).get('collection');
       if (requestedCollection.current !== null) {
@@ -173,20 +187,23 @@ export default function ReviewPage() {
       }
     }
     const requested = requestedCollection.current;
-    // `?collection=` carries a pack id, which is what "Review this deck" hands
-    // over.
+    // `?collection=` carries a pack id or a `pack/section` subpack id — the
+    // deck page hands over whichever scope the button that was tapped means.
     const handoff = requested
-      ? collections.find(c => c.id === requested)
+      ? pickableCollections.find(c => c.id === requested)
       : undefined;
     if (handoff) setSelectedKey(collectionKey(handoff));
-    else if (collections.length === 1) setSelectedKey(collectionKey(collections[0]));
+    // One row across *both* levels is the case with no choice in it. Counting
+    // only packs would skip the picker on a single pack split into six
+    // subpacks, which is exactly the account this feature exists for.
+    else if (pickableCollections.length === 1) setSelectedKey(collectionKey(pickableCollections[0]));
     requestedCollection.current = null;
-  }, [collections, selectedKey]);
+  }, [pickableCollections, selectedKey]);
 
+  // A pack takes its subpacks' cards too, which is what makes the whole-pack
+  // row a real sitting rather than a header.
   const collectionCards = useMemo(
-    () => !selected
-      ? []
-      : userFlashcards.filter(card => getCollectionId(card) === selected.id),
+    () => !selected ? [] : cardsInCollection(userFlashcards, selected.id),
     [userFlashcards, selected]
   );
 
@@ -588,10 +605,10 @@ export default function ReviewPage() {
 
   // Only offered when there is something else to change to — a single
   // collection is not a choice, and a control for it would only be noise.
-  const canChangeCollection = collections.length > 1;
+  const canChangeCollection = pickableCollections.length > 1;
   const changeCollectionButton = canChangeCollection && (
     <button
-      onClick={() => { setSelectedKey(undefined); setDirectionFilter('both'); }}
+      onClick={() => { setSelectedKey(undefined); setOpenPack(null); setDirectionFilter('both'); }}
       className="mt-4 text-sm px-3 py-1.5 rounded-lg border border-[var(--color-muted)] text-[var(--color-muted)] hover:text-[var(--color-text)] hover:border-[var(--color-text)] transition-colors"
     >
       {t(nativeLanguage, 'reviewChangeCollection')}
@@ -616,36 +633,93 @@ export default function ReviewPage() {
 
   const collectionName = selected?.name;
 
-  const renderCollectionPicker = (list: ReviewCollection[]) => (
-    <div>
-      <p className="text-sm text-[var(--color-muted)] mb-4">{t(nativeLanguage, 'reviewPickCollection')}</p>
-      <ul className="flex flex-col gap-3">
-        {list.map(collection => (
-          <li key={collectionKey(collection)}>
-            <button
-              onClick={() => setSelectedKey(collectionKey(collection))}
-              className="w-full text-left p-4 rounded-xl border border-[var(--color-muted)] hover:bg-[var(--color-muted)]/20 transition-colors"
-            >
-              <div className="flex items-baseline justify-between gap-3 flex-wrap">
-                <span className="font-bold text-[var(--color-text)]">{collection.name}</span>
-                <span
-                  className="text-xs shrink-0"
-                  style={{ color: collection.dueCount > 0 ? 'var(--color-highlight)' : 'var(--color-muted)' }}
-                >
-                  {collection.dueCount > 0
-                    ? t(nativeLanguage, 'reviewCollectionDue', { count: collection.dueCount })
-                    : t(nativeLanguage, 'reviewCollectionCaughtUp')}
-                </span>
-              </div>
-              <p className="text-xs text-[var(--color-muted)] mt-1">
-                {t(nativeLanguage, 'deckEntryCount', { count: collection.cardCount })}
-              </p>
-            </button>
-          </li>
-        ))}
-      </ul>
-    </div>
+  /**
+   * One row of the picker. `label` overrides the name for the whole-pack row,
+   * which sits under a heading already carrying the pack's name.
+   */
+  const renderCollectionRow = (
+    collection: ReviewCollection,
+    onClick: () => void,
+    { label, opens }: { label?: string; opens?: boolean } = {},
+  ) => (
+    <li key={collectionKey(collection)}>
+      <button
+        onClick={onClick}
+        className="w-full text-left p-4 rounded-xl border border-[var(--color-muted)] hover:bg-[var(--color-muted)]/20 transition-colors"
+      >
+        <div className="flex items-baseline justify-between gap-3 flex-wrap">
+          <span className="font-bold text-[var(--color-text)]">
+            {label ?? collection.name}
+            {/* This row opens a second choice rather than starting a session.
+                Without the mark, a pack with subpacks and one without look
+                identical and one of them does something you did not ask for. */}
+            {opens && <span className="ml-2 text-[var(--color-muted)] font-normal">›</span>}
+          </span>
+          <span
+            className="text-xs shrink-0"
+            style={{ color: collection.dueCount > 0 ? 'var(--color-highlight)' : 'var(--color-muted)' }}
+          >
+            {collection.dueCount > 0
+              ? t(nativeLanguage, 'reviewCollectionDue', { count: collection.dueCount })
+              : t(nativeLanguage, 'reviewCollectionCaughtUp')}
+          </span>
+        </div>
+        <p className="text-xs text-[var(--color-muted)] mt-1">
+          {t(nativeLanguage, 'deckEntryCount', { count: collection.cardCount })}
+        </p>
+      </button>
+    </li>
   );
+
+  /**
+   * The picker, one or two levels deep.
+   *
+   * The first level is packs and your own cards — the choice of what you sat
+   * down for. A pack holding subpacks opens into its own list instead of
+   * starting: the whole pack, then each section with its own progress. The
+   * whole-pack row is deliberately there and deliberately first — once you have
+   * worked through the sections, reviewing them one at a time is the same
+   * material several times over.
+   */
+  const renderCollectionPicker = () => {
+    const open = collections.find(c => collectionKey(c) === openPack);
+    if (!open) {
+      return (
+        <div>
+          <p className="text-sm text-[var(--color-muted)] mb-4">{t(nativeLanguage, 'reviewPickCollection')}</p>
+          <ul className="flex flex-col gap-3">
+            {collections.map(collection =>
+              collection.subcollections.length > 0
+                ? renderCollectionRow(collection, () => setOpenPack(collectionKey(collection)), { opens: true })
+                : renderCollectionRow(collection, () => setSelectedKey(collectionKey(collection)))
+            )}
+          </ul>
+        </div>
+      );
+    }
+    return (
+      <div>
+        <button
+          onClick={() => setOpenPack(null)}
+          className="text-sm text-[var(--color-muted)] hover:text-[var(--color-text)] transition-colors"
+        >
+          ← {t(nativeLanguage, 'reviewBackToCollections')}
+        </button>
+        <p className="mt-4 font-bold text-[var(--color-text)]">{open.name}</p>
+        <p className="text-sm text-[var(--color-muted)] mb-4">{t(nativeLanguage, 'reviewPickSubpack')}</p>
+        <ul className="flex flex-col gap-3">
+          {renderCollectionRow(
+            open,
+            () => setSelectedKey(collectionKey(open)),
+            { label: t(nativeLanguage, 'reviewWholePack') },
+          )}
+          {open.subcollections.map(sub =>
+            renderCollectionRow(sub, () => setSelectedKey(collectionKey(sub)))
+          )}
+        </ul>
+      </div>
+    );
+  };
 
   const filteredCount = filterByDirection(dueCards, directionFilter).length;
 
@@ -670,7 +744,7 @@ export default function ReviewPage() {
         {user ? (
           flashcardsLoading ? (
             <div className="text-[var(--color-muted)]">{t(nativeLanguage, 'loadingFlashcards')}</div>
-          ) : collections.length === 0 ? (
+          ) : pickableCollections.length === 0 ? (
             <div className="text-center py-4">
               <p className="text-[var(--color-muted)] mb-6">{t(nativeLanguage, 'noFlashcardsForReview')}</p>
               <Link
@@ -682,7 +756,7 @@ export default function ReviewPage() {
               </Link>
             </div>
           ) : selectedKey === undefined || !selected ? (
-            renderCollectionPicker(collections)
+            renderCollectionPicker()
           ) : /* A session in progress outranks the due count. Ratings now feed
                  straight back into `dueCards`, so finishing one cleanly drops
                  it to zero — and if that were checked first, the last answer

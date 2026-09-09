@@ -3,9 +3,9 @@ import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import {
-  buildPackCardDraft, collectSavedTerms, countSavedEntries, getCollectionId,
-  getPackEntries, getPackText, getStudyLangSide, getVocabPack, resolvePackBack,
-  unsavedEntries, t,
+  buildPackCardDraft, cardInCollection, collectSavedTerms, countSavedEntries,
+  getPackEntries, getPackText, getStudyLangSide, getVocabPack, packRefId,
+  resolvePackBack, unsavedEntries, t,
 } from '@amgi/core';
 import type { PackEntry, PackSection } from '@amgi/core';
 import { useUser } from '../../../../src/context/UserContext';
@@ -30,8 +30,23 @@ export default function DeckDetailScreen() {
   const [cards, setCards] = useState<Flashcard[] | null>(null);
   const [enrolling, setEnrolling] = useState<string | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
+  /**
+   * The subpack the entry list is narrowed to, or null for the whole deck.
+   *
+   * A filter rather than a screen: the deck's job is browsing the words, and
+   * the default view stays what it was. What it removes is the scroll — on an
+   * 11-section pack, reaching one section header meant paging past several
+   * hundred entries.
+   */
+  const [openSubpack, setOpenSubpack] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [detail, setDetail] = useState<PackEntry | null>(null);
+  /**
+   * The entry whose card modal is open, with the section it was tapped in —
+   * which is what a card saved from the modal gets filed under. Losing the
+   * section here would file it at the pack level and leave it out of every
+   * subpack review.
+   */
+  const [detail, setDetail] = useState<{ entry: PackEntry; section: PackSection } | null>(null);
 
   // Live: enrolling writes a batch of cards, and the listener is what turns the
   // deck's saved-count and every row's state over once they land. Nothing has
@@ -75,7 +90,7 @@ export default function DeckDetailScreen() {
       const key = getStudyLangSide(card).toLowerCase();
       if (!key) continue;
       const existing = byTerm.get(key);
-      if (!existing || getCollectionId(card) === packId) byTerm.set(key, card);
+      if (!existing || cardInCollection(card, packId)) byTerm.set(key, card);
     }
     return byTerm;
   }, [cards, packId]);
@@ -101,23 +116,31 @@ export default function DeckDetailScreen() {
   }
 
   /**
-   * Enrol a set of entries in one batched write, then go straight to reviewing
-   * the deck. Sections are the unit this is normally called with: 160 words is
-   * not one decision, and "save this section" turns a pack into six sittings.
+   * Enrol a set of sections in one batched write, then go straight to reviewing
+   * what was added. Sections are the unit: 160 words is not one decision, and
+   * "save this section" turns a pack into six sittings.
+   *
+   * Sections rather than a flat entry list because each card is filed under its
+   * own subpack, the whole-deck button included. Saving the deck and then
+   * reviewing only Greetings has to work, and it only does if every card knows
+   * which section it came from.
    */
-  const enrol = async (id: string, entries: readonly PackEntry[]) => {
+  const enrol = async (busyId: string, sections: readonly PackSection[], collection: string) => {
     if (!user) { setError(t(nativeLanguage, 'signInToSave')); return; }
-    const unsaved = unsavedEntries(entries, savedTerms);
-    if (unsaved === null) { setError(t(nativeLanguage, 'deckCardsUnavailable')); return; }
-    if (unsaved.length > 0) {
-      setEnrolling(id);
-      try {
-        await saveFlashcardsBatch(
-          unsaved.map(entry =>
-            buildPackCardDraft(entry, pack.id, user.uid, studyLanguage) as Omit<Flashcard, 'createdAt' | 'id'>
-          ),
-          studyLanguage,
+    const drafts: Omit<Flashcard, 'createdAt' | 'id'>[] = [];
+    for (const section of sections) {
+      const unsaved = unsavedEntries(section.entries, savedTerms);
+      if (unsaved === null) { setError(t(nativeLanguage, 'deckCardsUnavailable')); return; }
+      for (const entry of unsaved) {
+        drafts.push(
+          buildPackCardDraft(entry, packRefId(pack.id, section.id), user.uid, studyLanguage) as Omit<Flashcard, 'createdAt' | 'id'>
         );
+      }
+    }
+    if (drafts.length > 0) {
+      setEnrolling(busyId);
+      try {
+        await saveFlashcardsBatch(drafts, studyLanguage);
       } catch {
         setError(t(nativeLanguage, 'deckEnrollError'));
         setEnrolling(null);
@@ -125,19 +148,76 @@ export default function DeckDetailScreen() {
       }
       setEnrolling(null);
     }
-    router.navigate({ pathname: '/review', params: { collection: pack.id, nonce: String(Date.now()) } });
+    openReview(collection);
   };
+
+  /** The review tab, scoped to one collection. `nonce` makes a repeat handoff
+   *  of the same scope re-fire rather than land on a screen already showing it. */
+  const openReview = (collection: string) =>
+    router.navigate({ pathname: '/review', params: { collection, nonce: String(Date.now()) } });
 
   const entries = getPackEntries(pack);
   const savedCount = savedTerms ? countSavedEntries(entries, savedTerms) : null;
-  const detailCard = detail ? cardsByTerm.get(detail.study.toLowerCase()) : undefined;
 
-  const renderGridTile = (entry: PackEntry) => {
+  // A selection that no longer names a section — a stale one left over from
+  // another deck — shows the whole deck rather than nothing at all.
+  const picked = pack.sections.filter(section => section.id === openSubpack);
+  const shownSections = picked.length > 0 ? picked : pack.sections;
+
+  /** How many of a set of entries are saved, in the wording used everywhere. */
+  const progressLabel = (of: readonly PackEntry[]) => {
+    const saved = savedTerms ? countSavedEntries(of, savedTerms) : null;
+    return saved !== null
+      ? t(nativeLanguage, 'packsSaved', { added: saved, total: of.length })
+      : t(nativeLanguage, 'deckEntryCount', { count: of.length });
+  };
+
+  /**
+   * The subpacks, all visible at once, as the thing you pick before reading.
+   *
+   * Shaped like the review picker's second level — name over progress — because
+   * it is the same choice in the same words, one surface earlier. Wrapping
+   * tiles rather than full-width rows so eleven sections stay a glance instead
+   * of becoming the scroll they were meant to remove.
+   *
+   * Hidden on a single-section pack, where it would offer a choice between a
+   * thing and itself.
+   */
+  const renderSubpackPicker = () => {
+    if (pack.sections.length < 2) return null;
+    const option = (id: string | null, name: string, of: readonly PackEntry[]) => {
+      const active = id === null ? picked.length === 0 : id === openSubpack;
+      return (
+        <TouchableOpacity
+          key={id ?? ALL}
+          style={[s.subpackTile, active && s.subpackTileActive]}
+          onPress={() => setOpenSubpack(id)}
+        >
+          <Text style={s.subpackName}>{name}</Text>
+          <Text style={s.subpackCount}>{progressLabel(of)}</Text>
+        </TouchableOpacity>
+      );
+    };
+    return (
+      <View style={s.subpackBlock}>
+        <Text style={s.subpackLabel}>{t(nativeLanguage, 'deckSections')}</Text>
+        <View style={s.subpackWrap}>
+          {option(null, t(nativeLanguage, 'deckSubpackAll'), entries)}
+          {pack.sections.map(section =>
+            option(section.id, getPackText(section.name, nativeLanguage), section.entries)
+          )}
+        </View>
+      </View>
+    );
+  };
+  const detailCard = detail ? cardsByTerm.get(detail.entry.study.toLowerCase()) : undefined;
+
+  const renderGridTile = (entry: PackEntry, section: PackSection) => {
     const saved = savedTerms?.has(entry.study.toLowerCase()) ?? false;
     return (
       <View key={entry.study} style={[s.cardTile, saved && s.dimmed]}>
         <TouchableOpacity
-          onPress={() => setDetail(entry)}
+          onPress={() => setDetail({ entry, section })}
           style={s.cardTapArea}
           accessibilityLabel={`Open ${entry.study}`}
         >
@@ -155,13 +235,13 @@ export default function DeckDetailScreen() {
 
   // Words need a row, not a tile: 뒷받침하다 does not fit in the 68px box that
   // makes 71 kana scannable.
-  const renderListRow = (entry: PackEntry) => {
+  const renderListRow = (entry: PackEntry, section: PackSection) => {
     const saved = savedTerms?.has(entry.study.toLowerCase()) ?? false;
     return (
       <TouchableOpacity
         key={entry.study}
         style={[s.entryRow, saved && s.dimmed]}
-        onPress={() => setDetail(entry)}
+        onPress={() => setDetail({ entry, section })}
       >
         <Text style={s.entryStudy}>{entry.study}</Text>
         <Text style={s.entryBack} numberOfLines={1}>
@@ -177,37 +257,56 @@ export default function DeckDetailScreen() {
     const allSaved = sectionSaved === section.entries.length;
     const busy = enrolling === section.id;
     const disabled = !!enrolling || allSaved || (!!user && !knowsSaved);
+    const subpackId = packRefId(pack.id, section.id);
 
     return (
       <View key={section.id} style={s.section}>
         <View style={s.sectionHeader}>
           <Text style={s.sectionTitle}>{getPackText(section.name, nativeLanguage)}</Text>
-          <Text style={s.sectionCount}>
-            {sectionSaved !== null
-              ? t(nativeLanguage, 'packsSaved', { added: sectionSaved, total: section.entries.length })
-              : t(nativeLanguage, 'deckEntryCount', { count: section.entries.length })}
-          </Text>
+          <Text style={s.sectionCount}>{progressLabel(section.entries)}</Text>
         </View>
         {section.note && (
           <Text style={s.sectionNote}>{getPackText(section.note, nativeLanguage)}</Text>
         )}
-        <TouchableOpacity
-          style={[s.sectionBtn, disabled && s.btnDisabled]}
-          onPress={() => enrol(section.id, section.entries)}
-          // Signed out is not the same as still loading: that case keeps the
-          // button live so the tap can explain itself.
-          disabled={disabled}
-        >
-          <Text style={s.sectionBtnText}>
-            {busy
-              ? t(nativeLanguage, 'deckSectionSaving')
-              : allSaved
-                ? t(nativeLanguage, 'deckSectionAllSaved')
-                : t(nativeLanguage, 'deckSaveSection')}
-          </Text>
-        </TouchableOpacity>
+        {/* A subpack is a thing you sit down with on its own, so the three
+            things you can do to one live together: save it, review what you
+            have saved of it, drill it. */}
+        <View style={s.sectionActions}>
+          <TouchableOpacity
+            style={[s.sectionBtn, disabled && s.btnDisabled]}
+            onPress={() => enrol(section.id, [section], subpackId)}
+            // Signed out is not the same as still loading: that case keeps the
+            // button live so the tap can explain itself.
+            disabled={disabled}
+          >
+            <Text style={s.sectionBtnText}>
+              {busy
+                ? t(nativeLanguage, 'deckSectionSaving')
+                : allSaved
+                  ? t(nativeLanguage, 'deckSectionAllSaved')
+                  : t(nativeLanguage, 'deckSaveSection')}
+            </Text>
+          </TouchableOpacity>
+          {/* Only once there is something to review. A subpack you have saved
+              nothing of would open an empty session, which reads as a bug
+              rather than as an answer. */}
+          {!!sectionSaved && (
+            <TouchableOpacity style={s.sectionBtn} onPress={() => openReview(subpackId)}>
+              <Text style={s.sectionBtnText}>{t(nativeLanguage, 'deckReviewSection')}</Text>
+            </TouchableOpacity>
+          )}
+          {/* Drill needs nothing saved — it runs over the pack's own entries. */}
+          <TouchableOpacity
+            style={s.sectionBtn}
+            onPress={() => router.push(`/decks/${pack.id}/drill?section=${encodeURIComponent(section.id)}`)}
+          >
+            <Text style={s.sectionSubtleBtnText}>{t(nativeLanguage, 'drillLink')}</Text>
+          </TouchableOpacity>
+        </View>
         <View style={pack.layout === 'grid' ? s.cardWrap : s.entryWrap}>
-          {section.entries.map(pack.layout === 'grid' ? renderGridTile : renderListRow)}
+          {section.entries.map(entry =>
+            (pack.layout === 'grid' ? renderGridTile : renderListRow)(entry, section)
+          )}
         </View>
       </View>
     );
@@ -237,13 +336,20 @@ export default function DeckDetailScreen() {
         <View style={s.actionRow}>
           <TouchableOpacity
             style={[s.reviewBtn, (!!enrolling || (!!user && !knowsSaved)) && s.btnDisabled]}
-            onPress={() => enrol(ALL, entries)}
+            onPress={() => enrol(ALL, pack.sections, pack.id)}
             disabled={!!enrolling || (!!user && !knowsSaved)}
           >
             <Text style={s.reviewBtnText}>
               {enrolling === ALL ? t(nativeLanguage, 'deckEnrolling') : t(nativeLanguage, 'deckSaveAll')}
             </Text>
           </TouchableOpacity>
+          {/* The whole pack in one sitting, which is what you want once you
+              have worked through the sections separately. */}
+          {!!savedCount && (
+            <TouchableOpacity style={s.drillBtn} onPress={() => openReview(pack.id)}>
+              <Text style={s.drillBtnText}>{t(nativeLanguage, 'deckReviewDeck')}</Text>
+            </TouchableOpacity>
+          )}
           <TouchableOpacity
             style={s.drillBtn}
             onPress={() => router.push(`/decks/${pack.id}/drill`)}
@@ -260,7 +366,9 @@ export default function DeckDetailScreen() {
         )}
         {error && <Text style={s.error}>{error}</Text>}
 
-        {pack.sections.map(renderSection)}
+        {renderSubpackPicker()}
+
+        {shownSections.map(renderSection)}
       </ScrollView>
 
       {/* One tap opens the card, saved or not. This replaces both the old
@@ -269,8 +377,11 @@ export default function DeckDetailScreen() {
       {detail && (
         <CardDetailModal
           card={detailCard}
-          entry={detailCard ? null : detail}
-          packId={pack.id}
+          entry={detailCard ? null : detail.entry}
+          // The subpack, not the pack: a card saved from this modal has to land
+          // in the same collection the section's own save button would file it
+          // in, or the two paths would disagree about where the word lives.
+          packId={packRefId(pack.id, detail.section.id)}
           uid={user?.uid}
           studyLanguage={studyLanguage}
           nativeLanguage={nativeLanguage}
@@ -311,17 +422,33 @@ function makeStyles(C: Palette, tabBarHeight: number) {
     drillBtnText: { fontSize: 15, fontWeight: '600', color: C.text },
     error: { fontSize: 13, color: C.error, marginBottom: 12 },
 
+    subpackBlock: { marginBottom: 22 },
+    subpackLabel: { fontSize: 12, color: C.muted, marginBottom: 8 },
+    subpackWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+    subpackTile: {
+      minWidth: 104, flexGrow: 1,
+      borderWidth: 1, borderColor: C.border, borderRadius: 10,
+      paddingHorizontal: 12, paddingVertical: 8,
+    },
+    subpackTileActive: { borderColor: C.highlight },
+    subpackName: { fontSize: 14, color: C.text },
+    subpackCount: { fontSize: 12, color: C.muted, marginTop: 2 },
+
     section: { marginBottom: 26 },
     sectionHeader: { flexDirection: 'row', alignItems: 'baseline', flexWrap: 'wrap', gap: 8 },
     sectionTitle: { fontSize: 16, fontWeight: '700', color: C.text },
     sectionCount: { fontSize: 12, color: C.muted },
     sectionNote: { fontSize: 12, color: C.muted, opacity: 0.7, marginTop: 4 },
+    sectionActions: {
+      flexDirection: 'row', flexWrap: 'wrap', gap: 8,
+      marginTop: 10, marginBottom: 12,
+    },
     sectionBtn: {
-      alignSelf: 'flex-start', marginTop: 10, marginBottom: 12,
       borderWidth: 1, borderColor: C.border, borderRadius: 10,
       paddingHorizontal: 14, paddingVertical: 7,
     },
     sectionBtnText: { fontSize: 13, fontWeight: '600', color: C.text },
+    sectionSubtleBtnText: { fontSize: 13, fontWeight: '600', color: C.muted },
 
     dimmed: { opacity: 0.45 },
     entryWrap: { gap: 6 },

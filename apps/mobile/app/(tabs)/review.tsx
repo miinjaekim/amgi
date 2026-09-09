@@ -5,7 +5,8 @@ import {
   Keyboard, Pressable,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useNavigation } from 'expo-router';
+import type { BottomTabNavigationProp } from 'expo-router/tabs';
 import { useUser } from '../../src/context/UserContext';
 import { useCardEnrichment } from '../../src/hooks/useCardEnrichment';
 import {
@@ -22,16 +23,17 @@ import { usePendingReviewSync } from '../../src/hooks/usePendingReviewSync';
 import { refreshReminders } from '../../src/services/reminders';
 import {
   DIRECTION_FILTERS, applyPendingReviews, buildReviewCollections,
-  buildReviewQueue, collectionKey, dueReviewItems, filterByDirection,
-  getBackSide, getCollectionId, getNextReviewDate,
+  buildReviewQueue, cardsInCollection, collectionKey, dueReviewItems,
+  filterByDirection, findCollection, flattenCollections,
+  getBackSide, getNextReviewDate,
   getNextReviewData, getStudyLangSide, getStudyLanguageConfig, getBackSideConfig,
   directionLabel, getCharacterBreakdown, getExampleSides, getReading,
   maturityChange, removeCardFromQueue, t, trackingFor,
   gradeTypedAnswer, promptsForTyping, typedAnswerPlaceholder,
 } from '@amgi/core';
 import type {
-  CardSideField, DirectionFilter, PendingReview, RecordedReview, ReviewDirection,
-  ReviewQueueItem, TypedAnswerGrade,
+  CardSideField, DirectionFilter, PendingReview, RecordedReview, ReviewCollection,
+  ReviewDirection, ReviewQueueItem, TypedAnswerGrade,
 } from '@amgi/core';
 import { useTheme } from '../../src/context/ThemeContext';
 import { useFloatingTabBarHeight } from '../../src/components/FloatingTabBar';
@@ -339,9 +341,39 @@ export default function ReviewScreen() {
     [reviewedCards, studyLanguage, nativeLanguage]
   );
 
-  const selected = selectedKey === undefined
-    ? undefined
-    : collections.find(c => collectionKey(c) === selectedKey);
+  /**
+   * The pack whose subpacks the picker is showing, or null at the top level.
+   *
+   * A drill-down rather than an accordion: you pick the pack group first, and a
+   * pack's sections are a choice you make *inside* it. Expanding them in place
+   * would put 11 kanji sections between two packs on a list whose whole job is
+   * the first choice — and on a phone that is most of a screen.
+   */
+  const [openPack, setOpenPack] = useState<string | null>(null);
+
+  // A second tap on the Review tab closes the pack you opened into. The
+  // subpack list is the one place on this tab you can be *inside* something
+  // without having started anything, and re-tapping the tab you are already on
+  // is where people reach for "back out of this" — the `← All collections`
+  // link is the other way, not the only one.
+  //
+  // It stops at `openPack` deliberately. A chosen collection with a session
+  // running is work in progress, and a stray tap on the tab bar must not
+  // discard it; clearing `openPack` costs nothing there, since nothing reads it
+  // once a collection is picked.
+  const navigation = useNavigation<BottomTabNavigationProp<Record<string, undefined>>>();
+  useEffect(() => {
+    return navigation.addListener('tabPress', () => {
+      // Only a re-tap. Arriving from another tab should leave the list where
+      // you left it, the same rule the Learn tab's re-tap follows.
+      if (!navigation.isFocused()) return;
+      setOpenPack(null);
+    });
+  }, [navigation]);
+
+  const selected = findCollection(collections, selectedKey);
+  /** Every row that can be picked, both levels, for the counts below. */
+  const pickable = useMemo(() => flattenCollections(collections), [collections]);
   /** The card collection in play, or `undefined` when none is. */
   const collectionId = selected ? selected.id : undefined;
 
@@ -352,7 +384,9 @@ export default function ReviewScreen() {
   const dueItems = useMemo(
     () => collectionId === undefined
       ? []
-      : dueReviewItems(reviewedCards.filter(card => getCollectionId(card) === collectionId)),
+      // A pack takes its subpacks' cards too, which is what makes the
+      // whole-pack row a real sitting rather than a header.
+      : dueReviewItems(cardsInCollection(reviewedCards, collectionId)),
     [reviewedCards, collectionId]
   );
 
@@ -368,7 +402,9 @@ export default function ReviewScreen() {
    * for a session that began with nothing due.
    */
   const nextDate = useMemo(
-    () => getNextReviewDate(reviewedCards.filter(card => getCollectionId(card) === collectionId)),
+    () => collectionId === undefined
+      ? null
+      : getNextReviewDate(cardsInCollection(reviewedCards, collectionId)),
     [reviewedCards, collectionId]
   );
 
@@ -378,19 +414,24 @@ export default function ReviewScreen() {
   const { collection: requested, nonce } = useLocalSearchParams<{ collection?: string; nonce?: string }>();
   const consumedNonce = useRef<string | undefined>(undefined);
   useEffect(() => {
-    if (collections.length === 0 || selectedKey !== undefined) return;
+    if (pickable.length === 0 || selectedKey !== undefined) return;
     // The param outlives the handoff, so it is consumed once — otherwise
-    // "change collection" would be dragged straight back to the deck.
+    // "change collection" would be dragged straight back to the deck. It
+    // carries a pack id or a `pack/section` subpack id, whichever scope the
+    // button that was tapped means.
     const handoff = requested
-      ? collections.find(c => c.id === requested)
+      ? pickable.find(c => c.id === requested)
       : undefined;
     if (handoff && consumedNonce.current !== nonce) {
       consumedNonce.current = nonce;
       setSelectedKey(collectionKey(handoff));
-    } else if (collections.length === 1) {
-      setSelectedKey(collectionKey(collections[0]));
+    // One row across *both* levels is the case with no choice in it. Counting
+    // only packs would skip the picker on a single pack split into six
+    // subpacks, which is exactly the account this feature exists for.
+    } else if (pickable.length === 1) {
+      setSelectedKey(collectionKey(pickable[0]));
     }
-  }, [collections, selectedKey, requested, nonce]);
+  }, [pickable, selectedKey, requested, nonce]);
 
   /**
    * Begin a session over whatever is due in a collection right now, one way
@@ -403,7 +444,7 @@ export default function ReviewScreen() {
     collection: string | null,
     filter: DirectionFilter,
   ) => {
-    const q = buildReviewQueue(sourceCards.filter(card => getCollectionId(card) === collection), filter);
+    const q = buildReviewQueue(cardsInCollection(sourceCards, collection), filter);
     setQueue(q);
     setQueueFor(collection);
     setStarted(true);
@@ -712,6 +753,7 @@ export default function ReviewScreen() {
           helpTitleKey="helpReviewTitle"
           helpLeadKey="helpReviewLead"
           helpPointsKey="helpReviewPoints"
+          streak
         />
         <SkeletonGroup label={t(nativeLanguage, 'loadingFlashcards')} style={s.pickerScroll}>
           <SkeletonBar width={150} height={15} />
@@ -740,6 +782,7 @@ export default function ReviewScreen() {
           helpTitleKey="helpReviewTitle"
           helpLeadKey="helpReviewLead"
           helpPointsKey="helpReviewPoints"
+          streak
         />
         <View style={s.centerFill}>
           <Text style={s.emptyText}>
@@ -785,9 +828,38 @@ export default function ReviewScreen() {
     pendingCount > 0 ? t(nativeLanguage, 'offlinePendingShort', { count: pendingCount }) : null,
   ].filter(Boolean).join(' · ');
 
+  /**
+   * One row of the picker. `label` overrides the name for the whole-pack row,
+   * which sits under a heading already carrying the pack's name.
+   */
+  const renderPickerRow = (
+    collection: ReviewCollection,
+    { onPress, label, opens }: { onPress: () => void; label?: string; opens?: boolean },
+  ) => (
+    <TouchableOpacity key={collectionKey(collection)} style={s.pickerRow} onPress={onPress}>
+      <View style={s.pickerRowTop}>
+        <Text style={s.pickerName}>
+          {label ?? collection.name}{opens ? '  ›' : ''}
+        </Text>
+        <Text style={[s.pickerDue, collection.dueCount > 0 && { color: C.highlight }]}>
+          {collection.dueCount > 0
+            ? t(nativeLanguage, 'reviewCollectionDue', { count: collection.dueCount })
+            : t(nativeLanguage, 'reviewCollectionCaughtUp')}
+        </Text>
+      </View>
+      <Text style={s.pickerCount}>
+        {t(nativeLanguage, 'deckEntryCount', { count: collection.cardCount })}
+      </Text>
+    </TouchableOpacity>
+  );
+
+  /** The pack the picker has opened into, if it still holds cards. */
+  const openCollection = collections.find(c => collectionKey(c) === openPack);
+
   // Your own cards and each pack are reviewed apart — katakana arriving mid-way
   // through Japanese vocabulary is worse review than either done alone — so the
-  // landing is a choice of collection, not a filter over one pool.
+  // landing is a choice of collection, not a filter over one pool. A pack with
+  // subpacks opens into a second choice instead of starting.
   if (selectedKey === undefined || !selected) {
     return (
       <SafeAreaView style={s.root} edges={['top']}>
@@ -796,29 +868,41 @@ export default function ReviewScreen() {
           helpTitleKey="helpReviewTitle"
           helpLeadKey="helpReviewLead"
           helpPointsKey="helpReviewPoints"
+          streak
         />
         <ScrollView contentContainerStyle={s.pickerScroll}>
           {offlineNotice}
-          <Text style={s.pickerTitle}>{t(nativeLanguage, 'reviewPickCollection')}</Text>
-          {collections.map(collection => (
-            <TouchableOpacity
-              key={collectionKey(collection)}
-              style={s.pickerRow}
-              onPress={() => setSelectedKey(collectionKey(collection))}
-            >
-              <View style={s.pickerRowTop}>
-                <Text style={s.pickerName}>{collection.name}</Text>
-                <Text style={[s.pickerDue, collection.dueCount > 0 && { color: C.highlight }]}>
-                  {collection.dueCount > 0
-                    ? t(nativeLanguage, 'reviewCollectionDue', { count: collection.dueCount })
-                    : t(nativeLanguage, 'reviewCollectionCaughtUp')}
-                </Text>
-              </View>
-              <Text style={s.pickerCount}>
-                {t(nativeLanguage, 'deckEntryCount', { count: collection.cardCount })}
-              </Text>
-            </TouchableOpacity>
-          ))}
+          {openCollection ? (
+            <>
+              <TouchableOpacity onPress={() => setOpenPack(null)} hitSlop={12}>
+                <Text style={s.pickerBack}>← {t(nativeLanguage, 'reviewBackToCollections')}</Text>
+              </TouchableOpacity>
+              <Text style={s.pickerGroupName}>{openCollection.name}</Text>
+              <Text style={s.pickerTitle}>{t(nativeLanguage, 'reviewPickSubpack')}</Text>
+              {/* The whole pack first, and deliberately offered: once you have
+                  worked through the sections, reviewing them one at a time is
+                  the same material several times over. */}
+              {renderPickerRow(openCollection, {
+                label: t(nativeLanguage, 'reviewWholePack'),
+                onPress: () => setSelectedKey(collectionKey(openCollection)),
+              })}
+              {openCollection.subcollections.map(sub =>
+                renderPickerRow(sub, { onPress: () => setSelectedKey(collectionKey(sub)) })
+              )}
+            </>
+          ) : (
+            <>
+              <Text style={s.pickerTitle}>{t(nativeLanguage, 'reviewPickCollection')}</Text>
+              {collections.map(collection =>
+                renderPickerRow(collection, collection.subcollections.length > 0
+                  // Opens a second choice rather than starting a session.
+                  // Without the mark, a pack with subpacks and one without look
+                  // identical and one does something you did not ask for.
+                  ? { opens: true, onPress: () => setOpenPack(collectionKey(collection)) }
+                  : { onPress: () => setSelectedKey(collectionKey(collection)) })
+              )}
+            </>
+          )}
         </ScrollView>
       </SafeAreaView>
     );
@@ -826,8 +910,8 @@ export default function ReviewScreen() {
 
   // Only offered when there is something else to change to — a single
   // collection is not a choice, and a control for it would only be noise.
-  const changeCollectionButton = collections.length > 1 && (
-    <TouchableOpacity style={s.changeBtn} onPress={() => setSelectedKey(undefined)}>
+  const changeCollectionButton = pickable.length > 1 && (
+    <TouchableOpacity style={s.changeBtn} onPress={() => { setSelectedKey(undefined); setOpenPack(null); }}>
       <Text style={s.changeBtnText}>{t(nativeLanguage, 'reviewChangeCollection')}</Text>
     </TouchableOpacity>
   );
@@ -852,10 +936,11 @@ export default function ReviewScreen() {
             helpTitleKey="helpReviewTitle"
             helpLeadKey="helpReviewLead"
             helpPointsKey="helpReviewPoints"
+            streak
           />
           <View style={s.centerFill}>
             {offlineNotice}
-            {collections.length > 1 && <Text style={s.collectionLabel}>{collectionName}</Text>}
+            {pickable.length > 1 && <Text style={s.collectionLabel}>{collectionName}</Text>}
             <Text style={s.doneTitle}>{t(nativeLanguage, 'allCaughtUp')}</Text>
             <Text style={s.doneBody}>{t(nativeLanguage, 'reviewCompleteMessage')}</Text>
             {nextDate && (
@@ -879,6 +964,7 @@ export default function ReviewScreen() {
           helpTitleKey="helpReviewTitle"
           helpLeadKey="helpReviewLead"
           helpPointsKey="helpReviewPoints"
+          streak
         />
         <ScrollView contentContainerStyle={s.startScroll}>
           {offlineNotice}
@@ -937,7 +1023,7 @@ export default function ReviewScreen() {
     return (
       <SafeAreaView style={s.center}>
         {offlineNotice}
-        {collections.length > 1 && <Text style={s.collectionLabel}>{collectionName}</Text>}
+        {pickable.length > 1 && <Text style={s.collectionLabel}>{collectionName}</Text>}
         <Text style={s.stoppedTitle}>{t(nativeLanguage, 'reviewStoppedTitle')}</Text>
         <Text style={s.doneBody}>
           {reviewedCount > 0
@@ -971,7 +1057,7 @@ export default function ReviewScreen() {
     return (
       <SafeAreaView style={s.center}>
         {offlineNotice}
-        {collections.length > 1 && <Text style={s.collectionLabel}>{collectionName}</Text>}
+        {pickable.length > 1 && <Text style={s.collectionLabel}>{collectionName}</Text>}
         {filteredDueCount > 0 ? (
           <>
             <Text style={s.stoppedTitle}>{t(nativeLanguage, 'reviewSessionFinished')}</Text>
@@ -1148,7 +1234,7 @@ export default function ReviewScreen() {
             <View style={s.undoBtn} />
           )}
           <View style={s.progressLabelWrap}>
-            {collections.length > 1 ? (
+            {pickable.length > 1 ? (
               <TouchableOpacity onPress={() => setSelectedKey(undefined)} hitSlop={8}>
                 <Text style={s.progressText} numberOfLines={1}>
                   {collectionName} · {index + 1} / {queue.length}
@@ -1659,6 +1745,8 @@ function makeStyles(C: Palette, tabBarHeight: number) {
 
   pickerScroll: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 24, gap: 12 },
   pickerTitle: { fontSize: 15, color: C.muted, marginBottom: 4 },
+  pickerBack: { fontSize: 14, color: C.muted },
+  pickerGroupName: { fontSize: 17, fontWeight: '700', color: C.text },
   pickerRow: { padding: 16, borderWidth: 1, borderColor: C.border, borderRadius: 14 },
   pickerRowTop: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 },
   pickerName: { fontSize: 16, fontWeight: '700', color: C.text, flexShrink: 1 },

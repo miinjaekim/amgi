@@ -11,13 +11,14 @@ import {
 } from '@/services/firestore';
 import {
   buildPackCardDraft,
+  cardInCollection,
   collectSavedTerms,
   countSavedEntries,
-  getCollectionId,
   getPackEntries,
   getPackText,
   getStudyLangSide,
   getVocabPack,
+  packRefId,
   resolvePackBack,
   unsavedEntries,
 } from '@amgi/core';
@@ -37,8 +38,23 @@ export default function DeckDetailPage() {
   const [cards, setCards] = useState<Flashcard[] | null>(null);
   const [enrolling, setEnrolling] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [detail, setDetail] = useState<PackEntry | null>(null);
+  /**
+   * The entry whose card modal is open, with the section it was tapped in —
+   * which is what a card saved from the modal gets filed under. Losing the
+   * section here would file it at the pack level and leave it out of every
+   * subpack review.
+   */
+  const [detail, setDetail] = useState<{ entry: PackEntry; section: PackSection } | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
+  /**
+   * The subpack the entry list is narrowed to, or null for the whole deck.
+   *
+   * A filter rather than a route: the deck page's job is browsing the words,
+   * and the default view stays exactly what it was. What it removes is the
+   * scroll — on an 11-section pack, finding one section meant paging past
+   * several hundred entries to reach its header.
+   */
+  const [openSubpack, setOpenSubpack] = useState<string | null>(null);
 
   // Live: enrolling writes a batch of cards, and the enrolled/remaining counts
   // below are derived from this list, so they update themselves.
@@ -84,7 +100,7 @@ export default function DeckDetailPage() {
       const key = getStudyLangSide(card).toLowerCase();
       if (!key) continue;
       const existing = byTerm.get(key);
-      if (!existing || getCollectionId(card) === packId) byTerm.set(key, card);
+      if (!existing || cardInCollection(card, packId)) byTerm.set(key, card);
     }
     return byTerm;
   }, [cards, packId]);
@@ -111,25 +127,34 @@ export default function DeckDetailPage() {
   }
 
   /**
-   * Enrol a set of entries in one batched write, then go straight to reviewing
-   * the deck. Sections are the unit this is normally called with: 160 words is
-   * not one decision, and "save this section" turns a pack into six sittings
-   * that each end somewhere sensible.
+   * Enrol a set of sections in one batched write, then go straight to reviewing
+   * what was added. Sections are the unit: 160 words is not one decision, and
+   * "save this section" turns a pack into six sittings that each end somewhere
+   * sensible.
+   *
+   * Sections rather than a flat entry list because each card is filed under its
+   * own subpack, the whole-deck button included. Saving the deck and then
+   * reviewing only Greetings has to work, and it only does if every card knows
+   * which section it came from — filing the whole deck at the pack level would
+   * leave every subpack empty.
    */
-  async function enrol(id: string, entries: readonly PackEntry[]) {
+  async function enrol(busyId: string, sections: readonly PackSection[], collection: string) {
     if (!pack) return;
     if (!user) { setError(t(nativeLanguage, 'signInToSave')); return; }
-    const unsaved = unsavedEntries(entries, savedTerms);
-    if (unsaved === null) { setError(t(nativeLanguage, 'deckCardsUnavailable')); return; }
-    if (unsaved.length > 0) {
-      setEnrolling(id);
-      try {
-        await saveFlashcardsBatch(
-          unsaved.map(entry =>
-            buildPackCardDraft(entry, pack.id, user.uid, studyLanguage) as Omit<Flashcard, 'createdAt' | 'id'>
-          ),
-          studyLanguage
+    const drafts: Omit<Flashcard, 'createdAt' | 'id'>[] = [];
+    for (const section of sections) {
+      const unsaved = unsavedEntries(section.entries, savedTerms);
+      if (unsaved === null) { setError(t(nativeLanguage, 'deckCardsUnavailable')); return; }
+      for (const entry of unsaved) {
+        drafts.push(
+          buildPackCardDraft(entry, packRefId(pack.id, section.id), user.uid, studyLanguage) as Omit<Flashcard, 'createdAt' | 'id'>
         );
+      }
+    }
+    if (drafts.length > 0) {
+      setEnrolling(busyId);
+      try {
+        await saveFlashcardsBatch(drafts, studyLanguage);
       } catch {
         setError(t(nativeLanguage, 'deckEnrollError'));
         setEnrolling(null);
@@ -137,17 +162,81 @@ export default function DeckDetailPage() {
       }
       setEnrolling(null);
     }
-    router.push(`/review?collection=${encodeURIComponent(pack.id)}`);
+    router.push(`/review?collection=${encodeURIComponent(collection)}`);
   }
+
+  const reviewHref = (collection: string) =>
+    `/review?collection=${encodeURIComponent(collection)}`;
 
   const entries = getPackEntries(pack);
   const savedCount = savedTerms ? countSavedEntries(entries, savedTerms) : null;
-  const detailCard = detail ? cardsByTerm.get(detail.study.toLowerCase()) : undefined;
+
+  // A selection that no longer names a section — a stale one left over from
+  // another deck — shows the whole deck rather than nothing at all.
+  const picked = pack.sections.filter(section => section.id === openSubpack);
+  const shownSections = picked.length > 0 ? picked : pack.sections;
+
+  /** How many of a set of entries are saved, in the wording used everywhere. */
+  const progressLabel = (of: readonly PackEntry[]) => {
+    const saved = savedTerms ? countSavedEntries(of, savedTerms) : null;
+    return saved !== null
+      ? t(nativeLanguage, 'packsSaved', { added: saved, total: of.length })
+      : t(nativeLanguage, 'deckEntryCount', { count: of.length });
+  };
+
+  /**
+   * The subpacks, all visible at once, as the thing you pick before reading.
+   *
+   * Shaped like the review picker's second level — name over progress — because
+   * it is the same choice in the same words, one surface earlier. A grid rather
+   * than a column so eleven sections fit above the fold instead of becoming the
+   * scroll they were meant to remove.
+   *
+   * Hidden on a single-section pack, where the row would offer a choice between
+   * a thing and itself.
+   */
+  function renderSubpackPicker() {
+    if (pack!.sections.length < 2) return null;
+    const option = (id: string | null, name: string, of: readonly PackEntry[]) => {
+      const active = id === null ? picked.length === 0 : id === openSubpack;
+      return (
+        <button
+          key={id ?? '__all__'}
+          onClick={() => setOpenSubpack(id)}
+          aria-pressed={active}
+          className={`text-left px-3 py-2 rounded-lg border transition-colors ${
+            active
+              ? 'border-[var(--color-highlight)] bg-[var(--color-muted)]/20'
+              : 'border-[var(--color-muted)] hover:bg-[var(--color-muted)]/20'
+          }`}
+        >
+          <span className="block text-sm text-[var(--color-text)]">{name}</span>
+          <span className="block text-xs text-[var(--color-muted)] mt-0.5">{progressLabel(of)}</span>
+        </button>
+      );
+    };
+    return (
+      <div className="mb-8">
+        <p className="text-xs text-[var(--color-muted)] mb-2">{t(nativeLanguage, 'deckSections')}</p>
+        <div
+          className="grid gap-2"
+          style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(10rem, 1fr))' }}
+        >
+          {option(null, t(nativeLanguage, 'deckSubpackAll'), entries)}
+          {pack!.sections.map(section =>
+            option(section.id, getPackText(section.name, nativeLanguage), section.entries)
+          )}
+        </div>
+      </div>
+    );
+  }
+  const detailCard = detail ? cardsByTerm.get(detail.entry.study.toLowerCase()) : undefined;
 
   function renderSection(section: PackSection) {
     const sectionSaved = savedTerms ? countSavedEntries(section.entries, savedTerms) : null;
     const allSaved = sectionSaved === section.entries.length;
     const busy = enrolling === section.id;
+    const subpackId = packRefId(pack!.id, section.id);
 
     return (
       <section key={section.id} className="mb-8">
@@ -155,24 +244,45 @@ export default function DeckDetailPage() {
           <h2 className="text-lg font-semibold text-[var(--color-text)]">
             {getPackText(section.name, nativeLanguage)}
           </h2>
-          <span className="text-xs text-[var(--color-muted)]">
-            {sectionSaved !== null
-              ? t(nativeLanguage, 'packsSaved', { added: sectionSaved, total: section.entries.length })
-              : t(nativeLanguage, 'deckEntryCount', { count: section.entries.length })}
-          </span>
-          <button
-            onClick={() => enrol(section.id, section.entries)}
-            // Signed out is not the same as still loading: that case keeps the
-            // button live so the click can explain itself.
-            disabled={!!enrolling || allSaved || (!!user && !knowsSaved)}
-            className="ml-auto px-3 py-1.5 rounded-lg text-sm font-semibold border border-[var(--color-muted)] text-[var(--color-text)] hover:bg-[var(--color-muted)]/20 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            {busy
-              ? t(nativeLanguage, 'deckSectionSaving')
-              : allSaved
-                ? t(nativeLanguage, 'deckSectionAllSaved')
-                : t(nativeLanguage, 'deckSaveSection')}
-          </button>
+          <span className="text-xs text-[var(--color-muted)]">{progressLabel(section.entries)}</span>
+          {/* A subpack is a thing you sit down with on its own, so the three
+              things you can do to one live together here: save it, review what
+              you have saved of it, drill it. Review is the new half — before
+              this, saving Greetings alone still sent you into all 59 words. */}
+          <div className="ml-auto flex items-center gap-2 flex-wrap">
+            <button
+              onClick={() => enrol(section.id, [section], subpackId)}
+              // Signed out is not the same as still loading: that case keeps the
+              // button live so the click can explain itself.
+              disabled={!!enrolling || allSaved || (!!user && !knowsSaved)}
+              className="px-3 py-1.5 rounded-lg text-sm font-semibold border border-[var(--color-muted)] text-[var(--color-text)] hover:bg-[var(--color-muted)]/20 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {busy
+                ? t(nativeLanguage, 'deckSectionSaving')
+                : allSaved
+                  ? t(nativeLanguage, 'deckSectionAllSaved')
+                  : t(nativeLanguage, 'deckSaveSection')}
+            </button>
+            {/* Only once there is something to review. A subpack you have saved
+                nothing of would open an empty session, which reads as a bug
+                rather than as an answer. */}
+            {!!sectionSaved && (
+              <Link
+                href={reviewHref(subpackId)}
+                className="px-3 py-1.5 rounded-lg text-sm font-semibold border border-[var(--color-muted)] text-[var(--color-text)] hover:bg-[var(--color-muted)]/20 transition-colors"
+              >
+                {t(nativeLanguage, 'deckReviewSection')}
+              </Link>
+            )}
+            {/* Drill needs nothing saved — it runs over the pack's own entries,
+                so it is offered on a subpack you have never enrolled in. */}
+            <Link
+              href={`/decks/${pack!.id}/drill?section=${encodeURIComponent(section.id)}`}
+              className="px-3 py-1.5 rounded-lg text-sm text-[var(--color-muted)] border border-[var(--color-muted)] hover:text-[var(--color-text)] transition-colors"
+            >
+              {t(nativeLanguage, 'drillLink')}
+            </Link>
+          </div>
         </div>
         {section.note && (
           <p className="text-xs text-[var(--color-muted)] opacity-70 mb-3">
@@ -184,18 +294,18 @@ export default function DeckDetailPage() {
             className="grid gap-2"
             style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(4.5rem, 1fr))' }}
           >
-            {section.entries.map(entry => renderGridTile(entry))}
+            {section.entries.map(entry => renderGridTile(entry, section))}
           </div>
         ) : (
           <div className="flex flex-wrap gap-2">
-            {section.entries.map(entry => renderListRow(entry))}
+            {section.entries.map(entry => renderListRow(entry, section))}
           </div>
         )}
       </section>
     );
   }
 
-  function renderGridTile(entry: PackEntry) {
+  function renderGridTile(entry: PackEntry, section: PackSection) {
     const saved = savedTerms?.has(entry.study.toLowerCase()) ?? false;
     const owned = cardsByTerm.get(entry.study.toLowerCase());
     const back = owned ? undefined : resolvePackBack(entry.back, studyLanguage, nativeLanguage);
@@ -205,7 +315,7 @@ export default function DeckDetailPage() {
         className={`flex flex-col items-center rounded-lg border border-[var(--color-muted)] py-1.5 transition-opacity ${saved ? 'opacity-50' : ''}`}
       >
         <button
-          onClick={() => setDetail(entry)}
+          onClick={() => setDetail({ entry, section })}
           className="w-full flex flex-col items-center rounded hover:bg-[var(--color-muted)]/30"
           aria-label={`Open ${entry.study}`}
         >
@@ -223,12 +333,12 @@ export default function DeckDetailPage() {
 
   // Words need a row, not a tile: `comprehensive` and 뒷받침하다 do not fit in
   // the 4.5rem box that makes 71 kana scannable.
-  function renderListRow(entry: PackEntry) {
+  function renderListRow(entry: PackEntry, section: PackSection) {
     const saved = savedTerms?.has(entry.study.toLowerCase()) ?? false;
     return (
       <button
         key={entry.study}
-        onClick={() => setDetail(entry)}
+        onClick={() => setDetail({ entry, section })}
         className={`flex items-baseline gap-2 px-3 py-1.5 rounded-lg border border-[var(--color-muted)] text-left hover:bg-[var(--color-muted)]/20 transition-colors ${saved ? 'opacity-50' : ''}`}
       >
         <span className="text-sm text-[var(--color-text)]">{entry.study}</span>
@@ -268,12 +378,23 @@ export default function DeckDetailPage() {
           kana and the wrong one on 160 TOPIK words. */}
       <div className="flex gap-3 mb-6 flex-wrap">
         <button
-          onClick={() => enrol(ALL, entries)}
+          onClick={() => enrol(ALL, pack.sections, pack.id)}
           disabled={!!enrolling || (!!user && !knowsSaved)}
           className="px-5 py-2.5 rounded-lg font-semibold bg-[var(--color-highlight)] text-[var(--color-bg)] hover:bg-[var(--color-text)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {enrolling === ALL ? t(nativeLanguage, 'deckEnrolling') : t(nativeLanguage, 'deckSaveAll')}
         </button>
+        {/* The whole pack in one sitting, which is what you want once you
+            have worked through the sections separately — at that point doing
+            them one at a time is the same material several times over. */}
+        {!!savedCount && (
+          <Link
+            href={reviewHref(pack.id)}
+            className="px-5 py-2.5 rounded-lg font-semibold border border-[var(--color-muted)] text-[var(--color-text)] hover:bg-[var(--color-muted)]/20 transition-colors"
+          >
+            {t(nativeLanguage, 'deckReviewDeck')}
+          </Link>
+        )}
         <Link
           href={`/decks/${pack.id}/drill`}
           className="px-5 py-2.5 rounded-lg font-semibold border border-[var(--color-muted)] text-[var(--color-text)] hover:bg-[var(--color-muted)]/20 transition-colors"
@@ -297,7 +418,9 @@ export default function DeckDetailPage() {
         </div>
       )}
 
-      {pack.sections.map(renderSection)}
+      {renderSubpackPicker()}
+
+      {shownSections.map(renderSection)}
 
       {/* One tap opens the card, saved or not. This replaces both the old
           save-on-tap and the deck's own management panel, and it is what makes
@@ -305,8 +428,11 @@ export default function DeckDetailPage() {
       {detail && (
         <CardDetailModal
           card={detailCard}
-          entry={detailCard ? null : detail}
-          packId={pack.id}
+          entry={detailCard ? null : detail.entry}
+          // The subpack, not the pack: a card saved from this modal has to land
+          // in the same collection the section's own save button would file it
+          // in, or the two paths would disagree about where the word lives.
+          packId={packRefId(pack.id, detail.section.id)}
           uid={user?.uid}
           studyLanguage={studyLanguage}
           nativeLanguage={nativeLanguage}
