@@ -70,6 +70,11 @@ const EXAMPLE_TERMS: Record<StudyLanguage, string[]> = {
   Swahili: ['harambee', 'pole pole', 'uhuru', 'longing', 'ndoto'],
   Japanese: ['木漏れ日', '積ん読', 'nostalgia', 'awkward', '侘寂'],
   TraditionalChinese: ['緣分', '撒嬌', 'nostalgia', 'awkward', '將就'],
+  // Single characters, in the traditional forms the 어문회 list assigns —
+  // 學, not 学. Nothing here is an English word, unlike every row above:
+  // typing "water" into a hanja deck asks for a translation, and the deck
+  // answers a different question about a character you already have.
+  Hanja: ['水', '心', '學', '道', '天'],
 };
 
 export default function LearnScreen() {

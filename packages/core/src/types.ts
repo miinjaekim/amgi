@@ -6,6 +6,14 @@ import { kanaToHangul, kanaToRomaji, kikuyuToEnglish, kikuyuToHangul } from './t
  * one language with a script preference: the decks stay independent, so
  * neither constrains the other, and regional vocabulary differences go beyond
  * the glyphs. A Simplified deck would be its own registry entry.
+ *
+ * `Hanja` is the entry that most looks like it should have been a pack, and the
+ * precedent cuts that way: kanji is a pack under Japanese, and so are both kana
+ * packs. **What makes it an entry is the card, not the script.** A hanja card
+ * holds three parts — the character, its 훈 (meaning) and its 음 (sound) — and
+ * the learner chooses which of them is the front. 훈 and 음 have to be
+ * addressable separately for that, and a pack cannot add a field. Traditional
+ * vs Simplified is the precedent that fits: a script with its own collection.
  */
 export type StudyLanguage =
   | 'Korean'
@@ -16,7 +24,8 @@ export type StudyLanguage =
   | 'TraditionalChinese'
   | 'Spanish'
   | 'Kikuyu'
-  | 'Swahili';
+  | 'Swahili'
+  | 'Hanja';
 
 /**
  * i18n keys for the character-breakdown section heading. Every Han-script
@@ -33,7 +42,8 @@ export type FieldLabelKey =
   | 'labelTraditionalChinese'
   | 'labelSpanish'
   | 'labelKikuyu'
-  | 'labelSwahili';
+  | 'labelSwahili'
+  | 'labelHanja';
 
 export type CardSideField =
   | 'korean'
@@ -44,7 +54,8 @@ export type CardSideField =
   | 'traditionalChinese'
   | 'spanish'
   | 'kikuyu'
-  | 'swahili';
+  | 'swahili'
+  | 'hanja';
 
 /**
  * Per-study-language configuration. Adding a language means adding an entry
@@ -247,6 +258,37 @@ export const STUDY_LANGUAGE_CONFIGS: Record<StudyLanguage, StudyLanguageConfig> 
     ttsLanguageCode: 'cmn-TW',
     ttsVoiceName: 'cmn-TW-Wavenet-A',
   },
+  Hanja: {
+    code: 'Hanja',
+    label: 'Hanja',
+    labelNative: '한자',
+    // Its own collection, not `cards`. A hanja card is a different shape from a
+    // Korean word card — three parts rather than a front and a gloss — and the
+    // deck filters, progress rollups and pack enrolment all key on the
+    // collection to keep the two from pooling.
+    collection: 'cards_hanja',
+    // `ko`, because a hanja card's text that `Intl` ever segments is Korean:
+    // 훈, 음 and the 훈음 read together. The character itself is one grapheme
+    // and segments the same under any locale.
+    locale: 'ko',
+    studyField: 'hanja',
+    studyLabelKey: 'labelHanja',
+    // No `characterSectionKey`, deliberately, even though this is the most
+    // Han-script deck there is. That section answers "what is inside 여건" — it
+    // breaks a word into its characters. A card whose front is already one
+    // character has nothing to break down, and asking the depth prompt for it
+    // would return the card back to itself. Korean keeps `sectionHanja` for the
+    // question it does answer.
+    //
+    // **No TTS fields yet, and the missing piece is the text, not the voice.**
+    // The voice is settled — `ko-KR` with `ko-KR-Neural2-C` for single
+    // characters, which is what `ttsShortVoiceName` exists for. What is not
+    // settled is what to hand it: 水 is a glyph a Korean voice has no agreed
+    // reading for, and the answer that matters — 수 — is the 음, a field this
+    // card does not have until three-sided cards land. Both apps hide the
+    // pronunciation button while these are unset, which is the right thing to
+    // show in the meantime.
+  },
   // English study pairs with Korean — the only non-English native language
   // supported today. A native-Korean learner's card back is Korean.
   English: {
@@ -290,6 +332,15 @@ export interface BackSideConfig {
  * language you already speak is the only case where that collides with the
  * front of the card, and there the back falls to the other side — which
  * reproduces exactly what the old hardcoded table said for every pair.
+ *
+ * ⚠️ **Hanja is the one card this does not fully describe**, and the gap is
+ * real rather than a bug to fix here. 水 is 물 수 to every reader: 훈음 is
+ * Korean whatever language the learner speaks, and "water" is a *different
+ * fact* about the character, not a translation of 물 수. So a hanja card's back
+ * is 훈 + 음 always, and an English native gets an English gloss **in addition**
+ * — decided by the user 2026-09-09 — rather than instead. This function still
+ * answers correctly for the gloss slot (`english` for an English native), which
+ * is all it is asked for until 훈 and 음 become fields of their own.
  */
 export function getBackSideConfig(
   studyLanguage?: StudyLanguage | string,
@@ -315,6 +366,12 @@ export interface ExamplePair {
   spanish?: string;
   kikuyu?: string;
   swahili?: string;
+  /**
+   * A word the character appears in, not a sentence — an example of 독음, the
+   * sound a hanja takes inside a word, which is the thing a 훈음 alone does not
+   * tell you. 水 is 물 수 on its own and 수 in 수영.
+   */
+  hanja?: string;
   english: string;
 }
 
@@ -388,6 +445,7 @@ export interface TermCore {
   spanish?: string;
   kikuyu?: string;
   swahili?: string;
+  hanja?: string;
   english: string;
   translation?: string;
   /**
@@ -425,20 +483,25 @@ export interface TermDepth {
    * Chinese all want this section, and only one of them calls it hanja.
    */
   characterBreakdown?: string;
-  /**
-   * @deprecated Korean cards saved before the field was generalized. Never
-   * write it; read it through `getCharacterBreakdown()`, which is why those
-   * cards need no migration.
-   */
-  hanja?: string;
   notes?: string;
 }
 
-/** The character breakdown to render, from either the current or legacy field. */
+/**
+ * The character breakdown to render.
+ *
+ * Korean cards saved before this field was generalized carried the breakdown as
+ * `hanja`, and this read through to it rather than migrating them. That ended
+ * when Hanja became a study language: `hanja` is now the *front* of a Hanja
+ * card, and one name cannot mean the character and its own breakdown at once.
+ * `migrate:legacy-hanja` moved those cards, so there is one field again.
+ *
+ * Still a function rather than a field read, because every caller renders the
+ * section the same way and an empty string has to read as absent.
+ */
 export function getCharacterBreakdown(
-  depth: Pick<TermDepth, 'characterBreakdown' | 'hanja'>
+  depth: Pick<TermDepth, 'characterBreakdown'>
 ): string | undefined {
-  return depth.characterBreakdown || depth.hanja || undefined;
+  return depth.characterBreakdown || undefined;
 }
 
 export interface TermExplanation extends TermCore, TermDepth {
@@ -644,6 +707,7 @@ export function getDepthTarget(
     | 'spanish'
     | 'kikuyu'
     | 'swahili'
+    | 'hanja'
     | 'english'
     | 'briefDefinition'
   >,

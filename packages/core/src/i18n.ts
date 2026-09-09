@@ -33,6 +33,10 @@ const translations = {
     labelSpanish: 'Spanish',
     labelKikuyu: 'Kikuyu',
     labelSwahili: 'Swahili',
+    // The script, named as English names it. Not "Chinese characters": the deck
+    // teaches the 훈음 a Korean reader learns them by, and calling it hanja is
+    // what says that to someone who might otherwise expect pinyin.
+    labelHanja: 'Hanja',
     save: 'Save',
     flashcardSaved: 'Flashcard saved!',
     loadingFlashcards: 'Loading flashcards...',
@@ -465,6 +469,9 @@ const translations = {
     labelSpanish: '스페인어',
     labelKikuyu: '키쿠유어',
     labelSwahili: '스와힐리어',
+    // No ~어 suffix, unlike every label above it: 한자 is a script, not a
+    // language, and 한자어 is a different word meaning Sino-Korean vocabulary.
+    labelHanja: '한자',
     save: '저장',
     flashcardSaved: '플래시카드가 저장되었습니다!',
     loadingFlashcards: '플래시카드 불러오는 중...',

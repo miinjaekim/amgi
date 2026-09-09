@@ -55,6 +55,11 @@ describe('getBackSideConfig', () => {
       Spanish: 'english',
       Kikuyu: 'english',
       Swahili: 'english',
+      // The gloss slot only. A hanja card's back is 훈음 — 물 수, Korean for
+      // every reader — and an English native gets "water" *in addition*, which
+      // is the field this names. 훈 and 음 are not `getBackSideConfig`'s to
+      // hand out and become fields of their own with three-sided cards.
+      Hanja: 'english',
     };
     for (const { code } of SUPPORTED_STUDY_LANGUAGES) {
       expect(getBackSideConfig(code, 'English').backField, code).toBe(expected[code]);
