@@ -689,6 +689,14 @@ export type CardSides = Partial<Record<CardSideField, string>> & {
   studyLanguage?: StudyLanguage;
   term?: string;
   translation?: string;
+  /**
+   * A hanja's 훈 and 음. Card fields rather than `CardSideField`s — those name
+   * the *languages* a card has sides in, and these are two halves of one
+   * Korean reading — but the side accessors below need them, because a hanja
+   * card's Korean side is assembled from exactly these two.
+   */
+  hun?: string;
+  eum?: string;
 };
 
 /** Returns the study-language side of a card. */
@@ -715,6 +723,15 @@ export function getStudyLangSide(card: CardSides): string {
  */
 export function getBackSide(card: CardSides, nativeLanguage: string | null | undefined): string {
   const { backField } = getBackSideConfig(card.studyLanguage, nativeLanguage);
+  // A hanja's Korean side is its 훈음, and the lookup returns that as two
+  // fields rather than one string — deliberately, since either half can be the
+  // front. `buildFlashcardDoc` assembles it at save time, so without the same
+  // assembly here every surface *before* the save is the one place a hanja card
+  // has no Korean back, and falls through to the English gloss instead.
+  if (card.studyLanguage === 'Hanja' && backField === 'korean') {
+    const assembled = hunEum(card);
+    if (assembled) return assembled;
+  }
   return card[backField] || card.english || card.translation || '';
 }
 
@@ -734,6 +751,15 @@ export function getTermBackSide(
   nativeLanguage?: string | null
 ): string {
   const { backField } = getBackSideConfig(studyLanguage, nativeLanguage);
+  // A hanja's Korean side is its 훈음, and the lookup returns that as two
+  // fields rather than one string — deliberately, since either half can be the
+  // front. `buildFlashcardDoc` assembles it at save time, so without the same
+  // assembly here every surface *before* the save is the one place a hanja card
+  // has no Korean back, and falls through to the English gloss instead.
+  if (studyLanguage === 'Hanja' && backField === 'korean') {
+    const assembled = hunEum(core);
+    if (assembled) return assembled;
+  }
   return core[backField] || core.english || core.translation || '';
 }
 

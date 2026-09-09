@@ -616,7 +616,7 @@ ${glossRuleBullet(false)}
       prompt = `Provide the 훈음 and meaning of the hanja "${term}" with this context: "${context}".
 
 IMPORTANT:
-- "hanja" must be the character itself, written in the traditional form the 한국어문회 배정한자 list assigns — 學, never the Japanese or Simplified form 学. Exactly one character: if the term names a compound like 學校, answer for the single character being asked about.
+- "hanja" must be **exactly one character**, written in the traditional form the 한국어문회 배정한자 list assigns — 學, never the Japanese or Simplified form 学. A two-character answer is always wrong here: this deck's card is a character and its 훈음, and 學校 has no 훈음 of its own.
 - "hun" is the character's 훈 — its native-Korean meaning, written in Korean: 물 for 水, 배울 for 學. Never the English meaning, and never with the 음 attached.
 - "eum" is the character's 음 — its Korean sound, one syllable of 한글: 수 for 水, 학 for 學. The Korean reading; never the Japanese on'yomi and never the Mandarin pinyin.
 - Keep them in **separate fields**. Read together they are the 훈음 (물 수), and the app joins them; a card may show either part on its own, so neither field may contain the other.
@@ -648,6 +648,8 @@ A hanja is NOT ambiguous when:
 
 It is also ambiguous when the term given is a 훈, an 음 or an English word that several different characters answer to — 수 alone is 水, 手, 數 and more. There, each "label" is one character with its 훈음 (e.g. "水 — 물 수").
 
+**A term of two or more hanja is always the ambiguous case.** This deck teaches single characters, so 主張 is not a card — 主 and 張 are. List one entry per character, each "label" being that character with its 훈음 ("主 — 임금 주", "張 — 베풀 장"), and let the learner pick which one they are asking about. Never answer a multi-character term as though it were one card, and never return its 독음 — 주장 — as though that were a 훈음.
+
 ${spellBlock}
 If AMBIGUOUS, respond with only this JSON:
 {
@@ -674,7 +676,7 @@ If NOT ambiguous, respond with only this JSON:
 }
 
 IMPORTANT for the non-ambiguous case:
-- "hanja" must be the character itself, written in the traditional form the 한국어문회 배정한자 list assigns — 學, never the Japanese or Simplified form 学. Exactly one character: if the term names a compound like 學校, answer for the single character being asked about.
+- "hanja" must be **exactly one character**, written in the traditional form the 한국어문회 배정한자 list assigns — 學, never the Japanese or Simplified form 学. A two-character answer is always wrong here: this deck's card is a character and its 훈음, and 學校 has no 훈음 of its own.
 - "hun" is the character's 훈 — its native-Korean meaning, written in Korean: 물 for 水, 배울 for 學. Never the English meaning, and never with the 음 attached.
 - "eum" is the character's 음 — its Korean sound, one syllable of 한글: 수 for 水, 학 for 學. The Korean reading; never the Japanese on'yomi and never the Mandarin pinyin.
 - Keep them in **separate fields**. Read together they are the 훈음 (물 수), and the app joins them; a card may show either part on its own, so neither field may contain the other.

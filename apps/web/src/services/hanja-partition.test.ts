@@ -4,8 +4,10 @@ import {
   HANJA_PARTITIONS,
   directionLabel,
   directionPrompt,
+  getBackSide,
   getSpokenText,
   getStudyLanguageConfig,
+  getTermBackSide,
   hanjaFaces,
   hunEum,
   isHanjaPartition,
@@ -142,5 +144,37 @@ describe('what a hanja card says out loud', () => {
     const config = getStudyLanguageConfig('Hanja');
     expect(config.ttsLanguageCode).toBe('ko-KR');
     expect(config.ttsShortVoiceName).toBe('ko-KR-Neural2-C');
+  });
+});
+
+/**
+ * The Korean side of a hanja, before a card exists.
+ *
+ * `/api/explain` returns 훈 and 음 as two fields and never as one string,
+ * because either half can be the front. `buildFlashcardDoc` assembles them at
+ * save time — so without the same assembly on the read path, every surface
+ * *before* the save was the one place a hanja had no Korean back at all, and
+ * fell through to the English gloss. Learn showed a Korean native "water".
+ */
+describe('the Korean side of a looked-up hanja', () => {
+  const looked = { term: '水', hanja: '水', hun: '물', eum: '수', english: 'water' } as const;
+
+  it('assembles the 훈음 for a Korean native', () => {
+    expect(getTermBackSide(looked, 'Hanja', 'Korean')).toBe('물 수');
+    expect(getBackSide({ ...looked, studyLanguage: 'Hanja' }, 'Korean')).toBe('물 수');
+  });
+
+  it('still gives an English native the gloss', () => {
+    expect(getTermBackSide(looked, 'Hanja', 'English')).toBe('water');
+  });
+
+  // A card saved before 훈 and 음 were fields carries only the assembled string;
+  // `hunEum` falls back to it, so those cards keep reading correctly.
+  it('reads a card that carries only the assembled 훈음', () => {
+    expect(getBackSide({ studyLanguage: 'Hanja', hanja: '水', korean: '물 수' }, 'Korean')).toBe('물 수');
+  });
+
+  it('leaves every other deck\'s Korean side alone', () => {
+    expect(getBackSide({ studyLanguage: 'Japanese', japanese: '水', korean: '물' }, 'Korean')).toBe('물');
   });
 });
