@@ -242,6 +242,31 @@ Android, where only sign-in has been exercised.
 Closed calls, kept with their reasoning — a decision whose reasoning is lost gets
 reopened by the next person to notice the symptom. Newest first.
 
+### A phrase on the Hanja deck stays a list of characters (2026-09-09)
+
+**Left as built, on the user's call.** Typing 수신제가치국평천하 — or 修身齊家治
+國平天下 — into the Hanja deck returns an eight-item disambiguation, one entry
+per character with its 훈음, and picking any of them gives a proper card. The
+rule that makes a multi-character term ambiguous rather than a card generalises
+to the hangul form on its own; no separate handling was needed.
+
+**The argument for leaving it**: every chip is a genuine hanja card, and someone
+who types a 고사성어 into a character deck plausibly wants exactly that — its
+characters. Studying 고사성어 by their hanja is a normal way to study them.
+
+**What was considered and declined.** The deck is answering a different question
+than the one asked, and does not say so — the *phrase* is a Korean vocabulary
+item, and the Korean deck already answers it properly (`partOfSpeech: 'idiom'`,
+a real gloss, and the depth section breaking out its hanja; the user's own card
+for this phrase lives there). The right fix is a cross-deck pointer — "this is a
+word, study it on the Korean deck" — and that needs a concept the app has never
+had. Declined for now rather than invented mid-branch.
+
+⚠️ **`meanings` has no cap anywhere**, so a pasted run of hanja renders as many
+chips as the model returns. Known and accepted: nothing breaks, it is only long,
+and no real input has hit it. A prompt-level cap was offered and declined with
+the rest. If the wall ever shows up in use, that is the cheap half of the fix.
+
 ### The hanja button says the 음, and refuses to say anything else (2026-09-09)
 
 Hanja shipped without audio earlier the same day, and the reason expired within
