@@ -388,6 +388,8 @@ const translations = {
     // Section enrolment — 160 words is not one decision
     deckSaveSection: 'Save this section',
     deckReviewSection: 'Review',
+    deckSections: 'Sections',
+    deckSubpackAll: 'Everything',
     deckSectionSaving: 'Saving…',
     deckSectionAllSaved: 'All saved',
     deckSaveAll: 'Save the whole deck',
@@ -789,6 +791,8 @@ const translations = {
     // Section enrolment — 160 words is not one decision
     deckSaveSection: '이 묶음 저장하기',
     deckReviewSection: '복습하기',
+    deckSections: '묶음',
+    deckSubpackAll: '전체',
     deckSectionSaving: '저장하는 중…',
     deckSectionAllSaved: '모두 저장됨',
     deckSaveAll: '전체 저장하기',

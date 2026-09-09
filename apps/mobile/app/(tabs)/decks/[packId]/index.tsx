@@ -30,6 +30,15 @@ export default function DeckDetailScreen() {
   const [cards, setCards] = useState<Flashcard[] | null>(null);
   const [enrolling, setEnrolling] = useState<string | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
+  /**
+   * The subpack the entry list is narrowed to, or null for the whole deck.
+   *
+   * A filter rather than a screen: the deck's job is browsing the words, and
+   * the default view stays what it was. What it removes is the scroll — on an
+   * 11-section pack, reaching one section header meant paging past several
+   * hundred entries.
+   */
+  const [openSubpack, setOpenSubpack] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   /**
    * The entry whose card modal is open, with the section it was tapped in —
@@ -149,6 +158,58 @@ export default function DeckDetailScreen() {
 
   const entries = getPackEntries(pack);
   const savedCount = savedTerms ? countSavedEntries(entries, savedTerms) : null;
+
+  // A selection that no longer names a section — a stale one left over from
+  // another deck — shows the whole deck rather than nothing at all.
+  const picked = pack.sections.filter(section => section.id === openSubpack);
+  const shownSections = picked.length > 0 ? picked : pack.sections;
+
+  /** How many of a set of entries are saved, in the wording used everywhere. */
+  const progressLabel = (of: readonly PackEntry[]) => {
+    const saved = savedTerms ? countSavedEntries(of, savedTerms) : null;
+    return saved !== null
+      ? t(nativeLanguage, 'packsSaved', { added: saved, total: of.length })
+      : t(nativeLanguage, 'deckEntryCount', { count: of.length });
+  };
+
+  /**
+   * The subpacks, all visible at once, as the thing you pick before reading.
+   *
+   * Shaped like the review picker's second level — name over progress — because
+   * it is the same choice in the same words, one surface earlier. Wrapping
+   * tiles rather than full-width rows so eleven sections stay a glance instead
+   * of becoming the scroll they were meant to remove.
+   *
+   * Hidden on a single-section pack, where it would offer a choice between a
+   * thing and itself.
+   */
+  const renderSubpackPicker = () => {
+    if (pack.sections.length < 2) return null;
+    const option = (id: string | null, name: string, of: readonly PackEntry[]) => {
+      const active = id === null ? picked.length === 0 : id === openSubpack;
+      return (
+        <TouchableOpacity
+          key={id ?? ALL}
+          style={[s.subpackTile, active && s.subpackTileActive]}
+          onPress={() => setOpenSubpack(id)}
+        >
+          <Text style={s.subpackName}>{name}</Text>
+          <Text style={s.subpackCount}>{progressLabel(of)}</Text>
+        </TouchableOpacity>
+      );
+    };
+    return (
+      <View style={s.subpackBlock}>
+        <Text style={s.subpackLabel}>{t(nativeLanguage, 'deckSections')}</Text>
+        <View style={s.subpackWrap}>
+          {option(null, t(nativeLanguage, 'deckSubpackAll'), entries)}
+          {pack.sections.map(section =>
+            option(section.id, getPackText(section.name, nativeLanguage), section.entries)
+          )}
+        </View>
+      </View>
+    );
+  };
   const detailCard = detail ? cardsByTerm.get(detail.entry.study.toLowerCase()) : undefined;
 
   const renderGridTile = (entry: PackEntry, section: PackSection) => {
@@ -202,11 +263,7 @@ export default function DeckDetailScreen() {
       <View key={section.id} style={s.section}>
         <View style={s.sectionHeader}>
           <Text style={s.sectionTitle}>{getPackText(section.name, nativeLanguage)}</Text>
-          <Text style={s.sectionCount}>
-            {sectionSaved !== null
-              ? t(nativeLanguage, 'packsSaved', { added: sectionSaved, total: section.entries.length })
-              : t(nativeLanguage, 'deckEntryCount', { count: section.entries.length })}
-          </Text>
+          <Text style={s.sectionCount}>{progressLabel(section.entries)}</Text>
         </View>
         {section.note && (
           <Text style={s.sectionNote}>{getPackText(section.note, nativeLanguage)}</Text>
@@ -309,7 +366,9 @@ export default function DeckDetailScreen() {
         )}
         {error && <Text style={s.error}>{error}</Text>}
 
-        {pack.sections.map(renderSection)}
+        {renderSubpackPicker()}
+
+        {shownSections.map(renderSection)}
       </ScrollView>
 
       {/* One tap opens the card, saved or not. This replaces both the old
@@ -362,6 +421,18 @@ function makeStyles(C: Palette, tabBarHeight: number) {
     },
     drillBtnText: { fontSize: 15, fontWeight: '600', color: C.text },
     error: { fontSize: 13, color: C.error, marginBottom: 12 },
+
+    subpackBlock: { marginBottom: 22 },
+    subpackLabel: { fontSize: 12, color: C.muted, marginBottom: 8 },
+    subpackWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+    subpackTile: {
+      minWidth: 104, flexGrow: 1,
+      borderWidth: 1, borderColor: C.border, borderRadius: 10,
+      paddingHorizontal: 12, paddingVertical: 8,
+    },
+    subpackTileActive: { borderColor: C.highlight },
+    subpackName: { fontSize: 14, color: C.text },
+    subpackCount: { fontSize: 12, color: C.muted, marginTop: 2 },
 
     section: { marginBottom: 26 },
     sectionHeader: { flexDirection: 'row', alignItems: 'baseline', flexWrap: 'wrap', gap: 8 },

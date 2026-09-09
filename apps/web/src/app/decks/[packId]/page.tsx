@@ -46,6 +46,15 @@ export default function DeckDetailPage() {
    */
   const [detail, setDetail] = useState<{ entry: PackEntry; section: PackSection } | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
+  /**
+   * The subpack the entry list is narrowed to, or null for the whole deck.
+   *
+   * A filter rather than a route: the deck page's job is browsing the words,
+   * and the default view stays exactly what it was. What it removes is the
+   * scroll — on an 11-section pack, finding one section meant paging past
+   * several hundred entries to reach its header.
+   */
+  const [openSubpack, setOpenSubpack] = useState<string | null>(null);
 
   // Live: enrolling writes a batch of cards, and the enrolled/remaining counts
   // below are derived from this list, so they update themselves.
@@ -161,6 +170,66 @@ export default function DeckDetailPage() {
 
   const entries = getPackEntries(pack);
   const savedCount = savedTerms ? countSavedEntries(entries, savedTerms) : null;
+
+  // A selection that no longer names a section — a stale one left over from
+  // another deck — shows the whole deck rather than nothing at all.
+  const picked = pack.sections.filter(section => section.id === openSubpack);
+  const shownSections = picked.length > 0 ? picked : pack.sections;
+
+  /** How many of a set of entries are saved, in the wording used everywhere. */
+  const progressLabel = (of: readonly PackEntry[]) => {
+    const saved = savedTerms ? countSavedEntries(of, savedTerms) : null;
+    return saved !== null
+      ? t(nativeLanguage, 'packsSaved', { added: saved, total: of.length })
+      : t(nativeLanguage, 'deckEntryCount', { count: of.length });
+  };
+
+  /**
+   * The subpacks, all visible at once, as the thing you pick before reading.
+   *
+   * Shaped like the review picker's second level — name over progress — because
+   * it is the same choice in the same words, one surface earlier. A grid rather
+   * than a column so eleven sections fit above the fold instead of becoming the
+   * scroll they were meant to remove.
+   *
+   * Hidden on a single-section pack, where the row would offer a choice between
+   * a thing and itself.
+   */
+  function renderSubpackPicker() {
+    if (pack!.sections.length < 2) return null;
+    const option = (id: string | null, name: string, of: readonly PackEntry[]) => {
+      const active = id === null ? picked.length === 0 : id === openSubpack;
+      return (
+        <button
+          key={id ?? '__all__'}
+          onClick={() => setOpenSubpack(id)}
+          aria-pressed={active}
+          className={`text-left px-3 py-2 rounded-lg border transition-colors ${
+            active
+              ? 'border-[var(--color-highlight)] bg-[var(--color-muted)]/20'
+              : 'border-[var(--color-muted)] hover:bg-[var(--color-muted)]/20'
+          }`}
+        >
+          <span className="block text-sm text-[var(--color-text)]">{name}</span>
+          <span className="block text-xs text-[var(--color-muted)] mt-0.5">{progressLabel(of)}</span>
+        </button>
+      );
+    };
+    return (
+      <div className="mb-8">
+        <p className="text-xs text-[var(--color-muted)] mb-2">{t(nativeLanguage, 'deckSections')}</p>
+        <div
+          className="grid gap-2"
+          style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(10rem, 1fr))' }}
+        >
+          {option(null, t(nativeLanguage, 'deckSubpackAll'), entries)}
+          {pack!.sections.map(section =>
+            option(section.id, getPackText(section.name, nativeLanguage), section.entries)
+          )}
+        </div>
+      </div>
+    );
+  }
   const detailCard = detail ? cardsByTerm.get(detail.entry.study.toLowerCase()) : undefined;
 
   function renderSection(section: PackSection) {
@@ -175,11 +244,7 @@ export default function DeckDetailPage() {
           <h2 className="text-lg font-semibold text-[var(--color-text)]">
             {getPackText(section.name, nativeLanguage)}
           </h2>
-          <span className="text-xs text-[var(--color-muted)]">
-            {sectionSaved !== null
-              ? t(nativeLanguage, 'packsSaved', { added: sectionSaved, total: section.entries.length })
-              : t(nativeLanguage, 'deckEntryCount', { count: section.entries.length })}
-          </span>
+          <span className="text-xs text-[var(--color-muted)]">{progressLabel(section.entries)}</span>
           {/* A subpack is a thing you sit down with on its own, so the three
               things you can do to one live together here: save it, review what
               you have saved of it, drill it. Review is the new half — before
@@ -353,7 +418,9 @@ export default function DeckDetailPage() {
         </div>
       )}
 
-      {pack.sections.map(renderSection)}
+      {renderSubpackPicker()}
+
+      {shownSections.map(renderSection)}
 
       {/* One tap opens the card, saved or not. This replaces both the old
           save-on-tap and the deck's own management panel, and it is what makes

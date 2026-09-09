@@ -150,8 +150,11 @@ Reasoning in the Decisions entry in [status.md](status.md); the shape is in
       just sits at pack level rather than in a subpack, where a pack review
       still reaches it. `apps/web/scripts/remap-pack-subpacks.ts`
       (`npm run remap:subpacks --workspace @amgi/web`) derives each card's
-      subpack from study side + pack id; dry-run by default. **Not yet run
-      against production.**
+      subpack from study side + pack id; dry-run by default. **Run against
+      production 2026-09-09: 2218 cards, 12 accounts, 47 subpacks, 0 unmatched
+      and 0 ambiguous; a re-run reports nothing left at pack level.** The
+      pack-level branch stays anyway — it is what a card saved by an older
+      client would land on, and it costs one comparison.
       Registry invariants the ids depend on — no `/` in any id, each term in
       exactly one section of its pack — are pinned in `collections.test.ts` and
       documented in `docs/packs/README.md`, which now also says section names
