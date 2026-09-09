@@ -5,7 +5,8 @@ import {
   Keyboard, Pressable,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useNavigation } from 'expo-router';
+import type { BottomTabNavigationProp } from 'expo-router/tabs';
 import { useUser } from '../../src/context/UserContext';
 import { useCardEnrichment } from '../../src/hooks/useCardEnrichment';
 import {
@@ -349,6 +350,26 @@ export default function ReviewScreen() {
    * the first choice — and on a phone that is most of a screen.
    */
   const [openPack, setOpenPack] = useState<string | null>(null);
+
+  // A second tap on the Review tab closes the pack you opened into. The
+  // subpack list is the one place on this tab you can be *inside* something
+  // without having started anything, and re-tapping the tab you are already on
+  // is where people reach for "back out of this" — the `← All collections`
+  // link is the other way, not the only one.
+  //
+  // It stops at `openPack` deliberately. A chosen collection with a session
+  // running is work in progress, and a stray tap on the tab bar must not
+  // discard it; clearing `openPack` costs nothing there, since nothing reads it
+  // once a collection is picked.
+  const navigation = useNavigation<BottomTabNavigationProp<Record<string, undefined>>>();
+  useEffect(() => {
+    return navigation.addListener('tabPress', () => {
+      // Only a re-tap. Arriving from another tab should leave the list where
+      // you left it, the same rule the Learn tab's re-tap follows.
+      if (!navigation.isFocused()) return;
+      setOpenPack(null);
+    });
+  }, [navigation]);
 
   const selected = findCollection(collections, selectedKey);
   /** Every row that can be picked, both levels, for the counts below. */
