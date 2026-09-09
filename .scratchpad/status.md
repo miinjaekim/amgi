@@ -39,8 +39,8 @@ _Reconciled against `main` @ `bc8cb97`, 2026-08-21. `npm test` 246/246, measured
   per day could be reconstructed from `createdAt`; review history cannot be
   reconstructed from anything. So the calendar is near-empty for weeks by
   construction — expected, not a bug, and the empty state says so.
-- **부대·참모 has an eleventh section: 병과와 주특기** (2026-09-09), awaiting
-  approval on the word list. 24 pairs placed third, after 계급·호칭 and
+- **부대·참모 has an eleventh section: 병과와 주특기** (2026-09-09), **word list
+  approved the same day**. 24 pairs placed third, after 계급·호칭 and
   부대·편제 — the branch a soldier belongs to and the job inside it, which
   neither military pack covered. It is a section, not a fourth pack: it started
   as a 66-entry pack across all four services and the user cut it to the common
@@ -315,7 +315,8 @@ something a reader could already find.
 ⚠️ **Every US branch name rests on one source family** (two Wikipedia pages,
 which is self-consistency rather than corroboration), so the section is 7 A, 16
 B, 1 D. A reviewer with DA PAM 600-3 can lift most of it to A, and that is the
-highest-value thing anyone can do to it. **The word list still needs approval.**
+highest-value thing anyone can do to it. **The word list was approved 2026-09-09**
+— of the list, not of those two open items.
 
 ### A phrase on the Hanja deck stays a list of characters (2026-09-09)
 

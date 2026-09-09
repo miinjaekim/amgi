@@ -1,5 +1,11 @@
 # 병과와 주특기 / Branches and specialties — Subpack Draft for Review
 
+**Word list approved by the user 2026-09-09**, the gate every pack goes through.
+The open items below are unchanged by that: the US branch names still rest on one
+source family, the 군수과 conflict is still unsettled, and 인사과's hint still
+says "until recently" where a date belongs. Approval was of the list, not of
+those.
+
 **What this is.** A new section inside the existing
 [군사용어 — 부대·참모](military-unit-pack-draft.md) pack — `branches`, 24 pairs,
 placed third, after 계급·호칭 and 부대·편제. Not a pack of its own: the branch a

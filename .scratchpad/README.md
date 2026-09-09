@@ -26,10 +26,10 @@ Related docs outside this folder:
   they still carry live open questions — read them before changing a term or a
   hint, and hand *these* to a reviewer rather than the TS.
 - `docs/packs/military-branches-subpack-draft.md` — 병과와 주특기, the 24-pair
-  eleventh section of 부대·참모, added 2026-09-09 and **awaiting approval on the
-  word list**. It is the first military content authored under the sourcing
-  standard, so unlike its parent every row carries a tier and a citation, and it
-  leads with why a branch is written 보병과 rather than 보병. It also records
+  eleventh section of 부대·참모, added and **approved 2026-09-09**. It is the
+  first military content authored under the sourcing standard, so unlike its
+  parent every row carries a tier and a citation, and it leads with why a branch
+  is written 보병과 rather than 보병. It also records
   what was cut and why — it started as a whole pack and was reduced to a
   subpack.
 - `docs/packs/hanja-geupsu-pack-draft.md` — the 급수 pack, 300 characters over
