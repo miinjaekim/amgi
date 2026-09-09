@@ -126,40 +126,6 @@ Reasoning in the Decisions entry in [status.md](status.md); the shape is in
 
 ## Medium
 
-- [x] **Subpacks: a section you can review on its own** — shipped 2026-09-09.
-      A pack stays one collection and gained a second level inside it. A subpack
-      is a thing you save, drill and review by itself, from its own section
-      header on the deck page; the review picker drills into a pack to offer the
-      whole pack plus each subpack with its own progress.
-      **Cards store `pack/section`** — namespaced because section ids are only
-      unique within a pack, and the collisions are everywhere (`verbs` in four
-      packs, ten shared ids between the two military packs). One field, no
-      schema change.
-      **`cardInCollection` is the whole second level**, and it is asymmetric: a
-      subpack takes only its own cards, a pack takes its own and every
-      subpack's. Reasoning for keeping the whole-pack review — it contradicts
-      `ReviewCollection`'s "deliberately no everything collection" — is in
-      Decisions in [status.md](status.md).
-      **The Cards page chip row stayed at one chip per pack.** The other call
-      the item flagged; a chip per subpack would be 89 of them, and a two-level
-      chip control has nowhere to go in a row that is already a third axis on
-      mobile's filter sheet.
-      **The migration ships separately and is optional**, which is what choosing
-      subpacks over a flat split bought: the parent stays in the registry, so an
-      un-remapped card still resolves and still wears its pack's real name — it
-      just sits at pack level rather than in a subpack, where a pack review
-      still reaches it. `apps/web/scripts/remap-pack-subpacks.ts`
-      (`npm run remap:subpacks --workspace @amgi/web`) derives each card's
-      subpack from study side + pack id; dry-run by default. **Run against
-      production 2026-09-09: 2218 cards, 12 accounts, 47 subpacks, 0 unmatched
-      and 0 ambiguous; a re-run reports nothing left at pack level.** The
-      pack-level branch stays anyway — it is what a card saved by an older
-      client would land on, and it costs one comparison.
-      Registry invariants the ids depend on — no `/` in any id, each term in
-      exactly one section of its pack — are pinned in `collections.test.ts` and
-      documented in `docs/packs/README.md`, which now also says section names
-      are user-facing copy.
-
 - [ ] **Military specialties pack (병과 / 주특기, "MOS").** Infantry, engineer,
       signal, artillery, armor, logistics, medical, and the rest — the branch a
       soldier belongs to, which the two shipped military packs do not cover.

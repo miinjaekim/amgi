@@ -196,6 +196,22 @@ Android, where only sign-in has been exercised.
   docs name subscribing-in-an-effect as the intended use. Scoped under
   Housekeeping in [backlog.md](backlog.md).
 
+- ⚠️ **The subpack remap ran ahead of the code that reads it** (2026-09-09).
+  `remap:subpacks` moved 2218 cards across 12 accounts to `pack/section` ids
+  while PR #116 was still open — so deployed web and TestFlight build 14, which
+  only understand a bare pack id, now fall back to `name: id` for every pack
+  card. **Every pack shows as raw slugs** (`toeic-core/verbs`) in the review
+  picker and the deck chips, one row per section, sorted last.
+  Cosmetic and reversible — nothing is lost, every card still reviews — but it
+  is live for real accounts until the code catches up. The safety the design
+  was built around runs one way only: *new* code reads old cards fine, and that
+  is not the same claim as old code reading new cards.
+  Web clears on merge and deploy; **mobile cannot clear until the next build**,
+  which is the argument for reverting the remap and re-running it after that
+  build rather than waiting. `remap:subpacks --revert` undoes it exactly, and
+  re-running the forward pass afterwards costs nothing — the feature works on
+  un-remapped cards, they just sit at pack level.
+
 ## Decisions
 
 Closed calls, kept with their reasoning — a decision whose reasoning is lost gets
