@@ -112,40 +112,48 @@ exist, so `ReviewDirection` does not grow. What is left is a registry entry, two
 new card fields, a pack-shape extension, and a front/back setting — all
 additive, none of it under the scheduling code every other language runs on.
 
-#### 1. `Hanja` as a `StudyLanguage`
+#### 1. `Hanja` as a `StudyLanguage` — ✅ shipped 2026-09-09
 
-- [ ] **Add the registry entry, its Gemini prompt branches and its i18n keys.**
+- [x] **Add the registry entry, its Gemini prompt branches and its i18n keys.**
 
-The registry in `packages/core/src/types.ts` was built for this — an entry plus
-its Gemini prompt branches and i18n keys, rather than conditionals spreading
-through the app.
+The registry in `packages/core/src/types.ts` was built for this, and it held: an
+entry, one `/api/explain` branch, two i18n keys and one line of example terms
+per app. Nothing conditional spread anywhere else.
 
-⚠️ **The precedent cuts against calling it a language, and there is a reason to
-do it anyway.** Kanji — the exact analogue — is a *pack* under Japanese, not an
-entry; so are both kana packs. What makes Hanja different is not the script, it
-is the card: a pack cannot add a field, and the three-sided card needs 훈 and 음
-addressable separately. Traditional vs Simplified Chinese is the precedent that
-*does* fit — a script gets its own entry and its own collection.
+What the item asked to settle first, settled:
 
-- `collection: 'cards_hanja'`, its own — cards must not land in `cards`.
-- `studyField` needs a **new `CardSideField`** (`hanja`), and ⚠️ `hanja` already
-  exists on `TermDepth` as a **deprecated** field holding legacy Korean cards'
-  character breakdown, read through `getCharacterBreakdown()`. Two different
-  meanings under one name in one type. Rename one of them before writing either.
-- `locale: 'ko'`, and TTS is `ko-KR` with `ttsShortVoiceName: 'ko-KR-Neural2-C'`
-  — the field exists for exactly this, single-character terms.
-  ⚠️ **Pronounce the 음, not the glyph.** Handing 水 to a Korean voice is
-  untested and the answer that matters (수) is a string we already hold.
-- ⚠️ **`getBackSideConfig` does not describe this card.** The back is keyed on
-  the *pair* of languages — English back for an English native, Korean for a
-  Korean one. But 훈음 is Korean whatever the reader speaks: 水 is 물 수, and
-  "water" is a different fact, not a translation of it. Settle whether an
-  English native gets 훈음 plus a gloss, or whether the deck is Korean-native
-  only, before authoring entries.
-- ⚠️ **Korean already carries `characterSectionKey: 'sectionHanja'`** — the depth
-  prompt's per-character breakdown for Korean words. That stays; it answers "what
-  is inside 여건", which is not what this deck asks. Check the i18n keys don't
-  collide.
+- **The name collision is gone, by migration.** `hanja` on `TermDepth` — the
+  deprecated field holding legacy Korean cards' character breakdown — is
+  removed, and `migrate:legacy-hanja` moves those cards onto
+  `characterBreakdown`. `getCharacterBreakdown()` lost its fallback. The
+  alternative was a guard keying the fallback on study language, which works and
+  leaves two meanings under one name forever; the user chose the migration.
+  ⚠️ **The script must never see `cards_hanja`** — there `hanja` is the front of
+  the card — and it excludes Hanja by construction rather than by filter.
+- **An English native gets 훈음 *plus* a gloss** — user's call 2026-09-09. 水 is
+  물 수 to every reader and "water" is a different fact about it, not a
+  translation. So the Hanja branch of `/api/explain` asks for `korean` outright
+  instead of going through `nativeBackRule`, which is empty for an English
+  native. `getBackSideConfig` still answers correctly for the gloss slot, which
+  is all it is asked for; 훈 and 음 become fields of their own in 2 below.
+- **No `characterSectionKey`.** A card whose front is one character has nothing
+  to break into characters, so the depth prompt leaves the section out. Korean
+  keeps `sectionHanja` for the question it does answer, and the keys never meet.
+- **No TTS fields yet, and the missing piece is the text, not the voice.**
+  `ko-KR` + `ko-KR-Neural2-C` is settled and written down in the entry; what is
+  not is what to hand it, since the 음 has no field until 2 below. Both apps hide
+  the pronunciation button while these are unset.
+
+Verified against Gemini, six probes on the live route: 水 → 물 수 / water, 學 →
+배울 학, 樂 → ambiguous across 즐길 락 / 노래 악 / 좋아할 요, 学 → corrected to
+學 by the spellcheck rule that already bans Simplified forms, 물 → 水, and a bare
+음 (수) → ambiguous across 水 手 數 受 首, each label carrying its own 훈음.
+
+⚠️ **Two manual Firestore steps remain**, the ones every new collection needs
+and neither of which is in the repo: security rules for `cards_hanja` (no
+wildcard support — add them in the console) and the composite index on
+`archived + createdAt`, which Firebase offers a creation link for on the first
+failing query.
 
 #### 2. Three-sided cards
 
@@ -202,8 +210,13 @@ can — a pack cannot add a field.
 ⚠️ **`PackBack` has two slots for two *languages*, not three parts.**
 `PackEntry = { study, back: { English?, Korean? }, context? }` cannot express
 한자 + 훈 + 음. The pack shape needs extending before entries can be authored —
-settle it in the draft, and note that it also decides what an English native
-sees, since 물 is Korean whatever the reader speaks.
+settle it in the draft.
+
+✅ **What it does not have to settle any more is what an English native sees.**
+That was decided with 1 above: 훈 and 음 are Korean and shown to every reader,
+and an English gloss is *additional*. So the shape a pack entry needs is four
+authored parts — 한자, 훈, 음, and an English meaning — not two backs. The
+lookup route already returns exactly that quartet.
 
 ⚠️ **A two-part back breaks the typed-answer grader's assumption.**
 `typedAnswer.ts` grades input against *a* side. With 훈 and 음 both behind the

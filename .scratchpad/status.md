@@ -39,6 +39,19 @@ _Reconciled against `main` @ `bc8cb97`, 2026-08-21. `npm test` 246/246, measured
   per day could be reconstructed from `createdAt`; review history cannot be
   reconstructed from anything. So the calendar is near-empty for weeks by
   construction — expected, not a bug, and the empty state says so.
+- **Hanja is a study language on both platforms** (2026-09-09), the tenth
+  registry entry — an entry, one `/api/explain` branch, two i18n keys and a row
+  of example terms per app. Lookup verified against the live API, six probes:
+  水 → 물 수 / water, 學 → 배울 학, 樂 → ambiguous across its three 훈음, the
+  Japanese form 学 → corrected to 學, 물 → 水, and a bare 음 (수) → ambiguous
+  across five characters. The deck itself does not exist yet: three-sided cards
+  and the 급수 packs are the next two items in [backlog.md](backlog.md).
+  ⚠️ **Neither console step is done.** `cards_hanja` has **no security rule**,
+  so every read and write fails `permission-denied`, and **both** composite
+  indexes are missing — see the two-indexes lesson in [lessons.md](lessons.md),
+  since the link in the first error only builds one of them and `/review`
+  coming back to life makes it look finished while `/cards` is still broken.
+  Nothing can be saved to the deck until the rule is in.
 - **Spanish is live on web** (2026-08-22). Registry entry, prompt branch, i18n
   and example terms merged; lookup verified against the live API in both
   directions. `cards_spanish`'s security rule and **both** composite indexes are
@@ -221,6 +234,43 @@ Android, where only sign-in has been exercised.
 
 Closed calls, kept with their reasoning — a decision whose reasoning is lost gets
 reopened by the next person to notice the symptom. Newest first.
+
+### Hanja's card back, and the `hanja` name it had to take (2026-09-09)
+
+Two calls taken together, because the registry entry could not be written
+without either. Both set by the user.
+
+**An English native gets 훈음 *plus* an English gloss, not instead of it.** 水 is
+물 수 to every reader — 훈음 is how the character is *named* in Korean, and
+"water" is a different fact about it rather than a translation of 물 수. The
+alternative on the table was a Korean-native-only deck, which is arguably truer
+to an 어문회 exam deck and closes it to everyone else. So a hanja card carries
+four parts: the character, its 훈, its 음, and an English meaning that an English
+native sees in addition to the 훈음.
+
+**This is the first card `getBackSideConfig` does not fully describe**, and the
+gap is structural rather than a bug. That function answers "which slot holds the
+translation", keyed on the *pair* of languages; 훈음 is not a translation and
+belongs to neither side of the pair. It still answers correctly for the gloss
+slot, which is all it is asked for, and the Hanja branch of `/api/explain` asks
+for `korean` outright instead of routing through `nativeBackRule` — which is
+empty for an English native and would have dropped the 훈음 for exactly the
+reader who most needs it spelled out.
+
+**The deprecated `hanja` depth field was migrated rather than guarded.** It held
+legacy Korean cards' character breakdown and was left in place precisely to
+avoid a migration, read through `getCharacterBreakdown()`. The new study field
+wants the same name for the character itself. The cheap option was a guard —
+fall back to the legacy field only for Korean cards, which is precise, since it
+was only ever written for them — and the user chose the migration instead:
+`migrate:legacy-hanja` promotes it to `characterBreakdown` and deletes it, and
+`TermDepth` loses the field. One name, one meaning, nothing to remember later.
+
+⚠️ **The migration must never touch `cards_hanja`**, where `hanja` is the front
+of the card: promoting it would put the character in its own breakdown section
+and then delete the front. The script excludes Hanja by construction — it builds
+its collection list from the registry minus that one entry — rather than by a
+filter a later edit could widen past.
 
 ### Per-level content is allowed; per-level adaptivity is not (2026-09-09)
 
