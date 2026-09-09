@@ -60,6 +60,22 @@ export interface PackEntry {
   study: string;
   back: PackBack;
   /**
+   * A hanja's 훈 (native-Korean meaning) and 음 (Korean sound), authored apart.
+   *
+   * **`back` cannot hold these**, and that is why they are here: it has two
+   * slots for two *languages*, and 훈음 is one language in two parts. A hanja
+   * card shows either part on its own depending on the learner's partition, so
+   * a pack that authored "물 수" into `back.Korean` would have to be taken
+   * apart again by a parser guessing where the 훈 ends.
+   *
+   * `back.Korean` is still authored — as the assembled 훈음, derived from these
+   * two by `hunEum()` where the pack is written, so the deck page and the
+   * already-saved-marking have a string to show without knowing about
+   * partitions. Derived in one place, never typed twice.
+   */
+  hun?: string;
+  eum?: string;
+  /**
    * The article this noun takes — Spanish `el`/`la`, and whatever a future
    * gendered language names.
    *
@@ -242,6 +258,11 @@ export function buildPackCardDraft(
     // The article, where the entry names one — same field a looked-up noun
     // fills, so the two paths produce the same card.
     ...(entry.gender ? { gender: entry.gender } : {}),
+    // The two halves of a hanja's 훈음, kept apart on the card exactly as the
+    // pack authored them. `korean` above already carries the assembled form,
+    // so this adds the split rather than replacing anything.
+    ...(entry.hun ? { hun: entry.hun } : {}),
+    ...(entry.eum ? { eum: entry.eum } : {}),
     // Last, because on an English or Korean deck the study side is one of the
     // two slots above and has to win — a back never replaces the front.
     [config.studyField]: entry.study,
