@@ -483,3 +483,86 @@ export function getVocabPacks(studyLanguage: StudyLanguage): VocabPack[] {
 export function getVocabPack(studyLanguage: StudyLanguage, packId: string): VocabPack | undefined {
   return getVocabPacks(studyLanguage).find(pack => pack.id === packId);
 }
+
+/**
+ * The separator between a pack and one of its sections in a saved card's
+ * `packId`.
+ *
+ * A slash because no pack id and no section id contains one — checked across
+ * all twelve packs and all 79 sections — so the split is unambiguous and
+ * `parentPackId` needs no escaping rules.
+ */
+const REF_SEPARATOR = '/';
+
+/**
+ * The id a subpack's cards are saved under.
+ *
+ * Namespaced by the pack rather than bare, because section ids are only unique
+ * *within* a pack and the collisions are everywhere: `verbs` is in four packs,
+ * `greetings` and `numbers` in two, and `military-unit-en` shares all ten of
+ * its section ids with `military-unit-ko`. A bare `verbs` would pool TOEIC
+ * verbs with Spanish ones the moment someone studied both.
+ */
+export function packRefId(packId: string, sectionId: string): string {
+  return `${packId}${REF_SEPARATOR}${sectionId}`;
+}
+
+/**
+ * The pack half of a collection id, which is the id itself when it names no
+ * subpack.
+ *
+ * Pure string work on purpose: it answers for ids whose pack has left the
+ * registry too, and every surface that groups by pack — the deck chips, the
+ * review picker's first level — needs an answer for those.
+ */
+export function parentPackId(collectionId: string): string {
+  const cut = collectionId.indexOf(REF_SEPARATOR);
+  return cut === -1 ? collectionId : collectionId.slice(0, cut);
+}
+
+/**
+ * What a collection id points at: a pack, and the section inside it when the id
+ * names a subpack.
+ */
+export interface PackRef {
+  pack: VocabPack;
+  /** Absent when the id names the whole pack. */
+  section?: PackSection;
+}
+
+/**
+ * A collection id resolved against the registry, or `undefined` when the pack
+ * is not there.
+ *
+ * The single place the `pack/section` form is understood. Everything that
+ * groups, names or counts by collection goes through here, so a card saved
+ * under a section id that has since been renamed away degrades to the pack —
+ * still reviewable, still wearing the pack's real name — rather than to a raw
+ * slug.
+ */
+export function resolvePackRef(
+  studyLanguage: StudyLanguage,
+  collectionId: string,
+): PackRef | undefined {
+  const pack = getVocabPack(studyLanguage, parentPackId(collectionId));
+  if (!pack) return undefined;
+  const cut = collectionId.indexOf(REF_SEPARATOR);
+  if (cut === -1) return { pack };
+  const sectionId = collectionId.slice(cut + REF_SEPARATOR.length);
+  return { pack, section: pack.sections.find(section => section.id === sectionId) };
+}
+
+/**
+ * Every entry of these sections paired with the collection id its card is saved
+ * under.
+ *
+ * The enrol paths take sections rather than a flat entry list because of this
+ * pairing: saving a whole pack has to file each card under *its own* subpack,
+ * or "save the deck, then review just greetings" would come back empty.
+ */
+export function packEntriesByCollection(
+  pack: VocabPack,
+  sections: readonly PackSection[],
+): { section: PackSection; collectionId: string }[] {
+  return sections.map(section => ({ section, collectionId: packRefId(pack.id, section.id) }));
+}
