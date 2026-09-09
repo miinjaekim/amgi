@@ -26,6 +26,7 @@ import { getApps, initializeApp, cert } from 'firebase-admin/app';
 import {
   VOCAB_PACKS,
   getStudyLanguageConfig,
+  parentPackId,
   type CardSideField,
   getPackEntries,
   type PackEntry,
@@ -84,9 +85,16 @@ async function planForLanguage(
     ]),
   );
 
+  // Every card carrying a pack, rather than an `in` over the pack ids. A card
+  // enrolled since subpacks carries `pack/section` and matches no pack id, and
+  // the ones this repairs — saved before backs became native-aware, so filed at
+  // pack level — become `pack/section` themselves the moment `remap:subpacks`
+  // runs. An `in` here would make these two scripts order-dependent, and
+  // silently: running the remap first would leave every repairable card
+  // invisible to this one.
   let query: FirebaseFirestore.Query = store
     .collection(collection)
-    .where('packId', 'in', [...byPack.keys()]);
+    .where('packId', '>', '');
   if (uidFilter) query = query.where('uid', '==', uidFilter);
 
   const repairs: Repair[] = [];
@@ -94,7 +102,7 @@ async function planForLanguage(
     const data = doc.data();
     const study = data[studyField];
     const entry = typeof study === 'string'
-      ? byPack.get(data.packId)?.get(study.toLowerCase())
+      ? byPack.get(parentPackId(String(data.packId)))?.get(study.toLowerCase())
       : undefined;
     // A front that no longer matches the pack is not the pack's to repair.
     if (!entry) continue;
