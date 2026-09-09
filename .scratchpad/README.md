@@ -120,8 +120,9 @@ waiting, and `docs/local-model.md` §8 is now analysis rather than a plan. And
 **the word-of-the-day gloss divergence was cancelled and then reversed the same
 day** — the user set the ceiling directly (one gloss, a second only when one
 would mislead), so that route is fixed and `/api/explain`'s strict single is now
-the open half of the question. The pack roadmap closed too; the MOS pack is untouched and is now the only
-pack tracked. Full reasoning, item by item, in the 2026-09-08 Decisions entry in
+the open half of the question. The pack roadmap closed too, so a pack now needs its own case made rather than a
+slot on a list — the MOS pack was left untouched as the only one tracked, and
+the Hanja 급수 packs were added 2026-09-09 by making that case. Full reasoning, item by item, in the 2026-09-08 Decisions entry in
 [status.md](status.md)._
 
 _This pass **shipped the shareable stats asset**, in four commits that are

@@ -222,6 +222,41 @@ Android, where only sign-in has been exercised.
 Closed calls, kept with their reasoning — a decision whose reasoning is lost gets
 reopened by the next person to notice the symptom. Newest first.
 
+### Per-level content is allowed; per-level adaptivity is not (2026-09-09)
+
+**Amends [vision.md](vision.md).** The line "no level setting, no placement test,
+no per-level content" now refuses only the first two. Set by the user while
+scoping the Hanja packs: *"per-level content is still allowed, but we still want
+to apply first principle thinking... we don't create per-level content just for
+the sake of it, but rather because we want the content to be approachable and
+easily navigable."*
+
+**What the old wording conflated.** Two different things sat in one list. A
+level *setting* and a placement test are the app deciding what a learner is
+ready for — that is what the rule exists to refuse, and it still refuses it,
+because the user's own input already says. Content *organised* into levels is a
+navigation question, and it never had the same argument against it. The old
+wording only held up because nothing had tested it.
+
+**What replaces it is a test, not a permission.** Levels are allowed where they
+make content approachable and navigable, refused where they are structure for
+its own sake. Two things to check: does the ladder come from somewhere real — a
+published curriculum or exam sequence someone thought about — and can a learner
+tell from outside which rung they want. 급수 for hanja passes both. Slicing a
+vocabulary deck into "level 1–5" to look organised passes neither.
+
+**Why this was already latent.** The kanji pack chose 학년별한자배당표 over a
+JLPT tier for exactly this reason and argued it at length — a real curriculum
+with an order someone thought about. That was per-level content shipped in
+August under a rule that read as forbidding it, which is a fair sign the rule
+was wrong rather than the pack. The **kana exception amended into vision.md
+2026-07-24 is untouched** and is a different point: it is about scripts not
+being beginner content, not about levels.
+
+**Not affected:** domains-not-starters, and audience-is-not-beginners. A 급수
+deck is still a domain — hanja — being unlocked in a sourced order, not a
+starter deck.
+
 ### No Review group in settings — subpacks answered it instead (2026-09-09)
 
 **Closes "What belongs on the review screen versus in settings"**, removed from
