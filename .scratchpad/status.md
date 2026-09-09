@@ -403,11 +403,17 @@ hanja deck needs the 대표훈음 (계집 녀, 큰 대). So there is no shared s
 keep in step, and the drift risk the backlog flagged does not exist. The kanji
 pack corroborates the character and the English; never the 훈.
 
-⚠️ **One row ships knowingly wrong.** 省 is 살필 성 — *examine* — and Unihan
-carries only "province" and "save, economize". Writing "examine" would be a tier
-C assertion with no source, which `docs/packs/README.md` says to cut or get
-checked rather than ship quietly. It is flagged in the draft and tracked in the
-backlog as the one open row.
+**The one row that shipped knowingly wrong is fixed.** 省 is 살필 성 —
+*examine* — and Unihan's `kDefinition` has only "province" and "save,
+economize". It shipped as "province" with the wrongness flagged rather than an
+unsourced "examine" written in, and the call came back *examine* on 2026-09-09.
+It is now `examine, inspect`, tier B off Wiktionary's own wording for the xǐng
+reading, with CC-CEDICT and Unihan's own `kJapaneseKun` (`KAERIMIRU`, 省みる)
+agreeing on the sense Unihan's definition field omits. **The lesson is that
+flagging held**: the row was findable, the call was one line, and nothing had to
+be re-derived to make it. Its English is the only one in the pack from outside
+Unihan, so it has its own table (`OFF_UNIHAN`) rather than a line in
+`OVERRIDES`, which is what keeps the tier column honest.
 
 **The ingest script is committed beside the draft** because the draft's tier
 column is a claim about provenance, and a description of a method is not

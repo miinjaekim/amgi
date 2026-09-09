@@ -33,9 +33,9 @@ import { hunEum } from './types';
  * 한국어문회's own 배정한자 XLS for the characters, their levels and their
  * 대표훈음; Unicode Unihan corroborating all 300 음 with no exceptions, and
  * supplying the English where this repo's kanji pack does not already carry a
- * reviewed one. Per-entry tiers, the 13 sense overrides, and the one row whose
- * English is still unsourced are all in the draft — read it before changing a
- * gloss, and hand *it* to a reviewer rather than this file.
+ * reviewed one. Per-entry tiers, the 12 sense overrides, and the one gloss
+ * Unihan could not supply at all (省) are in the draft — read it before
+ * changing a gloss, and hand *it* to a reviewer rather than this file.
  *
  * Draft review: docs/packs/hanja-geupsu-pack-draft.md
  */
@@ -293,7 +293,7 @@ const GEUP6II_ROWS: readonly HanjaRow[] = [
   ['線', '줄', '선', 'line'],
   ['雪', '눈', '설', 'snow'],
   ['成', '이룰', '성', 'completed, finished'],
-  ['省', '살필', '성', 'province', '덜 생'],
+  ['省', '살필', '성', 'examine, inspect', '덜 생'],
   ['消', '사라질', '소', 'vanish, die out'],
   ['術', '재주', '술', 'art, skill'],
   ['始', '비로소', '시', 'begin, start'],

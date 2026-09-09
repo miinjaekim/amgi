@@ -94,8 +94,8 @@ which does not degrade gracefully._
 cards, and the five 급수 packs — shipped whole on 2026-09-09 and left this file
 per the convention in [README.md](README.md); its reasoning is in three
 Decisions entries in [status.md](status.md), the compatibility-ideograph gotcha
-is in [lessons.md](lessons.md), and the one row still open from it (省) is under
-Medium. What remains below is the last of the 2026-08-31 queue — everything else
+is in [lessons.md](lessons.md), and the one row it left open (省's English) was
+answered on 2026-09-09. What remains below is the last of the 2026-08-31 queue — everything else
 there either shipped (Spanish and Kikuyu packs, the pronunciation speed dial in
 build 14, the shareable stats asset across four commits on 2026-09-07) or was
 cancelled, with the reasoning in the same place.
@@ -134,16 +134,6 @@ Reasoning in the Decisions entry in [status.md](status.md); the shape is in
       example sentences", both locales) becomes false the moment it ships.
 
 ## Medium
-
-- [ ] **省 ships with a gloss that is wrong for its 훈.** The character is
-      살필 성 — *examine*, as in 반성 and 성찰 — and the pack's English says
-      "province", because Unicode Unihan carries only that and "save,
-      economize" and neither is the Korean sense. It is flagged in
-      `docs/packs/hanja-geupsu-pack-draft.md` rather than fixed, because
-      writing "examine" is a tier C assertion with no source and
-      `docs/packs/README.md` says to cut those or get them checked. **Needs a
-      Korean-English hanja dictionary, or a call to ship it unsourced.** One
-      row, and the only one left open from the Hanja work.
 
 - [ ] **Watch the kanji deck on the "All" chip.** The kanji pack is the first
       single-glyph pack laid out as a `list`, because its back carries readings

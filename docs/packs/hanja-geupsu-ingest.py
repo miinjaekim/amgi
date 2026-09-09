@@ -106,12 +106,26 @@ OVERRIDES = {
     '江': 'large river',      # was 'large river; the Yangzi'
 }
 
-# ⚠️ Unresolved, and left sourced-but-wrong on purpose rather than invented.
-# 省 is 살필 성 — *examine*, as in 반성 and 성찰 — and Unihan carries only
-# "province" and "save, economize", neither of which is that sense. Writing
-# "examine" here would be tier C, an assertion with no source, which
-# `docs/packs/README.md` says to cut or get checked rather than ship quietly.
-NEEDS_A_SOURCE = {'省'}
+# Where Unihan carries no sense the 훈 could be chosen from, so the English has
+# to come from somewhere else entirely. One row, and it needs its own table
+# rather than a line in OVERRIDES because the tier and the citation differ:
+# these are not Unihan's wording.
+#
+# 省 is 살필 성 — examine, as in 반성 and 성찰 — and Unihan's kDefinition is
+# "province; save, economize", neither of which is that sense. It is not that
+# Unihan disagrees: its own kJapaneseKun for 省 is KAERIMIRU (省みる, to reflect
+# on), so the sense is in the character and missing from the definition field.
+# The gloss below is Wiktionary's own wording for the xǐng reading, minus the
+# infinitival "to" the rest of the pack also drops.
+#
+# ⚠️ Tier B, and the one source is a **community wiki** — the bottom rank in
+# `docs/packs/README.md`. CC-CEDICT agrees in sense ("to scrutinize; to reflect
+# (on one's conduct)") but not word for word, which is why this is not A.
+OFF_UNIHAN = {
+    '省': ('examine, inspect', 'B',
+           'Wiktionary 省 (xǐng): _to examine; to inspect_ — Unihan has no sense '
+           'matching the 훈; CC-CEDICT agrees in sense'),
+}
 
 def trim(defn):
     defn = PAREN.sub('', defn)
@@ -136,6 +150,8 @@ for ch in order:
         ok = bool(words & set(re.findall(r'[a-z]+', defn.lower())))
         tier = 'A' if ok else 'B'
         source = ('kanji pack + Unihan' if ok else 'kanji pack') + (f' (as {form})' if form != ch else '')
+    elif ch in OFF_UNIHAN:
+        english, tier, source = OFF_UNIHAN[ch]
     elif ch in OVERRIDES:
         english, tier, source = OVERRIDES[ch], 'D', 'Unihan, sense chosen to match the 훈'
     else:
@@ -144,8 +160,7 @@ for ch in order:
                     'english': english, 'tier': tier, 'source': source,
                     'secondary': secondary, 'unihan': defn,
                     'hangul': uni[ch].get('kHangul', ''),
-                    'strokes': info['strokes'], 'radical': info['radical'],
-                    'unsourced': ch in NEEDS_A_SOURCE})
+                    'strokes': info['strokes'], 'radical': info['radical']})
 
 json.dump(entries, sys.stdout, ensure_ascii=False, indent=1)
 
