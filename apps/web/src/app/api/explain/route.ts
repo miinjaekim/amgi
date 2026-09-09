@@ -596,12 +596,18 @@ ${glossRuleBullet(false)}
     // input are both normal here rather than a mistake.
     const termLanguage = detectChinese(term) ? 'Hanja' : detectKorean(term) ? 'Korean' : 'English';
 
-    // **This branch asks for "korean" outright instead of using
+    // **This branch asks for 훈 and 음 outright instead of going through
     // `nativeBackRule`/`nativeBackJson`**, which are empty for an English
     // native. That is not an oversight: 훈음 is Korean for every reader. 水 is
     // 물 수 whether or not you speak Korean, and "water" is a *different fact*
     // about the character rather than a translation of 물 수 — so an English
     // native gets the gloss in addition, never instead.
+    //
+    // **Two fields, never one string.** Which part a learner sees first is
+    // their setting, so a card may show 물 alone or 수 alone; a model answering
+    // "물 수" would have to be taken apart again by a parser that has to guess
+    // where the 훈 ends. `hunEum()` joins them at the one point that wants them
+    // joined, and `korean` is filled from it when the card is saved.
     //
     // No `posRule` either. Part of speech describes a word, and a hanja is a
     // character: 水 is a noun in 水泳 and a modifier in 水道. Tagging every card
@@ -611,7 +617,9 @@ ${glossRuleBullet(false)}
 
 IMPORTANT:
 - "hanja" must be the character itself, written in the traditional form the 한국어문회 배정한자 list assigns — 學, never the Japanese or Simplified form 学. Exactly one character: if the term names a compound like 學校, answer for the single character being asked about.
-- "korean" must be the 대표훈음 — the character's 훈 (its native-Korean meaning) followed by its 음 (its Korean sound), in that order, separated by a space: 水 is "물 수", 學 is "배울 학". Write it in Korean for every learner. The 음 is the Korean reading; never the Japanese on'yomi or the Mandarin pinyin.
+- "hun" is the character's 훈 — its native-Korean meaning, written in Korean: 물 for 水, 배울 for 學. Never the English meaning, and never with the 음 attached.
+- "eum" is the character's 음 — its Korean sound, one syllable of 한글: 수 for 水, 학 for 學. The Korean reading; never the Japanese on'yomi and never the Mandarin pinyin.
+- Keep them in **separate fields**. Read together they are the 훈음 (물 수), and the app joins them; a card may show either part on its own, so neither field may contain the other.
 - "english" must be the English meaning of the character — "water" for 水, "learn" for 學.
 ${glossRuleBullet(true)}
 For "briefDefinition", write a single clear sentence in ${nativeLanguage} defining what the character means. No examples, no cultural context — just the core meaning.
@@ -621,7 +629,8 @@ Respond with only this JSON:
   "term": "${term}",
   "termLanguage": "${termLanguage}",
   "hanja": "the character",
-  "korean": "훈 음",
+  "hun": "훈 (native-Korean meaning)",
+  "eum": "음 (Korean sound, one syllable)",
   "english": "English meaning",
   "briefDefinition": "one-sentence definition"
 }`;
@@ -658,14 +667,17 @@ If NOT ambiguous, respond with only this JSON:
   "term": "${term}",${spellJson}
   "termLanguage": "${termLanguage}",
   "hanja": "the character",
-  "korean": "훈 음",
+  "hun": "훈 (native-Korean meaning)",
+  "eum": "음 (Korean sound, one syllable)",
   "english": "English meaning",
   "briefDefinition": "one-sentence definition in ${nativeLanguage}"
 }
 
 IMPORTANT for the non-ambiguous case:
 - "hanja" must be the character itself, written in the traditional form the 한국어문회 배정한자 list assigns — 學, never the Japanese or Simplified form 学. Exactly one character: if the term names a compound like 學校, answer for the single character being asked about.
-- "korean" must be the 대표훈음 — the character's 훈 (its native-Korean meaning) followed by its 음 (its Korean sound), in that order, separated by a space: 水 is "물 수", 學 is "배울 학". Write it in Korean for every learner. The 음 is the Korean reading; never the Japanese on'yomi or the Mandarin pinyin.
+- "hun" is the character's 훈 — its native-Korean meaning, written in Korean: 물 for 水, 배울 for 學. Never the English meaning, and never with the 음 attached.
+- "eum" is the character's 음 — its Korean sound, one syllable of 한글: 수 for 水, 학 for 學. The Korean reading; never the Japanese on'yomi and never the Mandarin pinyin.
+- Keep them in **separate fields**. Read together they are the 훈음 (물 수), and the app joins them; a card may show either part on its own, so neither field may contain the other.
 - "english" must be the English meaning of the character — "water" for 水, "learn" for 學.
 ${glossRuleBullet(false)}
 - "briefDefinition" must be a single sentence defining the core meaning. No examples, no cultural context.`;

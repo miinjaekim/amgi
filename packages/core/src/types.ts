@@ -356,6 +356,88 @@ export function getBackSideConfig(
   };
 }
 
+/**
+ * Which part of a hanja card sits on the front. The other two fall to the back.
+ *
+ * **A display setting, not a scheduling axis** — decided by the user
+ * 2026-09-09. Three parts split into a front and a back is six configurations,
+ * and those six are exactly these three partitions × the two `ReviewDirection`s
+ * that already exist. So `frontToBack` and `backToFront` keep meaning forward
+ * and reverse, the union does not grow, and `sm2.ts`, `reviewQueue.ts` and
+ * `offlineReview.ts` are untouched:
+ *
+ * | partition   | frontToBack        | backToFront        |
+ * |-------------|--------------------|--------------------|
+ * | `character` | 水 → 물 수          | 물 수 → 水          |
+ * | `hun`       | 물 → 水 수          | 水 수 → 물          |
+ * | `eum`       | 수 → 水 물          | 水 물 → 수          |
+ *
+ * ⚠️ **Chosen deck-level and left alone**, the way a study language is. The
+ * accepted cost is that switching inherits intervals earned answering a
+ * different question; choosing once is what keeps that small. **This control
+ * does not belong in the review session**, where it would become a toggle and
+ * make the inherited intervals meaningless. Partition-keyed tracking is
+ * additive and can be layered on later if switching turns out to be common.
+ */
+export type HanjaPartition = 'character' | 'hun' | 'eum';
+
+export const HANJA_PARTITIONS: readonly HanjaPartition[] = ['character', 'hun', 'eum'] as const;
+
+/** 水 → 물 수, the question the 급수 exam actually asks. */
+export const DEFAULT_HANJA_PARTITION: HanjaPartition = 'character';
+
+export function isHanjaPartition(value: unknown): value is HanjaPartition {
+  return typeof value === 'string' && (HANJA_PARTITIONS as readonly string[]).includes(value);
+}
+
+/**
+ * A hanja card split into a front and a back, by partition.
+ *
+ * **The only place the three parts are ever joined.** They are stored apart
+ * precisely because the split moves, so every surface that wants 훈음 as one
+ * string comes through here rather than assembling its own — which is how the
+ * two would drift into disagreeing about the separator.
+ *
+ * The back keeps the canonical 한자 · 훈 · 음 order whichever part was lifted
+ * out of it, so 水 물 and 물 수 never appear as the same fact in two orders.
+ *
+ * **Falls back to the character partition on a card that cannot be split.**
+ * Hanja cards saved before 훈 and 음 became fields carry the 훈음 assembled in
+ * `korean` and nothing to take apart; asking one for the 훈 alone would show a
+ * blank front. Answering the question the card *did* store is the only honest
+ * option, and it is what a learner sees until that card is next enriched.
+ */
+export function hanjaFaces(
+  card: Pick<TermCore, 'hanja' | 'hun' | 'eum' | 'korean'> & { term?: string },
+  partition: HanjaPartition = DEFAULT_HANJA_PARTITION,
+): { front: string; back: string } {
+  const character = card.hanja || card.term || '';
+  const hun = card.hun || '';
+  const eum = card.eum || '';
+
+  if (!hun || !eum) {
+    return { front: character, back: [hun, eum].filter(Boolean).join(' ') || card.korean || '' };
+  }
+
+  const join = (...parts: string[]) => parts.filter(Boolean).join(' ');
+  if (partition === 'hun') return { front: hun, back: join(character, eum) };
+  if (partition === 'eum') return { front: eum, back: join(character, hun) };
+  return { front: character, back: join(hun, eum) };
+}
+
+/**
+ * The 훈음 as one string — 물 수.
+ *
+ * Written onto `korean` when a hanja card is saved, so every surface keyed on
+ * the language pair (the card list, the detail modal, CSV and Anki export,
+ * `getBackSide`) keeps working with no knowledge of partitions. **Derived,
+ * never authored**: `hun` and `eum` are the stored truth and this is assembled
+ * from them at the one point a card is written.
+ */
+export function hunEum(card: Pick<TermCore, 'hanja' | 'hun' | 'eum' | 'korean'>): string {
+  return hanjaFaces(card, 'character').back;
+}
+
 // Example pairs — one side per language, see StudyLanguageConfig field names
 export interface ExamplePair {
   korean?: string;
@@ -472,6 +554,22 @@ export interface TermCore {
    * and on any word the dictionary does not carry.
    */
   pitchAccent?: number;
+  /**
+   * The two halves of a hanja's 훈음, stored apart and never as one string.
+   *
+   * 훈 is the character's native-Korean meaning (물), 음 is its Korean sound
+   * (수); read together they are the 훈음, 물 수. They sit here beside `furigana`
+   * and `pinyin` — parts of one card — rather than becoming `CardSideField`s,
+   * which name the *languages* a card has sides in. Both of these are Korean.
+   *
+   * **Separate because the split moves.** The kanji pack can author one string
+   * (`물 — みず / スイ`) because its back never changes shape; a hanja card's
+   * front is whichever part the learner chose, so any pre-assembled 훈음 would
+   * have to be taken apart again at review. `hanjaFaces()` is the only place
+   * they are ever joined.
+   */
+  hun?: string;
+  eum?: string;
   briefDefinition?: string;
 }
 
@@ -794,6 +892,15 @@ export function wordOfTheDayCore(
 export interface UserPreferences {
   nativeLanguage: string;
   studyLanguage?: StudyLanguage;
+  /**
+   * Which part of a hanja card sits on the front. Absent means
+   * `DEFAULT_HANJA_PARTITION` — the question the exam asks.
+   *
+   * One setting rather than one per deck, matching how the study language
+   * itself is stored: there is a single Hanja deck, and a learner who has
+   * chosen how they want to be asked has chosen it for that deck.
+   */
+  hanjaPartition?: HanjaPartition;
   streak?: number;
   longestStreak?: number;
   lastReviewDate?: string; // 'YYYY-MM-DD' in local timezone
