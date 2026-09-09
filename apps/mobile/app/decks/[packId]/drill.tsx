@@ -13,7 +13,8 @@ import PronounceButton from '../../../src/components/PronounceButton';
 import type { Palette } from '../../../src/theme';
 
 export default function DrillScreen() {
-  const { packId } = useLocalSearchParams<{ packId: string }>();
+  // `section` scopes the drill to one subpack; absent, it is the whole pack.
+  const { packId, section: sectionId } = useLocalSearchParams<{ packId: string; section?: string }>();
   const { C } = useTheme();
   const s = useMemo(() => makeStyles(C), [C]);
   const { nativeLanguage, studyLanguage } = useUser();
@@ -69,7 +70,10 @@ export default function DrillScreen() {
     setRevealed(false);
   };
 
-  const entries = getPackEntries(pack);
+  // A section id that names nothing drills the whole pack rather than nothing
+  // at all — a stale link is not worth an error screen.
+  const section = sectionId ? pack.sections.find(entry => entry.id === sectionId) : undefined;
+  const entries = section ? section.entries : getPackEntries(pack);
   const sizeOptions = DRILL_SIZES.filter(option => option === null || option < entries.length);
 
   if (queue === null) {
@@ -78,6 +82,11 @@ export default function DrillScreen() {
         {header}
         <ScrollView contentContainerStyle={s.centered}>
           <Text style={s.title}>{getPackText(pack.name, nativeLanguage)}</Text>
+          {/* The pack still names the screen — the subpack is a scope inside
+              it, not somewhere else. */}
+          {section && (
+            <Text style={s.subtitle}>{getPackText(section.name, nativeLanguage)}</Text>
+          )}
 
           <View style={s.pillRow}>
             {(['studyToBack', 'backToStudy'] as DrillDirection[]).map(dir => (
@@ -211,6 +220,7 @@ function makeStyles(C: Palette) {
     empty: { paddingHorizontal: 20, paddingTop: 8, fontSize: 14, color: C.muted },
     centered: { paddingHorizontal: 20, paddingBottom: 32, alignItems: 'center' },
     title: { fontSize: 21, fontWeight: '700', color: C.highlight, textAlign: 'center', marginTop: 8 },
+    subtitle: { fontSize: 14, color: C.muted, textAlign: 'center', marginTop: 4 },
     score: { fontSize: 15, color: C.text, textAlign: 'center', marginTop: 12 },
     pillRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'center', marginTop: 16 },
     pill: { borderWidth: 1, borderColor: C.border, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 9 },

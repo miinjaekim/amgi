@@ -29,10 +29,12 @@ import type { PackSection, VocabPack } from './packs';
  * side last, so it wins over whichever authored side would otherwise collide
  * with it, which is exactly the behaviour a mirrored pack needs.
  *
- * **Four ids, not two.** `getCollectionId` returns `card.packId` unqualified,
- * so the two directions of one pack cannot share an id — cards saved from the
- * Korean deck and the English deck would collapse into a single collection on
- * `/cards`. They are genuinely different cards (producing `battalion` from 대대
+ * **Four ids, not two.** A collection id is the pack's own id, so the two
+ * directions of one pack cannot share one — cards saved from the Korean deck
+ * and the English deck would collapse into a single collection on `/cards`.
+ * The same holds one level down, and more sharply: these two packs share all
+ * ten section ids between them, which is why a subpack id is namespaced under
+ * its pack rather than being the bare section id. They are genuinely different cards (producing `battalion` from 대대
  * is not the same skill as the reverse, and drilling both is the whole premise),
  * so the id carries the direction and the display name does not.
  *

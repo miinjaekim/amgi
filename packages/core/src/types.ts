@@ -493,6 +493,12 @@ export interface Flashcard extends TermExplanation {
    * existed — so it identifies provenance and must never be used to decide
    * whether a term is already saved. Deck progress matches on the study side
    * instead, which also credits a word you looked up on your own.
+   *
+   * A pack id, or `pack/section` when the card came from a subpack — which is
+   * every card enrolled since subpacks landed, the whole-deck button included.
+   * Never split it by hand: `parentPackId` and `resolvePackRef` in `packs.ts`
+   * are the only two readers of that shape, and `getCollectionId` is the only
+   * read of this field for grouping.
    */
   packId?: string;
   frontToBack?: ReviewTracking;
