@@ -168,20 +168,23 @@ forward and reverse — and the names stay true. **The 92 call sites across 24
 files are untouched.** What is new is *which partition is in play*, and that is
 a setting, not a scheduling axis.
 
-⚠️ **The one real decision: is the partition a display setting, or is
-scheduling per partition?**
-- **A display setting** — the learner picks a partition, the card is scheduled
-  on the two directions it already has. `sm2.ts`, `reviewQueue.ts`,
-  `offlineReview.ts` and the direction filter need **no change at all**. The
-  cost, named honestly: switching partition inherits intervals earned answering
-  a different question.
-- **Per partition** — six tracking slots on the document. Correct, and far more
-  than anyone asked for.
-- **Recommended: the display setting, made deck-level rather than a per-session
-  toggle** — chosen once the way a study language is, which is what makes the
-  inherited-interval cost small. It is also additive to reverse: partition-keyed
-  tracking can be layered on later without invalidating anything stored, so
-  starting cheap does not corner us.
+✅ **The partition is a display setting, chosen deck-level — decided by the
+user 2026-09-09.** The learner picks a partition and the card is scheduled on
+the two directions it already has, so `sm2.ts`, `reviewQueue.ts`,
+`offlineReview.ts` and the direction filter need **no change at all**.
+
+The alternative was scheduling per partition — six tracking slots on the
+document. Correct, and far more than anyone asked for.
+
+⚠️ **The accepted cost: switching partition inherits intervals earned answering
+a different question.** Deck-level rather than a per-session toggle is what
+keeps that small — chosen once, the way a study language is. **Do not put this
+control in the review session**, which is where it would drift into a toggle and
+make the inherited intervals meaningless.
+
+The reopen path is cheap and stays open: partition-keyed tracking is additive,
+so it can be layered on later without invalidating anything stored. Reopen it if
+switching turns out to be common rather than a one-time setup.
 
 ⚠️ **Do not pre-assemble the back.** The kanji pack renders `meaning — readings`
 into one authored string (`물 — みず / スイ`), which is right there because the
