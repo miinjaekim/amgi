@@ -577,7 +577,7 @@ const REF_SEPARATOR = '/';
  *
  * Namespaced by the pack rather than bare, because section ids are only unique
  * *within* a pack and the collisions are everywhere: `verbs` is in four packs,
- * `greetings` and `numbers` in two, and `military-unit-en` shares all ten of
+ * `greetings` and `numbers` in two, and `military-unit-en` shares all eleven of
  * its section ids with `military-unit-ko`. A bare `verbs` would pool TOEIC
  * verbs with Spanish ones the moment someone studied both.
  */

@@ -135,35 +135,6 @@ Reasoning in the Decisions entry in [status.md](status.md); the shape is in
 
 ## Medium
 
-- [ ] **Military specialties pack (병과 / 주특기, "MOS").** Infantry, engineer,
-      signal, artillery, armor, logistics, medical, and the rest — the branch a
-      soldier belongs to, which the two shipped military packs do not cover.
-      Since the pack roadmap closed 2026-09-08 a pack needs its own case made
-      rather than a slot on a list; this one and the Hanja 급수 packs under High
-      are the only two tracked.
-      **English *and* Korean study languages, like the others**: it is a
-      `BilingualPack` in `packages/core/src/military.ts`, so it derives both
-      directions from one pair list via `derivePack(PACK, 'Korean' | 'English')`
-      — follow `MILITARY_UNIT` / `MILITARY_AFFAIRS` exactly rather than
-      authoring two packs.
-      ⚠️ **The naming is itself a content decision.** 병과 (branch/corps) and
-      주특기 (primary specialty) are **not the same thing** — 병과 is the corps
-      you are commissioned or assigned into, 주특기 is the specific job code
-      within it — and US "MOS" maps cleanly to neither: the US Army splits
-      *branch* from *MOS*, and the Marine Corps, Navy and Air Force each use a
-      different scheme again. Settle in the draft which of the two the pack is
-      about, or section it explicitly into both, before writing entries.
-      ⚠️ **ROK and US structures do not line up one-to-one**, which is exactly
-      the failure mode the existing military packs were built to avoid — a
-      correct-looking translation that misleads the listener. Expect `context`
-      notes to do heavy lifting here.
-      Follow `docs/packs/README.md`: **the model is not a source**, so every
-      entry carries a tier and a citation, and the list is rendered through the
-      app's own transforms before anyone believes it. The two existing military
-      drafts are **bilingual pair lists** rather than a study side plus glosses
-      — match that shape, and hand the draft to a reviewer rather than the TS.
-      Needs user approval on the word list before shipping.
-
 - [ ] **省 ships with a gloss that is wrong for its 훈.** The character is
       살필 성 — *examine*, as in 반성 and 성찰 — and the pack's English says
       "province", because Unicode Unihan carries only that and "save,

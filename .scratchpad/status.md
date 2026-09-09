@@ -39,6 +39,27 @@ _Reconciled against `main` @ `bc8cb97`, 2026-08-21. `npm test` 246/246, measured
   per day could be reconstructed from `createdAt`; review history cannot be
   reconstructed from anything. So the calendar is near-empty for weeks by
   construction — expected, not a bug, and the empty state says so.
+- **부대·참모 has an eleventh section: 병과와 주특기** (2026-09-09), **word list
+  approved the same day**. 24 pairs placed third, after 계급·호칭 and
+  부대·편제 — the branch a soldier belongs to and the job inside it, which
+  neither military pack covered. It is a section, not a fourth pack: it started
+  as a 66-entry pack across all four services and the user cut it to the common
+  terms inside the pack that already answers "what unit" and "what rank".
+  The pack is now 244 pairs; nothing else about it changed, and both directions
+  pick the section up from the one authored pair list as before. It is a subpack,
+  so it can be enrolled and reviewed on its own. No console step: it writes into
+  `cards` and `cards_korean`, live for months. `npm test` on web is 553/553.
+  **It is the first military content authored under the sourcing standard**, so
+  every row in `docs/packs/military-branches-subpack-draft.md` carries a tier and
+  a citation — 7 A, 16 B, 1 D, no C. The branch inventory is 「군인사법」 제5조;
+  the back is the US counterpart branch, and the hint carries 법제처's official
+  English wherever the two disagree, which is the reason the section is worth
+  having: 병참과 is the Quartermaster Corps and the official English calls it
+  "logistics", which in the ROK Army is a different branch again.
+  ⚠️ **Branch names take the statute's form — 보병과, not 보병.** Six bare forms
+  are already cards in the same pack, and a branch is not the arm; a test pins
+  the form rather than leaving it to style. **This is the call most likely to be
+  wrong**, since a soldier asked their 병과 answers "보병".
 - **Hanja is a study language on both platforms** (2026-09-09), the tenth
   registry entry — an entry, one `/api/explain` branch, two i18n keys and a row
   of example terms per app. Lookup verified against the live API, six probes:
@@ -241,6 +262,61 @@ Android, where only sign-in has been exercised.
 
 Closed calls, kept with their reasoning — a decision whose reasoning is lost gets
 reopened by the next person to notice the symptom. Newest first.
+
+### 병과 material is a section of 부대·참모, and its branches keep the 「-과」 (2026-09-09)
+
+**Two calls, one branch. Both are the user's on the first, mine on the second.**
+
+**A subpack, not a fourth pack.** The backlog item asked for a Military
+specialties pack and it was built that way first: 66 pairs, eight sections, all
+four services' statutory inventories, the 병무청 enlisted specialty list and a
+traps section, registered as `military-specialties-ko`/`-en`. The user's call on
+seeing it: *"i think it might be a little excessive to make a whole new pack.
+maybe it could be better to just add a subpack to the unit and staff pack
+relating to branches and specialties with just some of the most common/basic
+terms."* Reverted and rebuilt as one 24-pair section of 부대·참모.
+
+**Why that is the better shape, in hindsight.** The branch is the third question
+after what unit and what rank, and both of those are already this pack. A fourth
+military deck would have split one conversation across two decks and asked a
+learner to enrol twice for it. **Subpacks made the smaller shape lose nothing**
+— the section is separately enrollable, drillable and reviewable, with its own
+progress, so "just the branches" is still a thing a learner can do. That is the
+same argument that closed the Review-group item on 2026-09-09, arriving from the
+other direction.
+
+**The research survives the cut.** What was dropped is listed with its reasons in
+`docs/packs/military-branches-subpack-draft.md`, so an expansion — the Navy and
+Air Force inventories are the most defensible one — starts from sourced material
+rather than from scratch.
+
+**Branch names are written 보병과, not 보병.** Two reasons and the second is
+mechanical. The statute names them that way, so the form is sourced rather than
+invented, and 보병과 can only be the branch where 보병 is also the arm. And the
+bare forms are **already cards in this same pack** — 보병, 방공, 수송, 보급,
+군사경찰 — so repeating them would put two cards with one front, and two with one
+answer, into a single review queue, which `military-packs.test.ts` refuses across
+both packs in both directions. The English side follows the same rule (Infantry
+**Branch**, Transportation **Corps**), which is also how the US Army writes its
+own branch names.
+⚠️ **This is the likeliest thing here to be wrong.** 보병과 is the legal
+register; a soldier asked their 병과 answers "보병". It is pinned by a test so
+that changing it is a decision rather than a drift, and it is the first thing the
+draft asks a reviewer.
+
+**The back is the US branch, not the official English.** 법제처's translation of
+군인사법 is an official source and unusable as a card back: it renders 병참과 as
+"logistics" — a different ROK branch, 군수과 — and 부관과, now 인사과, as
+"aide-de-camp", which is a person. So the back is what a US listener says and
+the hint carries the official English where they differ. **That gap is the whole
+reason the section is worth having**; a bare bilingual chart of branch names is
+something a reader could already find.
+
+⚠️ **Every US branch name rests on one source family** (two Wikipedia pages,
+which is self-consistency rather than corroboration), so the section is 7 A, 16
+B, 1 D. A reviewer with DA PAM 600-3 can lift most of it to A, and that is the
+highest-value thing anyone can do to it. **The word list was approved 2026-09-09**
+— of the list, not of those two open items.
 
 ### A phrase on the Hanja deck stays a list of characters (2026-09-09)
 
