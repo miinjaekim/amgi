@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildLookupCardDraft, type TermCore } from '@amgi/core';
+import { buildLookupCardDraft, lookupCardFaces, type TermCore } from '@amgi/core';
 
 /** What `/api/explain` returns for 물 on the Hanja deck — all three parts. */
 const su: TermCore = {
@@ -68,5 +68,46 @@ describe('buildLookupCardDraft everywhere else', () => {
   it('defaults examples to an empty list rather than undefined', () => {
     const core: TermCore = { term: '눈치', termLanguage: 'Korean', korean: '눈치', english: 'tact' };
     expect(buildLookupCardDraft(core, 'Korean', 'English').examples).toEqual([]);
+  });
+});
+
+/**
+ * What the screen shows above the save button. It has to agree with
+ * `buildLookupCardDraft` — a lookup that reads one way and saves another is a
+ * surprise at exactly the moment the user commits.
+ */
+describe('lookupCardFaces', () => {
+  it('leads with the character whichever half was typed', () => {
+    expect(lookupCardFaces(su, 'Hanja', 'Korean')).toEqual({
+      headword: '水', back: '물 수', gloss: undefined,
+    });
+    const typedCharacter = { ...su, term: '水', termLanguage: 'Hanja' as const };
+    expect(lookupCardFaces(typedCharacter, 'Hanja', 'Korean').headword).toBe('水');
+  });
+
+  it('gives an English native the gloss beside the 훈음, not instead of it', () => {
+    const faces = lookupCardFaces(su, 'Hanja', 'English');
+    expect(faces.back).toBe('물 수');
+    expect(faces.gloss).toBe('water');
+  });
+
+  // The screen and the card come from two functions; this is the assertion
+  // that keeps them saying the same thing.
+  it('agrees with the draft it is previewing', () => {
+    for (const native of ['Korean', 'English']) {
+      const faces = lookupCardFaces(su, 'Hanja', native);
+      const draft = buildLookupCardDraft(su, 'Hanja', native);
+      expect(draft.hanja, native).toBe(faces.headword);
+      expect(draft.korean, native).toBe(faces.back);
+    }
+  });
+
+  it('leaves every other deck leading with the term', () => {
+    const core: TermCore = {
+      term: 'awkward', termLanguage: 'English', korean: '어색하다', english: 'awkward',
+    };
+    expect(lookupCardFaces(core, 'Korean', 'English')).toEqual({
+      headword: 'awkward', back: '어색하다',
+    });
   });
 });

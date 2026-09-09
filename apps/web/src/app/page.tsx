@@ -13,7 +13,7 @@ import {
 } from '@/services/gemini';
 import Markdown from '@/components/Markdown';
 import { saveFlashcardToFirestore, Flashcard } from '@/services/firestore';
-import { buildLookupCardDraft, getTermBackSide, getCharacterBreakdown, getExampleSides, getReading, getStudyLanguageConfig, parseStreamedExamples, parseStreamedDepth, pronunciationNote, pronunciationNoteNeedsCredit, wordOfTheDayCore, PITCH_ACCENT_CREDIT } from '@amgi/core';
+import { buildLookupCardDraft, lookupCardFaces, getTermBackSide, getCharacterBreakdown, getExampleSides, getReading, getStudyLanguageConfig, parseStreamedExamples, parseStreamedDepth, pronunciationNote, pronunciationNoteNeedsCredit, wordOfTheDayCore, PITCH_ACCENT_CREDIT } from '@amgi/core';
 import type { WordOfTheDay } from '@amgi/core';
 import { useUser } from '@/components/UserContext';
 import { t, partOfSpeechLabel } from '@/lib/i18n';
@@ -366,11 +366,13 @@ export default function Home() {
 
   const langConfig = getStudyLanguageConfig(studyLanguage);
 
-  const translation = core
-    ? (core.termLanguage === studyLanguage
-        ? getTermBackSide(core, studyLanguage, nativeLanguage)
-        : core[langConfig.studyField]) || core.translation
-    : null;
+  // What the screen shows above the save button, from the same place the draft
+  // comes from — so what you read and what you save cannot disagree.
+  const isHanja = studyLanguage === 'Hanja';
+  const faces = core ? lookupCardFaces(core, studyLanguage, nativeLanguage) : null;
+  const headword = faces?.headword ?? '';
+  const translation = faces?.back ?? null;
+  const hanjaGloss = faces?.gloss;
 
   const exampleTerms = EXAMPLE_TERMS[studyLanguage] ?? EXAMPLE_TERMS.Korean;
 
@@ -548,9 +550,11 @@ export default function Home() {
       {core && (
         <div className={`${correction ? "mt-3" : "mt-10"} p-6 rounded-xl bg-[var(--color-surface)] shadow-lg border border-[var(--color-muted)]`}>
           <div className="flex items-center gap-3 mb-4 flex-wrap">
-            <h2 className="text-2xl font-bold text-[var(--color-highlight)]">{core.term}</h2>
-            {core.termLanguage === studyLanguage && (
-              <PronounceButton text={core.term} furigana={core.furigana} eum={core.eum} studyLanguage={studyLanguage} />
+            <h2 className="text-2xl font-bold text-[var(--color-highlight)]">{headword}</h2>
+            {/* On Hanja the headword is always the character, so it always
+                carries the button — which speaks the 음, not the glyph. */}
+            {(core.termLanguage === studyLanguage || isHanja) && (
+              <PronounceButton text={headword} furigana={core.furigana} eum={core.eum} studyLanguage={studyLanguage} />
             )}
             {partOfSpeechLabel(nativeLanguage, core) && (
               <span className="px-2 py-0.5 text-xs rounded-full border border-[var(--color-muted)] text-[var(--color-muted)]">
@@ -585,6 +589,9 @@ export default function Home() {
                 <PronounceButton text={translation} furigana={core.furigana} studyLanguage={studyLanguage} />
               )}
             </div>
+            {hanjaGloss && (
+              <p className="mt-1 text-base text-[var(--color-text)] opacity-70">{hanjaGloss}</p>
+            )}
             {core.briefDefinition && (
               <p className="mt-2 text-sm" style={{ color: 'var(--color-muted)' }}>
                 {core.briefDefinition}

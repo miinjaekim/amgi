@@ -903,6 +903,43 @@ export interface WordOfTheDay {
 }
 
 /**
+ * The three lines a lookup result shows: the headword, the side under it, and
+ * the gloss that sometimes rides beside that side.
+ *
+ * Shared because both apps render this identically, and because rendering the
+ * same fact twice is how three separate "Korean native sees English" bugs got
+ * in on 2026-09-09. `buildLookupCardDraft` decides what the *card* will be;
+ * this decides what the screen above the save button says, and the two have to
+ * agree or the save is a surprise.
+ *
+ * **On Hanja the headword is the character, whichever half was typed.** Type 물
+ * and the answer is 水 with 물 수 behind it — not 물 with 水 as its
+ * "translation", which is what a term-leads rule produces on a character deck.
+ */
+export function lookupCardFaces(
+  core: TermCore,
+  studyLanguage: StudyLanguage,
+  nativeLanguage?: string | null,
+): { headword: string; back: string; gloss?: string } {
+  const { studyField } = getStudyLanguageConfig(studyLanguage);
+
+  if (studyLanguage === 'Hanja') {
+    return {
+      headword: core.hanja || core.term,
+      back: hunEum(core),
+      // 훈음 is Korean for every reader, so an English native gets the gloss
+      // *beside* it rather than instead of it.
+      gloss: nativeLanguage === 'Korean' ? undefined : core.english || undefined,
+    };
+  }
+
+  const back = (core.termLanguage === studyLanguage
+    ? getTermBackSide(core, studyLanguage, nativeLanguage)
+    : (core as CardSides)[studyField]) || core.translation || '';
+  return { headword: core.term, back };
+}
+
+/**
  * The `TermCore` a word of the day represents, so tapping the card can show an
  * explanation without regenerating one. Prefers the stored `core`; falls back
  * to assembling the fields the word of the day always carries.

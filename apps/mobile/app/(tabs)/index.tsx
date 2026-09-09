@@ -16,7 +16,7 @@ import {
 } from '../../src/services/gemini';
 import {
   getCharacterBreakdown, getDepthTarget, getReading, getStudyLanguageConfig,
-  buildLookupCardDraft, getTermBackSide, getExampleSides,
+  buildLookupCardDraft, lookupCardFaces, getTermBackSide, getExampleSides,
   parseStreamedDepth, parseStreamedExamples, pronunciationNote,
   pronunciationNoteNeedsCredit, wordOfTheDayCore, PITCH_ACCENT_CREDIT,
 } from '@amgi/core';
@@ -401,11 +401,12 @@ export default function LearnScreen() {
     resolveExplanation(core.term, contextInput.trim(), false, correction ?? undefined);
   };
 
-  const translation = core
-    ? (core.termLanguage === studyLanguage
-        ? getTermBackSide(core, studyLanguage, nativeLanguage)
-        : core[langConfig.studyField]) || core.translation
-    : null;
+  // The same three lines web shows, from the same function.
+  const isHanja = studyLanguage === 'Hanja';
+  const faces = core ? lookupCardFaces(core, studyLanguage, nativeLanguage) : null;
+  const headword = faces?.headword ?? '';
+  const translation = faces?.back ?? null;
+  const hanjaGloss = faces?.gloss;
 
   // The first thing a cold launch shows, so it is the one placeholder that has
   // to look like the app. Laid out as the empty state below — chips and search
@@ -659,9 +660,9 @@ export default function LearnScreen() {
           {core && (
             <View style={s.card}>
               <View style={s.cardHeaderRow}>
-                <Text style={s.cardTerm}>{core.term}</Text>
-                {core.termLanguage === studyLanguage && (
-                  <PronounceButton text={core.term} furigana={core.furigana} eum={core.eum} studyLanguage={studyLanguage} />
+                <Text style={s.cardTerm}>{headword}</Text>
+                {(core.termLanguage === studyLanguage || isHanja) && (
+                  <PronounceButton text={headword} furigana={core.furigana} eum={core.eum} studyLanguage={studyLanguage} />
                 )}
                 {partOfSpeechLabel(nativeLanguage, core) && (
                   <View style={s.formalityBadge}>
@@ -692,6 +693,7 @@ export default function LearnScreen() {
                   <PronounceButton text={translation} furigana={core.furigana} studyLanguage={studyLanguage} />
                 )}
               </View>
+              {!!hanjaGloss && <Text style={s.hanjaGloss}>{hanjaGloss}</Text>}
 
               {!depth ? (
                 <TouchableOpacity style={s.loadBtn} onPress={handleLoadDepth} disabled={loadingDepth}>
@@ -878,6 +880,8 @@ function makeStyles(C: Palette, tabBarHeight: number) {
   sectionLabel: { fontSize: 12, fontWeight: '700', color: C.muted, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 4, marginTop: 12 },
   translationRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
   translationText: { fontSize: 18, color: C.text, lineHeight: 26 },
+  // Quieter than the 훈음 above it: a second fact about the character.
+  hanjaGloss: { fontSize: 16, color: C.muted, marginTop: 2 },
   bodyText: { fontSize: 15, color: C.text, lineHeight: 22, opacity: 0.85 },
   exampleStudyRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   exampleStudyText: { flexShrink: 1 },
