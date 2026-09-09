@@ -667,7 +667,7 @@ export default function LearnScreen() {
               <View style={s.cardHeaderRow}>
                 <Text style={s.cardTerm}>{core.term}</Text>
                 {core.termLanguage === studyLanguage && (
-                  <PronounceButton text={core.term} furigana={core.furigana} studyLanguage={studyLanguage} />
+                  <PronounceButton text={core.term} furigana={core.furigana} eum={core.eum} studyLanguage={studyLanguage} />
                 )}
                 {partOfSpeechLabel(nativeLanguage, core) && (
                   <View style={s.formalityBadge}>

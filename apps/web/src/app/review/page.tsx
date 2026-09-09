@@ -1021,7 +1021,7 @@ export default function ReviewPage() {
                     <>
                       <div className="flex items-center gap-2 mb-2">
                         <div className="font-semibold text-2xl text-[var(--color-highlight)]">{faces(currentReview.card).front}</div>
-                        <PronounceButton text={faces(currentReview.card).front} furigana={currentReview.card.furigana} studyLanguage={studyLanguage} />
+                        <PronounceButton text={faces(currentReview.card).front} furigana={currentReview.card.furigana} eum={currentReview.card.eum} studyLanguage={studyLanguage} />
                       </div>
 
                       {showAnswer ? (
@@ -1088,7 +1088,7 @@ export default function ReviewPage() {
                         <>
                           <div className="flex items-center gap-2 mb-3 mt-4">
                             <div className="font-semibold text-2xl text-[var(--color-highlight)]">{faces(currentReview.card).front}</div>
-                            <PronounceButton text={faces(currentReview.card).front} furigana={currentReview.card.furigana} studyLanguage={studyLanguage} />
+                            <PronounceButton text={faces(currentReview.card).front} furigana={currentReview.card.furigana} eum={currentReview.card.eum} studyLanguage={studyLanguage} />
                           </div>
 
                           {hanjaGloss(currentReview.card) && (

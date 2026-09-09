@@ -161,7 +161,7 @@ export default function CardDetailModal({
           <div>
             <div className="flex items-center gap-3 flex-wrap">
               <h2 className="text-2xl font-bold" style={{ color: 'var(--color-highlight)' }}>{studySide}</h2>
-              <PronounceButton text={studySide} furigana={saved?.furigana} studyLanguage={lang} />
+              <PronounceButton text={studySide} furigana={saved?.furigana} eum={saved?.eum} studyLanguage={lang} />
               {saved && partOfSpeechLabel(nativeLanguage, saved) && (
                 <span className="px-2 py-0.5 text-xs rounded-full border" style={{ borderColor: 'var(--color-muted)', color: 'var(--color-muted)' }}>
                   {partOfSpeechLabel(nativeLanguage, saved)}

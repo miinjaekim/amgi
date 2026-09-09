@@ -280,14 +280,24 @@ export const STUDY_LANGUAGE_CONFIGS: Record<StudyLanguage, StudyLanguageConfig> 
     // would return the card back to itself. Korean keeps `sectionHanja` for the
     // question it does answer.
     //
-    // **No TTS fields yet, and the missing piece is the text, not the voice.**
-    // The voice is settled — `ko-KR` with `ko-KR-Neural2-C` for single
-    // characters, which is what `ttsShortVoiceName` exists for. What is not
-    // settled is what to hand it: 水 is a glyph a Korean voice has no agreed
-    // reading for, and the answer that matters — 수 — is the 음, a field this
-    // card does not have until three-sided cards land. Both apps hide the
-    // pronunciation button while these are unset, which is the right thing to
-    // show in the meantime.
+    // **The button speaks the 음, never the glyph** — 수, not 水.
+    //
+    // Not a style preference. Handing 水 to a Korean voice does return audio
+    // (6720 bytes, well clear of the silence floor, measured 2026-09-09), but
+    // nothing about the response says *what it read*, and a card that teaches a
+    // reading cannot be built on a guess about one. The 음 is a string this
+    // card already holds and there is nothing to infer. `PronounceButton`
+    // enforces it: on Hanja it renders only when it is given the 음, so a glyph
+    // or a Han-script example can never reach the voice by omission.
+    //
+    // Every utterance here is therefore one syllable, which is exactly the case
+    // `ttsShortVoiceName` exists for — Chirp 3: HD intermittently returns
+    // silence on a lone character where Neural2 did not, 0/91 times. The
+    // Chirp voice stays named for the multi-syllable text this deck does not
+    // currently produce.
+    ttsLanguageCode: 'ko-KR',
+    ttsVoiceName: 'ko-KR-Chirp3-HD-Charon',
+    ttsShortVoiceName: 'ko-KR-Neural2-C',
   },
   // English study pairs with Korean — the only non-English native language
   // supported today. A native-Korean learner's card back is Korean.

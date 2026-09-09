@@ -461,7 +461,10 @@ export const HANJA_GEUPSU_PACK: VocabPack = {
   // kana scannable. The "All" chip consequence is the same question the kanji
   // deck already raises, tracked once under Medium in the backlog.
   layout: 'list',
-  // No `pronounceable`: the registry gives Hanja no TTS voice, because the
-  // thing worth hearing is the 음 rather than the glyph. Both apps hide the
-  // button on their own; this just declines to ask for one.
+  // Worth hearing, which is what this flag is for: a hanja card's answer is a
+  // sound — 水 is 수 — and the entry carries that sound as its own field, so
+  // the button on the deck page speaks the 음 rather than the glyph. Both
+  // `PronounceButton`s refuse to render on this deck without one, so a missed
+  // entry costs a button rather than a mispronounced character.
+  pronounceable: true,
 };

@@ -49,6 +49,8 @@ _Reconciled against `main` @ `bc8cb97`, 2026-08-21. `npm test` 246/246, measured
   learner picks which part leads from settings, review reads its two faces
   through `hanjaFaces()`, and the 급수 pack is 300 characters over five
   subpacks. Typing is off on this deck.
+  Audio landed the same day: the button speaks the 음 (수), never the glyph, and
+  refuses to render without one.
   ⚠️ **Nothing has been enrolled or reviewed on a real account yet** — the
   console steps above are what stand between the pack and a saved card.
   ⚠️ **Neither console step is done.** `cards_hanja` has **no security rule**,
@@ -239,6 +241,35 @@ Android, where only sign-in has been exercised.
 
 Closed calls, kept with their reasoning — a decision whose reasoning is lost gets
 reopened by the next person to notice the symptom. Newest first.
+
+### The hanja button says the 음, and refuses to say anything else (2026-09-09)
+
+Hanja shipped without audio earlier the same day, and the reason expired within
+hours: the voice was settled (`ko-KR`, with `ko-KR-Neural2-C` for single
+characters) and the *text* was not, because the answer worth hearing is the 음
+and the 음 had no field until three-sided cards landed. It has one now.
+
+**Measured before deciding.** 水 handed to a Korean voice does return audio —
+6720 bytes, against 6336 for 수, both well clear of the silence floor. So the
+argument for speaking the 음 is not that the glyph fails; it is that **nothing
+in the response says what it read**, and a deck whose whole subject is a
+character's reading cannot rest on a guess about one. The 음 is a string the
+card already holds.
+
+**Enforced in the component, not by convention.** `PronounceButton` renders
+nothing on Hanja unless it is given the 음. A surface that forgets to pass it
+loses a button instead of gaining a mispronunciation, and example sentences and
+translations on this deck therefore have no button at all — which is right,
+since neither is a hanja reading.
+
+`getSpokenText` took the 음 as a third argument beside `furigana` rather than
+growing a second function: both answer the same question — the reading that
+resolves a glyph — and they never appear on one card, so the precedence between
+them only had to be defined, not negotiated.
+
+Every utterance on this deck is one syllable, which is exactly what
+`ttsShortVoiceName` exists for: Chirp 3: HD intermittently returns silence on a
+lone character where Neural2 returned it 0/91 times.
 
 ### The 급수 pack was sourced, not recalled — and how (2026-09-09)
 

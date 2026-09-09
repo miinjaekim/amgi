@@ -4,6 +4,8 @@ import {
   HANJA_PARTITIONS,
   directionLabel,
   directionPrompt,
+  getSpokenText,
+  getStudyLanguageConfig,
   hanjaFaces,
   hunEum,
   isHanjaPartition,
@@ -112,5 +114,33 @@ describe('typed answers on Hanja', () => {
     expect(promptsForTyping(true, 'backToFront')).toBe(true);
     expect(promptsForTyping(true, 'frontToBack', 'Japanese')).toBe(false);
     expect(promptsForTyping(false, 'backToFront', 'Japanese')).toBe(false);
+  });
+});
+
+// The pronunciation button, which on this deck says the 음 and not the glyph.
+describe('what a hanja card says out loud', () => {
+  // 水 handed to a Korean voice does return audio — 6720 bytes, well clear of
+  // the silence floor, measured 2026-09-09 — but nothing in the response says
+  // what it read. The 음 is a string the card already holds, so there is
+  // nothing to infer.
+  it('speaks the 음, not the character', () => {
+    expect(getSpokenText('水', undefined, '수')).toBe('수');
+  });
+
+  // The two never share a card — a hanja has no furigana and a kanji has no 음
+  // — so the order between them only has to be defined, not negotiated.
+  it('leaves every other deck on the reading it already used', () => {
+    expect(getSpokenText('生物', 'せいぶつ')).toBe('せいぶつ');
+    expect(getSpokenText('사랑')).toBe('사랑');
+    expect(getSpokenText('水', undefined, '   ')).toBe('水');
+  });
+
+  // Single syllables every time, which is the case `ttsShortVoiceName` exists
+  // for: Chirp 3: HD intermittently returns silence on a lone character where
+  // Neural2 did not, 0/91 times.
+  it('routes Hanja to the short-text voice', () => {
+    const config = getStudyLanguageConfig('Hanja');
+    expect(config.ttsLanguageCode).toBe('ko-KR');
+    expect(config.ttsShortVoiceName).toBe('ko-KR-Neural2-C');
   });
 });

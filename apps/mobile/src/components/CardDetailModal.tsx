@@ -163,7 +163,7 @@ export default function CardDetailModal({
             <View style={s.headerMain}>
               <View style={s.titleRow}>
                 <Text style={s.term}>{studySide}</Text>
-                <PronounceButton text={studySide} furigana={saved?.furigana} studyLanguage={lang} />
+                <PronounceButton text={studySide} furigana={saved?.furigana} eum={saved?.eum} studyLanguage={lang} />
                 {badges.map((b, i) => (
                   <View key={i} style={s.badge}><Text style={s.badgeText}>{b}</Text></View>
                 ))}

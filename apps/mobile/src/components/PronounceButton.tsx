@@ -11,6 +11,8 @@ interface Props {
   text: string;
   /** Japanese kana reading, when the term has one — spoken instead of `text` */
   furigana?: string;
+  /** A hanja's 음, spoken instead of the glyph. Required on the Hanja deck. */
+  eum?: string;
   studyLanguage: StudyLanguage;
   size?: 'sm' | 'md';
   style?: StyleProp<ViewStyle>;
@@ -26,7 +28,7 @@ function ensureAudioMode() {
   return audioModeReady;
 }
 
-export default function PronounceButton({ text, furigana, studyLanguage, size = 'md', style }: Props) {
+export default function PronounceButton({ text, furigana, eum, studyLanguage, size = 'md', style }: Props) {
   const { C } = useTheme();
   const { rate } = usePronunciation();
   const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('idle');
@@ -36,12 +38,19 @@ export default function PronounceButton({ text, furigana, studyLanguage, size = 
   const { ttsLanguageCode, ttsVoiceName } = getStudyLanguageConfig(studyLanguage);
   if (!text.trim() || !ttsLanguageCode || !ttsVoiceName) return null;
 
+  // **On Hanja the button speaks the 음 or does not appear.** The glyph is not
+  // the answer — 水 is 수 — and no surface should be able to hand a Korean
+  // voice a Han character by forgetting to pass the reading. Requiring the 음
+  // makes that a silent no-button rather than a confident mispronunciation, so
+  // example sentences and translations on this deck simply have no button.
+  if (studyLanguage === 'Hanja' && !eum?.trim()) return null;
+
   const handlePress = async () => {
     if (status === 'loading') return;
     setStatus('loading');
     try {
       await ensureAudioMode();
-      const url = await getPronunciationUrl(getSpokenText(text, furigana), studyLanguage);
+      const url = await getPronunciationUrl(getSpokenText(text, furigana, eum), studyLanguage);
       const player = createAudioPlayer({ uri: url });
       player.addListener('playbackStatusUpdate', s => {
         if (s.didJustFinish) player.remove();

@@ -1140,7 +1140,7 @@ export default function ReviewScreen() {
    * is explained on screen rather than looking like a bug.
    */
   const pronounceButton = isOnline ? (
-    <PronounceButton text={studySide} furigana={card.furigana} studyLanguage={studyLanguage} />
+    <PronounceButton text={studySide} furigana={card.furigana} eum={card.eum} studyLanguage={studyLanguage} />
   ) : null;
   /**
    * Kikuyu respelling, Japanese furigana + pitch accent, Chinese pinyin — the

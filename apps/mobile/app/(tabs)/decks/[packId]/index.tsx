@@ -227,7 +227,7 @@ export default function DeckDetailScreen() {
           </Text>
         </TouchableOpacity>
         {pack.pronounceable && (
-          <PronounceButton text={entry.study} studyLanguage={studyLanguage} size="sm" />
+          <PronounceButton text={entry.study} eum={entry.eum} studyLanguage={studyLanguage} size="sm" />
         )}
       </View>
     );
