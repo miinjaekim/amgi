@@ -84,12 +84,190 @@ which does not degrade gracefully._
 
 ## High
 
-Queued 2026-08-31, in the user's order. **One item is left of it.** Everything
-else in this section either shipped — Spanish and Kikuyu packs, the pronunciation
-speed dial in build 14, the shareable stats asset across four commits on
-2026-09-07 — or was cancelled, with the reasoning in the Decisions entries in
-[status.md](status.md) and the Kikuyu respelling item's durable half in
-[lessons.md](lessons.md).
+Two queues, kept apart because they were asked for a week apart. **Hanja
+(2026-09-09) is the newer and the larger**; below it, one item is left of the
+2026-08-31 queue — everything else there either shipped (Spanish and Kikuyu
+packs, the pronunciation speed dial in build 14, the shareable stats asset
+across four commits on 2026-09-07) or was cancelled, with the reasoning in the
+Decisions entries in [status.md](status.md) and the Kikuyu respelling item's
+durable half in [lessons.md](lessons.md).
+
+### Korean Hanja — a study language, three-sided cards, 급수 packs — queued 2026-09-09
+
+Asked for as one thing; it is three. Take them in this order — each is usable
+without the next.
+
+✅ **None of the three touches the scheduler.** The first read of "three-sided"
+looked expensive, because a third review direction would have meant editing a
+two-member union read in 92 places across 24 files and written into every
+Firestore document in every language. **It is not that** (see 2 below): three
+parts split front/back is three partitions × the two directions that already
+exist, so `ReviewDirection` does not grow. What is left is a registry entry, two
+new card fields, a pack-shape extension, and a front/back setting — all
+additive, none of it under the scheduling code every other language runs on.
+
+#### 1. `Hanja` as a `StudyLanguage`
+
+- [ ] **Add the registry entry, its Gemini prompt branches and its i18n keys.**
+
+The registry in `packages/core/src/types.ts` was built for this — an entry plus
+its Gemini prompt branches and i18n keys, rather than conditionals spreading
+through the app.
+
+⚠️ **The precedent cuts against calling it a language, and there is a reason to
+do it anyway.** Kanji — the exact analogue — is a *pack* under Japanese, not an
+entry; so are both kana packs. What makes Hanja different is not the script, it
+is the card: a pack cannot add a field, and the three-sided card needs 훈 and 음
+addressable separately. Traditional vs Simplified Chinese is the precedent that
+*does* fit — a script gets its own entry and its own collection.
+
+- `collection: 'cards_hanja'`, its own — cards must not land in `cards`.
+- `studyField` needs a **new `CardSideField`** (`hanja`), and ⚠️ `hanja` already
+  exists on `TermDepth` as a **deprecated** field holding legacy Korean cards'
+  character breakdown, read through `getCharacterBreakdown()`. Two different
+  meanings under one name in one type. Rename one of them before writing either.
+- `locale: 'ko'`, and TTS is `ko-KR` with `ttsShortVoiceName: 'ko-KR-Neural2-C'`
+  — the field exists for exactly this, single-character terms.
+  ⚠️ **Pronounce the 음, not the glyph.** Handing 水 to a Korean voice is
+  untested and the answer that matters (수) is a string we already hold.
+- ⚠️ **`getBackSideConfig` does not describe this card.** The back is keyed on
+  the *pair* of languages — English back for an English native, Korean for a
+  Korean one. But 훈음 is Korean whatever the reader speaks: 水 is 물 수, and
+  "water" is a different fact, not a translation of it. Settle whether an
+  English native gets 훈음 plus a gloss, or whether the deck is Korean-native
+  only, before authoring entries.
+- ⚠️ **Korean already carries `characterSectionKey: 'sectionHanja'`** — the depth
+  prompt's per-character breakdown for Korean words. That stays; it answers "what
+  is inside 여건", which is not what this deck asks. Check the i18n keys don't
+  collide.
+
+#### 2. Three-sided cards
+
+- [ ] **Store 훈 and 음 as separate fields; let the learner choose the split.**
+
+A card holds three parts — 한자 (水), 훈, the meaning (물), and 음, the sound
+(수). 훈음 is the two read together (물 수); 독음 is the sound a character takes
+inside a word. **At review the learner picks which parts are on the front**; the
+rest fall to the back. Sometimes the character alone with 훈음 behind it,
+sometimes 훈음 with the character behind it, sometimes two parts up and one
+behind.
+
+✅ **This does not need a third `ReviewDirection`, and that is the whole
+difference in cost.** Three parts split into a front and a back is six
+configurations, and those six are exactly **three partitions × the two
+directions that already exist**:
+
+| partition | forward (`frontToBack`) | reverse (`backToFront`) |
+|---|---|---|
+| 한자 \| 훈 + 음 | 水 → 물 수 — the exam's main question | 물 수 → 水, write it |
+| 훈 \| 한자 + 음 | 물 → 水 수 | 水 수 → 물 |
+| 음 \| 한자 + 훈 | 수 → 水 물 | 水 물 → 수 |
+
+So `frontToBack` / `backToFront` keep meaning exactly what they mean today —
+forward and reverse — and the names stay true. **The 92 call sites across 24
+files are untouched.** What is new is *which partition is in play*, and that is
+a setting, not a scheduling axis.
+
+⚠️ **The one real decision: is the partition a display setting, or is
+scheduling per partition?**
+- **A display setting** — the learner picks a partition, the card is scheduled
+  on the two directions it already has. `sm2.ts`, `reviewQueue.ts`,
+  `offlineReview.ts` and the direction filter need **no change at all**. The
+  cost, named honestly: switching partition inherits intervals earned answering
+  a different question.
+- **Per partition** — six tracking slots on the document. Correct, and far more
+  than anyone asked for.
+- **Recommended: the display setting, made deck-level rather than a per-session
+  toggle** — chosen once the way a study language is, which is what makes the
+  inherited-interval cost small. It is also additive to reverse: partition-keyed
+  tracking can be layered on later without invalidating anything stored, so
+  starting cheap does not corner us.
+
+⚠️ **Do not pre-assemble the back.** The kanji pack renders `meaning — readings`
+into one authored string (`물 — みず / スイ`), which is right there because the
+split never moves. Here it moves by definition, so 훈 and 음 must be **separate
+fields** on the card and stay that way through the pack, the draft and the
+renderer. This is the concrete reason a pack cannot do this and a registry entry
+can — a pack cannot add a field.
+
+⚠️ **`PackBack` has two slots for two *languages*, not three parts.**
+`PackEntry = { study, back: { English?, Korean? }, context? }` cannot express
+한자 + 훈 + 음. The pack shape needs extending before entries can be authored —
+settle it in the draft, and note that it also decides what an English native
+sees, since 물 is Korean whatever the reader speaks.
+
+⚠️ **A two-part back breaks the typed-answer grader's assumption.**
+`typedAnswer.ts` grades input against *a* side. With 훈 and 음 both behind the
+card, does a correct answer need both, either, or is typing disabled for this
+deck? Cheapest honest answer is probably to leave typed answers off Hanja until
+someone asks.
+
+Progress rolls up verdict counts per language (`byLanguage`, 2026-09-04) and
+that keeps working unchanged — another consequence of not growing the union.
+
+#### 3. 급수 packs from 전국한자능력검정시험 배정한자
+
+- [ ] **Author 8급 through 6급 as five subpacks. Stop there.**
+
+**Scope is 8급, 7급II, 7급, 6급II, 6급** — set by the user 2026-09-09. The ladder
+runs to 1급 and there is no plan to climb it; anything past 6급 needs its own
+case made, like any pack.
+
+Source: <https://namu.wiki/w/전국한자능력검정시험/배정한자>.
+
+⚠️ **Cite 한국어문회, not namu.wiki.** Per `docs/packs/README.md` a
+community-contributed wiki is the bottom tier and is treated as *contaminated*,
+not merely thin. But the underlying facts are not wiki claims: the 배정한자 list
+is a **published exam specification**, and 어문회 publishes an official
+**대표훈음** for each character. That makes this the rare pack whose content is
+authority-specified end to end — 물 수 is not a judgement call the way a Kikuyu
+gloss was. Use namu.wiki as a convenience index, cite the official list, and the
+tiering stays honest.
+⚠️ **namu.wiki returns 403 to automated fetches** (checked 2026-09-09), so
+there is no scripted transcription path from it. Budget for it or find the
+official list in a machine-readable form.
+
+⚠️ **Levels are cumulative, sections are not.** A 8급 character is also on the
+7급 list. `docs/packs/README.md` pins that **a term appears in exactly one
+section of its pack** — that is what lets `scripts/remap-pack-subpacks.ts`
+derive a card's subpack from its study side, and it is enforced in
+`apps/web/src/services/collections.test.ts`. So a section holds the characters
+**newly assigned at that level**, never the cumulative list. Name the sections
+for the level (8급, 7급II, …); those names are user-facing copy in the review
+picker now.
+
+**Stopping at 6급 keeps this the size of a pack that has already shipped.**
+Cumulative to 6급 is ~300 characters against the kanji pack's 240 and TOEIC's
+~160 — a known quantity, not a new class of undertaking. The full ladder is
+what would not have been: it passes 1,000 by 4급 and ~1,817 by 3급.
+⚠️ **The per-level counts are unverified.** The figures to hand are 50 / 50 / 50
+/ 75 / 75 newly assigned (50 / 100 / 150 / 225 / 300 cumulative); a search
+corroborated the *upper* rungs of the same series (3급II 1,500, 3급 1,817, 2급
+2,355, 1급 3,500) but not these five. Confirm against the official 어문회 list
+before the section sizes are treated as real.
+
+⚠️ **The "All" chip problem arrives here at the same scale as the kanji deck,
+not a larger one** — which is the other thing stopping at 6급 buys. Single-glyph
+packs whose back carries readings are `layout: 'list'`, and `isGridDeck` exempts
+only *grid* decks from the All chip; that is already tracked for the 240-card
+kanji deck under Medium below. ~300 Hanja cards make it the same question asked
+twice rather than a new one, so **decide it once, on the kanji item, and let
+Hanja inherit the answer**.
+
+⚠️ **The kanji pack already holds 240 Korean 훈음**, authored and reviewed
+(`docs/packs/kanji-pack-draft.md` — 水 물 수 → 물). Free corroboration for the
+overlap, and a **drift risk**: the same character's 훈음 would then live in two
+files. Decide whether Hanja reads from the kanji rows, the other way round, or
+neither, and write down which.
+
+**The per-level rule in [vision.md](vision.md) was amended for this**, on the
+user's call 2026-09-09 — per-level content is allowed where levels make content
+approachable and navigable, and is still refused where it is structure for its
+own sake. A 급수 ladder is the first case: it is a published curriculum ordering,
+the same argument the kanji pack made for 학년별한자배당표 over a JLPT tier.
+Reasoning in the Decisions entry in [status.md](status.md).
+
+Needs user approval on the word list before shipping, like every curated pack.
 
 ### What is left of the mobile UI redesign — queued 2026-09-01
 
@@ -129,9 +307,9 @@ Reasoning in the Decisions entry in [status.md](status.md); the shape is in
 - [ ] **Military specialties pack (병과 / 주특기, "MOS").** Infantry, engineer,
       signal, artillery, armor, logistics, medical, and the rest — the branch a
       soldier belongs to, which the two shipped military packs do not cover.
-      **This is the only pack currently scoped**, and since the pack roadmap
-      closed 2026-09-08 it is the only one tracked at all — a further pack now
-      needs its own case made rather than a slot on a list.
+      Since the pack roadmap closed 2026-09-08 a pack needs its own case made
+      rather than a slot on a list; this one and the Hanja 급수 packs under High
+      are the only two tracked.
       **English *and* Korean study languages, like the others**: it is a
       `BilingualPack` in `packages/core/src/military.ts`, so it derives both
       directions from one pair list via `derivePack(PACK, 'Korean' | 'English')`

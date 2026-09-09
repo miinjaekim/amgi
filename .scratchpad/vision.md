@@ -38,13 +38,27 @@ filler.
 beginner, grammar feedback is the *valuable* half, not the commodity half.
 
 **Prefer adaptivity that is emergent, not configured.** No level setting, no
-placement test, no per-level content — those are the wide-scope version of this
-and they are not what's wanted. Where a feature can read the level off the
-user's own input, it should: writing review does exactly this, since a submitted
-passage reveals control of morphology, register awareness and sentence-length
-ceiling all at once. One prompt line ("pitch it to the level the writing
-demonstrates") replaces an entire levelling system. See the writing-review
-entry in [status.md](status.md).
+placement test — those are the wide-scope version of this and they are not
+what's wanted. Where a feature can read the level off the user's own input, it
+should: writing review does exactly this, since a submitted passage reveals
+control of morphology, register awareness and sentence-length ceiling all at
+once. One prompt line ("pitch it to the level the writing demonstrates")
+replaces an entire levelling system. See the writing-review entry in
+[status.md](status.md).
+
+**Amended 2026-09-09 — per-level *content* is allowed; per-level *adaptivity* is
+still not.** This line used to refuse "no per-level content" in the same breath
+as the other two, and that conflated two different things. What the rule is
+actually about is the app deciding what a learner is ready for: **that** stays
+refused, because the app has no business levelling the user when their own input
+already says. Content organised into levels is a separate question, and the
+answer is first-principles rather than a rule: **levels are allowed when they
+make content approachable and navigable, and refused when they are structure for
+its own sake.** The test is whether the ladder comes from somewhere real — a
+published curriculum or exam sequence someone thought about — and whether a
+learner can tell from the outside which rung they want. A 급수 ladder for hanja
+passes; slicing a vocabulary deck into "level 1–5" to look organised does not.
+_Set by the user, with the Hanja packs._
 
 This shapes packs: they are **domains being unlocked**, never "starter" decks.
 Curated from real sources, editorially controlled, not AI-generated.
