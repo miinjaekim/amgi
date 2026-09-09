@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useUser } from '@/components/UserContext';
@@ -26,6 +26,20 @@ export default function DrillPage() {
   const { nativeLanguage, studyLanguage } = useUser();
   const langConfig = getStudyLanguageConfig(studyLanguage);
   const pack = getVocabPack(studyLanguage, packId);
+
+  /**
+   * The subpack being drilled, from `?section=`, or null for the whole pack.
+   *
+   * Read from `window.location` in an effect rather than through
+   * `useSearchParams`, which would need a Suspense boundary around the page to
+   * keep it statically rendered — the same trade the Learn page documents. It
+   * lands on the second render, and the only thing that reads it before then is
+   * the entry list, which is why nothing starts until a size is picked.
+   */
+  const [sectionId, setSectionId] = useState<string | null>(null);
+  useEffect(() => {
+    setSectionId(new URLSearchParams(window.location.search).get('section'));
+  }, []);
 
   const [direction, setDirection] = useState<DrillDirection>('studyToBack');
   const [size, setSize] = useState<number | null>(null);
@@ -76,7 +90,10 @@ export default function DrillPage() {
     setRevealed(false);
   }
 
-  const entries = getPackEntries(pack);
+  // A section id that names nothing drills the whole pack rather than nothing
+  // at all — a stale link is not worth an error screen.
+  const section = sectionId ? pack.sections.find(s => s.id === sectionId) : undefined;
+  const entries = section ? section.entries : getPackEntries(pack);
   const sizeOptions = DRILL_SIZES.filter(s => s === null || s < entries.length);
 
   // Start screen — mirrors Review's, which is the loop this one is a sibling of.
@@ -87,6 +104,13 @@ export default function DrillPage() {
         <h1 className="mt-4 text-2xl font-bold text-[var(--color-highlight)]">
           {getPackText(pack.name, nativeLanguage)}
         </h1>
+        {/* The pack still names the page — the subpack is a scope inside it,
+            not somewhere else. */}
+        {section && (
+          <p className="text-sm text-[var(--color-muted)] mt-1">
+            {getPackText(section.name, nativeLanguage)}
+          </p>
+        )}
 
         <div className="flex flex-wrap gap-2 mt-6 justify-center">
           {(['studyToBack', 'backToStudy'] as DrillDirection[]).map(dir => (

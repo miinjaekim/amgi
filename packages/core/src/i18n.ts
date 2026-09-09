@@ -71,6 +71,9 @@ const translations = {
     // Review collections — your own cards and each pack are reviewed apart
     reviewCollectionMine: 'My cards',
     reviewPickCollection: 'What are you reviewing?',
+    reviewPickSubpack: 'The whole pack, or one part of it?',
+    reviewWholePack: 'The whole pack',
+    reviewBackToCollections: 'All collections',
     reviewCollectionDue: '{count} due',
     reviewCollectionCaughtUp: 'Caught up',
     reviewChangeCollection: 'Change collection',
@@ -384,6 +387,7 @@ const translations = {
     deckCardsUnavailable: "Could not check which cards you already have. Reload before adding the deck, or it may be added twice.",
     // Section enrolment — 160 words is not one decision
     deckSaveSection: 'Save this section',
+    deckReviewSection: 'Review',
     deckSectionSaving: 'Saving…',
     deckSectionAllSaved: 'All saved',
     deckSaveAll: 'Save the whole deck',
@@ -497,6 +501,9 @@ const translations = {
     // Review collections — your own cards and each pack are reviewed apart
     reviewCollectionMine: '내 카드',
     reviewPickCollection: '무엇을 복습할까요?',
+    reviewPickSubpack: '단어팩 전체, 아니면 한 묶음만?',
+    reviewWholePack: '단어팩 전체',
+    reviewBackToCollections: '전체 목록',
     reviewCollectionDue: '{count}개 복습할 차례',
     reviewCollectionCaughtUp: '지금은 없어요',
     reviewChangeCollection: '다른 묶음 고르기',
@@ -781,6 +788,7 @@ const translations = {
     deckCardsUnavailable: '이미 가지고 있는 카드를 확인할 수 없어요. 덱이 중복으로 추가될 수 있으니 새로고침한 뒤 다시 시도해 주세요.',
     // Section enrolment — 160 words is not one decision
     deckSaveSection: '이 묶음 저장하기',
+    deckReviewSection: '복습하기',
     deckSectionSaving: '저장하는 중…',
     deckSectionAllSaved: '모두 저장됨',
     deckSaveAll: '전체 저장하기',
