@@ -17,6 +17,12 @@ costs ~20 minutes rather than an App Review cycle.
 
 ## Cutting a build
 
+⚠️ **Build 15 also clears a live cosmetic regression.** The subpack remap ran
+2026-09-09 against production, so build 14 shows every pack as a raw slug
+(`toeic-core/verbs`) in the review picker and the deck chips — it predates the
+code that resolves those ids. Web was fixed by deploying #116; mobile cannot be
+until a build. See Known Issues in [status.md](status.md).
+
 **Queued: the mobile UI redesign, Expo SDK 57, and the shareable stats asset**
 (PR #111 merged 2026-09-04; the asset landed 2026-09-07). 1.5.0 (build 14) is on
 SDK 54 and predates all of it, so **testers are running none of this** — the tab
