@@ -126,6 +126,97 @@ Reasoning in the Decisions entry in [status.md](status.md); the shape is in
 
 ## Medium
 
+- [ ] **Smaller packs instead of one pack with sections** — queued 2026-09-09.
+      The rule, in the user's words: several smaller packs rather than one big
+      one with subgroups, and **a pack keeps subgroups only when the subgroups
+      are themselves semantically related to each other**. No "Basics" pack —
+      greetings and family names are different things, and sometimes you want to
+      sit down with one of them.
+      **Why that isn't already true.** Section enrolment split the *sitting*, not
+      the *deck*. `buildPackCardDraft` writes `packId` and nothing about the
+      section, so `getCollectionId` — the single grouping every surface reads —
+      returns the whole pack. Saving Greetings alone still leaves you reviewing
+      Kikuyu Basics: the review collection (`buildReviewCollections`), the deck
+      chip (`buildDeckFilters`) and the drill route all key on that one id.
+      **This needs no schema change and no new UI**, which is the reason to do it
+      this way rather than adding a section axis to the card. A section promoted
+      to a pack *is* a review collection, a deck chip and a drill target the
+      moment it lands in `VOCAB_PACKS`.
+      _It does not reopen the pack roadmap (closed 2026-09-08) — nothing new is
+      authored, this is a re-sectioning of shipped content. Nor the daily-draw
+      decision in [status.md](status.md): section enrolment stays, this makes the
+      section survive the save._
+
+      ⚠️ **The rule is a test to apply pack by pack, not a loop over 79
+      sections.** Mechanically splitting every section gives ~79 packs across
+      five languages and turns the Decks page into a wall. The verdict the rule
+      actually yields — the user's call, this is the recommendation:
+      **Split** — the subgroups are unrelated topics:
+      • `kikuyu-basics` (59) → greetings 17 / numbers 17 / family 15 / actions
+        10. The case that prompted this. ⚠️ 10 entries would be the smallest deck
+        the app has listed; check it doesn't read as broken on the Decks page.
+      • `spanish-basics` (153) → greetings 26 / numbers 36 / restaurant 31 /
+        directions 28 / verbs 32. Same shape as Kikuyu, healthier sizes.
+      • `daily-life` "Everyday English" (149, seven sections of 14–24) — the
+        "Basics" pack under another name.
+      • `kanji-grade-1-2` (240, 11 sections) → **at least** Grade 1 (80) and
+        Grade 2 (160), which is the split the pack's own source (学年別漢字配当表)
+        already argues; whether the themed sections inside a grade split too is a
+        second question. ⚠️ This shrinks the "All" chip item further down this
+        file rather than settling it.
+      • `military-unit-*` (220) and `military-affairs-*` (254) — by the rule,
+        ranks, radio procedure and casualty handling are not each other's
+        neighbours. ⚠️ Twenty sections × two languages is 40 registry entries,
+        the heaviest case here. They are `BilingualPack`s, so the split happens
+        once on the pair list and `derivePack` carries both directions.
+      **Keep whole** — the exception the user named, subgroups related to each
+      other:
+      • `kana-hiragana` / `kana-katakana` — gojūon, dakuten and handakuten are
+        one script's own structure. A dakuten pack without the gojūon is not a
+        thing anyone would sit down with.
+      • `toeic-core` (133) and `topik-advanced` (160) — the sections are parts of
+        speech inside one exam. "TOEIC adjectives" is a slice of a single
+        purpose, not a topic.
+      • `english-idioms` (100) — every section is idioms; the binding is form and
+        the sections are its topics. The weakest of the three, so it is the one
+        worth asking about.
+
+      ⚠️ **The migration is the actual work, and it has a deadline inside the
+      diff.** Retiring `kikuyu-basics` for four ids orphans every card already
+      saved under it. Both `buildDeckFilters` and `buildReviewCollections` fall
+      back to `name: id`, so those cards get a chip and a review row labelled
+      `kikuyu-basics`, sorted last by `byRegistryOrder` — reviewable, but wearing
+      a slug. Remapping them is derivable: study side + old `packId` identifies
+      the entry, and the entry sits in exactly one section, which names its new
+      pack. **That derivation only works while the old pack definition is still
+      in the file** — so the remap ships in the same PR as the split, or the old
+      definition stays until it has run. `apps/web/scripts/backfill-pack-backs.ts`
+      is the precedent and already keys on exactly that pair.
+      _The alternative, a permanent retired-id → new-id table in `getVocabPack`,
+      is worse for the number of testers there actually are._
+
+      ⚠️ **Registry order gets rewritten, and the Decks page may not survive it.**
+      The `VOCAB_PACKS` doc comment argues a deliberate order per language
+      ("English runs exam → everyday → idioms → job"); a twenty-pack Korean list
+      needs a different organizing idea than a three-pack one, and
+      `apps/web/src/app/decks/page.tsx` is a flat `packs.map` today. Grouping the
+      Decks page is the likely tail of this item, not a separate one.
+
+      **And decide what happens to `PackSection`.** It stays — kana and kanji
+      still need it — but every split pack becomes single-section, and
+      `renderSection` puts a section header and its own "save this section"
+      button above the list, which on a one-section pack just repeats the
+      whole-deck enrol at the top of the page. Either branch on
+      `sections.length === 1` or let a split pack render a bare entry list.
+
+      **Also on the checklist:** the per-pack tests pin counts and ids
+      (`kikuyu-pack.test.ts`, `spanish-pack.test.ts`, `english-packs.test.ts`,
+      `kanji-pack.test.ts`, `military-packs.test.ts`) and `deck-filters.test.ts`
+      pins registry order; and `docs/packs/README.md` makes the draft the source
+      of record and the thing handed to a reviewer, so the drafts get re-headed
+      with the TS or that rule quietly breaks — the two military drafts still
+      carry live open questions, so they are the ones to be careful with.
+
 - [ ] **Military specialties pack (병과 / 주특기, "MOS").** Infantry, engineer,
       signal, artillery, armor, logistics, medical, and the rest — the branch a
       soldier belongs to, which the two shipped military packs do not cover.
