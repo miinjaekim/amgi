@@ -52,14 +52,17 @@ describe('getCharacterBreakdown', () => {
     expect(getCharacterBreakdown({ characterBreakdown: '電 diàn + 腦 nǎo' })).toBe('電 diàn + 腦 nǎo');
   });
 
-  // Korean cards saved before the field was generalized still carry `hanja`,
-  // which is what lets them render without a migration.
-  it('falls back to a legacy Korean card’s hanja', () => {
-    expect(getCharacterBreakdown({ hanja: '葛 갈 + 藤 등' })).toBe('葛 갈 + 藤 등');
+  // The legacy `hanja` field these used to fall back to is gone: it now names
+  // the front of a Hanja card, and `migrate:legacy-hanja` moved the Korean
+  // cards that carried a breakdown there onto `characterBreakdown`.
+  it('returns undefined when a card has no breakdown', () => {
+    expect(getCharacterBreakdown({})).toBeUndefined();
   });
 
-  it('returns undefined when a card has neither', () => {
-    expect(getCharacterBreakdown({})).toBeUndefined();
+  // An empty string is what enrichment returns for a term with nothing to break
+  // down, and it has to read as absent so the section does not render blank.
+  it('reads an empty breakdown as absent', () => {
+    expect(getCharacterBreakdown({ characterBreakdown: '' })).toBeUndefined();
   });
 });
 

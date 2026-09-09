@@ -13,7 +13,7 @@ import {
 } from '@/services/gemini';
 import Markdown from '@/components/Markdown';
 import { saveFlashcardToFirestore, Flashcard } from '@/services/firestore';
-import { getBackSideConfig, getTermBackSide, getCharacterBreakdown, getExampleSides, getReading, getStudyLanguageConfig, parseStreamedExamples, parseStreamedDepth, pronunciationNote, pronunciationNoteNeedsCredit, wordOfTheDayCore, PITCH_ACCENT_CREDIT } from '@amgi/core';
+import { buildLookupCardDraft, lookupCardFaces, getTermBackSide, getCharacterBreakdown, getExampleSides, getReading, getStudyLanguageConfig, parseStreamedExamples, parseStreamedDepth, pronunciationNote, pronunciationNoteNeedsCredit, wordOfTheDayCore, PITCH_ACCENT_CREDIT } from '@amgi/core';
 import type { WordOfTheDay } from '@amgi/core';
 import { useUser } from '@/components/UserContext';
 import { t, partOfSpeechLabel } from '@/lib/i18n';
@@ -32,6 +32,11 @@ const EXAMPLE_TERMS: Record<string, string[]> = {
   Swahili: ['harambee', 'pole pole', 'uhuru', 'longing', 'ndoto'],
   Japanese: ['木漏れ日', '積ん読', 'nostalgia', 'awkward', '侘寂'],
   TraditionalChinese: ['緣分', '撒嬌', 'nostalgia', 'awkward', '將就'],
+  // Single characters, in the traditional forms the 어문회 list assigns —
+  // 學, not 学. Nothing here is an English word, unlike every row above:
+  // typing "water" into a hanja deck asks for a translation, and the deck
+  // answers a different question about a character you already have.
+  Hanja: ['水', '心', '學', '道', '天'],
 };
 
 function animateText(
@@ -360,13 +365,14 @@ export default function Home() {
   };
 
   const langConfig = getStudyLanguageConfig(studyLanguage);
-  const backConfig = getBackSideConfig(studyLanguage, nativeLanguage);
 
-  const translation = core
-    ? (core.termLanguage === studyLanguage
-        ? getTermBackSide(core, studyLanguage, nativeLanguage)
-        : core[langConfig.studyField]) || core.translation
-    : null;
+  // What the screen shows above the save button, from the same place the draft
+  // comes from — so what you read and what you save cannot disagree.
+  const isHanja = studyLanguage === 'Hanja';
+  const faces = core ? lookupCardFaces(core, studyLanguage, nativeLanguage) : null;
+  const headword = faces?.headword ?? '';
+  const translation = faces?.back ?? null;
+  const hanjaGloss = faces?.gloss;
 
   const exampleTerms = EXAMPLE_TERMS[studyLanguage] ?? EXAMPLE_TERMS.Korean;
 
@@ -435,7 +441,18 @@ export default function Home() {
               <div className="flex items-baseline gap-3 flex-wrap">
                 <span className="text-xl font-bold text-[var(--color-highlight)]">{wordOfTheDay.term}</span>
                 <span className="text-[var(--color-text)] opacity-80">
-                  {studyLanguage === 'English' ? wordOfTheDay.korean : wordOfTheDay.english}
+                {/* The same core the tap-through builds, so the face and the
+                    detail cannot disagree about which side to show. This read
+                    used to be `studyLanguage === 'English' ? korean : english`
+                    — a language-*pair* rule from before backs became
+                    native-aware, which showed a Korean native the English side
+                    on every deck but one. The document has carried both sides
+                    since; only this line was still asking the old question. */}
+                  {getTermBackSide(
+                    wordOfTheDayCore(wordOfTheDay, studyLanguage, nativeLanguage),
+                    studyLanguage,
+                    nativeLanguage,
+                  )}
                 </span>
               </div>
               {wordOfTheDay.briefDefinition && (
@@ -533,9 +550,11 @@ export default function Home() {
       {core && (
         <div className={`${correction ? "mt-3" : "mt-10"} p-6 rounded-xl bg-[var(--color-surface)] shadow-lg border border-[var(--color-muted)]`}>
           <div className="flex items-center gap-3 mb-4 flex-wrap">
-            <h2 className="text-2xl font-bold text-[var(--color-highlight)]">{core.term}</h2>
-            {core.termLanguage === studyLanguage && (
-              <PronounceButton text={core.term} furigana={core.furigana} studyLanguage={studyLanguage} />
+            <h2 className="text-2xl font-bold text-[var(--color-highlight)]">{headword}</h2>
+            {/* On Hanja the headword is always the character, so it always
+                carries the button — which speaks the 음, not the glyph. */}
+            {(core.termLanguage === studyLanguage || isHanja) && (
+              <PronounceButton text={headword} furigana={core.furigana} eum={core.eum} studyLanguage={studyLanguage} />
             )}
             {partOfSpeechLabel(nativeLanguage, core) && (
               <span className="px-2 py-0.5 text-xs rounded-full border border-[var(--color-muted)] text-[var(--color-muted)]">
@@ -570,6 +589,9 @@ export default function Home() {
                 <PronounceButton text={translation} furigana={core.furigana} studyLanguage={studyLanguage} />
               )}
             </div>
+            {hanjaGloss && (
+              <p className="mt-1 text-base text-[var(--color-text)] opacity-70">{hanjaGloss}</p>
+            )}
             {core.briefDefinition && (
               <p className="mt-2 text-sm" style={{ color: 'var(--color-muted)' }}>
                 {core.briefDefinition}
@@ -660,20 +682,9 @@ export default function Home() {
                 return;
               }
 
-              const studySide = core.termLanguage === studyLanguage ? core.term : (core[langConfig.studyField] || '');
-              const backSide =
-                core.termLanguage === backConfig.backLanguage
-                  ? core.term
-                  : getTermBackSide(core, studyLanguage, nativeLanguage);
-
-              setFlashcardDraft({
-                ...core,
-                ...(depth || {}),
-                examples: examples || [],
-                studyLanguage,
-                [langConfig.studyField]: studySide,
-                [backConfig.backField]: backSide,
-              });
+              setFlashcardDraft(
+                buildLookupCardDraft(core, studyLanguage, nativeLanguage, { depth, examples }),
+              );
               setShowFlashcardForm(true);
               setSaveSuccess(false);
             }}

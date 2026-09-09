@@ -18,8 +18,8 @@ import {
   readReminderPreferences, refreshReminders, writeReminderPreferences,
 } from '../src/services/reminders';
 import {
-  SUPPORTED_LANGUAGES, SUPPORTED_STUDY_LANGUAGES, formatReminderTime,
-  reminderTimeOptions, t, type ReminderPreferences,
+  HANJA_PARTITIONS, SUPPORTED_LANGUAGES, SUPPORTED_STUDY_LANGUAGES, formatReminderTime,
+  reminderTimeOptions, t, type HanjaPartition, type ReminderPreferences,
 } from '@amgi/core';
 import { THEMES } from '../src/theme';
 import type { Palette } from '../src/theme';
@@ -27,11 +27,18 @@ import type { Palette } from '../src/theme';
 // The policy is hosted on the web app; Korean speakers get the Korean version.
 const PRIVACY_URL_BASE = 'https://amgi-iota.vercel.app/privacy';
 
+/** Each partition's two i18n keys, together so neither can be guessed apart. */
+const PARTITION_KEYS: Record<HanjaPartition, { label: 'hanjaPartitionCharacter' | 'hanjaPartitionHun' | 'hanjaPartitionEum'; example: 'hanjaPartitionCharacterExample' | 'hanjaPartitionHunExample' | 'hanjaPartitionEumExample' }> = {
+  character: { label: 'hanjaPartitionCharacter', example: 'hanjaPartitionCharacterExample' },
+  hun: { label: 'hanjaPartitionHun', example: 'hanjaPartitionHunExample' },
+  eum: { label: 'hanjaPartitionEum', example: 'hanjaPartitionEumExample' },
+};
+
 export default function SettingsScreen() {
   const { C, theme, setTheme } = useTheme();
   const { speed, setSpeed, speeds } = usePronunciation();
   const s = useMemo(() => makeStyles(C), [C]);
-  const { user, authLoading, nativeLanguage, studyLanguage, setNativeLanguage, deleteAccount, handleSignIn, handleSignOut } = useUser();
+  const { user, authLoading, nativeLanguage, studyLanguage, hanjaPartition, setNativeLanguage, setHanjaPartition, deleteAccount, handleSignIn, handleSignOut } = useUser();
   const [deleting, setDeleting] = useState(false);
   const [reminders, setReminders] = useState<ReminderPreferences | null>(null);
   const [remindersBlocked, setRemindersBlocked] = useState(false);
@@ -223,6 +230,44 @@ export default function SettingsScreen() {
             </View>
           )}
         </View>
+
+        {/* The hanja partition — which part of the card leads. A stacked list
+            rather than the chip row below, because each option carries an
+            example (水 → 물 수) that a chip cannot hold.
+
+            Shown only on the deck it describes, and deliberately only here:
+            put in the review session it would become a per-session toggle, and
+            every switch inherits intervals earned answering a different
+            question. Chosen once, like the study language above. */}
+        {studyLanguage === 'Hanja' && (
+          <>
+            <Text style={s.sectionLabel}>{t(nativeLanguage, 'settingsHanjaPartition')}</Text>
+            <View style={s.card}>
+              <Text style={s.settingDescription}>
+                {t(nativeLanguage, 'settingsHanjaPartitionDesc')}
+              </Text>
+              {HANJA_PARTITIONS.map(partition => {
+                const active = hanjaPartition === partition;
+                return (
+                  <TouchableOpacity
+                    key={partition}
+                    style={[s.partitionRow, active && s.partitionRowActive]}
+                    onPress={() => setHanjaPartition(partition)}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: active }}
+                  >
+                    <Text style={[s.partitionLabel, active && s.partitionLabelActive]}>
+                      {t(nativeLanguage, PARTITION_KEYS[partition].label)}
+                    </Text>
+                    <Text style={[s.partitionDesc, active && s.partitionDescActive]}>
+                      {t(nativeLanguage, PARTITION_KEYS[partition].example)}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </>
+        )}
 
         {/* Theme */}
         <Text style={s.sectionLabel}>{t(nativeLanguage, 'settingsTheme')}</Text>
@@ -429,6 +474,18 @@ function makeStyles(C: Palette) {
   langChipActive: { backgroundColor: C.highlight, borderColor: C.highlight },
   langChipText: { fontSize: 15, color: C.text, fontWeight: '500' },
   langChipTextActive: { color: C.bg, fontWeight: '700' },
+
+  // Hanja partition — a stacked list, because each row carries an example
+  // under its name and a chip row cannot hold two lines.
+  partitionRow: {
+    paddingHorizontal: 14, paddingVertical: 11, marginBottom: 8,
+    borderRadius: 12, borderWidth: 1.5, borderColor: C.border,
+  },
+  partitionRowActive: { backgroundColor: C.highlight, borderColor: C.highlight },
+  partitionLabel: { fontSize: 15, color: C.text, fontWeight: '500' },
+  partitionLabelActive: { color: C.bg, fontWeight: '700' },
+  partitionDesc: { fontSize: 13, color: C.muted, marginTop: 2 },
+  partitionDescActive: { color: C.bg, opacity: 0.8 },
 
   // Disclosure (study language)
   disclosure: {

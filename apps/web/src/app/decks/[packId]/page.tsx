@@ -325,7 +325,7 @@ export default function DeckDetailPage() {
           </span>
         </button>
         {pack!.pronounceable && (
-          <PronounceButton text={entry.study} studyLanguage={studyLanguage} size="sm" />
+          <PronounceButton text={entry.study} eum={entry.eum} studyLanguage={studyLanguage} size="sm" />
         )}
       </div>
     );

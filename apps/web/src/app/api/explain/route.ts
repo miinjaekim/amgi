@@ -589,6 +589,101 @@ ${glossRuleBullet(false)}
 - "pinyin": the full Hanyu Pinyin reading of "traditionalChinese", with tone marks (e.g. "dōngxi"), spaced by word.${posRule}
 - "briefDefinition" must be a single sentence defining the core meaning. No examples, no cultural context.`;
     }
+  } else if (studyLanguage === 'Hanja') {
+    // Hanja: the front is a single Han character, which the script detects. A
+    // learner may equally type the 훈 (물), the 음 (수) or the English meaning
+    // — each of those is a way of asking for the character, so hangul and Latin
+    // input are both normal here rather than a mistake.
+    const termLanguage = detectChinese(term) ? 'Hanja' : detectKorean(term) ? 'Korean' : 'English';
+
+    // **This branch asks for 훈 and 음 outright instead of going through
+    // `nativeBackRule`/`nativeBackJson`**, which are empty for an English
+    // native. That is not an oversight: 훈음 is Korean for every reader. 水 is
+    // 물 수 whether or not you speak Korean, and "water" is a *different fact*
+    // about the character rather than a translation of 물 수 — so an English
+    // native gets the gloss in addition, never instead.
+    //
+    // **Two fields, never one string.** Which part a learner sees first is
+    // their setting, so a card may show 물 alone or 수 alone; a model answering
+    // "물 수" would have to be taken apart again by a parser that has to guess
+    // where the 훈 ends. `hunEum()` joins them at the one point that wants them
+    // joined, and `korean` is filled from it when the card is saved.
+    //
+    // No `posRule` either. Part of speech describes a word, and a hanja is a
+    // character: 水 is a noun in 水泳 and a modifier in 水道. Tagging every card
+    // 접사 would be a badge that says nothing on 300 cards.
+    if (context) {
+      prompt = `Provide the 훈음 and meaning of the hanja "${term}" with this context: "${context}".
+
+IMPORTANT:
+- "hanja" must be **exactly one character**, written in the traditional form the 한국어문회 배정한자 list assigns — 學, never the Japanese or Simplified form 学. A two-character answer is always wrong here: this deck's card is a character and its 훈음, and 學校 has no 훈음 of its own.
+- "hun" is the character's 훈 — its native-Korean meaning, written in Korean: 물 for 水, 배울 for 學. Never the English meaning, and never with the 음 attached.
+- "eum" is the character's 음 — its Korean sound, one syllable of 한글: 수 for 水, 학 for 學. The Korean reading; never the Japanese on'yomi and never the Mandarin pinyin.
+- Keep them in **separate fields**. Read together they are the 훈음 (물 수), and the app joins them; a card may show either part on its own, so neither field may contain the other.
+- "english" must be the English meaning of the character — "water" for 水, "learn" for 學.
+${glossRuleBullet(true)}
+For "briefDefinition", write a single clear sentence in ${nativeLanguage} defining what the character means. No examples, no cultural context — just the core meaning.
+
+Respond with only this JSON:
+{
+  "term": "${term}",
+  "termLanguage": "${termLanguage}",
+  "hanja": "the character",
+  "hun": "훈 (native-Korean meaning)",
+  "eum": "음 (Korean sound, one syllable)",
+  "english": "English meaning",
+  "briefDefinition": "one-sentence definition"
+}`;
+    } else {
+      prompt = `You are a hanja tutor for learners working through the 전국한자능력검정시험 배정한자.
+
+Given "${term}", identify the hanja it refers to, then check whether 한국어문회 assigns that character more than one 훈음.
+
+A hanja is ambiguous when it carries 2 or more distinct 훈음 — 樂 is 즐길 락, 노래 악 and 좋아할 요; 金 is 쇠 금 and 성 김; 北 is 북녘 북 and 달아날 배.
+
+A hanja is NOT ambiguous when:
+- One 훈음 covers it
+- A second reading is rare, archaic, or appears only in names
+- Two glosses are the same meaning worded differently
+
+It is also ambiguous when the term given is a 훈, an 음 or an English word that several different characters answer to — 수 alone is 水, 手, 數 and more. There, each "label" is one character with its 훈음 (e.g. "水 — 물 수").
+
+**A term of two or more hanja is always the ambiguous case.** This deck teaches single characters, so 主張 is not a card — 主 and 張 are. List one entry per character, each "label" being that character with its 훈음 ("主 — 임금 주", "張 — 베풀 장"), and let the learner pick which one they are asking about. Never answer a multi-character term as though it were one card, and never return its 독음 — 주장 — as though that were a 훈음.
+
+${spellBlock}
+If AMBIGUOUS, respond with only this JSON:
+{
+  "ambiguous": true,
+  "term": "${term}",${spellJson}
+  "termLanguage": "${termLanguage}",
+  "meanings": [
+    { "label": "short label (3-6 words max)", "hint": "one sentence clarifying this meaning" },
+    { "label": "...", "hint": "..." }
+  ]
+}
+
+Every "hint" must be written in ${nativeLanguage} — the user may not understand any other language. A "label" naming a 훈음 keeps it in Korean, because that is what the reading is called.
+
+If NOT ambiguous, respond with only this JSON:
+{
+  "term": "${term}",${spellJson}
+  "termLanguage": "${termLanguage}",
+  "hanja": "the character",
+  "hun": "훈 (native-Korean meaning)",
+  "eum": "음 (Korean sound, one syllable)",
+  "english": "English meaning",
+  "briefDefinition": "one-sentence definition in ${nativeLanguage}"
+}
+
+IMPORTANT for the non-ambiguous case:
+- "hanja" must be **exactly one character**, written in the traditional form the 한국어문회 배정한자 list assigns — 學, never the Japanese or Simplified form 学. A two-character answer is always wrong here: this deck's card is a character and its 훈음, and 學校 has no 훈음 of its own.
+- "hun" is the character's 훈 — its native-Korean meaning, written in Korean: 물 for 水, 배울 for 學. Never the English meaning, and never with the 음 attached.
+- "eum" is the character's 음 — its Korean sound, one syllable of 한글: 수 for 水, 학 for 學. The Korean reading; never the Japanese on'yomi and never the Mandarin pinyin.
+- Keep them in **separate fields**. Read together they are the 훈음 (물 수), and the app joins them; a card may show either part on its own, so neither field may contain the other.
+- "english" must be the English meaning of the character — "water" for 水, "learn" for 學.
+${glossRuleBullet(false)}
+- "briefDefinition" must be a single sentence defining the core meaning. No examples, no cultural context.`;
+    }
   } else if (studyLanguage === 'English') {
     // English study — for native-Korean learners. The card back is Korean,
     // so Hangul detection distinguishes the two sides client-free.

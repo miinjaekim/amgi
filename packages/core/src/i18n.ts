@@ -1,5 +1,5 @@
-import { getStudyLanguageConfig, getBackSideConfig } from './types';
-import type { StudyLanguage, TermCore } from './types';
+import { getStudyLanguageConfig, getBackSideConfig, DEFAULT_HANJA_PARTITION } from './types';
+import type { HanjaPartition, StudyLanguage, TermCore } from './types';
 import type { ReviewDirection } from './sm2';
 
 const translations = {
@@ -33,6 +33,10 @@ const translations = {
     labelSpanish: 'Spanish',
     labelKikuyu: 'Kikuyu',
     labelSwahili: 'Swahili',
+    // The script, named as English names it. Not "Chinese characters": the deck
+    // teaches the 훈음 a Korean reader learns them by, and calling it hanja is
+    // what says that to someone who might otherwise expect pinyin.
+    labelHanja: 'Hanja',
     save: 'Save',
     flashcardSaved: 'Flashcard saved!',
     loadingFlashcards: 'Loading flashcards...',
@@ -118,6 +122,13 @@ const translations = {
     directionBoth: 'Both directions',
     promptMeaning: 'What does this mean in {language}?',
     promptProduce: 'How do you say this in {language}?',
+    // Hanja asks for parts of one card rather than a translation into a
+    // language, so it names the parts instead. Short, because these also
+    // compose the direction chip: "한자 → 훈 · 음".
+    partHanja: 'character',
+    partHun: '훈',
+    partEum: '음',
+    promptHanja: 'Recall the {parts}.',
     // Header
     navLearn: 'Learn',
     navReview: 'Review',
@@ -188,6 +199,20 @@ const translations = {
     speedSlow: 'Slow',
     speedNormal: 'Normal',
     speedFast: 'Fast',
+    // The hanja partition. Named for the part that goes on the front, because
+    // that is the choice being made; the direction chips already say which way
+    // round a given card is being asked.
+    settingsHanjaPartition: 'Front of a hanja card',
+    settingsHanjaPartitionDesc: 'Which part you see first; the other two go on the back. The character is what the 급수 exam asks. Changing this later keeps each card’s existing schedule.',
+    hanjaPartitionCharacter: 'The character',
+    hanjaPartitionHun: '훈 — the meaning',
+    hanjaPartitionEum: '음 — the sound',
+    // Bare examples, because they render inline beside the label. The reason
+    // to prefer one lives in the section description above, once, rather than
+    // in the option that happens to be the default.
+    hanjaPartitionCharacterExample: '水 → 물 수',
+    hanjaPartitionHunExample: '물 → 水 수',
+    hanjaPartitionEumExample: '수 → 水 물',
     signOut: 'Sign out',
     signIn: 'Sign in',
     // Settings screen (mobile)
@@ -465,6 +490,9 @@ const translations = {
     labelSpanish: '스페인어',
     labelKikuyu: '키쿠유어',
     labelSwahili: '스와힐리어',
+    // No ~어 suffix, unlike every label above it: 한자 is a script, not a
+    // language, and 한자어 is a different word meaning Sino-Korean vocabulary.
+    labelHanja: '한자',
     save: '저장',
     flashcardSaved: '플래시카드가 저장되었습니다!',
     loadingFlashcards: '플래시카드 불러오는 중...',
@@ -542,6 +570,12 @@ const translations = {
     // them and no `으로` branch is needed.
     promptMeaning: '이 단어는 {language}로 무슨 뜻인가요?',
     promptProduce: '이것을 {language}로 어떻게 말하나요?',
+    partHanja: '한자',
+    partHun: '훈',
+    partEum: '음',
+    // The comma is doing real work: it lets one string take both "훈 · 음" and
+    // "한자" without a 을/를 that would be wrong for one of them.
+    promptHanja: '{parts}, 무엇일까요?',
     // Header
     navLearn: '학습',
     navReview: '복습',
@@ -556,6 +590,14 @@ const translations = {
     speedSlow: '느리게',
     speedNormal: '보통',
     speedFast: '빠르게',
+    settingsHanjaPartition: '한자 카드 앞면',
+    settingsHanjaPartitionDesc: '먼저 보이는 부분이에요. 나머지 둘은 뒷면으로 갑니다. 급수 시험이 묻는 방식은 한자고요. 나중에 바꿔도 카드마다 쌓인 복습 일정은 그대로예요.',
+    hanjaPartitionCharacter: '한자',
+    hanjaPartitionHun: '훈 (뜻)',
+    hanjaPartitionEum: '음 (소리)',
+    hanjaPartitionCharacterExample: '水 → 물 수',
+    hanjaPartitionHunExample: '물 → 水 수',
+    hanjaPartitionEumExample: '수 → 水 물',
     signOut: '로그아웃',
     signIn: '로그인',
     // Settings screen (mobile)
@@ -935,8 +977,13 @@ export function partOfSpeechLabel(
 export function directionLabel(
   nativeLanguage: string | null | undefined,
   studyLanguage: StudyLanguage | string | undefined,
-  direction: ReviewDirection
+  direction: ReviewDirection,
+  partition: HanjaPartition = DEFAULT_HANJA_PARTITION,
 ): string {
+  if (studyLanguage === 'Hanja') {
+    const [front, back] = hanjaPartNames(nativeLanguage, partition);
+    return direction === 'frontToBack' ? `${front} → ${back}` : `${back} → ${front}`;
+  }
   const study = t(nativeLanguage, getStudyLanguageConfig(studyLanguage).studyLabelKey);
   const back = t(nativeLanguage, getBackSideConfig(studyLanguage, nativeLanguage).backLabelKey);
   return direction === 'frontToBack' ? `${study} → ${back}` : `${back} → ${study}`;
@@ -946,14 +993,43 @@ export function directionLabel(
 export function directionPrompt(
   nativeLanguage: string | null | undefined,
   studyLanguage: StudyLanguage | string | undefined,
-  direction: ReviewDirection
+  direction: ReviewDirection,
+  partition: HanjaPartition = DEFAULT_HANJA_PARTITION,
 ): string {
+  if (studyLanguage === 'Hanja') {
+    const [front, back] = hanjaPartNames(nativeLanguage, partition);
+    // The prompt names whatever is hidden, which flips with the direction:
+    // showing 水 asks for 훈 · 음, showing 물 수 asks for the 한자.
+    return t(nativeLanguage, 'promptHanja', {
+      parts: direction === 'frontToBack' ? back : front,
+    });
+  }
   const key = direction === 'frontToBack' ? 'promptMeaning' : 'promptProduce';
   const labelKey =
     direction === 'frontToBack'
       ? getBackSideConfig(studyLanguage, nativeLanguage).backLabelKey
       : getStudyLanguageConfig(studyLanguage).studyLabelKey;
   return t(nativeLanguage, key, { language: t(nativeLanguage, labelKey) });
+}
+
+/**
+ * A partition's two faces, named: `['한자', '훈 · 음']`.
+ *
+ * Composed from three short part names rather than stored as six strings per
+ * locale, for the reason `directionLabel` composes its arrow — the pieces are
+ * already translated, and six hand-written pairs are six chances for the chip
+ * and the prompt to disagree about what a partition is called.
+ */
+function hanjaPartNames(
+  nativeLanguage: string | null | undefined,
+  partition: HanjaPartition,
+): [front: string, back: string] {
+  const character = t(nativeLanguage, 'partHanja');
+  const hun = t(nativeLanguage, 'partHun');
+  const eum = t(nativeLanguage, 'partEum');
+  if (partition === 'hun') return [hun, `${character} · ${eum}`];
+  if (partition === 'eum') return [eum, `${character} · ${hun}`];
+  return [character, `${hun} · ${eum}`];
 }
 
 /**

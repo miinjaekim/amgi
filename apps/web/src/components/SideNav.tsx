@@ -215,8 +215,12 @@ export default function SideNav({ collapsed, onToggle }: Props) {
           )}
 
           {settingsOpen && (
+            // Bounded to the viewport and scrollable. This popover is anchored
+            // at `bottom-4` and grows *upward*, so an unbounded one runs off
+            // the top of the screen rather than the bottom — the settings you
+            // cannot reach are the first ones in the panel.
             <div
-              className="fixed bottom-4 left-[calc(var(--sidenav-w,14rem)+0.5rem)] w-64 rounded-xl shadow-xl border border-[var(--color-muted)] z-50 overflow-hidden"
+              className="fixed bottom-4 left-[calc(var(--sidenav-w,14rem)+0.5rem)] w-64 max-h-[calc(100vh-2rem)] overflow-y-auto rounded-xl shadow-xl border border-[var(--color-muted)] z-50"
               style={{ background: 'var(--color-surface)' }}
             >
               <SettingsMenu onClose={() => setSettingsOpen(false)} />

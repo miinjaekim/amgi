@@ -10,6 +10,7 @@ import {
   getReading,
   getStudyLangSide,
   getStudyLanguageConfig,
+  hunEum,
   partOfSpeechLabel,
   resolvePackBack,
   t,
@@ -79,8 +80,21 @@ export default function CardDetailModal({
   // unsaved entry is projected onto the two fields it can fill.
   const studySide = saved ? getStudyLangSide(saved) : entry?.study ?? '';
   const backSide = saved
-    ? getBackSide(saved)
+    ? getBackSide(saved, nativeLanguage)
     : entry ? resolvePackBack(entry.back, lang, nativeLanguage) : '';
+
+  /**
+   * A hanja card's back is 훈음 for every reader, and an English native gets
+   * the gloss *in addition* — the rule the review screen already follows. Here
+   * that needs saying explicitly, because `getBackSide` answers with the slot
+   * the language *pair* points at: 물 수 for a Korean native, "water" for an
+   * English one, which silently drops the 훈음 for the reader least able to
+   * supply it themselves.
+   */
+  const hunEumLine = lang === 'Hanja'
+    ? (saved ? hunEum(saved) : entry?.back.Korean ?? '')
+    : '';
+  const glossLine = lang === 'Hanja' && nativeLanguage !== 'Korean' ? backSide : '';
 
   const { backField } = getBackSideConfig(lang, nativeLanguage);
   const characterBreakdown = saved ? getCharacterBreakdown(saved) : undefined;
@@ -163,12 +177,13 @@ export default function CardDetailModal({
             <View style={s.headerMain}>
               <View style={s.titleRow}>
                 <Text style={s.term}>{studySide}</Text>
-                <PronounceButton text={studySide} furigana={saved?.furigana} studyLanguage={lang} />
+                <PronounceButton text={studySide} furigana={saved?.furigana} eum={saved?.eum} studyLanguage={lang} />
                 {badges.map((b, i) => (
                   <View key={i} style={s.badge}><Text style={s.badgeText}>{b}</Text></View>
                 ))}
               </View>
-              <Text style={s.back}>{backSide}</Text>
+              <Text style={s.back}>{lang === 'Hanja' ? hunEumLine : backSide}</Text>
+              {!!glossLine && <Text style={s.backGloss}>{glossLine}</Text>}
               {/* The hint an unsaved entry carries, which is also the sense any
                   generated depth will be pinned to. */}
               {!saved && !!entry?.context && <Text style={s.hint}>{entry.context}</Text>}
@@ -331,6 +346,8 @@ function makeStyles(C: Palette) {
     badge: { borderWidth: 1, borderColor: C.border, borderRadius: 12, paddingHorizontal: 8, paddingVertical: 2 },
     badgeText: { fontSize: 11, color: C.muted },
     back: { fontSize: 16, color: C.text, marginTop: 4 },
+    // Quieter than the 훈음 above it: a second fact about the character.
+    backGloss: { fontSize: 14, color: C.muted, marginTop: 2 },
     hint: { fontSize: 12, color: C.muted, marginTop: 4 },
     close: { fontSize: 28, color: C.muted, lineHeight: 30, marginLeft: 12 },
 

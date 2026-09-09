@@ -1,7 +1,7 @@
 import { db } from '@/config/firebase';
 import { collection, addDoc, Timestamp, query, where, orderBy, getDocs, getCountFromServer, onSnapshot, doc, updateDoc, deleteDoc, writeBatch } from 'firebase/firestore';
 import type { DocumentData, QueryDocumentSnapshot } from 'firebase/firestore';
-import { getStudyLanguageConfig } from '@amgi/core';
+import { getStudyLanguageConfig, hunEum } from '@amgi/core';
 import { recordNewCards } from './progress';
 import type { Flashcard, ReviewTracking, StudyLanguage } from '@amgi/core';
 
@@ -33,6 +33,12 @@ function buildFlashcardDoc(
 
   const rawData = {
     ...flashcard,
+    // A hanja card's Korean side is its 훈음, assembled from the two parts
+    // rather than stored a third time: every surface keyed on the language
+    // pair — the card list, the detail modal, CSV and Anki export — reads
+    // `korean` and needs no idea that partitions exist. Derived here, at the
+    // one point a card is written, so it cannot drift from `hun` and `eum`.
+    ...(studyLanguage === 'Hanja' ? { korean: hunEum(flashcard) } : {}),
     studyLanguage: studyLanguage ?? 'Korean',
     createdAt: Timestamp.now(),
     archived: false,

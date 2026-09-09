@@ -55,10 +55,31 @@ describe('getBackSideConfig', () => {
       Spanish: 'english',
       Kikuyu: 'english',
       Swahili: 'english',
+      // The gloss slot only. A hanja card's back is 훈음 — 물 수, Korean for
+      // every reader — and an English native gets "water" *in addition*, which
+      // is the field this names. 훈 and 음 are not `getBackSideConfig`'s to
+      // hand out and become fields of their own with three-sided cards.
+      Hanja: 'english',
     };
     for (const { code } of SUPPORTED_STUDY_LANGUAGES) {
       expect(getBackSideConfig(code, 'English').backField, code).toBe(expected[code]);
     }
+  });
+
+  /**
+   * The bug this pins: both card-detail modals called `getBackSide(saved)` with
+   * no native language, and it did not fail — `getBackSideConfig` reads any
+   * non-Korean value, `undefined` included, as "not a Korean native", so every
+   * Korean native saw an English gloss on every deck's card detail while the
+   * correct text sat two lines away in the same function.
+   *
+   * The parameter is required now, so the omission is a compile error rather
+   * than a wrong answer. This keeps the *reason* legible: it is the silence of
+   * the failure that made it survive, not the difficulty of the fix.
+   */
+  it('reads a missing native language as English, which is why it is required', () => {
+    expect(getBackSideConfig('Japanese', undefined).backField).toBe('english');
+    expect(getBackSideConfig('Japanese', 'Korean').backField).toBe('korean');
   });
 
   it('labels the back with the language it is actually in', () => {

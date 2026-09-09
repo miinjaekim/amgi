@@ -17,16 +17,18 @@ import {
 } from '../services/offlineReview';
 import { recordProgress } from '../services/progress';
 import {
-  advanceStreak, hourKey, isStudyLanguage, mergeStreakState, negateDelta, resolveNativeLanguage,
+  advanceStreak, DEFAULT_HANJA_PARTITION, hourKey, isHanjaPartition, isStudyLanguage, mergeStreakState,
+  negateDelta, resolveNativeLanguage,
   resolveStudyLanguage, reviewDelta,
   type RatingContext, type RecordedReview, type ReviewVerdict, type StreakState,
-  type StudyLanguage, type UserPreferences,
+  type HanjaPartition, type StudyLanguage, type UserPreferences,
 } from '@amgi/core';
 
 WebBrowser.maybeCompleteAuthSession();
 
 const LANG_CACHE_KEY = 'amgi_native_language';
 const STUDY_LANG_CACHE_KEY = 'amgi_study_language';
+const HANJA_PARTITION_CACHE_KEY = 'amgi_hanja_partition';
 
 const EMPTY_STREAK: StreakState = {
   streak: 0, longestStreak: 0, lastReviewDate: null, reviewedToday: 0, dirty: false,
@@ -99,10 +101,13 @@ interface UserContextType {
   authLoading: boolean;
   nativeLanguage: string | null | undefined;
   studyLanguage: StudyLanguage;
+  /** Which part of a hanja card is on the front. Meaningless on other decks. */
+  hanjaPartition: HanjaPartition;
   streak: number;
   reviewedToday: number;
   setNativeLanguage: (lang: string) => Promise<void>;
   setStudyLanguage: (lang: StudyLanguage) => Promise<void>;
+  setHanjaPartition: (partition: HanjaPartition) => Promise<void>;
   /** Returns the receipt `undoReview` needs — the day counted and what was written. */
   recordReview: (verdict: ReviewVerdict, context?: RatingContext) => RecordedReview;
   undoReview: (recorded: RecordedReview) => void;
@@ -118,6 +123,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const [authLoading, setAuthLoading] = useState(true);
   const [nativeLanguage, setNativeLanguageState] = useState<string | null | undefined>(undefined);
   const [studyLanguage, setStudyLanguageState] = useState<StudyLanguage>('Korean');
+  const [hanjaPartition, setHanjaPartitionState] = useState<HanjaPartition>(DEFAULT_HANJA_PARTITION);
   /**
    * The streak as one value, because every rule that touches it — merging a
    * server copy in, advancing it by a review — is a decision over all four
@@ -189,6 +195,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
         const cachedLang = await AsyncStorage.getItem(LANG_CACHE_KEY);
         const cachedStudy = await AsyncStorage.getItem(STUDY_LANG_CACHE_KEY);
+        const cachedPartition = await AsyncStorage.getItem(HANJA_PARTITION_CACHE_KEY);
 
         // A brand-new account inherits what this device already answered.
         // Without this, anyone who completes first run signed out is asked the
@@ -214,6 +221,15 @@ export function UserProvider({ children }: { children: ReactNode }) {
         if (isStudyLanguage(study)) {
           setStudyLanguageState(study);
           await AsyncStorage.setItem(STUDY_LANG_CACHE_KEY, study);
+        }
+
+        // Same server-or-cache rule as the study language above, for the same
+        // reason: a launch that never reached the server must not read the
+        // absence of a field as the user unsetting it.
+        const partition = reachedServer && !adopting ? prefs?.hanjaPartition : cachedPartition;
+        if (isHanjaPartition(partition)) {
+          setHanjaPartitionState(partition);
+          await AsyncStorage.setItem(HANJA_PARTITION_CACHE_KEY, partition);
         }
 
         if (adopting && cachedLang) {
@@ -256,6 +272,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
         setNativeLanguageState(cached ?? null);
         const cachedStudy = await AsyncStorage.getItem(STUDY_LANG_CACHE_KEY);
         if (isStudyLanguage(cachedStudy)) setStudyLanguageState(cachedStudy);
+        const cachedPartition = await AsyncStorage.getItem(HANJA_PARTITION_CACHE_KEY);
+        if (isHanjaPartition(cachedPartition)) setHanjaPartitionState(cachedPartition);
         commitStreak(EMPTY_STREAK);
       }
       setAuthLoading(false);
@@ -310,6 +328,11 @@ export function UserProvider({ children }: { children: ReactNode }) {
         // merge, and assigning zeros here would wipe a first session that has
         // not been written yet.
         if (!prefs) return;
+        // Picked up here as well as at launch, so choosing the partition on one
+        // device reaches the other without a restart.
+        setHanjaPartitionState(
+          isHanjaPartition(prefs.hanjaPartition) ? prefs.hanjaPartition : DEFAULT_HANJA_PARTITION,
+        );
         const merged = mergeStreakState(streakRef.current, streakFromPreferences(prefs));
         commitStreak(merged);
         if (!merged.dirty) void writeCachedStreak(signedInUid, merged);
@@ -377,6 +400,12 @@ export function UserProvider({ children }: { children: ReactNode }) {
         ...(nativeChanged ? { nativeLanguage: nextNative } : {}),
       });
     }
+  };
+
+  const setHanjaPartition = async (partition: HanjaPartition) => {
+    setHanjaPartitionState(partition);
+    await AsyncStorage.setItem(HANJA_PARTITION_CACHE_KEY, partition);
+    if (user) await saveUserPreferences(user.uid, { hanjaPartition: partition });
   };
 
   const recordReview = (verdict: ReviewVerdict, context: RatingContext = {}): RecordedReview => {
@@ -510,7 +539,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     streakState.lastReviewDate === getTodayString() ? streakState.reviewedToday : 0;
 
   return (
-    <UserContext.Provider value={{ user, authLoading, nativeLanguage, studyLanguage, streak: streakState.streak, reviewedToday, setNativeLanguage, setStudyLanguage, recordReview, undoReview, deleteAccount, handleSignIn, handleSignOut }}>
+    <UserContext.Provider value={{ user, authLoading, nativeLanguage, studyLanguage, hanjaPartition, streak: streakState.streak, reviewedToday, setNativeLanguage, setStudyLanguage, setHanjaPartition, recordReview, undoReview, deleteAccount, handleSignIn, handleSignOut }}>
       {children}
     </UserContext.Provider>
   );

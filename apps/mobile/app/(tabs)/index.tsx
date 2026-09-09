@@ -15,8 +15,8 @@ import {
   streamTermDepth, streamTermExamples, applySpellingCorrection,
 } from '../../src/services/gemini';
 import {
-  getCharacterBreakdown, getDepthTarget, getReading, getStudyLanguageConfig, getBackSideConfig,
-  getTermBackSide, getExampleSides,
+  getCharacterBreakdown, getDepthTarget, getReading, getStudyLanguageConfig,
+  buildLookupCardDraft, lookupCardFaces, getTermBackSide, getExampleSides,
   parseStreamedDepth, parseStreamedExamples, pronunciationNote,
   pronunciationNoteNeedsCredit, wordOfTheDayCore, PITCH_ACCENT_CREDIT,
 } from '@amgi/core';
@@ -70,6 +70,11 @@ const EXAMPLE_TERMS: Record<StudyLanguage, string[]> = {
   Swahili: ['harambee', 'pole pole', 'uhuru', 'longing', 'ndoto'],
   Japanese: ['木漏れ日', '積ん読', 'nostalgia', 'awkward', '侘寂'],
   TraditionalChinese: ['緣分', '撒嬌', 'nostalgia', 'awkward', '將就'],
+  // Single characters, in the traditional forms the 어문회 list assigns —
+  // 學, not 学. Nothing here is an English word, unlike every row above:
+  // typing "water" into a hanja deck asks for a translation, and the deck
+  // answers a different question about a character you already have.
+  Hanja: ['水', '心', '學', '道', '天'],
 };
 
 export default function LearnScreen() {
@@ -92,7 +97,6 @@ export default function LearnScreen() {
   const keyboardReserve = Dimensions.get('window').height * 0.46;
   const { user, nativeLanguage, studyLanguage, authLoading, handleSignIn } = useUser();
   const langConfig = getStudyLanguageConfig(studyLanguage);
-  const backConfig = getBackSideConfig(studyLanguage, nativeLanguage);
   const exampleTerms = EXAMPLE_TERMS[studyLanguage] ?? EXAMPLE_TERMS.Korean;
 
   const [term, setTerm] = useState('');
@@ -364,18 +368,7 @@ export default function LearnScreen() {
 
   const handleOpenSave = () => {
     if (!core) return;
-    const studySide = core.termLanguage === studyLanguage ? core.term : (core[langConfig.studyField] ?? '');
-    const backSide = core.termLanguage === backConfig.backLanguage
-      ? core.term
-      : getTermBackSide(core, studyLanguage, nativeLanguage);
-    setFlashcardDraft({
-      ...core,
-      ...(depth ?? {}),
-      examples: examples ?? [],
-      studyLanguage,
-      [langConfig.studyField]: studySide,
-      [backConfig.backField]: backSide,
-    });
+    setFlashcardDraft(buildLookupCardDraft(core, studyLanguage, nativeLanguage, { depth, examples }));
     setShowSaveModal(true);
     setSaveSuccess(false);
   };
@@ -408,11 +401,12 @@ export default function LearnScreen() {
     resolveExplanation(core.term, contextInput.trim(), false, correction ?? undefined);
   };
 
-  const translation = core
-    ? (core.termLanguage === studyLanguage
-        ? getTermBackSide(core, studyLanguage, nativeLanguage)
-        : core[langConfig.studyField]) || core.translation
-    : null;
+  // The same three lines web shows, from the same function.
+  const isHanja = studyLanguage === 'Hanja';
+  const faces = core ? lookupCardFaces(core, studyLanguage, nativeLanguage) : null;
+  const headword = faces?.headword ?? '';
+  const translation = faces?.back ?? null;
+  const hanjaGloss = faces?.gloss;
 
   // The first thing a cold launch shows, so it is the one placeholder that has
   // to look like the app. Laid out as the empty state below — chips and search
@@ -570,7 +564,13 @@ export default function LearnScreen() {
                 <View style={s.wotdRow}>
                   <Text style={s.wotdTerm}>{wordOfTheDay.term}</Text>
                   <Text style={s.wotdTranslation}>
-                    {studyLanguage === 'English' ? wordOfTheDay.korean : wordOfTheDay.english}
+                  {/* The same core the tap-through builds, so the face and
+                      the detail cannot disagree — see the web copy of this. */}
+                    {getTermBackSide(
+                      wordOfTheDayCore(wordOfTheDay, studyLanguage, nativeLanguage),
+                      studyLanguage,
+                      nativeLanguage,
+                    )}
                   </Text>
                 </View>
                 {wordOfTheDay.briefDefinition && (
@@ -660,9 +660,9 @@ export default function LearnScreen() {
           {core && (
             <View style={s.card}>
               <View style={s.cardHeaderRow}>
-                <Text style={s.cardTerm}>{core.term}</Text>
-                {core.termLanguage === studyLanguage && (
-                  <PronounceButton text={core.term} furigana={core.furigana} studyLanguage={studyLanguage} />
+                <Text style={s.cardTerm}>{headword}</Text>
+                {(core.termLanguage === studyLanguage || isHanja) && (
+                  <PronounceButton text={headword} furigana={core.furigana} eum={core.eum} studyLanguage={studyLanguage} />
                 )}
                 {partOfSpeechLabel(nativeLanguage, core) && (
                   <View style={s.formalityBadge}>
@@ -693,6 +693,7 @@ export default function LearnScreen() {
                   <PronounceButton text={translation} furigana={core.furigana} studyLanguage={studyLanguage} />
                 )}
               </View>
+              {!!hanjaGloss && <Text style={s.hanjaGloss}>{hanjaGloss}</Text>}
 
               {!depth ? (
                 <TouchableOpacity style={s.loadBtn} onPress={handleLoadDepth} disabled={loadingDepth}>
@@ -879,6 +880,8 @@ function makeStyles(C: Palette, tabBarHeight: number) {
   sectionLabel: { fontSize: 12, fontWeight: '700', color: C.muted, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 4, marginTop: 12 },
   translationRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
   translationText: { fontSize: 18, color: C.text, lineHeight: 26 },
+  // Quieter than the 훈음 above it: a second fact about the character.
+  hanjaGloss: { fontSize: 16, color: C.muted, marginTop: 2 },
   bodyText: { fontSize: 15, color: C.text, lineHeight: 22, opacity: 0.85 },
   exampleStudyRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   exampleStudyText: { flexShrink: 1 },

@@ -7,6 +7,7 @@ export * from './collections';
 export * from './reviewQueue';
 export * from './kana';
 export * from './kanji';
+export * from './hanja';
 export * from './dailyLife';
 export * from './idioms';
 export * from './kikuyuBasics';

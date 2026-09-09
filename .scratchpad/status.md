@@ -39,6 +39,26 @@ _Reconciled against `main` @ `bc8cb97`, 2026-08-21. `npm test` 246/246, measured
   per day could be reconstructed from `createdAt`; review history cannot be
   reconstructed from anything. So the calendar is near-empty for weeks by
   construction — expected, not a bug, and the empty state says so.
+- **Hanja is a study language on both platforms** (2026-09-09), the tenth
+  registry entry — an entry, one `/api/explain` branch, two i18n keys and a row
+  of example terms per app. Lookup verified against the live API, six probes:
+  水 → 물 수 / water, 學 → 배울 학, 樂 → ambiguous across its three 훈음, the
+  Japanese form 学 → corrected to 學, 물 → 水, and a bare 음 (수) → ambiguous
+  across five characters.
+  **All three parts landed the same day.** 훈 and 음 are separate fields, the
+  learner picks which part leads from settings, review reads its two faces
+  through `hanjaFaces()`, and the 급수 pack is 300 characters over five
+  subpacks. Typing is off on this deck.
+  Audio landed the same day: the button speaks the 음 (수), never the glyph, and
+  refuses to render without one.
+  ⚠️ **Nothing has been enrolled or reviewed on a real account yet** — the
+  console steps above are what stand between the pack and a saved card.
+  ⚠️ **Neither console step is done.** `cards_hanja` has **no security rule**,
+  so every read and write fails `permission-denied`, and **both** composite
+  indexes are missing — see the two-indexes lesson in [lessons.md](lessons.md),
+  since the link in the first error only builds one of them and `/review`
+  coming back to life makes it look finished while `/cards` is still broken.
+  Nothing can be saved to the deck until the rule is in.
 - **Spanish is live on web** (2026-08-22). Registry entry, prompt branch, i18n
   and example terms merged; lookup verified against the live API in both
   directions. `cards_spanish`'s security rule and **both** composite indexes are
@@ -221,6 +241,175 @@ Android, where only sign-in has been exercised.
 
 Closed calls, kept with their reasoning — a decision whose reasoning is lost gets
 reopened by the next person to notice the symptom. Newest first.
+
+### A phrase on the Hanja deck stays a list of characters (2026-09-09)
+
+**Left as built, on the user's call.** Typing 수신제가치국평천하 — or 修身齊家治
+國平天下 — into the Hanja deck returns an eight-item disambiguation, one entry
+per character with its 훈음, and picking any of them gives a proper card. The
+rule that makes a multi-character term ambiguous rather than a card generalises
+to the hangul form on its own; no separate handling was needed.
+
+**The argument for leaving it**: every chip is a genuine hanja card, and someone
+who types a 고사성어 into a character deck plausibly wants exactly that — its
+characters. Studying 고사성어 by their hanja is a normal way to study them.
+
+**What was considered and declined.** The deck is answering a different question
+than the one asked, and does not say so — the *phrase* is a Korean vocabulary
+item, and the Korean deck already answers it properly (`partOfSpeech: 'idiom'`,
+a real gloss, and the depth section breaking out its hanja; the user's own card
+for this phrase lives there). The right fix is a cross-deck pointer — "this is a
+word, study it on the Korean deck" — and that needs a concept the app has never
+had. Declined for now rather than invented mid-branch.
+
+⚠️ **`meanings` has no cap anywhere**, so a pasted run of hanja renders as many
+chips as the model returns. Known and accepted: nothing breaks, it is only long,
+and no real input has hit it. A prompt-level cap was offered and declined with
+the rest. If the wall ever shows up in use, that is the cheap half of the fix.
+
+### The hanja button says the 음, and refuses to say anything else (2026-09-09)
+
+Hanja shipped without audio earlier the same day, and the reason expired within
+hours: the voice was settled (`ko-KR`, with `ko-KR-Neural2-C` for single
+characters) and the *text* was not, because the answer worth hearing is the 음
+and the 음 had no field until three-sided cards landed. It has one now.
+
+**Measured before deciding.** 水 handed to a Korean voice does return audio —
+6720 bytes, against 6336 for 수, both well clear of the silence floor. So the
+argument for speaking the 음 is not that the glyph fails; it is that **nothing
+in the response says what it read**, and a deck whose whole subject is a
+character's reading cannot rest on a guess about one. The 음 is a string the
+card already holds.
+
+**Enforced in the component, not by convention.** `PronounceButton` renders
+nothing on Hanja unless it is given the 음. A surface that forgets to pass it
+loses a button instead of gaining a mispronunciation, and example sentences and
+translations on this deck therefore have no button at all — which is right,
+since neither is a hanja reading.
+
+`getSpokenText` took the 음 as a third argument beside `furigana` rather than
+growing a second function: both answer the same question — the reading that
+resolves a glyph — and they never appear on one card, so the precedence between
+them only had to be defined, not negotiated.
+
+Every utterance on this deck is one syllable, which is exactly what
+`ttsShortVoiceName` exists for: Chirp 3: HD intermittently returns silence on a
+lone character where Neural2 returned it 0/91 times.
+
+### The 급수 pack was sourced, not recalled — and how (2026-09-09)
+
+**Approved by the user 2026-09-09.** 300 characters, five subpacks, 8급 through
+6급. The item budgeted for sourcing being the hard part and it was, but it came
+out better than expected: the 배정한자 is published as an XLS in 어문회's own
+learning-materials section, and a transcription of it carries the levels *and*
+the 대표훈음 with 훈 and 음 already apart — the shape three-sided cards need.
+
+**Fetched as bytes, not as prose, and that is the transferable part.**
+`raw.githubusercontent.com` is blocked from the sandbox, so the CSVs came
+through the GitHub *contents* API and were base64-decoded locally. The available
+alternative was a fetch-and-summarise tool, which puts a **model** between the
+source and the file — and a model transcribing 300 hanja is precisely what
+"the model is not a source" forbids. It is not a hypothetical: it is how the
+四 compatibility-ideograph rows would have been silently normalised away, or
+not, with no way to tell which. **When a pack rule says a model is not a source,
+that includes the model inside the fetch tool.**
+
+**Two independent sources on the half that matters.** Unihan's `kHangul`
+corroborates all 300 음 with no exceptions, and ko.wikipedia's cumulative counts
+(8급 50, 7급 150, 6급 300) match at the three rungs it names — which also
+settles the per-level figures the backlog had carried as unverified: 50 / 50 /
+50 / 75 / 75 newly assigned.
+
+**The kanji-pack question is answered: neither reads from the other.** 151 of
+the 300 overlap, and the two decks deliberately answer different questions —
+the kanji pack authored *modern Korean* glosses (女 → 여자, 大 → 크다) where a
+hanja deck needs the 대표훈음 (계집 녀, 큰 대). So there is no shared source to
+keep in step, and the drift risk the backlog flagged does not exist. The kanji
+pack corroborates the character and the English; never the 훈.
+
+⚠️ **One row ships knowingly wrong.** 省 is 살필 성 — *examine* — and Unihan
+carries only "province" and "save, economize". Writing "examine" would be a tier
+C assertion with no source, which `docs/packs/README.md` says to cut or get
+checked rather than ship quietly. It is flagged in the draft and tracked in the
+backlog as the one open row.
+
+**The ingest script is committed beside the draft** because the draft's tier
+column is a claim about provenance, and a description of a method is not
+evidence of it — re-running it reproduces all 300 rows exactly.
+
+### Three-sided hanja cards cost a setting, not a scheduling axis (2026-09-09)
+
+**Shipped as scoped**, and the scoping is the whole story: the first read of
+"three-sided" looked like a third `ReviewDirection`, which is a two-member union
+read in 92 places across 24 files and written into every card document in every
+language. It is not that. Three parts split into a front and a back is six
+configurations, and those six are three partitions × the two directions that
+already exist — so `sm2.ts`, `reviewQueue.ts`, `offlineReview.ts` and the
+direction filter were **not touched at all**.
+
+**`hanjaFaces()` is the only place the parts are joined**, and that is the rule
+worth keeping. `hun` and `eum` are stored apart because the split moves; any
+surface that assembles its own 훈음 is a second opinion about the separator.
+The back also keeps 한자 · 훈 · 음 order whichever part was lifted out of it, so
+水 물 and 물 水 never appear as the same fact in two orders.
+
+**`korean` is still written, and derived.** Every surface keyed on the language
+pair — the card list, the detail modal, CSV and Anki export, `getBackSide` —
+reads `korean` and now gets the assembled 훈음 without knowing partitions exist.
+It is filled from `hunEum()` at the one point a card is written, so it cannot
+drift from the two fields it comes from. The alternative was making six generic
+surfaces Hanja-aware to avoid storing a derived string; this is the smaller
+change and the drift risk is contained to one line per platform.
+
+**Typing is off on Hanja, in both directions.** `gradeTypedAnswer` grades
+against *a* side, and a typed 물 against a back of 물 수 is neither right nor
+wrong until someone decides whether both parts are required — and on the default
+partition the expected answer is a glyph most learners cannot type. Left off
+rather than guessed at; `promptsForTyping` takes the study language to say so.
+
+⚠️ **The accepted cost stands: switching partition inherits intervals earned
+answering a different question.** The control lives in settings on both
+platforms and **nowhere else** — in the review session it would drift into a
+per-session toggle and make those inherited intervals meaningless. Reopen with
+partition-keyed tracking if switching turns out to be common; it is additive and
+invalidates nothing stored.
+
+### Hanja's card back, and the `hanja` name it had to take (2026-09-09)
+
+Two calls taken together, because the registry entry could not be written
+without either. Both set by the user.
+
+**An English native gets 훈음 *plus* an English gloss, not instead of it.** 水 is
+물 수 to every reader — 훈음 is how the character is *named* in Korean, and
+"water" is a different fact about it rather than a translation of 물 수. The
+alternative on the table was a Korean-native-only deck, which is arguably truer
+to an 어문회 exam deck and closes it to everyone else. So a hanja card carries
+four parts: the character, its 훈, its 음, and an English meaning that an English
+native sees in addition to the 훈음.
+
+**This is the first card `getBackSideConfig` does not fully describe**, and the
+gap is structural rather than a bug. That function answers "which slot holds the
+translation", keyed on the *pair* of languages; 훈음 is not a translation and
+belongs to neither side of the pair. It still answers correctly for the gloss
+slot, which is all it is asked for, and the Hanja branch of `/api/explain` asks
+for `korean` outright instead of routing through `nativeBackRule` — which is
+empty for an English native and would have dropped the 훈음 for exactly the
+reader who most needs it spelled out.
+
+**The deprecated `hanja` depth field was migrated rather than guarded.** It held
+legacy Korean cards' character breakdown and was left in place precisely to
+avoid a migration, read through `getCharacterBreakdown()`. The new study field
+wants the same name for the character itself. The cheap option was a guard —
+fall back to the legacy field only for Korean cards, which is precise, since it
+was only ever written for them — and the user chose the migration instead:
+`migrate:legacy-hanja` promotes it to `characterBreakdown` and deletes it, and
+`TermDepth` loses the field. One name, one meaning, nothing to remember later.
+
+⚠️ **The migration must never touch `cards_hanja`**, where `hanja` is the front
+of the card: promoting it would put the character in its own breakdown section
+and then delete the front. The script excludes Hanja by construction — it builds
+its collection list from the registry minus that one entry — rather than by a
+filter a later edit could widen past.
 
 ### Per-level content is allowed; per-level adaptivity is not (2026-09-09)
 

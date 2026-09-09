@@ -10,9 +10,13 @@ import type { StudyLanguage } from './types';
  * Deliberately takes `furigana` and not `getReading()`: the other reading
  * field, `pinyin`, is Latin transliteration, and handing "jiǎotàchē" to a
  * Mandarin voice would get the letters read back, not the word.
+ *
+ * A hanja's `eum` is the same kind of field — the reading that resolves a
+ * glyph — and it takes priority over `furigana` because the two never appear
+ * on one card: a Hanja card has no furigana and a Japanese one has no 음.
  */
-export function getSpokenText(text: string, furigana?: string): string {
-  return furigana?.trim() || text;
+export function getSpokenText(text: string, furigana?: string, eum?: string): string {
+  return eum?.trim() || furigana?.trim() || text;
 }
 
 export async function getPronunciationUrl(

@@ -285,6 +285,45 @@ Three things worth keeping:
   and propagates slowly — so the error means "not ready yet" at least as often
   as it means "missing". **Retry before changing anything**; the temptation is
   to start editing config that had nothing to do with it.
+- **A hanja that renders correctly can still be the wrong character.** Four rows
+  of the 어문회 배정한자 arrived as **CJK Compatibility Ideographs** — 金 as
+  U+F90A rather than U+91D1, and 車 不 樂 likewise. They are pixel-identical to
+  the unified forms and they are not the same character, so a card front stored
+  that way silently matches nothing: not a learner typing 金, not the kanji
+  pack, not the pack's own already-saved marking, not Firestore dedupe. Nothing
+  errors; the deck just behaves as though those cards were never saved.
+  **They are exactly the four characters carrying two Korean readings** (금/김,
+  거/차, 불/부, 락/악/요), which is what that Unicode block exists to encode — so
+  this is a property of Korean hanja data, not of one dataset, and **the next
+  source will have them too**. `docs/packs/hanja-geupsu-ingest.py` NFC-normalises
+  at ingest and asserts that nothing survived; `hanja-pack.test.ts` guards the
+  shipped list. Normalise any Han-script list at the boundary, and assert it —
+  eyeballing the table cannot find this.
+
+- **A hardcoded language *pair* is the shape these bugs keep arriving in.**
+  Three surfaces were still asking a question the app stopped answering that
+  way: both card-detail modals dropped `nativeLanguage` from `getBackSide`, and
+  the word of the day rendered `studyLanguage === 'English' ? korean : english`
+  — a rule from before backs became native-aware. All three showed a Korean
+  native the English side, on decks whose documents carried the Korean one all
+  along. **The tell is a screen disagreeing with itself**: the word of the day's
+  face was English while tapping it showed Korean, because the tap already went
+  through `wordOfTheDayCore` and the face did not. When two paths render the
+  same fact, make them share the function, not the intention — and grep for
+  `=== 'English' ?` before believing there are no more.
+
+- **An optional parameter that has a plausible default is a bug waiting to be
+  silent.** `getBackSide(card, nativeLanguage?)` resolved a missing native
+  language to the English back, because `getBackSideConfig` reads anything that
+  is not `'Korean'` — `undefined` included — as "not a Korean native". Both
+  card-detail modals dropped the argument, so **every Korean native saw an
+  English gloss on every deck's card detail**, with the correct text two lines
+  away in the same function. Nothing threw, nothing rendered blank, and the
+  neighbouring unsaved-entry path was right, which is what made it survive:
+  the deck tile showed Korean and the modal showed English. The parameter is
+  required now, which turns the omission into a compile error. **Where a
+  default is indistinguishable from a real answer, do not have one.**
+
 - **Security rules are manual** (Firebase console), not in the codebase. Add
   rules for every new collection — there is no wildcard support.
 - **Composite indexes** are required for multi-field filter+sort queries (e.g.

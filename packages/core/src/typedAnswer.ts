@@ -1,4 +1,4 @@
-import type { CardSides, TermCore } from './types';
+import type { CardSides, StudyLanguage, TermCore } from './types';
 import { getStudyLangSide } from './types';
 import type { ReviewDirection } from './sm2';
 
@@ -144,7 +144,18 @@ export function gradeTypedAnswer(typed: string, card: TypedAnswerCard): TypedAns
  * expected answer is genuinely ambiguous in a direction the target never is.
  * A mixed session is therefore mixed on screen: gloss→word cards get the
  * input, word→gloss cards stay flip-and-rate.
+ *
+ * **Never on Hanja**, whichever direction. `gradeTypedAnswer` grades input
+ * against *a* side, and a hanja card's back is two parts: with 물 and 수 both
+ * behind the character, a typed 물 is neither right nor wrong until someone
+ * decides whether both parts are required — and on the `character` partition
+ * the expected answer is a glyph most learners cannot type at all. Left off
+ * rather than guessed at; it is additive if someone asks for it.
  */
-export function promptsForTyping(typingEnabled: boolean, direction: ReviewDirection): boolean {
-  return typingEnabled && direction === 'backToFront';
+export function promptsForTyping(
+  typingEnabled: boolean,
+  direction: ReviewDirection,
+  studyLanguage?: StudyLanguage | string,
+): boolean {
+  return typingEnabled && direction === 'backToFront' && studyLanguage !== 'Hanja';
 }

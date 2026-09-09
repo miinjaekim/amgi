@@ -28,11 +28,13 @@ interface TermCore {
   gender?: string;      // grammatical gender: Swedish en/ett, French le/la
   furigana?: string;    // Japanese kana reading, when the term contains kanji
   pinyin?: string;      // Traditional Chinese, tone-marked
+  hun?: string;         // Hanja 훈 — the native-Korean meaning (물)
+  eum?: string;         // Hanja 음 — the Korean sound (수)
   briefDefinition?: string;
   translation?: string; // legacy only — cards pre-dating the korean/english fields
 }
 
-interface TermDepth { definition?: string; characterBreakdown?: string; notes?: string; hanja?: string /* deprecated */ }
+interface TermDepth { definition?: string; characterBreakdown?: string; notes?: string }
 interface TermExplanation extends TermCore, TermDepth { examples?: ExamplePair[] }
 
 export interface Flashcard extends TermExplanation {
@@ -439,8 +441,18 @@ review-direction chips, and question prompts. UI and services look everything up
 through `getStudyLanguageConfig()`.
 
 **Adding a language** = one registry entry + an `/api/explain` prompt branch +
-i18n keys + the two manual Firestore steps above. The depth and examples routes
-are already generic.
+i18n keys + a row in each app's `EXAMPLE_TERMS` + a line in the exhaustive table
+in `back-side.test.ts` + the two manual Firestore steps above. The depth and
+examples routes are already generic, and the language pickers derive from the
+registry, so no UI list needs touching.
+
+**Two of those five tell you they are missing; three do not.** `EXAMPLE_TERMS`
+on mobile is a `Record<StudyLanguage, string[]>` and fails the typecheck, and
+`back-side.test.ts` iterates `SUPPORTED_STUDY_LANGUAGES` against a hand-written
+table so a language with no line fails the suite — both deliberate. **Web's
+`EXAMPLE_TERMS` is `Record<string, string[]>` and says nothing**: it falls back
+to the Korean row, so the new deck's search placeholder suggests 눈치 and 사랑
+and looks deliberate. Copy the row to both.
 
 **Prompts must use `config.label`, not the registry code.** Codes are
 identifiers: interpolating `${studyLanguage}` produced "a learner of
@@ -601,8 +613,43 @@ schema change plus offline-write handling for a one-second choice (PR #65).
   `characterSectionKey` (Korean, Japanese, Traditional Chinese); the parser
   keys off `text.includes('CHARACTERS:\n')`, never off the language. The
   per-language wording lives in `apps/web/src/lib/characterBreakdown.ts` so the
-  streaming and JSON routes can't drift. Legacy Korean cards still carry
-  `hanja` and are read through `getCharacterBreakdown()` — no migration.
+  streaming and JSON routes can't drift. **Hanja carries no `characterSectionKey`
+  despite being the most Han-script deck there is** — a card whose front is one
+  character has nothing to break into characters.
+  Legacy Korean cards used to carry the breakdown as `hanja` and were read
+  through `getCharacterBreakdown()` with no migration. That ended 2026-09-09,
+  when `hanja` became the *front* of a Hanja card: `migrate:legacy-hanja` moved
+  them onto `characterBreakdown` and the deprecated field is gone.
+## The hanja partition
+
+`HanjaPartition = 'character' | 'hun' | 'eum'` in `types.ts` — which part of a
+hanja card is on the front. Stored on `UserPreferences.hanjaPartition`, absent
+meaning `DEFAULT_HANJA_PARTITION` (`'character'`, the question the 급수 exam
+asks). One setting, not one per deck: there is one Hanja deck.
+
+**It is a display setting, not a scheduling axis.** Three partitions × the two
+existing `ReviewDirection`s covers all six front/back configurations, so nothing
+under `sm2.ts` / `reviewQueue.ts` / `offlineReview.ts` changed:
+
+| partition | frontToBack | backToFront |
+|---|---|---|
+| `character` | 水 → 물 수 | 물 수 → 水 |
+| `hun` | 물 → 水 수 | 水 수 → 물 |
+| `eum` | 수 → 水 물 | 水 물 → 수 |
+
+`hanjaFaces(card, partition)` is **the only place the three parts are joined**,
+and the back keeps 한자 · 훈 · 음 order whichever part came out of it. It falls
+back to the character partition on a card with no `hun`/`eum` to split.
+
+`hunEum(card)` assembles the same string for `korean`, which `buildFlashcardDoc`
+writes on save so the card list, detail modal and export stay partition-blind.
+**Derived, never authored** — one line per platform, at the one point a card is
+written.
+
+⚠️ **The control belongs in settings and nowhere else.** In the review session
+it becomes a per-session toggle, and switching inherits intervals earned
+answering a different question.
+
 ## Packs
 
 `packages/core/src/packs.ts`. **One kind, since 2026-08-02** — the `lookup` /

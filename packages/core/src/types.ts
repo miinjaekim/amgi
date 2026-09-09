@@ -6,6 +6,14 @@ import { kanaToHangul, kanaToRomaji, kikuyuToEnglish, kikuyuToHangul } from './t
  * one language with a script preference: the decks stay independent, so
  * neither constrains the other, and regional vocabulary differences go beyond
  * the glyphs. A Simplified deck would be its own registry entry.
+ *
+ * `Hanja` is the entry that most looks like it should have been a pack, and the
+ * precedent cuts that way: kanji is a pack under Japanese, and so are both kana
+ * packs. **What makes it an entry is the card, not the script.** A hanja card
+ * holds three parts — the character, its 훈 (meaning) and its 음 (sound) — and
+ * the learner chooses which of them is the front. 훈 and 음 have to be
+ * addressable separately for that, and a pack cannot add a field. Traditional
+ * vs Simplified is the precedent that fits: a script with its own collection.
  */
 export type StudyLanguage =
   | 'Korean'
@@ -16,7 +24,8 @@ export type StudyLanguage =
   | 'TraditionalChinese'
   | 'Spanish'
   | 'Kikuyu'
-  | 'Swahili';
+  | 'Swahili'
+  | 'Hanja';
 
 /**
  * i18n keys for the character-breakdown section heading. Every Han-script
@@ -33,7 +42,8 @@ export type FieldLabelKey =
   | 'labelTraditionalChinese'
   | 'labelSpanish'
   | 'labelKikuyu'
-  | 'labelSwahili';
+  | 'labelSwahili'
+  | 'labelHanja';
 
 export type CardSideField =
   | 'korean'
@@ -44,7 +54,8 @@ export type CardSideField =
   | 'traditionalChinese'
   | 'spanish'
   | 'kikuyu'
-  | 'swahili';
+  | 'swahili'
+  | 'hanja';
 
 /**
  * Per-study-language configuration. Adding a language means adding an entry
@@ -247,6 +258,47 @@ export const STUDY_LANGUAGE_CONFIGS: Record<StudyLanguage, StudyLanguageConfig> 
     ttsLanguageCode: 'cmn-TW',
     ttsVoiceName: 'cmn-TW-Wavenet-A',
   },
+  Hanja: {
+    code: 'Hanja',
+    label: 'Hanja',
+    labelNative: '한자',
+    // Its own collection, not `cards`. A hanja card is a different shape from a
+    // Korean word card — three parts rather than a front and a gloss — and the
+    // deck filters, progress rollups and pack enrolment all key on the
+    // collection to keep the two from pooling.
+    collection: 'cards_hanja',
+    // `ko`, because a hanja card's text that `Intl` ever segments is Korean:
+    // 훈, 음 and the 훈음 read together. The character itself is one grapheme
+    // and segments the same under any locale.
+    locale: 'ko',
+    studyField: 'hanja',
+    studyLabelKey: 'labelHanja',
+    // No `characterSectionKey`, deliberately, even though this is the most
+    // Han-script deck there is. That section answers "what is inside 여건" — it
+    // breaks a word into its characters. A card whose front is already one
+    // character has nothing to break down, and asking the depth prompt for it
+    // would return the card back to itself. Korean keeps `sectionHanja` for the
+    // question it does answer.
+    //
+    // **The button speaks the 음, never the glyph** — 수, not 水.
+    //
+    // Not a style preference. Handing 水 to a Korean voice does return audio
+    // (6720 bytes, well clear of the silence floor, measured 2026-09-09), but
+    // nothing about the response says *what it read*, and a card that teaches a
+    // reading cannot be built on a guess about one. The 음 is a string this
+    // card already holds and there is nothing to infer. `PronounceButton`
+    // enforces it: on Hanja it renders only when it is given the 음, so a glyph
+    // or a Han-script example can never reach the voice by omission.
+    //
+    // Every utterance here is therefore one syllable, which is exactly the case
+    // `ttsShortVoiceName` exists for — Chirp 3: HD intermittently returns
+    // silence on a lone character where Neural2 did not, 0/91 times. The
+    // Chirp voice stays named for the multi-syllable text this deck does not
+    // currently produce.
+    ttsLanguageCode: 'ko-KR',
+    ttsVoiceName: 'ko-KR-Chirp3-HD-Charon',
+    ttsShortVoiceName: 'ko-KR-Neural2-C',
+  },
   // English study pairs with Korean — the only non-English native language
   // supported today. A native-Korean learner's card back is Korean.
   English: {
@@ -290,6 +342,15 @@ export interface BackSideConfig {
  * language you already speak is the only case where that collides with the
  * front of the card, and there the back falls to the other side — which
  * reproduces exactly what the old hardcoded table said for every pair.
+ *
+ * ⚠️ **Hanja is the one card this does not fully describe**, and the gap is
+ * real rather than a bug to fix here. 水 is 물 수 to every reader: 훈음 is
+ * Korean whatever language the learner speaks, and "water" is a *different
+ * fact* about the character, not a translation of 물 수. So a hanja card's back
+ * is 훈 + 음 always, and an English native gets an English gloss **in addition**
+ * — decided by the user 2026-09-09 — rather than instead. This function still
+ * answers correctly for the gloss slot (`english` for an English native), which
+ * is all it is asked for until 훈 and 음 become fields of their own.
  */
 export function getBackSideConfig(
   studyLanguage?: StudyLanguage | string,
@@ -305,6 +366,88 @@ export function getBackSideConfig(
   };
 }
 
+/**
+ * Which part of a hanja card sits on the front. The other two fall to the back.
+ *
+ * **A display setting, not a scheduling axis** — decided by the user
+ * 2026-09-09. Three parts split into a front and a back is six configurations,
+ * and those six are exactly these three partitions × the two `ReviewDirection`s
+ * that already exist. So `frontToBack` and `backToFront` keep meaning forward
+ * and reverse, the union does not grow, and `sm2.ts`, `reviewQueue.ts` and
+ * `offlineReview.ts` are untouched:
+ *
+ * | partition   | frontToBack        | backToFront        |
+ * |-------------|--------------------|--------------------|
+ * | `character` | 水 → 물 수          | 물 수 → 水          |
+ * | `hun`       | 물 → 水 수          | 水 수 → 물          |
+ * | `eum`       | 수 → 水 물          | 水 물 → 수          |
+ *
+ * ⚠️ **Chosen deck-level and left alone**, the way a study language is. The
+ * accepted cost is that switching inherits intervals earned answering a
+ * different question; choosing once is what keeps that small. **This control
+ * does not belong in the review session**, where it would become a toggle and
+ * make the inherited intervals meaningless. Partition-keyed tracking is
+ * additive and can be layered on later if switching turns out to be common.
+ */
+export type HanjaPartition = 'character' | 'hun' | 'eum';
+
+export const HANJA_PARTITIONS: readonly HanjaPartition[] = ['character', 'hun', 'eum'] as const;
+
+/** 水 → 물 수, the question the 급수 exam actually asks. */
+export const DEFAULT_HANJA_PARTITION: HanjaPartition = 'character';
+
+export function isHanjaPartition(value: unknown): value is HanjaPartition {
+  return typeof value === 'string' && (HANJA_PARTITIONS as readonly string[]).includes(value);
+}
+
+/**
+ * A hanja card split into a front and a back, by partition.
+ *
+ * **The only place the three parts are ever joined.** They are stored apart
+ * precisely because the split moves, so every surface that wants 훈음 as one
+ * string comes through here rather than assembling its own — which is how the
+ * two would drift into disagreeing about the separator.
+ *
+ * The back keeps the canonical 한자 · 훈 · 음 order whichever part was lifted
+ * out of it, so 水 물 and 물 수 never appear as the same fact in two orders.
+ *
+ * **Falls back to the character partition on a card that cannot be split.**
+ * Hanja cards saved before 훈 and 음 became fields carry the 훈음 assembled in
+ * `korean` and nothing to take apart; asking one for the 훈 alone would show a
+ * blank front. Answering the question the card *did* store is the only honest
+ * option, and it is what a learner sees until that card is next enriched.
+ */
+export function hanjaFaces(
+  card: Pick<TermCore, 'hanja' | 'hun' | 'eum' | 'korean'> & { term?: string },
+  partition: HanjaPartition = DEFAULT_HANJA_PARTITION,
+): { front: string; back: string } {
+  const character = card.hanja || card.term || '';
+  const hun = card.hun || '';
+  const eum = card.eum || '';
+
+  if (!hun || !eum) {
+    return { front: character, back: [hun, eum].filter(Boolean).join(' ') || card.korean || '' };
+  }
+
+  const join = (...parts: string[]) => parts.filter(Boolean).join(' ');
+  if (partition === 'hun') return { front: hun, back: join(character, eum) };
+  if (partition === 'eum') return { front: eum, back: join(character, hun) };
+  return { front: character, back: join(hun, eum) };
+}
+
+/**
+ * The 훈음 as one string — 물 수.
+ *
+ * Written onto `korean` when a hanja card is saved, so every surface keyed on
+ * the language pair (the card list, the detail modal, CSV and Anki export,
+ * `getBackSide`) keeps working with no knowledge of partitions. **Derived,
+ * never authored**: `hun` and `eum` are the stored truth and this is assembled
+ * from them at the one point a card is written.
+ */
+export function hunEum(card: Pick<TermCore, 'hanja' | 'hun' | 'eum' | 'korean'>): string {
+  return hanjaFaces(card, 'character').back;
+}
+
 // Example pairs — one side per language, see StudyLanguageConfig field names
 export interface ExamplePair {
   korean?: string;
@@ -315,6 +458,12 @@ export interface ExamplePair {
   spanish?: string;
   kikuyu?: string;
   swahili?: string;
+  /**
+   * A word the character appears in, not a sentence — an example of 독음, the
+   * sound a hanja takes inside a word, which is the thing a 훈음 alone does not
+   * tell you. 水 is 물 수 on its own and 수 in 수영.
+   */
+  hanja?: string;
   english: string;
 }
 
@@ -388,6 +537,7 @@ export interface TermCore {
   spanish?: string;
   kikuyu?: string;
   swahili?: string;
+  hanja?: string;
   english: string;
   translation?: string;
   /**
@@ -414,6 +564,22 @@ export interface TermCore {
    * and on any word the dictionary does not carry.
    */
   pitchAccent?: number;
+  /**
+   * The two halves of a hanja's 훈음, stored apart and never as one string.
+   *
+   * 훈 is the character's native-Korean meaning (물), 음 is its Korean sound
+   * (수); read together they are the 훈음, 물 수. They sit here beside `furigana`
+   * and `pinyin` — parts of one card — rather than becoming `CardSideField`s,
+   * which name the *languages* a card has sides in. Both of these are Korean.
+   *
+   * **Separate because the split moves.** The kanji pack can author one string
+   * (`물 — みず / スイ`) because its back never changes shape; a hanja card's
+   * front is whichever part the learner chose, so any pre-assembled 훈음 would
+   * have to be taken apart again at review. `hanjaFaces()` is the only place
+   * they are ever joined.
+   */
+  hun?: string;
+  eum?: string;
   briefDefinition?: string;
 }
 
@@ -425,20 +591,25 @@ export interface TermDepth {
    * Chinese all want this section, and only one of them calls it hanja.
    */
   characterBreakdown?: string;
-  /**
-   * @deprecated Korean cards saved before the field was generalized. Never
-   * write it; read it through `getCharacterBreakdown()`, which is why those
-   * cards need no migration.
-   */
-  hanja?: string;
   notes?: string;
 }
 
-/** The character breakdown to render, from either the current or legacy field. */
+/**
+ * The character breakdown to render.
+ *
+ * Korean cards saved before this field was generalized carried the breakdown as
+ * `hanja`, and this read through to it rather than migrating them. That ended
+ * when Hanja became a study language: `hanja` is now the *front* of a Hanja
+ * card, and one name cannot mean the character and its own breakdown at once.
+ * `migrate:legacy-hanja` moved those cards, so there is one field again.
+ *
+ * Still a function rather than a field read, because every caller renders the
+ * section the same way and an empty string has to read as absent.
+ */
 export function getCharacterBreakdown(
-  depth: Pick<TermDepth, 'characterBreakdown' | 'hanja'>
+  depth: Pick<TermDepth, 'characterBreakdown'>
 ): string | undefined {
-  return depth.characterBreakdown || depth.hanja || undefined;
+  return depth.characterBreakdown || undefined;
 }
 
 export interface TermExplanation extends TermCore, TermDepth {
@@ -518,6 +689,14 @@ export type CardSides = Partial<Record<CardSideField, string>> & {
   studyLanguage?: StudyLanguage;
   term?: string;
   translation?: string;
+  /**
+   * A hanja's 훈 and 음. Card fields rather than `CardSideField`s — those name
+   * the *languages* a card has sides in, and these are two halves of one
+   * Korean reading — but the side accessors below need them, because a hanja
+   * card's Korean side is assembled from exactly these two.
+   */
+  hun?: string;
+  eum?: string;
 };
 
 /** Returns the study-language side of a card. */
@@ -533,9 +712,26 @@ export function getStudyLangSide(card: CardSides): string {
  * had saved cards: every document written before that carries its back there
  * and nowhere else. A Korean native sees English on those rather than a blank
  * card, until the card is next saved and gains a Korean side.
+ *
+ * ⚠️ **`nativeLanguage` is required, and that is a fix rather than a style.**
+ * It was optional, and omitting it does not fail — it quietly resolves to the
+ * English back, because `getBackSideConfig` reads any non-Korean value as "not
+ * a Korean native". Both card-detail modals dropped it and showed every Korean
+ * native an English gloss on every deck, on a screen where the correct text was
+ * two lines away in the same function. A required parameter turns that from a
+ * wrong answer into a compile error.
  */
-export function getBackSide(card: CardSides, nativeLanguage?: string | null): string {
+export function getBackSide(card: CardSides, nativeLanguage: string | null | undefined): string {
   const { backField } = getBackSideConfig(card.studyLanguage, nativeLanguage);
+  // A hanja's Korean side is its 훈음, and the lookup returns that as two
+  // fields rather than one string — deliberately, since either half can be the
+  // front. `buildFlashcardDoc` assembles it at save time, so without the same
+  // assembly here every surface *before* the save is the one place a hanja card
+  // has no Korean back, and falls through to the English gloss instead.
+  if (card.studyLanguage === 'Hanja' && backField === 'korean') {
+    const assembled = hunEum(card);
+    if (assembled) return assembled;
+  }
   return card[backField] || card.english || card.translation || '';
 }
 
@@ -555,6 +751,15 @@ export function getTermBackSide(
   nativeLanguage?: string | null
 ): string {
   const { backField } = getBackSideConfig(studyLanguage, nativeLanguage);
+  // A hanja's Korean side is its 훈음, and the lookup returns that as two
+  // fields rather than one string — deliberately, since either half can be the
+  // front. `buildFlashcardDoc` assembles it at save time, so without the same
+  // assembly here every surface *before* the save is the one place a hanja card
+  // has no Korean back, and falls through to the English gloss instead.
+  if (studyLanguage === 'Hanja' && backField === 'korean') {
+    const assembled = hunEum(core);
+    if (assembled) return assembled;
+  }
   return core[backField] || core.english || core.translation || '';
 }
 
@@ -644,6 +849,7 @@ export function getDepthTarget(
     | 'spanish'
     | 'kikuyu'
     | 'swahili'
+    | 'hanja'
     | 'english'
     | 'briefDefinition'
   >,
@@ -672,7 +878,14 @@ export function getDepthTarget(
 export interface WordOfTheDay {
   term: string; // study-language word
   english: string;
-  korean?: string; // translation side for English study
+  /**
+   * The Korean side. Named for English study because that is the only deck
+   * where it is the *front*'s counterpart, but it is filled on every deck a
+   * Korean native studies — `/api/word-of-the-day` asks for both sides
+   * whenever the back is Korean. Absent only on documents written before backs
+   * became native-aware, which is what `wordOfTheDayCore` falls back for.
+   */
+  korean?: string;
   briefDefinition?: string;
   partOfSpeech?: PartOfSpeech; // every language
   formality?: string; // Korean
@@ -687,6 +900,43 @@ export interface WordOfTheDay {
    * use `wordOfTheDayCore()`, which reconstructs it from the fields above.
    */
   core?: TermCore;
+}
+
+/**
+ * The three lines a lookup result shows: the headword, the side under it, and
+ * the gloss that sometimes rides beside that side.
+ *
+ * Shared because both apps render this identically, and because rendering the
+ * same fact twice is how three separate "Korean native sees English" bugs got
+ * in on 2026-09-09. `buildLookupCardDraft` decides what the *card* will be;
+ * this decides what the screen above the save button says, and the two have to
+ * agree or the save is a surprise.
+ *
+ * **On Hanja the headword is the character, whichever half was typed.** Type 물
+ * and the answer is 水 with 물 수 behind it — not 물 with 水 as its
+ * "translation", which is what a term-leads rule produces on a character deck.
+ */
+export function lookupCardFaces(
+  core: TermCore,
+  studyLanguage: StudyLanguage,
+  nativeLanguage?: string | null,
+): { headword: string; back: string; gloss?: string } {
+  const { studyField } = getStudyLanguageConfig(studyLanguage);
+
+  if (studyLanguage === 'Hanja') {
+    return {
+      headword: core.hanja || core.term,
+      back: hunEum(core),
+      // 훈음 is Korean for every reader, so an English native gets the gloss
+      // *beside* it rather than instead of it.
+      gloss: nativeLanguage === 'Korean' ? undefined : core.english || undefined,
+    };
+  }
+
+  const back = (core.termLanguage === studyLanguage
+    ? getTermBackSide(core, studyLanguage, nativeLanguage)
+    : (core as CardSides)[studyField]) || core.translation || '';
+  return { headword: core.term, back };
 }
 
 /**
@@ -730,6 +980,15 @@ export function wordOfTheDayCore(
 export interface UserPreferences {
   nativeLanguage: string;
   studyLanguage?: StudyLanguage;
+  /**
+   * Which part of a hanja card sits on the front. Absent means
+   * `DEFAULT_HANJA_PARTITION` — the question the exam asks.
+   *
+   * One setting rather than one per deck, matching how the study language
+   * itself is stored: there is a single Hanja deck, and a learner who has
+   * chosen how they want to be asked has chosen it for that deck.
+   */
+  hanjaPartition?: HanjaPartition;
   streak?: number;
   longestStreak?: number;
   lastReviewDate?: string; // 'YYYY-MM-DD' in local timezone

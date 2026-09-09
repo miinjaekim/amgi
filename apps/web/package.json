@@ -10,7 +10,8 @@
     "test": "vitest",
     "backfill:pack-backs": "tsx --env-file=.env.local scripts/backfill-pack-backs.ts",
     "dedupe:pack-cards": "tsx --env-file=.env.local scripts/dedupe-pack-cards.ts",
-    "remap:subpacks": "tsx --env-file=.env.local scripts/remap-pack-subpacks.ts"
+    "remap:subpacks": "tsx --env-file=.env.local scripts/remap-pack-subpacks.ts",
+    "migrate:legacy-hanja": "tsx --env-file=.env.local scripts/migrate-legacy-hanja.ts"
   },
   "dependencies": {
     "@amgi/core": "*",
