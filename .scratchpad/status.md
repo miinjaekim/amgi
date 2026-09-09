@@ -201,6 +201,36 @@ Android, where only sign-in has been exercised.
 Closed calls, kept with their reasoning — a decision whose reasoning is lost gets
 reopened by the next person to notice the symptom. Newest first.
 
+### No Review group in settings — subpacks answered it instead (2026-09-09)
+
+**Closes "What belongs on the review screen versus in settings"**, removed from
+the backlog rather than built. The user's call, on seeing subpacks working:
+*"i think we managed to remove the need for a review screen settings by adding
+subpacks."*
+
+**What the item was actually stuck on.** The rule it named — *the review screen
+holds session properties, settings holds durable preferences* — covered
+everything except one axis: a control that is **durable but scoped to review**.
+That axis was the only argument for a Review group inside settings, and the
+whole item was waiting on it.
+
+**Subpacks removed the pressure by making the scoping structural.** The thing
+you would have reached for a persisted setting to do — sit down with part of a
+deck rather than all of it — is now a thing you *pick*, in the place you pick
+what you are reviewing. A remembered preference would be a worse version of
+that: it answers once, invisibly, where the picker answers every session and
+shows you the state it is in.
+
+**The rule stands and is now written down**, which was half the item's value:
+session properties on the review screen, durable preferences in settings, and
+nothing in between needing a third home.
+
+⚠️ **What this does not decide.** Default direction and whether typing starts on
+are still session state that resets, and nobody has asked for them to persist.
+If someone does, this entry is the thing to reopen — the answer then is a Review
+group in settings, and the settings screen's own flat-list problem (noted with
+the per-context pronunciation speed item) becomes the same piece of work.
+
 ### A pack is reviewable as a whole, and that narrows an older rule (2026-09-09)
 
 **Closes the first of the two calls the subpacks item left open**, answered by

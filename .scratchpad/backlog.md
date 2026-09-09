@@ -189,34 +189,6 @@ Reasoning in the Decisions entry in [status.md](status.md); the shape is in
       — match that shape, and hand the draft to a reviewer rather than the TS.
       Needs user approval on the word list before shipping.
 
-- [ ] **What belongs on the review screen versus in settings.** Arrived as
-      "let users see Kikuyu pronunciation during review" and was two halves; the
-      parity half — mobile's review screen never called `getReading` at all —
-      shipped 2026-09-08 with **no setting**, and the reasoning is in the
-      Decisions entry in [status.md](status.md). What is left is the design
-      question it was really about.
-      There is an unstated rule here worth making explicit: **the review screen
-      holds session properties, settings holds durable preferences.**
-      `directionFilter` and `typingEnabled` live in `review.tsx` state, reset
-      every session, and the typed-answers Decisions entry argues that
-      deliberately. Native language, study language, theme, pronunciation speed
-      and reminders persist and live in `app/settings.tsx`. Neither home is
-      written down anywhere a third control would find it.
-      The axis that rule does not cover, and the reason this is still open: a
-      control can be *durable but scoped to review* (a default direction,
-      whether typing starts on), which is neither of the two above and is the
-      case that would justify a **Review section inside settings** rather than
-      more controls on the review screen itself — where every added control
-      costs the card its space on a phone.
-      **And the settings screen itself is the third piece.** It is a flat list
-      of unrelated rows — account, languages, theme, speed, reminders, privacy,
-      data — with no grouping beyond the section headings it already has. If a
-      Review group is being added, that is the moment to look at the whole
-      screen rather than appending one more row.
-      ⚠️ `settingsPronunciationSpeedDesc` is already load-bearing copy in both
-      locales, and the per-context speed item above would change it. These two
-      items touch the same screen — **read that one before starting this**.
-
 - [ ] **Watch the kanji deck on the "All" chip.** The kanji pack is the first
       single-glyph pack laid out as a `list`, because its back carries readings
       that do not fit a tile — and `isGridDeck` exempts only *grid* decks from
