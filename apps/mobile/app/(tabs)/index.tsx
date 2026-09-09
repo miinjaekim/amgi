@@ -575,7 +575,13 @@ export default function LearnScreen() {
                 <View style={s.wotdRow}>
                   <Text style={s.wotdTerm}>{wordOfTheDay.term}</Text>
                   <Text style={s.wotdTranslation}>
-                    {studyLanguage === 'English' ? wordOfTheDay.korean : wordOfTheDay.english}
+                  {/* The same core the tap-through builds, so the face and
+                      the detail cannot disagree — see the web copy of this. */}
+                    {getTermBackSide(
+                      wordOfTheDayCore(wordOfTheDay, studyLanguage, nativeLanguage),
+                      studyLanguage,
+                      nativeLanguage,
+                    )}
                   </Text>
                 </View>
                 {wordOfTheDay.briefDefinition && (

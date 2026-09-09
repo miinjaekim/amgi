@@ -300,6 +300,18 @@ Three things worth keeping:
   shipped list. Normalise any Han-script list at the boundary, and assert it —
   eyeballing the table cannot find this.
 
+- **A hardcoded language *pair* is the shape these bugs keep arriving in.**
+  Three surfaces were still asking a question the app stopped answering that
+  way: both card-detail modals dropped `nativeLanguage` from `getBackSide`, and
+  the word of the day rendered `studyLanguage === 'English' ? korean : english`
+  — a rule from before backs became native-aware. All three showed a Korean
+  native the English side, on decks whose documents carried the Korean one all
+  along. **The tell is a screen disagreeing with itself**: the word of the day's
+  face was English while tapping it showed Korean, because the tap already went
+  through `wordOfTheDayCore` and the face did not. When two paths render the
+  same fact, make them share the function, not the intention — and grep for
+  `=== 'English' ?` before believing there are no more.
+
 - **An optional parameter that has a plausible default is a bug waiting to be
   silent.** `getBackSide(card, nativeLanguage?)` resolved a missing native
   language to the English back, because `getBackSideConfig` reads anything that

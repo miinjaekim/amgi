@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { wordOfTheDayCore, type WordOfTheDay } from '@amgi/core';
+import { getTermBackSide, wordOfTheDayCore, type WordOfTheDay } from '@amgi/core';
 
 describe('wordOfTheDayCore', () => {
   it('prefers the stored explanation when the document has one', () => {
@@ -66,4 +66,35 @@ it('keeps a 平板 pitch accent, which is 0 and must not be dropped as empty', (
     'Japanese'
   );
   expect(core.pitchAccent).toBe(0);
+});
+
+/**
+ * What the card on Learn shows under the word.
+ *
+ * It read `studyLanguage === 'English' ? korean : english` — a language-*pair*
+ * rule from before backs became native-aware, so a Korean native got the
+ * English side on every deck but one. The tell was that tapping the card was
+ * *correct*: the detail already went through `wordOfTheDayCore`, so the face
+ * and the detail disagreed with each other on the same screen.
+ */
+describe('the side the word of the day shows', () => {
+  const wotd: WordOfTheDay = { term: '木漏れ日', english: 'sunlight through leaves', korean: '나뭇잎 사이로 비치는 햇살' };
+  const faceFor = (native: string) =>
+    getTermBackSide(wordOfTheDayCore(wotd, 'Japanese', native), 'Japanese', native);
+
+  it('shows a Korean native the Korean side', () => {
+    expect(faceFor('Korean')).toBe('나뭇잎 사이로 비치는 햇살');
+  });
+
+  it('shows an English native the English side', () => {
+    expect(faceFor('English')).toBe('sunlight through leaves');
+  });
+
+  // Documents written before backs became native-aware carry only English, and
+  // a blank card is worse than one in the wrong language.
+  it('falls back to English when the document predates the Korean side', () => {
+    const old: WordOfTheDay = { term: '木漏れ日', english: 'sunlight through leaves' };
+    expect(getTermBackSide(wordOfTheDayCore(old, 'Japanese', 'Korean'), 'Japanese', 'Korean'))
+      .toBe('sunlight through leaves');
+  });
 });

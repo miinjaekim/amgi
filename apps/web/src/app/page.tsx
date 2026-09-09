@@ -440,7 +440,18 @@ export default function Home() {
               <div className="flex items-baseline gap-3 flex-wrap">
                 <span className="text-xl font-bold text-[var(--color-highlight)]">{wordOfTheDay.term}</span>
                 <span className="text-[var(--color-text)] opacity-80">
-                  {studyLanguage === 'English' ? wordOfTheDay.korean : wordOfTheDay.english}
+                {/* The same core the tap-through builds, so the face and the
+                    detail cannot disagree about which side to show. This read
+                    used to be `studyLanguage === 'English' ? korean : english`
+                    — a language-*pair* rule from before backs became
+                    native-aware, which showed a Korean native the English side
+                    on every deck but one. The document has carried both sides
+                    since; only this line was still asking the old question. */}
+                  {getTermBackSide(
+                    wordOfTheDayCore(wordOfTheDay, studyLanguage, nativeLanguage),
+                    studyLanguage,
+                    nativeLanguage,
+                  )}
                 </span>
               </div>
               {wordOfTheDay.briefDefinition && (

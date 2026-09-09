@@ -878,7 +878,14 @@ export function getDepthTarget(
 export interface WordOfTheDay {
   term: string; // study-language word
   english: string;
-  korean?: string; // translation side for English study
+  /**
+   * The Korean side. Named for English study because that is the only deck
+   * where it is the *front*'s counterpart, but it is filled on every deck a
+   * Korean native studies — `/api/word-of-the-day` asks for both sides
+   * whenever the back is Korean. Absent only on documents written before backs
+   * became native-aware, which is what `wordOfTheDayCore` falls back for.
+   */
+  korean?: string;
   briefDefinition?: string;
   partOfSpeech?: PartOfSpeech; // every language
   formality?: string; // Korean
