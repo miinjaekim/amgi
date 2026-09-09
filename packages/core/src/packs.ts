@@ -1,5 +1,5 @@
-import type { CardSides, StudyLanguage } from './types';
-import { getBackSideConfig, getStudyLanguageConfig } from './types';
+import type { CardSides, ExamplePair, StudyLanguage, TermCore, TermDepth } from './types';
+import { getBackSideConfig, getStudyLanguageConfig, getTermBackSide, hunEum } from './types';
 import { DAILY_LIFE_PACK } from './dailyLife';
 import { IDIOMS_PACK } from './idioms';
 import { HANJA_GEUPSU_PACK } from './hanja';
@@ -267,6 +267,61 @@ export function buildPackCardDraft(
     // Last, because on an English or Korean deck the study side is one of the
     // two slots above and has to win — a back never replaces the front.
     [config.studyField]: entry.study,
+  };
+}
+
+/**
+ * The card draft a *lookup* produces — the Learn flow's counterpart to
+ * `buildPackCardDraft` above.
+ *
+ * Shared for the reason that one is, and the reason is now load-bearing rather
+ * than tidy: web and mobile built this identically, and three separate bugs in
+ * one day came from the same fact rendered twice and drifting once. The pack
+ * path was extracted after the same lesson; the lookup path never was.
+ *
+ * `depth` and `examples` are folded in because a card saved from Learn carries
+ * whatever the user had already asked for on screen.
+ */
+export function buildLookupCardDraft(
+  core: TermCore,
+  studyLanguage: StudyLanguage,
+  nativeLanguage: string | null | undefined,
+  extra: { depth?: Partial<TermDepth> | null; examples?: ExamplePair[] | null } = {},
+): Record<string, unknown> {
+  const { studyField } = getStudyLanguageConfig(studyLanguage);
+  const { backField, backLanguage } = getBackSideConfig(studyLanguage, nativeLanguage);
+
+  // The term goes on the study side when the user typed the study language;
+  // otherwise the model's translation of it does.
+  const studySide = core.termLanguage === studyLanguage
+    ? core.term
+    : (core as CardSides)[studyField] || '';
+
+  // **Typing the back-language term normally means the back *is* what you
+  // typed** — you asked for "water", and that word should survive the model
+  // rewording it as "water, liquid".
+  //
+  // ⚠️ **Except on Hanja, where the back is two parts.** Typing 물 gives the 훈
+  // and not the 음, so taking the term verbatim files a card whose back is half
+  // the answer — 水 with 물 behind it and 수 nowhere. There the assembled 훈음
+  // wins over what was typed, which is also what the card is saved with.
+  const backSide = core.termLanguage === backLanguage && studyLanguage !== 'Hanja'
+    ? core.term
+    : getTermBackSide(core, studyLanguage, nativeLanguage);
+
+  return {
+    ...core,
+    ...(extra.depth ?? {}),
+    examples: extra.examples ?? [],
+    studyLanguage,
+    [studyField]: studySide,
+    [backField]: backSide,
+    // A hanja's Korean side is its 훈음 for every reader, so it is written even
+    // when the reader's back is the English gloss. `buildFlashcardDoc` derives
+    // the same string at save time from the same function; setting it here too
+    // is what makes the draft a faithful preview of the card rather than a
+    // near-miss an English native never sees.
+    ...(studyLanguage === 'Hanja' ? { korean: hunEum(core as CardSides) } : {}),
   };
 }
 

@@ -13,7 +13,7 @@ import {
 } from '@/services/gemini';
 import Markdown from '@/components/Markdown';
 import { saveFlashcardToFirestore, Flashcard } from '@/services/firestore';
-import { getBackSideConfig, getTermBackSide, getCharacterBreakdown, getExampleSides, getReading, getStudyLanguageConfig, parseStreamedExamples, parseStreamedDepth, pronunciationNote, pronunciationNoteNeedsCredit, wordOfTheDayCore, PITCH_ACCENT_CREDIT } from '@amgi/core';
+import { buildLookupCardDraft, getTermBackSide, getCharacterBreakdown, getExampleSides, getReading, getStudyLanguageConfig, parseStreamedExamples, parseStreamedDepth, pronunciationNote, pronunciationNoteNeedsCredit, wordOfTheDayCore, PITCH_ACCENT_CREDIT } from '@amgi/core';
 import type { WordOfTheDay } from '@amgi/core';
 import { useUser } from '@/components/UserContext';
 import { t, partOfSpeechLabel } from '@/lib/i18n';
@@ -365,7 +365,6 @@ export default function Home() {
   };
 
   const langConfig = getStudyLanguageConfig(studyLanguage);
-  const backConfig = getBackSideConfig(studyLanguage, nativeLanguage);
 
   const translation = core
     ? (core.termLanguage === studyLanguage
@@ -676,20 +675,9 @@ export default function Home() {
                 return;
               }
 
-              const studySide = core.termLanguage === studyLanguage ? core.term : (core[langConfig.studyField] || '');
-              const backSide =
-                core.termLanguage === backConfig.backLanguage
-                  ? core.term
-                  : getTermBackSide(core, studyLanguage, nativeLanguage);
-
-              setFlashcardDraft({
-                ...core,
-                ...(depth || {}),
-                examples: examples || [],
-                studyLanguage,
-                [langConfig.studyField]: studySide,
-                [backConfig.backField]: backSide,
-              });
+              setFlashcardDraft(
+                buildLookupCardDraft(core, studyLanguage, nativeLanguage, { depth, examples }),
+              );
               setShowFlashcardForm(true);
               setSaveSuccess(false);
             }}

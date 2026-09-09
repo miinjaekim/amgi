@@ -15,8 +15,8 @@ import {
   streamTermDepth, streamTermExamples, applySpellingCorrection,
 } from '../../src/services/gemini';
 import {
-  getCharacterBreakdown, getDepthTarget, getReading, getStudyLanguageConfig, getBackSideConfig,
-  getTermBackSide, getExampleSides,
+  getCharacterBreakdown, getDepthTarget, getReading, getStudyLanguageConfig,
+  buildLookupCardDraft, getTermBackSide, getExampleSides,
   parseStreamedDepth, parseStreamedExamples, pronunciationNote,
   pronunciationNoteNeedsCredit, wordOfTheDayCore, PITCH_ACCENT_CREDIT,
 } from '@amgi/core';
@@ -97,7 +97,6 @@ export default function LearnScreen() {
   const keyboardReserve = Dimensions.get('window').height * 0.46;
   const { user, nativeLanguage, studyLanguage, authLoading, handleSignIn } = useUser();
   const langConfig = getStudyLanguageConfig(studyLanguage);
-  const backConfig = getBackSideConfig(studyLanguage, nativeLanguage);
   const exampleTerms = EXAMPLE_TERMS[studyLanguage] ?? EXAMPLE_TERMS.Korean;
 
   const [term, setTerm] = useState('');
@@ -369,18 +368,7 @@ export default function LearnScreen() {
 
   const handleOpenSave = () => {
     if (!core) return;
-    const studySide = core.termLanguage === studyLanguage ? core.term : (core[langConfig.studyField] ?? '');
-    const backSide = core.termLanguage === backConfig.backLanguage
-      ? core.term
-      : getTermBackSide(core, studyLanguage, nativeLanguage);
-    setFlashcardDraft({
-      ...core,
-      ...(depth ?? {}),
-      examples: examples ?? [],
-      studyLanguage,
-      [langConfig.studyField]: studySide,
-      [backConfig.backField]: backSide,
-    });
+    setFlashcardDraft(buildLookupCardDraft(core, studyLanguage, nativeLanguage, { depth, examples }));
     setShowSaveModal(true);
     setSaveSuccess(false);
   };
