@@ -196,21 +196,26 @@ Android, where only sign-in has been exercised.
   docs name subscribing-in-an-effect as the intended use. Scoped under
   Housekeeping in [backlog.md](backlog.md).
 
-- ⚠️ **The subpack remap ran ahead of the code that reads it** (2026-09-09).
-  `remap:subpacks` moved 2218 cards across 12 accounts to `pack/section` ids
-  while PR #116 was still open — so deployed web and TestFlight build 14, which
-  only understand a bare pack id, now fall back to `name: id` for every pack
-  card. **Every pack shows as raw slugs** (`toeic-core/verbs`) in the review
-  picker and the deck chips, one row per section, sorted last.
-  Cosmetic and reversible — nothing is lost, every card still reviews — but it
-  is live for real accounts until the code catches up. The safety the design
-  was built around runs one way only: *new* code reads old cards fine, and that
-  is not the same claim as old code reading new cards.
-  Web clears on merge and deploy; **mobile cannot clear until the next build**,
-  which is the argument for reverting the remap and re-running it after that
-  build rather than waiting. `remap:subpacks --revert` undoes it exactly, and
-  re-running the forward pass afterwards costs nothing — the feature works on
-  un-remapped cards, they just sit at pack level.
+- ⚠️ **Mobile shows raw slugs for every pack until build 15.** `remap:subpacks`
+  moved 2218 cards across 12 accounts to `pack/section` ids on 2026-09-09, while
+  PR #116 was still open. Code that predates that PR cannot resolve those ids:
+  `getVocabPack` returns undefined and both `buildReviewCollections` and
+  `buildDeckFilters` fall back to `name: id`, so a pack appears as
+  `toeic-core/verbs` in the review picker and the deck chips, one row per
+  section, sorted last.
+  **Web is fixed** — #116 merged and deployed the same day, and the new code
+  reads the new ids. **TestFlight build 14 is not, and cannot be**: mobile ships
+  by build, so it clears when build 15 goes out and not before. Cosmetic, no
+  data at risk, every card still reviews. Accepted deliberately rather than
+  reverted (the alternative was moving 2218 cards twice); listed under Cutting a
+  build in [backlog.md](backlog.md) so the build clears it knowingly.
+  **The lesson, which is the part worth keeping:** the design's safety runs one
+  way only. New code reading old cards is fine, and that is a different claim
+  from old code reading new cards — the one that actually governs when a data
+  migration may run. On a platform that ships by build, "after the PR merges" is
+  not the same moment on both platforms, so a migration is safe only after the
+  *slower* one has shipped. `remap:subpacks --revert` exists now for the next
+  time this comes up.
 
 ## Decisions
 
