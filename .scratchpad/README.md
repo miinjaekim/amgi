@@ -25,6 +25,12 @@ Related docs outside this folder:
   above these are **bilingual pair lists**, not a study side plus glosses, and
   they still carry live open questions — read them before changing a term or a
   hint, and hand *these* to a reviewer rather than the TS.
+- `docs/packs/hanja-geupsu-pack-draft.md` — the 급수 pack, 300 characters over
+  five subpacks, **awaiting approval on the word list**. Unlike every draft
+  above it, its rows are *generated* rather than typed:
+  `docs/packs/hanja-geupsu-ingest.py` beside it builds them from the 어문회 list
+  and Unihan, so the tier column can be re-checked instead of believed. Read the
+  draft before touching the pack.
 - `docs/packs/daily-life-pack-draft.md`, `docs/packs/idioms-pack-draft.md`,
   `docs/packs/kanji-pack-draft.md` — the three packs added 2026-08-24 (referenced
   from `dailyLife.ts`, `idioms.ts`, `kanji.ts`), **approved 2026-08-24**. Each
