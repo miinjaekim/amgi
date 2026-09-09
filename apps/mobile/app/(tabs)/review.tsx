@@ -753,6 +753,7 @@ export default function ReviewScreen() {
           helpTitleKey="helpReviewTitle"
           helpLeadKey="helpReviewLead"
           helpPointsKey="helpReviewPoints"
+          streak
         />
         <SkeletonGroup label={t(nativeLanguage, 'loadingFlashcards')} style={s.pickerScroll}>
           <SkeletonBar width={150} height={15} />
@@ -781,6 +782,7 @@ export default function ReviewScreen() {
           helpTitleKey="helpReviewTitle"
           helpLeadKey="helpReviewLead"
           helpPointsKey="helpReviewPoints"
+          streak
         />
         <View style={s.centerFill}>
           <Text style={s.emptyText}>
@@ -866,6 +868,7 @@ export default function ReviewScreen() {
           helpTitleKey="helpReviewTitle"
           helpLeadKey="helpReviewLead"
           helpPointsKey="helpReviewPoints"
+          streak
         />
         <ScrollView contentContainerStyle={s.pickerScroll}>
           {offlineNotice}
@@ -933,10 +936,11 @@ export default function ReviewScreen() {
             helpTitleKey="helpReviewTitle"
             helpLeadKey="helpReviewLead"
             helpPointsKey="helpReviewPoints"
+            streak
           />
           <View style={s.centerFill}>
             {offlineNotice}
-            {collections.length > 1 && <Text style={s.collectionLabel}>{collectionName}</Text>}
+            {pickable.length > 1 && <Text style={s.collectionLabel}>{collectionName}</Text>}
             <Text style={s.doneTitle}>{t(nativeLanguage, 'allCaughtUp')}</Text>
             <Text style={s.doneBody}>{t(nativeLanguage, 'reviewCompleteMessage')}</Text>
             {nextDate && (
@@ -960,6 +964,7 @@ export default function ReviewScreen() {
           helpTitleKey="helpReviewTitle"
           helpLeadKey="helpReviewLead"
           helpPointsKey="helpReviewPoints"
+          streak
         />
         <ScrollView contentContainerStyle={s.startScroll}>
           {offlineNotice}
@@ -1018,7 +1023,7 @@ export default function ReviewScreen() {
     return (
       <SafeAreaView style={s.center}>
         {offlineNotice}
-        {collections.length > 1 && <Text style={s.collectionLabel}>{collectionName}</Text>}
+        {pickable.length > 1 && <Text style={s.collectionLabel}>{collectionName}</Text>}
         <Text style={s.stoppedTitle}>{t(nativeLanguage, 'reviewStoppedTitle')}</Text>
         <Text style={s.doneBody}>
           {reviewedCount > 0
@@ -1052,7 +1057,7 @@ export default function ReviewScreen() {
     return (
       <SafeAreaView style={s.center}>
         {offlineNotice}
-        {collections.length > 1 && <Text style={s.collectionLabel}>{collectionName}</Text>}
+        {pickable.length > 1 && <Text style={s.collectionLabel}>{collectionName}</Text>}
         {filteredDueCount > 0 ? (
           <>
             <Text style={s.stoppedTitle}>{t(nativeLanguage, 'reviewSessionFinished')}</Text>
@@ -1229,7 +1234,7 @@ export default function ReviewScreen() {
             <View style={s.undoBtn} />
           )}
           <View style={s.progressLabelWrap}>
-            {collections.length > 1 ? (
+            {pickable.length > 1 ? (
               <TouchableOpacity onPress={() => setSelectedKey(undefined)} hitSlop={8}>
                 <Text style={s.progressText} numberOfLines={1}>
                   {collectionName} · {index + 1} / {queue.length}

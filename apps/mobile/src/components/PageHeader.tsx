@@ -5,6 +5,7 @@ import { t } from '@amgi/core';
 import type { TranslationKey } from '@amgi/core';
 import { useUser } from '../context/UserContext';
 import { useTheme } from '../context/ThemeContext';
+import StreakBadge from './StreakBadge';
 import type { Palette } from '../theme';
 
 /**
@@ -26,6 +27,17 @@ interface Props {
   helpLeadKey: TranslationKey;
   /** The non-obvious mechanics, one per line, split on `\n`. */
   helpPointsKey: TranslationKey;
+  /**
+   * Show the streak at the right end of the title row.
+   *
+   * Opt-in rather than always-on: it belongs on the tabs where you *do* the
+   * work — Learn and Review — and not on Packs or Cards, which are for browsing
+   * what you already have. A number that only moves on the other two tabs is
+   * decoration there.
+   *
+   * Costs nothing on an account without a streak; `StreakBadge` renders null.
+   */
+  streak?: boolean;
 }
 
 /**
@@ -41,7 +53,7 @@ interface Props {
  * asked. Unsolicited, the same text would be the lecture that the first-run
  * checklist was rejected for being.
  */
-export default function PageHeader({ titleKey, helpTitleKey, helpLeadKey, helpPointsKey }: Props) {
+export default function PageHeader({ titleKey, helpTitleKey, helpLeadKey, helpPointsKey, streak }: Props) {
   const { nativeLanguage } = useUser();
   const { C } = useTheme();
   const s = useMemo(() => makeStyles(C), [C]);
@@ -50,7 +62,9 @@ export default function PageHeader({ titleKey, helpTitleKey, helpLeadKey, helpPo
   return (
     <>
       <View style={s.header}>
-        <Text style={s.title}>{t(nativeLanguage, titleKey)}</Text>
+        {/* The title shrinks and the badge does not: a long title is still
+            readable clipped, where a streak reading "12 d…" is not. */}
+        <Text style={s.title} numberOfLines={1}>{t(nativeLanguage, titleKey)}</Text>
         <TouchableOpacity
           style={s.helpBtn}
           onPress={() => setHelpOpen(true)}
@@ -61,6 +75,10 @@ export default function PageHeader({ titleKey, helpTitleKey, helpLeadKey, helpPo
         >
           <Ionicons name="help-circle-outline" size={20} color={C.muted} />
         </TouchableOpacity>
+        {/* Pushed to the far edge, so it lands in the same corner on every
+            screen that carries it — the help button stays beside the title it
+            explains. */}
+        {streak && <StreakBadge style={s.streakSlot} />}
       </View>
 
       <Modal
@@ -121,7 +139,8 @@ function makeStyles(C: Palette) {
       flexDirection: 'row', alignItems: 'center', gap: 8,
       paddingHorizontal: 20, paddingVertical: 12,
     },
-    title: { fontSize: PAGE_TITLE_SIZE, fontWeight: '700', color: C.highlight },
+    title: { fontSize: PAGE_TITLE_SIZE, fontWeight: '700', color: C.highlight, flexShrink: 1 },
+    streakSlot: { marginLeft: 'auto', flexShrink: 0 },
     helpBtn: { padding: 2 },
     backdrop: {
       flex: 1, backgroundColor: 'rgba(0,0,0,0.6)',

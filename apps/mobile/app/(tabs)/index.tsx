@@ -5,7 +5,7 @@ import {
   Dimensions, Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router, useLocalSearchParams, useNavigation } from 'expo-router';
+import { useLocalSearchParams, useNavigation } from 'expo-router';
 // SDK 57 vendored react-navigation into expo-router and dropped the
 // `@react-navigation/*` packages; `expo-router/tabs` is the public re-export.
 import type { BottomTabNavigationProp } from 'expo-router/tabs';
@@ -27,6 +27,7 @@ import type { Flashcard } from '../../src/services/firestore';
 import SaveFlashcardModal from '../../src/components/SaveFlashcardModal';
 import PronounceButton from '../../src/components/PronounceButton';
 import PageHeader from '../../src/components/PageHeader';
+import StreakBadge, { streakRowStyle } from '../../src/components/StreakBadge';
 import Markdown from '../../src/components/Markdown';
 import { SkeletonBar, SkeletonGroup } from '../../src/components/Skeleton';
 import { t, partOfSpeechLabel } from '@amgi/core';
@@ -89,7 +90,7 @@ export default function LearnScreen() {
    * number is the fix; it costs nothing but a slightly higher resting position.
    */
   const keyboardReserve = Dimensions.get('window').height * 0.46;
-  const { user, nativeLanguage, studyLanguage, authLoading, handleSignIn, streak, reviewedToday } = useUser();
+  const { user, nativeLanguage, studyLanguage, authLoading, handleSignIn } = useUser();
   const langConfig = getStudyLanguageConfig(studyLanguage);
   const backConfig = getBackSideConfig(studyLanguage, nativeLanguage);
   const exampleTerms = EXAMPLE_TERMS[studyLanguage] ?? EXAMPLE_TERMS.Korean;
@@ -475,30 +476,6 @@ export default function LearnScreen() {
     />
   );
 
-  // A shortcut into the progress screen rather than the only door — progress
-  // took a tab of its own 2026-09-04, precisely because this badge hides
-  // itself the moment a streak breaks. `navigate` rather than `push`: the
-  // destination is a sibling tab, and pushing it would stack a second copy
-  // over Learn instead of switching to the one already mounted.
-  const streakBadge = user && streak > 0 ? (
-    <TouchableOpacity
-      style={s.streakBadge}
-      onPress={() => router.navigate('/progress')}
-      accessibilityRole="button"
-      accessibilityLabel={t(nativeLanguage, 'progressTitle')}
-      hitSlop={8}
-    >
-      <Text style={s.streakFlame}>🔥</Text>
-      <Text style={s.streakText}>
-        {nativeLanguage === 'Korean' ? `${streak}일` : `${streak} ${streak === 1 ? 'day' : 'days'}`}
-      </Text>
-      <Text style={s.streakSep}>·</Text>
-      <Text style={s.streakMuted}>
-        {nativeLanguage === 'Korean' ? `오늘 ${reviewedToday}개` : `${reviewedToday} ${reviewedToday === 1 ? 'card' : 'cards'} today`}
-      </Text>
-    </TouchableOpacity>
-  ) : null;
-
   // ── Empty state: search + chips resting in the lower part of the screen ──
   if (isEmpty) {
     return (
@@ -508,8 +485,8 @@ export default function LearnScreen() {
           helpTitleKey="helpLearnTitle"
           helpLeadKey="helpLearnLead"
           helpPointsKey="helpLearnPoints"
+          streak
         />
-        {streakBadge}
         {/* One big dismiss target. With the bar pinned rather than lifted,
             there is no guarantee of a large empty spacer to aim at, and a
             keyboard you cannot put away is worse than one that covers things.
@@ -611,7 +588,10 @@ export default function LearnScreen() {
   // ── Results state: search at top, results scroll below ──
   return (
     <SafeAreaView style={s.root} edges={['top']}>
-      {streakBadge}
+      {/* No page title in this state — the search row takes the top — so the
+          badge keeps a row of its own, right-aligned to land in the same
+          corner it occupies on every screen that does have one. */}
+      <StreakBadge style={streakRowStyle} />
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={s.flex}>
         <ScrollView
           style={s.flex}
@@ -825,11 +805,6 @@ function makeStyles(C: Palette, tabBarHeight: number) {
   flex: { flex: 1 },
   scroll: { padding: 16, paddingBottom: tabBarHeight, flexGrow: 1 },
 
-  streakBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 16, paddingTop: 8, paddingBottom: 4 },
-  streakFlame: { fontSize: 14 },
-  streakText: { fontSize: 13, fontWeight: '700', color: C.text },
-  streakSep: { fontSize: 13, color: C.muted },
-  streakMuted: { fontSize: 13, color: C.muted },
 
   // Empty state layout. Absorbs the space above the bottom bar; shrinks to
   // nothing rather than pushing the bar off screen.
