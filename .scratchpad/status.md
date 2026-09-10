@@ -8,28 +8,36 @@ show: the reasoning behind closed calls (Decisions), the console and binary stat
 that lives outside the repo (Builds, TestFlight), and what is currently
 unverified.
 
-_Reconciled against `main` @ `bc8cb97`, 2026-08-21. `npm test` 246/246, measured._
+_Reconciled against `release/1.6.0` @ `c8c113a`, 2026-09-10. `npm test` 553/553
+and `npm run lint` 0 errors / 21 warnings, both measured._
 
 ## Now
 
-- **1.5.0 (build 14) is live in TestFlight and approved for external testing**
-  (2026-09-02), approved the same day it was submitted. It carries eight merges
-  since build 13 — typed responses, undo a rating, audio and a speed dial in
-  review, the reading aid with Japanese pitch accent, and the Spanish and Kikuyu
-  Basics packs. All JS: no dependency or `app.json` native change since 1.4.0,
-  which is why one build covers the lot. External testers can now be invited
+- **1.6.0 (build 15) is live in TestFlight and approved for external testing**
+  (2026-09-10), approved the same day it was submitted. It carries eleven merges
+  since build 14 — the mobile UI redesign, Expo SDK 57, Hanja as a study
+  language with its 급수 pack, subpacks, the shareable stats image, readings in
+  mobile review, and the 병과와 주특기 section. External testers can be invited
   without another review as long as the version doesn't change.
-- ⚠️ **Nothing in 1.5.0 has been checked on a binary**, and the native paths
-  under Builds have never been verified on *any* build. **This build is the
-  first with no route through testers**: What to Test was cut to what's new on
-  2026-09-02, so nothing asks for that list by name any more. As of 2026-09-04
+  **It is the first binary on SDK 57**, where every native module moved at once
+  rather than one arriving — which is what makes the never-verified list below
+  matter more on this build than on the last two. `expo config --type
+  introspect` came back clean before the build: `entitlements: {}`, so
+  `withoutPushEntitlement` still strips `aps-environment` on 57.
+  It also clears the raw-slug regression build 14 could not — pack names resolve
+  again in the review picker and the deck chips.
+- ⚠️ **Nothing in 1.6.0 has been checked on a binary**, and the native paths
+  under Builds have never been verified on *any* build — now with SDK 57 under
+  them, which moved every one of those modules at once. **No release now routes testers to that
+  list**: What to Test was cut to what's new on 2026-09-02 and 1.6.0's was
+  written to the same rule, so nothing asks for it by name. As of 2026-09-04
   it is **not tracked as work either** — the checks come from using the app
   (Decisions, below). The one item with a decision hanging on it is the **Slow
   speed**, a pitch-corrected 0.7× stretch rather than a slow synthesis: if it
   reads as an artifact the fallback is server-side rates behind the same three
   chips, and that is written down in its Decisions entry, not waiting on a list.
 - **Mobile merges are unblocked.** The freeze held only until submission; the
-  next mobile change waits for the build after this one.
+  next mobile change waits for build 16.
 - **The progress dashboard is on both platforms** (2026-08-20) but only in users'
   hands on web, since mobile ships by build. Daily rollups are written on every
   rating and every card save. The Firestore security rule for
@@ -169,6 +177,7 @@ No OTA, so every mobile change reaches users through one of these.
 
 | Version | Build | Date | Cut from |
 |---|---|---|---|
+| 1.6.0 | 15 | 2026-09-10 | `c8c113a` on `release/1.6.0` (version bump + TestFlight copy) — external testing approved 09-10, same day |
 | 1.5.0 | 14 | 2026-09-02 | `84be8af` on `release/1.5.0` (PR #109, version bump + TestFlight copy) — external testing approved 09-02, same day |
 | 1.4.0 | 13 | 2026-08-22 | `dedcdd6` on `release/1.4.0` (version bump + TestFlight copy) — external testing approved 08-24 |
 | 1.3.0 | 11 | 2026-08-11 | `86c2c5a` on `release/1.3.0` (version bump) — **first build approved for external testing**, 08-12 |
@@ -182,7 +191,9 @@ No OTA, so every mobile change reaches users through one of these.
 The table is **iOS only**. Android ships as a sideloaded APK on its own cadence
 with no review, so its builds are not release events worth recording — see the
 Decisions entry for how it is distributed. 1.5.0's Android APK is `versionCode`
-4, cut the same day from `d25b544`.
+4, cut the same day from `d25b544`; 1.6.0's is `versionCode` 5, cut the same day
+as build 15. Its commit was not recorded here — resolve it from the EAS build
+record if it ever matters, for the reason the next paragraph gives.
 
 ⚠️ **1.5.0's two builds carry different commit hashes and the same app.** EAS
 logged `84be8af` for iOS and `d25b544` for Android; the delta between them is
@@ -213,16 +224,20 @@ iOS release carrying `expo-dev-client`, `expo-dev-launcher` and `expo-dev-menu`.
 
 ⚠️ **Never verified on a real binary**, on any build so far — the logic is
 tested, the native bindings are not: pronunciation audio, CSV/Anki export,
-sharing, offline review across a force-kill and reconnect, the review reminder
+sharing — including the stats image's `File.downloadFileAsync` →
+`Sharing.shareAsync` path, which has never run end to end — offline review
+across a force-kill and reconnect, the review reminder
 firing *and* disappearing once you review, and account deletion against the
 production `EXPO_PUBLIC_API_BASE_URL`. (The 1.3.0 copy button left this list
 with the writing rewrite it belonged to.) 1.4.0's What to Test asks for these by
-name and puts **offline review first**; **1.5.0's does not** — it was cut to
-what's new, so no release now asks for this list. **This paragraph is where the
+name and puts **offline review first**; **neither 1.5.0's nor 1.6.0's does** —
+both were cut to what's new, so no release now asks for this list. **This paragraph is where the
 list lives**: tracking it as work was dropped 2026-09-04 (Decisions), so what
 retires a line here is somebody hitting the path in normal use, not a session
 spent working down the list. Everything here is separately unverified on
-Android, where only sign-in has been exercised.
+Android, where only sign-in has been exercised. **Build 15 raised the stakes
+without changing the list**: SDK 57 moved every one of these native modules at
+once, so a path that worked on build 14 is not evidence about build 15.
 
 ## Known Issues
 
@@ -231,34 +246,13 @@ Android, where only sign-in has been exercised.
   **OTA was abandoned 2026-07-23** rather than diagnosed. Not a blocker under the
   Expo Go + production build model — reopen only with a specific reason to want
   OTA back. See [tech-stack.md](tech-stack.md).
-- **20 lint warnings, 0 errors** (measured 2026-08-22) — 13 React Compiler, the
-  rest accumulated since. Two were added by the subscribe change: the
+- **21 lint warnings, 0 errors** (measured 2026-09-09, cutting build 15) — 13
+  React Compiler, the rest accumulated since. Two were added by the subscribe change: the
   `set-state-in-effect` rule fires on the `if (!user) { setX([]); return; }`
   guard that every subscription effect opens with. Same class the codebase
   already carries in `useOnlineStatus` and `useCardEnrichment`, and React's own
   docs name subscribing-in-an-effect as the intended use. Scoped under
   Housekeeping in [backlog.md](backlog.md).
-
-- ⚠️ **Mobile shows raw slugs for every pack until build 15.** `remap:subpacks`
-  moved 2218 cards across 12 accounts to `pack/section` ids on 2026-09-09, while
-  PR #116 was still open. Code that predates that PR cannot resolve those ids:
-  `getVocabPack` returns undefined and both `buildReviewCollections` and
-  `buildDeckFilters` fall back to `name: id`, so a pack appears as
-  `toeic-core/verbs` in the review picker and the deck chips, one row per
-  section, sorted last.
-  **Web is fixed** — #116 merged and deployed the same day, and the new code
-  reads the new ids. **TestFlight build 14 is not, and cannot be**: mobile ships
-  by build, so it clears when build 15 goes out and not before. Cosmetic, no
-  data at risk, every card still reviews. Accepted deliberately rather than
-  reverted (the alternative was moving 2218 cards twice); listed under Cutting a
-  build in [backlog.md](backlog.md) so the build clears it knowingly.
-  **The lesson, which is the part worth keeping:** the design's safety runs one
-  way only. New code reading old cards is fine, and that is a different claim
-  from old code reading new cards — the one that actually governs when a data
-  migration may run. On a platform that ships by build, "after the PR merges" is
-  not the same moment on both platforms, so a migration is safe only after the
-  *slower* one has shipped. `remap:subpacks --revert` exists now for the next
-  time this comes up.
 
 ## Decisions
 

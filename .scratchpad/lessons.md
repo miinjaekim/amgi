@@ -262,6 +262,25 @@ Three things worth keeping:
 - Always use Git — new branch per feature, commit as work completes. Never work
   directly on `main`.
 - Always proxy third-party API keys server-side — never `NEXT_PUBLIC_` for secrets.
+- **A data migration is safe only after the *slower* platform has shipped.**
+  `remap:subpacks` moved 2218 cards across 12 accounts to `pack/section` ids on
+  2026-09-09, once PR #116 had merged — and web was indeed fine, because it had
+  deployed. Mobile had not: TestFlight build 14 predated the code that resolves
+  those ids, so `getVocabPack` returned undefined and every pack showed as a raw
+  slug (`toeic-core/verbs`) in the review picker and the deck chips until build
+  15 went out on 2026-09-10. Cosmetic, and accepted deliberately rather than
+  moving 2218 cards twice.
+  **The transferable half:** the design's safety runs one way only. New code
+  reading old cards is fine; *old code reading new cards* is a different claim,
+  and it is the one that governs when a migration may run. On a platform that
+  ships by build, "after the PR merges" is not the same moment on both
+  platforms. Write the revert before you need it — `remap:subpacks --revert`
+  exists now.
+  The counter-example is worth holding next to it: `migrate:legacy-hanja`
+  (2026-09-09) moved a field *into* one that both the old and new code read
+  (`characterBreakdown || hanja` on build 14), so it was safe in both directions
+  and needed no build to wait on. What matters is not that a migration ran, but
+  whether the oldest binary in someone's hands can still read what it leaves.
 
 ## Firestore
 

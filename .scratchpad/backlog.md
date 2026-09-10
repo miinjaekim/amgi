@@ -17,76 +17,67 @@ costs ~20 minutes rather than an App Review cycle.
 
 ## Cutting a build
 
-⚠️ **Build 15 also clears a live cosmetic regression.** The subpack remap ran
-2026-09-09 against production, so build 14 shows every pack as a raw slug
-(`toeic-core/verbs`) in the review picker and the deck chips — it predates the
-code that resolves those ids. Web was fixed by deploying #116; mobile cannot be
-until a build. See Known Issues in [status.md](status.md).
-
-**Queued: the mobile UI redesign, Expo SDK 57, and the shareable stats asset**
-(PR #111 merged 2026-09-04; the asset landed 2026-09-07). 1.5.0 (build 14) is on
-SDK 54 and predates all of it, so **testers are running none of this** — the tab
-bar they have is still Learn-first with a Settings tab. The batch is worth a
-release on its own; nothing needs to wait for a second feature.
-
-⚠️ **Two things about the stats asset to check on the build, not in Expo Go.**
-The Share control needs `EXPO_PUBLIC_API_BASE_URL` pointing at a deployment that
-*has* `/api/stats-image` — against an older deployment the button fetches a 404
-and reports a failure, which will read as a broken feature rather than a stale
-backend. And the share path itself (`File.downloadFileAsync` →
-`Sharing.shareAsync`) has **never run end to end**: no new native module is
-involved, so Expo Go exercises the same code, but sharing is already on the
-never-verified-on-a-binary list under Builds below.
+**Nothing is queued.** Build 15 (1.6.0) went out 2026-09-10 — the mobile UI
+redesign, Expo SDK 57, Hanja and its 급수 pack, subpacks, the shareable stats
+image, readings in mobile review, the 병과와 주특기 section — and was approved
+for external testing the same day. It also cleared the raw-slug regression build
+14 could not. The next mobile change starts this list again.
 
 ⚠️ **Checking a build is not tracked here** (2026-09-04). The ranked list of what
-1.5.0 had never been exercised on came off this file — all of it is reached by
-using the app, so it surfaces in use rather than in a sitting spent working down
-a list. The durable halves stayed elsewhere: the never-verified-on-a-binary
+a release has never been exercised on came off this file — all of it is reached
+by using the app, so it surfaces in use rather than in a sitting spent working
+down a list. The durable halves live elsewhere: the never-verified-on-a-binary
 caveat under Builds in [status.md](status.md), and the Slow speed's fallback in
-that file's Decisions entry. Reasoning in Decisions there too.
+that file's Decisions entry.
 
-**Pre-flight:** smoke-test in Expo Go → verify the native-adjacent things on the
-build itself → bump `version` in `app.json` **before** starting the build (EAS
-auto-increments the *build* number and never the version, so nothing catches this
-for you) → rewrite What to Test in `docs/testflight-beta-info.md` and re-check
-the rest of it — **the description and the Apple review notes go stale too**, and
-1.4.0 shipped with both still describing features removed in August → **`expo
-config --type introspect` if any native module was added**, which is where an
-unasked-for entitlement shows up before a cloud build finds it → submit
-(`ascAppId` is in `eas.json`) → paste the listing copy into Test Information,
-**both ko and en**.
+**Pre-flight**, in order. Steps 2–6 were all exercised cutting 1.6.0; step 1
+never has been, on any build:
+
+1. Smoke-test in Expo Go, then verify the native-adjacent paths on the build
+   itself — Expo Go runs the SDK's own bundled native modules, so a clean pass
+   there says nothing about audio, notifications, sharing, the file system or
+   the auth redirect. ⚠️ **This has never happened**, through fifteen builds; see
+   the never-verified caveat under Builds in [status.md](status.md) for what is
+   on it and why working down the list is not tracked as a task.
+2. Bump `version` in `app.json` **before** starting the build. EAS
+   auto-increments the *build* number and never the version, so nothing catches
+   this for you.
+3. `expo config --type introspect` if any native module or `app.json` native
+   config changed — this is where an unasked-for entitlement shows up before a
+   cloud build finds it. 1.6.0's came back `entitlements: {}`, which is what
+   `withoutPushEntitlement` is there to produce.
+4. Rewrite What to Test in `docs/testflight-beta-info.md` and **re-check the
+   rest of the file** — the description and the Apple review notes go stale too.
+   1.4.0 shipped with both describing features removed in August; 1.6.0 caught
+   review notes that still routed the reviewer to a Settings tab the redesign
+   had removed, which is a 5.1.1(v) problem because account deletion lives
+   behind it.
+5. **Diff the listing copy's character set against the version Apple last
+   accepted** before pasting — not read it, diff it. That is what catches a
+   non-BMP character, and blank error bullets are all App Store Connect will
+   tell you. See [lessons.md](lessons.md).
+6. Submit (`ascAppId` is in `eas.json`), then paste the copy into Test
+   Information in **both ko and en**.
 
 ⚠️ **What to Test is a skimmable list of what's new and nothing else** (set
 2026-09-02, on the user's call). No "use it for a few days" opener, no roll-call
 of what hasn't been verified, one short clause per bullet — the 1.4.0 form was
 long enough that a tester would bounce off it. A caveat about *shipped content*
-still earns its clause; a request to go and test something does not. **The
-Kikuyu clause is no longer one of them** — a speaker read the list 2026-09-08,
-and the sentence saying otherwise has already been cut from both locales rather
-than carried forward a third build.
+still earns its clause; a request to go and test something does not.
 
 ⚠️ **Cut the build without `--non-interactive`.** It does not skip prompts, it
 turns one into an error — 1.4.0 died on an unanswerable Apple Team ID question
 and burned build 12. The flag is for CI.
 
-_A version bump queues another Beta App Review; 1.5.0's external approval covers
-1.5.0 only. Batch changes into a build rather than cutting one per feature.
+⚠️ **Don't hand-run the OTA workflow.** `.github/workflows/mobile-ota-update.yml`
+is `workflow_dispatch`-only and its push trigger is commented out, which is the
+only thing that stopped the #111 merge from publishing an update to a binary two
+SDKs behind it. OTA is abandoned (2026-07-23); leave the workflow alone rather
+than tidying it up, so the option stays open.
+
+_A version bump queues another Beta App Review; 1.6.0's external approval covers
+1.6.0 only. Batch changes into a build rather than cutting one per feature.
 Android is the exception — no review, so a fix there ships the same day._
-
-⚠️ **This build is the first on Expo SDK 57**, so two pre-flight steps stop
-being optional. `expo config --type introspect` — every native module moved,
-and that is where an unasked-for entitlement shows up before a cloud build finds
-it. And the **native-adjacent paths on the binary itself**: audio,
-notifications, sharing, file system, the auth redirect. Expo Go runs the SDK's
-own bundled native modules, so a clean Expo Go pass says nothing about them.
-Upgrade notes in [lessons.md](lessons.md)._
-
-⚠️ **Do not hand-run the OTA workflow before that build ships.**
-`.github/workflows/mobile-ota-update.yml` is `workflow_dispatch`-only and its
-push trigger is commented out, which is the only thing that stopped the #111
-merge from publishing. `runtimeVersion` is `appVersion`, so an update published
-now would target 1.5.0 — an **SDK 54 binary being handed an SDK 57 bundle**,
-which does not degrade gracefully._
 
 ## High
 
