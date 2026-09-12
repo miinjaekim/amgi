@@ -53,8 +53,8 @@ and `npm run lint` 0 errors / 21 warnings, both measured._
   already get the language line and already lost the retention tile — no build,
   no OTA, nothing to ship. **Web** has all five changes as soon as it deploys.
   **Mobile's own screen** — the labelled calendar, the corrected ramp, the cards
-  learned tile, retention off the language row, the share chooser — waits for
-  build 16 like everything else. The reasoning is in the Decisions entry of the
+  learned tile, retention off the language row, the share preview screen —
+  waits for build 16 like everything else. The reasoning is in the Decisions entry of the
   same date; the one thing that is *not* recorded anywhere else is that none of
   it has been looked at: the colours were computed and validated, the layouts
   were not.
@@ -236,7 +236,9 @@ iOS release carrying `expo-dev-client`, `expo-dev-launcher` and `expo-dev-menu`.
 ⚠️ **Never verified on a real binary**, on any build so far — the logic is
 tested, the native bindings are not: pronunciation audio, CSV/Anki export,
 sharing — including the stats image's `File.downloadFileAsync` →
-`Sharing.shareAsync` path, which has never run end to end — offline review
+`Sharing.shareAsync` path, which has never run end to end and which **turned out
+to be broken all along**, found by reading rather than by running on 2026-09-12
+(the share entry in Decisions) — offline review
 across a force-kill and reconnect, the review reminder
 firing *and* disappearing once you review, and account deletion against the
 production `EXPO_PUBLIC_API_BASE_URL`. (The 1.3.0 copy button left this list
@@ -425,9 +427,31 @@ confirm step — you are looking at what you are about to post while picking it.
 Web keeps its anchor (the thumbnail sits inside the `<a>`, so the no-JS download
 still works) and waives `@next/next/no-img-element` deliberately, since routing
 an OG render through the image optimizer to draw 80px is worse than the raw
-request. Mobile draws it only when `EXPO_PUBLIC_API_BASE_URL` is set; without a
-host the row still shares, it just cannot show what it will send. **The
-direction this is heading is Strava's**: pick a card, see it, post it.
+request. **The direction this is heading is Strava's**: pick a card, see it,
+post it.
+
+⚠️ **Mobile went the whole way there the same day, because the sheet could not
+work at all** (2026-09-12, user's call). Its chooser was a `BottomSheet`, which
+is a React Native `Modal`, and it closed itself before calling
+`Sharing.shareAsync`. **iOS silently refuses to present a view controller while
+a modal is animating out**, so the share sheet never appeared, `shareAsync`'s
+promise never settled, the `finally` that cleared the busy flag never ran, and
+the Share button stayed `disabled` until the app was reloaded — three symptoms,
+one cause. Timing around the dismissal would have been a race to lose later, so
+mobile's chooser is now a **pushed screen** (`app/share.tsx`): a pushed screen is
+not mid-transition when its own button is tapped, which removes the race rather
+than narrowing it. Web is untouched and keeps its `<details>` of anchors.
+
+**The preview screen offers a card per range, not per variant.** Swiping is only
+worth doing over more than two things, so it draws 30/90/364 plus today, opening
+on whichever range the Progress tab had selected. That means it needs a year of
+rows where the tab only holds the range it shows — so it runs **one** 364-day
+query of its own on open, the same single indexed read the "1yr" chip already
+does. `buildShareStats`'s no-reads promise is intact: what costs a read is the
+new screen, not the numbers. Which cards exist is `buildShareCards` in core,
+tested there, so the per-card zeroed-image gate and the ordering cannot drift
+between platforms. Errors are inline and the Share button is its own retry —
+an `Alert` fired during that same dismissal was subject to the very bug above.
 
 **The image names languages and will never split its figures by them.**
 `byLanguage.reviews` goes back to the start; the verdicts inside it only to

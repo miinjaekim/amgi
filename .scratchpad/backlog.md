@@ -22,14 +22,21 @@ Progress tab: the week-aligned calendar with its weekday and month labels, the
 corrected heatmap ramp (a palette change, so it is visible on every theme), the
 all-time cards learned tile and its per-language counts, the weekly review bar
 chart under the calendar, retention and days studied gone from the tiles and the
-language rows, and the share chooser — with its today card and a thumbnail of
-each asset in the sheet.
+language rows, and the share flow — now a full-screen preview swiped card by
+card, one per range plus today.
 
-⚠️ **The share sheet's thumbnails need a reachable `EXPO_PUBLIC_API_BASE_URL`.**
-They are the deployed route's own render, so on a build pointed at nothing they
-are simply absent — the rows still share. Worth one look on the build, since it
-is the first thing on that screen that fails by showing less rather than by
-erroring.
+⚠️ **The sheet-based chooser this replaces never worked on iOS, and was queued
+for this same build.** It closed its own `Modal` on the way to
+`Sharing.shareAsync`, which iOS refuses to present mid-dismissal — so the share
+sheet never appeared, the promise never settled, and the Share button stayed
+disabled for the rest of the session. Replaced 2026-09-12 with a pushed screen,
+which cannot be mid-transition when its own button is tapped. The full account
+is in the share entry under Decisions in [status.md](status.md).
+
+⚠️ **The preview needs a reachable `EXPO_PUBLIC_API_BASE_URL`.** The card is the
+deployed route's own render, so on a build pointed at nothing the preview is a
+blank placeholder — and unlike the old thumbnail, *sharing* needs that host too,
+since the download is what feeds the OS sheet. Worth one look on the build.
 
 **No console step is needed for `mature`, and this was checked rather than
 assumed** (2026-09-12). The worry was that a new field on ten card collections

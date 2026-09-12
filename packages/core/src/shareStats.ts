@@ -228,6 +228,69 @@ export function hasShareableHistory(stats: ShareStats): boolean {
 }
 
 /**
+ * One picture on offer, and the numbers behind it.
+ *
+ * Built here rather than on each screen because "what may be shared" is a rule,
+ * not a layout: the per-variant `hasShareableHistory` gate, the order the cards
+ * come in, and the label each one wears all have to agree across platforms, and
+ * two copies of that list would drift the moment one of them gained a window.
+ */
+export interface ShareCard {
+  /** Stable across renders and unique within a list — a React key, and a param. */
+  id: string;
+  variant: ShareVariant;
+  /** How many days the card covers; 1 for the today card. */
+  windowDays: number;
+  /**
+   * The label the card wears under the preview.
+   *
+   * `shareWindowDays` takes a `{count}`, which is `windowDays`; the today key
+   * ignores it. Kept here rather than at the call site so the chooser and the
+   * image itself cannot describe the same picture differently — the render
+   * route reaches for the very same two keys.
+   */
+  labelKey: 'shareWindowDays' | 'shareVariantToday';
+  stats: ShareStats;
+}
+
+/**
+ * Every picture worth offering, in the order they should be swiped through.
+ *
+ * Windows first, shortest to longest, then today — matching the range chips on
+ * the Progress screen, which is where the reader just came from. A window with
+ * nothing in it is dropped rather than offered blank, per `hasShareableHistory`,
+ * and an account with no history at all yields an empty list, which is the
+ * caller's cue to say so instead of drawing an empty carousel.
+ *
+ * ⚠️ **The gate is asked per card.** A today card on a day with nothing rated is
+ * exactly the zeroed image that check exists to prevent, however full the year
+ * beside it happens to be.
+ */
+export function buildShareCards(
+  days: DailyProgress[],
+  input: Omit<ShareStatsInput, 'windowDays'> & { windows: readonly number[] },
+): ShareCard[] {
+  const { windows, ...rest } = input;
+  const cards: ShareCard[] = [
+    ...[...windows].sort((a, b) => a - b).map((windowDays): ShareCard => ({
+      id: `w${windowDays}`,
+      variant: 'window',
+      windowDays,
+      labelKey: 'shareWindowDays',
+      stats: buildShareStats(days, { ...rest, windowDays }),
+    })),
+    {
+      id: 'today',
+      variant: 'today',
+      windowDays: 1,
+      labelKey: 'shareVariantToday',
+      stats: buildTodayStats(days, rest),
+    },
+  ];
+  return cards.filter(card => hasShareableHistory(card.stats));
+}
+
+/**
  * The query string the image route is called with.
  *
  * Shared because both platforms build the same URL and a drifting parameter

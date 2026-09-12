@@ -199,6 +199,10 @@ const translations = {
     shareFooter: 'Amgi',
     shareNothingYet: 'Study a little first — there is nothing to share yet.',
     shareFailed: 'Could not build the image.',
+    // The way out of the preview screen. Its own key rather than `cancel`:
+    // nothing is being abandoned by leaving, and the arrow needs a name only a
+    // screen reader will hear.
+    shareBack: 'Back',
     settingsStudyLanguage: 'Learning',
     // Shown only when the language being chosen is the one Amgi is currently
     // speaking to the user in — picking it moves their native language, which
@@ -774,6 +778,7 @@ const translations = {
     shareFooter: 'Amgi',
     shareNothingYet: '아직 공유할 기록이 없습니다. 조금만 더 공부해 보세요.',
     shareFailed: '이미지를 만들지 못했습니다.',
+    shareBack: '뒤로',
     cardsPageTitle: '내 카드',
     cardsPageDescription: '가지고 있는 카드를 모두 검색하고 관리하세요. 직접 저장한 카드도, 단어팩에서 담은 카드도요.',
     cardsSearchPlaceholder: '카드 검색...',

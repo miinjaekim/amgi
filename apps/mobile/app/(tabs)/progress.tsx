@@ -1,18 +1,16 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Image, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
-import { File, Paths } from 'expo-file-system';
-import * as Sharing from 'expo-sharing';
 import {
-  PROGRESS_HISTORY_START, SUPPORTED_STUDY_LANGUAGES, buildHeatmap, buildShareStats,
-  CARD_COLLECTIONS, buildTodayStats, buildWeekGrid, hasShareableHistory,
+  PROGRESS_HISTORY_START, SUPPORTED_STUDY_LANGUAGES, buildHeatmap,
+  CARD_COLLECTIONS, buildWeekGrid,
   historyStartsMidWindow, localDateString, mergeLanguageRows, weekdayIndex,
-  shareImageFilename, shareImagePath, shiftDate,
+  shiftDate,
   summarizeProgress, t,
   type DailyProgress, type HeatmapCell, type LanguageProgress,
-  type ShareVariant, type StudyLanguage, type TranslationKey,
+  type StudyLanguage, type TranslationKey,
 } from '@amgi/core';
 import { useUser } from '../../src/context/UserContext';
 import { useTheme } from '../../src/context/ThemeContext';
@@ -23,9 +21,6 @@ import { fetchRecentProgress } from '../../src/services/progress';
 import { backfillMatureFlags, countMatureFlashcards } from '../../src/services/firestore';
 import { getUserPreferences, saveUserPreferences } from '../../src/services/userPreferences';
 import type { Palette } from '../../src/theme';
-
-/** The web deployment that renders the share image, same host as every AI route. */
-const API_BASE_URL = (process.env.EXPO_PUBLIC_API_BASE_URL ?? '').replace(/\/$/, '');
 
 /** 364 rather than 365 so the calendar is a whole number of weeks. */
 const RANGES = [
@@ -74,8 +69,6 @@ export default function ProgressScreen() {
   const [days, setDays] = useState<DailyProgress[] | null>(null);
   const [rangeDays, setRangeDays] = useState<number>(90);
   const [switcherOpen, setSwitcherOpen] = useState(false);
-  const [shareOpen, setShareOpen] = useState(false);
-  const [sharing, setSharing] = useState(false);
   /**
    * Cards learned — all of them, not a window's worth.
    *
@@ -150,86 +143,6 @@ export default function ProgressScreen() {
       return () => { cancelled = true; };
     }, [user]),
   );
-
-  /**
-   * The numbers the shareable image is built from — the same window the screen
-   * is showing, so what someone posts matches what they were looking at.
-   *
-   * Derived rather than fetched: `buildShareStats` reads the rollups already in
-   * hand, so opening the share sheet costs no reads.
-   */
-  const shareStats = useMemo(
-    () => buildShareStats(days ?? [], {
-      streak,
-      endDate: localDateString(),
-      windowDays: rangeDays,
-    }),
-    [days, streak, rangeDays],
-  );
-
-  /** Today's numbers, from the same rows — a one-day window, nothing more. */
-  const todayStats = useMemo(
-    () => buildTodayStats(days ?? [], { streak, endDate: localDateString() }),
-    [days, streak],
-  );
-
-  /**
-   * What there is to share, and nothing that would go out blank.
-   *
-   * ⚠️ **The gate is asked per variant.** A today card on a day with nothing
-   * rated is exactly the zeroed image `hasShareableHistory` exists to prevent,
-   * however full the 90-day window beside it happens to be.
-   */
-  const shareOptions = useMemo(() => ([
-    { variant: 'window' as const, stats: shareStats, labelKey: 'shareVariantWindow' as const },
-    { variant: 'today' as const, stats: todayStats, labelKey: 'shareVariantToday' as const },
-  ].filter(option => hasShareableHistory(option.stats))), [shareStats, todayStats]);
-
-  /**
-   * Fetch the rendered PNG and hand it to the OS share sheet.
-   *
-   * **No new native module.** `expo-file-system` and `expo-sharing` are both
-   * already in the shipped build — `expo-sharing` carries the CSV export — so
-   * this needs no config plugin and keeps working in Expo Go, which
-   * `react-native-view-shot` would not.
-   *
-   * `downloadFileAsync` rather than fetch-then-write because `shareAsync` needs
-   * a local uri and cannot take a remote one; going through the download path
-   * also avoids handling the image bytes in JS at all.
-   */
-  const handleShare = async (variant: ShareVariant) => {
-    if (sharing) return;
-    setShareOpen(false);
-    setSharing(true);
-    try {
-      if (!API_BASE_URL) throw new Error('no API base url configured');
-      if (!(await Sharing.isAvailableAsync())) throw new Error('sharing unavailable');
-
-      const stats = variant === 'today' ? todayStats : shareStats;
-      const target = new File(Paths.cache, shareImageFilename(stats, variant));
-      // A cached file from an earlier share would be silently reused, so the
-      // window's own numbers could go out under a newer window's filename —
-      // which is also why the variant is part of that name.
-      if (target.exists) target.delete();
-
-      const file = await File.downloadFileAsync(
-        `${API_BASE_URL}${shareImagePath(stats, nativeLanguage, variant)}`,
-        target,
-        { idempotent: true },
-      );
-      await Sharing.shareAsync(file.uri, {
-        mimeType: 'image/png',
-        UTI: 'public.png',
-        dialogTitle: t(nativeLanguage, 'shareTitle'),
-      });
-    } catch {
-      // Cancelling the sheet is not a failure and does not reject here, so
-      // anything reaching this really did go wrong.
-      Alert.alert(t(nativeLanguage, 'shareFailed'));
-    } finally {
-      setSharing(false);
-    }
-  };
 
   const summary = useMemo(() => summarizeProgress(days ?? []), [days]);
   const cells = useMemo(
@@ -384,18 +297,24 @@ export default function ProgressScreen() {
               </TouchableOpacity>
             );
           })}
-          {/* Offered only once there is something on *some* image. A zeroed
-              story asset is not a modest result, it is a broken-looking one. */}
-          {shareOptions.length > 0 && (
+          {/* Offered once there is any history at all, rather than once this
+              window has some: the preview screen offers every window and asks
+              the zeroed-image question per card, so gating on the selected
+              range here would hide the way to a year that is full. */}
+          {hasHistory && (
             <TouchableOpacity
-              onPress={() => setShareOpen(true)}
-              disabled={sharing}
+              // The range travels so the carousel opens on the card for the
+              // window being looked at, rather than making it be found again.
+              onPress={() => router.push({
+                pathname: '/share',
+                params: { range: String(rangeDays) },
+              })}
               // The drawn chip is about 36×28, under the 44pt minimum, and it
               // sits at the very edge of the screen where a thumb is least
               // precise. The slop is asymmetric for that reason — more of it on
               // the right, where there is nothing to steal a tap from.
               hitSlop={{ top: 10, bottom: 10, left: 6, right: 16 }}
-              style={[s.rangeBtn, s.shareBtn, sharing && s.shareBtnBusy]}
+              style={[s.rangeBtn, s.shareBtn]}
               accessibilityRole="button"
               accessibilityLabel={t(nativeLanguage, 'shareTitle')}
             >
@@ -592,41 +511,6 @@ export default function ProgressScreen() {
         )}
       </ScrollView>
       {switcher}
-      {/* The same sheet the study-language switcher on this screen uses, rather
-          than a second kind of popover for the second thing that asks a
-          question. */}
-      <BottomSheet
-        visible={shareOpen}
-        title={t(nativeLanguage, 'shareChoose')}
-        onClose={() => setShareOpen(false)}
-      >
-        {shareOptions.map(option => (
-          <TouchableOpacity
-            key={option.variant}
-            style={s.shareOption}
-            onPress={() => handleShare(option.variant)}
-            accessibilityRole="button"
-          >
-            {/* The picture itself, before it goes anywhere. It costs no new
-                machinery — the asset is a URL, so this is the same address the
-                share sheet is about to be handed. Only drawn when there is a
-                host to ask; without one the row still works and still shares,
-                it just cannot show what it is about to send. */}
-            {API_BASE_URL !== '' && (
-              <Image
-                source={{
-                  uri: `${API_BASE_URL}${shareImagePath(option.stats, nativeLanguage, option.variant)}`,
-                }}
-                style={s.shareThumb}
-                resizeMode="contain"
-                accessibilityIgnoresInvertColors
-              />
-            )}
-            <Text style={s.shareOptionText}>{t(nativeLanguage, option.labelKey)}</Text>
-            <Ionicons name="share-outline" size={18} color={C.muted} />
-          </TouchableOpacity>
-        ))}
-      </BottomSheet>
     </SafeAreaView>
   );
 }
@@ -849,19 +733,6 @@ function makeStyles(C: Palette, tabBarHeight: number) {
     // horizontal padding is trimmed from `rangeBtn`'s 12 because there is no
     // text beside the icon to balance it.
     shareBtn: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, marginLeft: 'auto', flexShrink: 0, borderColor: C.highlight },
-    shareBtnBusy: { opacity: 0.5 },
-    shareOption: {
-      flexDirection: 'row', alignItems: 'center',
-      paddingVertical: 12, paddingHorizontal: 4,
-      borderBottomWidth: 1, borderBottomColor: C.border,
-    },
-    // 9:16, the canvas the image is drawn on. The border colour shows through
-    // while the PNG is still loading, so the row does not jump.
-    shareThumb: {
-      width: 54, height: 96, borderRadius: 6,
-      backgroundColor: C.border, marginRight: 12,
-    },
-    shareOptionText: { flex: 1, color: C.text, fontSize: 15 },
     rangeTextOn: { color: C.highlight, fontWeight: '700' },
     empty: { color: C.muted, fontSize: 14, paddingHorizontal: 16 },
     emptyBody: { color: C.muted, fontSize: 13, opacity: 0.7, marginTop: 8, paddingHorizontal: 16 },
