@@ -7,7 +7,8 @@ import { File, Paths } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import {
   PROGRESS_HISTORY_START, SUPPORTED_STUDY_LANGUAGES, buildHeatmap, buildShareStats,
-  buildWeekGrid, hasShareableHistory, historyStartsMidWindow, localDateString,
+  buildWeekGrid, detailedHistoryStartsMidWindow, hasShareableHistory,
+  historyStartsMidWindow, localDateString,
   shareImageFilename, shareImagePath, shiftDate,
   summarizeProgress, t,
   type DailyProgress, type HeatmapCell, type LanguageProgress,
@@ -266,6 +267,20 @@ export default function ProgressScreen() {
   const windowStart = shiftDate(localDateString(), -(rangeDays - 1));
   const partialWindow = historyStartsMidWindow(windowStart);
 
+  /**
+   * Cards that crossed into maturity inside the window — or nothing at all.
+   *
+   * The second, later boundary: `cardsMatured` has only been written since
+   * 2026-09-06, so over a window reaching further back it undercounts, and an
+   * undercount here looks exactly like a quiet fortnight. Withheld rather than
+   * shown low, which is the rule the shared image already follows — and it
+   * starts answering on its own once the window clears the boundary, with no
+   * code change.
+   */
+  const cardsLearned = detailedHistoryStartsMidWindow(windowStart)
+    ? null
+    : summary.totalCardsMatured;
+
   return (
     <SafeAreaView style={s.safe} edges={['top']}>
       {header}
@@ -343,6 +358,13 @@ export default function ProgressScreen() {
               <Stat s={s} label={t(nativeLanguage, 'progressStatReviews')} value={summary.totalReviews} />
               <Stat s={s} label={t(nativeLanguage, 'progressStatActiveDays')} value={summary.activeDays} />
               <Stat s={s} label={t(nativeLanguage, 'progressStatAverage')} value={summary.averagePerActiveDay} />
+              {/* Shares its label with the tile on the shared image, so the two
+                  surfaces cannot describe one number differently. Note it
+                  counts *cards* where Reviews above counts directions — the
+                  reason they carry different nouns and never one shared one. */}
+              {cardsLearned !== null && (
+                <Stat s={s} label={t(nativeLanguage, 'shareStatLearned')} value={cardsLearned} />
+              )}
             </View>
 
             <Text style={s.sectionTitle}>{t(nativeLanguage, 'progressCalendar')}</Text>

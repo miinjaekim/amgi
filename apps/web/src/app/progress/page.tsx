@@ -4,8 +4,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useUser } from '@/components/UserContext';
 import { fetchRecentProgress } from '@/services/progress';
 import {
-  buildHeatmap, buildShareStats, buildWeekGrid, hasShareableHistory, localDateString,
-  summarizeProgress,
+  buildHeatmap, buildShareStats, buildWeekGrid, detailedHistoryStartsMidWindow,
+  hasShareableHistory, localDateString, shiftDate, summarizeProgress,
   type DailyProgress, type StudyLanguage,
 } from '@amgi/core';
 import { t } from '@/lib/i18n';
@@ -147,6 +147,20 @@ export default function ProgressPage() {
 
   const hasHistory = summary.totalReviews > 0 || summary.totalNewCards > 0 || summary.totalPackCards > 0;
 
+  /**
+   * Cards that crossed into maturity inside the window — or nothing at all.
+   *
+   * `cardsMatured` has only been written since 2026-09-06, so over a window
+   * reaching further back it undercounts, and an undercount here looks exactly
+   * like a quiet fortnight. Withheld rather than shown low, which is the rule
+   * the shared image already follows; it starts answering on its own once the
+   * window clears the boundary, with no code change.
+   */
+  const windowStart = shiftDate(localDateString(), -(rangeDays - 1));
+  const cardsLearned = detailedHistoryStartsMidWindow(windowStart)
+    ? null
+    : summary.totalCardsMatured;
+
   return (
     <div className="max-w-2xl mx-auto">
       <h1 className="text-2xl font-bold text-[var(--color-highlight)] mb-1">
@@ -195,7 +209,9 @@ export default function ProgressPage() {
               start empty the day this ships, so deriving it would show `1` to
               someone on a 200-day streak — and two surfaces disagreeing about
               a streak is exactly the failure this dashboard should not add. */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
+          <div className={`grid grid-cols-2 gap-3 mb-8 ${
+            cardsLearned === null ? 'sm:grid-cols-4' : 'sm:grid-cols-5'
+          }`}>
             <Stat label={t(nativeLanguage, 'progressStreak')}
               value={streak === 1
                 ? t(nativeLanguage, 'progressStreakDay')
@@ -203,6 +219,13 @@ export default function ProgressPage() {
             <Stat label={t(nativeLanguage, 'progressStatReviews')} value={summary.totalReviews} />
             <Stat label={t(nativeLanguage, 'progressStatActiveDays')} value={summary.activeDays} />
             <Stat label={t(nativeLanguage, 'progressStatAverage')} value={summary.averagePerActiveDay} />
+            {/* Shares its label with the tile on the shared image, so the two
+                surfaces cannot describe one number differently. It counts
+                *cards* where Reviews counts directions — the reason they carry
+                different nouns and never one shared one. */}
+            {cardsLearned !== null && (
+              <Stat label={t(nativeLanguage, 'shareStatLearned')} value={cardsLearned} />
+            )}
           </div>
 
           <section className="mb-8">
