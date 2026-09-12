@@ -7,7 +7,7 @@ import { File, Paths } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import {
   PROGRESS_HISTORY_START, SUPPORTED_STUDY_LANGUAGES, buildHeatmap, buildShareStats,
-  hasShareableHistory, historyStartsMidWindow, localDateString,
+  buildWeekGrid, hasShareableHistory, historyStartsMidWindow, localDateString,
   shareImageFilename, shareImagePath, shiftDate,
   summarizeProgress, t,
   type DailyProgress, type HeatmapCell, type LanguageProgress,
@@ -35,11 +35,33 @@ const RANGES = [
  * A day's shade, indexed by `HeatmapCell.level`. Level 0 is drawn as a faint
  * block rather than as nothing: an empty cell and a missing cell look the same
  * and one of them is a bug.
+ *
+ * Straight from the palette rather than alpha-blended, since the blend measured
+ * wrong — see the `heat` field in `theme.ts` for what and by how much.
  */
 function levelColor(C: Palette, level: HeatmapCell['level']): string {
-  if (level === 0) return C.border;
-  return C.highlight + ['', '40', '73', 'BF', 'FF'][level];
+  return C.heat[level];
 }
+
+/**
+ * Sunday-first weekday names in the reader's language.
+ *
+ * Built from a known Sunday through `Intl` rather than from translation keys:
+ * seven more keys per locale to say what the platform already knows, and any
+ * locale added later gets them for free.
+ */
+function weekdayLabels(nativeLanguage: string | null | undefined): string[] {
+  const locale = nativeLanguage === 'Korean' ? 'ko-KR' : 'en-GB';
+  // 1970-01-04 was a Sunday.
+  return [0, 1, 2, 3, 4, 5, 6].map(offset => new Date(Date.UTC(1970, 0, 4 + offset, 12))
+    .toLocaleDateString(locale, { weekday: 'short' }));
+}
+
+/**
+ * Which weekday rows get a label. Seven at 12px would collide; three is what
+ * GitHub's calendar labels, and it is enough to key the other four.
+ */
+const LABELLED_WEEKDAYS = [1, 3, 5];
 
 export default function ProgressScreen() {
   const { C } = useTheme();
@@ -131,20 +153,28 @@ export default function ProgressScreen() {
     () => buildHeatmap(days ?? [], localDateString(), rangeDays),
     [days, rangeDays],
   );
-  const weeks = useMemo(() => {
-    const columns: HeatmapCell[][] = [];
-    for (let i = 0; i < cells.length; i += 7) columns.push(cells.slice(i, i + 7));
-    return columns;
-  }, [cells]);
+  /**
+   * The calendar in week columns, so a row is always the same weekday — which
+   * is what lets the rows carry labels at all. See `buildWeekGrid`.
+   */
+  const grid = useMemo(() => buildWeekGrid(cells), [cells]);
+  const weekdays = useMemo(() => weekdayLabels(nativeLanguage), [nativeLanguage]);
 
   /**
-   * The selected day, as its index into `cells`.
+   * The selected day, as its place in the grid.
+   *
+   * Kept as a date plus its column and row rather than an index into `cells`:
+   * the grid is padded at both ends, so an index into the flat window no longer
+   * says where a cell was drawn, and the bubble is positioned from where it was
+   * drawn.
    *
    * Selection persists rather than lasting only while a finger is down: on a
    * phone the finger is on top of the cell, so "hold to read" would mean
    * reading around your own thumb. Tapping the same cell again clears it.
    */
-  const [selected, setSelected] = useState<number | null>(null);
+  const [selected, setSelected] = useState<
+    { date: string; column: number; row: number } | null
+  >(null);
   /** The full day behind a cell; `HeatmapCell` only carries the review count. */
   const daysByDate = useMemo(
     () => new Map((days ?? []).map(day => [day.date, day])),
@@ -316,53 +346,85 @@ export default function ProgressScreen() {
             </View>
 
             <Text style={s.sectionTitle}>{t(nativeLanguage, 'progressCalendar')}</Text>
-            {/* Scrolls sideways on its own — a year is 52 columns and will not
-                fit a phone. */}
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              // Vertical room for the bubble, which is absolutely positioned and
-              // would otherwise be clipped by the scroller's own bounds.
-              contentContainerStyle={s.heatmapScroll}
-            >
-              <View style={s.heatmap}>
-                {weeks.map((week, weekIndex) => (
-                  <View key={weekIndex} style={s.heatmapCol}>
-                    {week.map((cell, dayIndex) => {
-                      const index = weekIndex * 7 + dayIndex;
-                      return (
-                        <TouchableOpacity
-                          key={cell.date}
-                          activeOpacity={0.6}
-                          onPress={() => setSelected(current => current === index ? null : index)}
-                          onLongPress={() => setSelected(index)}
-                          accessibilityRole="button"
-                          accessibilityLabel={describeDay(nativeLanguage, cell.date, daysByDate.get(cell.date))}
-                          style={[
-                            s.cell,
-                            { backgroundColor: levelColor(C, cell.level) },
-                            selected === index && { borderWidth: 1, borderColor: C.text },
-                          ]}
-                        />
-                      );
-                    })}
-                  </View>
+            {/* The weekday gutter sits *outside* the scroller so it stays put
+                while a year of columns slides past it. Everything that scrolls
+                — the month row and the grid — shares one content view, so the
+                two can never drift apart horizontally. */}
+            <View style={s.calendarRow}>
+              <View style={s.weekdayGutter}>
+                {weekdays.map((name, row) => (
+                  <Text key={name} style={s.weekdayLabel} numberOfLines={1}>
+                    {LABELLED_WEEKDAYS.includes(row) ? name : ''}
+                  </Text>
                 ))}
-
-                {selected !== null && cells[selected] && (
-                  <DayTooltip
-                    C={C}
-                    s={s}
-                    nativeLanguage={nativeLanguage}
-                    cell={cells[selected]}
-                    day={daysByDate.get(cells[selected].date)}
-                    index={selected}
-                    columnCount={weeks.length}
-                  />
-                )}
               </View>
-            </ScrollView>
+              {/* Scrolls sideways on its own — a year is 52 columns and will not
+                  fit a phone. */}
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                // Vertical room for the bubble, which is absolutely positioned
+                // and would otherwise be clipped by the scroller's own bounds.
+                contentContainerStyle={s.heatmapScroll}
+              >
+                <View>
+                  <View style={[s.monthRow, { width: grid.columns.length * PITCH }]}>
+                    {grid.months.map(tick => (
+                      <Text key={tick.date} style={[s.monthLabel, { left: tick.column * PITCH }]}>
+                        {formatMonth(nativeLanguage, tick.date)}
+                      </Text>
+                    ))}
+                  </View>
+                  <View style={s.heatmap}>
+                    {grid.columns.map((column, columnIndex) => (
+                      <View key={columnIndex} style={s.heatmapCol}>
+                        {column.map((cell, row) => (cell === null
+                          // A slot outside the window: drawn as nothing, because
+                          // an empty square would claim it was a day nobody
+                          // studied.
+                          ? <View key={`pad-${row}`} style={s.cellPad} />
+                          : (
+                            <TouchableOpacity
+                              key={cell.date}
+                              activeOpacity={0.6}
+                              onPress={() => setSelected(current => (
+                                current?.date === cell.date
+                                  ? null
+                                  : { date: cell.date, column: columnIndex, row }
+                              ))}
+                              onLongPress={() => setSelected({ date: cell.date, column: columnIndex, row })}
+                              accessibilityRole="button"
+                              accessibilityLabel={describeDay(nativeLanguage, cell.date, daysByDate.get(cell.date))}
+                              style={[
+                                s.cell,
+                                { backgroundColor: levelColor(C, cell.level) },
+                                selected?.date === cell.date && { borderWidth: 1, borderColor: C.text },
+                              ]}
+                            />
+                          )))}
+                      </View>
+                    ))}
+
+                    {selected && (
+                      <DayTooltip
+                        C={C}
+                        s={s}
+                        nativeLanguage={nativeLanguage}
+                        date={selected.date}
+                        day={daysByDate.get(selected.date)}
+                        column={selected.column}
+                        row={selected.row}
+                        columnCount={grid.columns.length}
+                      />
+                    )}
+                  </View>
+                </View>
+              </ScrollView>
+            </View>
+            {/* Named, not just graded: "Less → More" alone never says more of
+                what. */}
             <View style={s.legend}>
+              <Text style={s.legendText}>{t(nativeLanguage, 'progressStatReviews')}</Text>
               <Text style={s.legendText}>{t(nativeLanguage, 'progressLessMore')}</Text>
               {([0, 1, 2, 3, 4] as const).map(level => (
                 <View key={level} style={[s.cell, { backgroundColor: levelColor(C, level) }]} />
@@ -373,6 +435,7 @@ export default function ProgressScreen() {
             {summary.byLanguage.length > 0 && (
               <>
                 <Text style={s.sectionTitle}>{t(nativeLanguage, 'progressByLanguage')}</Text>
+                <Text style={s.sectionNote}>{t(nativeLanguage, 'progressBarScale')}</Text>
                 {summary.byLanguage.map(({ studyLanguage: language, progress }) => (
                   <LanguageRow
                     key={language}
@@ -458,18 +521,22 @@ const PITCH = CELL + GAP;
 /** Fixed so the bubble can be centred exactly without measuring its text. */
 const TOOLTIP_WIDTH = 150;
 const TOOLTIP_HEIGHT = 42;
+/** Room above the grid for the month ticks. */
+const MONTH_ROW_HEIGHT = 14;
 
-function DayTooltip({ C, s, nativeLanguage, cell, day, index, columnCount }: {
+function DayTooltip({ C, s, nativeLanguage, date, day, column, row, columnCount }: {
   C: Palette;
   s: ReturnType<typeof makeStyles>;
   nativeLanguage: string | null | undefined;
-  cell: HeatmapCell;
+  date: string;
   day: DailyProgress | undefined;
-  index: number;
+  column: number;
+  row: number;
   columnCount: number;
 }) {
-  const column = Math.floor(index / 7);
-  const row = index % 7;
+  // A day with no document is a day with no reviews, which is what the cell
+  // behind this bubble is already drawing.
+  const reviews = day?.reviews ?? 0;
   const cardsAdded = (day?.newCards ?? 0) + (day?.packCards ?? 0);
 
   // Centred on the cell, then clamped so neither end runs past the grid.
@@ -487,13 +554,13 @@ function DayTooltip({ C, s, nativeLanguage, cell, day, index, columnCount }: {
 
   return (
     <View style={[s.tooltip, { left, top, width: TOOLTIP_WIDTH, borderColor: C.muted, backgroundColor: C.surface }]}>
-      <Text style={s.tooltipDate}>{formatDay(nativeLanguage, cell.date)}</Text>
+      <Text style={s.tooltipDate}>{formatDay(nativeLanguage, date)}</Text>
       <Text style={s.tooltipDetail} numberOfLines={1}>
-        {cell.reviews === 0
+        {reviews === 0
           ? t(nativeLanguage, 'progressTooltipNoReviews')
-          : cell.reviews === 1
+          : reviews === 1
             ? t(nativeLanguage, 'progressTooltipOneReview')
-            : t(nativeLanguage, 'progressTooltipReviews', { count: cell.reviews })}
+            : t(nativeLanguage, 'progressTooltipReviews', { count: reviews })}
         {cardsAdded > 0
           ? ` · ${cardsAdded === 1
             ? t(nativeLanguage, 'progressTooltipOneCard')
@@ -501,6 +568,14 @@ function DayTooltip({ C, s, nativeLanguage, cell, day, index, columnCount }: {
           : ''}
       </Text>
     </View>
+  );
+}
+
+/** `2026-09-01` → `Sep` / `9월`, for the calendar's month ticks. */
+function formatMonth(nativeLanguage: string | null | undefined, date: string): string {
+  return new Date(`${date}T12:00:00Z`).toLocaleDateString(
+    nativeLanguage === 'Korean' ? 'ko-KR' : 'en-GB',
+    { month: 'short' },
   );
 }
 
@@ -601,12 +676,25 @@ function makeStyles(C: Palette, tabBarHeight: number) {
     statValue: { color: C.highlight, fontSize: 20, fontWeight: '700' },
     statLabel: { color: C.muted, fontSize: 12, marginTop: 2 },
     sectionTitle: { color: C.text, fontSize: 14, fontWeight: '700', marginBottom: 10 },
+    sectionNote: { color: C.muted, fontSize: 11, marginTop: -4, marginBottom: 10 },
+    calendarRow: { flexDirection: 'row' },
+    // Padded down by the month row plus the scroller's own top inset, so row 0
+    // of the labels lines up with row 0 of the cells.
+    weekdayGutter: { marginRight: 6, paddingTop: 48 + MONTH_ROW_HEIGHT },
+    weekdayLabel: {
+      height: CELL, marginBottom: GAP, width: 22, textAlign: 'right',
+      color: C.muted, fontSize: 9, lineHeight: CELL,
+    },
+    monthRow: { height: MONTH_ROW_HEIGHT, position: 'relative' },
+    monthLabel: { position: 'absolute', top: 0, color: C.muted, fontSize: 9 },
     // The bubble sits above or below a cell and is absolutely positioned, so
     // the scroller needs room for it or it gets clipped at the grid's edge.
     heatmapScroll: { paddingTop: 48, paddingBottom: 24 },
     heatmap: { flexDirection: 'row', gap: GAP, position: 'relative' },
     heatmapCol: { flexDirection: 'column', gap: GAP },
     cell: { width: CELL, height: CELL, borderRadius: 2 },
+    // Holds a slot's place in the column without drawing anything in it.
+    cellPad: { width: CELL, height: CELL },
     tooltip: {
       position: 'absolute', zIndex: 10, paddingHorizontal: 8, paddingVertical: 5,
       borderRadius: 8, borderWidth: 1,

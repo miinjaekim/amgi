@@ -158,6 +158,10 @@ const translations = {
     progressLessMore: 'Less',
     progressMore: 'More',
     progressByLanguage: 'By language',
+    // The bar is a share of the busiest language, not of the total — with one
+    // language it would otherwise always be full and say nothing. Said out loud
+    // because a bar with no axis is otherwise read as a share of everything.
+    progressBarScale: 'Bars compare each language to your busiest one.',
     progressLanguageReviews: '{count} reviews',
     // Rollups began 2026-08-20 and cannot be reconstructed, so a window
     // reaching further back is shorter than it looks. Say so rather than
@@ -733,6 +737,7 @@ const translations = {
     progressLessMore: '적음',
     progressMore: '많음',
     progressByLanguage: '언어별',
+    progressBarScale: '막대는 가장 많이 복습한 언어를 기준으로 비교한 것입니다.',
     progressLanguageReviews: '{count}개 복습',
     progressCardsFromPacks: '단어팩에서 {count}개',
     progressTooltipReviews: '{count}개 복습',

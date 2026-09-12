@@ -4,7 +4,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useUser } from '@/components/UserContext';
 import { fetchRecentProgress } from '@/services/progress';
 import {
-  buildHeatmap, buildShareStats, hasShareableHistory, localDateString,
+  buildHeatmap, buildShareStats, buildWeekGrid, hasShareableHistory, localDateString,
   summarizeProgress,
   type DailyProgress, type StudyLanguage,
 } from '@amgi/core';
@@ -23,16 +23,41 @@ const RANGES = [
 
 /**
  * A day's shade. Index is `HeatmapCell.level`, so 0 is a rest day — drawn as a
- * faint outline rather than as nothing, because an empty grid cell and a
- * missing grid cell look identical and one of them is a bug.
+ * faint block rather than as nothing, because an empty grid cell and a missing
+ * grid cell look identical and one of them is a bug.
+ *
+ * Each step is a theme variable rather than an opacity on `--color-highlight`.
+ * The old alpha ramp measured wrong — on forest it made a rest day *lighter*
+ * than a studied one, and put empty and level 1 ΔE 1.4 apart under
+ * deuteranopia. See the comment on `--heat-0` in globals.css, and the identical
+ * values in mobile's `theme.ts`.
  */
 const LEVEL_STYLES = [
-  'bg-[var(--color-muted)]/15',
-  'bg-[var(--color-highlight)]/25',
-  'bg-[var(--color-highlight)]/50',
-  'bg-[var(--color-highlight)]/75',
-  'bg-[var(--color-highlight)]',
+  'bg-[var(--heat-0)]',
+  'bg-[var(--heat-1)]',
+  'bg-[var(--heat-2)]',
+  'bg-[var(--heat-3)]',
+  'bg-[var(--heat-4)]',
 ];
+
+/**
+ * Which weekday rows get a label. Seven at 12px collide; three is what GitHub's
+ * calendar labels, and it is enough to key the other four.
+ */
+const LABELLED_WEEKDAYS = [1, 3, 5];
+
+/**
+ * Sunday-first weekday names in the reader's language.
+ *
+ * Built from a known Sunday through `Intl` rather than from translation keys:
+ * seven more keys per locale to say what the platform already knows.
+ */
+function weekdayLabels(nativeLanguage: string | null | undefined): string[] {
+  const locale = nativeLanguage === 'Korean' ? 'ko-KR' : 'en-GB';
+  // 1970-01-04 was a Sunday.
+  return [0, 1, 2, 3, 4, 5, 6].map(offset => new Date(Date.UTC(1970, 0, 4 + offset, 12))
+    .toLocaleDateString(locale, { weekday: 'short' }));
+}
 
 export default function ProgressPage() {
   const { user, authLoading, nativeLanguage, streak } = useUser();
@@ -64,22 +89,27 @@ export default function ProgressPage() {
     [days, rangeDays],
   );
 
-  // Columns of seven, oldest first, so the grid reads left to right like a
-  // calendar rather than wrapping mid-week.
-  const weeks = useMemo(() => {
-    const columns: (typeof heatmap)[] = [];
-    for (let i = 0; i < heatmap.length; i += 7) columns.push(heatmap.slice(i, i + 7));
-    return columns;
-  }, [heatmap]);
+  /**
+   * Columns of seven, week-aligned, so a *row* is always the same weekday —
+   * which is what lets the rows carry labels at all. Chunking the window by
+   * seven put a different weekday in row 0 every day. See `buildWeekGrid`.
+   */
+  const grid = useMemo(() => buildWeekGrid(heatmap), [heatmap]);
+  const weekdays = useMemo(() => weekdayLabels(nativeLanguage), [nativeLanguage]);
 
   /**
-   * The hovered day, as its index into `heatmap`.
+   * The hovered day, as its place in the grid.
    *
-   * One tooltip node positioned from the index, rather than a hidden one inside
+   * One tooltip node positioned from that, rather than a hidden one inside
    * every cell — a year is 364 cells, and 364 permanently-mounted tooltips is a
-   * lot of DOM for something at most one of which is ever visible.
+   * lot of DOM for something at most one of which is ever visible. Carries the
+   * column and row rather than an index into `heatmap`, because the grid is
+   * padded at both ends and an index into the flat window no longer says where
+   * a cell was drawn.
    */
-  const [hovered, setHovered] = useState<number | null>(null);
+  const [hovered, setHovered] = useState<
+    { date: string; column: number; row: number } | null
+  >(null);
   /** The full day behind a cell; `HeatmapCell` only carries the review count. */
   const daysByDate = useMemo(
     () => new Map((days ?? []).map(day => [day.date, day])),
@@ -179,50 +209,87 @@ export default function ProgressPage() {
             <h2 className="text-sm font-bold text-[var(--color-text)] mb-3">
               {t(nativeLanguage, 'progressCalendar')}
             </h2>
-            {/* Scrolls on its own rather than letting the page scroll sideways:
-                a year is 52 columns and will not fit a phone. `relative` is the
-                tooltip's positioning context, and it sits inside the scroller so
-                the bubble travels with the grid instead of detaching from its
-                cell. */}
-            <div className="overflow-x-auto pb-2">
+            {/* The weekday gutter sits outside the scroller so it stays put
+                while a year of columns slides past it. */}
+            <div className="flex">
               <div
-                className="relative flex gap-1 w-max"
-                style={{ paddingTop: TOOLTIP_LANE }}
-                onMouseLeave={() => setHovered(null)}
+                className="flex flex-col gap-1 mr-1.5 shrink-0"
+                style={{ paddingTop: TOOLTIP_LANE + MONTH_ROW_HEIGHT }}
               >
-                {weeks.map((week, weekIndex) => (
-                  <div key={weekIndex} className="flex flex-col gap-1">
-                    {week.map((cell, dayIndex) => {
-                      const index = weekIndex * 7 + dayIndex;
-                      return (
-                        <button
-                          key={cell.date}
-                          type="button"
-                          aria-label={describeDay(nativeLanguage, cell.date, daysByDate.get(cell.date))}
-                          onMouseEnter={() => setHovered(index)}
-                          onFocus={() => setHovered(index)}
-                          onBlur={() => setHovered(null)}
-                          className={`w-3 h-3 rounded-sm ${LEVEL_STYLES[cell.level]} ${
-                            hovered === index ? 'ring-1 ring-[var(--color-text)]' : ''
-                          }`}
-                        />
-                      );
-                    })}
+                {weekdays.map((name, row) => (
+                  <div
+                    key={name}
+                    className="h-3 w-7 text-right text-[9px] leading-3 text-[var(--color-muted)]"
+                  >
+                    {LABELLED_WEEKDAYS.includes(row) ? name : ''}
                   </div>
                 ))}
+              </div>
+              {/* Scrolls on its own rather than letting the page scroll
+                  sideways: a year is 52 columns and will not fit a phone.
+                  `relative` is the tooltip's positioning context, and it sits
+                  inside the scroller so the bubble travels with the grid
+                  instead of detaching from its cell. */}
+              <div className="overflow-x-auto pb-2">
+                <div
+                  className="relative w-max"
+                  style={{ paddingTop: TOOLTIP_LANE }}
+                  onMouseLeave={() => setHovered(null)}
+                >
+                  <div
+                    className="relative"
+                    style={{ height: MONTH_ROW_HEIGHT, width: grid.columns.length * COLUMN_PITCH }}
+                  >
+                    {grid.months.map(tick => (
+                      <span
+                        key={tick.date}
+                        className="absolute top-0 text-[9px] text-[var(--color-muted)]"
+                        style={{ left: tick.column * COLUMN_PITCH }}
+                      >
+                        {formatMonth(nativeLanguage, tick.date)}
+                      </span>
+                    ))}
+                  </div>
+                  <div className="flex gap-1">
+                    {grid.columns.map((column, columnIndex) => (
+                      <div key={columnIndex} className="flex flex-col gap-1">
+                        {column.map((cell, row) => (cell === null
+                          // Outside the window: drawn as nothing, since an empty
+                          // square would claim it was a day nobody studied.
+                          ? <div key={`pad-${row}`} className="w-3 h-3" />
+                          : (
+                            <button
+                              key={cell.date}
+                              type="button"
+                              aria-label={describeDay(nativeLanguage, cell.date, daysByDate.get(cell.date))}
+                              onMouseEnter={() => setHovered({ date: cell.date, column: columnIndex, row })}
+                              onFocus={() => setHovered({ date: cell.date, column: columnIndex, row })}
+                              onBlur={() => setHovered(null)}
+                              className={`w-3 h-3 rounded-sm ${LEVEL_STYLES[cell.level]} ${
+                                hovered?.date === cell.date ? 'ring-1 ring-[var(--color-text)]' : ''
+                              }`}
+                            />
+                          )))}
+                      </div>
+                    ))}
+                  </div>
 
-                {hovered !== null && heatmap[hovered] && (
-                  <DayTooltip
-                    nativeLanguage={nativeLanguage}
-                    cell={heatmap[hovered]}
-                    day={daysByDate.get(heatmap[hovered].date)}
-                    index={hovered}
-                    columnCount={weeks.length}
-                  />
-                )}
+                  {hovered && (
+                    <DayTooltip
+                      nativeLanguage={nativeLanguage}
+                      date={hovered.date}
+                      day={daysByDate.get(hovered.date)}
+                      column={hovered.column}
+                      columnCount={grid.columns.length}
+                    />
+                  )}
+                </div>
               </div>
             </div>
+            {/* Named, not just graded: "Less → More" alone never says more of
+                what. */}
             <div className="flex items-center gap-1.5 mt-3 text-xs text-[var(--color-muted)]">
+              <span>{t(nativeLanguage, 'progressStatReviews')}</span>
               <span>{t(nativeLanguage, 'progressLessMore')}</span>
               {LEVEL_STYLES.map((style, level) => (
                 <div key={level} className={`w-3 h-3 rounded-sm ${style}`} />
@@ -273,15 +340,19 @@ export default function ProgressPage() {
 const TOOLTIP_LANE = 44;
 /** Cell (12px) plus the `gap-1` between columns (4px). */
 const COLUMN_PITCH = 16;
+/** Room above the grid for the month ticks. */
+const MONTH_ROW_HEIGHT = 14;
 
-function DayTooltip({ nativeLanguage, cell, day, index, columnCount }: {
+function DayTooltip({ nativeLanguage, date, day, column, columnCount }: {
   nativeLanguage: string | null | undefined;
-  cell: { date: string; reviews: number };
+  date: string;
   day: DailyProgress | undefined;
-  index: number;
+  column: number;
   columnCount: number;
 }) {
-  const column = Math.floor(index / 7);
+  // A day with no document is a day with no reviews, which is what the cell
+  // behind this bubble is already drawing.
+  const reviews = day?.reviews ?? 0;
   const cardsAdded = (day?.newCards ?? 0) + (day?.packCards ?? 0);
 
   /**
@@ -305,13 +376,13 @@ function DayTooltip({ nativeLanguage, cell, day, index, columnCount }: {
         border: '1px solid var(--color-muted)',
       }}
     >
-      <div className="font-bold text-[var(--color-text)]">{formatDay(nativeLanguage, cell.date)}</div>
+      <div className="font-bold text-[var(--color-text)]">{formatDay(nativeLanguage, date)}</div>
       <div className="text-[var(--color-muted)]">
-        {cell.reviews === 0
+        {reviews === 0
           ? t(nativeLanguage, 'progressTooltipNoReviews')
-          : cell.reviews === 1
+          : reviews === 1
             ? t(nativeLanguage, 'progressTooltipOneReview')
-            : t(nativeLanguage, 'progressTooltipReviews', { count: cell.reviews })}
+            : t(nativeLanguage, 'progressTooltipReviews', { count: reviews })}
         {cardsAdded > 0 && (
           <> · {cardsAdded === 1
             ? t(nativeLanguage, 'progressTooltipOneCard')
@@ -319,6 +390,14 @@ function DayTooltip({ nativeLanguage, cell, day, index, columnCount }: {
         )}
       </div>
     </div>
+  );
+}
+
+/** `2026-09-01` → `Sep` / `9월`, for the calendar's month ticks. */
+function formatMonth(nativeLanguage: string | null | undefined, date: string): string {
+  return new Date(`${date}T12:00:00Z`).toLocaleDateString(
+    nativeLanguage === 'Korean' ? 'ko-KR' : 'en-GB',
+    { month: 'short' },
   );
 }
 

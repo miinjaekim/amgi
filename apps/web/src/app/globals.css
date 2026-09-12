@@ -9,6 +9,19 @@
     --color-muted-dark: #2D6355;
     --color-text: #E9E0D2;
     --color-highlight: #EAA09C;
+    /* Calendar ramp. One hue, lightness climbing, generated in OKLCH and
+       checked with the data-viz palette validator: monotone L, adjacent ΔL
+       >= 0.06, faintest step 2.38:1 on this surface, hue spread 2°. --heat-0 is
+       "no data" and is deliberately a categorical break rather than a step on
+       the scale — ΔE 20 from --heat-1, and 17.4 under protanopia. The old ramp
+       alpha-blended --color-highlight over --color-bg, which put those two at
+       ΔE 1.4 under deuteranopia and made a rest day *lighter* than a studied
+       one. Mobile carries the identical values in theme.ts. */
+    --heat-0: #453a39;
+    --heat-1: #956462;
+    --heat-2: #b17874;
+    --heat-3: #cd8c88;
+    --heat-4: #eaa09c;
   }
 
   /* Sonokai — dark mode (id stays "slate" for stored prefs + system mapping) */
@@ -19,6 +32,13 @@
     --color-muted-dark: #414550;
     --color-text: #E2E2E3;
     --color-highlight: #9ED072;
+    /* Same construction as forest's: faintest step 2.39:1, hue spread 0°,
+       --heat-0 at ΔE 19.5 from --heat-1 under deuteranopia. */
+    --heat-0: #30352d;
+    --heat-1: #507032;
+    --heat-2: #698f47;
+    --heat-3: #83af5c;
+    --heat-4: #9ed072;
   }
 
   /* Paper — light mode */
@@ -29,6 +49,14 @@
     --color-muted-dark: #64748B;
     --color-text: #1E2235;
     --color-highlight: #2D6A4F;
+    /* The light theme, so the ramp darkens as the day gets busier and --heat-0
+       is the lightest step. Faintest step 2.36:1, hue spread 0°, --heat-0 at
+       ΔE 18.8 from --heat-1 under protanopia. */
+    --heat-0: #d6e1db;
+    --heat-1: #7faa94;
+    --heat-2: #64947c;
+    --heat-3: #497f65;
+    --heat-4: #2d6a4f;
   }
 
   body {
