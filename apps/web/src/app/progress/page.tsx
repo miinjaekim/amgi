@@ -427,6 +427,7 @@ export default function ProgressPage() {
           <WeekChart
             nativeLanguage={nativeLanguage}
             cells={weekCells}
+            daysByDate={daysByDate}
             mark={weekMark}
             onMarkChange={weekMarkStore.set}
           />
@@ -537,10 +538,26 @@ function DayTooltip({ nativeLanguage, date, day, column, columnCount }: {
   );
 }
 
-/** The plot's height in pixels; the tallest mark fills it. */
+/** The plot's height in pixels; the axis ceiling fills it. */
 const WEEK_PLOT_HEIGHT = 64;
-/** Room above the plot so the peak's label is not clipped. */
-const WEEK_LABEL_LANE = 14;
+/** Room above the plot for the hover bubble. */
+const WEEK_TOOLTIP_LANE = 44;
+/** Left gutter the axis labels sit in. */
+const WEEK_AXIS_GUTTER = 26;
+
+/**
+ * A round number at or above `value`, so the gridlines land somewhere a reader
+ * can actually read — 47 reviews gives an axis to 50, not to 47.
+ */
+function niceCeiling(value: number): number {
+  if (value <= 0) return 0;
+  const magnitude = 10 ** Math.floor(Math.log10(value));
+  for (const step of [1, 2, 2.5, 5]) {
+    const candidate = step * magnitude;
+    if (candidate >= value) return Math.round(candidate);
+  }
+  return Math.round(10 * magnitude);
+}
 
 type WeekMark = 'bars' | 'line';
 const WEEK_MARK_KEY = 'amgi_week_chart_mark';
@@ -599,21 +616,42 @@ const weekMarkStore = {
  * already carry. Both marks share the title, the labels and the plot height,
  * so switching cannot shift the layout.
  */
-function WeekChart({ nativeLanguage, cells, mark, onMarkChange }: {
+function WeekChart({ nativeLanguage, cells, daysByDate, mark, onMarkChange }: {
   nativeLanguage: string | null | undefined;
   cells: HeatmapCell[];
+  daysByDate: Map<string, DailyProgress>;
   mark: WeekMark;
   onMarkChange: (mark: WeekMark) => void;
 }) {
   const weekdays = weekdayLabels(nativeLanguage);
   const busiest = Math.max(0, ...cells.map(cell => cell.reviews));
-  const peak = cells.findIndex(cell => busiest > 0 && cell.reviews === busiest);
+  /** The axis top. Marks scale to this, not to the raw busiest day. */
+  const ceiling = niceCeiling(busiest);
+  /**
+   * The lines drawn across the plot. The midpoint earns one only when it is a
+   * whole number: a line labelled "3" sitting at 2.5 is worse than no line.
+   */
+  const ticks = ceiling === 0
+    ? [0]
+    : ceiling % 2 === 0 ? [0, ceiling / 2, ceiling] : [0, ceiling];
+
   /** Horizontal centre of a day's slot, as a percentage of the plot's width. */
   const centre = (index: number) => ((index + 0.5) * 100) / cells.length;
   /** A day's height in px, so both marks sit on one scale. */
-  const heightOf = (reviews: number) => (busiest > 0 && reviews > 0
-    ? Math.max(2, Math.round((reviews / busiest) * WEEK_PLOT_HEIGHT))
+  const heightOf = (reviews: number) => (ceiling > 0 && reviews > 0
+    ? Math.max(2, Math.round((reviews / ceiling) * WEEK_PLOT_HEIGHT))
     : 0);
+
+  /**
+   * The hovered day, by index.
+   *
+   * The tooltip enhances rather than gates: the gridlines carry the magnitude
+   * on their own, so nothing here is the only way to read a value.
+   */
+  const [hovered, setHovered] = useState<number | null>(null);
+  const active = hovered !== null ? cells[hovered] : null;
+  const activeDay = active ? daysByDate.get(active.date) : undefined;
+  const activeCards = (activeDay?.newCards ?? 0) + (activeDay?.packCards ?? 0);
 
   return (
     <section className="mb-8">
@@ -640,36 +678,55 @@ function WeekChart({ nativeLanguage, cells, mark, onMarkChange }: {
       </div>
 
       <div
-        className="relative border-b border-[var(--color-muted)]"
-        style={{ height: WEEK_PLOT_HEIGHT + WEEK_LABEL_LANE }}
+        className="relative"
+        style={{ height: WEEK_PLOT_HEIGHT + WEEK_TOOLTIP_LANE }}
+        onMouseLeave={() => setHovered(null)}
       >
-        {/* The peak's value, in HTML rather than inside the SVG. The plot has
-            to stretch to its container, which means preserveAspectRatio="none"
-            — and that would stretch any text or circle drawn in it. */}
-        {peak >= 0 && (
-          <span
-            className="absolute text-[10px] leading-3 text-[var(--color-muted)] -translate-x-1/2"
-            style={{ left: `${centre(peak)}%`, top: 0 }}
+        {/* Gridlines and their labels. Solid hairlines a shade off the surface,
+            never dashed — a dashed rule reads as a threshold or a projection
+            when it is only a scale. */}
+        {ticks.map(value => (
+          <div
+            key={value}
+            className="absolute flex items-center"
+            style={{
+              left: 0,
+              right: 0,
+              bottom: ceiling > 0 ? (value / ceiling) * WEEK_PLOT_HEIGHT : 0,
+            }}
           >
-            {busiest}
-          </span>
-        )}
+            <span
+              className="text-[10px] leading-none text-[var(--color-muted)] text-right shrink-0 pr-1"
+              style={{ width: WEEK_AXIS_GUTTER }}
+            >
+              {value}
+            </span>
+            <span className="flex-1 border-t border-[var(--color-muted)] opacity-30" />
+          </div>
+        ))}
 
         {mark === 'bars' ? (
-          <div className="absolute inset-x-0 bottom-0 flex items-end gap-2">
-            {cells.map(cell => (
+          <div
+            className="absolute bottom-0 flex items-end gap-2"
+            style={{ left: WEEK_AXIS_GUTTER, right: 0 }}
+          >
+            {cells.map((cell, index) => (
               <div
                 key={cell.date}
-                className="flex-1 rounded-t-sm bg-[var(--heat-4)]"
+                className="flex-1 rounded-t-sm bg-[var(--heat-4)] transition-opacity"
                 // A day with reviews keeps a visible sliver, for the same
                 // reason the calendar gives a one-review day a level of 1.
-                style={{ height: Math.max(heightOf(cell.reviews), cell.reviews > 0 ? 2 : 1) }}
+                style={{
+                  height: Math.max(heightOf(cell.reviews), cell.reviews > 0 ? 2 : 1),
+                  opacity: hovered === null || hovered === index ? 1 : 0.55,
+                }}
               />
             ))}
           </div>
         ) : (
           <svg
-            className="absolute inset-x-0 bottom-0 w-full overflow-visible"
+            className="absolute bottom-0 overflow-visible"
+            style={{ left: WEEK_AXIS_GUTTER, right: 0, width: 'auto' }}
             height={WEEK_PLOT_HEIGHT}
             viewBox={`0 0 100 ${WEEK_PLOT_HEIGHT}`}
             preserveAspectRatio="none"
@@ -690,9 +747,64 @@ function WeekChart({ nativeLanguage, cells, mark, onMarkChange }: {
             />
           </svg>
         )}
+
+        {/* One full-height target per day, over the marks. A quiet day's bar is
+            two pixels tall and a line has no width at all — hovering the mark
+            itself would be a game rather than a chart. */}
+        <div
+          className="absolute bottom-0 flex gap-2"
+          style={{ left: WEEK_AXIS_GUTTER, right: 0, height: WEEK_PLOT_HEIGHT }}
+        >
+          {cells.map((cell, index) => (
+            <button
+              key={cell.date}
+              type="button"
+              className="flex-1 h-full cursor-default"
+              aria-label={describeDay(nativeLanguage, cell.date, daysByDate.get(cell.date))}
+              onMouseEnter={() => setHovered(index)}
+              onFocus={() => setHovered(index)}
+              onBlur={() => setHovered(null)}
+            />
+          ))}
+        </div>
+
+        {/* Guarded on `hovered` rather than on `active`, so the index below is
+            narrowed by the compiler instead of asserted with a `!`. */}
+        {hovered !== null && active && (
+          <div
+            className={`absolute top-0 z-10 pointer-events-none px-2 py-1.5 rounded-lg text-xs whitespace-nowrap shadow-lg ${
+              hovered <= 1
+                ? 'translate-x-0'
+                : hovered >= cells.length - 2
+                  ? '-translate-x-full'
+                  : '-translate-x-1/2'
+            }`}
+            style={{
+              left: `calc(${WEEK_AXIS_GUTTER}px + ${centre(hovered)}%)`,
+              background: 'var(--color-surface)',
+              border: '1px solid var(--color-muted)',
+            }}
+          >
+            <div className="font-bold text-[var(--color-text)]">
+              {formatDay(nativeLanguage, active.date)}
+            </div>
+            <div className="text-[var(--color-muted)]">
+              {active.reviews === 0
+                ? t(nativeLanguage, 'progressTooltipNoReviews')
+                : active.reviews === 1
+                  ? t(nativeLanguage, 'progressTooltipOneReview')
+                  : t(nativeLanguage, 'progressTooltipReviews', { count: active.reviews })}
+              {activeCards > 0 && (
+                <> · {activeCards === 1
+                  ? t(nativeLanguage, 'progressTooltipOneCard')
+                  : t(nativeLanguage, 'progressTooltipCards', { count: activeCards })}</>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
-      <div className="flex gap-2 mt-1">
+      <div className="flex gap-2 mt-1" style={{ marginLeft: WEEK_AXIS_GUTTER }}>
         {cells.map(cell => (
           <div
             key={cell.date}
