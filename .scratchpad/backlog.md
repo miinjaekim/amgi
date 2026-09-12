@@ -20,10 +20,18 @@ costs ~20 minutes rather than an App Review cycle.
 **Build 16 is queued, as of 2026-09-12.** What is waiting on it, all on the
 Progress tab: the week-aligned calendar with its weekday and month labels, the
 corrected heatmap ramp (a palette change, so it is visible on every theme), the
-all-time cards learned tile and its per-language counts, the weekly review bar
-chart under the calendar, retention and days studied gone from the tiles and the
-language rows, and the share flow — now a full-screen preview swiped card by
-card, 30 days and 90 days plus today, each carrying four tiles rather than one.
+all-time cards learned tile and its per-language counts, the weekly review
+chart — now the web one's twin, bars or line behind a toggle, ruled against a
+rounded ceiling instead of its own busiest day — retention and days studied gone
+from the tiles and the language rows, and the share flow, now a full-screen
+preview swiped card by card, 30 days and 90 days plus today, each carrying four
+tiles rather than one.
+
+⚠️ **This build is a native-module build**, unlike the last few: the chart's
+line mark added `react-native-svg` 15.15.4 on 2026-09-12. Expo Go bundles it, so
+nothing about the dev loop changed, but the binary needs it compiled in and step
+3 below (`expo config --type introspect`) is therefore **not** skippable this
+time.
 
 ⚠️ **The sheet-based chooser this replaces never worked on iOS, and was queued
 for this same build.** It closed its own `Modal` on the way to

@@ -5,7 +5,8 @@ import { useUser } from '@/components/UserContext';
 import { fetchRecentProgress } from '@/services/progress';
 import {
   CARD_COLLECTIONS, buildHeatmap, buildShareStats, buildTodayStats, buildWeekGrid,
-  hasShareableHistory, localDateString, mergeLanguageRows, summarizeProgress, weekdayIndex,
+  hasShareableHistory, localDateString, mergeLanguageRows, niceCeiling, summarizeProgress,
+  weekAxisTicks, weekdayIndex,
   type DailyProgress, type HeatmapCell, type StudyLanguage,
 } from '@amgi/core';
 import { backfillMatureFlags, countMatureFlashcards } from '@/services/firestore';
@@ -95,10 +96,10 @@ export default function ProgressPage() {
   /**
    * Which mark the weekly chart draws with.
    *
-   * Web only for now, and a toggle rather than a decision: seven discrete
-   * counts read defensibly either way, so the way to choose is to look at both.
-   * Mobile stays on bars — a line there needs `react-native-svg`, which is not
-   * installed, where the DOM draws SVG on its own.
+   * A toggle rather than a decision: seven discrete counts read defensibly
+   * either way, so the way to choose is to look at both. Mobile carries the
+   * same toggle since 2026-09-12 — `react-native-svg` was added for it, and
+   * remembers the choice in `AsyncStorage` under this same key's name.
    *
    * ⚠️ **`useSyncExternalStore`, not `useState` + an effect.** Reading
    * `localStorage` in a `useState` initializer is the App Router hydration
@@ -545,20 +546,6 @@ const WEEK_TOOLTIP_LANE = 44;
 /** Left gutter the axis labels sit in. */
 const WEEK_AXIS_GUTTER = 26;
 
-/**
- * A round number at or above `value`, so the gridlines land somewhere a reader
- * can actually read — 47 reviews gives an axis to 50, not to 47.
- */
-function niceCeiling(value: number): number {
-  if (value <= 0) return 0;
-  const magnitude = 10 ** Math.floor(Math.log10(value));
-  for (const step of [1, 2, 2.5, 5]) {
-    const candidate = step * magnitude;
-    if (candidate >= value) return Math.round(candidate);
-  }
-  return Math.round(10 * magnitude);
-}
-
 type WeekMark = 'bars' | 'line';
 const WEEK_MARK_KEY = 'amgi_week_chart_mark';
 
@@ -607,9 +594,9 @@ const weekMarkStore = {
  * Reviews per day for the last week, drawn as bars or as a line.
  *
  * Seven days is seven discrete counts, which reads defensibly either way — so
- * the mark is a toggle rather than a decision made here. **Web only**: the
- * line is inline SVG, which the DOM does natively, where mobile would need
- * `react-native-svg` installed and compiled into a build.
+ * the mark is a toggle rather than a decision made here. Mobile draws the same
+ * two marks from the same `niceCeiling` scale; the line is inline SVG here and
+ * `react-native-svg` there, which is the only part that differs.
  *
  * One series, so there is no legend and the title names the measure. Only the
  * busiest day is labelled: a number over every point is noise the heights
@@ -627,13 +614,8 @@ function WeekChart({ nativeLanguage, cells, daysByDate, mark, onMarkChange }: {
   const busiest = Math.max(0, ...cells.map(cell => cell.reviews));
   /** The axis top. Marks scale to this, not to the raw busiest day. */
   const ceiling = niceCeiling(busiest);
-  /**
-   * The lines drawn across the plot. The midpoint earns one only when it is a
-   * whole number: a line labelled "3" sitting at 2.5 is worse than no line.
-   */
-  const ticks = ceiling === 0
-    ? [0]
-    : ceiling % 2 === 0 ? [0, ceiling / 2, ceiling] : [0, ceiling];
+  /** The lines drawn across the plot — the same rule mobile rules its plot by. */
+  const ticks = weekAxisTicks(ceiling);
 
   /** Horizontal centre of a day's slot, as a percentage of the plot's width. */
   const centre = (index: number) => ((index + 0.5) * 100) / cells.length;

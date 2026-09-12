@@ -1,13 +1,18 @@
-import React, { useCallback, useMemo, useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Image } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  View, Text, TouchableOpacity, ScrollView, StyleSheet, Image,
+  type LayoutChangeEvent,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import Svg, { Polyline } from 'react-native-svg';
 import {
   PROGRESS_HISTORY_START, SUPPORTED_STUDY_LANGUAGES, buildHeatmap,
   CARD_COLLECTIONS, buildWeekGrid,
-  historyStartsMidWindow, localDateString, mergeLanguageRows, weekdayIndex,
-  shiftDate,
+  historyStartsMidWindow, localDateString, mergeLanguageRows, niceCeiling, weekdayIndex,
+  shiftDate, weekAxisTicks,
   summarizeProgress, t,
   type DailyProgress, type HeatmapCell, type LanguageProgress,
   type StudyLanguage, type TranslationKey,
@@ -270,9 +275,9 @@ export default function ProgressScreen() {
    */
   const languageRows = mergeLanguageRows(summary.byLanguage, matureCount?.byLanguage ?? {});
   /** The last seven days, dense — the same builder the calendar uses. */
+  // Scaled against a rounded ceiling rather than its own busiest day — see
+  // `niceCeiling`. The chart owns that now, so nothing is derived here.
   const weekCells = buildHeatmap(days ?? [], localDateString(), 7);
-  /** Scaled against its own busiest day, the way the calendar's levels are. */
-  const weekBusiest = Math.max(0, ...weekCells.map(cell => cell.reviews));
 
   return (
     <SafeAreaView style={s.safe} edges={['top']}>
@@ -432,9 +437,7 @@ export default function ProgressScreen() {
                         nativeLanguage={nativeLanguage}
                         date={selected.date}
                         day={daysByDate.get(selected.date)}
-                        column={selected.column}
-                        row={selected.row}
-                        columnCount={grid.columns.length}
+                        {...heatmapTooltipAt(selected.column, selected.row, grid.columns.length)}
                       />
                     )}
                   </View>
@@ -452,34 +455,14 @@ export default function ProgressScreen() {
               <Text style={s.legendText}>{t(nativeLanguage, 'progressMore')}</Text>
             </View>
 
-            <Text style={s.sectionTitle}>{t(nativeLanguage, 'progressWeekTitle')}</Text>
-            <View style={s.weekPlot}>
-              {weekCells.map(cell => (
-                <View key={cell.date} style={s.weekCol}>
-                  {weekBusiest > 0 && cell.reviews === weekBusiest && (
-                    <Text style={s.weekValue}>{cell.reviews}</Text>
-                  )}
-                  {/* A day with reviews keeps a visible sliver, for the same
-                      reason the calendar gives a one-review day a level 1. */}
-                  <View
-                    style={[s.weekBar, {
-                      height: weekBusiest > 0 && cell.reviews > 0
-                        ? Math.max(2, Math.round((cell.reviews / weekBusiest) * WEEK_PLOT_HEIGHT))
-                        : 1,
-                    }]}
-                  />
-                </View>
-              ))}
-            </View>
-            <View style={s.weekLabels}>
-              {weekCells.map(cell => (
-                // From the cell's own date: these seven days end on today, so
-                // they are not a fixed Sunday-to-Saturday run.
-                <Text key={cell.date} style={s.weekLabel}>
-                  {weekdays[weekdayIndex(cell.date)]}
-                </Text>
-              ))}
-            </View>
+            <WeekChart
+              C={C}
+              s={s}
+              nativeLanguage={nativeLanguage}
+              cells={weekCells}
+              daysByDate={daysByDate}
+              weekdays={weekdays}
+            />
 
             {languageRows.length > 0 && (
               <>
@@ -587,24 +570,15 @@ const TOOLTIP_WIDTH = 150;
 const TOOLTIP_HEIGHT = 42;
 /** Room above the grid for the month ticks. */
 const MONTH_ROW_HEIGHT = 14;
-/** The weekly plot's height in pixels; the tallest bar fills it. */
+/** The weekly plot's height in pixels; the axis ceiling fills it. */
 const WEEK_PLOT_HEIGHT = 64;
+/** Room above the plot for the bubble, so it never overlaps the marks. */
+const WEEK_TOOLTIP_LANE = 44;
+/** Left gutter the axis labels sit in. Matches web, so both plots inset alike. */
+const WEEK_AXIS_GUTTER = 26;
 
-function DayTooltip({ C, s, nativeLanguage, date, day, column, row, columnCount }: {
-  C: Palette;
-  s: ReturnType<typeof makeStyles>;
-  nativeLanguage: string | null | undefined;
-  date: string;
-  day: DailyProgress | undefined;
-  column: number;
-  row: number;
-  columnCount: number;
-}) {
-  // A day with no document is a day with no reviews, which is what the cell
-  // behind this bubble is already drawing.
-  const reviews = day?.reviews ?? 0;
-  const cardsAdded = (day?.newCards ?? 0) + (day?.packCards ?? 0);
-
+/** Where the calendar's bubble goes, from the cell it points at. */
+function heatmapTooltipAt(column: number, row: number, columnCount: number) {
   // Centred on the cell, then clamped so neither end runs past the grid.
   const gridWidth = columnCount * PITCH - GAP;
   const left = Math.max(0, Math.min(
@@ -617,6 +591,31 @@ function DayTooltip({ C, s, nativeLanguage, date, day, column, row, columnCount 
   const top = row <= 1
     ? row * PITCH + CELL + 6
     : row * PITCH - TOOLTIP_HEIGHT - 6;
+  return { left, top };
+}
+
+/**
+ * The bubble naming one day, positioned by whoever is pointing at it.
+ *
+ * ⚠️ **Geometry is the caller's, content is not.** The calendar places this off
+ * a column and a row of its fixed grid; the weekly chart places it off a slot
+ * in a measured plot. Only the placement differs, so only the placement moved
+ * out — a second bubble component would be two things to keep saying the same
+ * sentence, and this one already says it in both locales.
+ */
+function DayTooltip({ C, s, nativeLanguage, date, day, left, top }: {
+  C: Palette;
+  s: ReturnType<typeof makeStyles>;
+  nativeLanguage: string | null | undefined;
+  date: string;
+  day: DailyProgress | undefined;
+  left: number;
+  top: number;
+}) {
+  // A day with no document is a day with no reviews, which is what the cell
+  // behind this bubble is already drawing.
+  const reviews = day?.reviews ?? 0;
+  const cardsAdded = (day?.newCards ?? 0) + (day?.packCards ?? 0);
 
   return (
     <View style={[s.tooltip, { left, top, width: TOOLTIP_WIDTH, borderColor: C.muted, backgroundColor: C.surface }]}>
@@ -634,6 +633,228 @@ function DayTooltip({ C, s, nativeLanguage, date, day, column, row, columnCount 
           : ''}
       </Text>
     </View>
+  );
+}
+
+type WeekMark = 'bars' | 'line';
+/** Device-local, like the theme and the pronunciation speed beside it. */
+const WEEK_MARK_KEY = 'amgi_week_chart_mark';
+
+/**
+ * Reviews per day for the last week, drawn as bars or as a line.
+ *
+ * The web chart's twin, and deliberately so — same title, same `niceCeiling`
+ * scale, same gridlines, same two marks. What differs is only what has to:
+ * the line is `react-native-svg` rather than inline SVG, and the detail is a
+ * **tap** rather than a hover, because a phone has no pointer to rest.
+ *
+ * ⚠️ **The scale is the point of the rewrite.** This plot used to size bars
+ * against its own busiest day, which guarantees exactly one full-height bar and
+ * therefore says nothing about how big a week it was. Ruling it against a
+ * rounded ceiling is what turns seven heights into seven readable numbers.
+ */
+function WeekChart({ C, s, nativeLanguage, cells, daysByDate, weekdays }: {
+  C: Palette;
+  s: ReturnType<typeof makeStyles>;
+  nativeLanguage: string | null | undefined;
+  cells: HeatmapCell[];
+  daysByDate: Map<string, DailyProgress>;
+  weekdays: string[];
+}) {
+  /**
+   * The remembered mark.
+   *
+   * Held here rather than in the screen, unlike web: that copy lives in the
+   * page because `useSyncExternalStore` has to hand the server a snapshot to
+   * hydrate against, and there is no server here. Reading storage in a promise
+   * callback is the shape `ThemeContext` and `PronunciationContext` already
+   * use — asynchronous, so it is not the synchronous set-state-in-effect the
+   * lint rule is about.
+   */
+  const [mark, setMark] = useState<WeekMark>('bars');
+  useEffect(() => {
+    AsyncStorage.getItem(WEEK_MARK_KEY)
+      .then(saved => { if (saved === 'line') setMark('line'); })
+      // Not remembering the choice is no reason to refuse it.
+      .catch(() => undefined);
+  }, []);
+
+  /** The tapped day, by index. Tapping it again clears it, as the calendar does. */
+  const [selected, setSelected] = useState<number | null>(null);
+  /** The plot's drawn width, measured — the line needs real pixels. */
+  const [plotWidth, setPlotWidth] = useState(0);
+
+  const choose = (next: WeekMark) => {
+    setMark(next);
+    setSelected(null);
+    AsyncStorage.setItem(WEEK_MARK_KEY, next).catch(() => undefined);
+  };
+
+  const busiest = Math.max(0, ...cells.map(cell => cell.reviews));
+  /** The axis top. Marks scale to this, not to the raw busiest day. */
+  const ceiling = niceCeiling(busiest);
+  const ticks = weekAxisTicks(ceiling);
+  /** A day's height in px, so both marks sit on one scale. */
+  const heightOf = (reviews: number) => (ceiling > 0 && reviews > 0
+    ? Math.max(2, Math.round((reviews / ceiling) * WEEK_PLOT_HEIGHT))
+    : 0);
+  /**
+   * Horizontal centre of a day's slot, in pixels.
+   *
+   * Measured rather than expressed as a percentage of a stretched viewBox: web
+   * scales its SVG with `preserveAspectRatio="none"` and then has to undo the
+   * damage with `vectorEffect` and HTML dots. Drawing in real pixels sidesteps
+   * that entirely — the stroke is uniform and a dot is round because nothing
+   * was stretched.
+   */
+  const centre = (index: number) => ((index + 0.5) * plotWidth) / Math.max(1, cells.length);
+
+  const onPlot = (event: LayoutChangeEvent) => {
+    const { width } = event.nativeEvent.layout;
+    setPlotWidth(current => (current === width ? current : width));
+  };
+
+  const active = selected !== null ? cells[selected] ?? null : null;
+
+  return (
+    <>
+      <View style={s.weekHeader}>
+        <Text style={s.sectionTitle}>{t(nativeLanguage, 'progressWeekTitle')}</Text>
+        <View style={s.weekMarkRow}>
+          {(['bars', 'line'] as const).map(option => (
+            <TouchableOpacity
+              key={option}
+              onPress={() => choose(option)}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityState={{ selected: mark === option }}
+              style={[
+                s.weekMarkBtn,
+                { borderColor: mark === option ? C.highlight : C.border },
+              ]}
+            >
+              <Text style={[s.weekMarkText, { color: mark === option ? C.highlight : C.muted }]}>
+                {t(nativeLanguage, option === 'bars' ? 'progressChartBars' : 'progressChartLine')}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
+
+      <View style={s.weekPlot}>
+        {/* Gridlines and their labels. Hairlines a shade off the surface, never
+            dashed — a dashed rule reads as a threshold when it is only a
+            scale. The zero line replaces the border this plot used to wear. */}
+        {ticks.map(value => (
+          <View
+            key={value}
+            style={[
+              s.weekGridRow,
+              { bottom: ceiling > 0 ? (value / ceiling) * WEEK_PLOT_HEIGHT : 0 },
+            ]}
+          >
+            <Text style={s.weekGridLabel}>{value}</Text>
+            <View style={s.weekGridLine} />
+          </View>
+        ))}
+
+        <View style={s.weekMarksLayer} onLayout={onPlot}>
+          {mark === 'bars' ? (
+            <View style={s.weekBars}>
+              {cells.map((cell, index) => (
+                <View
+                  key={cell.date}
+                  // A day with reviews keeps a visible sliver, for the same
+                  // reason the calendar gives a one-review day a level of 1.
+                  style={[s.weekBar, {
+                    height: Math.max(heightOf(cell.reviews), cell.reviews > 0 ? 2 : 1),
+                    opacity: selected === null || selected === index ? 1 : 0.55,
+                  }]}
+                />
+              ))}
+            </View>
+          ) : plotWidth > 0 && (
+            <>
+              <Svg width={plotWidth} height={WEEK_PLOT_HEIGHT}>
+                <Polyline
+                  points={cells
+                    .map((cell, index) => `${centre(index)},${WEEK_PLOT_HEIGHT - heightOf(cell.reviews)}`)
+                    .join(' ')}
+                  fill="none"
+                  stroke={C.heat[4]}
+                  strokeWidth={2}
+                  strokeLinejoin="round"
+                  strokeLinecap="round"
+                />
+              </Svg>
+              {/* The vertices, as plain Views. The ring is a border in the
+                  background colour, which punches the dot out of the line it
+                  sits on — RN has no outset shadow to do it the way web does. */}
+              {cells.map((cell, index) => {
+                const on = selected === index;
+                const size = on ? 12 : 8;
+                return (
+                  <View
+                    key={cell.date}
+                    style={[s.weekDot, {
+                      width: size,
+                      height: size,
+                      borderRadius: size / 2,
+                      left: centre(index) - size / 2,
+                      bottom: heightOf(cell.reviews) - size / 2,
+                      backgroundColor: C.heat[4],
+                      borderColor: C.bg,
+                      opacity: selected === null || on ? 1 : 0.5,
+                    }]}
+                  />
+                );
+              })}
+            </>
+          )}
+        </View>
+
+        {/* One full-height target per day, over the marks. A quiet day's bar is
+            two pixels tall and a line has no width at all — tapping the mark
+            itself would be a game rather than a chart. */}
+        <View style={s.weekTargets}>
+          {cells.map((cell, index) => (
+            <TouchableOpacity
+              key={cell.date}
+              activeOpacity={0.6}
+              style={s.weekTarget}
+              onPress={() => setSelected(current => (current === index ? null : index))}
+              accessibilityRole="button"
+              accessibilityLabel={describeDay(nativeLanguage, cell.date, daysByDate.get(cell.date))}
+            />
+          ))}
+        </View>
+
+        {selected !== null && active && (
+          <DayTooltip
+            C={C}
+            s={s}
+            nativeLanguage={nativeLanguage}
+            date={active.date}
+            day={daysByDate.get(active.date)}
+            left={WEEK_AXIS_GUTTER + Math.max(0, Math.min(
+              centre(selected) - TOOLTIP_WIDTH / 2,
+              Math.max(0, plotWidth - TOOLTIP_WIDTH),
+            ))}
+            top={0}
+          />
+        )}
+      </View>
+
+      <View style={s.weekLabels}>
+        {cells.map(cell => (
+          // From the cell's own date: these seven days end on today, so they
+          // are not a fixed Sunday-to-Saturday run.
+          <Text key={cell.date} style={s.weekLabel}>
+            {weekdays[weekdayIndex(cell.date)]}
+          </Text>
+        ))}
+      </View>
+    </>
   );
 }
 
@@ -768,17 +989,38 @@ function makeStyles(C: Palette, tabBarHeight: number) {
     tooltipDetail: { fontSize: 11, color: C.muted, marginTop: 1 },
     legend: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 10, marginBottom: 24 },
     legendText: { color: C.muted, fontSize: 11 },
-    // Bars rather than a line: seven days is seven discrete counts, and it
-    // keeps both platforms on one picture without a drawing library here.
-    weekPlot: {
-      flexDirection: 'row', alignItems: 'flex-end', gap: 8,
-      height: WEEK_PLOT_HEIGHT + 14,
-      borderBottomWidth: 1, borderBottomColor: C.border,
+    weekHeader: {
+      flexDirection: 'row', alignItems: 'baseline',
+      justifyContent: 'space-between', gap: 12,
     },
-    weekCol: { flex: 1, alignItems: 'center', justifyContent: 'flex-end' },
-    weekBar: { width: '100%', borderTopLeftRadius: 2, borderTopRightRadius: 2, backgroundColor: C.heat[4] },
-    weekValue: { color: C.muted, fontSize: 10, lineHeight: 12 },
-    weekLabels: { flexDirection: 'row', gap: 8, marginTop: 4, marginBottom: 24 },
+    weekMarkRow: { flexDirection: 'row', gap: 4 },
+    weekMarkBtn: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, borderWidth: 1 },
+    weekMarkText: { fontSize: 11 },
+    // The lane above the plot belongs to the bubble; the marks sit on the
+    // bottom of it, so a tooltip can never overlap what it is describing.
+    weekPlot: { height: WEEK_PLOT_HEIGHT + WEEK_TOOLTIP_LANE },
+    weekGridRow: { position: 'absolute', left: 0, right: 0, flexDirection: 'row', alignItems: 'center' },
+    weekGridLabel: {
+      width: WEEK_AXIS_GUTTER, paddingRight: 4, textAlign: 'right',
+      color: C.muted, fontSize: 10, lineHeight: 10,
+    },
+    weekGridLine: { flex: 1, height: StyleSheet.hairlineWidth, backgroundColor: C.muted, opacity: 0.3 },
+    weekMarksLayer: {
+      position: 'absolute', left: WEEK_AXIS_GUTTER, right: 0, bottom: 0,
+      height: WEEK_PLOT_HEIGHT,
+    },
+    weekBars: { flexDirection: 'row', alignItems: 'flex-end', height: '100%', gap: 8 },
+    weekBar: { flex: 1, borderTopLeftRadius: 2, borderTopRightRadius: 2, backgroundColor: C.heat[4] },
+    weekDot: { position: 'absolute', borderWidth: 2 },
+    weekTargets: {
+      position: 'absolute', left: WEEK_AXIS_GUTTER, right: 0, bottom: 0,
+      height: WEEK_PLOT_HEIGHT, flexDirection: 'row', gap: 8,
+    },
+    weekTarget: { flex: 1, height: '100%' },
+    weekLabels: {
+      flexDirection: 'row', gap: 8, marginTop: 4, marginBottom: 24,
+      marginLeft: WEEK_AXIS_GUTTER,
+    },
     weekLabel: { flex: 1, textAlign: 'center', color: C.muted, fontSize: 10 },
     langRow: { padding: 12, borderRadius: 12, borderWidth: 1, borderColor: C.border, marginBottom: 8 },
     // No `flex: 1`: the name sits directly in the card's column now that the
