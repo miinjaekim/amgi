@@ -386,6 +386,32 @@ dev server rather than a deploy, and `matureBackfillAt` makes it one-shot.
 Clearing that field on `users/{uid}` is the only way to make the count
 recompute if it is ever wrong.
 
+**Per-language learned costs nothing extra**, because the count was always
+per-collection — ten `countMatureFlashcards` calls whose breakdown was being
+thrown away in a `reduce`. `mergeLanguageRows` now joins it to the window's
+`byLanguage`. ⚠️ **The union is the point**: taking only the window's languages
+would hide a deck left alone lately, which is exactly the one whose total you
+have forgotten; taking only the languages with learned cards would drop one
+being studied now that has matured nothing yet. A row therefore carries two
+scopes — a windowed review count beside an all-time learned count — which is
+fine on a screen being read and is why this is *not* on the shared image.
+
+**The weekly chart is bars, not the line that was asked for** (user's call, on
+the trade being named). Seven days is seven discrete counts, which is what bars
+are for, and it needs no drawing library on the phone. Worth recording that the
+dependency was not actually the obstacle: Expo SDK 57 bundles
+`react-native-svg` 15.15.4 and Skia, so a line would not have cost a dev-loop
+break — it was a form choice in the end, not a platform one. One series, so the
+title names the measure and there is no legend; only the busiest day is
+labelled, since a number over every bar is noise the heights already carry.
+
+⚠️ **A crash was caught by a grep rather than by a type.** Mobile's language bars
+took their scale from `summary.byLanguage[0]`, which was correct until the list
+being rendered became the *union* — a dormant language with learned cards makes
+that array empty while rows still exist, so `[0].progress` would have thrown.
+TypeScript does not check index access without `noUncheckedIndexedAccess`, and
+neither platform's screens have tests, so nothing else was going to catch it.
+
 **Days studied came off both surfaces** (same day, user's call). Beside a streak
 it read as a second opinion on one question, and the streak is the one people
 mean. `activeDays` stays in `summarizeProgress` — still data, no longer a tile —
