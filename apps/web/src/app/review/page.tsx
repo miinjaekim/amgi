@@ -90,9 +90,9 @@ interface UndoableRating {
 }
 
 export default function ReviewPage() {
-  const { user, nativeLanguage, studyLanguage, hanjaPartition, recordReview, undoReview } = useUser();
+  const { user, interfaceLanguage, deckNativeLanguage, studyLanguage, hanjaPartition, recordReview, undoReview } = useUser();
   const langConfig = getStudyLanguageConfig(studyLanguage);
-  const backConfig = getBackSideConfig(studyLanguage, nativeLanguage);
+  const backConfig = getBackSideConfig(studyLanguage, deckNativeLanguage);
   const [userFlashcards, setUserFlashcards] = useState<Flashcard[]>([]);
   const [flashcardsLoading, setFlashcardsLoading] = useState(false);
   const [migrationComplete, setMigrationComplete] = useState(false);
@@ -156,8 +156,8 @@ export default function ReviewPage() {
   }, [user, studyLanguage]);
 
   const collections = useMemo(
-    () => buildReviewCollections(userFlashcards, studyLanguage, nativeLanguage),
-    [userFlashcards, studyLanguage, nativeLanguage]
+    () => buildReviewCollections(userFlashcards, studyLanguage, interfaceLanguage),
+    [userFlashcards, studyLanguage, interfaceLanguage]
   );
 
   /**
@@ -518,7 +518,7 @@ export default function ReviewPage() {
   const faces = (card: Flashcard) =>
     studyLanguage === 'Hanja'
       ? hanjaFaces(card, hanjaPartition)
-      : { front: getStudySide(card), back: getBackSide(card, nativeLanguage) };
+      : { front: getStudySide(card), back: getBackSide(card, deckNativeLanguage) };
 
   /**
    * The English meaning of a hanja, for a reader who does not read 훈음 as
@@ -527,7 +527,7 @@ export default function ReviewPage() {
    * rather than a translation of the first.
    */
   const hanjaGloss = (card: Flashcard) =>
-    studyLanguage === 'Hanja' && nativeLanguage !== 'Korean' ? card.english : undefined;
+    studyLanguage === 'Hanja' && deckNativeLanguage !== 'Korean' ? card.english : undefined;
 
   /**
    * A ring on the rating the typed answer earned. Emphasis only — every button
@@ -541,7 +541,7 @@ export default function ReviewPage() {
       : undefined;
 
   const handleOpenManage = (card: Flashcard) => {
-    setManageEditDraft({ studySide: getStudySide(card), backSide: getBackSide(card, nativeLanguage) });
+    setManageEditDraft({ studySide: getStudySide(card), backSide: getBackSide(card, deckNativeLanguage) });
     setManageStatus(null);
     setShowManage(true);
   };
@@ -562,38 +562,38 @@ export default function ReviewPage() {
           ? { ...item, card: { ...item.card, ...update } }
           : item
       ));
-      setManageStatus(t(nativeLanguage, 'reviewCardSaved'));
+      setManageStatus(t(interfaceLanguage, 'reviewCardSaved'));
       setShowManage(false);
     } catch {
-      setManageStatus(t(nativeLanguage, 'errorSaveChanges'));
+      setManageStatus(t(interfaceLanguage, 'errorSaveChanges'));
     }
   };
 
   const handleManageArchive = async () => {
     const { card } = activeQueue[currentReviewIdx];
     if (!card.id) return;
-    if (!window.confirm(t(nativeLanguage, 'confirmArchive'))) return;
+    if (!window.confirm(t(interfaceLanguage, 'confirmArchive'))) return;
     try {
       await archiveFlashcard(card.id, studyLanguage);
-      setManageStatus(t(nativeLanguage, 'reviewCardArchived'));
+      setManageStatus(t(interfaceLanguage, 'reviewCardArchived'));
       setShowManage(false);
       advanceAfterManage(card.id);
     } catch {
-      setManageStatus(t(nativeLanguage, 'errorArchiveFlashcard'));
+      setManageStatus(t(interfaceLanguage, 'errorArchiveFlashcard'));
     }
   };
 
   const handleManageDelete = async () => {
     const { card } = activeQueue[currentReviewIdx];
     if (!card.id) return;
-    if (!window.confirm(t(nativeLanguage, 'confirmDelete'))) return;
+    if (!window.confirm(t(interfaceLanguage, 'confirmDelete'))) return;
     try {
       await deleteFlashcard(card.id, studyLanguage);
-      setManageStatus(t(nativeLanguage, 'reviewCardDeleted'));
+      setManageStatus(t(interfaceLanguage, 'reviewCardDeleted'));
       setShowManage(false);
       advanceAfterManage(card.id);
     } catch {
-      setManageStatus(t(nativeLanguage, 'errorDeleteFlashcard'));
+      setManageStatus(t(interfaceLanguage, 'errorDeleteFlashcard'));
     }
   };
 
@@ -650,7 +650,7 @@ export default function ReviewPage() {
       onClick={() => { setSelectedKey(undefined); setOpenPack(null); setDirectionFilter('both'); }}
       className="mt-4 text-sm px-3 py-1.5 rounded-lg border border-[var(--color-muted)] text-[var(--color-muted)] hover:text-[var(--color-text)] hover:border-[var(--color-text)] transition-colors"
     >
-      {t(nativeLanguage, 'reviewChangeCollection')}
+      {t(interfaceLanguage, 'reviewChangeCollection')}
     </button>
   );
 
@@ -666,7 +666,7 @@ export default function ReviewPage() {
       style={{ borderColor: 'var(--color-muted)', color: 'var(--color-text)' }}
       onClick={handleUndoRating}
     >
-      ↺ {t(nativeLanguage, 'undoRating')}
+      ↺ {t(interfaceLanguage, 'undoRating')}
     </button>
   );
 
@@ -699,12 +699,12 @@ export default function ReviewPage() {
             style={{ color: collection.dueCount > 0 ? 'var(--color-highlight)' : 'var(--color-muted)' }}
           >
             {collection.dueCount > 0
-              ? t(nativeLanguage, 'reviewCollectionDue', { count: collection.dueCount })
-              : t(nativeLanguage, 'reviewCollectionCaughtUp')}
+              ? t(interfaceLanguage, 'reviewCollectionDue', { count: collection.dueCount })
+              : t(interfaceLanguage, 'reviewCollectionCaughtUp')}
           </span>
         </div>
         <p className="text-xs text-[var(--color-muted)] mt-1">
-          {t(nativeLanguage, 'deckEntryCount', { count: collection.cardCount })}
+          {t(interfaceLanguage, 'deckEntryCount', { count: collection.cardCount })}
         </p>
       </button>
     </li>
@@ -725,7 +725,7 @@ export default function ReviewPage() {
     if (!open) {
       return (
         <div>
-          <p className="text-sm text-[var(--color-muted)] mb-4">{t(nativeLanguage, 'reviewPickCollection')}</p>
+          <p className="text-sm text-[var(--color-muted)] mb-4">{t(interfaceLanguage, 'reviewPickCollection')}</p>
           <ul className="flex flex-col gap-3">
             {collections.map(collection =>
               collection.subcollections.length > 0
@@ -742,15 +742,15 @@ export default function ReviewPage() {
           onClick={() => setOpenPack(null)}
           className="text-sm text-[var(--color-muted)] hover:text-[var(--color-text)] transition-colors"
         >
-          ← {t(nativeLanguage, 'reviewBackToCollections')}
+          ← {t(interfaceLanguage, 'reviewBackToCollections')}
         </button>
         <p className="mt-4 font-bold text-[var(--color-text)]">{open.name}</p>
-        <p className="text-sm text-[var(--color-muted)] mb-4">{t(nativeLanguage, 'reviewPickSubpack')}</p>
+        <p className="text-sm text-[var(--color-muted)] mb-4">{t(interfaceLanguage, 'reviewPickSubpack')}</p>
         <ul className="flex flex-col gap-3">
           {renderCollectionRow(
             open,
             () => setSelectedKey(collectionKey(open)),
-            { label: t(nativeLanguage, 'reviewWholePack') },
+            { label: t(interfaceLanguage, 'reviewWholePack') },
           )}
           {open.subcollections.map(sub =>
             renderCollectionRow(sub, () => setSelectedKey(collectionKey(sub)))
@@ -762,11 +762,11 @@ export default function ReviewPage() {
 
   const filteredCount = filterByDirection(dueCards, directionFilter).length;
 
-  const reviewCardsDueLabel = nativeLanguage === 'Korean'
+  const reviewCardsDueLabel = interfaceLanguage === 'Korean'
     ? `${filteredCount}개 카드 복습하기`
     : `Review ${filteredCount} Card${filteredCount !== 1 ? 's' : ''} Due`;
 
-  const reviewCardProgressLabel = nativeLanguage === 'Korean'
+  const reviewCardProgressLabel = interfaceLanguage === 'Korean'
     ? `카드 ${currentReviewIdx + 1} / ${activeQueue.length}`
     : `Review Card ${currentReviewIdx + 1} of ${activeQueue.length}`;
 
@@ -777,21 +777,21 @@ export default function ReviewPage() {
           Offline — showing cached cards. Progress will sync when reconnected.
         </div>
       )}
-      <h1 className="text-2xl font-bold mb-2 mt-8 text-[var(--color-highlight)]">{t(nativeLanguage, 'reviewPageTitle')}</h1>
-      <p className="text-sm mb-6 text-[var(--color-muted)]">{t(nativeLanguage, 'reviewPageDescription')}</p>
+      <h1 className="text-2xl font-bold mb-2 mt-8 text-[var(--color-highlight)]">{t(interfaceLanguage, 'reviewPageTitle')}</h1>
+      <p className="text-sm mb-6 text-[var(--color-muted)]">{t(interfaceLanguage, 'reviewPageDescription')}</p>
       <div className="p-6 rounded-xl bg-[var(--color-surface)] border border-[var(--color-muted)] shadow-lg">
         {user ? (
           flashcardsLoading ? (
-            <div className="text-[var(--color-muted)]">{t(nativeLanguage, 'loadingFlashcards')}</div>
+            <div className="text-[var(--color-muted)]">{t(interfaceLanguage, 'loadingFlashcards')}</div>
           ) : pickableCollections.length === 0 ? (
             <div className="text-center py-4">
-              <p className="text-[var(--color-muted)] mb-6">{t(nativeLanguage, 'noFlashcardsForReview')}</p>
+              <p className="text-[var(--color-muted)] mb-6">{t(interfaceLanguage, 'noFlashcardsForReview')}</p>
               <Link
                 href="/"
                 className="inline-block px-5 py-2.5 rounded-lg font-semibold transition-colors"
                 style={{ background: 'var(--color-highlight)', color: 'var(--color-bg)' }}
               >
-                {t(nativeLanguage, 'goToLearnPage')}
+                {t(interfaceLanguage, 'goToLearnPage')}
               </Link>
             </div>
           ) : selectedKey === undefined || !selected ? (
@@ -806,10 +806,10 @@ export default function ReviewPage() {
               {canChangeCollection && (
                 <p className="text-xs text-[var(--color-muted)] mb-2">{collectionName}</p>
               )}
-              <p className="text-xl font-bold mb-2">{t(nativeLanguage, 'allCaughtUp')}</p>
+              <p className="text-xl font-bold mb-2">{t(interfaceLanguage, 'allCaughtUp')}</p>
               {nextReviewDate && clientNow && (
                 <p className="text-[var(--color-muted)] text-sm">
-                  {t(nativeLanguage, 'nextReviewOn')} {formatRelativeDate(nextReviewDate, nativeLanguage, clientNow)}
+                  {t(interfaceLanguage, 'nextReviewOn')} {formatRelativeDate(nextReviewDate, interfaceLanguage, clientNow)}
                 </p>
               )}
               <div>{changeCollectionButton}</div>
@@ -819,7 +819,7 @@ export default function ReviewPage() {
                   onClick={handleForceSynchronize}
                   disabled={isSyncing || !isOnline}
                 >
-                  {isSyncing ? t(nativeLanguage, 'synchronizing') : t(nativeLanguage, 'forceSyncCards')}
+                  {isSyncing ? t(interfaceLanguage, 'synchronizing') : t(interfaceLanguage, 'forceSyncCards')}
                 </button>
               )}
             </div>
@@ -833,9 +833,9 @@ export default function ReviewPage() {
                     it back costs a single click. */}
                 {filteredCount > 0 ? (
                   <>
-                    <h2 className="text-2xl font-bold mb-2">{t(nativeLanguage, 'reviewSessionFinished')}</h2>
+                    <h2 className="text-2xl font-bold mb-2">{t(interfaceLanguage, 'reviewSessionFinished')}</h2>
                     <p className="text-[var(--color-muted)] text-sm mb-6">
-                      {t(nativeLanguage, 'reviewMissedStillDue', { count: filteredCount })}
+                      {t(interfaceLanguage, 'reviewMissedStillDue', { count: filteredCount })}
                     </p>
                     <div className="flex gap-3 justify-center flex-wrap">
                       <button
@@ -843,7 +843,7 @@ export default function ReviewPage() {
                         style={{ background: 'var(--color-highlight)', color: 'var(--color-bg)' }}
                         onClick={handleStartReview}
                       >
-                        {t(nativeLanguage, 'reviewAgainMissed')}
+                        {t(interfaceLanguage, 'reviewAgainMissed')}
                       </button>
                       {undoRatingButton}
                       <button
@@ -851,26 +851,26 @@ export default function ReviewPage() {
                         style={{ borderColor: 'var(--color-muted)', color: 'var(--color-text)' }}
                         onClick={handleExitReview}
                       >
-                        {t(nativeLanguage, 'exitReview')}
+                        {t(interfaceLanguage, 'exitReview')}
                       </button>
                     </div>
                   </>
                 ) : (
                   <>
-                    <h2 className="text-2xl font-bold mb-2">{t(nativeLanguage, 'reviewComplete')}</h2>
+                    <h2 className="text-2xl font-bold mb-2">{t(interfaceLanguage, 'reviewComplete')}</h2>
                     <p className="text-[var(--color-muted)] text-sm mb-1">
-                      {nativeLanguage === 'Korean'
+                      {interfaceLanguage === 'Korean'
                         ? `${reviewedCount}개 카드를 복습했습니다.`
                         : `You reviewed ${reviewedCount} card${reviewedCount !== 1 ? 's' : ''}.`}
                     </p>
-                    <p className="text-[var(--color-muted)] text-sm mb-6">{t(nativeLanguage, 'reviewCompleteMessage')}</p>
+                    <p className="text-[var(--color-muted)] text-sm mb-6">{t(interfaceLanguage, 'reviewCompleteMessage')}</p>
                     <div className="flex gap-3 justify-center flex-wrap">
                       <button
                         className="px-5 py-2.5 rounded-lg font-semibold transition-colors"
                         style={{ background: 'var(--color-highlight)', color: 'var(--color-bg)' }}
                         onClick={handleExitReview}
                       >
-                        {t(nativeLanguage, 'exitReview')}
+                        {t(interfaceLanguage, 'exitReview')}
                       </button>
                       {undoRatingButton}
                       <Link
@@ -878,7 +878,7 @@ export default function ReviewPage() {
                         className="px-5 py-2.5 rounded-lg border font-semibold transition-colors hover:bg-[var(--color-muted)]/20"
                         style={{ borderColor: 'var(--color-muted)', color: 'var(--color-text)' }}
                       >
-                        {t(nativeLanguage, 'navLearn')}
+                        {t(interfaceLanguage, 'navLearn')}
                       </Link>
                     </div>
                   </>
@@ -889,15 +889,15 @@ export default function ReviewPage() {
                 {canChangeCollection && (
                   <p className="text-xs text-[var(--color-muted)] mb-2">{collectionName}</p>
                 )}
-                <h2 className="text-2xl font-bold mb-2">{t(nativeLanguage, 'reviewStoppedTitle')}</h2>
+                <h2 className="text-2xl font-bold mb-2">{t(interfaceLanguage, 'reviewStoppedTitle')}</h2>
                 <p className="text-[var(--color-muted)] text-sm mb-1">
                   {reviewedCount > 0
-                    ? t(nativeLanguage, 'reviewStoppedSummary', { count: reviewedCount })
-                    : t(nativeLanguage, 'reviewStoppedNone')}
+                    ? t(interfaceLanguage, 'reviewStoppedSummary', { count: reviewedCount })
+                    : t(interfaceLanguage, 'reviewStoppedNone')}
                 </p>
                 {activeQueue.length - currentReviewIdx > 0 && (
                   <p className="text-[var(--color-muted)] text-sm mb-6">
-                    {t(nativeLanguage, 'reviewStoppedRemaining', {
+                    {t(interfaceLanguage, 'reviewStoppedRemaining', {
                       count: activeQueue.length - currentReviewIdx,
                     })}
                   </p>
@@ -908,14 +908,14 @@ export default function ReviewPage() {
                     style={{ background: 'var(--color-highlight)', color: 'var(--color-bg)' }}
                     onClick={() => setReviewStopped(false)}
                   >
-                    {t(nativeLanguage, 'reviewResume')}
+                    {t(interfaceLanguage, 'reviewResume')}
                   </button>
                   <button
                     className="px-5 py-2.5 rounded-lg border font-semibold transition-colors hover:bg-[var(--color-muted)]/20"
                     style={{ borderColor: 'var(--color-muted)', color: 'var(--color-text)' }}
                     onClick={handleExitReview}
                   >
-                    {t(nativeLanguage, 'exitReview')}
+                    {t(interfaceLanguage, 'exitReview')}
                   </button>
                 </div>
                 <div>{changeCollectionButton}</div>
@@ -926,7 +926,7 @@ export default function ReviewPage() {
                   <h2 className="text-xl font-bold">
                     {reviewCardProgressLabel}
                     <span className="ml-2 px-2 py-1 text-sm bg-[var(--color-muted)] rounded-md">
-                      {directionLabel(nativeLanguage, studyLanguage, currentReview.direction, hanjaPartition)}
+                      {directionLabel(interfaceLanguage, studyLanguage, deckNativeLanguage, currentReview.direction, hanjaPartition)}
                     </span>
                   </h2>
                   <div className="flex items-center gap-2">
@@ -939,8 +939,8 @@ export default function ReviewPage() {
                     {lastRating && (
                       <button
                         onClick={handleUndoRating}
-                        aria-label={t(nativeLanguage, 'undoRating')}
-                        title={t(nativeLanguage, 'undoRating')}
+                        aria-label={t(interfaceLanguage, 'undoRating')}
+                        title={t(interfaceLanguage, 'undoRating')}
                         className="text-lg leading-none px-2.5 py-1 rounded-lg border border-[var(--color-muted)] text-[var(--color-muted)] hover:text-[var(--color-text)] hover:border-[var(--color-text)] transition-colors"
                       >
                         ↺
@@ -950,7 +950,7 @@ export default function ReviewPage() {
                       onClick={() => showManage ? setShowManage(false) : handleOpenManage(currentReview.card)}
                       className="text-sm px-3 py-1 rounded-lg border border-[var(--color-muted)] text-[var(--color-muted)] hover:text-[var(--color-text)] hover:border-[var(--color-text)] transition-colors"
                     >
-                      {t(nativeLanguage, 'reviewManageCard')}
+                      {t(interfaceLanguage, 'reviewManageCard')}
                     </button>
                     {/* Until now there was no way out of a session on web short
                         of navigating away — the only Exit Review button lived
@@ -958,8 +958,8 @@ export default function ReviewPage() {
                         every card. */}
                     <button
                       onClick={() => { setShowManage(false); setReviewStopped(true); }}
-                      aria-label={t(nativeLanguage, 'exitReview')}
-                      title={t(nativeLanguage, 'exitReview')}
+                      aria-label={t(interfaceLanguage, 'exitReview')}
+                      title={t(interfaceLanguage, 'exitReview')}
                       className="text-lg leading-none px-2.5 py-1 rounded-lg border border-[var(--color-muted)] text-[var(--color-muted)] hover:text-[var(--color-text)] hover:border-[var(--color-text)] transition-colors"
                     >
                       ✕
@@ -972,7 +972,7 @@ export default function ReviewPage() {
                   <div className="mb-4 p-4 rounded-xl border border-[var(--color-muted)] bg-[var(--color-surface)] space-y-3">
                     <div>
                       <label className="block text-xs font-semibold text-[var(--color-muted)] mb-1">
-                        {t(nativeLanguage, langConfig.studyLabelKey)}
+                        {t(interfaceLanguage, langConfig.studyLabelKey)}
                       </label>
                       <input
                         type="text"
@@ -982,7 +982,7 @@ export default function ReviewPage() {
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-[var(--color-muted)] mb-1">{t(nativeLanguage, backConfig.backLabelKey)}</label>
+                      <label className="block text-xs font-semibold text-[var(--color-muted)] mb-1">{t(interfaceLanguage, backConfig.backLabelKey)}</label>
                       <input
                         type="text"
                         value={manageEditDraft.backSide}
@@ -996,25 +996,25 @@ export default function ReviewPage() {
                         className="px-3 py-1.5 rounded-lg text-sm font-semibold"
                         style={{ background: 'var(--color-highlight)', color: 'var(--color-bg)' }}
                       >
-                        {t(nativeLanguage, 'save')}
+                        {t(interfaceLanguage, 'save')}
                       </button>
                       <button
                         onClick={handleManageArchive}
                         className="px-3 py-1.5 rounded-lg text-sm font-semibold bg-[var(--color-muted)] text-[var(--color-text)] hover:bg-[var(--color-muted-dark)]"
                       >
-                        {t(nativeLanguage, 'archive')}
+                        {t(interfaceLanguage, 'archive')}
                       </button>
                       <button
                         onClick={handleManageDelete}
                         className="px-3 py-1.5 rounded-lg text-sm font-semibold border border-[var(--color-muted)] text-[var(--color-muted)] hover:border-red-400 hover:text-red-400"
                       >
-                        {t(nativeLanguage, 'delete')}
+                        {t(interfaceLanguage, 'delete')}
                       </button>
                       <button
                         onClick={() => setShowManage(false)}
                         className="px-3 py-1.5 rounded-lg text-sm text-[var(--color-muted)] hover:text-[var(--color-text)]"
                       >
-                        {t(nativeLanguage, 'cancel')}
+                        {t(interfaceLanguage, 'cancel')}
                       </button>
                     </div>
                   </div>
@@ -1045,13 +1045,13 @@ export default function ReviewPage() {
                             <div className="text-base mb-3 text-[var(--color-muted)]">{hanjaGloss(currentReview.card)}</div>
                           )}
 
-                          {(partOfSpeechLabel(nativeLanguage, currentReview.card) ||
+                          {(partOfSpeechLabel(deckNativeLanguage, currentReview.card) ||
                             currentReview.card.gender ||
-                            getReading(currentReview.card, studyLanguage, nativeLanguage)) && (
+                            getReading(currentReview.card, studyLanguage, deckNativeLanguage)) && (
                             <div className="mb-3 flex gap-2 flex-wrap">
-                              {partOfSpeechLabel(nativeLanguage, currentReview.card) && (
+                              {partOfSpeechLabel(deckNativeLanguage, currentReview.card) && (
                                 <span className="px-2 py-0.5 text-xs rounded-full border border-[var(--color-muted)] text-[var(--color-muted)]">
-                                  {partOfSpeechLabel(nativeLanguage, currentReview.card)}
+                                  {partOfSpeechLabel(deckNativeLanguage, currentReview.card)}
                                 </span>
                               )}
                               {currentReview.card.gender && (
@@ -1059,9 +1059,9 @@ export default function ReviewPage() {
                                   {currentReview.card.gender}
                                 </span>
                               )}
-                              {getReading(currentReview.card, studyLanguage, nativeLanguage) && (
+                              {getReading(currentReview.card, studyLanguage, deckNativeLanguage) && (
                                 <span className="px-2 py-0.5 text-xs rounded-full border border-[var(--color-muted)] text-[var(--color-muted)]">
-                                  {getReading(currentReview.card, studyLanguage, nativeLanguage)}
+                                  {getReading(currentReview.card, studyLanguage, deckNativeLanguage)}
                                 </span>
                               )}
                             </div>
@@ -1071,21 +1071,23 @@ export default function ReviewPage() {
                             onClick={handleToggleDetails}
                             className="text-sm px-3 py-1 bg-[var(--color-muted-dark)] text-[var(--color-text)] rounded hover:bg-[var(--color-muted)] mb-4"
                           >
-                            {showDetails ? t(nativeLanguage, 'hideDetails') : t(nativeLanguage, 'showDetails')}
+                            {showDetails ? t(interfaceLanguage, 'hideDetails') : t(interfaceLanguage, 'showDetails')}
                           </button>
 
                           {showDetails && (
                             <ReviewDetailsPanel
                               card={currentReview.card}
                               studyLanguage={studyLanguage}
-                              nativeLanguage={nativeLanguage}
+                              interfaceLanguage={interfaceLanguage}
+
+                              deckNativeLanguage={deckNativeLanguage}
                               onChanged={handleCardEnriched}
                             />
                           )}
                         </>
                       ) : (
                         <div className="text-[var(--color-muted)] text-lg mt-4 italic">
-                          {directionPrompt(nativeLanguage, studyLanguage, 'frontToBack', hanjaPartition)}
+                          {directionPrompt(interfaceLanguage, studyLanguage, deckNativeLanguage, 'frontToBack', hanjaPartition)}
                         </div>
                       )}
                     </>
@@ -1114,24 +1116,24 @@ export default function ReviewPage() {
                             <div className="mb-3 text-sm">
                               <span className={typedGrade.correct ? 'text-[var(--color-highlight)] font-semibold' : 'text-red-400 font-semibold'}>
                                 {typedGrade.correct
-                                  ? t(nativeLanguage, 'typedAnswerCorrect')
-                                  : t(nativeLanguage, 'typedAnswerMissed')}
+                                  ? t(interfaceLanguage, 'typedAnswerCorrect')
+                                  : t(interfaceLanguage, 'typedAnswerMissed')}
                               </span>
                               {!typedGrade.correct && (
                                 <span className="text-[var(--color-muted)]">
-                                  {' · '}{t(nativeLanguage, 'typedAnswerYours')}: <span className="line-through">{typedAnswer}</span>
+                                  {' · '}{t(interfaceLanguage, 'typedAnswerYours')}: <span className="line-through">{typedAnswer}</span>
                                 </span>
                               )}
                             </div>
                           )}
 
-                          {(partOfSpeechLabel(nativeLanguage, currentReview.card) ||
+                          {(partOfSpeechLabel(deckNativeLanguage, currentReview.card) ||
                             currentReview.card.gender ||
-                            getReading(currentReview.card, studyLanguage, nativeLanguage)) && (
+                            getReading(currentReview.card, studyLanguage, deckNativeLanguage)) && (
                             <div className="mb-3 flex gap-2 flex-wrap">
-                              {partOfSpeechLabel(nativeLanguage, currentReview.card) && (
+                              {partOfSpeechLabel(deckNativeLanguage, currentReview.card) && (
                                 <span className="px-2 py-0.5 text-xs rounded-full border border-[var(--color-muted)] text-[var(--color-muted)]">
-                                  {partOfSpeechLabel(nativeLanguage, currentReview.card)}
+                                  {partOfSpeechLabel(deckNativeLanguage, currentReview.card)}
                                 </span>
                               )}
                               {currentReview.card.gender && (
@@ -1139,9 +1141,9 @@ export default function ReviewPage() {
                                   {currentReview.card.gender}
                                 </span>
                               )}
-                              {getReading(currentReview.card, studyLanguage, nativeLanguage) && (
+                              {getReading(currentReview.card, studyLanguage, deckNativeLanguage) && (
                                 <span className="px-2 py-0.5 text-xs rounded-full border border-[var(--color-muted)] text-[var(--color-muted)]">
-                                  {getReading(currentReview.card, studyLanguage, nativeLanguage)}
+                                  {getReading(currentReview.card, studyLanguage, deckNativeLanguage)}
                                 </span>
                               )}
                             </div>
@@ -1151,14 +1153,16 @@ export default function ReviewPage() {
                             onClick={handleToggleDetails}
                             className="text-sm px-3 py-1 bg-[var(--color-muted-dark)] text-[var(--color-text)] rounded hover:bg-[var(--color-muted)] mb-4"
                           >
-                            {showDetails ? t(nativeLanguage, 'hideDetails') : t(nativeLanguage, 'showDetails')}
+                            {showDetails ? t(interfaceLanguage, 'hideDetails') : t(interfaceLanguage, 'showDetails')}
                           </button>
 
                           {showDetails && (
                             <ReviewDetailsPanel
                               card={currentReview.card}
                               studyLanguage={studyLanguage}
-                              nativeLanguage={nativeLanguage}
+                              interfaceLanguage={interfaceLanguage}
+
+                              deckNativeLanguage={deckNativeLanguage}
                               onChanged={handleCardEnriched}
                             />
                           )}
@@ -1166,7 +1170,7 @@ export default function ReviewPage() {
                       ) : (
                         <>
                           <div className="text-[var(--color-muted)] text-lg mt-4 italic">
-                            {directionPrompt(nativeLanguage, studyLanguage, 'backToFront', hanjaPartition)}
+                            {directionPrompt(interfaceLanguage, studyLanguage, deckNativeLanguage, 'backToFront', hanjaPartition)}
                           </div>
                           {typingThisCard && (
                             <input
@@ -1179,7 +1183,7 @@ export default function ReviewPage() {
                               value={typedAnswer}
                               onChange={e => setTypedAnswer(e.target.value)}
                               onKeyDown={e => { if (e.key === 'Enter') handleSubmitTypedAnswer(); }}
-                              placeholder={typedAnswerPlaceholder(nativeLanguage, studyLanguage)}
+                              placeholder={typedAnswerPlaceholder(interfaceLanguage, studyLanguage)}
                               // Autocorrect and capitalisation are off on
                               // purpose: a phone helpfully completing the word
                               // being recalled is the whole exercise done for
@@ -1204,28 +1208,28 @@ export default function ReviewPage() {
                       onClick={() => handleReviewResponse('again')}
                       style={ratingEmphasis('again')}
                     >
-                      {t(nativeLanguage, 'ratingAgain')}
+                      {t(interfaceLanguage, 'ratingAgain')}
                     </button>
                     <button
                       className="px-4 py-3 rounded-lg bg-[var(--color-highlight)] text-[var(--color-bg)] hover:bg-[var(--color-text)] font-semibold"
                       onClick={() => handleReviewResponse('hard')}
                       style={ratingEmphasis('hard')}
                     >
-                      {t(nativeLanguage, 'ratingHard')}
+                      {t(interfaceLanguage, 'ratingHard')}
                     </button>
                     <button
                       className="px-4 py-3 rounded-lg bg-[var(--color-muted)] text-[var(--color-text)] hover:bg-[var(--color-muted-dark)] font-semibold"
                       onClick={() => handleReviewResponse('good')}
                       style={ratingEmphasis('good')}
                     >
-                      {t(nativeLanguage, 'ratingGood')}
+                      {t(interfaceLanguage, 'ratingGood')}
                     </button>
                     <button
                       className="px-4 py-3 rounded-lg bg-[var(--color-bg)] text-[var(--color-text)] border border-[var(--color-muted)] hover:bg-[var(--color-muted)] font-semibold"
                       onClick={() => handleReviewResponse('easy')}
                       style={ratingEmphasis('easy')}
                     >
-                      {t(nativeLanguage, 'ratingEasy')}
+                      {t(interfaceLanguage, 'ratingEasy')}
                     </button>
                   </div>
                 ) : typingThisCard ? (
@@ -1235,7 +1239,7 @@ export default function ReviewPage() {
                       onClick={handleSubmitTypedAnswer}
                       disabled={!typedAnswer.trim()}
                     >
-                      {t(nativeLanguage, 'typedAnswerCheck')}
+                      {t(interfaceLanguage, 'typedAnswerCheck')}
                     </button>
                     {/* The per-card way out. A card you cannot type — no IME
                         to hand, or you simply don't want to — flips exactly as
@@ -1245,7 +1249,7 @@ export default function ReviewPage() {
                       className="w-full px-4 py-2 text-sm text-[var(--color-muted)] hover:text-[var(--color-text)]"
                       onClick={handleShowAnswer}
                     >
-                      {t(nativeLanguage, 'typedAnswerReveal')}
+                      {t(interfaceLanguage, 'typedAnswerReveal')}
                     </button>
                   </div>
                 ) : (
@@ -1253,7 +1257,7 @@ export default function ReviewPage() {
                     className="w-full mt-4 px-4 py-3 bg-[var(--color-muted)] text-[var(--color-text)] rounded-lg hover:bg-[var(--color-muted-dark)] text-lg font-semibold"
                     onClick={handleShowAnswer}
                   >
-                    {t(nativeLanguage, 'showAnswer')}
+                    {t(interfaceLanguage, 'showAnswer')}
                   </button>
                 )}
               </>
@@ -1279,8 +1283,8 @@ export default function ReviewPage() {
                     }
                   >
                     {dir === 'both'
-                      ? t(nativeLanguage, 'directionBoth')
-                      : directionLabel(nativeLanguage, studyLanguage, dir, hanjaPartition)}
+                      ? t(interfaceLanguage, 'directionBoth')
+                      : directionLabel(interfaceLanguage, studyLanguage, deckNativeLanguage, dir, hanjaPartition)}
                   </button>
                 ))}
               </div>
@@ -1294,7 +1298,7 @@ export default function ReviewPage() {
                   onChange={e => setTypingEnabled(e.target.checked)}
                   className="accent-[var(--color-highlight)] w-4 h-4"
                 />
-                {t(nativeLanguage, 'typedReviewToggle')}
+                {t(interfaceLanguage, 'typedReviewToggle')}
               </label>
               <button
                 className="px-6 py-3 rounded-lg text-lg font-semibold mb-4 bg-[var(--color-highlight)] text-[var(--color-bg)] hover:bg-[var(--color-text)] disabled:opacity-40 disabled:cursor-not-allowed"
@@ -1312,13 +1316,13 @@ export default function ReviewPage() {
                   onClick={handleForceSynchronize}
                   disabled={isSyncing || !isOnline}
                 >
-                  {isSyncing ? t(nativeLanguage, 'synchronizing') : t(nativeLanguage, 'forceSyncCards')}
+                  {isSyncing ? t(interfaceLanguage, 'synchronizing') : t(interfaceLanguage, 'forceSyncCards')}
                 </button>
               )}
             </div>
           )
         ) : (
-          <div className="text-[var(--color-muted)]">{t(nativeLanguage, 'signInToReview')}</div>
+          <div className="text-[var(--color-muted)]">{t(interfaceLanguage, 'signInToReview')}</div>
         )}
       </div>
     </div>

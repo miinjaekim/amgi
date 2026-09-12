@@ -25,7 +25,7 @@ export default function DeckDetailScreen() {
   const { C } = useTheme();
   const tabBarHeight = useFloatingTabBarHeight();
   const s = useMemo(() => makeStyles(C, tabBarHeight), [C, tabBarHeight]);
-  const { user, nativeLanguage, studyLanguage } = useUser();
+  const { user, interfaceLanguage, deckNativeLanguage, studyLanguage } = useUser();
   const pack = getVocabPack(studyLanguage, packId);
   const [cards, setCards] = useState<Flashcard[] | null>(null);
   const [enrolling, setEnrolling] = useState<string | null>(null);
@@ -100,7 +100,7 @@ export default function DeckDetailScreen() {
       <TouchableOpacity onPress={() => router.back()} hitSlop={12}>
         <Text style={s.back}>←</Text>
       </TouchableOpacity>
-      <Text style={s.headerLabel}>{t(nativeLanguage, 'decksBack')}</Text>
+      <Text style={s.headerLabel}>{t(interfaceLanguage, 'decksBack')}</Text>
     </View>
   );
 
@@ -110,7 +110,7 @@ export default function DeckDetailScreen() {
     return (
       <SafeAreaView style={s.safe} edges={['top', 'bottom']}>
         {header}
-        <Text style={s.empty}>{t(nativeLanguage, 'deckNotFound')}</Text>
+        <Text style={s.empty}>{t(interfaceLanguage, 'deckNotFound')}</Text>
       </SafeAreaView>
     );
   }
@@ -126,11 +126,11 @@ export default function DeckDetailScreen() {
    * which section it came from.
    */
   const enrol = async (busyId: string, sections: readonly PackSection[], collection: string) => {
-    if (!user) { setError(t(nativeLanguage, 'signInToSave')); return; }
+    if (!user) { setError(t(interfaceLanguage, 'signInToSave')); return; }
     const drafts: Omit<Flashcard, 'createdAt' | 'id'>[] = [];
     for (const section of sections) {
       const unsaved = unsavedEntries(section.entries, savedTerms);
-      if (unsaved === null) { setError(t(nativeLanguage, 'deckCardsUnavailable')); return; }
+      if (unsaved === null) { setError(t(interfaceLanguage, 'deckCardsUnavailable')); return; }
       for (const entry of unsaved) {
         drafts.push(
           buildPackCardDraft(entry, packRefId(pack.id, section.id), user.uid, studyLanguage) as Omit<Flashcard, 'createdAt' | 'id'>
@@ -142,7 +142,7 @@ export default function DeckDetailScreen() {
       try {
         await saveFlashcardsBatch(drafts, studyLanguage);
       } catch {
-        setError(t(nativeLanguage, 'deckEnrollError'));
+        setError(t(interfaceLanguage, 'deckEnrollError'));
         setEnrolling(null);
         return;
       }
@@ -168,8 +168,8 @@ export default function DeckDetailScreen() {
   const progressLabel = (of: readonly PackEntry[]) => {
     const saved = savedTerms ? countSavedEntries(of, savedTerms) : null;
     return saved !== null
-      ? t(nativeLanguage, 'packsSaved', { added: saved, total: of.length })
-      : t(nativeLanguage, 'deckEntryCount', { count: of.length });
+      ? t(interfaceLanguage, 'packsSaved', { added: saved, total: of.length })
+      : t(interfaceLanguage, 'deckEntryCount', { count: of.length });
   };
 
   /**
@@ -200,11 +200,11 @@ export default function DeckDetailScreen() {
     };
     return (
       <View style={s.subpackBlock}>
-        <Text style={s.subpackLabel}>{t(nativeLanguage, 'deckSections')}</Text>
+        <Text style={s.subpackLabel}>{t(interfaceLanguage, 'deckSections')}</Text>
         <View style={s.subpackWrap}>
-          {option(null, t(nativeLanguage, 'deckSubpackAll'), entries)}
+          {option(null, t(interfaceLanguage, 'deckSubpackAll'), entries)}
           {pack.sections.map(section =>
-            option(section.id, getPackText(section.name, nativeLanguage), section.entries)
+            option(section.id, getPackText(section.name, interfaceLanguage), section.entries)
           )}
         </View>
       </View>
@@ -223,7 +223,7 @@ export default function DeckDetailScreen() {
         >
           <Text style={s.cardStudy}>{entry.study}</Text>
           <Text style={s.cardBack}>
-            {resolvePackBack(entry.back, studyLanguage, nativeLanguage)}{saved ? ' ✓' : ''}
+            {resolvePackBack(entry.back, studyLanguage, deckNativeLanguage)}{saved ? ' ✓' : ''}
           </Text>
         </TouchableOpacity>
         {pack.pronounceable && (
@@ -245,7 +245,7 @@ export default function DeckDetailScreen() {
       >
         <Text style={s.entryStudy}>{entry.study}</Text>
         <Text style={s.entryBack} numberOfLines={1}>
-          {resolvePackBack(entry.back, studyLanguage, nativeLanguage)}
+          {resolvePackBack(entry.back, studyLanguage, deckNativeLanguage)}
         </Text>
         {saved ? <Text style={s.entryCheck}>✓</Text> : null}
       </TouchableOpacity>
@@ -262,11 +262,11 @@ export default function DeckDetailScreen() {
     return (
       <View key={section.id} style={s.section}>
         <View style={s.sectionHeader}>
-          <Text style={s.sectionTitle}>{getPackText(section.name, nativeLanguage)}</Text>
+          <Text style={s.sectionTitle}>{getPackText(section.name, interfaceLanguage)}</Text>
           <Text style={s.sectionCount}>{progressLabel(section.entries)}</Text>
         </View>
         {section.note && (
-          <Text style={s.sectionNote}>{getPackText(section.note, nativeLanguage)}</Text>
+          <Text style={s.sectionNote}>{getPackText(section.note, interfaceLanguage)}</Text>
         )}
         {/* A subpack is a thing you sit down with on its own, so the three
             things you can do to one live together: save it, review what you
@@ -281,10 +281,10 @@ export default function DeckDetailScreen() {
           >
             <Text style={s.sectionBtnText}>
               {busy
-                ? t(nativeLanguage, 'deckSectionSaving')
+                ? t(interfaceLanguage, 'deckSectionSaving')
                 : allSaved
-                  ? t(nativeLanguage, 'deckSectionAllSaved')
-                  : t(nativeLanguage, 'deckSaveSection')}
+                  ? t(interfaceLanguage, 'deckSectionAllSaved')
+                  : t(interfaceLanguage, 'deckSaveSection')}
             </Text>
           </TouchableOpacity>
           {/* Only once there is something to review. A subpack you have saved
@@ -292,7 +292,7 @@ export default function DeckDetailScreen() {
               rather than as an answer. */}
           {!!sectionSaved && (
             <TouchableOpacity style={s.sectionBtn} onPress={() => openReview(subpackId)}>
-              <Text style={s.sectionBtnText}>{t(nativeLanguage, 'deckReviewSection')}</Text>
+              <Text style={s.sectionBtnText}>{t(interfaceLanguage, 'deckReviewSection')}</Text>
             </TouchableOpacity>
           )}
           {/* Drill needs nothing saved — it runs over the pack's own entries. */}
@@ -300,7 +300,7 @@ export default function DeckDetailScreen() {
             style={s.sectionBtn}
             onPress={() => router.push(`/decks/${pack.id}/drill?section=${encodeURIComponent(section.id)}`)}
           >
-            <Text style={s.sectionSubtleBtnText}>{t(nativeLanguage, 'drillLink')}</Text>
+            <Text style={s.sectionSubtleBtnText}>{t(interfaceLanguage, 'drillLink')}</Text>
           </TouchableOpacity>
         </View>
         <View style={pack.layout === 'grid' ? s.cardWrap : s.entryWrap}>
@@ -317,16 +317,16 @@ export default function DeckDetailScreen() {
       {header}
       <ScrollView contentContainerStyle={s.scroll}>
         <View style={s.titleRow}>
-          <Text style={s.title}>{getPackText(pack.name, nativeLanguage)}</Text>
+          <Text style={s.title}>{getPackText(pack.name, interfaceLanguage)}</Text>
           <Text style={s.count}>
             {savedCount !== null
-              ? t(nativeLanguage, 'packsSaved', { added: savedCount, total: entries.length })
-              : t(nativeLanguage, 'deckEntryCount', { count: entries.length })}
+              ? t(interfaceLanguage, 'packsSaved', { added: savedCount, total: entries.length })
+              : t(interfaceLanguage, 'deckEntryCount', { count: entries.length })}
           </Text>
         </View>
-        <Text style={s.desc}>{getPackText(pack.description, nativeLanguage)}</Text>
+        <Text style={s.desc}>{getPackText(pack.description, interfaceLanguage)}</Text>
         <Text style={s.hint}>
-          {t(nativeLanguage, pack.layout === 'grid' ? 'packTapHintCards' : 'packTapHint')}
+          {t(interfaceLanguage, pack.layout === 'grid' ? 'packTapHintCards' : 'packTapHint')}
         </Text>
 
         {/* Every pack is enrollable and drillable now that every pack is
@@ -340,21 +340,21 @@ export default function DeckDetailScreen() {
             disabled={!!enrolling || (!!user && !knowsSaved)}
           >
             <Text style={s.reviewBtnText}>
-              {enrolling === ALL ? t(nativeLanguage, 'deckEnrolling') : t(nativeLanguage, 'deckSaveAll')}
+              {enrolling === ALL ? t(interfaceLanguage, 'deckEnrolling') : t(interfaceLanguage, 'deckSaveAll')}
             </Text>
           </TouchableOpacity>
           {/* The whole pack in one sitting, which is what you want once you
               have worked through the sections separately. */}
           {!!savedCount && (
             <TouchableOpacity style={s.drillBtn} onPress={() => openReview(pack.id)}>
-              <Text style={s.drillBtnText}>{t(nativeLanguage, 'deckReviewDeck')}</Text>
+              <Text style={s.drillBtnText}>{t(interfaceLanguage, 'deckReviewDeck')}</Text>
             </TouchableOpacity>
           )}
           <TouchableOpacity
             style={s.drillBtn}
             onPress={() => router.push(`/decks/${pack.id}/drill`)}
           >
-            <Text style={s.drillBtnText}>{t(nativeLanguage, 'drillLink')}</Text>
+            <Text style={s.drillBtnText}>{t(interfaceLanguage, 'drillLink')}</Text>
           </TouchableOpacity>
         </View>
 
@@ -362,7 +362,7 @@ export default function DeckDetailScreen() {
             saved yet" — say so, rather than letting it be discovered by
             enrolling a second copy. */}
         {loadFailed && !error && (
-          <Text style={s.error}>{t(nativeLanguage, 'deckCardsUnavailable')}</Text>
+          <Text style={s.error}>{t(interfaceLanguage, 'deckCardsUnavailable')}</Text>
         )}
         {error && <Text style={s.error}>{error}</Text>}
 
@@ -384,7 +384,9 @@ export default function DeckDetailScreen() {
           packId={packRefId(pack.id, detail.section.id)}
           uid={user?.uid}
           studyLanguage={studyLanguage}
-          nativeLanguage={nativeLanguage}
+          interfaceLanguage={interfaceLanguage}
+
+          deckNativeLanguage={deckNativeLanguage}
           onClose={() => setDetail(null)}
           // No `onChanged`: the listener above already reports anything the
           // modal writes, so telling the screen to go and look again would only

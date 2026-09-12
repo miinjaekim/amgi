@@ -276,6 +276,25 @@ export async function updateFlashcardReview(
 }
 
 /**
+ * How many cards this account has in one language, learned or not.
+ *
+ * Exists for the language-list migration and nothing else: an account written
+ * before `UserPreferences.languages` has to be seeded from the decks it has
+ * actually been using, and "has any cards at all" is that question. One
+ * equality filter, so no composite index, and it runs once per account.
+ */
+export async function countUserFlashcards(
+  uid: string,
+  studyLanguage?: StudyLanguage,
+): Promise<number> {
+  const snapshot = await withTimeout(getCountFromServer(query(
+    collection(db, getCardsCollection(studyLanguage)),
+    where('uid', '==', uid),
+  )));
+  return snapshot.data().count;
+}
+
+/**
  * How many cards are learned right now, in one language.
  *
  * An aggregation, not a read of every card: `getCountFromServer` bills per

@@ -31,13 +31,17 @@ export interface ShareOption {
  * offer the control becomes a `<details>` disclosure whose every row is its own
  * anchor to its own URL — so the no-JS download survives the chooser instead of
  * being traded for it. A menu built out of buttons and an onClick would not.
+ *
+ * The image takes the **interface** language throughout. It reports a streak and
+ * a review count — Amgi talking about the user, not a deck explaining a word —
+ * so it reads in the language the rest of the app is speaking.
  */
 export default function ShareStatsButton({
   options,
-  nativeLanguage,
+  interfaceLanguage,
 }: {
   options: ShareOption[];
-  nativeLanguage: string | null | undefined;
+  interfaceLanguage: string | null | undefined;
 }) {
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -84,7 +88,7 @@ export default function ShareStatsButton({
     };
 
   const linkFor = (option: ShareOption, children: React.ReactNode, className: string) => {
-    const href = shareImagePath(option.stats, nativeLanguage, option.variant);
+    const href = shareImagePath(option.stats, interfaceLanguage, option.variant);
     const filename = shareImageFilename(option.stats, option.variant);
     return (
       <a
@@ -116,7 +120,7 @@ export default function ShareStatsButton({
     // above the element it excuses.
     // eslint-disable-next-line @next/next/no-img-element
     <img
-      src={shareImagePath(option.stats, nativeLanguage, option.variant)}
+      src={shareImagePath(option.stats, interfaceLanguage, option.variant)}
       alt=""
       loading="lazy"
       className="w-20 rounded-md border border-[var(--color-muted)]"
@@ -124,7 +128,7 @@ export default function ShareStatsButton({
   );
 
   const label = (option: ShareOption) => t(
-    nativeLanguage,
+    interfaceLanguage,
     option.variant === 'today' ? 'shareVariantToday' : 'shareVariantWindow',
   );
 
@@ -137,14 +141,14 @@ export default function ShareStatsButton({
     <div className="flex flex-col items-end gap-1">
       {options.length === 1
         // One picture, one link — no disclosure to open first.
-        ? linkFor(options[0], t(nativeLanguage, 'shareTitle'), `${chip} ${chipStyle}`)
+        ? linkFor(options[0], t(interfaceLanguage, 'shareTitle'), `${chip} ${chipStyle}`)
         : (
           <details className="relative">
             <summary
               className={`${chip} ${chipStyle} cursor-pointer list-none`}
-              aria-label={t(nativeLanguage, 'shareChoose')}
+              aria-label={t(interfaceLanguage, 'shareChoose')}
             >
-              {t(nativeLanguage, 'shareTitle')}
+              {t(interfaceLanguage, 'shareTitle')}
             </summary>
             <div className="absolute right-0 mt-1 z-10 flex gap-2 p-2 rounded-xl border border-[var(--color-muted)] bg-[var(--color-surface)] whitespace-nowrap">
               {options.map(option => linkFor(
@@ -160,7 +164,7 @@ export default function ShareStatsButton({
         )}
       {failed && (
         <span className="text-xs" style={{ color: 'var(--color-error, #FC5D7C)' }}>
-          {t(nativeLanguage, 'shareFailed')}
+          {t(interfaceLanguage, 'shareFailed')}
         </span>
       )}
     </div>

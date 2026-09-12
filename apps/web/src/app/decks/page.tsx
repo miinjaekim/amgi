@@ -13,8 +13,13 @@ import {
 } from '@amgi/core';
 import { t } from '@/lib/i18n';
 
+/**
+ * Entirely chrome: a pack's name and description are UI copy, which is what
+ * `getPackText` keys on. Only a pack *back* belongs to the deck's language, and
+ * this page shows none — see `resolvePackBack` for that distinction.
+ */
 export default function DecksPage() {
-  const { user, nativeLanguage, studyLanguage } = useUser();
+  const { user, interfaceLanguage, studyLanguage } = useUser();
   const packs = getVocabPacks(studyLanguage);
   const [savedTerms, setSavedTerms] = useState<Set<string> | null>(null);
 
@@ -33,7 +38,7 @@ export default function DecksPage() {
   return (
     <div className="max-w-2xl mx-auto">
       <h1 className="text-2xl font-bold text-[var(--color-highlight)] mb-6">
-        {t(nativeLanguage, 'decksTitle')}
+        {t(interfaceLanguage, 'decksTitle')}
       </h1>
 
       {packs.length === 0 ? (
@@ -41,9 +46,9 @@ export default function DecksPage() {
         // most of them. It says what a pack is rather than promising one:
         // nothing is committed to a date.
         <div>
-          <p className="text-[var(--color-muted)]">{t(nativeLanguage, 'decksEmpty')}</p>
+          <p className="text-[var(--color-muted)]">{t(interfaceLanguage, 'decksEmpty')}</p>
           <p className="text-sm text-[var(--color-muted)] opacity-70 mt-2">
-            {t(nativeLanguage, 'decksEmptyBody')}
+            {t(interfaceLanguage, 'decksEmptyBody')}
           </p>
         </div>
       ) : (
@@ -59,16 +64,16 @@ export default function DecksPage() {
                 >
                   <div className="flex items-baseline justify-between gap-3 flex-wrap">
                     <h2 className="font-bold text-[var(--color-text)]">
-                      {getPackText(pack.name, nativeLanguage)}
+                      {getPackText(pack.name, interfaceLanguage)}
                     </h2>
                     <span className="text-xs text-[var(--color-muted)] shrink-0">
                       {saved !== null
-                        ? t(nativeLanguage, 'packsSaved', { added: saved, total })
-                        : t(nativeLanguage, 'deckEntryCount', { count: total })}
+                        ? t(interfaceLanguage, 'packsSaved', { added: saved, total })
+                        : t(interfaceLanguage, 'deckEntryCount', { count: total })}
                     </span>
                   </div>
                   <p className="text-sm text-[var(--color-muted)] mt-1">
-                    {getPackText(pack.description, nativeLanguage)}
+                    {getPackText(pack.description, interfaceLanguage)}
                   </p>
                   {saved !== null && total > 0 && (
                     <div className="mt-3 h-1 rounded-full bg-[var(--color-muted)]/30 overflow-hidden">

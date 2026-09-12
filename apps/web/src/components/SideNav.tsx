@@ -5,7 +5,7 @@ import Link from 'next/link';
 import AmgiLogo from './AmgiLogo';
 import SettingsMenu, { StudyLanguageList } from './SettingsMenu';
 import { useUser } from '@/components/UserContext';
-import { SUPPORTED_STUDY_LANGUAGES } from '@/services/userPreferences';
+import { getStudyLanguageConfig } from '@amgi/core';
 import { getNavItems } from './nav-items';
 import { t } from '@/lib/i18n';
 
@@ -18,7 +18,7 @@ interface Props {
  *  only hides the text, so icons never move or resize. */
 export default function SideNav({ collapsed, onToggle }: Props) {
   const pathname = usePathname();
-  const { user, authLoading, nativeLanguage, studyLanguage, streak, reviewedToday, handleSignIn } = useUser();
+  const { user, authLoading, interfaceLanguage, studyLanguage, streak, reviewedToday, handleSignIn } = useUser();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [langOpen, setLangOpen] = useState(false);
   const popoverRef = useRef<HTMLDivElement>(null);
@@ -35,9 +35,11 @@ export default function SideNav({ collapsed, onToggle }: Props) {
     return () => document.removeEventListener('mousedown', handler);
   }, [settingsOpen, langOpen]);
 
-  const navItems = getNavItems(nativeLanguage, pathname);
-  const studyLang = SUPPORTED_STUDY_LANGUAGES.find((l) => l.code === studyLanguage);
-  const studyLangTitle = `${t(nativeLanguage, 'settingsStudyLanguage')} · ${studyLang?.label ?? studyLanguage}`;
+  const navItems = getNavItems(interfaceLanguage, pathname);
+  // The deck's name, written in the language Amgi is speaking — a label, not
+  // card content.
+  const studyLangLabel = t(interfaceLanguage, getStudyLanguageConfig(studyLanguage).studyLabelKey);
+  const studyLangTitle = `${t(interfaceLanguage, 'settingsStudyLanguage')} · ${studyLangLabel}`;
 
   return (
     <aside
@@ -97,7 +99,7 @@ export default function SideNav({ collapsed, onToggle }: Props) {
           <div
             className="flex items-center gap-2 pl-2 pr-3 py-2 font-mono text-sm"
             style={{ color: 'var(--color-text)' }}
-            title={nativeLanguage === 'Korean' ? `${streak}일 연속 · 오늘 ${reviewedToday}개` : `${streak}-day streak · ${reviewedToday} reviewed today`}
+            title={interfaceLanguage === 'Korean' ? `${streak}일 연속 · 오늘 ${reviewedToday}개` : `${streak}-day streak · ${reviewedToday} reviewed today`}
           >
             <span className="w-[3.6rem] flex items-center justify-center gap-1 flex-shrink-0">
               <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor" style={{ color: 'var(--color-highlight)' }}>
@@ -106,7 +108,7 @@ export default function SideNav({ collapsed, onToggle }: Props) {
               <span className="font-semibold">{streak}</span>
             </span>
             <span className="sidenav-label whitespace-nowrap" style={{ color: 'var(--color-muted)' }}>
-              {nativeLanguage === 'Korean' ? `일 · 오늘 ${reviewedToday}개` : `${streak === 1 ? 'day' : 'days'} · ${reviewedToday} today`}
+              {interfaceLanguage === 'Korean' ? `일 · 오늘 ${reviewedToday}개` : `${streak === 1 ? 'day' : 'days'} · ${reviewedToday} today`}
             </span>
           </div>
         )}
@@ -114,7 +116,7 @@ export default function SideNav({ collapsed, onToggle }: Props) {
         {!authLoading && !user && (
           <button
             onClick={handleSignIn}
-            title={collapsed ? t(nativeLanguage, 'signIn') : undefined}
+            title={collapsed ? t(interfaceLanguage, 'signIn') : undefined}
             className="w-full flex items-center gap-3 pl-2 pr-3 py-2.5 rounded-lg font-mono font-semibold text-sm transition-colors"
             style={{ background: 'var(--color-highlight)', color: 'var(--color-bg)' }}
           >
@@ -123,7 +125,7 @@ export default function SideNav({ collapsed, onToggle }: Props) {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-7.5A2.25 2.25 0 003.75 5.25v13.5A2.25 2.25 0 006 21h7.5a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" />
               </svg>
             </span>
-            <span className="sidenav-label whitespace-nowrap">{t(nativeLanguage, 'signIn')}</span>
+            <span className="sidenav-label whitespace-nowrap">{t(interfaceLanguage, 'signIn')}</span>
           </button>
         )}
 
@@ -133,7 +135,8 @@ export default function SideNav({ collapsed, onToggle }: Props) {
             and nudge the whole cluster upward. */}
         <div ref={popoverRef}>
           <div className="space-y-1">
-          {/* Study language indicator — opens the language list only */}
+          {/* Study language indicator — opens the list of languages you have
+              added, plus the way to add another. */}
           <button
             onClick={() => { setLangOpen((v) => !v); setSettingsOpen(false); }}
             title={studyLangTitle}
@@ -145,15 +148,10 @@ export default function SideNav({ collapsed, onToggle }: Props) {
                 className="w-7 h-7 rounded-md border flex items-center justify-center text-[10px] font-bold"
                 style={{ borderColor: 'var(--color-muted)', color: 'var(--color-text)' }}
               >
-                {(studyLang?.code ?? studyLanguage).slice(0, 2).toUpperCase()}
+                {studyLanguage.slice(0, 2).toUpperCase()}
               </span>
             </span>
-            <span className="sidenav-label truncate whitespace-nowrap">
-              {studyLang?.label ?? studyLanguage}
-              {studyLang && studyLang.labelNative !== studyLang.label && (
-                <span className="ml-2 opacity-60">{studyLang.labelNative}</span>
-              )}
-            </span>
+            <span className="sidenav-label truncate whitespace-nowrap">{studyLangLabel}</span>
           </button>
 
           {/* User / settings */}
@@ -188,7 +186,7 @@ export default function SideNav({ collapsed, onToggle }: Props) {
                 </svg>
                 </span>
                 <span className="sidenav-label flex-1 text-left whitespace-nowrap" style={{ color: 'var(--color-muted)' }}>
-                  {t(nativeLanguage, 'settingsLanguage')}
+                  {t(interfaceLanguage, 'settingsAppLanguage')}
                 </span>
               </>
             )}
@@ -208,7 +206,7 @@ export default function SideNav({ collapsed, onToggle }: Props) {
               style={{ background: 'var(--color-surface)' }}
             >
               <p className="px-4 pt-3 pb-1 text-xs font-mono uppercase tracking-widest" style={{ color: 'var(--color-muted)' }}>
-                {t(nativeLanguage, 'settingsStudyLanguage')}
+                {t(interfaceLanguage, 'settingsStudyLanguage')}
               </p>
               <StudyLanguageList onSelect={() => setLangOpen(false)} />
             </div>

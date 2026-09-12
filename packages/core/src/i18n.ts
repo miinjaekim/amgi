@@ -217,9 +217,6 @@ const translations = {
     // Shown only when the language being chosen is the one Amgi is currently
     // speaking to the user in — picking it moves their native language, which
     // is defensible from a settings screen and alarming from a one-tap chip.
-    switchNativeWarningTitle: 'Change your interface language?',
-    switchNativeWarningBody: 'Amgi speaks to you in {study}. Studying {study} moves that to {native}.',
-    switchNativeWarningConfirm: 'Switch',
     settingsLanguage: 'Language',
     settingsTheme: 'Theme',
     settingsPronunciationSpeed: 'Pronunciation speed',
@@ -250,6 +247,34 @@ const translations = {
     settingsNativeLanguage: 'Native Language',
     settingsNativeLanguageDesc: 'Explanations and app text will use this language.',
     settingsStudyLanguageDesc: 'The language you\'re studying. Cards and reviews are grouped per language.',
+    // Your languages. The section names the pair, because the pair is the
+    // thing being chosen — a language on its own says nothing about what its
+    // card backs will be written in.
+    settingsYourLanguages: 'Your languages',
+    settingsYourLanguagesDesc: 'Each language you study, with the language its card backs and explanations are written in.',
+    // Deliberately not "Native language". It stopped being that when the two
+    // were split: this one is only what Amgi speaks to you in, and naming it
+    // for the app is what stops it reading as a second answer to the same
+    // question the rows above already ask.
+    settingsAppLanguage: 'App language',
+    settingsAppLanguageDesc: 'What Amgi speaks to you in. Separate from the languages you study, so switching decks never changes it.',
+    languagePairSummary: 'explained in {native}',
+    addLanguage: 'Add a language',
+    addLanguageStudyTitle: 'What do you want to learn?',
+    addLanguageStudySubtitle: 'Pick a language to start a deck for.',
+    // Names the language being added, because by this step the choice above
+    // has scrolled away on a phone and "which language?" alone is ambiguous
+    // between the two questions this flow asks.
+    addLanguageNativeTitle: 'Explain {study} in which language?',
+    addLanguageNativeSubtitle: 'Card backs and explanations for this deck will be written in the language you pick.',
+    addLanguageConfirm: 'Add',
+    addLanguageAllAdded: 'You are already studying every language Amgi supports.',
+    // Removing a deck is not deleting its cards, and the body says so — the
+    // word "remove" next to a language is otherwise easy to read as "erase
+    // everything I have learned in it".
+    removeLanguage: 'Remove',
+    removeLanguageTitle: 'Remove {study}?',
+    removeLanguageBody: 'It disappears from your language switcher. Your cards are kept, and adding it back brings them with it.',
     settingsSignInWithGoogle: 'Sign in with Google',
     settingsAbout: 'About',
     settingsPrivacyPolicy: 'Privacy Policy',
@@ -608,9 +633,6 @@ const translations = {
     navLearn: '학습',
     navReview: '복습',
     settingsStudyLanguage: '학습 언어',
-    switchNativeWarningTitle: '화면 언어를 바꿀까요?',
-    switchNativeWarningBody: 'Amgi 화면은 지금 {study}로 표시됩니다. {study}를 학습 언어로 고르면 화면 언어는 {native}로 바뀝니다.',
-    switchNativeWarningConfirm: '바꾸기',
     settingsLanguage: '언어',
     settingsTheme: '테마',
     settingsPronunciationSpeed: '발음 속도',
@@ -635,6 +657,21 @@ const translations = {
     settingsNativeLanguage: '모국어',
     settingsNativeLanguageDesc: '설명과 앱 화면이 이 언어로 표시됩니다.',
     settingsStudyLanguageDesc: '배우고 있는 언어예요. 카드와 복습은 언어별로 따로 관리됩니다.',
+    settingsYourLanguages: '내 언어',
+    settingsYourLanguagesDesc: '공부하는 언어와, 그 언어의 카드 뒷면과 설명을 어떤 언어로 볼지예요.',
+    settingsAppLanguage: '앱 언어',
+    settingsAppLanguageDesc: 'Amgi 화면에 쓰이는 언어예요. 공부하는 언어와 따로라서 학습 언어를 바꿔도 화면 언어는 그대로예요.',
+    languagePairSummary: '설명은 {native}',
+    addLanguage: '언어 추가',
+    addLanguageStudyTitle: '어떤 언어를 배우고 싶나요?',
+    addLanguageStudySubtitle: '덱을 만들 언어를 골라 주세요.',
+    addLanguageNativeTitle: '{study}를 어떤 언어로 설명할까요?',
+    addLanguageNativeSubtitle: '이 덱의 카드 뒷면과 설명이 고른 언어로 작성돼요.',
+    addLanguageConfirm: '추가',
+    addLanguageAllAdded: 'Amgi가 지원하는 언어를 모두 공부하고 있어요.',
+    removeLanguage: '삭제',
+    removeLanguageTitle: '{study}를 목록에서 뺄까요?',
+    removeLanguageBody: '언어 전환 목록에서만 사라져요. 카드는 그대로 남아 있고, 다시 추가하면 함께 돌아와요.',
     settingsSignInWithGoogle: 'Google로 로그인',
     settingsAbout: '정보',
     settingsPrivacyPolicy: '개인정보처리방침',
@@ -1012,42 +1049,58 @@ export function partOfSpeechLabel(
  * strings in two locales, all of them the same arrow between two names that
  * are already translated.
  */
+/**
+ * ⚠️ **Two languages, and they are not interchangeable.**
+ *
+ * This reads "Japanese → Korean", and those are two separate decisions. The
+ * *words* are chrome, so they are written in `interfaceLanguage`. *Which*
+ * language is named on the back comes from the deck — `deckNativeLanguage` —
+ * because that is what decides the slot the back is actually read from.
+ *
+ * They were one argument until 2026-09-12, which was correct only for as long
+ * as one global native language served both. An English-speaking user studying
+ * Japanese with Korean backs needs this to say "Japanese → Korean" **in
+ * English**, and a single argument cannot produce that sentence.
+ */
 export function directionLabel(
-  nativeLanguage: string | null | undefined,
+  interfaceLanguage: string | null | undefined,
   studyLanguage: StudyLanguage | string | undefined,
+  deckNativeLanguage: string | null | undefined,
   direction: ReviewDirection,
   partition: HanjaPartition = DEFAULT_HANJA_PARTITION,
 ): string {
   if (studyLanguage === 'Hanja') {
-    const [front, back] = hanjaPartNames(nativeLanguage, partition);
+    const [front, back] = hanjaPartNames(interfaceLanguage, partition);
     return direction === 'frontToBack' ? `${front} → ${back}` : `${back} → ${front}`;
   }
-  const study = t(nativeLanguage, getStudyLanguageConfig(studyLanguage).studyLabelKey);
-  const back = t(nativeLanguage, getBackSideConfig(studyLanguage, nativeLanguage).backLabelKey);
+  const study = t(interfaceLanguage, getStudyLanguageConfig(studyLanguage).studyLabelKey);
+  const back = t(interfaceLanguage, getBackSideConfig(studyLanguage, deckNativeLanguage).backLabelKey);
   return direction === 'frontToBack' ? `${study} → ${back}` : `${back} → ${study}`;
 }
 
 /** The question a review card asks, in the direction being tested. */
+/** Two languages, for the same reason as `directionLabel` — see the note there. */
 export function directionPrompt(
-  nativeLanguage: string | null | undefined,
+  interfaceLanguage: string | null | undefined,
   studyLanguage: StudyLanguage | string | undefined,
+  deckNativeLanguage: string | null | undefined,
   direction: ReviewDirection,
   partition: HanjaPartition = DEFAULT_HANJA_PARTITION,
 ): string {
   if (studyLanguage === 'Hanja') {
-    const [front, back] = hanjaPartNames(nativeLanguage, partition);
+    const [front, back] = hanjaPartNames(interfaceLanguage, partition);
     // The prompt names whatever is hidden, which flips with the direction:
     // showing 水 asks for 훈 · 음, showing 물 수 asks for the 한자.
-    return t(nativeLanguage, 'promptHanja', {
+    return t(interfaceLanguage, 'promptHanja', {
       parts: direction === 'frontToBack' ? back : front,
     });
   }
   const key = direction === 'frontToBack' ? 'promptMeaning' : 'promptProduce';
   const labelKey =
     direction === 'frontToBack'
-      ? getBackSideConfig(studyLanguage, nativeLanguage).backLabelKey
+      ? getBackSideConfig(studyLanguage, deckNativeLanguage).backLabelKey
       : getStudyLanguageConfig(studyLanguage).studyLabelKey;
-  return t(nativeLanguage, key, { language: t(nativeLanguage, labelKey) });
+  return t(interfaceLanguage, key, { language: t(interfaceLanguage, labelKey) });
 }
 
 /**

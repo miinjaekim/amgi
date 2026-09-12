@@ -95,7 +95,7 @@ export default function LearnScreen() {
    * number is the fix; it costs nothing but a slightly higher resting position.
    */
   const keyboardReserve = Dimensions.get('window').height * 0.46;
-  const { user, nativeLanguage, studyLanguage, authLoading, handleSignIn } = useUser();
+  const { user, interfaceLanguage, deckNativeLanguage, studyLanguage, authLoading, handleSignIn } = useUser();
   const langConfig = getStudyLanguageConfig(studyLanguage);
   const exampleTerms = EXAMPLE_TERMS[studyLanguage] ?? EXAMPLE_TERMS.Korean;
 
@@ -129,31 +129,31 @@ export default function LearnScreen() {
   // Word of the day — refreshes when the language pair changes. Non-essential:
   // any failure just hides the card (getWordOfTheDay returns null).
   useEffect(() => {
-    if (nativeLanguage === undefined) return; // preferences still loading
+    if (interfaceLanguage === undefined) return; // preferences still loading
     let cancelled = false;
     setWordOfTheDay(null);
     setWotdLoading(true);
     const date = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD, local timezone
     // Never rejects — resolves to null on any failure, so the skeleton always
     // resolves to either the tile or nothing.
-    getWordOfTheDay(date, studyLanguage, nativeLanguage ?? 'English')
+    getWordOfTheDay(date, studyLanguage, deckNativeLanguage)
       .then(data => { if (!cancelled) { setWordOfTheDay(data); setWotdLoading(false); } });
     return () => { cancelled = true; };
-  }, [studyLanguage, nativeLanguage]);
+  }, [studyLanguage, deckNativeLanguage, interfaceLanguage]);
 
   // A word tapped on a deck screen arrives as a route param, because looking it
   // up is this screen's job. `nonce` changes on every tap so the same word twice
-  // still re-fires; waiting on `nativeLanguage` matters because preferences load
+  // still re-fires; waiting on `interfaceLanguage` matters because preferences load
   // after mount and `studyLanguage` reads 'Korean' until they do.
   const { term: packTerm, context: packContext, nonce } = useLocalSearchParams<{
     term?: string; context?: string; nonce?: string;
   }>();
   useEffect(() => {
-    if (nativeLanguage === undefined || !packTerm) return;
+    if (interfaceLanguage === undefined || !packTerm) return;
     setTerm(packTerm);
     resolveExplanation(packTerm, packContext);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [packTerm, nonce, nativeLanguage]);
+  }, [packTerm, nonce, interfaceLanguage]);
 
   const reset = () => {
     setCore(null); setAmbiguity(null); setDepth(null); setExamples(null);
@@ -221,7 +221,7 @@ export default function LearnScreen() {
     setLoading(true);
     reset();
     try {
-      const raw = await getTermExplanation(termValue, nativeLanguage ?? 'English', context, studyLanguage, exact);
+      const raw = await getTermExplanation(termValue, deckNativeLanguage, context, studyLanguage, exact);
       if (run !== runId.current) return;
       const { result, correction: spelling } = applySpellingCorrection(raw, termValue);
       if (spelling) setCorrection({ ...spelling, applied: true });
@@ -233,7 +233,7 @@ export default function LearnScreen() {
       }
     } catch (e) {
       if (run !== runId.current) return;
-      setError(t(nativeLanguage, 'errorExplanation'));
+      setError(t(interfaceLanguage, 'errorExplanation'));
     } finally {
       if (run === runId.current) setLoading(false);
     }
@@ -248,7 +248,7 @@ export default function LearnScreen() {
     runId.current += 1;
     reset();
     setTerm(wotd.term);
-    setCore(wordOfTheDayCore(wotd, studyLanguage, nativeLanguage));
+    setCore(wordOfTheDayCore(wotd, studyLanguage, deckNativeLanguage));
   };
 
   const handleSubmit = () => {
@@ -284,10 +284,10 @@ export default function LearnScreen() {
     setLoadingDepth(true);
     setStreamingDepth(false);
     setDepth(null);
-    const target = getDepthTarget(core, studyLanguage, nativeLanguage);
+    const target = getDepthTarget(core, studyLanguage, deckNativeLanguage);
     const sense = { translation: target.translation, briefDefinition: target.briefDefinition };
     try {
-      const res = await streamTermDepth({ ...target, nativeLanguage, studyLanguage });
+      const res = await streamTermDepth({ ...target, nativeLanguage: deckNativeLanguage, studyLanguage });
       if (!res.ok || !res.body) throw new Error('Stream failed');
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
@@ -310,10 +310,10 @@ export default function LearnScreen() {
       // Streaming can fail (offline, proxy buffering) — fall back to the
       // non-streamed endpoint so digging deeper still works.
       try {
-        const fallback = await getTermDepth(target.term, target.termLanguage, nativeLanguage ?? 'English', sense, studyLanguage);
+        const fallback = await getTermDepth(target.term, target.termLanguage, deckNativeLanguage, sense, studyLanguage);
         if (run === runId.current) setDepth(fallback);
       } catch {
-        if (run === runId.current) setError(t(nativeLanguage, 'errorLoadDepth'));
+        if (run === runId.current) setError(t(interfaceLanguage, 'errorLoadDepth'));
       }
       if (run !== runId.current) return;
       setLoadingDepth(false);
@@ -327,10 +327,10 @@ export default function LearnScreen() {
     setLoadingExamples(true);
     setStreamingExamples(false);
     setExamples(null);
-    const target = getDepthTarget(core, studyLanguage, nativeLanguage);
+    const target = getDepthTarget(core, studyLanguage, deckNativeLanguage);
     const sense = { translation: target.translation, briefDefinition: target.briefDefinition };
     try {
-      const res = await streamTermExamples({ ...target, nativeLanguage, studyLanguage });
+      const res = await streamTermExamples({ ...target, nativeLanguage: deckNativeLanguage, studyLanguage });
       if (!res.ok || !res.body) throw new Error('Stream failed');
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
@@ -341,7 +341,7 @@ export default function LearnScreen() {
         accRef, doneRef,
         slice => {
           if (run !== runId.current) return;
-          const parsed = parseStreamedExamples(slice, studyLanguage, nativeLanguage);
+          const parsed = parseStreamedExamples(slice, studyLanguage, deckNativeLanguage);
           if (parsed.length > 0) setExamples(parsed);
         },
         () => { if (run === runId.current) setStreamingExamples(false); },
@@ -355,10 +355,10 @@ export default function LearnScreen() {
       doneRef.current = true;
     } catch {
       try {
-        const fallback = await getTermExamples(target.term, target.termLanguage, nativeLanguage ?? 'English', sense, studyLanguage);
+        const fallback = await getTermExamples(target.term, target.termLanguage, deckNativeLanguage, sense, studyLanguage);
         if (run === runId.current) setExamples(fallback);
       } catch {
-        if (run === runId.current) setError(t(nativeLanguage, 'errorLoadExamples'));
+        if (run === runId.current) setError(t(interfaceLanguage, 'errorLoadExamples'));
       }
       if (run !== runId.current) return;
       setLoadingExamples(false);
@@ -368,7 +368,7 @@ export default function LearnScreen() {
 
   const handleOpenSave = () => {
     if (!core) return;
-    setFlashcardDraft(buildLookupCardDraft(core, studyLanguage, nativeLanguage, { depth, examples }));
+    setFlashcardDraft(buildLookupCardDraft(core, studyLanguage, deckNativeLanguage, { depth, examples }));
     setShowSaveModal(true);
     setSaveSuccess(false);
   };
@@ -390,7 +390,7 @@ export default function LearnScreen() {
       setError(null);
       setSaveSuccess(true);
     } catch {
-      setError(t(nativeLanguage, 'errorSaveFlashcard'));
+      setError(t(interfaceLanguage, 'errorSaveFlashcard'));
     } finally {
       setSaving(false);
     }
@@ -403,7 +403,7 @@ export default function LearnScreen() {
 
   // The same three lines web shows, from the same function.
   const isHanja = studyLanguage === 'Hanja';
-  const faces = core ? lookupCardFaces(core, studyLanguage, nativeLanguage) : null;
+  const faces = core ? lookupCardFaces(core, studyLanguage, deckNativeLanguage) : null;
   const headword = faces?.headword ?? '';
   const translation = faces?.back ?? null;
   const hanjaGloss = faces?.gloss;
@@ -413,7 +413,7 @@ export default function LearnScreen() {
   // bar resting low, word of the day under them — so the launch resolves into
   // position instead of replacing a centred spinner with a full screen.
   //
-  // Text-free on purpose, and not only because skeletons are: `nativeLanguage`
+  // Text-free on purpose, and not only because skeletons are: `interfaceLanguage`
   // is still undefined here, so every label would render in English first and
   // correct itself a moment later for a Korean reader.
   if (authLoading) {
@@ -461,7 +461,8 @@ export default function LearnScreen() {
   const saveModal = showSaveModal && flashcardDraft && (
     <SaveFlashcardModal
       draft={flashcardDraft}
-      nativeLanguage={nativeLanguage}
+      interfaceLanguage={interfaceLanguage}
+      deckNativeLanguage={deckNativeLanguage}
       studyLanguage={studyLanguage}
       saving={saving}
       onChange={(field, value) => setFlashcardDraft(prev => ({ ...prev, [field]: value }))}
@@ -491,20 +492,20 @@ export default function LearnScreen() {
           <View style={s.bottomBar}>
             {saveSuccess && (
               <View style={s.successBanner}>
-                <Text style={s.successText}>{t(nativeLanguage, 'flashcardSaved')}</Text>
+                <Text style={s.successText}>{t(interfaceLanguage, 'flashcardSaved')}</Text>
               </View>
             )}
             <View style={s.exampleRow}>
-              <Text style={s.exampleLabel}>{t(nativeLanguage, 'exampleTermsLabel')}</Text>
+              <Text style={s.exampleLabel}>{t(interfaceLanguage, 'exampleTermsLabel')}</Text>
               {exampleTerms.map(ex => (
                 <TouchableOpacity key={ex} style={s.chip} onPress={() => { setTerm(ex); resolveExplanation(ex); }}>
                   <Text style={s.chipText}>{ex}</Text>
                 </TouchableOpacity>
               ))}
             </View>
-            {pronunciationNote(nativeLanguage, studyLanguage) && (
+            {pronunciationNote(deckNativeLanguage, studyLanguage) && (
               <Text style={s.pronunciationNote}>
-                {pronunciationNote(nativeLanguage, studyLanguage)}
+                {pronunciationNote(deckNativeLanguage, studyLanguage)}
                 {pronunciationNoteNeedsCredit(studyLanguage) && (
                   <Text
                     style={s.pronunciationCredit}
@@ -520,13 +521,13 @@ export default function LearnScreen() {
                 style={s.searchInput}
                 value={term}
                 onChangeText={setTerm}
-                placeholder={t(nativeLanguage, 'inputPlaceholder')}
+                placeholder={t(interfaceLanguage, 'inputPlaceholder')}
                 placeholderTextColor={C.muted}
                 returnKeyType="search"
                 onSubmitEditing={handleSubmit}
               />
               <TouchableOpacity style={s.searchBtn} onPress={handleSubmit}>
-                <Text style={s.searchBtnText}>{t(nativeLanguage, 'learnButton')}</Text>
+                <Text style={s.searchBtnText}>{t(interfaceLanguage, 'learnButton')}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -546,8 +547,8 @@ export default function LearnScreen() {
               // of the day arrives. Keeps its label: unlike the cold-launch
               // placeholder above, the rest of the screen is already here and
               // the tile is only saying what is filling it in.
-              <SkeletonGroup label={t(nativeLanguage, 'wordOfTheDay')} style={s.wotdCard}>
-                <Text style={s.wotdLabel}>{t(nativeLanguage, 'wordOfTheDay')}</Text>
+              <SkeletonGroup label={t(interfaceLanguage, 'wordOfTheDay')} style={s.wotdCard}>
+                <Text style={s.wotdLabel}>{t(interfaceLanguage, 'wordOfTheDay')}</Text>
                 <View style={s.wotdRow}>
                   <SkeletonBar width={92} height={24} />
                   <SkeletonBar width={120} height={18} />
@@ -560,16 +561,16 @@ export default function LearnScreen() {
                 style={s.wotdCard}
                 onPress={() => showWordOfTheDay(wordOfTheDay)}
               >
-                <Text style={s.wotdLabel}>{t(nativeLanguage, 'wordOfTheDay')}</Text>
+                <Text style={s.wotdLabel}>{t(interfaceLanguage, 'wordOfTheDay')}</Text>
                 <View style={s.wotdRow}>
                   <Text style={s.wotdTerm}>{wordOfTheDay.term}</Text>
                   <Text style={s.wotdTranslation}>
                   {/* The same core the tap-through builds, so the face and
                       the detail cannot disagree — see the web copy of this. */}
                     {getTermBackSide(
-                      wordOfTheDayCore(wordOfTheDay, studyLanguage, nativeLanguage),
+                      wordOfTheDayCore(wordOfTheDay, studyLanguage, deckNativeLanguage),
                       studyLanguage,
-                      nativeLanguage,
+                      deckNativeLanguage,
                     )}
                   </Text>
                 </View>
@@ -604,7 +605,7 @@ export default function LearnScreen() {
               style={s.searchInput}
               value={term}
               onChangeText={setTerm}
-              placeholder={t(nativeLanguage, 'inputPlaceholder')}
+              placeholder={t(interfaceLanguage, 'inputPlaceholder')}
               placeholderTextColor={C.muted}
               returnKeyType="search"
               onSubmitEditing={handleSubmit}
@@ -613,7 +614,7 @@ export default function LearnScreen() {
             <TouchableOpacity style={[s.searchBtn, loading && s.searchBtnDisabled]} onPress={handleSubmit} disabled={loading}>
               {loading
                 ? <ActivityIndicator color={C.bg} size="small" />
-                : <Text style={s.searchBtnText}>{t(nativeLanguage, 'learnButton')}</Text>}
+                : <Text style={s.searchBtnText}>{t(interfaceLanguage, 'learnButton')}</Text>}
             </TouchableOpacity>
           </View>
 
@@ -630,13 +631,13 @@ export default function LearnScreen() {
           {correction && (core || ambiguity) && (
             <View style={s.correctionRow}>
               <Text style={s.correctionText}>
-                {t(nativeLanguage, 'showingResultsFor', {
+                {t(interfaceLanguage, 'showingResultsFor', {
                   term: correction.applied ? correction.corrected : correction.typed,
                 })}
               </Text>
               <TouchableOpacity onPress={handleSwitchSpelling} disabled={loading}>
                 <Text style={[s.correctionLink, loading && s.correctionLinkDisabled]}>
-                  {t(nativeLanguage, 'searchInsteadFor', {
+                  {t(interfaceLanguage, 'searchInsteadFor', {
                     term: correction.applied ? correction.typed : correction.corrected,
                   })}
                 </Text>
@@ -647,7 +648,7 @@ export default function LearnScreen() {
           {ambiguity && (
             <View style={s.card}>
               <Text style={s.cardTerm}>{ambiguity.term}</Text>
-              <Text style={s.cardSubtitle}>{t(nativeLanguage, 'disambiguationPrompt')}</Text>
+              <Text style={s.cardSubtitle}>{t(interfaceLanguage, 'disambiguationPrompt')}</Text>
               {ambiguity.meanings.map((m, i) => (
                 <TouchableOpacity key={i} style={s.meaningBtn} onPress={() => handleDisambiguate(m.label)} disabled={loading}>
                   <Text style={s.meaningLabel}>{m.label}</Text>
@@ -664,9 +665,9 @@ export default function LearnScreen() {
                 {(core.termLanguage === studyLanguage || isHanja) && (
                   <PronounceButton text={headword} furigana={core.furigana} eum={core.eum} studyLanguage={studyLanguage} />
                 )}
-                {partOfSpeechLabel(nativeLanguage, core) && (
+                {partOfSpeechLabel(deckNativeLanguage, core) && (
                   <View style={s.formalityBadge}>
-                    <Text style={s.formalityText}>{partOfSpeechLabel(nativeLanguage, core)}</Text>
+                    <Text style={s.formalityText}>{partOfSpeechLabel(deckNativeLanguage, core)}</Text>
                   </View>
                 )}
                 {core.formality && core.formality !== 'N/A' && (
@@ -679,16 +680,16 @@ export default function LearnScreen() {
                     <Text style={s.formalityText}>{core.gender}</Text>
                   </View>
                 )}
-                {getReading(core, studyLanguage, nativeLanguage) && (
+                {getReading(core, studyLanguage, deckNativeLanguage) && (
                   <View style={s.formalityBadge}>
-                    <Text style={s.formalityText}>{getReading(core, studyLanguage, nativeLanguage)}</Text>
+                    <Text style={s.formalityText}>{getReading(core, studyLanguage, deckNativeLanguage)}</Text>
                   </View>
                 )}
               </View>
 
-              <Text style={s.sectionLabel}>{t(nativeLanguage, 'sectionTranslation')}</Text>
+              <Text style={s.sectionLabel}>{t(interfaceLanguage, 'sectionTranslation')}</Text>
               <View style={s.translationRow}>
-                <Text style={s.translationText}>{translation || t(nativeLanguage, 'noTranslation')}</Text>
+                <Text style={s.translationText}>{translation || t(interfaceLanguage, 'noTranslation')}</Text>
                 {core.termLanguage !== studyLanguage && translation && (
                   <PronounceButton text={translation} furigana={core.furigana} studyLanguage={studyLanguage} />
                 )}
@@ -699,27 +700,27 @@ export default function LearnScreen() {
                 <TouchableOpacity style={s.loadBtn} onPress={handleLoadDepth} disabled={loadingDepth}>
                   {loadingDepth
                     ? <ActivityIndicator color={C.text} size="small" />
-                    : <Text style={s.loadBtnText}>{t(nativeLanguage, 'loadDefinition')}</Text>}
+                    : <Text style={s.loadBtnText}>{t(interfaceLanguage, 'loadDefinition')}</Text>}
                 </TouchableOpacity>
               ) : (
                 <View style={s.depthSection}>
                   {depth.definition && (
                     <>
-                      <Text style={s.sectionLabel}>{t(nativeLanguage, 'sectionDefinition')}</Text>
+                      <Text style={s.sectionLabel}>{t(interfaceLanguage, 'sectionDefinition')}</Text>
                       <Markdown>{depth.definition}</Markdown>
                     </>
                   )}
                   {getCharacterBreakdown(depth) && (
                     <>
                       <Text style={s.sectionLabel}>
-                        {t(nativeLanguage, langConfig.characterSectionKey ?? 'sectionHanja')}
+                        {t(interfaceLanguage, langConfig.characterSectionKey ?? 'sectionHanja')}
                       </Text>
                       <Markdown>{getCharacterBreakdown(depth)!}</Markdown>
                     </>
                   )}
                   {depth.notes && (
                     <>
-                      <Text style={s.sectionLabel}>{t(nativeLanguage, 'sectionContext')}</Text>
+                      <Text style={s.sectionLabel}>{t(interfaceLanguage, 'sectionContext')}</Text>
                       <Markdown>{depth.notes}</Markdown>
                     </>
                   )}
@@ -731,13 +732,13 @@ export default function LearnScreen() {
                 <TouchableOpacity style={s.loadBtn} onPress={handleLoadExamples} disabled={loadingExamples}>
                   {loadingExamples
                     ? <ActivityIndicator color={C.text} size="small" />
-                    : <Text style={s.loadBtnText}>{t(nativeLanguage, 'loadExamples')}</Text>}
+                    : <Text style={s.loadBtnText}>{t(interfaceLanguage, 'loadExamples')}</Text>}
                 </TouchableOpacity>
               ) : (
                 <View style={s.examplesSection}>
-                  <Text style={s.sectionLabel}>{t(nativeLanguage, 'sectionExamples')}</Text>
+                  <Text style={s.sectionLabel}>{t(interfaceLanguage, 'sectionExamples')}</Text>
                   {(examples ?? []).map((ex, i) => {
-                    const sides = getExampleSides(ex, studyLanguage, nativeLanguage);
+                    const sides = getExampleSides(ex, studyLanguage, deckNativeLanguage);
                     return (
                       <View key={i} style={s.exampleItem}>
                         {sides.study ? (
@@ -760,14 +761,14 @@ export default function LearnScreen() {
                 onPress={user ? handleOpenSave : handleSignIn}
               >
                 <Text style={s.saveBtnText}>
-                  {user ? t(nativeLanguage, 'saveAsFlashcard') : t(nativeLanguage, 'signInToSave')}
+                  {user ? t(interfaceLanguage, 'saveAsFlashcard') : t(interfaceLanguage, 'signInToSave')}
                 </Text>
               </TouchableOpacity>
 
               <View style={s.contextSection}>
                 {!showContextInput ? (
                   <TouchableOpacity onPress={() => setShowContextInput(true)}>
-                    <Text style={s.contextToggleText}>{t(nativeLanguage, 'notWhatYouMeant')}</Text>
+                    <Text style={s.contextToggleText}>{t(interfaceLanguage, 'notWhatYouMeant')}</Text>
                   </TouchableOpacity>
                 ) : (
                   <View style={s.contextRow}>
@@ -775,7 +776,7 @@ export default function LearnScreen() {
                       style={s.contextInput}
                       value={contextInput}
                       onChangeText={setContextInput}
-                      placeholder={t(nativeLanguage, 'addContextPlaceholder')}
+                      placeholder={t(interfaceLanguage, 'addContextPlaceholder')}
                       placeholderTextColor={C.muted}
                       returnKeyType="send"
                       onSubmitEditing={handleRegenerate}
@@ -786,7 +787,7 @@ export default function LearnScreen() {
                       onPress={handleRegenerate}
                       disabled={!contextInput.trim() || loading}
                     >
-                      <Text style={s.regenBtnText}>{t(nativeLanguage, 'regenerate')}</Text>
+                      <Text style={s.regenBtnText}>{t(interfaceLanguage, 'regenerate')}</Text>
                     </TouchableOpacity>
                   </View>
                 )}

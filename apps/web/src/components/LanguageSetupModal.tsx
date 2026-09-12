@@ -2,51 +2,53 @@
 import React, { useState } from 'react';
 import { SUPPORTED_NATIVE_LANGUAGES, SUPPORTED_STUDY_LANGUAGES } from '@/services/userPreferences';
 import { useUser } from '@/components/UserContext';
-import { getStudyLanguageConfig } from '@amgi/core';
+import { getStudyLanguageConfig, nativeOptionsFor } from '@amgi/core';
 import { t } from '@/lib/i18n';
 import type { StudyLanguage } from '@amgi/core';
 
 /**
- * First run: two language questions, then one pass over what the app does.
+ * First run: three language questions, then one pass over what the app does.
  *
- * The tour is the third step of this modal rather than its own surface because
+ * ⚠️ **Three, not two.** The old flow asked for a native language and a study
+ * language and inferred everything else from the pair. That inference is what
+ * this change removes: the language the app speaks and the language a deck is
+ * explained in are separate choices, and a first run that asks only once has to
+ * guess one of them.
+ *
+ * So: the app's language, then what you want to learn, then what to explain it
+ * in. The third step is prefilled with the first — answering it the same way is
+ * one tap, and the question is still *asked*, which is what makes the answer a
+ * choice rather than a default nobody was shown.
+ *
+ * The tour is the last step of this modal rather than its own surface because
  * that is what keeps it to a single showing with nothing to record.
  *
- * Both answers are held locally and committed together on the last tap, not as
- * they are given. That is what lets the caller gate on `nativeLanguage ===
- * null` and nothing else: committing earlier would falsify the gate while the
- * tour was still on screen, and the caller would need a latch to keep this
- * mounted through its own final step. Quitting mid-flow therefore saves
- * nothing, which is the honest outcome — setup was not finished.
+ * Every answer is held locally and committed together on the last tap, not as
+ * it is given. That is what lets the caller gate on `interfaceLanguage === null`
+ * and nothing else: committing earlier would falsify the gate while the tour was
+ * still on screen, and the caller would need a latch to keep this mounted
+ * through its own final step. Quitting mid-flow therefore saves nothing, which
+ * is the honest outcome — setup was not finished.
  */
 export default function LanguageSetupModal() {
-  const { setNativeLanguage, setStudyLanguage } = useUser();
-  const [step, setStep] = useState<'native' | 'study' | 'tour'>('native');
-  const [pendingNative, setPendingNative] = useState<string | null>(null);
+  const { setInterfaceLanguage, addLanguage } = useUser();
+  const [step, setStep] = useState<'interface' | 'study' | 'native' | 'tour'>('interface');
+  const [pendingInterface, setPendingInterface] = useState<string | null>(null);
   const [pendingStudy, setPendingStudy] = useState<StudyLanguage | null>(null);
-
-  const handleNativeSelect = (lang: string) => {
-    setPendingNative(lang);
-    setStep('study');
-  };
-
-  const handleStudySelect = (lang: StudyLanguage) => {
-    setPendingStudy(lang);
-    setStep('tour');
-  };
+  const [pendingNative, setPendingNative] = useState<string | null>(null);
 
   // Deliberately not awaited. Both setters apply to state and localStorage
   // before their Firestore write, and that write does not reject when the
   // connection is gone — it never settles. Awaiting it would hold this modal
   // open behind a promise that may never resolve, and it has no dismiss.
-  // Neither setter reads the other's result: the study language was chosen
-  // from a list the native language was filtered out of, so the collision
-  // resolvers have nothing to correct.
   const handleDone = () => {
-    if (!pendingNative || !pendingStudy) return;
-    void setNativeLanguage(pendingNative);
-    void setStudyLanguage(pendingStudy);
+    if (!pendingInterface || !pendingStudy || !pendingNative) return;
+    void setInterfaceLanguage(pendingInterface);
+    void addLanguage({ study: pendingStudy, native: pendingNative });
   };
+
+  const optionClass =
+    'w-full py-3 rounded-lg font-semibold text-base border border-[var(--color-muted)] text-[var(--color-text)] hover:bg-[var(--color-muted)] hover:text-[var(--color-bg)] transition-colors';
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
@@ -58,16 +60,24 @@ export default function LanguageSetupModal() {
           Welcome to Amgi · 암기에 오신 것을 환영합니다
         </p>
 
-        {step === 'native' && (
+        {step === 'interface' && (
           <>
-            <h2 className="text-2xl font-bold mb-1 text-[var(--color-text)]">What is your native language?</h2>
-            <h2 className="text-lg font-semibold mb-8 text-[var(--color-text)] opacity-60">모국어가 무엇인가요?</h2>
+            {/* Bilingual, because until this is answered there is no language
+                to ask the question in. */}
+            <h2 className="text-2xl font-bold mb-1 text-[var(--color-text)]">What language should Amgi speak?</h2>
+            <h2 className="text-lg font-semibold mb-8 text-[var(--color-text)] opacity-60">앱을 어떤 언어로 볼까요?</h2>
             <div className="flex flex-col gap-3">
               {SUPPORTED_NATIVE_LANGUAGES.map((lang) => (
                 <button
                   key={lang.code}
-                  onClick={() => handleNativeSelect(lang.code)}
-                  className="w-full py-3 rounded-lg font-semibold text-base border border-[var(--color-muted)] text-[var(--color-text)] hover:bg-[var(--color-muted)] hover:text-[var(--color-bg)] transition-colors"
+                  onClick={() => {
+                    setPendingInterface(lang.code);
+                    // The obvious answer to the third question, offered rather
+                    // than assumed — the step still runs.
+                    setPendingNative(lang.code);
+                    setStep('study');
+                  }}
+                  className={optionClass}
                   style={{ background: 'var(--color-bg)' }}
                 >
                   {lang.label}
@@ -79,16 +89,27 @@ export default function LanguageSetupModal() {
 
         {step === 'study' && (
           <>
-            <h2 className="text-2xl font-bold mb-1 text-[var(--color-text)]">{t(pendingNative, 'setupStudyTitle')}</h2>
-            <h2 className="text-lg font-semibold mb-8 text-[var(--color-text)] opacity-60">{t(pendingNative, 'setupStudySubtitle')}</h2>
-            <div className="flex flex-col gap-3">
-              {SUPPORTED_STUDY_LANGUAGES.filter((lang) => lang.code !== pendingNative).map((lang) => {
-                const localizedLabel = t(pendingNative, getStudyLanguageConfig(lang.code).studyLabelKey);
+            <h2 className="text-2xl font-bold mb-1 text-[var(--color-text)]">{t(pendingInterface, 'setupStudyTitle')}</h2>
+            <h2 className="text-lg font-semibold mb-8 text-[var(--color-text)] opacity-60">{t(pendingInterface, 'setupStudySubtitle')}</h2>
+            <div className="flex flex-col gap-3 max-h-[50vh] overflow-y-auto">
+              {SUPPORTED_STUDY_LANGUAGES.map((lang) => {
+                const localizedLabel = t(pendingInterface, getStudyLanguageConfig(lang.code).studyLabelKey);
                 return (
                   <button
                     key={lang.code}
-                    onClick={() => handleStudySelect(lang.code)}
-                    className="w-full py-3 rounded-lg font-semibold text-base border border-[var(--color-muted)] text-[var(--color-text)] hover:bg-[var(--color-muted)] hover:text-[var(--color-bg)] transition-colors"
+                    onClick={() => {
+                      setPendingStudy(lang.code);
+                      // Studying the language you are reading the app in is a
+                      // legitimate choice — an English speaker learning
+                      // English from Korean backs — but it cannot also be the
+                      // explanation language, so the prefill moves off it.
+                      const options = nativeOptionsFor(lang.code);
+                      setPendingNative(current =>
+                        current && options.some(o => o.code === current) ? current : options[0].code,
+                      );
+                      setStep('native');
+                    }}
+                    className={optionClass}
                     style={{ background: 'var(--color-bg)' }}
                   >
                     <span>{localizedLabel}</span>
@@ -100,25 +121,60 @@ export default function LanguageSetupModal() {
               })}
             </div>
             <button
-              onClick={() => setStep('native')}
+              onClick={() => setStep('interface')}
               className="mt-4 text-sm text-[var(--color-muted)] hover:text-[var(--color-text)] transition-colors"
             >
-              {t(pendingNative, 'setupBack')}
+              {t(pendingInterface, 'setupBack')}
+            </button>
+          </>
+        )}
+
+        {step === 'native' && pendingStudy && (
+          <>
+            <h2 className="text-2xl font-bold mb-1 text-[var(--color-text)]">
+              {t(pendingInterface, 'addLanguageNativeTitle', {
+                study: t(pendingInterface, getStudyLanguageConfig(pendingStudy).studyLabelKey),
+              })}
+            </h2>
+            <p className="text-sm mb-8 text-[var(--color-text)] opacity-60">
+              {t(pendingInterface, 'addLanguageNativeSubtitle')}
+            </p>
+            <div className="flex flex-col gap-3">
+              {nativeOptionsFor(pendingStudy).map(option => (
+                <button
+                  key={option.code}
+                  onClick={() => { setPendingNative(option.code); setStep('tour'); }}
+                  className={optionClass}
+                  style={
+                    pendingNative === option.code
+                      ? { background: 'var(--color-bg)', borderColor: 'var(--color-highlight)' }
+                      : { background: 'var(--color-bg)' }
+                  }
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={() => setStep('study')}
+              className="mt-4 text-sm text-[var(--color-muted)] hover:text-[var(--color-text)] transition-colors"
+            >
+              {t(pendingInterface, 'setupBack')}
             </button>
           </>
         )}
 
         {step === 'tour' && (
           <>
-            <h2 className="text-2xl font-bold mb-6 text-[var(--color-text)]">{t(pendingNative, 'tourTitle')}</h2>
+            <h2 className="text-2xl font-bold mb-6 text-[var(--color-text)]">{t(pendingInterface, 'tourTitle')}</h2>
             <div className="flex flex-col gap-5">
               {TOUR_ROWS.map(({ labelKey, bodyKey }) => (
                 <div key={labelKey}>
                   <p className="text-sm font-bold text-[var(--color-highlight)] mb-1">
-                    {t(pendingNative, labelKey)}
+                    {t(pendingInterface, labelKey)}
                   </p>
                   <p className="text-sm text-[var(--color-text)] opacity-70 leading-relaxed">
-                    {t(pendingNative, bodyKey)}
+                    {t(pendingInterface, bodyKey)}
                   </p>
                 </div>
               ))}
@@ -127,7 +183,7 @@ export default function LanguageSetupModal() {
               onClick={handleDone}
               className="mt-8 w-full py-3 rounded-lg font-semibold text-base bg-[var(--color-highlight)] text-[var(--color-bg)] hover:opacity-90 transition-opacity"
             >
-              {t(pendingNative, 'tourStart')}
+              {t(pendingInterface, 'tourStart')}
             </button>
           </>
         )}

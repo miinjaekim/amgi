@@ -33,7 +33,7 @@ const ALL = '__all__';
 export default function DeckDetailPage() {
   const { packId } = useParams<{ packId: string }>();
   const router = useRouter();
-  const { user, nativeLanguage, studyLanguage } = useUser();
+  const { user, interfaceLanguage, deckNativeLanguage, studyLanguage } = useUser();
   const pack = getVocabPack(studyLanguage, packId);
   const [cards, setCards] = useState<Flashcard[] | null>(null);
   const [enrolling, setEnrolling] = useState<string | null>(null);
@@ -110,7 +110,7 @@ export default function DeckDetailPage() {
       href="/decks"
       className="text-sm text-[var(--color-muted)] hover:text-[var(--color-text)] transition-colors"
     >
-      ← {t(nativeLanguage, 'decksBack')}
+      ← {t(interfaceLanguage, 'decksBack')}
     </Link>
   );
 
@@ -121,7 +121,7 @@ export default function DeckDetailPage() {
     return (
       <div className="max-w-3xl mx-auto">
         {backLink}
-        <p className="mt-6 text-[var(--color-muted)]">{t(nativeLanguage, 'deckNotFound')}</p>
+        <p className="mt-6 text-[var(--color-muted)]">{t(interfaceLanguage, 'deckNotFound')}</p>
       </div>
     );
   }
@@ -140,11 +140,11 @@ export default function DeckDetailPage() {
    */
   async function enrol(busyId: string, sections: readonly PackSection[], collection: string) {
     if (!pack) return;
-    if (!user) { setError(t(nativeLanguage, 'signInToSave')); return; }
+    if (!user) { setError(t(interfaceLanguage, 'signInToSave')); return; }
     const drafts: Omit<Flashcard, 'createdAt' | 'id'>[] = [];
     for (const section of sections) {
       const unsaved = unsavedEntries(section.entries, savedTerms);
-      if (unsaved === null) { setError(t(nativeLanguage, 'deckCardsUnavailable')); return; }
+      if (unsaved === null) { setError(t(interfaceLanguage, 'deckCardsUnavailable')); return; }
       for (const entry of unsaved) {
         drafts.push(
           buildPackCardDraft(entry, packRefId(pack.id, section.id), user.uid, studyLanguage) as Omit<Flashcard, 'createdAt' | 'id'>
@@ -156,7 +156,7 @@ export default function DeckDetailPage() {
       try {
         await saveFlashcardsBatch(drafts, studyLanguage);
       } catch {
-        setError(t(nativeLanguage, 'deckEnrollError'));
+        setError(t(interfaceLanguage, 'deckEnrollError'));
         setEnrolling(null);
         return;
       }
@@ -180,8 +180,8 @@ export default function DeckDetailPage() {
   const progressLabel = (of: readonly PackEntry[]) => {
     const saved = savedTerms ? countSavedEntries(of, savedTerms) : null;
     return saved !== null
-      ? t(nativeLanguage, 'packsSaved', { added: saved, total: of.length })
-      : t(nativeLanguage, 'deckEntryCount', { count: of.length });
+      ? t(interfaceLanguage, 'packsSaved', { added: saved, total: of.length })
+      : t(interfaceLanguage, 'deckEntryCount', { count: of.length });
   };
 
   /**
@@ -217,14 +217,14 @@ export default function DeckDetailPage() {
     };
     return (
       <div className="mb-8">
-        <p className="text-xs text-[var(--color-muted)] mb-2">{t(nativeLanguage, 'deckSections')}</p>
+        <p className="text-xs text-[var(--color-muted)] mb-2">{t(interfaceLanguage, 'deckSections')}</p>
         <div
           className="grid gap-2"
           style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(10rem, 1fr))' }}
         >
-          {option(null, t(nativeLanguage, 'deckSubpackAll'), entries)}
+          {option(null, t(interfaceLanguage, 'deckSubpackAll'), entries)}
           {pack!.sections.map(section =>
-            option(section.id, getPackText(section.name, nativeLanguage), section.entries)
+            option(section.id, getPackText(section.name, interfaceLanguage), section.entries)
           )}
         </div>
       </div>
@@ -242,7 +242,7 @@ export default function DeckDetailPage() {
       <section key={section.id} className="mb-8">
         <div className="flex items-baseline gap-3 flex-wrap mb-1">
           <h2 className="text-lg font-semibold text-[var(--color-text)]">
-            {getPackText(section.name, nativeLanguage)}
+            {getPackText(section.name, interfaceLanguage)}
           </h2>
           <span className="text-xs text-[var(--color-muted)]">{progressLabel(section.entries)}</span>
           {/* A subpack is a thing you sit down with on its own, so the three
@@ -258,10 +258,10 @@ export default function DeckDetailPage() {
               className="px-3 py-1.5 rounded-lg text-sm font-semibold border border-[var(--color-muted)] text-[var(--color-text)] hover:bg-[var(--color-muted)]/20 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             >
               {busy
-                ? t(nativeLanguage, 'deckSectionSaving')
+                ? t(interfaceLanguage, 'deckSectionSaving')
                 : allSaved
-                  ? t(nativeLanguage, 'deckSectionAllSaved')
-                  : t(nativeLanguage, 'deckSaveSection')}
+                  ? t(interfaceLanguage, 'deckSectionAllSaved')
+                  : t(interfaceLanguage, 'deckSaveSection')}
             </button>
             {/* Only once there is something to review. A subpack you have saved
                 nothing of would open an empty session, which reads as a bug
@@ -271,7 +271,7 @@ export default function DeckDetailPage() {
                 href={reviewHref(subpackId)}
                 className="px-3 py-1.5 rounded-lg text-sm font-semibold border border-[var(--color-muted)] text-[var(--color-text)] hover:bg-[var(--color-muted)]/20 transition-colors"
               >
-                {t(nativeLanguage, 'deckReviewSection')}
+                {t(interfaceLanguage, 'deckReviewSection')}
               </Link>
             )}
             {/* Drill needs nothing saved — it runs over the pack's own entries,
@@ -280,13 +280,13 @@ export default function DeckDetailPage() {
               href={`/decks/${pack!.id}/drill?section=${encodeURIComponent(section.id)}`}
               className="px-3 py-1.5 rounded-lg text-sm text-[var(--color-muted)] border border-[var(--color-muted)] hover:text-[var(--color-text)] transition-colors"
             >
-              {t(nativeLanguage, 'drillLink')}
+              {t(interfaceLanguage, 'drillLink')}
             </Link>
           </div>
         </div>
         {section.note && (
           <p className="text-xs text-[var(--color-muted)] opacity-70 mb-3">
-            {getPackText(section.note, nativeLanguage)}
+            {getPackText(section.note, interfaceLanguage)}
           </p>
         )}
         {pack!.layout === 'grid' ? (
@@ -308,7 +308,7 @@ export default function DeckDetailPage() {
   function renderGridTile(entry: PackEntry, section: PackSection) {
     const saved = savedTerms?.has(entry.study.toLowerCase()) ?? false;
     const owned = cardsByTerm.get(entry.study.toLowerCase());
-    const back = owned ? undefined : resolvePackBack(entry.back, studyLanguage, nativeLanguage);
+    const back = owned ? undefined : resolvePackBack(entry.back, studyLanguage, deckNativeLanguage);
     return (
       <div
         key={entry.study}
@@ -321,7 +321,7 @@ export default function DeckDetailPage() {
         >
           <span className="text-2xl leading-tight text-[var(--color-text)]">{entry.study}</span>
           <span className="text-[10px] leading-tight text-[var(--color-muted)]">
-            {back ?? resolvePackBack(entry.back, studyLanguage, nativeLanguage)}{saved && ' ✓'}
+            {back ?? resolvePackBack(entry.back, studyLanguage, deckNativeLanguage)}{saved && ' ✓'}
           </span>
         </button>
         {pack!.pronounceable && (
@@ -343,7 +343,7 @@ export default function DeckDetailPage() {
       >
         <span className="text-sm text-[var(--color-text)]">{entry.study}</span>
         <span className="text-xs text-[var(--color-muted)]">
-          {resolvePackBack(entry.back, studyLanguage, nativeLanguage)}
+          {resolvePackBack(entry.back, studyLanguage, deckNativeLanguage)}
         </span>
         {saved && <span className="text-xs text-[var(--color-muted)]">✓</span>}
       </button>
@@ -356,20 +356,20 @@ export default function DeckDetailPage() {
 
       <div className="mt-4 flex items-baseline gap-3 flex-wrap">
         <h1 className="text-2xl font-bold text-[var(--color-highlight)]">
-          {getPackText(pack.name, nativeLanguage)}
+          {getPackText(pack.name, interfaceLanguage)}
         </h1>
         <span className="text-xs text-[var(--color-muted)]">
           {savedCount !== null
-            ? t(nativeLanguage, 'packsSaved', { added: savedCount, total: entries.length })
-            : t(nativeLanguage, 'deckEntryCount', { count: entries.length })}
+            ? t(interfaceLanguage, 'packsSaved', { added: savedCount, total: entries.length })
+            : t(interfaceLanguage, 'deckEntryCount', { count: entries.length })}
         </span>
       </div>
 
       <p className="text-sm text-[var(--color-muted)] mt-2">
-        {getPackText(pack.description, nativeLanguage)}
+        {getPackText(pack.description, interfaceLanguage)}
       </p>
       <p className="text-xs text-[var(--color-muted)] opacity-70 mt-2 mb-4">
-        {t(nativeLanguage, pack.layout === 'grid' ? 'packTapHintCards' : 'packTapHint')}
+        {t(interfaceLanguage, pack.layout === 'grid' ? 'packTapHintCards' : 'packTapHint')}
       </p>
 
       {/* Every pack is enrollable and drillable now that every pack is
@@ -382,7 +382,7 @@ export default function DeckDetailPage() {
           disabled={!!enrolling || (!!user && !knowsSaved)}
           className="px-5 py-2.5 rounded-lg font-semibold bg-[var(--color-highlight)] text-[var(--color-bg)] hover:bg-[var(--color-text)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {enrolling === ALL ? t(nativeLanguage, 'deckEnrolling') : t(nativeLanguage, 'deckSaveAll')}
+          {enrolling === ALL ? t(interfaceLanguage, 'deckEnrolling') : t(interfaceLanguage, 'deckSaveAll')}
         </button>
         {/* The whole pack in one sitting, which is what you want once you
             have worked through the sections separately — at that point doing
@@ -392,14 +392,14 @@ export default function DeckDetailPage() {
             href={reviewHref(pack.id)}
             className="px-5 py-2.5 rounded-lg font-semibold border border-[var(--color-muted)] text-[var(--color-text)] hover:bg-[var(--color-muted)]/20 transition-colors"
           >
-            {t(nativeLanguage, 'deckReviewDeck')}
+            {t(interfaceLanguage, 'deckReviewDeck')}
           </Link>
         )}
         <Link
           href={`/decks/${pack.id}/drill`}
           className="px-5 py-2.5 rounded-lg font-semibold border border-[var(--color-muted)] text-[var(--color-text)] hover:bg-[var(--color-muted)]/20 transition-colors"
         >
-          {t(nativeLanguage, 'drillLink')}
+          {t(interfaceLanguage, 'drillLink')}
         </Link>
       </div>
 
@@ -408,7 +408,7 @@ export default function DeckDetailPage() {
           a second copy. */}
       {loadFailed && !error && (
         <div className="mb-4 p-3 rounded-lg text-sm bg-[var(--color-muted)]/30 text-[var(--color-text)]">
-          {t(nativeLanguage, 'deckCardsUnavailable')}
+          {t(interfaceLanguage, 'deckCardsUnavailable')}
         </div>
       )}
 
@@ -435,7 +435,9 @@ export default function DeckDetailPage() {
           packId={packRefId(pack.id, detail.section.id)}
           uid={user?.uid}
           studyLanguage={studyLanguage}
-          nativeLanguage={nativeLanguage}
+          interfaceLanguage={interfaceLanguage}
+
+          deckNativeLanguage={deckNativeLanguage}
           onClose={() => setDetail(null)}
           // No `onChanged`: the subscription carries the modal's writes.
         />

@@ -524,9 +524,82 @@ render sites across web and mobile don't grow a conditional per language.
 
 ## User preferences (`users` collection)
 
-- `nativeLanguage`: string — the user's native language (e.g. "English")
+- `languages`: `{ study, native }[]` — the decks added, each with the language
+  it is explained in (2026-09-12; see below)
+- `interfaceLanguage`: string — what Amgi speaks to the user in
+- `nativeLanguage`: string — **deprecated**, kept as the migration seed and
+  still written alongside `interfaceLanguage` so an older build reading the same
+  account still finds it. There is no OTA on mobile, so that is not hypothetical.
 - `studyLanguage`: string — which deck is currently active
 - `streak`, `longestStreak`, `lastReviewDate`, `reviewedToday` — SRS progress
+
+### One native language per deck, and an interface language beside it (2026-09-12)
+
+⚠️ **`nativeLanguage` was doing three jobs at once**, and the third one is the
+reason this had to change. It chose the card's back slot
+(`getBackSideConfig`), it was interpolated into every `/api/explain` prompt
+("Write all explanations in ${nativeLanguage}"), *and* it was the language of
+the app's own chrome. Those are not the same question, and with one field the
+pair "Korean explanations, English interface" was unsayable.
+
+So the field split in two:
+
+- **`languages`** — one entry per study language, carrying the language that
+  deck's **backs and explanations** are written in.
+- **`interfaceLanguage`** — chrome only: nav, buttons, settings copy,
+  reminders, collection and pack names, the shareable stats image.
+
+**Explanations follow the deck, not the interface, and that is forced rather
+than chosen.** `definition`, `notes`, `characterBreakdown` and
+`briefDefinition` are *stored on the card* and never regenerated, so they
+cannot track a setting that changes later — tying them to the interface would
+leave a card whose back is Korean sitting beside a definition in English,
+permanently. `getDepthTarget` already resolved its sense through
+`getBackSideConfig`, so explanation and back were one decision before this and
+still are.
+
+**One entry per study language, forced by the collections.** Cards shard into
+one collection per study language (`cards_japanese`), so there is nowhere to put
+a second Japanese deck explained in a different language. `addLanguagePair`
+replaces rather than appends for exactly that reason.
+
+**The collision resolvers are deleted, not deprecated.**
+`resolveStudyLanguage` and `resolveNativeLanguage` existed to repair one
+situation *after* it happened — the learner studying the language Amgi was
+speaking to them in — by moving the other setting out from under them. That was
+the only repair available while one global native language served every deck.
+Now `nativeOptionsFor` drops the study language from the options at the point of
+choosing, so the pair cannot be built, and the interface language is independent
+of every deck, so switching decks cannot move it. That also retires the
+confirmation dialog those functions made necessary (and its three i18n keys).
+Nothing reads a stored collision through them: `getBackSideConfig` has always
+fallen to the other side when the back would land on the front, so an old
+document saying "native Korean, studying Korean" still renders with no repair
+pass.
+
+⚠️ **The migration seeds from the decks that hold cards, not from
+`studyLanguage` alone.** The switcher now shows only added languages, so an
+account seeded from the current deck would hide every other deck it has been
+using behind an Add flow the user has no reason to open — the cards would still
+be there, but a deck you cannot reach is indistinguishable from one you have
+lost. `seedLanguagePairs` therefore takes the study languages holding at least
+one card (ten `getCountFromServer` aggregations, once per account, written
+straight back) plus the current one, and gives them all the old global
+`nativeLanguage` — which is the honest reading, since that is the language every
+one of those decks has in fact been explained in until now.
+
+**Mobile only migrates on a launch that reached the server.**
+`getCountFromServer` has no offline answer, so an underground launch would seed
+from the current deck alone and then write that narrow list down as if it were
+the truth. Offline it keeps what the device holds and tries again next launch.
+
+**No new collection and no new index**, so neither manual Firestore step
+applies: `languages` is a field on a `users/{uid}` document that already has a
+security rule.
+
+`directionLabel` and `directionPrompt` take **both** languages now. They read
+"Japanese → Korean", and those are two separate decisions: the words are chrome,
+while *which* language is named on the back comes from the deck.
 
 ### `users/{uid}/progress/{YYYY-MM-DD}` — daily rollups (2026-08-19)
 

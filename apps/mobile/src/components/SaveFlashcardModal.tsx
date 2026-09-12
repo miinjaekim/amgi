@@ -11,7 +11,9 @@ import type { Flashcard } from '../services/firestore';
 
 interface Props {
   draft: Partial<Flashcard>;
-  nativeLanguage: string | null | undefined;
+  interfaceLanguage: string | null | undefined;
+  /** Decides which field this form edits, not just how it is labelled. */
+  deckNativeLanguage: string;
   studyLanguage: StudyLanguage;
   saving: boolean;
   onChange: (field: CardSideField, value: string) => void;
@@ -19,19 +21,19 @@ interface Props {
   onClose: () => void;
 }
 
-export default function SaveFlashcardModal({ draft, nativeLanguage, studyLanguage, saving, onChange, onSave, onClose }: Props) {
+export default function SaveFlashcardModal({ draft, interfaceLanguage, deckNativeLanguage, studyLanguage, saving, onChange, onSave, onClose }: Props) {
   const { C } = useTheme();
   const s = useMemo(() => makeStyles(C), [C]);
   const config = getStudyLanguageConfig(studyLanguage);
-  const backConfig = getBackSideConfig(studyLanguage, nativeLanguage);
+  const backConfig = getBackSideConfig(studyLanguage, deckNativeLanguage);
   return (
     <Modal visible transparent animationType="fade" onRequestClose={onClose}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={s.flex}>
         <TouchableOpacity style={s.backdrop} activeOpacity={1} onPress={onClose}>
           <TouchableOpacity activeOpacity={1} style={s.sheet} onPress={() => {}}>
-            <Text style={s.title}>{t(nativeLanguage, 'reviewEditFlashcard')}</Text>
+            <Text style={s.title}>{t(interfaceLanguage, 'reviewEditFlashcard')}</Text>
 
-            <Text style={s.label}>{t(nativeLanguage, config.studyLabelKey)}</Text>
+            <Text style={s.label}>{t(interfaceLanguage, config.studyLabelKey)}</Text>
             <TextInput
               style={s.input}
               value={draft[config.studyField] ?? ''}
@@ -40,7 +42,7 @@ export default function SaveFlashcardModal({ draft, nativeLanguage, studyLanguag
               returnKeyType="next"
             />
 
-            <Text style={s.label}>{t(nativeLanguage, backConfig.backLabelKey)}</Text>
+            <Text style={s.label}>{t(interfaceLanguage, backConfig.backLabelKey)}</Text>
             <TextInput
               style={s.input}
               value={draft[backConfig.backField] ?? ''}
@@ -53,10 +55,10 @@ export default function SaveFlashcardModal({ draft, nativeLanguage, studyLanguag
               <TouchableOpacity style={s.saveBtn} onPress={onSave} disabled={saving}>
                 {saving
                   ? <ActivityIndicator color={C.bg} size="small" />
-                  : <Text style={s.saveBtnText}>{t(nativeLanguage, 'save')}</Text>}
+                  : <Text style={s.saveBtnText}>{t(interfaceLanguage, 'save')}</Text>}
               </TouchableOpacity>
               <TouchableOpacity style={s.cancelBtn} onPress={onClose} disabled={saving}>
-                <Text style={s.cancelBtnText}>{t(nativeLanguage, 'cancel')}</Text>
+                <Text style={s.cancelBtnText}>{t(interfaceLanguage, 'cancel')}</Text>
               </TouchableOpacity>
             </View>
           </TouchableOpacity>

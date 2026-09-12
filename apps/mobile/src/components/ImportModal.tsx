@@ -27,9 +27,9 @@ const DEFAULT_TRACKING = { nextReview: new Date(), interval: 0, ease: 2.5, repet
 export default function ImportModal({ studyLanguage, onClose, onSaved }: Props) {
   const { C } = useTheme();
   const s = useMemo(() => makeStyles(C), [C]);
-  const { user, nativeLanguage } = useUser();
+  const { user, interfaceLanguage, deckNativeLanguage } = useUser();
   const langConfig = getStudyLanguageConfig(studyLanguage);
-  const backConfig = getBackSideConfig(studyLanguage, nativeLanguage);
+  const backConfig = getBackSideConfig(studyLanguage, deckNativeLanguage);
   const [input, setInput] = useState('');
   const [items, setItems] = useState<ImportItem[]>([]);
   const [step, setStep] = useState<'input' | 'processing' | 'done'>('input');
@@ -53,7 +53,7 @@ export default function ImportModal({ studyLanguage, onClose, onSaved }: Props) 
         // `exact`: an import has nowhere to show "showing results for X" and
         // saves what comes back, so it looks up the word as written rather
         // than quietly importing a card for a different one.
-        const data = await getTermExplanation(words[i], nativeLanguage ?? 'English', undefined, studyLanguage, true);
+        const data = await getTermExplanation(words[i], deckNativeLanguage, undefined, studyLanguage, true);
         if ('ambiguous' in data && data.ambiguous) {
           setItems(prev => prev.map((item, idx) => idx === i ? { ...item, status: 'ambiguous' } : item));
         } else {
@@ -105,14 +105,14 @@ export default function ImportModal({ studyLanguage, onClose, onSaved }: Props) 
       <View style={s.backdrop}>
         <View style={s.sheet}>
           <View style={s.header}>
-            <Text style={s.title}>{t(nativeLanguage, 'importTitle')}</Text>
+            <Text style={s.title}>{t(interfaceLanguage, 'importTitle')}</Text>
             <TouchableOpacity onPress={close} hitSlop={12}><Text style={s.close}>×</Text></TouchableOpacity>
           </View>
 
           <ScrollView contentContainerStyle={s.body} keyboardShouldPersistTaps="handled">
             {step === 'input' && (
               <>
-                <Text style={s.prompt}>{t(nativeLanguage, 'importPastePrompt')}</Text>
+                <Text style={s.prompt}>{t(interfaceLanguage, 'importPastePrompt')}</Text>
                 <TextInput
                   style={s.textarea}
                   value={input}
@@ -124,7 +124,7 @@ export default function ImportModal({ studyLanguage, onClose, onSaved }: Props) 
                 />
                 {words.length > 0 && (
                   <Text style={s.count}>
-                    {t(nativeLanguage, words.length === 1 ? 'importWordCountOne' : 'importWordCount', { count: words.length })}
+                    {t(interfaceLanguage, words.length === 1 ? 'importWordCountOne' : 'importWordCount', { count: words.length })}
                   </Text>
                 )}
                 <TouchableOpacity
@@ -132,7 +132,7 @@ export default function ImportModal({ studyLanguage, onClose, onSaved }: Props) 
                   onPress={startImport}
                   disabled={words.length === 0}
                 >
-                  <Text style={s.primaryBtnText}>{t(nativeLanguage, 'importStart')}</Text>
+                  <Text style={s.primaryBtnText}>{t(interfaceLanguage, 'importStart')}</Text>
                 </TouchableOpacity>
               </>
             )}
@@ -141,8 +141,8 @@ export default function ImportModal({ studyLanguage, onClose, onSaved }: Props) 
               <>
                 <Text style={s.prompt}>
                   {step === 'processing'
-                    ? t(nativeLanguage, 'importProcessing', { done: doneCount, total: items.length })
-                    : t(nativeLanguage, 'importDoneSummary', { success: successCount, total: items.length, selected: selected.size })}
+                    ? t(interfaceLanguage, 'importProcessing', { done: doneCount, total: items.length })
+                    : t(interfaceLanguage, 'importDoneSummary', { success: successCount, total: items.length, selected: selected.size })}
                 </Text>
                 {items.map((item, i) => {
                   const isSel = selected.has(i);
@@ -160,8 +160,8 @@ export default function ImportModal({ studyLanguage, onClose, onSaved }: Props) 
                         <View style={s.itemRow}>
                           <Text style={s.itemWord}>{item.word}</Text>
                           {item.status === 'loading' && <ActivityIndicator size="small" color={C.muted} />}
-                          {item.status === 'error' && <Text style={s.itemMeta}>{t(nativeLanguage, 'importStatusFailed')}</Text>}
-                          {item.status === 'ambiguous' && <Text style={s.itemMeta}>{t(nativeLanguage, 'importStatusAmbiguous')}</Text>}
+                          {item.status === 'error' && <Text style={s.itemMeta}>{t(interfaceLanguage, 'importStatusFailed')}</Text>}
+                          {item.status === 'ambiguous' && <Text style={s.itemMeta}>{t(interfaceLanguage, 'importStatusAmbiguous')}</Text>}
                           {item.status === 'success' && item.data && (
                             <Text style={s.itemMeta} numberOfLines={1}>
                               {item.data[langConfig.studyField]} · {item.data[backConfig.backField] || item.data.english}
@@ -181,7 +181,7 @@ export default function ImportModal({ studyLanguage, onClose, onSaved }: Props) 
                     {saving
                       ? <ActivityIndicator color={C.bg} size="small" />
                       : <Text style={s.primaryBtnText}>
-                          {t(nativeLanguage, selected.size === 1 ? 'importSaveCardsOne' : 'importSaveCards', { count: selected.size })}
+                          {t(interfaceLanguage, selected.size === 1 ? 'importSaveCardsOne' : 'importSaveCards', { count: selected.size })}
                         </Text>}
                   </TouchableOpacity>
                 )}

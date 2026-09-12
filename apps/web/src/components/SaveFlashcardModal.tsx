@@ -10,7 +10,16 @@ import PronounceButton from '@/components/PronounceButton';
 
 interface Props {
   draft: Partial<Flashcard>;
-  nativeLanguage: string | null | undefined;
+  /** The dialog's own copy and the two field labels — chrome. */
+  interfaceLanguage: string | null | undefined;
+  /**
+   * The language this deck is explained in.
+   *
+   * ⚠️ Decides **which field this form edits**, not just how it is labelled:
+   * `getBackSideConfig` resolves the back to `korean` or `english`, and typing
+   * into the wrong one would save the text where nothing reads it back.
+   */
+  deckNativeLanguage: string;
   studyLanguage: StudyLanguage;
   saving: boolean;
   onChange: (field: CardSideField, value: string) => void;
@@ -18,7 +27,9 @@ interface Props {
   onClose: () => void;
 }
 
-export default function SaveFlashcardModal({ draft, nativeLanguage, studyLanguage, saving, onChange, onSave, onClose }: Props) {
+export default function SaveFlashcardModal({
+  draft, interfaceLanguage, deckNativeLanguage, studyLanguage, saving, onChange, onSave, onClose,
+}: Props) {
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     document.addEventListener('keydown', handler);
@@ -26,8 +37,8 @@ export default function SaveFlashcardModal({ draft, nativeLanguage, studyLanguag
   }, [onClose]);
 
   const langConfig = getStudyLanguageConfig(studyLanguage);
-  const backConfig = getBackSideConfig(studyLanguage, nativeLanguage);
-  const studyLangLabel = t(nativeLanguage, langConfig.studyLabelKey);
+  const backConfig = getBackSideConfig(studyLanguage, deckNativeLanguage);
+  const studyLangLabel = t(interfaceLanguage, langConfig.studyLabelKey);
   const studyLangValue = draft[langConfig.studyField] || '';
 
   return (
@@ -44,7 +55,7 @@ export default function SaveFlashcardModal({ draft, nativeLanguage, studyLanguag
         {/* Header */}
         <div className="flex items-center justify-between p-6 pb-4 border-b" style={{ borderColor: 'var(--color-muted)' }}>
           <h2 className="text-xl font-bold" style={{ color: 'var(--color-highlight)' }}>
-            {t(nativeLanguage, 'reviewEditFlashcard')}
+            {t(interfaceLanguage, 'reviewEditFlashcard')}
           </h2>
           <button
             onClick={onClose}
@@ -77,8 +88,9 @@ export default function SaveFlashcardModal({ draft, nativeLanguage, studyLanguag
             />
           </div>
           <div>
+            {/* The label names the back's language, written in the reader's. */}
             <label className="block text-xs font-semibold uppercase tracking-widest mb-2" style={{ color: 'var(--color-muted)' }}>
-              {t(nativeLanguage, backConfig.backLabelKey)}
+              {t(interfaceLanguage, backConfig.backLabelKey)}
             </label>
             <input
               type="text"
@@ -95,7 +107,7 @@ export default function SaveFlashcardModal({ draft, nativeLanguage, studyLanguag
               className="px-5 py-2 rounded-lg font-bold disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               style={{ background: 'var(--color-highlight)', color: 'var(--color-bg)' }}
             >
-              {saving ? <Spinner /> : t(nativeLanguage, 'save')}
+              {saving ? <Spinner /> : t(interfaceLanguage, 'save')}
             </button>
             <button
               onClick={onClose}
@@ -103,7 +115,7 @@ export default function SaveFlashcardModal({ draft, nativeLanguage, studyLanguag
               className="px-5 py-2 rounded-lg font-bold transition-colors"
               style={{ background: 'var(--color-muted)', color: 'var(--color-text)' }}
             >
-              {t(nativeLanguage, 'cancel')}
+              {t(interfaceLanguage, 'cancel')}
             </button>
           </div>
         </div>

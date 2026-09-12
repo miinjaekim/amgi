@@ -15,11 +15,12 @@ type State = 'idle' | 'copied' | 'failed';
  */
 export default function CopyButton({
   text,
-  nativeLanguage,
+  interfaceLanguage,
   className = '',
 }: {
   text: string;
-  nativeLanguage: string | null | undefined;
+  /** Button copy only — this control never touches card content. */
+  interfaceLanguage: string | null | undefined;
   className?: string;
 }) {
   const [state, setState] = useState<State>('idle');
@@ -76,7 +77,7 @@ export default function CopyButton({
           : { borderColor: 'var(--color-muted)', color: 'var(--color-muted)' }
       }
     >
-      {t(nativeLanguage, label)}
+      {t(interfaceLanguage, label)}
     </button>
   );
 }

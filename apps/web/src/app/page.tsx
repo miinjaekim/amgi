@@ -62,8 +62,18 @@ function animateText(
   requestAnimationFrame(tick);
 }
 
+/**
+ * ⚠️ **Two languages on this screen, and mixing them up is silent.**
+ *
+ * `interfaceLanguage` is every `t()` call — the tagline, the section headings,
+ * the buttons. `deckNativeLanguage` is everything that becomes, or describes,
+ * **the card**: the `/api/explain` request, the word of the day, both depth
+ * streams, the back side, the reading, the part of speech, and the draft that
+ * gets saved. The compiler cannot tell them apart — both are strings — so the
+ * rule is which side of the card the value ends up on.
+ */
 export default function Home() {
-  const { user, nativeLanguage, studyLanguage, handleSignIn } = useUser();
+  const { user, interfaceLanguage, deckNativeLanguage, studyLanguage, handleSignIn } = useUser();
   const [term, setTerm] = useState('');
   const [core, setCore] = useState<TermCore | null>(null);
   const [ambiguity, setAmbiguity] = useState<TermAmbiguous | null>(null);
@@ -96,14 +106,16 @@ export default function Home() {
   // which would need a Suspense boundary around the whole page to keep
   // `next build` from failing on prerender.
   //
-  // Waits for preferences: `studyLanguage` is 'Korean' and `nativeLanguage`
+  // Waits for preferences: `studyLanguage` is 'Korean' and `interfaceLanguage`
   // undefined until they load, so firing on mount would look the word up in the
-  // wrong language pair. The ref keeps it to one lookup once they arrive, and
+  // wrong language pair. `interfaceLanguage` is what signals that wait —
+  // `deckNativeLanguage` is always a real language and so can never be
+  // `undefined` to test. The ref keeps it to one lookup once they arrive, and
   // the param is stripped so a refresh doesn't repeat a lookup the user has
   // moved on from.
   const packTermConsumed = React.useRef(false);
   useEffect(() => {
-    if (nativeLanguage === undefined || packTermConsumed.current) return;
+    if (interfaceLanguage === undefined || packTermConsumed.current) return;
     const params = new URLSearchParams(window.location.search);
     const packTerm = params.get('term');
     if (!packTerm) return;
@@ -112,15 +124,19 @@ export default function Home() {
     setTerm(packTerm);
     resolveExplanation(packTerm, params.get('context') ?? undefined);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [nativeLanguage]);
+  }, [interfaceLanguage]);
 
   useEffect(() => {
-    if (nativeLanguage === undefined) return; // preferences still loading
+    if (interfaceLanguage === undefined) return; // preferences still loading
     let cancelled = false;
     setWordOfTheDay(null);
     setWotdLoading(true);
     const date = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD, local timezone
-    const params = new URLSearchParams({ date, studyLanguage, nativeLanguage: nativeLanguage ?? 'English' });
+    // The word of the day is stored per `date_studyLanguage_nativeLanguage`, so
+    // the deck's language is the one that keys it — two decks explained in
+    // different languages get their own document, which is what makes the
+    // stored explanation match the deck it is being read on.
+    const params = new URLSearchParams({ date, studyLanguage, nativeLanguage: deckNativeLanguage });
     fetch(`/api/word-of-the-day?${params}`)
       .then(res => (res.ok ? res.json() : null))
       .then(data => { if (!cancelled && data?.term) setWordOfTheDay(data); })
@@ -129,7 +145,7 @@ export default function Home() {
       // nothing rather than lingering.
       .finally(() => { if (!cancelled) setWotdLoading(false); });
     return () => { cancelled = true; };
-  }, [studyLanguage, nativeLanguage]);
+  }, [studyLanguage, deckNativeLanguage, interfaceLanguage]);
 
   /**
    * @param exact Look the term up as typed, skipping spellcheck — the
@@ -159,7 +175,8 @@ export default function Home() {
     setContextInput('');
     setCorrection(null);
     try {
-      const raw = await getTermExplanation(termValue, nativeLanguage ?? 'English', context, '', studyLanguage, exact);
+      // The deck's language: this response *is* the card.
+      const raw = await getTermExplanation(termValue, deckNativeLanguage, context, '', studyLanguage, exact);
       const { result, correction: spelling } = applySpellingCorrection(raw, termValue);
       if (spelling) setCorrection({ ...spelling, applied: true });
       else if (keptCorrection) setCorrection(keptCorrection);
@@ -169,7 +186,7 @@ export default function Home() {
         setCore(result as TermCore);
       }
     } catch (err) {
-      setError(t(nativeLanguage, 'errorExplanation'));
+      setError(t(interfaceLanguage, 'errorExplanation'));
       console.error(err);
     } finally {
       setLoading(false);
@@ -193,7 +210,7 @@ export default function Home() {
     setShowContextInput(false);
     setContextInput('');
     setCorrection(null);
-    setCore(wordOfTheDayCore(wotd, studyLanguage, nativeLanguage));
+    setCore(wordOfTheDayCore(wotd, studyLanguage, deckNativeLanguage));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -240,13 +257,15 @@ export default function Home() {
     const doneRef = { current: false };
     let canceled = false;
 
-    const depthTarget = getDepthTarget(core, studyLanguage, nativeLanguage);
+    const depthTarget = getDepthTarget(core, studyLanguage, deckNativeLanguage);
 
     try {
       const res = await fetch('/api/explain/depth-stream', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...depthTarget, nativeLanguage, studyLanguage }),
+        // `nativeLanguage` is the route's parameter name and means the language
+        // to write in. This text is saved onto the card, so it is the deck's.
+        body: JSON.stringify({ ...depthTarget, nativeLanguage: deckNativeLanguage, studyLanguage }),
       });
       if (!res.ok || !res.body) throw new Error('Stream failed');
 
@@ -274,7 +293,7 @@ export default function Home() {
       doneRef.current = true;
     } catch (err) {
       canceled = true;
-      setError(t(nativeLanguage, 'errorLoadDepth'));
+      setError(t(interfaceLanguage, 'errorLoadDepth'));
       console.error(err);
       setLoadingDepth(false);
       setStreamingDepth(false);
@@ -291,13 +310,13 @@ export default function Home() {
     const doneRef = { current: false };
     let canceled = false;
 
-    const examplesTarget = getDepthTarget(core, studyLanguage, nativeLanguage);
+    const examplesTarget = getDepthTarget(core, studyLanguage, deckNativeLanguage);
 
     try {
       const res = await fetch('/api/explain/examples-stream', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...examplesTarget, nativeLanguage, studyLanguage }),
+        body: JSON.stringify({ ...examplesTarget, nativeLanguage: deckNativeLanguage, studyLanguage }),
       });
       if (!res.ok || !res.body) throw new Error('Stream failed');
 
@@ -329,7 +348,7 @@ export default function Home() {
       doneRef.current = true;
     } catch (err) {
       canceled = true;
-      setError(t(nativeLanguage, 'errorLoadExamples'));
+      setError(t(interfaceLanguage, 'errorLoadExamples'));
       console.error(err);
       setLoadingExamples(false);
       setStreamingExamples(false);
@@ -357,7 +376,7 @@ export default function Home() {
         setCorrection(null);
         setSaveSuccess(true);
       } catch {
-        setError(t(nativeLanguage, 'errorSaveFlashcard'));
+        setError(t(interfaceLanguage, 'errorSaveFlashcard'));
       } finally {
         setSaving(false);
       }
@@ -369,7 +388,7 @@ export default function Home() {
   // What the screen shows above the save button, from the same place the draft
   // comes from — so what you read and what you save cannot disagree.
   const isHanja = studyLanguage === 'Hanja';
-  const faces = core ? lookupCardFaces(core, studyLanguage, nativeLanguage) : null;
+  const faces = core ? lookupCardFaces(core, studyLanguage, deckNativeLanguage) : null;
   const headword = faces?.headword ?? '';
   const translation = faces?.back ?? null;
   const hanjaGloss = faces?.gloss;
@@ -382,8 +401,8 @@ export default function Home() {
           the vertical center; stays during loading to avoid a layout jump */}
       {!core && !ambiguity && !error && (
         <div className="mt-16 sm:mt-28 text-center">
-          <p className="text-[var(--color-text)] text-lg font-semibold mb-2">{t(nativeLanguage, 'tagline')}</p>
-          <p className="text-[var(--color-text)] opacity-60 text-sm max-w-md mx-auto">{t(nativeLanguage, 'taglineSubtitle')}</p>
+          <p className="text-[var(--color-text)] text-lg font-semibold mb-2">{t(interfaceLanguage, 'tagline')}</p>
+          <p className="text-[var(--color-text)] opacity-60 text-sm max-w-md mx-auto">{t(interfaceLanguage, 'taglineSubtitle')}</p>
         </div>
       )}
 
@@ -394,7 +413,7 @@ export default function Home() {
             type="text"
             value={term}
             onChange={(e) => setTerm(e.target.value)}
-            placeholder={t(nativeLanguage, 'inputPlaceholder')}
+            placeholder={t(interfaceLanguage, 'inputPlaceholder')}
             className="flex-1 p-3 rounded-lg bg-[var(--color-bg)] border border-[var(--color-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--color-highlight)] text-[var(--color-text)] placeholder-[var(--color-muted)]"
             disabled={loading}
             autoFocus
@@ -404,7 +423,7 @@ export default function Home() {
             className="px-5 py-2 rounded-lg bg-[var(--color-highlight)] text-[var(--color-bg)] font-bold hover:bg-[var(--color-text)] hover:text-[var(--color-bg)] focus:outline-none focus:ring-2 focus:ring-[var(--color-highlight)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             disabled={loading}
           >
-            {loading ? <Spinner className="w-5 h-5 mx-auto" /> : t(nativeLanguage, 'learnButton')}
+            {loading ? <Spinner className="w-5 h-5 mx-auto" /> : t(interfaceLanguage, 'learnButton')}
           </button>
         </div>
       </form>
@@ -421,7 +440,7 @@ export default function Home() {
               className="block w-full max-w-md mx-auto mb-8 p-4 rounded-xl bg-[var(--color-surface)] border border-[var(--color-muted)] text-left animate-pulse"
             >
               <div className="text-xs uppercase tracking-wider text-[var(--color-muted)] mb-1">
-                {t(nativeLanguage, 'wordOfTheDay')}
+                {t(interfaceLanguage, 'wordOfTheDay')}
               </div>
               <div className="flex items-baseline gap-3 flex-wrap">
                 <div className="h-7 w-24 rounded bg-[var(--color-muted)] opacity-40" />
@@ -436,7 +455,7 @@ export default function Home() {
               className="block w-full max-w-md mx-auto mb-8 p-4 rounded-xl bg-[var(--color-surface)] border border-[var(--color-muted)] text-left hover:border-[var(--color-highlight)] transition-colors"
             >
               <div className="text-xs uppercase tracking-wider text-[var(--color-muted)] mb-1">
-                {t(nativeLanguage, 'wordOfTheDay')}
+                {t(interfaceLanguage, 'wordOfTheDay')}
               </div>
               <div className="flex items-baseline gap-3 flex-wrap">
                 <span className="text-xl font-bold text-[var(--color-highlight)]">{wordOfTheDay.term}</span>
@@ -449,9 +468,9 @@ export default function Home() {
                     on every deck but one. The document has carried both sides
                     since; only this line was still asking the old question. */}
                   {getTermBackSide(
-                    wordOfTheDayCore(wordOfTheDay, studyLanguage, nativeLanguage),
+                    wordOfTheDayCore(wordOfTheDay, studyLanguage, deckNativeLanguage),
                     studyLanguage,
-                    nativeLanguage,
+                    deckNativeLanguage,
                   )}
                 </span>
               </div>
@@ -461,7 +480,7 @@ export default function Home() {
             </button>
           )}
           <div className="flex flex-wrap gap-2 justify-center">
-            <span className="text-[var(--color-muted)] text-sm mr-1">{t(nativeLanguage, 'exampleTermsLabel')}</span>
+            <span className="text-[var(--color-muted)] text-sm mr-1">{t(interfaceLanguage, 'exampleTermsLabel')}</span>
             {exampleTerms.map((example) => (
               <button
                 key={example}
@@ -472,9 +491,11 @@ export default function Home() {
               </button>
             ))}
           </div>
-          {pronunciationNote(nativeLanguage, studyLanguage) && (
+          {/* Explains how to read the card's pronunciation, so it is written in
+              the language the rest of that card is explained in. */}
+          {pronunciationNote(deckNativeLanguage, studyLanguage) && (
             <p className="mt-3 text-xs text-[var(--color-muted)] max-w-md mx-auto leading-relaxed">
-              {pronunciationNote(nativeLanguage, studyLanguage)}
+              {pronunciationNote(deckNativeLanguage, studyLanguage)}
               {pronunciationNoteNeedsCredit(studyLanguage) && (
                 <>
                   {' '}
@@ -508,7 +529,7 @@ export default function Home() {
       {correction && (core || ambiguity) && (
         <div className="mt-6 text-sm flex flex-wrap items-baseline gap-x-3 gap-y-1">
           <span className="text-[var(--color-muted)]">
-            {t(nativeLanguage, 'showingResultsFor', {
+            {t(interfaceLanguage, 'showingResultsFor', {
               term: correction.applied ? correction.corrected : correction.typed,
             })}
           </span>
@@ -517,7 +538,7 @@ export default function Home() {
             disabled={loading}
             className="text-[var(--color-highlight)] hover:text-[var(--color-text)] transition-colors underline underline-offset-2 disabled:opacity-50"
           >
-            {t(nativeLanguage, 'searchInsteadFor', {
+            {t(interfaceLanguage, 'searchInsteadFor', {
               term: correction.applied ? correction.typed : correction.corrected,
             })}
           </button>
@@ -528,7 +549,7 @@ export default function Home() {
       {ambiguity && (
         <div className={`${correction ? "mt-3" : "mt-10"} p-6 rounded-xl bg-[var(--color-surface)] shadow-lg border border-[var(--color-muted)]`}>
           <h2 className="text-2xl font-bold text-[var(--color-highlight)] mb-2">{ambiguity.term}</h2>
-          <p className="text-[var(--color-text)] opacity-70 text-sm mb-5">{t(nativeLanguage, 'disambiguationPrompt')}</p>
+          <p className="text-[var(--color-text)] opacity-70 text-sm mb-5">{t(interfaceLanguage, 'disambiguationPrompt')}</p>
           <ul className="space-y-3">
             {ambiguity.meanings.map((meaning, i) => (
               <li key={i}>
@@ -556,9 +577,9 @@ export default function Home() {
             {(core.termLanguage === studyLanguage || isHanja) && (
               <PronounceButton text={headword} furigana={core.furigana} eum={core.eum} studyLanguage={studyLanguage} />
             )}
-            {partOfSpeechLabel(nativeLanguage, core) && (
+            {partOfSpeechLabel(deckNativeLanguage, core) && (
               <span className="px-2 py-0.5 text-xs rounded-full border border-[var(--color-muted)] text-[var(--color-muted)]">
-                {partOfSpeechLabel(nativeLanguage, core)}
+                {partOfSpeechLabel(deckNativeLanguage, core)}
               </span>
             )}
             {core.formality && core.formality !== 'N/A' && (
@@ -571,19 +592,19 @@ export default function Home() {
                 {core.gender}
               </span>
             )}
-            {getReading(core, studyLanguage, nativeLanguage) && (
+            {getReading(core, studyLanguage, deckNativeLanguage) && (
               <span className="px-2 py-0.5 text-xs rounded-full border border-[var(--color-muted)] text-[var(--color-muted)]">
-                {getReading(core, studyLanguage, nativeLanguage)}
+                {getReading(core, studyLanguage, deckNativeLanguage)}
               </span>
             )}
           </div>
 
           {/* Translation + brief definition */}
           <div className="mb-6">
-            <h3 className="font-semibold text-[var(--color-text)] mb-1">{t(nativeLanguage, 'sectionTranslation')}</h3>
+            <h3 className="font-semibold text-[var(--color-text)] mb-1">{t(interfaceLanguage, 'sectionTranslation')}</h3>
             <div className="flex items-center gap-2">
               <p className="text-[var(--color-text)] opacity-90 text-lg">
-                {translation || t(nativeLanguage, 'noTranslation')}
+                {translation || t(interfaceLanguage, 'noTranslation')}
               </p>
               {core.termLanguage !== studyLanguage && translation && (
                 <PronounceButton text={translation} furigana={core.furigana} studyLanguage={studyLanguage} />
@@ -606,7 +627,7 @@ export default function Home() {
               onClick={handleLoadDepth}
               disabled={loadingDepth}
             >
-              {t(nativeLanguage, 'loadDefinition')}
+              {t(interfaceLanguage, 'loadDefinition')}
             </button>
           ) : loadingDepth ? (
             <div className="mb-4"><Spinner /></div>
@@ -614,7 +635,7 @@ export default function Home() {
             <div className="mb-6 space-y-4">
               {depth.definition && (
                 <div>
-                  <h3 className="font-semibold text-[var(--color-text)] mb-1">{t(nativeLanguage, 'sectionDefinition')}</h3>
+                  <h3 className="font-semibold text-[var(--color-text)] mb-1">{t(interfaceLanguage, 'sectionDefinition')}</h3>
                   <Markdown className="text-[var(--color-text)] opacity-80">{depth.definition}</Markdown>
                   {streamingDepth && !getCharacterBreakdown(depth) && !depth.notes && <span className="animate-pulse text-[var(--color-muted)]">▎</span>}
                 </div>
@@ -622,7 +643,7 @@ export default function Home() {
               {getCharacterBreakdown(depth) && (
                 <div>
                   <h3 className="font-semibold text-[var(--color-text)] mb-1">
-                    {t(nativeLanguage, langConfig.characterSectionKey ?? 'sectionHanja')}
+                    {t(interfaceLanguage, langConfig.characterSectionKey ?? 'sectionHanja')}
                   </h3>
                   <Markdown className="text-[var(--color-text)] opacity-80">{getCharacterBreakdown(depth)!}</Markdown>
                   {streamingDepth && !depth.notes && <span className="animate-pulse text-[var(--color-muted)]">▎</span>}
@@ -630,7 +651,7 @@ export default function Home() {
               )}
               {depth.notes && (
                 <div>
-                  <h3 className="font-semibold text-[var(--color-text)] mb-1">{t(nativeLanguage, 'sectionContext')}</h3>
+                  <h3 className="font-semibold text-[var(--color-text)] mb-1">{t(interfaceLanguage, 'sectionContext')}</h3>
                   <Markdown className="text-[var(--color-text)] opacity-80">{depth.notes}</Markdown>
                   {streamingDepth && <span className="animate-pulse text-[var(--color-muted)]">▎</span>}
                 </div>
@@ -644,16 +665,16 @@ export default function Home() {
               className="mb-6 px-4 py-2 rounded-lg border border-[var(--color-muted)] text-[var(--color-text)] hover:bg-[var(--color-muted)]/30 transition-colors disabled:opacity-50 text-sm"
               onClick={handleLoadExamples}
             >
-              {t(nativeLanguage, 'loadExamples')}
+              {t(interfaceLanguage, 'loadExamples')}
             </button>
           ) : loadingExamples ? (
             <div className="mb-6"><Spinner /></div>
           ) : (
             <div className="mb-6">
-              <h3 className="font-semibold text-[var(--color-text)] mb-2">{t(nativeLanguage, 'sectionExamples')}</h3>
+              <h3 className="font-semibold text-[var(--color-text)] mb-2">{t(interfaceLanguage, 'sectionExamples')}</h3>
               <ul className="space-y-3">
                 {(examples ?? []).map((ex, i) => {
-                  const sides = getExampleSides(ex, studyLanguage, nativeLanguage);
+                  const sides = getExampleSides(ex, studyLanguage, deckNativeLanguage);
                   return (
                     <li key={i} className="text-[var(--color-text)] opacity-80">
                       {sides.study && (
@@ -683,13 +704,13 @@ export default function Home() {
               }
 
               setFlashcardDraft(
-                buildLookupCardDraft(core, studyLanguage, nativeLanguage, { depth, examples }),
+                buildLookupCardDraft(core, studyLanguage, deckNativeLanguage, { depth, examples }),
               );
               setShowFlashcardForm(true);
               setSaveSuccess(false);
             }}
           >
-            {user ? t(nativeLanguage, 'saveAsFlashcard') : t(nativeLanguage, 'signInToSave')}
+            {user ? t(interfaceLanguage, 'saveAsFlashcard') : t(interfaceLanguage, 'signInToSave')}
           </button>
 
           {/* Not what you meant? */}
@@ -699,7 +720,7 @@ export default function Home() {
                 className="text-sm text-[var(--color-muted)] hover:text-[var(--color-text)] transition-colors underline underline-offset-2"
                 onClick={() => setShowContextInput(true)}
               >
-                {t(nativeLanguage, 'notWhatYouMeant')}
+                {t(interfaceLanguage, 'notWhatYouMeant')}
               </button>
             ) : (
               <form onSubmit={handleRegenerate} className="flex gap-2">
@@ -707,7 +728,7 @@ export default function Home() {
                   type="text"
                   value={contextInput}
                   onChange={e => setContextInput(e.target.value)}
-                  placeholder={t(nativeLanguage, 'addContextPlaceholder')}
+                  placeholder={t(interfaceLanguage, 'addContextPlaceholder')}
                   className="flex-1 p-2 text-sm rounded-lg bg-[var(--color-bg)] border border-[var(--color-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--color-highlight)] text-[var(--color-text)] placeholder-[var(--color-muted)]"
                   autoFocus
                   disabled={loading}
@@ -717,7 +738,7 @@ export default function Home() {
                   className="px-3 py-2 text-sm rounded-lg bg-[var(--color-muted)] text-[var(--color-text)] font-bold hover:bg-[var(--color-highlight)] hover:text-[var(--color-bg)] disabled:opacity-50 transition-colors"
                   disabled={loading || !contextInput.trim()}
                 >
-                  {loading ? <Spinner /> : t(nativeLanguage, 'regenerate')}
+                  {loading ? <Spinner /> : t(interfaceLanguage, 'regenerate')}
                 </button>
               </form>
             )}
@@ -728,14 +749,15 @@ export default function Home() {
       {/* Flashcard Save Success Message */}
       {saveSuccess && (
         <div className="mt-4 p-4 rounded-lg bg-[var(--color-muted)] text-[var(--color-text)] font-semibold">
-          {t(nativeLanguage, 'flashcardSaved')}
+          {t(interfaceLanguage, 'flashcardSaved')}
         </div>
       )}
 
       {showFlashcardForm && flashcardDraft && (
         <SaveFlashcardModal
           draft={flashcardDraft}
-          nativeLanguage={nativeLanguage}
+          interfaceLanguage={interfaceLanguage}
+          deckNativeLanguage={deckNativeLanguage}
           studyLanguage={studyLanguage}
           saving={saving}
           onChange={(field, value) => setFlashcardDraft(prev => ({ ...prev, [field]: value }))}

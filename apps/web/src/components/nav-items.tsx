@@ -8,10 +8,11 @@ export interface NavItem {
   icon: (active: boolean, className?: string) => React.ReactElement;
 }
 
-export function getNavItems(nativeLanguage: string | null | undefined, pathname: string): NavItem[] {
+/** Nav labels are chrome, so they take the interface language, never a deck's. */
+export function getNavItems(interfaceLanguage: string | null | undefined, pathname: string): NavItem[] {
   return [
     {
-      label: t(nativeLanguage, 'navLearn'),
+      label: t(interfaceLanguage, 'navLearn'),
       href: '/',
       active: pathname === '/',
       icon: (active: boolean, className = 'w-6 h-6') => (
@@ -21,7 +22,7 @@ export function getNavItems(nativeLanguage: string | null | undefined, pathname:
       ),
     },
     {
-      label: t(nativeLanguage, 'navReview'),
+      label: t(interfaceLanguage, 'navReview'),
       href: '/review',
       active: pathname === '/review',
       icon: (active: boolean, className = 'w-6 h-6') => (
@@ -31,7 +32,7 @@ export function getNavItems(nativeLanguage: string | null | undefined, pathname:
       ),
     },
     {
-      label: t(nativeLanguage, 'navCards'),
+      label: t(interfaceLanguage, 'navCards'),
       href: '/cards',
       active: pathname === '/cards',
       icon: (active: boolean, className = 'w-6 h-6') => (
@@ -45,7 +46,7 @@ export function getNavItems(nativeLanguage: string | null | undefined, pathname:
     // is worse than a quiet empty state. Packs are a peer of Cards now, not a
     // drill-down from Learn.
     {
-      label: t(nativeLanguage, 'navDecks'),
+      label: t(interfaceLanguage, 'navDecks'),
       href: '/decks',
       active: pathname.startsWith('/decks'),
       icon: (active: boolean, className = 'w-6 h-6') => (
@@ -55,7 +56,7 @@ export function getNavItems(nativeLanguage: string | null | undefined, pathname:
       ),
     },
     {
-      label: t(nativeLanguage, 'navProgress'),
+      label: t(interfaceLanguage, 'navProgress'),
       href: '/progress',
       active: pathname === '/progress',
       icon: (active: boolean, className = 'w-6 h-6') => (

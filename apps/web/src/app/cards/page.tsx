@@ -38,7 +38,7 @@ function highlight(text: string, query: string): React.ReactElement {
 }
 
 export default function CardsPage() {
-  const { user, nativeLanguage, studyLanguage } = useUser();
+  const { user, interfaceLanguage, deckNativeLanguage, studyLanguage } = useUser();
   const [allCards, setAllCards] = useState<Flashcard[]>([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
@@ -58,7 +58,7 @@ export default function CardsPage() {
   const [showExportMenu, setShowExportMenu] = useState(false);
 
   const langConfig = getStudyLanguageConfig(studyLanguage);
-  const backConfig = getBackSideConfig(studyLanguage, nativeLanguage);
+  const backConfig = getBackSideConfig(studyLanguage, deckNativeLanguage);
 
   const getStudySide = (card: Flashcard) =>
     card[langConfig.studyField] ?? card.term ?? '';
@@ -96,8 +96,8 @@ export default function CardsPage() {
   // deck retires its chip, and a selection left pointing at a chip that is no
   // longer on screen shows an empty list with no visible reason.
   const deckFilters = useMemo(
-    () => buildDeckFilters(allCards, studyLanguage, nativeLanguage),
-    [allCards, studyLanguage, nativeLanguage]
+    () => buildDeckFilters(allCards, studyLanguage, interfaceLanguage),
+    [allCards, studyLanguage, interfaceLanguage]
   );
   const activeDeck = deckFilters.some(d => d.id === deckKey) ? deckKey : DEFAULT_DECK_FILTER;
   const deckCards = useMemo(
@@ -113,7 +113,7 @@ export default function CardsPage() {
       const q = search.trim().toLowerCase();
       cards = cards.filter(c =>
         getStudySide(c).toLowerCase().includes(q) ||
-        getBackSide(c, nativeLanguage).toLowerCase().includes(q)
+        getBackSide(c, deckNativeLanguage).toLowerCase().includes(q)
       );
     }
     if (sortKey === 'newest') cards = [...cards].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
@@ -147,14 +147,14 @@ export default function CardsPage() {
 
   const handleBulkArchive = async () => {
     if (selectedIds.size === 0) return;
-    if (!window.confirm(t(nativeLanguage, 'bulkConfirmArchive'))) return;
+    if (!window.confirm(t(interfaceLanguage, 'bulkConfirmArchive'))) return;
     setBulkWorking(true);
     try {
       await Promise.all([...selectedIds].map(id => archiveFlashcard(id, studyLanguage)));
       setAllCards(prev => prev.map(c => selectedIds.has(c.id!) ? { ...c, archived: true } : c));
       exitSelectMode();
     } catch {
-      setError(t(nativeLanguage, 'errorArchiveFlashcard'));
+      setError(t(interfaceLanguage, 'errorArchiveFlashcard'));
     } finally {
       setBulkWorking(false);
     }
@@ -162,14 +162,14 @@ export default function CardsPage() {
 
   const handleBulkDelete = async () => {
     if (selectedIds.size === 0) return;
-    if (!window.confirm(t(nativeLanguage, 'bulkConfirmDelete'))) return;
+    if (!window.confirm(t(interfaceLanguage, 'bulkConfirmDelete'))) return;
     setBulkWorking(true);
     try {
       await Promise.all([...selectedIds].map(id => deleteFlashcard(id, studyLanguage)));
       setAllCards(prev => prev.filter(c => !selectedIds.has(c.id!)));
       exitSelectMode();
     } catch {
-      setError(t(nativeLanguage, 'errorDeleteFlashcard'));
+      setError(t(interfaceLanguage, 'errorDeleteFlashcard'));
     } finally {
       setBulkWorking(false);
     }
@@ -177,7 +177,7 @@ export default function CardsPage() {
 
   const handleEditStart = (card: Flashcard) => {
     setEditingCardId(card.id || null);
-    setEditDraft({ studySide: getStudySide(card), backSide: getBackSide(card, nativeLanguage) });
+    setEditDraft({ studySide: getStudySide(card), backSide: getBackSide(card, deckNativeLanguage) });
     setError(null);
   };
 
@@ -196,7 +196,7 @@ export default function CardsPage() {
       setEditingCardId(null);
       setEditDraft(null);
     } catch {
-      setError(t(nativeLanguage, 'errorSaveChanges'));
+      setError(t(interfaceLanguage, 'errorSaveChanges'));
     }
   };
 
@@ -206,7 +206,7 @@ export default function CardsPage() {
       await archiveFlashcard(card.id, studyLanguage);
       setAllCards(prev => prev.map(c => c.id === card.id ? { ...c, archived: true } : c));
     } catch {
-      setError(t(nativeLanguage, 'errorArchiveFlashcard'));
+      setError(t(interfaceLanguage, 'errorArchiveFlashcard'));
     }
   };
 
@@ -216,18 +216,18 @@ export default function CardsPage() {
       await restoreFlashcard(card.id, studyLanguage);
       setAllCards(prev => prev.map(c => c.id === card.id ? { ...c, archived: false } : c));
     } catch {
-      setError(t(nativeLanguage, 'errorRestoreFlashcard'));
+      setError(t(interfaceLanguage, 'errorRestoreFlashcard'));
     }
   };
 
   const handleDelete = async (card: Flashcard) => {
     if (!card.id) return;
-    if (!window.confirm(t(nativeLanguage, 'confirmDelete'))) return;
+    if (!window.confirm(t(interfaceLanguage, 'confirmDelete'))) return;
     try {
       await deleteFlashcard(card.id, studyLanguage);
       setAllCards(prev => prev.filter(c => c.id !== card.id));
     } catch {
-      setError(t(nativeLanguage, 'errorDeleteFlashcard'));
+      setError(t(interfaceLanguage, 'errorDeleteFlashcard'));
     }
   };
 
@@ -238,15 +238,15 @@ export default function CardsPage() {
   const archivedCount = deckCards.filter(c => c.archived).length;
 
   const sortOptions: { key: SortKey; label: string }[] = [
-    { key: 'newest', label: t(nativeLanguage, 'cardsSortNewest') },
-    { key: 'oldest', label: t(nativeLanguage, 'cardsSortOldest') },
-    { key: 'az', label: t(nativeLanguage, 'cardsSortAZ') },
+    { key: 'newest', label: t(interfaceLanguage, 'cardsSortNewest') },
+    { key: 'oldest', label: t(interfaceLanguage, 'cardsSortOldest') },
+    { key: 'az', label: t(interfaceLanguage, 'cardsSortAZ') },
   ];
 
   const filterOptions: { key: FilterKey; label: string; count: number }[] = [
-    { key: 'active', label: t(nativeLanguage, 'cardsFilterActive'), count: activeCount },
-    { key: 'archived', label: t(nativeLanguage, 'cardsFilterArchived'), count: archivedCount },
-    { key: 'all', label: t(nativeLanguage, 'cardsFilterAll'), count: deckCards.length },
+    { key: 'active', label: t(interfaceLanguage, 'cardsFilterActive'), count: activeCount },
+    { key: 'archived', label: t(interfaceLanguage, 'cardsFilterArchived'), count: archivedCount },
+    { key: 'all', label: t(interfaceLanguage, 'cardsFilterAll'), count: deckCards.length },
   ];
 
   const downloadFile = (content: string, filename: string, mime: string) => {
@@ -268,16 +268,16 @@ export default function CardsPage() {
     for (const c of visibleCards) {
       const studySide = getStudySide(c);
       const examples = c.examples?.map(e => {
-        const sides = getExampleSides(e, studyLanguage, nativeLanguage);
+        const sides = getExampleSides(e, studyLanguage, deckNativeLanguage);
         return `${sides.study} / ${sides.back}`;
       }).join(' | ') ?? '';
       const saved = c.createdAt instanceof Date ? c.createdAt.toISOString().slice(0, 10) : '';
       rows.push([
         studySide,
-        getBackSide(c, nativeLanguage),
+        getBackSide(c, deckNativeLanguage),
         // The label, not the code: the column is read by a person, and it is
         // the same word the badge showed them.
-        partOfSpeechLabel(nativeLanguage, c) || '',
+        partOfSpeechLabel(deckNativeLanguage, c) || '',
         c.formality || '',
         c.definition || '',
         getCharacterBreakdown(c) || '',
@@ -296,7 +296,7 @@ export default function CardsPage() {
     const lines = ['#separator:Tab', '#html:false', '#notetype:Basic', '#deck:Amgi'];
     for (const c of visibleCards) {
       const front = getStudySide(c);
-      const backParts = [getBackSide(c, nativeLanguage)];
+      const backParts = [getBackSide(c, deckNativeLanguage)];
       if (c.briefDefinition) backParts.push(c.briefDefinition);
       else if (c.definition) backParts.push(c.definition);
       lines.push(`${front}\t${backParts.join(' — ')}`);
@@ -308,14 +308,14 @@ export default function CardsPage() {
   const handleImportSaved = async (count: number) => {
     setShowImport(false);
     // No reload: the imported cards arrive on the subscription.
-    setImportSuccess(t(nativeLanguage, count === 1 ? 'importSavedToastOne' : 'importSavedToast', { count }));
+    setImportSuccess(t(interfaceLanguage, count === 1 ? 'importSavedToastOne' : 'importSavedToast', { count }));
     setTimeout(() => setImportSuccess(null), 4000);
   };
 
   return (
     <div className="max-w-2xl mx-auto font-mono text-base pb-36" style={{ color: 'var(--color-text)' }}>
       <div className="flex items-start justify-between mt-8 mb-2">
-        <h1 className="text-2xl font-bold text-[var(--color-highlight)]">{t(nativeLanguage, 'cardsPageTitle')}</h1>
+        <h1 className="text-2xl font-bold text-[var(--color-highlight)]">{t(interfaceLanguage, 'cardsPageTitle')}</h1>
         {/* Import and export are card-shaped — CSV columns, Anki notes — so
             they leave with the card list rather than sitting greyed out over a
             list they cannot act on. */}
@@ -325,7 +325,7 @@ export default function CardsPage() {
               onClick={() => setShowImport(true)}
               className="text-xs px-3 py-1.5 rounded-lg border border-[var(--color-muted)] text-[var(--color-muted)] hover:text-[var(--color-text)] hover:border-[var(--color-text)] transition-colors"
             >
-              {t(nativeLanguage, 'cardsImport')}
+              {t(interfaceLanguage, 'cardsImport')}
             </button>
             <div className="relative">
               <button
@@ -333,7 +333,7 @@ export default function CardsPage() {
                 disabled={visibleCards.length === 0}
                 className="text-xs px-3 py-1.5 rounded-lg border border-[var(--color-muted)] text-[var(--color-muted)] hover:text-[var(--color-text)] hover:border-[var(--color-text)] transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
               >
-                {t(nativeLanguage, 'cardsExport')}
+                {t(interfaceLanguage, 'cardsExport')}
               </button>
               {showExportMenu && (
                 <>
@@ -346,13 +346,13 @@ export default function CardsPage() {
                       onClick={exportCSV}
                       className="w-full text-left px-4 py-2.5 text-xs text-[var(--color-text)] hover:bg-[var(--color-muted)] hover:text-[var(--color-bg)] transition-colors"
                     >
-                      {t(nativeLanguage, 'cardsExportCSV')}
+                      {t(interfaceLanguage, 'cardsExportCSV')}
                     </button>
                     <button
                       onClick={exportAnki}
                       className="w-full text-left px-4 py-2.5 text-xs text-[var(--color-text)] hover:bg-[var(--color-muted)] hover:text-[var(--color-bg)] transition-colors"
                     >
-                      {t(nativeLanguage, 'cardsExportAnki')}
+                      {t(interfaceLanguage, 'cardsExportAnki')}
                     </button>
                   </div>
                 </>
@@ -361,7 +361,7 @@ export default function CardsPage() {
           </div>
         )}
       </div>
-      <p className="text-sm mb-6 text-[var(--color-muted)]">{t(nativeLanguage, 'cardsPageDescription')}</p>
+      <p className="text-sm mb-6 text-[var(--color-muted)]">{t(interfaceLanguage, 'cardsPageDescription')}</p>
       {importSuccess && (
         <div className="mb-4 p-3 rounded-lg text-sm font-semibold" style={{ background: 'var(--color-muted)', color: 'var(--color-bg)' }}>
           {importSuccess}
@@ -371,10 +371,10 @@ export default function CardsPage() {
 
       {!user ? (
         <div className="p-6 rounded-xl bg-[var(--color-surface)] border border-[var(--color-muted)] text-center">
-          <p className="text-[var(--color-muted)] mb-4">{t(nativeLanguage, 'cardsSignInPrompt')}</p>
+          <p className="text-[var(--color-muted)] mb-4">{t(interfaceLanguage, 'cardsSignInPrompt')}</p>
           <Link href="/" className="inline-block px-5 py-2.5 rounded-lg font-semibold transition-colors"
             style={{ background: 'var(--color-highlight)', color: 'var(--color-bg)' }}>
-            {t(nativeLanguage, 'cardsGoLearn')}
+            {t(interfaceLanguage, 'cardsGoLearn')}
           </Link>
         </div>
       ) : (
@@ -385,7 +385,7 @@ export default function CardsPage() {
               type="text"
               value={search}
               onChange={e => setSearch(e.target.value)}
-              placeholder={t(nativeLanguage, 'cardsSearchPlaceholder')}
+              placeholder={t(interfaceLanguage, 'cardsSearchPlaceholder')}
               className="w-full p-3 rounded-lg bg-[var(--color-bg)] border border-[var(--color-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--color-highlight)] text-[var(--color-text)] placeholder-[var(--color-muted)]"
             />
           </div>
@@ -445,7 +445,7 @@ export default function CardsPage() {
                   disabled={visibleCards.length === 0}
                   className="text-xs px-2.5 py-1 rounded-lg border border-[var(--color-muted)] text-[var(--color-muted)] hover:text-[var(--color-text)] hover:border-[var(--color-text)] transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                 >
-                  {t(nativeLanguage, 'bulkSelect')}
+                  {t(interfaceLanguage, 'bulkSelect')}
                 </button>
               ) : (
                 <div className="flex items-center gap-2">
@@ -453,13 +453,13 @@ export default function CardsPage() {
                     onClick={toggleSelectAll}
                     className="text-xs px-2.5 py-1 rounded-lg border border-[var(--color-muted)] text-[var(--color-muted)] hover:text-[var(--color-text)] transition-colors"
                   >
-                    {allVisibleSelected ? t(nativeLanguage, 'bulkDeselectAll') : t(nativeLanguage, 'bulkSelectAll')}
+                    {allVisibleSelected ? t(interfaceLanguage, 'bulkDeselectAll') : t(interfaceLanguage, 'bulkSelectAll')}
                   </button>
                   <button
                     onClick={exitSelectMode}
                     className="text-xs px-2.5 py-1 rounded-lg border border-[var(--color-muted)] text-[var(--color-muted)] hover:text-[var(--color-text)] transition-colors"
                   >
-                    {t(nativeLanguage, 'bulkCancel')}
+                    {t(interfaceLanguage, 'bulkCancel')}
                   </button>
                 </div>
               )}
@@ -499,14 +499,14 @@ export default function CardsPage() {
 
           {/* Card list */}
           {loading ? (
-            <div className="text-[var(--color-muted)]">{t(nativeLanguage, 'loadingFlashcards')}</div>
+            <div className="text-[var(--color-muted)]">{t(interfaceLanguage, 'loadingFlashcards')}</div>
           ) : visibleCards.length === 0 ? (
             <div className="text-center py-12">
-              <p className="text-[var(--color-muted)] mb-4">{t(nativeLanguage, 'cardsEmpty')}</p>
+              <p className="text-[var(--color-muted)] mb-4">{t(interfaceLanguage, 'cardsEmpty')}</p>
               {filterKey === 'active' && allCards.length === 0 && (
                 <Link href="/" className="inline-block px-5 py-2.5 rounded-lg font-semibold transition-colors"
                   style={{ background: 'var(--color-highlight)', color: 'var(--color-bg)' }}>
-                  {t(nativeLanguage, 'cardsGoLearn')}
+                  {t(interfaceLanguage, 'cardsGoLearn')}
                 </Link>
               )}
             </div>
@@ -563,13 +563,13 @@ export default function CardsPage() {
                               className="px-4 py-2 rounded-lg font-bold"
                               style={{ background: 'var(--color-highlight)', color: 'var(--color-bg)' }}
                             >
-                              {t(nativeLanguage, 'save')}
+                              {t(interfaceLanguage, 'save')}
                             </button>
                             <button
                               onClick={() => { setEditingCardId(null); setEditDraft(null); }}
                               className="px-4 py-2 rounded-lg bg-[var(--color-muted)] text-[var(--color-text)] font-bold"
                             >
-                              {t(nativeLanguage, 'cancel')}
+                              {t(interfaceLanguage, 'cancel')}
                             </button>
                           </div>
                         </div>
@@ -580,17 +580,17 @@ export default function CardsPage() {
                             onClick={() => selectMode && card.id ? toggleSelect(card.id) : setDetailCard(card)}
                           >
                             <div className="font-semibold text-lg text-[var(--color-text)]">
-                              {highlight(cardOrder === 'korean-first' ? getStudySide(card) : getBackSide(card, nativeLanguage), search)}
+                              {highlight(cardOrder === 'korean-first' ? getStudySide(card) : getBackSide(card, deckNativeLanguage), search)}
                             </div>
                             <div className="text-[var(--color-highlight)] text-base">
-                              {highlight(cardOrder === 'korean-first' ? getBackSide(card, nativeLanguage) : getStudySide(card), search)}
+                              {highlight(cardOrder === 'korean-first' ? getBackSide(card, deckNativeLanguage) : getStudySide(card), search)}
                             </div>
                           </button>
                           <div className="text-xs text-[var(--color-muted)]">
-                            {t(nativeLanguage, 'savedAt')} {card.createdAt instanceof Date ? card.createdAt.toLocaleDateString() : String(card.createdAt)}
+                            {t(interfaceLanguage, 'savedAt')} {card.createdAt instanceof Date ? card.createdAt.toLocaleDateString() : String(card.createdAt)}
                             {card.archived && (
                               <span className="ml-2 px-1.5 py-0.5 rounded text-xs border border-[var(--color-muted)]">
-                                {t(nativeLanguage, 'cardsFilterArchived')}
+                                {t(interfaceLanguage, 'cardsFilterArchived')}
                               </span>
                             )}
                           </div>
@@ -603,13 +603,13 @@ export default function CardsPage() {
                                     className="px-3 py-1 rounded-lg text-sm font-bold"
                                     style={{ background: 'var(--color-highlight)', color: 'var(--color-bg)' }}
                                   >
-                                    {t(nativeLanguage, 'edit')}
+                                    {t(interfaceLanguage, 'edit')}
                                   </button>
                                   <button
                                     onClick={() => handleArchive(card)}
                                     className="px-3 py-1 rounded-lg text-sm font-bold bg-[var(--color-muted)] text-[var(--color-text)]"
                                   >
-                                    {t(nativeLanguage, 'archive')}
+                                    {t(interfaceLanguage, 'archive')}
                                   </button>
                                 </>
                               ) : (
@@ -617,14 +617,14 @@ export default function CardsPage() {
                                   onClick={() => handleRestore(card)}
                                   className="px-3 py-1 rounded-lg text-sm font-bold bg-[var(--color-muted)] text-[var(--color-text)]"
                                 >
-                                  {t(nativeLanguage, 'restore')}
+                                  {t(interfaceLanguage, 'restore')}
                                 </button>
                               )}
                               <button
                                 onClick={() => handleDelete(card)}
                                 className="px-3 py-1 rounded-lg text-sm font-bold border border-[var(--color-muted)] text-[var(--color-muted)] hover:border-red-400 hover:text-red-400"
                               >
-                                {t(nativeLanguage, 'delete')}
+                                {t(interfaceLanguage, 'delete')}
                               </button>
                             </div>
                           )}
@@ -647,7 +647,7 @@ export default function CardsPage() {
         >
           <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
             <span className="text-sm text-[var(--color-muted)]">
-              {selectedIds.size} {nativeLanguage === 'Korean' ? '개 선택됨' : `selected`}
+              {selectedIds.size} {interfaceLanguage === 'Korean' ? '개 선택됨' : `selected`}
             </span>
             <div className="flex gap-2">
               {filterKey !== 'archived' && (
@@ -656,7 +656,7 @@ export default function CardsPage() {
                   disabled={selectedIds.size === 0 || bulkWorking}
                   className="px-4 py-2 rounded-lg text-sm font-bold bg-[var(--color-muted)] text-[var(--color-text)] disabled:opacity-40 disabled:cursor-not-allowed"
                 >
-                  {t(nativeLanguage, 'bulkArchiveSelected')}
+                  {t(interfaceLanguage, 'bulkArchiveSelected')}
                 </button>
               )}
               <button
@@ -664,7 +664,7 @@ export default function CardsPage() {
                 disabled={selectedIds.size === 0 || bulkWorking}
                 className="px-4 py-2 rounded-lg text-sm font-bold border border-red-400 text-red-400 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-red-400/10"
               >
-                {t(nativeLanguage, 'bulkDeleteSelected')}
+                {t(interfaceLanguage, 'bulkDeleteSelected')}
               </button>
             </div>
           </div>
@@ -675,7 +675,9 @@ export default function CardsPage() {
         <CardDetailModal
           card={detailCard}
           studyLanguage={studyLanguage}
-          nativeLanguage={nativeLanguage}
+          interfaceLanguage={interfaceLanguage}
+
+          deckNativeLanguage={deckNativeLanguage}
           onClose={() => setDetailCard(null)}
           // No `onChanged`: the modal's writes — enrichment, an edited back,
           // archive, delete — reach this list on the subscription now.

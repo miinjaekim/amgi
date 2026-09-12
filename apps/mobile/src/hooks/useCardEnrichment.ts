@@ -26,7 +26,16 @@ interface Options {
   packId?: string;
   uid?: string;
   studyLanguage: StudyLanguage;
-  nativeLanguage: string | null | undefined;
+  /** Error copy shown to the user — chrome. */
+  interfaceLanguage: string | null | undefined;
+  /**
+   * The language this deck is explained in.
+   *
+   * ⚠️ This is what goes to the model. Depth and examples are written
+   * *onto the card* and never regenerated, so they have to match the language
+   * the rest of that card is in.
+   */
+  deckNativeLanguage: string;
   /**
    * The card as it now stands, after anything was written to it.
    *
@@ -59,7 +68,7 @@ export type EnrichKind = 'depth' | 'examples';
  * sync by hand is a promise nobody keeps.
  */
 export function useCardEnrichment({
-  card, entry, packId, uid, studyLanguage, nativeLanguage, onChanged,
+  card, entry, packId, uid, studyLanguage, interfaceLanguage, deckNativeLanguage, onChanged,
 }: Options) {
   const [saved, setSaved] = useState<Flashcard | null>(card ?? null);
   /**
@@ -116,13 +125,13 @@ export function useCardEnrichment({
     setSavingEntry(true);
     setError(null);
     try {
-      if (!await ensureSaved()) setError(t(nativeLanguage, 'errorSaveFlashcard'));
+      if (!await ensureSaved()) setError(t(interfaceLanguage, 'errorSaveFlashcard'));
     } catch {
-      setError(t(nativeLanguage, 'errorSaveFlashcard'));
+      setError(t(interfaceLanguage, 'errorSaveFlashcard'));
     } finally {
       setSavingEntry(false);
     }
-  }, [ensureSaved, nativeLanguage]);
+  }, [ensureSaved, interfaceLanguage]);
 
   const enrich = useCallback(async (kind: EnrichKind) => {
     setRunning(prev => new Set(prev).add(kind));
@@ -135,17 +144,17 @@ export function useCardEnrichment({
 
     try {
       const target = await ensureSaved();
-      if (!target?.id) { setError(t(nativeLanguage, 'errorSaveFlashcard')); return; }
+      if (!target?.id) { setError(t(interfaceLanguage, 'errorSaveFlashcard')); return; }
       // getDepthTarget resolves which sense to elaborate on — for a pack card
       // that is the `briefDefinition` the entry's context hint was carried into,
       // which is what keeps depth on `fine` about penalties.
-      const depthTarget = getDepthTarget(target, studyLanguage, nativeLanguage);
+      const depthTarget = getDepthTarget(target, studyLanguage, deckNativeLanguage);
 
       const route = kind === 'depth' ? 'depth-stream' : 'examples-stream';
       const res = await expoFetch(`${BASE_URL}/api/explain/${route}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...depthTarget, nativeLanguage, studyLanguage }),
+        body: JSON.stringify({ ...depthTarget, nativeLanguage: deckNativeLanguage, studyLanguage }),
       });
       if (!res.ok || !res.body) throw new Error('Stream failed');
 
@@ -162,7 +171,7 @@ export function useCardEnrichment({
         if (kind === 'depth') {
           apply(depthFieldsToPersist(parseStreamedDepth(acc)) as Partial<Flashcard>);
         } else {
-          const partial = parseStreamedExamples(acc, studyLanguage, nativeLanguage);
+          const partial = parseStreamedExamples(acc, studyLanguage, deckNativeLanguage);
           if (partial.length) apply({ examples: partial });
         }
       }
@@ -171,23 +180,23 @@ export function useCardEnrichment({
         const fields = depthFieldsToPersist(parseStreamedDepth(acc));
         // Nothing usable came back. Say so rather than silently doing nothing —
         // the user just waited on a request.
-        if (Object.keys(fields).length === 0) { setError(t(nativeLanguage, 'cardEnrichError')); return; }
+        if (Object.keys(fields).length === 0) { setError(t(interfaceLanguage, 'cardEnrichError')); return; }
         await updateFlashcardFields(target.id, fields, studyLanguage);
         apply(fields as Partial<Flashcard>);
         onChanged?.({ ...savedRef.current!, ...fields } as Flashcard);
       } else {
-        const examples: ExamplePair[] = parseStreamedExamples(acc, studyLanguage, nativeLanguage);
-        if (!examples.length) { setError(t(nativeLanguage, 'cardEnrichError')); return; }
+        const examples: ExamplePair[] = parseStreamedExamples(acc, studyLanguage, deckNativeLanguage);
+        if (!examples.length) { setError(t(interfaceLanguage, 'cardEnrichError')); return; }
         await updateFlashcardFields(target.id, { examples }, studyLanguage);
         apply({ examples });
         onChanged?.({ ...savedRef.current!, examples } as Flashcard);
       }
     } catch {
-      setError(t(nativeLanguage, 'cardEnrichError'));
+      setError(t(interfaceLanguage, 'cardEnrichError'));
     } finally {
       finish();
     }
-  }, [ensureSaved, studyLanguage, nativeLanguage, onChanged, apply]);
+  }, [ensureSaved, studyLanguage, interfaceLanguage, deckNativeLanguage, onChanged, apply]);
 
   return {
     /** The card as it now stands, including anything mid-stream. */

@@ -21,9 +21,16 @@ import type { DrillDirection, PackEntry } from '@amgi/core';
 import PronounceButton from '@/components/PronounceButton';
 import { t } from '@/lib/i18n';
 
+/**
+ * Two languages in play, and the split runs straight down the middle of this
+ * screen: the pack's name, the section's name and every button are chrome, while
+ * the card being drilled is the deck's. `drillPrompt` and `drillAnswer` resolve
+ * a pack entry's back through `resolvePackBack`, so they take the deck's
+ * language — the same one the saved card would have been written in.
+ */
 export default function DrillPage() {
   const { packId } = useParams<{ packId: string }>();
-  const { nativeLanguage, studyLanguage } = useUser();
+  const { interfaceLanguage, deckNativeLanguage, studyLanguage } = useUser();
   const langConfig = getStudyLanguageConfig(studyLanguage);
   const pack = getVocabPack(studyLanguage, packId);
 
@@ -53,7 +60,7 @@ export default function DrillPage() {
       href={`/decks/${packId}`}
       className="text-sm text-[var(--color-muted)] hover:text-[var(--color-text)] transition-colors"
     >
-      ← {t(nativeLanguage, 'drillBackToDeck')}
+      ← {t(interfaceLanguage, 'drillBackToDeck')}
     </Link>
   );
 
@@ -64,7 +71,7 @@ export default function DrillPage() {
     return (
       <div className="max-w-xl mx-auto">
         {backToDeck}
-        <p className="mt-6 text-[var(--color-muted)]">{t(nativeLanguage, 'deckNotFound')}</p>
+        <p className="mt-6 text-[var(--color-muted)]">{t(interfaceLanguage, 'deckNotFound')}</p>
       </div>
     );
   }
@@ -102,13 +109,13 @@ export default function DrillPage() {
       <div className="max-w-xl mx-auto flex flex-col items-center text-center">
         <div className="self-start">{backToDeck}</div>
         <h1 className="mt-4 text-2xl font-bold text-[var(--color-highlight)]">
-          {getPackText(pack.name, nativeLanguage)}
+          {getPackText(pack.name, interfaceLanguage)}
         </h1>
         {/* The pack still names the page — the subpack is a scope inside it,
             not somewhere else. */}
         {section && (
           <p className="text-sm text-[var(--color-muted)] mt-1">
-            {getPackText(section.name, nativeLanguage)}
+            {getPackText(section.name, interfaceLanguage)}
           </p>
         )}
 
@@ -124,7 +131,14 @@ export default function DrillPage() {
                   : { background: 'transparent', color: 'var(--color-text)', borderColor: 'var(--color-muted)' }
               }
             >
-              {directionLabel(nativeLanguage, studyLanguage, dir === 'studyToBack' ? 'frontToBack' : 'backToFront')}
+              {/* Reads "Japanese → Korean" in the interface language, while the
+                  deck decides which language is named on the back. */}
+              {directionLabel(
+                interfaceLanguage,
+                studyLanguage,
+                deckNativeLanguage,
+                dir === 'studyToBack' ? 'frontToBack' : 'backToFront',
+              )}
             </button>
           ))}
         </div>
@@ -143,8 +157,8 @@ export default function DrillPage() {
                 }
               >
                 {option === null
-                  ? t(nativeLanguage, 'drillSizeAll', { count: entries.length })
-                  : t(nativeLanguage, 'drillSizeCards', { count: option })}
+                  ? t(interfaceLanguage, 'drillSizeAll', { count: entries.length })
+                  : t(interfaceLanguage, 'drillSizeCards', { count: option })}
               </button>
             ))}
           </div>
@@ -154,11 +168,11 @@ export default function DrillPage() {
           onClick={() => begin(entries, size)}
           className="mt-6 px-6 py-3 rounded-lg text-lg font-semibold bg-[var(--color-highlight)] text-[var(--color-bg)] hover:bg-[var(--color-text)]"
         >
-          {t(nativeLanguage, 'drillStart')}
+          {t(interfaceLanguage, 'drillStart')}
         </button>
 
         <p className="mt-4 text-xs text-[var(--color-muted)]">
-          {t(nativeLanguage, 'drillNoProgress')}
+          {t(interfaceLanguage, 'drillNoProgress')}
         </p>
       </div>
     );
@@ -172,14 +186,14 @@ export default function DrillPage() {
       <div className="max-w-xl mx-auto flex flex-col items-center text-center">
         <div className="self-start">{backToDeck}</div>
         <h1 className="mt-6 text-2xl font-bold text-[var(--color-highlight)]">
-          {t(nativeLanguage, 'drillDoneTitle')}
+          {t(interfaceLanguage, 'drillDoneTitle')}
         </h1>
         {/* Ending a drill before answering anything leaves nothing to score. */}
         {total > 0 && (
           <p className="mt-3 text-[var(--color-text)]">
             {missed.length === 0
-              ? t(nativeLanguage, 'drillScorePerfect', { total })
-              : t(nativeLanguage, 'drillScore', { correct, total })}
+              ? t(interfaceLanguage, 'drillScorePerfect', { total })
+              : t(interfaceLanguage, 'drillScore', { correct, total })}
           </p>
         )}
 
@@ -189,14 +203,14 @@ export default function DrillPage() {
               onClick={() => begin(missed, null)}
               className="px-5 py-3 rounded-lg font-semibold bg-[var(--color-highlight)] text-[var(--color-bg)] hover:bg-[var(--color-text)]"
             >
-              {t(nativeLanguage, 'drillMissedAgain', { count: missed.length })}
+              {t(interfaceLanguage, 'drillMissedAgain', { count: missed.length })}
             </button>
           )}
           <button
             onClick={() => begin(entries, size)}
             className="px-5 py-3 rounded-lg font-semibold border border-[var(--color-muted)] text-[var(--color-text)] hover:bg-[var(--color-muted)]/30"
           >
-            {t(nativeLanguage, 'drillAgain')}
+            {t(interfaceLanguage, 'drillAgain')}
           </button>
         </div>
       </div>
@@ -209,21 +223,23 @@ export default function DrillPage() {
     <div className="max-w-xl mx-auto flex flex-col items-center text-center">
       <div className="w-full flex items-center justify-between">
         <span className="text-sm text-[var(--color-muted)]">
-          {t(nativeLanguage, 'drillRemaining', { count: queue.length })}
+          {t(interfaceLanguage, 'drillRemaining', { count: queue.length })}
         </span>
         <button
           onClick={() => setQueue([])}
           className="text-sm text-[var(--color-muted)] hover:text-[var(--color-text)] transition-colors"
         >
-          {t(nativeLanguage, 'drillEnd')}
+          {t(interfaceLanguage, 'drillEnd')}
         </button>
       </div>
 
       <div className="w-full mt-8 p-8 rounded-2xl border border-[var(--color-muted)] flex flex-col items-center gap-4"
         style={{ background: 'var(--color-surface)' }}
       >
+        {/* The card itself, in the deck's language — these resolve the entry's
+            back through `resolvePackBack`. */}
         <span className="text-5xl text-[var(--color-text)] leading-tight">
-          {drillPrompt(current, direction, studyLanguage, nativeLanguage)}
+          {drillPrompt(current, direction, studyLanguage, deckNativeLanguage)}
         </span>
 
         {/* The answer and the pronounce button are always in the layout and
@@ -233,7 +249,7 @@ export default function DrillPage() {
             keeps the answer out of the DOM text and the a11y tree until it's
             been earned. */}
         <span className={`text-2xl text-[var(--color-highlight)] ${revealed ? '' : 'invisible'}`}>
-          {revealed ? drillAnswer(current, direction, studyLanguage, nativeLanguage) : ' '}
+          {revealed ? drillAnswer(current, direction, studyLanguage, deckNativeLanguage) : ' '}
         </span>
         {pack.pronounceable && (
           <span className={revealed ? '' : 'invisible pointer-events-none'}>
@@ -250,13 +266,13 @@ export default function DrillPage() {
             onClick={() => grade(false)}
             className="px-4 py-3 rounded-lg border border-[var(--color-muted)] text-[var(--color-text)] font-semibold hover:bg-[var(--color-muted)]/30"
           >
-            {t(nativeLanguage, 'drillMissed')}
+            {t(interfaceLanguage, 'drillMissed')}
           </button>
           <button
             onClick={() => grade(true)}
             className="px-4 py-3 rounded-lg bg-[var(--color-highlight)] text-[var(--color-bg)] font-semibold hover:bg-[var(--color-text)]"
           >
-            {t(nativeLanguage, 'drillKnew')}
+            {t(interfaceLanguage, 'drillKnew')}
           </button>
         </div>
       ) : (
@@ -264,7 +280,7 @@ export default function DrillPage() {
           onClick={() => setRevealed(true)}
           className="w-full mt-4 px-4 py-3 rounded-lg bg-[var(--color-muted)] text-[var(--color-text)] font-semibold hover:bg-[var(--color-muted-dark)]"
         >
-          {t(nativeLanguage, 'showAnswer')}
+          {t(interfaceLanguage, 'showAnswer')}
         </button>
       )}
     </div>

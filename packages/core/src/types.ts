@@ -977,8 +977,62 @@ export function wordOfTheDayCore(
 }
 
 // User types
+
+/**
+ * One language the learner has added, and the language it is explained in.
+ *
+ * ⚠️ **`native` here is not the interface language**, and keeping those two
+ * apart is the whole point of this type. Before it, one `nativeLanguage` field
+ * did three jobs at once: it picked the card's back slot, it was interpolated
+ * into every `/api/explain` prompt, and it chose the language of the app's own
+ * chrome. Those are not the same question. Someone who reads Korean well can
+ * want Japanese explained in Korean while still running Amgi in English, and
+ * with one field that was unsayable.
+ *
+ * So `native` answers only the first two — **the back slot and the
+ * explanations** — and the chrome moved to `UserPreferences.interfaceLanguage`.
+ *
+ * **One entry per study language**, which is forced rather than chosen: cards
+ * shard into one collection per study language (`cards_japanese`), so there is
+ * nowhere to put a second Japanese deck explained in a different language.
+ * `addLanguagePair` replaces rather than appends for that reason.
+ *
+ * **`native` is never the study language itself.** `nativeOptionsFor` filters
+ * it out at the point of choosing, which is what makes "studying Korean,
+ * explained in Korean" unreachable rather than merely discouraged. Legacy data
+ * that says otherwise still renders: `getBackSideConfig` has always fallen to
+ * the other side in that case, so nothing has to be repaired on read.
+ */
+export interface StudyLanguagePair {
+  study: StudyLanguage;
+  /** The language this deck's card backs and explanations are written in. */
+  native: string;
+}
+
 export interface UserPreferences {
+  /**
+   * @deprecated Read `interfaceLanguage` for chrome and `languages` for a
+   * deck's explanation language. Kept on the document because it is what every
+   * account written before 2026-09-12 has, and it is the seed both of those
+   * migrate from — see `seedLanguagePairs`. Still written on first run so an
+   * older build reading this account does not see an unset language.
+   */
   nativeLanguage: string;
+  /**
+   * The languages the learner has added, each with the language it is
+   * explained in. Absent on an account written before this existed, which is
+   * what `seedLanguagePairs` fills in.
+   */
+  languages?: StudyLanguagePair[];
+  /**
+   * What Amgi speaks to the user in — nav, buttons, settings copy, reminders.
+   *
+   * Its own field rather than a per-deck value because there is only ever one
+   * of it on screen. Switching decks therefore cannot change it, which is what
+   * retires the confirmation dialog that used to warn the interface was about
+   * to move.
+   */
+  interfaceLanguage?: string;
   studyLanguage?: StudyLanguage;
   /**
    * Which part of a hanja card sits on the front. Absent means
@@ -1040,59 +1094,145 @@ export function isNativeLanguage(value: unknown): boolean {
 }
 
 /**
- * Study language to use after the native language changes.
+ * The languages a deck can be explained in, for a given study language.
  *
- * Natives don't study their own language — the setup modal enforces this by
- * excluding the native language from the study options, but changing native
- * language later in settings could strand you on a deck that teaches you your
- * own language. On a collision we move to the language the user just stopped
- * being native in (English ↔ Korean, the demo case), never to a language they
- * weren't already using.
+ * The study language itself is filtered out, and that single line is what
+ * makes the collision the old `resolveStudyLanguage`/`resolveNativeLanguage`
+ * pair existed to clean up **unreachable instead of corrected**. Those two
+ * functions are gone with this: they moved a global native language off a
+ * collision after the fact, and there is no global native language any more.
  */
-export function resolveStudyLanguage(
-  nextNativeLanguage: string,
-  currentStudyLanguage: StudyLanguage,
-  previousNativeLanguage: string | null | undefined
-): StudyLanguage {
-  // No previous native means first-time setup, which the setup modal owns —
-  // it already excludes the native language from the study options, and
-  // stepping in here would only fight the choice being made. True on both
-  // platforms since mobile got its own blocking setup modal; before that
-  // mobile had no first run at all, and this early return was the hole the
-  // native-Korean-studying-Korean collision came through.
-  if (previousNativeLanguage == null) return currentStudyLanguage;
-  if (currentStudyLanguage !== nextNativeLanguage) return currentStudyLanguage;
-  if (isStudyLanguage(previousNativeLanguage) && previousNativeLanguage !== nextNativeLanguage) {
-    return previousNativeLanguage;
-  }
-  // No usable previous native (first run, or it isn't a study language) — any
-  // supported study language other than the new native will do.
-  return SUPPORTED_STUDY_LANGUAGES.find((l) => l.code !== nextNativeLanguage)!.code;
+export function nativeOptionsFor(
+  studyLanguage: StudyLanguage,
+): readonly { code: string; label: string }[] {
+  return SUPPORTED_NATIVE_LANGUAGES.filter(l => l.code !== studyLanguage);
+}
+
+/** The study languages not yet added — what the add flow offers. */
+export function availableStudyLanguages(
+  pairs: readonly StudyLanguagePair[],
+): typeof SUPPORTED_STUDY_LANGUAGES {
+  return SUPPORTED_STUDY_LANGUAGES.filter(
+    lang => !pairs.some(pair => pair.study === lang.code),
+  );
 }
 
 /**
- * Native language to use after the study language changes — the mirror of
- * `resolveStudyLanguage`.
+ * The language one deck is explained in.
  *
- * Picking your own language to study is the same contradiction seen from the
- * other side: a native English speaker who switches to studying English is
- * really telling us they aren't a native English speaker. We move the native
- * language to the one they were just studying, when that is a language we
- * support natively; otherwise to any native language that isn't the new study
- * language. Note this changes the UI language too, which is a larger effect
- * than the mirror case has.
+ * Falls back to English rather than throwing on a study language that is not in
+ * the list. A switcher only ever offers added languages, so reaching this means
+ * something raced — a deck removed on another device while this one was on it —
+ * and an English explanation is a better answer than a crash. It is also
+ * exactly what `getBackSideConfig` reads a missing value as, so the back slot
+ * and the explanation stay in agreement.
  */
-export function resolveNativeLanguage(
-  nextStudyLanguage: StudyLanguage,
-  currentNativeLanguage: string | null | undefined,
-  previousStudyLanguage: StudyLanguage
-): string | null | undefined {
-  if (currentNativeLanguage !== nextStudyLanguage) return currentNativeLanguage;
-  if (isNativeLanguage(previousStudyLanguage) && previousStudyLanguage !== nextStudyLanguage) {
-    return previousStudyLanguage;
-  }
-  // Previously studying something we don't support as a native language
-  // (Swedish, French, Japanese, Traditional Chinese) — fall back to any
-  // native that isn't the language they just chose to study.
-  return SUPPORTED_NATIVE_LANGUAGES.find((l) => l.code !== nextStudyLanguage)!.code;
+export function nativeForStudy(
+  pairs: readonly StudyLanguagePair[],
+  studyLanguage: StudyLanguage,
+): string {
+  return pairs.find(pair => pair.study === studyLanguage)?.native ?? 'English';
 }
+
+/**
+ * Add a language, or change the one an existing deck is explained in.
+ *
+ * Replaces rather than appends on a study language already present, because
+ * cards shard one collection per study language and a second entry would point
+ * at the same cards with a different back slot.
+ */
+export function addLanguagePair(
+  pairs: readonly StudyLanguagePair[],
+  pair: StudyLanguagePair,
+): StudyLanguagePair[] {
+  const without = pairs.filter(existing => existing.study !== pair.study);
+  return [...without, pair];
+}
+
+/** Drop a deck from the switcher. The cards are untouched — see the copy. */
+export function removeLanguagePair(
+  pairs: readonly StudyLanguagePair[],
+  studyLanguage: StudyLanguage,
+): StudyLanguagePair[] {
+  return pairs.filter(pair => pair.study !== studyLanguage);
+}
+
+/**
+ * Pairs off a Firestore document, dropping anything unrecognisable.
+ *
+ * Tolerant on purpose: this reads a field other builds and other versions have
+ * written, and one bad row must not cost the user every deck they have. A
+ * language removed from the registry simply stops appearing.
+ */
+export function parseLanguagePairs(value: unknown): StudyLanguagePair[] {
+  if (!Array.isArray(value)) return [];
+  const seen = new Set<StudyLanguage>();
+  const pairs: StudyLanguagePair[] = [];
+  for (const entry of value) {
+    if (typeof entry !== 'object' || entry === null) continue;
+    const { study, native } = entry as { study?: unknown; native?: unknown };
+    if (!isStudyLanguage(study) || seen.has(study)) continue;
+    if (typeof native !== 'string' || !isNativeLanguage(native)) continue;
+    seen.add(study);
+    pairs.push({ study, native });
+  }
+  return pairs;
+}
+
+/**
+ * The language list for an account written before language lists existed.
+ *
+ * ⚠️ **Seeded from the decks that hold cards, not from the current study
+ * language alone.** Every existing account has cards in however many
+ * collections it has used, and the switcher now shows only added languages — so
+ * seeding from `studyLanguage` by itself would hide every other deck the user
+ * has been studying for months behind an Add flow they have no reason to think
+ * they need. The cards were never deleted, but a deck you cannot reach is
+ * indistinguishable from one you have lost.
+ *
+ * All of them inherit the old global `nativeLanguage`, which is the honest
+ * reading: it is the language every one of those decks has in fact been
+ * explained in until now.
+ *
+ * `withCards` is the study languages holding at least one card. The current
+ * study language is included whether or not it has any, so a brand-new deck
+ * someone just switched to does not vanish from under them.
+ */
+export function seedLanguagePairs(
+  prefs: Pick<UserPreferences, 'nativeLanguage' | 'studyLanguage'>,
+  withCards: readonly StudyLanguage[],
+): StudyLanguagePair[] {
+  const native = isNativeLanguage(prefs.nativeLanguage) ? prefs.nativeLanguage : 'English';
+  const studyLanguages = new Set<StudyLanguage>(withCards);
+  if (prefs.studyLanguage) studyLanguages.add(prefs.studyLanguage);
+  // Nothing at all to go on — a document with a native language and no deck.
+  // The current study language defaults to Korean everywhere else, so it does
+  // here too rather than leaving someone with an empty switcher.
+  if (studyLanguages.size === 0) studyLanguages.add('Korean');
+
+  return SUPPORTED_STUDY_LANGUAGES
+    .filter(lang => studyLanguages.has(lang.code))
+    .map(lang => ({ study: lang.code, native }));
+}
+
+/*
+ * `resolveStudyLanguage` and `resolveNativeLanguage` lived here until
+ * 2026-09-12, and they are gone rather than deprecated.
+ *
+ * Both existed to repair one collision — the learner ending up studying the
+ * language Amgi was speaking to them in — *after* it had happened, by moving
+ * the other setting out from under them. That was the only repair available
+ * while a single global `nativeLanguage` had to serve every deck at once.
+ *
+ * With a native language per deck the collision has nowhere to occur:
+ * `nativeOptionsFor` drops the study language from the options at the moment
+ * of choosing, so no pair can be built that needs correcting. The interface
+ * language is now independent of every deck, so switching decks cannot move it
+ * either — which also retires the confirmation dialog those functions made
+ * necessary.
+ *
+ * Deleted rather than kept for legacy data: nothing reads a stored collision
+ * through them. `getBackSideConfig` has always fallen to the other side when
+ * the back would land on the front, so an old document saying "native Korean,
+ * studying Korean" still renders correctly with no repair pass.
+ */
