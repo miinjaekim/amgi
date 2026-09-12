@@ -162,6 +162,12 @@ const translations = {
     // because a bar with no axis is otherwise read as a share of everything.
     progressBarScale: 'Bars compare each language to your busiest one.',
     progressLanguageReviews: '{count} reviews',
+    // Sits beside the window's review count on the same row, so it has to name
+    // its own scope: this one is all-time, read off the cards.
+    progressLanguageLearned: '{count} learned',
+    // Names the measure, since the chart carries one series and therefore no
+    // legend — the title is what says what the bars are.
+    progressWeekTitle: 'Reviews, last 7 days',
     // Rollups began 2026-08-20 and cannot be reconstructed, so a window
     // reaching further back is shorter than it looks. Say so rather than
     // showing a total that quietly means something narrower.
@@ -742,6 +748,8 @@ const translations = {
     progressByLanguage: '언어별',
     progressBarScale: '막대는 가장 많이 복습한 언어를 기준으로 비교한 것입니다.',
     progressLanguageReviews: '{count}개 복습',
+    progressLanguageLearned: '{count}개 익힘',
+    progressWeekTitle: '최근 7일 복습',
     progressCardsFromPacks: '단어팩에서 {count}개',
     progressTooltipReviews: '{count}개 복습',
     progressTooltipOneReview: '1개 복습',

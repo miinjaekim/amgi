@@ -581,6 +581,63 @@ export function summarizeProgress(days: DailyProgress[]): ProgressSummary {
   };
 }
 
+/** One row of the by-language list: the window's activity, plus the all-time count. */
+export interface LanguageRow {
+  studyLanguage: StudyLanguage;
+  /** The window's counters. All zero for a language with no activity in it. */
+  progress: LanguageProgress;
+  /** Cards past the maturity line right now — all time, not this window. */
+  learned: number;
+}
+
+/**
+ * The by-language list: what happened in the window, beside what has been
+ * learned overall.
+ *
+ * ⚠️ **Two scopes on one row, deliberately.** `progress` is the selected
+ * window; `learned` is every card over the line right now, because that is the
+ * only thing "learned" can mean once it is read off the card rather than off a
+ * rollup. On a screen being read that is fine if the labels say so — it is a
+ * shared *image*, read at thumbnail size, where mixed scopes lie.
+ *
+ * **The union is the point.** Taking only the window's languages would hide a
+ * language with learned cards that has not been reviewed lately — and the
+ * dormant deck is exactly the one whose total you have forgotten and would most
+ * want to see. Taking only the languages with learned cards would drop a
+ * language being studied right now that has not matured anything yet.
+ *
+ * Ordered by the window's reviews so the list still reads as "what I have been
+ * doing", with learned breaking ties and the code last, so the order is stable
+ * rather than dependent on map insertion.
+ */
+export function mergeLanguageRows(
+  byLanguage: { studyLanguage: StudyLanguage; progress: LanguageProgress }[],
+  learned: Partial<Record<StudyLanguage, number>>,
+): LanguageRow[] {
+  const rows = new Map<StudyLanguage, LanguageRow>();
+  for (const entry of byLanguage) {
+    rows.set(entry.studyLanguage, {
+      ...entry,
+      learned: learned[entry.studyLanguage] ?? 0,
+    });
+  }
+  for (const [language, count] of Object.entries(learned) as [StudyLanguage, number][]) {
+    // A zero here is a language with nothing learned *and* nothing in the
+    // window — a row that would say nothing at all.
+    if (count <= 0 || rows.has(language)) continue;
+    rows.set(language, {
+      studyLanguage: language,
+      progress: emptyLanguageProgress(),
+      learned: count,
+    });
+  }
+  return [...rows.values()].sort((a, b) => (
+    b.progress.reviews - a.progress.reviews
+    || b.learned - a.learned
+    || a.studyLanguage.localeCompare(b.studyLanguage)
+  ));
+}
+
 export interface HeatmapCell {
   date: string;
   reviews: number;

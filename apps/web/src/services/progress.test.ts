@@ -11,6 +11,7 @@ import {
   historyStartsMidWindow,
   localDateString,
   mergeDeltas,
+  mergeLanguageRows,
   negateDelta,
   newCardsDelta,
   parseDailyProgress,
@@ -238,6 +239,58 @@ describe('buildHeatmap', () => {
   it('is all zeroes when nothing was reviewed', () => {
     const cells = buildHeatmap([], '2026-08-19', 3);
     expect(cells.every(cell => cell.level === 0 && cell.reviews === 0)).toBe(true);
+  });
+});
+
+describe('mergeLanguageRows', () => {
+  it('attaches the all-time count to the language it belongs to', () => {
+    const rows = mergeLanguageRows(
+      [{ studyLanguage: 'Korean', progress: lang({ reviews: 40 }) }],
+      { Korean: 148 },
+    );
+    expect(rows).toEqual([
+      { studyLanguage: 'Korean', progress: lang({ reviews: 40 }), learned: 148 },
+    ]);
+  });
+
+  it('keeps a language that has learned cards but no reviews in the window', () => {
+    // The case the union exists for: a deck you have not touched lately is
+    // exactly the one whose total you have forgotten, and taking only the
+    // window's languages would hide it from the only place it appears.
+    const rows = mergeLanguageRows(
+      [{ studyLanguage: 'Korean', progress: lang({ reviews: 40 }) }],
+      { Korean: 148, Spanish: 10 },
+    );
+    expect(rows.map(row => row.studyLanguage)).toEqual(['Korean', 'Spanish']);
+    expect(rows[1].progress).toEqual(emptyLanguageProgress());
+    expect(rows[1].learned).toBe(10);
+  });
+
+  it('keeps a language being studied that has matured nothing yet', () => {
+    const rows = mergeLanguageRows(
+      [{ studyLanguage: 'Japanese', progress: lang({ reviews: 9 }) }],
+      {},
+    );
+    expect(rows).toEqual([
+      { studyLanguage: 'Japanese', progress: lang({ reviews: 9 }), learned: 0 },
+    ]);
+  });
+
+  it('leaves out a language with nothing to say on either count', () => {
+    expect(mergeLanguageRows([], { Korean: 0 })).toEqual([]);
+  });
+
+  it('orders by the window, then by learned, then stably', () => {
+    const rows = mergeLanguageRows(
+      [
+        { studyLanguage: 'Korean', progress: lang({ reviews: 5 }) },
+        { studyLanguage: 'Japanese', progress: lang({ reviews: 40 }) },
+      ],
+      { Swedish: 30, French: 30 },
+    );
+    // Reviewed languages first by volume; the dormant pair after them, tied on
+    // learned and broken by code so the list cannot reshuffle between renders.
+    expect(rows.map(row => row.studyLanguage)).toEqual(['Japanese', 'Korean', 'French', 'Swedish']);
   });
 });
 

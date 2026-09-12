@@ -5,8 +5,8 @@ import { useUser } from '@/components/UserContext';
 import { fetchRecentProgress } from '@/services/progress';
 import {
   CARD_COLLECTIONS, buildHeatmap, buildShareStats, buildTodayStats, buildWeekGrid,
-  hasShareableHistory, localDateString, summarizeProgress,
-  type DailyProgress, type StudyLanguage,
+  hasShareableHistory, localDateString, mergeLanguageRows, summarizeProgress, weekdayIndex,
+  type DailyProgress, type HeatmapCell, type StudyLanguage,
 } from '@amgi/core';
 import { backfillMatureFlags, countMatureFlashcards } from '@/services/firestore';
 import { getUserPreferences, saveUserPreferences } from '@/services/userPreferences';
@@ -86,6 +86,11 @@ export default function ProgressPage() {
   const days = loaded?.rangeDays === rangeDays ? loaded.days : null;
 
   const summary = useMemo(() => summarizeProgress(days ?? []), [days]);
+  /** The last seven days, dense — the same builder the calendar uses. */
+  const weekCells = useMemo(
+    () => buildHeatmap(days ?? [], localDateString(), 7),
+    [days],
+  );
   const heatmap = useMemo(
     () => buildHeatmap(days ?? [], localDateString(), rangeDays),
     [days, rangeDays],
@@ -170,7 +175,9 @@ export default function ProgressPage() {
    * sitting after `if (authLoading) return null`, which is fine for a function
    * and a rules-of-hooks violation for these two.
    */
-  const [learned, setLearned] = useState<number | null>(null);
+  const [learned, setLearned] = useState<
+    { total: number; byLanguage: Partial<Record<StudyLanguage, number>> } | null
+  >(null);
 
   useEffect(() => {
     // No `setLearned(null)` here: the tile only renders inside the signed-in
@@ -192,10 +199,20 @@ export default function ProgressPage() {
         // Cards shard per language, so the whole deck means every collection.
         // Aggregation counts, so this is ten cheap queries rather than a read
         // of every card.
-        const counts = await Promise.all(
-          CARD_COLLECTIONS.map(({ code }) => countMatureFlashcards(user.uid, code)),
-        );
-        if (!cancelled) setLearned(counts.reduce((total, n) => total + n, 0));
+        // Kept per language rather than summed on the spot: the breakdown is
+        // already in hand here, and throwing it away would mean asking for it
+        // again the moment the by-language list wanted it.
+        const counts = await Promise.all(CARD_COLLECTIONS.map(
+          async ({ code }) => [code, await countMatureFlashcards(user.uid, code)] as const,
+        ));
+        if (cancelled) return;
+        const byLanguage: Partial<Record<StudyLanguage, number>> = {};
+        let total = 0;
+        for (const [code, count] of counts) {
+          if (count > 0) byLanguage[code] = count;
+          total += count;
+        }
+        setLearned({ total, byLanguage });
       } catch {
         if (!cancelled) setLearned(null);
       }
@@ -217,6 +234,14 @@ export default function ProgressPage() {
   }
 
   const hasHistory = summary.totalReviews > 0 || summary.totalNewCards > 0 || summary.totalPackCards > 0;
+
+  /**
+   * The window's languages and the all-time learned counts, as one list.
+   *
+   * The union is what keeps a language you have not reviewed lately from
+   * disappearing along with its learned count — see `mergeLanguageRows`.
+   */
+  const languageRows = mergeLanguageRows(summary.byLanguage, learned?.byLanguage ?? {});
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -280,7 +305,7 @@ export default function ProgressPage() {
                 *cards* where Reviews counts directions — the reason they carry
                 different nouns and never one shared one. */}
             {learned !== null && (
-              <Stat label={t(nativeLanguage, 'shareStatLearned')} value={learned} />
+              <Stat label={t(nativeLanguage, 'shareStatLearned')} value={learned.total} />
             )}
           </div>
 
@@ -377,13 +402,15 @@ export default function ProgressPage() {
             </div>
           </section>
 
-          {summary.byLanguage.length > 0 && (
+          <WeekBars nativeLanguage={nativeLanguage} cells={weekCells} />
+
+          {languageRows.length > 0 && (
             <section>
               <h2 className="text-sm font-bold text-[var(--color-text)] mb-3">
                 {t(nativeLanguage, 'progressByLanguage')}
               </h2>
               <ul className="flex flex-col gap-2">
-                {summary.byLanguage.map(({ studyLanguage, progress }) => (
+                {languageRows.map(({ studyLanguage, progress, learned: learnedHere }) => (
                   <li
                     key={studyLanguage}
                     className="flex items-baseline justify-between gap-3 p-3 rounded-xl border border-[var(--color-muted)]"
@@ -392,7 +419,18 @@ export default function ProgressPage() {
                       {t(nativeLanguage, languageLabelKey(studyLanguage))}
                     </span>
                     <span className="text-xs text-[var(--color-muted)] text-right">
-                      {t(nativeLanguage, 'progressLanguageReviews', { count: progress.reviews })}
+                      {/* A row can be here for its learned count alone, with
+                          nothing in the window — saying "0 reviews" would read
+                          as a slump rather than as a language left alone. */}
+                      {progress.reviews === 0
+                        ? t(nativeLanguage, 'progressTooltipNoReviews')
+                        : t(nativeLanguage, 'progressLanguageReviews', { count: progress.reviews })}
+                      {learnedHere > 0 && (
+                        <>
+                          {' · '}
+                          {t(nativeLanguage, 'progressLanguageLearned', { count: learnedHere })}
+                        </>
+                      )}
                       {progress.newCards + progress.packCards > 0 && (
                         <>
                           {' · '}
@@ -469,6 +507,70 @@ function DayTooltip({ nativeLanguage, date, day, column, columnCount }: {
         )}
       </div>
     </div>
+  );
+}
+
+/** The plot's height in pixels; the tallest bar fills it. */
+const WEEK_PLOT_HEIGHT = 64;
+
+/**
+ * Reviews per day for the last week.
+ *
+ * Bars rather than a line: seven days is seven discrete counts, which is what
+ * bars are for — and it keeps both platforms on the same picture without a
+ * native drawing library on the phone.
+ *
+ * One series, so there is no legend and the title names the measure instead.
+ * Only the busiest day is labelled: a number over every bar is noise, and the
+ * height already carries the comparison.
+ */
+function WeekBars({ nativeLanguage, cells }: {
+  nativeLanguage: string | null | undefined;
+  cells: HeatmapCell[];
+}) {
+  const weekdays = weekdayLabels(nativeLanguage);
+  const busiest = Math.max(0, ...cells.map(cell => cell.reviews));
+
+  return (
+    <section className="mb-8">
+      <h2 className="text-sm font-bold text-[var(--color-text)] mb-3">
+        {t(nativeLanguage, 'progressWeekTitle')}
+      </h2>
+      <div
+        className="flex items-end gap-2 border-b border-[var(--color-muted)]"
+        style={{ height: WEEK_PLOT_HEIGHT + 14 }}
+      >
+        {cells.map(cell => (
+          <div key={cell.date} className="flex-1 flex flex-col items-center justify-end">
+            {busiest > 0 && cell.reviews === busiest && (
+              <span className="text-[10px] leading-3 text-[var(--color-muted)]">{cell.reviews}</span>
+            )}
+            {/* A day with reviews keeps a visible sliver, for the same reason
+                the calendar gives a one-review day a level of 1. */}
+            <div
+              className="w-full rounded-t-sm bg-[var(--heat-4)]"
+              style={{
+                height: busiest > 0 && cell.reviews > 0
+                  ? Math.max(2, Math.round((cell.reviews / busiest) * WEEK_PLOT_HEIGHT))
+                  : 1,
+              }}
+            />
+          </div>
+        ))}
+      </div>
+      <div className="flex gap-2 mt-1">
+        {cells.map(cell => (
+          <div
+            key={cell.date}
+            className="flex-1 text-center text-[10px] text-[var(--color-muted)]"
+          >
+            {/* From the cell's own date: these seven days end on today, so they
+                are not a fixed Sunday-to-Saturday run. */}
+            {weekdays[weekdayIndex(cell.date)]}
+          </div>
+        ))}
+      </div>
+    </section>
   );
 }
 

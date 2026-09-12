@@ -8,7 +8,7 @@ import * as Sharing from 'expo-sharing';
 import {
   PROGRESS_HISTORY_START, SUPPORTED_STUDY_LANGUAGES, buildHeatmap, buildShareStats,
   CARD_COLLECTIONS, buildTodayStats, buildWeekGrid, hasShareableHistory,
-  historyStartsMidWindow, localDateString,
+  historyStartsMidWindow, localDateString, mergeLanguageRows, weekdayIndex,
   shareImageFilename, shareImagePath, shiftDate,
   summarizeProgress, t,
   type DailyProgress, type HeatmapCell, type LanguageProgress,
@@ -89,7 +89,9 @@ export default function ProgressScreen() {
    * Null while counting, and null if the count fails: an absent tile says less
    * than a tile showing a wrong number.
    */
-  const [matureCount, setMatureCount] = useState<number | null>(null);
+  const [matureCount, setMatureCount] = useState<
+    { total: number; byLanguage: Partial<Record<StudyLanguage, number>> } | null
+  >(null);
 
   // Refetch on focus, matching every other mobile screen — the review tab is
   // where these numbers change, and it is one tap away.
@@ -127,10 +129,20 @@ export default function ProgressScreen() {
           // Cards shard per language, so the whole deck means every collection.
           // Aggregation counts, so this is ten cheap queries rather than a read
           // of every card.
-          const counts = await Promise.all(
-            CARD_COLLECTIONS.map(({ code }) => countMatureFlashcards(user.uid, code)),
-          );
-          if (!cancelled) setMatureCount(counts.reduce((total, n) => total + n, 0));
+          // Kept per language rather than summed on the spot: the breakdown is
+          // already in hand here, and throwing it away would mean asking for it
+          // again the moment the by-language list wanted it.
+          const counts = await Promise.all(CARD_COLLECTIONS.map(
+            async ({ code }) => [code, await countMatureFlashcards(user.uid, code)] as const,
+          ));
+          if (cancelled) return;
+          const byLanguage: Partial<Record<StudyLanguage, number>> = {};
+          let total = 0;
+          for (const [code, count] of counts) {
+            if (count > 0) byLanguage[code] = count;
+            total += count;
+          }
+          setMatureCount({ total, byLanguage });
         } catch {
           if (!cancelled) setMatureCount(null);
         }
@@ -338,6 +350,16 @@ export default function ProgressScreen() {
   const partialWindow = historyStartsMidWindow(windowStart);
 
   const learned = matureCount;
+  /**
+   * The window's languages and the all-time learned counts, as one list — the
+   * union, so a language left alone lately keeps its learned count instead of
+   * vanishing with it.
+   */
+  const languageRows = mergeLanguageRows(summary.byLanguage, matureCount?.byLanguage ?? {});
+  /** The last seven days, dense — the same builder the calendar uses. */
+  const weekCells = buildHeatmap(days ?? [], localDateString(), 7);
+  /** Scaled against its own busiest day, the way the calendar's levels are. */
+  const weekBusiest = Math.max(0, ...weekCells.map(cell => cell.reviews));
 
   return (
     <SafeAreaView style={s.safe} edges={['top']}>
@@ -420,7 +442,7 @@ export default function ProgressScreen() {
                   counts *cards* where Reviews above counts directions — the
                   reason they carry different nouns and never one shared one. */}
               {learned !== null && (
-                <Stat s={s} label={t(nativeLanguage, 'shareStatLearned')} value={learned} />
+                <Stat s={s} label={t(nativeLanguage, 'shareStatLearned')} value={learned.total} />
               )}
             </View>
 
@@ -511,11 +533,40 @@ export default function ProgressScreen() {
               <Text style={s.legendText}>{t(nativeLanguage, 'progressMore')}</Text>
             </View>
 
-            {summary.byLanguage.length > 0 && (
+            <Text style={s.sectionTitle}>{t(nativeLanguage, 'progressWeekTitle')}</Text>
+            <View style={s.weekPlot}>
+              {weekCells.map(cell => (
+                <View key={cell.date} style={s.weekCol}>
+                  {weekBusiest > 0 && cell.reviews === weekBusiest && (
+                    <Text style={s.weekValue}>{cell.reviews}</Text>
+                  )}
+                  {/* A day with reviews keeps a visible sliver, for the same
+                      reason the calendar gives a one-review day a level 1. */}
+                  <View
+                    style={[s.weekBar, {
+                      height: weekBusiest > 0 && cell.reviews > 0
+                        ? Math.max(2, Math.round((cell.reviews / weekBusiest) * WEEK_PLOT_HEIGHT))
+                        : 1,
+                    }]}
+                  />
+                </View>
+              ))}
+            </View>
+            <View style={s.weekLabels}>
+              {weekCells.map(cell => (
+                // From the cell's own date: these seven days end on today, so
+                // they are not a fixed Sunday-to-Saturday run.
+                <Text key={cell.date} style={s.weekLabel}>
+                  {weekdays[weekdayIndex(cell.date)]}
+                </Text>
+              ))}
+            </View>
+
+            {languageRows.length > 0 && (
               <>
                 <Text style={s.sectionTitle}>{t(nativeLanguage, 'progressByLanguage')}</Text>
                 <Text style={s.sectionNote}>{t(nativeLanguage, 'progressBarScale')}</Text>
-                {summary.byLanguage.map(({ studyLanguage: language, progress }) => (
+                {languageRows.map(({ studyLanguage: language, progress, learned: learnedHere }) => (
                   <LanguageRow
                     key={language}
                     s={s}
@@ -523,11 +574,16 @@ export default function ProgressScreen() {
                     nativeLanguage={nativeLanguage}
                     language={language}
                     progress={progress}
+                    learned={learnedHere}
                     // Share of the busiest language rather than of the total:
                     // with one language the bar would otherwise always be full
                     // and say nothing, and with five it is the comparison
                     // between them that is being read.
-                    busiest={summary.byLanguage[0].progress.reviews}
+                    // From the list actually being drawn, not from the window's
+                    // own ranking: a language can now be in this list for its
+                    // learned count alone, in which case `summary.byLanguage`
+                    // may be empty while there are still rows to scale.
+                    busiest={languageRows[0]?.progress.reviews ?? 0}
                   />
                 ))}
               </>
@@ -588,12 +644,14 @@ export default function ProgressScreen() {
  * still written, and `retentionRate` still computes it for whoever needs it
  * next.
  */
-function LanguageRow({ s, C, nativeLanguage, language, progress, busiest }: {
+function LanguageRow({ s, C, nativeLanguage, language, progress, learned, busiest }: {
   s: ReturnType<typeof makeStyles>;
   C: Palette;
   nativeLanguage: string | null | undefined;
   language: StudyLanguage;
   progress: LanguageProgress;
+  /** All-time cards over the maturity line, unlike everything else on the row. */
+  learned: number;
   busiest: number;
 }) {
   const cardsAdded = progress.newCards + progress.packCards;
@@ -615,7 +673,15 @@ function LanguageRow({ s, C, nativeLanguage, language, progress, busiest }: {
         />
       </View>
       <Text style={s.langStat}>
-        {t(nativeLanguage, 'progressLanguageReviews', { count: progress.reviews })}
+        {/* A row can be here for its learned count alone, with nothing in the
+            window — "0 reviews" would read as a slump rather than as a language
+            left alone for a while. */}
+        {progress.reviews === 0
+          ? t(nativeLanguage, 'progressTooltipNoReviews')
+          : t(nativeLanguage, 'progressLanguageReviews', { count: progress.reviews })}
+        {learned > 0
+          ? ` · ${t(nativeLanguage, 'progressLanguageLearned', { count: learned })}`
+          : ''}
         {cardsAdded > 0
           ? ` · ${t(nativeLanguage, 'progressStatNewCards')} ${cardsAdded}`
           : ''}
@@ -637,6 +703,8 @@ const TOOLTIP_WIDTH = 150;
 const TOOLTIP_HEIGHT = 42;
 /** Room above the grid for the month ticks. */
 const MONTH_ROW_HEIGHT = 14;
+/** The weekly plot's height in pixels; the tallest bar fills it. */
+const WEEK_PLOT_HEIGHT = 64;
 
 function DayTooltip({ C, s, nativeLanguage, date, day, column, row, columnCount }: {
   C: Palette;
@@ -829,6 +897,18 @@ function makeStyles(C: Palette, tabBarHeight: number) {
     tooltipDetail: { fontSize: 11, color: C.muted, marginTop: 1 },
     legend: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 10, marginBottom: 24 },
     legendText: { color: C.muted, fontSize: 11 },
+    // Bars rather than a line: seven days is seven discrete counts, and it
+    // keeps both platforms on one picture without a drawing library here.
+    weekPlot: {
+      flexDirection: 'row', alignItems: 'flex-end', gap: 8,
+      height: WEEK_PLOT_HEIGHT + 14,
+      borderBottomWidth: 1, borderBottomColor: C.border,
+    },
+    weekCol: { flex: 1, alignItems: 'center', justifyContent: 'flex-end' },
+    weekBar: { width: '100%', borderTopLeftRadius: 2, borderTopRightRadius: 2, backgroundColor: C.heat[4] },
+    weekValue: { color: C.muted, fontSize: 10, lineHeight: 12 },
+    weekLabels: { flexDirection: 'row', gap: 8, marginTop: 4, marginBottom: 24 },
+    weekLabel: { flex: 1, textAlign: 'center', color: C.muted, fontSize: 10 },
     langRow: { padding: 12, borderRadius: 12, borderWidth: 1, borderColor: C.border, marginBottom: 8 },
     // No `flex: 1`: the name sits directly in the card's column now that the
     // retention figure is gone, where flex would stretch it vertically rather
