@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { useUser } from '@/components/UserContext';
 import { fetchRecentProgress } from '@/services/progress';
 import {
@@ -90,6 +90,28 @@ export default function ProgressPage() {
   const weekCells = useMemo(
     () => buildHeatmap(days ?? [], localDateString(), 7),
     [days],
+  );
+
+  /**
+   * Which mark the weekly chart draws with.
+   *
+   * Web only for now, and a toggle rather than a decision: seven discrete
+   * counts read defensibly either way, so the way to choose is to look at both.
+   * Mobile stays on bars — a line there needs `react-native-svg`, which is not
+   * installed, where the DOM draws SVG on its own.
+   *
+   * ⚠️ **`useSyncExternalStore`, not `useState` + an effect.** Reading
+   * `localStorage` in a `useState` initializer is the App Router hydration
+   * mismatch recorded in lessons.md; reading it in an effect trades that bug
+   * for a `set-state-in-effect` warning, and the backlog's standing rule on
+   * those is not to add more. This is what the hook is for: `getServerSnapshot`
+   * answers "bars" on the server, so the markup matches and nothing has to be
+   * corrected after mount.
+   */
+  const weekMark = useSyncExternalStore(
+    weekMarkStore.subscribe,
+    weekMarkStore.get,
+    weekMarkStore.getServer,
   );
   const heatmap = useMemo(
     () => buildHeatmap(days ?? [], localDateString(), rangeDays),
@@ -402,7 +424,12 @@ export default function ProgressPage() {
             </div>
           </section>
 
-          <WeekBars nativeLanguage={nativeLanguage} cells={weekCells} />
+          <WeekChart
+            nativeLanguage={nativeLanguage}
+            cells={weekCells}
+            mark={weekMark}
+            onMarkChange={weekMarkStore.set}
+          />
 
           {languageRows.length > 0 && (
             <section>
@@ -510,54 +537,161 @@ function DayTooltip({ nativeLanguage, date, day, column, columnCount }: {
   );
 }
 
-/** The plot's height in pixels; the tallest bar fills it. */
+/** The plot's height in pixels; the tallest mark fills it. */
 const WEEK_PLOT_HEIGHT = 64;
+/** Room above the plot so the peak's label is not clipped. */
+const WEEK_LABEL_LANE = 14;
+
+type WeekMark = 'bars' | 'line';
+const WEEK_MARK_KEY = 'amgi_week_chart_mark';
 
 /**
- * Reviews per day for the last week.
+ * The remembered chart mark, as an external store.
  *
- * Bars rather than a line: seven days is seven discrete counts, which is what
- * bars are for — and it keeps both platforms on the same picture without a
- * native drawing library on the phone.
+ * Small enough to be obvious and large enough to be worth the shape: it keeps
+ * the browser-only read out of render, gives the server a snapshot to agree
+ * with, and lets the toggle write through without a second copy of the value
+ * living in component state.
  *
- * One series, so there is no legend and the title names the measure instead.
- * Only the busiest day is labelled: a number over every bar is noise, and the
- * height already carries the comparison.
+ * `get` returns a primitive, so `useSyncExternalStore` can compare snapshots by
+ * value — returning a fresh object here is the usual way to make this hook
+ * loop forever.
  */
-function WeekBars({ nativeLanguage, cells }: {
+const weekMarkStore = {
+  listeners: new Set<() => void>(),
+  subscribe(listener: () => void) {
+    weekMarkStore.listeners.add(listener);
+    return () => { weekMarkStore.listeners.delete(listener); };
+  },
+  get(): WeekMark {
+    try {
+      return localStorage.getItem(WEEK_MARK_KEY) === 'line' ? 'line' : 'bars';
+    } catch {
+      // Private mode, or storage disabled. The default stands.
+      return 'bars';
+    }
+  },
+  /** What the server renders, and therefore what hydration has to match. */
+  getServer(): WeekMark {
+    return 'bars';
+  },
+  set(mark: WeekMark) {
+    try {
+      localStorage.setItem(WEEK_MARK_KEY, mark);
+    } catch {
+      // Not being able to remember the choice is no reason to refuse it — the
+      // listeners still fire, so the chart still switches for this visit.
+    }
+    for (const listener of weekMarkStore.listeners) listener();
+  },
+};
+
+/**
+ * Reviews per day for the last week, drawn as bars or as a line.
+ *
+ * Seven days is seven discrete counts, which reads defensibly either way — so
+ * the mark is a toggle rather than a decision made here. **Web only**: the
+ * line is inline SVG, which the DOM does natively, where mobile would need
+ * `react-native-svg` installed and compiled into a build.
+ *
+ * One series, so there is no legend and the title names the measure. Only the
+ * busiest day is labelled: a number over every point is noise the heights
+ * already carry. Both marks share the title, the labels and the plot height,
+ * so switching cannot shift the layout.
+ */
+function WeekChart({ nativeLanguage, cells, mark, onMarkChange }: {
   nativeLanguage: string | null | undefined;
   cells: HeatmapCell[];
+  mark: WeekMark;
+  onMarkChange: (mark: WeekMark) => void;
 }) {
   const weekdays = weekdayLabels(nativeLanguage);
   const busiest = Math.max(0, ...cells.map(cell => cell.reviews));
+  const peak = cells.findIndex(cell => busiest > 0 && cell.reviews === busiest);
+  /** Horizontal centre of a day's slot, as a percentage of the plot's width. */
+  const centre = (index: number) => ((index + 0.5) * 100) / cells.length;
+  /** A day's height in px, so both marks sit on one scale. */
+  const heightOf = (reviews: number) => (busiest > 0 && reviews > 0
+    ? Math.max(2, Math.round((reviews / busiest) * WEEK_PLOT_HEIGHT))
+    : 0);
 
   return (
     <section className="mb-8">
-      <h2 className="text-sm font-bold text-[var(--color-text)] mb-3">
-        {t(nativeLanguage, 'progressWeekTitle')}
-      </h2>
-      <div
-        className="flex items-end gap-2 border-b border-[var(--color-muted)]"
-        style={{ height: WEEK_PLOT_HEIGHT + 14 }}
-      >
-        {cells.map(cell => (
-          <div key={cell.date} className="flex-1 flex flex-col items-center justify-end">
-            {busiest > 0 && cell.reviews === busiest && (
-              <span className="text-[10px] leading-3 text-[var(--color-muted)]">{cell.reviews}</span>
-            )}
-            {/* A day with reviews keeps a visible sliver, for the same reason
-                the calendar gives a one-review day a level of 1. */}
-            <div
-              className="w-full rounded-t-sm bg-[var(--heat-4)]"
-              style={{
-                height: busiest > 0 && cell.reviews > 0
-                  ? Math.max(2, Math.round((cell.reviews / busiest) * WEEK_PLOT_HEIGHT))
-                  : 1,
-              }}
-            />
-          </div>
-        ))}
+      <div className="flex items-baseline justify-between gap-3 mb-3">
+        <h2 className="text-sm font-bold text-[var(--color-text)]">
+          {t(nativeLanguage, 'progressWeekTitle')}
+        </h2>
+        <div className="flex gap-1">
+          {(['bars', 'line'] as const).map(option => (
+            <button
+              key={option}
+              type="button"
+              onClick={() => onMarkChange(option)}
+              aria-pressed={mark === option}
+              className="px-2 py-0.5 rounded-md text-[11px] font-mono border transition-colors"
+              style={mark === option
+                ? { borderColor: 'var(--color-highlight)', color: 'var(--color-highlight)' }
+                : { borderColor: 'var(--color-muted)', color: 'var(--color-muted)' }}
+            >
+              {t(nativeLanguage, option === 'bars' ? 'progressChartBars' : 'progressChartLine')}
+            </button>
+          ))}
+        </div>
       </div>
+
+      <div
+        className="relative border-b border-[var(--color-muted)]"
+        style={{ height: WEEK_PLOT_HEIGHT + WEEK_LABEL_LANE }}
+      >
+        {/* The peak's value, in HTML rather than inside the SVG. The plot has
+            to stretch to its container, which means preserveAspectRatio="none"
+            — and that would stretch any text or circle drawn in it. */}
+        {peak >= 0 && (
+          <span
+            className="absolute text-[10px] leading-3 text-[var(--color-muted)] -translate-x-1/2"
+            style={{ left: `${centre(peak)}%`, top: 0 }}
+          >
+            {busiest}
+          </span>
+        )}
+
+        {mark === 'bars' ? (
+          <div className="absolute inset-x-0 bottom-0 flex items-end gap-2">
+            {cells.map(cell => (
+              <div
+                key={cell.date}
+                className="flex-1 rounded-t-sm bg-[var(--heat-4)]"
+                // A day with reviews keeps a visible sliver, for the same
+                // reason the calendar gives a one-review day a level of 1.
+                style={{ height: Math.max(heightOf(cell.reviews), cell.reviews > 0 ? 2 : 1) }}
+              />
+            ))}
+          </div>
+        ) : (
+          <svg
+            className="absolute inset-x-0 bottom-0 w-full overflow-visible"
+            height={WEEK_PLOT_HEIGHT}
+            viewBox={`0 0 100 ${WEEK_PLOT_HEIGHT}`}
+            preserveAspectRatio="none"
+            aria-hidden
+          >
+            <polyline
+              points={cells
+                .map((cell, index) => `${centre(index)},${WEEK_PLOT_HEIGHT - heightOf(cell.reviews)}`)
+                .join(' ')}
+              fill="none"
+              stroke="var(--heat-4)"
+              strokeWidth={2}
+              strokeLinejoin="round"
+              strokeLinecap="round"
+              // Without this the stroke is scaled by the same non-uniform
+              // transform as the geometry, so it thickens with the container.
+              vectorEffect="non-scaling-stroke"
+            />
+          </svg>
+        )}
+      </div>
+
       <div className="flex gap-2 mt-1">
         {cells.map(cell => (
           <div

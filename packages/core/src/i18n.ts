@@ -168,6 +168,8 @@ const translations = {
     // Names the measure, since the chart carries one series and therefore no
     // legend — the title is what says what the bars are.
     progressWeekTitle: 'Reviews, last 7 days',
+    progressChartBars: 'Bars',
+    progressChartLine: 'Line',
     // Rollups began 2026-08-20 and cannot be reconstructed, so a window
     // reaching further back is shorter than it looks. Say so rather than
     // showing a total that quietly means something narrower.
@@ -750,6 +752,8 @@ const translations = {
     progressLanguageReviews: '{count}개 복습',
     progressLanguageLearned: '{count}개 익힘',
     progressWeekTitle: '최근 7일 복습',
+    progressChartBars: '막대',
+    progressChartLine: '선',
     progressCardsFromPacks: '단어팩에서 {count}개',
     progressTooltipReviews: '{count}개 복습',
     progressTooltipOneReview: '1개 복습',
