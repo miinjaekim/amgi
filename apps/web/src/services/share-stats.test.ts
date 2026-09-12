@@ -60,7 +60,6 @@ describe('buildShareStats window', () => {
       day(LATER, { reviews: 1 }),
     ], 30);
     expect(stats.reviews).toBe(2);
-    expect(stats.daysStudied).toBe(2);
   });
 
   it('fills gaps in the heatmap so an unstudied day is drawn, not missing', () => {
@@ -77,12 +76,13 @@ describe('buildShareStats numbers', () => {
     expect(statsFor([]).streak).toBe(7);
   });
 
-  it('counts days studied by ratings, not by cards added', () => {
+  it('no longer carries days studied, which the streak already answered', () => {
     const stats = statsFor([
       day(LATER, { reviews: 2 }),
       day(shiftDate(LATER, -1), { newCards: 40, packCards: 474 }),
     ]);
-    expect(stats.daysStudied).toBe(1);
+    expect(stats).not.toHaveProperty('daysStudied');
+    expect(new URLSearchParams(shareImageQuery(stats)).has('d')).toBe(false);
   });
 
   it('keeps counting verdicts even though nothing renders them', () => {
@@ -293,7 +293,6 @@ describe('shareImageQuery', () => {
     const parsed = readShareImageParams(new URLSearchParams(shareImageQuery(stats, 'Korean')));
     expect(parsed.reviews).toBe(stats.reviews);
     expect(parsed.streak).toBe(stats.streak);
-    expect(parsed.daysStudied).toBe(stats.daysStudied);
     expect(parsed.learned).toBe(stats.cardsLearned);
     expect(parsed.cells).toEqual(stats.heatmap.map(c => c.level));
   });

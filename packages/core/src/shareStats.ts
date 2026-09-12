@@ -87,8 +87,6 @@ export interface ShareStats {
    * has to say *reviews*.
    */
   reviews: number;
-  /** Days in the window with at least one rating. */
-  daysStudied: number;
   /** The stored streak, passed straight through. */
   streak: number;
 
@@ -172,7 +170,6 @@ export function buildShareStats(days: DailyProgress[], input: ShareStatsInput): 
     windowEnd: endDate,
     windowDays,
     reviews: summary.totalReviews,
-    daysStudied: summary.activeDays,
     streak,
     cardsLearned: detailed ? summary.totalCardsMatured : null,
     studySeconds: detailed ? summary.totalStudySeconds : null,
@@ -253,7 +250,6 @@ export function shareImageQuery(
   q.set('w', String(stats.windowDays));
   q.set('r', String(stats.reviews));
   q.set('s', String(stats.streak));
-  q.set('d', String(stats.daysStudied));
   if (stats.cardsLearned !== null) q.set('l', String(stats.cardsLearned));
   // Codes rather than display names: shorter, stable, and it leaves the label
   // in the reader's own language rather than the sharer's.

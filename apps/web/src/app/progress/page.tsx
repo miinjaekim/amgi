@@ -4,9 +4,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useUser } from '@/components/UserContext';
 import { fetchRecentProgress } from '@/services/progress';
 import {
-  buildHeatmap, buildShareStats, buildTodayStats, buildWeekGrid,
-  detailedHistoryStartsMidWindow, hasShareableHistory, localDateString, shiftDate,
-  summarizeProgress,
+  buildHeatmap, buildShareStats, buildTodayStats, buildWeekGrid, cardsLearnedIn,
+  hasShareableHistory, localDateString, summarizeProgress,
   type DailyProgress, type StudyLanguage,
 } from '@amgi/core';
 import { t } from '@/lib/i18n';
@@ -167,18 +166,14 @@ export default function ProgressPage() {
   const hasHistory = summary.totalReviews > 0 || summary.totalNewCards > 0 || summary.totalPackCards > 0;
 
   /**
-   * Cards that crossed into maturity inside the window — or nothing at all.
+   * Cards learned, over as much of the window as the counter can answer for.
    *
-   * `cardsMatured` has only been written since 2026-09-06, so over a window
-   * reaching further back it undercounts, and an undercount here looks exactly
-   * like a quiet fortnight. Withheld rather than shown low, which is the rule
-   * the shared image already follows; it starts answering on its own once the
-   * window clears the boundary, with no code change.
+   * Withholding it outright — what the shared image still does — meant it never
+   * appeared here at all: every range on offer is 30 days or more, and
+   * `cardsMatured` only began on 2026-09-06. A shorter span with the span said
+   * out loud beats an absent tile on a screen with room to say it.
    */
-  const windowStart = shiftDate(localDateString(), -(rangeDays - 1));
-  const cardsLearned = detailedHistoryStartsMidWindow(windowStart)
-    ? null
-    : summary.totalCardsMatured;
+  const learned = cardsLearnedIn(days ?? [], localDateString(), rangeDays);
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -229,21 +224,28 @@ export default function ProgressPage() {
               someone on a 200-day streak — and two surfaces disagreeing about
               a streak is exactly the failure this dashboard should not add. */}
           <div className={`grid grid-cols-2 gap-3 mb-8 ${
-            cardsLearned === null ? 'sm:grid-cols-4' : 'sm:grid-cols-5'
+            learned === null ? 'sm:grid-cols-3' : 'sm:grid-cols-4'
           }`}>
             <Stat label={t(nativeLanguage, 'progressStreak')}
               value={streak === 1
                 ? t(nativeLanguage, 'progressStreakDay')
                 : t(nativeLanguage, 'progressStreakDays', { count: streak })} />
             <Stat label={t(nativeLanguage, 'progressStatReviews')} value={summary.totalReviews} />
-            <Stat label={t(nativeLanguage, 'progressStatActiveDays')} value={summary.activeDays} />
             <Stat label={t(nativeLanguage, 'progressStatAverage')} value={summary.averagePerActiveDay} />
             {/* Shares its label with the tile on the shared image, so the two
                 surfaces cannot describe one number differently. It counts
                 *cards* where Reviews counts directions — the reason they carry
                 different nouns and never one shared one. */}
-            {cardsLearned !== null && (
-              <Stat label={t(nativeLanguage, 'shareStatLearned')} value={cardsLearned} />
+            {learned !== null && (
+              <Stat
+                label={t(nativeLanguage, 'shareStatLearned')}
+                value={learned.count}
+                note={learned.partial
+                  ? t(nativeLanguage, 'progressSince', {
+                    date: formatDay(nativeLanguage, learned.from),
+                  })
+                  : undefined}
+              />
             )}
           </div>
 
@@ -470,11 +472,19 @@ function describeDay(
   return parts.join(' · ');
 }
 
-function Stat({ label, value }: { label: string; value: string | number }) {
+function Stat({ label, value, note }: {
+  label: string;
+  value: string | number;
+  /** Qualifies the figure when it covers less than the selected range. */
+  note?: string;
+}) {
   return (
     <div className="p-3 rounded-xl border border-[var(--color-muted)]">
       <div className="text-xl font-bold text-[var(--color-highlight)]">{value}</div>
       <div className="text-xs text-[var(--color-muted)] mt-0.5">{label}</div>
+      {note !== undefined && (
+        <div className="text-[10px] text-[var(--color-muted)] opacity-80 mt-0.5">{note}</div>
+      )}
     </div>
   );
 }

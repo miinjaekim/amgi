@@ -7,7 +7,7 @@ import { File, Paths } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import {
   PROGRESS_HISTORY_START, SUPPORTED_STUDY_LANGUAGES, buildHeatmap, buildShareStats,
-  buildTodayStats, buildWeekGrid, detailedHistoryStartsMidWindow, hasShareableHistory,
+  buildTodayStats, buildWeekGrid, cardsLearnedIn, hasShareableHistory,
   historyStartsMidWindow, localDateString,
   shareImageFilename, shareImagePath, shiftDate,
   summarizeProgress, t,
@@ -290,18 +290,14 @@ export default function ProgressScreen() {
   const partialWindow = historyStartsMidWindow(windowStart);
 
   /**
-   * Cards that crossed into maturity inside the window — or nothing at all.
+   * Cards learned, over as much of the window as the counter can answer for.
    *
-   * The second, later boundary: `cardsMatured` has only been written since
-   * 2026-09-06, so over a window reaching further back it undercounts, and an
-   * undercount here looks exactly like a quiet fortnight. Withheld rather than
-   * shown low, which is the rule the shared image already follows — and it
-   * starts answering on its own once the window clears the boundary, with no
-   * code change.
+   * Withholding it outright — what the shared image still does — meant it never
+   * appeared here at all: every range on offer is 30 days or more, and
+   * `cardsMatured` only began on 2026-09-06. A shorter span with the span said
+   * out loud beats an absent tile on a screen with room to say it.
    */
-  const cardsLearned = detailedHistoryStartsMidWindow(windowStart)
-    ? null
-    : summary.totalCardsMatured;
+  const learned = cardsLearnedIn(days ?? [], localDateString(), rangeDays);
 
   return (
     <SafeAreaView style={s.safe} edges={['top']}>
@@ -378,14 +374,22 @@ export default function ProgressScreen() {
                   ? t(nativeLanguage, 'progressStreakDay')
                   : t(nativeLanguage, 'progressStreakDays', { count: streak })} />
               <Stat s={s} label={t(nativeLanguage, 'progressStatReviews')} value={summary.totalReviews} />
-              <Stat s={s} label={t(nativeLanguage, 'progressStatActiveDays')} value={summary.activeDays} />
               <Stat s={s} label={t(nativeLanguage, 'progressStatAverage')} value={summary.averagePerActiveDay} />
               {/* Shares its label with the tile on the shared image, so the two
                   surfaces cannot describe one number differently. Note it
                   counts *cards* where Reviews above counts directions — the
                   reason they carry different nouns and never one shared one. */}
-              {cardsLearned !== null && (
-                <Stat s={s} label={t(nativeLanguage, 'shareStatLearned')} value={cardsLearned} />
+              {learned !== null && (
+                <Stat
+                  s={s}
+                  label={t(nativeLanguage, 'shareStatLearned')}
+                  value={learned.count}
+                  note={learned.partial
+                    ? t(nativeLanguage, 'progressSince', {
+                      date: formatDay(nativeLanguage, learned.from),
+                    })
+                    : undefined}
+                />
               )}
             </View>
 
@@ -680,15 +684,18 @@ function describeDay(
   return parts.join(' · ');
 }
 
-function Stat({ s, label, value }: {
+function Stat({ s, label, value, note }: {
   s: ReturnType<typeof makeStyles>;
   label: string;
   value: string | number;
+  /** Qualifies the figure when it covers less than the selected range. */
+  note?: string;
 }) {
   return (
     <View style={s.stat}>
       <Text style={s.statValue}>{value}</Text>
       <Text style={s.statLabel}>{label}</Text>
+      {note !== undefined && <Text style={s.statNote}>{note}</Text>}
     </View>
   );
 }
@@ -745,6 +752,7 @@ function makeStyles(C: Palette, tabBarHeight: number) {
     stat: { flexGrow: 1, flexBasis: '45%', padding: 12, borderRadius: 12, borderWidth: 1, borderColor: C.border },
     statValue: { color: C.highlight, fontSize: 20, fontWeight: '700' },
     statLabel: { color: C.muted, fontSize: 12, marginTop: 2 },
+    statNote: { color: C.muted, fontSize: 10, opacity: 0.8, marginTop: 1 },
     sectionTitle: { color: C.text, fontSize: 14, fontWeight: '700', marginBottom: 10 },
     sectionNote: { color: C.muted, fontSize: 11, marginTop: -4, marginBottom: 10 },
     calendarRow: { flexDirection: 'row' },

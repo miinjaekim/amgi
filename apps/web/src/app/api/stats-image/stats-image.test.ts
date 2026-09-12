@@ -20,10 +20,9 @@ const parse = (query: string) => readShareImageParams(new URLSearchParams(query)
 
 describe('reading the parameters', () => {
   it('reads a full set', () => {
-    const p = parse('w=30&r=1284&s=12&d=23&l=47&lang=Korean');
+    const p = parse('w=30&r=1284&s=12&l=47&lang=Korean');
     expect(p).toMatchObject({
-      windowDays: 30, reviews: 1284, streak: 12, daysStudied: 23,
-      learned: 47, lang: 'Korean',
+      windowDays: 30, reviews: 1284, streak: 12, learned: 47, lang: 'Korean',
     });
   });
 
@@ -59,12 +58,14 @@ describe('reading the parameters', () => {
     expect(parse('r=10').languages).toEqual([]);
   });
 
-  it('ignores the retention parameter an older build still sends', () => {
-    // Retention came off the image on 2026-09-12. Mobile ships by build and
-    // this route is server-side, so an installed 1.6.0 goes on appending `ret`
-    // for as long as it is on the phone: it must be inert, never a failure.
-    expect(parse('r=10&ret=88')).toMatchObject({ reviews: 10 });
-    expect(parse('r=10&ret=88')).not.toHaveProperty('retention');
+  it('ignores the parameters an older build still sends', () => {
+    // Retention and days studied both came off the image on 2026-09-12. Mobile
+    // ships by build and this route is server-side, so an installed build goes
+    // on appending `ret` and `d` for as long as it is on the phone: they must
+    // be inert, never a failure.
+    expect(parse('r=10&ret=88&d=23')).toMatchObject({ reviews: 10 });
+    expect(parse('r=10&ret=88&d=23')).not.toHaveProperty('retention');
+    expect(parse('r=10&ret=88&d=23')).not.toHaveProperty('daysStudied');
   });
 
   it('keeps a negative cardsLearned, which is a real value', () => {
@@ -74,13 +75,13 @@ describe('reading the parameters', () => {
   });
 
   it('floors the counts that cannot be negative', () => {
-    const p = parse('r=-5&s=-2&d=-9');
-    expect([p.reviews, p.streak, p.daysStudied]).toEqual([0, 0, 0]);
+    const p = parse('r=-5&s=-2');
+    expect([p.reviews, p.streak]).toEqual([0, 0]);
   });
 
   it('treats junk as zero rather than throwing', () => {
-    const p = parse('r=abc&s=NaN&d=&w=zzz');
-    expect([p.reviews, p.streak, p.daysStudied]).toEqual([0, 0, 0]);
+    const p = parse('r=abc&s=NaN&w=zzz');
+    expect([p.reviews, p.streak]).toEqual([0, 0]);
     expect(p.windowDays).toBe(30);
   });
 
@@ -95,8 +96,8 @@ describe('reading the parameters', () => {
   });
 
   it('rounds fractional input, since every figure is drawn as an integer', () => {
-    expect(parse('r=12.6&d=4.4').reviews).toBe(13);
-    expect(parse('r=12.6&d=4.4').daysStudied).toBe(4);
+    expect(parse('r=12.6&s=4.4').reviews).toBe(13);
+    expect(parse('r=12.6&s=4.4').streak).toBe(4);
   });
 });
 

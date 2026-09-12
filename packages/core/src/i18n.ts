@@ -148,7 +148,6 @@ const translations = {
     progressRangeQuarter: '90 days',
     progressRangeYear: 'Year',
     progressStatReviews: 'Reviews',
-    progressStatActiveDays: 'Days studied',
     progressStatAverage: 'Average per day',
     progressStatNewCards: 'Cards added',
     progressStreak: 'Current streak',
@@ -167,6 +166,9 @@ const translations = {
     // reaching further back is shorter than it looks. Say so rather than
     // showing a total that quietly means something narrower.
     progressHistoryNote: 'Recorded from {date} onwards.',
+    // Sits under a tile whose window had to be shortened to stay honest. It
+    // disappears on its own once the counter is old enough to fill the range.
+    progressSince: 'since {date}',
     progressCardsFromPacks: '{count} from packs',
     progressTooltipReviews: '{count} reviews',
     progressTooltipOneReview: '1 review',
@@ -182,7 +184,6 @@ const translations = {
     // Never "cards reviewed": `reviews` counts directions, so only this label
     // is a card count. See `ShareStats.reviews`.
     shareStatLearned: 'Cards learned',
-    shareStatDays: 'Days studied',
     shareWindowDays: 'Last {count} days',
     // The chooser in front of the share sheet, and the label the today card
     // wears at the top. One key for both: they name the same thing, and the
@@ -732,10 +733,10 @@ const translations = {
     progressRangeQuarter: '90일',
     progressRangeYear: '1년',
     progressStatReviews: '복습',
-    progressStatActiveDays: '공부한 날',
     progressStatAverage: '하루 평균',
     progressStatNewCards: '담은 카드',
     progressHistoryNote: '{date}부터의 기록입니다.',
+    progressSince: '{date}부터',
     progressStreak: '연속 학습',
     progressStreakDays: '{count}일',
     progressStreakDay: '1일',
@@ -758,7 +759,6 @@ const translations = {
     shareStatReviews: '복습',
     shareStatStreak: '연속 학습',
     shareStatLearned: '익힌 카드',
-    shareStatDays: '공부한 날',
     shareWindowDays: '지난 {count}일',
     shareChoose: '무엇을 공유할까요?',
     shareVariantWindow: '이 기간',

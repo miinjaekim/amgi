@@ -581,6 +581,47 @@ export function summarizeProgress(days: DailyProgress[]): ProgressSummary {
   };
 }
 
+/** Cards learned over the part of a window that can actually answer. */
+export interface CardsLearned {
+  /** Net maturity crossings between `from` and the window's end. */
+  count: number;
+  /** The first day counted, `YYYY-MM-DD`. */
+  from: string;
+  /**
+   * True when `from` is later than the window asked for, because the counter
+   * did not exist that far back — the caller has to say so next to the number.
+   */
+  partial: boolean;
+}
+
+/**
+ * Cards learned in a window, shortened to the part that is honest.
+ *
+ * The alternative was withholding the figure whenever the window reached past
+ * `DETAILED_HISTORY_START`, which is what the shared image still does. On a
+ * dashboard that turned out to mean *never*: every range on offer is 30 days or
+ * longer, so for a month after the counter shipped the tile could not appear on
+ * any of them. A number over a stated shorter span beats no number at all when
+ * there is room to state the span — and an image, read at thumbnail size and
+ * out of context, is exactly where there is not.
+ *
+ * Returns `null` only when the window ends before the counter began, which is
+ * the one case with genuinely nothing to say.
+ */
+export function cardsLearnedIn(
+  days: DailyProgress[],
+  endDate: string,
+  windowDays: number,
+): CardsLearned | null {
+  const requested = shiftDate(endDate, -(windowDays - 1));
+  const from = requested < DETAILED_HISTORY_START ? DETAILED_HISTORY_START : requested;
+  if (endDate < from) return null;
+  const count = days
+    .filter(day => day.date >= from && day.date <= endDate)
+    .reduce((total, day) => total + day.cardsMatured, 0);
+  return { count, from, partial: from !== requested };
+}
+
 export interface HeatmapCell {
   date: string;
   reviews: number;
