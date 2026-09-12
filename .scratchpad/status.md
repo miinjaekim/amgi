@@ -53,8 +53,8 @@ and `npm run lint` 0 errors / 21 warnings, both measured._
   already get the language line and already lost the retention tile — no build,
   no OTA, nothing to ship. **Web** has all five changes as soon as it deploys.
   **Mobile's own screen** — the labelled calendar, the corrected ramp, the cards
-  learned tile, retention off the language row, the share chooser — waits for
-  build 16 like everything else. The reasoning is in the Decisions entry of the
+  learned tile, retention off the language row, the share preview screen —
+  waits for build 16 like everything else. The reasoning is in the Decisions entry of the
   same date; the one thing that is *not* recorded anywhere else is that none of
   it has been looked at: the colours were computed and validated, the layouts
   were not.
@@ -236,7 +236,9 @@ iOS release carrying `expo-dev-client`, `expo-dev-launcher` and `expo-dev-menu`.
 ⚠️ **Never verified on a real binary**, on any build so far — the logic is
 tested, the native bindings are not: pronunciation audio, CSV/Anki export,
 sharing — including the stats image's `File.downloadFileAsync` →
-`Sharing.shareAsync` path, which has never run end to end — offline review
+`Sharing.shareAsync` path, which has never run end to end and which **turned out
+to be broken all along**, found by reading rather than by running on 2026-09-12
+(the share entry in Decisions) — offline review
 across a force-kill and reconnect, the review reminder
 firing *and* disappearing once you review, and account deletion against the
 production `EXPO_PUBLIC_API_BASE_URL`. (The 1.3.0 copy button left this list
@@ -425,9 +427,52 @@ confirm step — you are looking at what you are about to post while picking it.
 Web keeps its anchor (the thumbnail sits inside the `<a>`, so the no-JS download
 still works) and waives `@next/next/no-img-element` deliberately, since routing
 an OG render through the image optimizer to draw 80px is worse than the raw
-request. Mobile draws it only when `EXPO_PUBLIC_API_BASE_URL` is set; without a
-host the row still shares, it just cannot show what it will send. **The
-direction this is heading is Strava's**: pick a card, see it, post it.
+request. **The direction this is heading is Strava's**: pick a card, see it,
+post it.
+
+⚠️ **Mobile went the whole way there the same day, because the sheet could not
+work at all** (2026-09-12, user's call). Its chooser was a `BottomSheet`, which
+is a React Native `Modal`, and it closed itself before calling
+`Sharing.shareAsync`. **iOS silently refuses to present a view controller while
+a modal is animating out**, so the share sheet never appeared, `shareAsync`'s
+promise never settled, the `finally` that cleared the busy flag never ran, and
+the Share button stayed `disabled` until the app was reloaded — three symptoms,
+one cause. Timing around the dismissal would have been a race to lose later, so
+mobile's chooser is now a **pushed screen** (`app/share.tsx`): a pushed screen is
+not mid-transition when its own button is tapped, which removes the race rather
+than narrowing it. Web is untouched and keeps its `<details>` of anchors.
+
+**The preview screen offers a card per range, not per variant.** Swiping is only
+worth doing over more than two things, so it draws **30 and 90 days plus
+today**, opening on whichever range the Progress tab had selected. ⚠️ **The year
+is deliberately not offered** (user's call): 364 cells is a wall that says less
+about how you are doing lately than 30 does, and opening from the year chip
+falls through to the 30-day card. So the screen needs 90 days of rows where the
+tab holds only the range it shows — **one** 90-day query of its own on open, the
+same shape of single indexed read the range chips already do.
+`buildShareStats`'s no-reads promise is intact: what costs a read is the new
+screen, not the numbers. Which cards exist is `buildShareCards` in core, tested
+there, so the per-card zeroed-image gate and the ordering cannot drift between
+platforms. Errors are inline and the Share button is its own retry — an `Alert`
+fired during that same dismissal was subject to the very bug above.
+
+**The card carries four tiles now, and two of them are blank until October**
+(2026-09-12, user's call). Streak was the only one left after the cull earlier
+the same day; it is joined by **Newly learned**, **Time studied** and **Cards
+added**. ⚠️ **"Newly learned" is not the dashboard's "Cards learned"** — that
+tile is the all-time count of cards past `MATURE_INTERVAL_DAYS`, which cannot
+share a canvas where every other figure names one window, so this is
+`cardsMatured`, the *crossings* inside the window, under a label that says so.
+The rejection recorded here on 2026-09-12 named exactly that condition, and this
+meets it. ⚠️ **Both it and Time studied are withheld until the window clears
+`DETAILED_HISTORY_START` (2026-09-06)**: the Today card shows them immediately,
+the 30-day card from **2026-10-05** and the 90-day card from **2026-12-04**. A
+withheld figure is omitted from the URL rather than sent as 0, and the route
+draws no tile for it — so the row is built, not declared, and a card can carry
+anywhere from one to four tiles. Cards added has no such boundary and reuses the
+dashboard's own `progressStatNewCards` wording, since the two count the same
+thing. Tile type shrinks at three or more, because "Time studied" at 30px does
+not fit the ~228px a fourth tile gets.
 
 **The image names languages and will never split its figures by them.**
 `byLanguage.reviews` goes back to the start; the verdicts inside it only to
@@ -460,9 +505,24 @@ it. Web's chooser is a `<details>` of per-variant anchors rather than a button
 menu, so the no-JS download that made that component an anchor survives the
 choice.
 
-⚠️ **None of it was verified visually.** Colour is computed; layout is not. The
-calendar needs a signed-in account with history to draw at all, and mobile needs
-a build — the standing caveat under Builds.
+**The image itself finally was verified visually** (2026-09-12) — the first
+thing on this entry that has been. `next dev` serves the route, so
+`curl localhost:3000/api/stats-image?…` writes a real PNG that can simply be
+looked at; no build, no account, no device. Both locales, the today card and the
+30-day card, one tile through four.
+
+⚠️ **It immediately caught a bug that reading could not.** Korean writes 2h 40m
+as 「2시간 40분」 — eight full-width glyphs that cannot fit the ~228px a fourth
+tile gets at any legible size, so the value wrapped, grew its tile, and shoved
+its own label below the other three. English never wraps and looked perfect.
+The fix is a **fixed two-line box around every tile value**, so a label sits on
+the same line whether or not a neighbour wrapped. The lesson generalises past
+this tile: *any* label or value on this canvas has to be checked in Korean, at
+the tightest column it can land in, and the check costs one curl.
+
+⚠️ **Still unverified: the mobile screen around it.** The carousel, its paging
+and the OS share sheet need a device — the standing caveat under Builds. The
+calendar also needs a signed-in account with history to draw real data.
 
 ### 병과 material is a section of 부대·참모, and its branches keep the 「-과」 (2026-09-09)
 

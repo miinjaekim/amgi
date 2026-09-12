@@ -189,6 +189,16 @@ const translations = {
     // Never "cards reviewed": `reviews` counts directions, so only this label
     // is a card count. See `ShareStats.reviews`.
     shareStatLearned: 'Cards learned',
+    // ⚠️ Deliberately *not* 'Cards learned'. That tile is an all-time state;
+    // this one counts crossings inside the window, and the two numbers differ.
+    // Sharing a label would make the image contradict the dashboard.
+    shareStatMatured: 'Newly learned',
+    shareStatTime: 'Time studied',
+    // Read at story size, so the unit is spelled the short way. The hour-only
+    // case is separate because "2h 0m" is not something anyone writes.
+    shareTimeHoursMinutes: '{h}h {m}m',
+    shareTimeHours: '{h}h',
+    shareTimeMinutes: '{m}m',
     shareWindowDays: 'Last {count} days',
     // The chooser in front of the share sheet, and the label the today card
     // wears at the top. One key for both: they name the same thing, and the
@@ -199,6 +209,10 @@ const translations = {
     shareFooter: 'Amgi',
     shareNothingYet: 'Study a little first — there is nothing to share yet.',
     shareFailed: 'Could not build the image.',
+    // The way out of the preview screen. Its own key rather than `cancel`:
+    // nothing is being abandoned by leaving, and the arrow needs a name only a
+    // screen reader will hear.
+    shareBack: 'Back',
     settingsStudyLanguage: 'Learning',
     // Shown only when the language being chosen is the one Amgi is currently
     // speaking to the user in — picking it moves their native language, which
@@ -767,6 +781,11 @@ const translations = {
     shareStatReviews: '복습',
     shareStatStreak: '연속 학습',
     shareStatLearned: '익힌 카드',
+    shareStatMatured: '새로 익힘',
+    shareStatTime: '공부 시간',
+    shareTimeHoursMinutes: '{h}시간 {m}분',
+    shareTimeHours: '{h}시간',
+    shareTimeMinutes: '{m}분',
     shareWindowDays: '지난 {count}일',
     shareChoose: '무엇을 공유할까요?',
     shareVariantWindow: '이 기간',
@@ -774,6 +793,7 @@ const translations = {
     shareFooter: 'Amgi',
     shareNothingYet: '아직 공유할 기록이 없습니다. 조금만 더 공부해 보세요.',
     shareFailed: '이미지를 만들지 못했습니다.',
+    shareBack: '뒤로',
     cardsPageTitle: '내 카드',
     cardsPageDescription: '가지고 있는 카드를 모두 검색하고 관리하세요. 직접 저장한 카드도, 단어팩에서 담은 카드도요.',
     cardsSearchPlaceholder: '카드 검색...',

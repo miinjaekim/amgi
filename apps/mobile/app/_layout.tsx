@@ -38,6 +38,15 @@ export default function RootLayout() {
                 the streak breaks. Reached from the gear on the Progress
                 header; nothing deep-links to it. */}
             <Stack.Screen name="settings" />
+            {/* The share preview, pushed rather than presented as a modal —
+                and that is load-bearing, not a style choice. `Sharing.shareAsync`
+                presents a native view controller, which iOS silently refuses
+                while a React Native `Modal` is still animating out. The old
+                chooser was a `Modal`, so the OS sheet never appeared, its
+                promise never settled, and the Share button stayed disabled for
+                the rest of the session. A pushed screen is not mid-transition
+                when its own button is tapped, so the race cannot happen. */}
+            <Stack.Screen name="share" />
           </Stack>
           <FirstRun />
         </PronunciationProvider>
