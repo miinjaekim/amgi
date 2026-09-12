@@ -79,6 +79,38 @@ export function isCardMature(intervals: (number | undefined)[]): boolean {
   return intervals.some(interval => (interval ?? 0) >= MATURE_INTERVAL_DAYS);
 }
 
+/** Just enough of a card to judge maturity, legacy field included. */
+type CardForMaturity = {
+  frontToBack?: Pick<ReviewTracking, 'interval'>;
+  backToFront?: Pick<ReviewTracking, 'interval'>;
+  /** @deprecated What a card last rated before the direction split carries. */
+  interval?: number;
+};
+
+/**
+ * Whether a *card* is learned, from whatever tracking it happens to carry.
+ *
+ * `isCardMature` takes intervals; this takes the card, and knows where they
+ * live — including the pre-bidirectional top-level `interval`, which is the
+ * only one a card last rated before the split has.
+ *
+ * It exists because "learned" became a **stored field** on the card document on
+ * 2026-09-12, rather than something each reader derives. Three places have to
+ * agree about it exactly — the rating write, the undo write, and the one-off
+ * backfill over existing cards — and three call sites each picking their own
+ * field set is precisely how they would stop agreeing.
+ *
+ * ⚠️ **Why a stored flag at all.** The interval has always been on the card, so
+ * "is this learned" was answerable for the whole deck at any time — but only by
+ * reading every card. A boolean can be counted by `getCountFromServer`, an
+ * aggregation billed per index scan rather than per document, and two equality
+ * filters (`uid`, `mature`) need no composite index. That is the difference
+ * between a dashboard tile costing ten reads and costing a thousand.
+ */
+export function isFlashcardMature(card: CardForMaturity): boolean {
+  return isCardMature([card.frontToBack?.interval, card.backToFront?.interval, card.interval]);
+}
+
 /**
  * What one rating did to a card's maturity: `1` if it took the card over the
  * line, `-1` if it knocked it back under, `0` if nothing changed.

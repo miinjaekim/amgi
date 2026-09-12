@@ -20,22 +20,14 @@ const parse = (query: string) => readShareImageParams(new URLSearchParams(query)
 
 describe('reading the parameters', () => {
   it('reads a full set', () => {
-    const p = parse('w=30&r=1284&s=12&l=47&lang=Korean');
+    const p = parse('w=30&r=1284&s=12&lang=Korean');
     expect(p).toMatchObject({
-      windowDays: 30, reviews: 1284, streak: 12, learned: 47, lang: 'Korean',
+      windowDays: 30, reviews: 1284, streak: 12, lang: 'Korean',
     });
   });
 
   it('defaults to a 30-day window when none is given', () => {
     expect(parse('').windowDays).toBe(30);
-  });
-
-  it('distinguishes a withheld figure from a zero one', () => {
-    // The distinction the whole `null` design rests on. `buildShareStats`
-    // returns null for a figure the window cannot cover; a 0 on a shared image
-    // is a claim, not a gap, so the two must not collapse here.
-    expect(parse('r=10').learned).toBeNull();
-    expect(parse('r=10&l=0').learned).toBe(0);
   });
 
   it('reads the variant, defaulting to the window card', () => {
@@ -59,19 +51,15 @@ describe('reading the parameters', () => {
   });
 
   it('ignores the parameters an older build still sends', () => {
-    // Retention and days studied both came off the image on 2026-09-12. Mobile
-    // ships by build and this route is server-side, so an installed build goes
-    // on appending `ret` and `d` for as long as it is on the phone: they must
-    // be inert, never a failure.
-    expect(parse('r=10&ret=88&d=23')).toMatchObject({ reviews: 10 });
-    expect(parse('r=10&ret=88&d=23')).not.toHaveProperty('retention');
-    expect(parse('r=10&ret=88&d=23')).not.toHaveProperty('daysStudied');
-  });
-
-  it('keeps a negative cardsLearned, which is a real value', () => {
-    // Net maturity can genuinely go negative over a window where more cards
-    // lapsed than matured. Clamping it to zero would hide that.
-    expect(parse('l=-3').learned).toBe(-3);
+    // Retention, days studied and cards learned all came off the image on
+    // 2026-09-12. Mobile ships by build and this route is server-side, so an
+    // installed build goes on appending `ret`, `d` and `l` for as long as it is
+    // on the phone: they must be inert, never a failure.
+    const stale = 'r=10&ret=88&d=23&l=47';
+    expect(parse(stale)).toMatchObject({ reviews: 10 });
+    expect(parse(stale)).not.toHaveProperty('retention');
+    expect(parse(stale)).not.toHaveProperty('daysStudied');
+    expect(parse(stale)).not.toHaveProperty('learned');
   });
 
   it('floors the counts that cannot be negative', () => {

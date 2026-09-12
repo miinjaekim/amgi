@@ -101,16 +101,16 @@ describe('buildShareStats numbers', () => {
       day(LATER, { reviews: 10, cardsMatured: 3, studySeconds: 240 }),
       day(shiftDate(LATER, -1), { reviews: 4, cardsMatured: 1, studySeconds: 96 }),
     ]);
-    expect(stats.cardsLearned).toBe(4);
     expect(stats.studySeconds).toBe(336);
   });
 
-  it('nets a card that matured and later lapsed back out', () => {
-    const stats = statsFor([
-      day(LATER, { reviews: 1, cardsMatured: -1 }),
-      day(shiftDate(LATER, -1), { reviews: 1, cardsMatured: 1 }),
-    ]);
-    expect(stats.cardsLearned).toBe(0);
+  it('carries no cards-learned figure at all', () => {
+    // It became an all-time number on 2026-09-12, and an all-time number cannot
+    // sit on a canvas where every other figure names one window. The window's
+    // crossings are still summed by summarizeProgress for whoever wants them.
+    const stats = statsFor([day(LATER, { reviews: 10, cardsMatured: 3 })]);
+    expect(stats).not.toHaveProperty('cardsLearned');
+    expect(new URLSearchParams(shareImageQuery(stats)).has('l')).toBe(false);
   });
 });
 
@@ -123,7 +123,6 @@ describe('the two history boundaries', () => {
       [day(endDate, { reviews: 20, cardsMatured: 2, studySeconds: 300 })],
       { streak: 3, endDate, windowDays: 30 },
     );
-    expect(stats.cardsLearned).toBeNull();
     expect(stats.studySeconds).toBeNull();
     // The numbers that were always written are unaffected by that boundary.
     expect(stats.reviews).toBe(20);
@@ -133,10 +132,10 @@ describe('the two history boundaries', () => {
     // No code change between this and the case above — only the calendar.
     const endDate = shiftDate(DETAILED_HISTORY_START, 29);
     const stats = buildShareStats(
-      [day(endDate, { reviews: 20, cardsMatured: 2 })],
+      [day(endDate, { reviews: 20, cardsMatured: 2, studySeconds: 120 })],
       { streak: 3, endDate, windowDays: 30 },
     );
-    expect(stats.cardsLearned).toBe(2);
+    expect(stats.studySeconds).toBe(120);
   });
 
   it('flags a window reaching back before any rollup exists', () => {
@@ -157,7 +156,7 @@ describe('the two history boundaries', () => {
     const endDate = shiftDate(DETAILED_HISTORY_START, 1);
     const stats = buildShareStats([], { streak: 0, endDate, windowDays: 14 });
     expect(stats.partialHistory).toBe(false);
-    expect(stats.cardsLearned).toBeNull();
+    expect(stats.studySeconds).toBeNull();
   });
 });
 
@@ -183,10 +182,10 @@ describe('fullyCoveredWindow', () => {
       const endDate = shiftDate(DETAILED_HISTORY_START, offset);
       const windowDays = fullyCoveredWindow(endDate, 30);
       const stats = buildShareStats(
-        [day(endDate, { reviews: 1, cardsMatured: 1 })],
+        [day(endDate, { reviews: 1, studySeconds: 30 })],
         { streak: 1, endDate, windowDays },
       );
-      expect(stats.cardsLearned).not.toBeNull();
+      expect(stats.studySeconds).not.toBeNull();
     }
   });
 });
@@ -222,21 +221,7 @@ describe('shareImageQuery', () => {
     expect(q.get('w')).toBe('30');
     expect(q.get('r')).toBe('40');
     expect(q.get('s')).toBe('7');
-    expect(q.get('l')).toBe('3');
     expect(q.get('lang')).toBe('Korean');
-  });
-
-  it('omits a withheld figure rather than sending zero', () => {
-    // The contract between `buildShareStats` and the route. Sending `l=0` would
-    // draw a "0 cards learned" tile, which is a claim the data cannot support.
-    const endDate = shiftDate(DETAILED_HISTORY_START, 2);
-    const stats = buildShareStats([day(endDate, { reviews: 5 })], {
-      streak: 1, endDate, windowDays: 30,
-    });
-    expect(stats.cardsLearned).toBeNull();
-    const q = new URLSearchParams(shareImageQuery(stats));
-    expect(q.has('l')).toBe(false);
-    expect(q.has('r')).toBe(true);
   });
 
   it('no longer sends retention, however many verdicts the window holds', () => {
@@ -293,17 +278,7 @@ describe('shareImageQuery', () => {
     const parsed = readShareImageParams(new URLSearchParams(shareImageQuery(stats, 'Korean')));
     expect(parsed.reviews).toBe(stats.reviews);
     expect(parsed.streak).toBe(stats.streak);
-    expect(parsed.learned).toBe(stats.cardsLearned);
     expect(parsed.cells).toEqual(stats.heatmap.map(c => c.level));
-  });
-
-  it('round-trips a withheld figure as withheld', () => {
-    const endDate = shiftDate(DETAILED_HISTORY_START, 2);
-    const stats = buildShareStats([day(endDate, { reviews: 5 })], {
-      streak: 1, endDate, windowDays: 30,
-    });
-    const parsed = readShareImageParams(new URLSearchParams(shareImageQuery(stats)));
-    expect(parsed.learned).toBeNull();
   });
 });
 

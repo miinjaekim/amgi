@@ -17,6 +17,7 @@ import {
   getNextReviewDate,
   getReading,
   getStudyLanguageConfig,
+  isCardMature,
   legacyNextReview,
   maturityChange,
   trackingFor,
@@ -393,6 +394,11 @@ export default function ReviewPage() {
     // deprecated field and the undo that restores it agree — and so a card due
     // sooner the other way round isn't pushed out by a rating on this one.
     update.nextReview = legacyNextReview({ interval, ease, repetitions, nextReview }, otherTracking);
+    // "Learned" is a stored field as of 2026-09-12, so the rating that changes
+    // it has to write it. From both directions, the same rule `maturityChange`
+    // above applies — and written even when false, so a lapse clears the flag
+    // instead of leaving the card counted as learned forever.
+    update.mature = isCardMature([interval, otherTracking?.interval]);
 
     const collectionName = getCardsCollection(studyLanguage);
     // Fire-and-forget: Firestore queues writes offline and syncs when reconnected.
@@ -443,6 +449,11 @@ export default function ReviewPage() {
       [`${direction}.repetitions`]: tracking.repetitions,
       [`${direction}.nextReview`]: new Date(tracking.nextReview),
       nextReview: legacyNextReview(tracking, otherTracking),
+      // Undo restores what the rating consumed, and `mature` is now part of
+      // that. Recomputed from the tracking being put back rather than negated,
+      // because maturity is a threshold: a rating that crossed it and an undo
+      // that uncrosses it are not symmetric arithmetic.
+      mature: isCardMature([tracking.interval, otherTracking?.interval]),
     };
     updateDoc(doc(db, getCardsCollection(studyLanguage), cardId), update).catch(err => {
       console.error('Failed to undo card scheduling:', err);

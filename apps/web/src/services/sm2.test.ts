@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { getNextReviewData } from './sm2';
 import {
-  MATURE_INTERVAL_DAYS, freshTracking, isCardMature, isDue, legacyNextReview,
-  maturityChange, trackingFor,
+  MATURE_INTERVAL_DAYS, freshTracking, isCardMature, isDue, isFlashcardMature,
+  legacyNextReview, maturityChange, trackingFor,
 } from '@amgi/core';
 import { Flashcard } from './firestore';
 
@@ -166,6 +166,27 @@ describe('maturity', () => {
   it('treats an untracked direction as zero rather than as missing', () => {
     expect(isCardMature([undefined, undefined])).toBe(false);
     expect(isCardMature([undefined, MATURE_INTERVAL_DAYS])).toBe(true);
+  });
+
+  it('reads maturity off a whole card, legacy field included', () => {
+    // What the stored `mature` flag is computed from, in all three places that
+    // write it — the rating, the undo, and the one-off backfill. They agree
+    // because they call this rather than each picking their own field set.
+    expect(isFlashcardMature({ frontToBack: { interval: MATURE_INTERVAL_DAYS } })).toBe(true);
+    expect(isFlashcardMature({ backToFront: { interval: 40 } })).toBe(true);
+    expect(isFlashcardMature({
+      frontToBack: { interval: 6 },
+      backToFront: { interval: 6 },
+    })).toBe(false);
+    expect(isFlashcardMature({})).toBe(false);
+  });
+
+  it('counts a card last rated before the direction split', () => {
+    // Its interval lives in the deprecated top-level field and nowhere else, so
+    // a backfill reading only the two directions would silently score every one
+    // of these as unlearned.
+    expect(isFlashcardMature({ interval: 60 })).toBe(true);
+    expect(isFlashcardMature({ interval: 6 })).toBe(false);
   });
 
   it('reports the crossing, not the state', () => {

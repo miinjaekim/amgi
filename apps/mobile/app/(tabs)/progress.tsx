@@ -7,7 +7,7 @@ import { File, Paths } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import {
   PROGRESS_HISTORY_START, SUPPORTED_STUDY_LANGUAGES, buildHeatmap, buildShareStats,
-  buildTodayStats, buildWeekGrid, cardsLearnedIn, hasShareableHistory,
+  CARD_COLLECTIONS, buildTodayStats, buildWeekGrid, hasShareableHistory,
   historyStartsMidWindow, localDateString,
   shareImageFilename, shareImagePath, shiftDate,
   summarizeProgress, t,
@@ -20,6 +20,8 @@ import BottomSheet from '../../src/components/BottomSheet';
 import StudyLanguageList from '../../src/components/StudyLanguageList';
 import { useFloatingTabBarHeight } from '../../src/components/FloatingTabBar';
 import { fetchRecentProgress } from '../../src/services/progress';
+import { backfillMatureFlags, countMatureFlashcards } from '../../src/services/firestore';
+import { getUserPreferences, saveUserPreferences } from '../../src/services/userPreferences';
 import type { Palette } from '../../src/theme';
 
 /** The web deployment that renders the share image, same host as every AI route. */
@@ -74,6 +76,20 @@ export default function ProgressScreen() {
   const [switcherOpen, setSwitcherOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
   const [sharing, setSharing] = useState(false);
+  /**
+   * Cards learned — all of them, not a window's worth.
+   *
+   * "Learned" is a *state*: a card whose interval has reached 21 days. That is
+   * readable from the card itself and always has been, for every card, with no
+   * date boundary — which is why this no longer asks the rollups. They only
+   * ever knew the *day a card crossed*, and that began on 2026-09-06, so a
+   * windowed version could not appear on any range this tab offers until
+   * October.
+   *
+   * Null while counting, and null if the count fails: an absent tile says less
+   * than a tile showing a wrong number.
+   */
+  const [matureCount, setMatureCount] = useState<number | null>(null);
 
   // Refetch on focus, matching every other mobile screen — the review tab is
   // where these numbers change, and it is one tap away.
@@ -89,6 +105,38 @@ export default function ProgressScreen() {
         .catch(() => { if (!cancelled) setDays([]); });
       return () => { cancelled = true; };
     }, [user, rangeDays]),
+  );
+
+  // Counted on focus like the rollups beside it: the review tab is one tap away
+  // and is exactly where this number changes.
+  useFocusEffect(
+    useCallback(() => {
+      if (!user) { setMatureCount(null); return; }
+      let cancelled = false;
+      (async () => {
+        try {
+          // The flag is written by every rating from 2026-09-12, but a card not
+          // rated since carries none — and long-interval cards are exactly the
+          // ones nobody has rated lately. The backfill runs first, once per
+          // account, or the very first count would miss most of its subject.
+          const prefs = await getUserPreferences(user.uid);
+          if (!prefs?.matureBackfillAt) {
+            await backfillMatureFlags(user.uid);
+            await saveUserPreferences(user.uid, { matureBackfillAt: localDateString() });
+          }
+          // Cards shard per language, so the whole deck means every collection.
+          // Aggregation counts, so this is ten cheap queries rather than a read
+          // of every card.
+          const counts = await Promise.all(
+            CARD_COLLECTIONS.map(({ code }) => countMatureFlashcards(user.uid, code)),
+          );
+          if (!cancelled) setMatureCount(counts.reduce((total, n) => total + n, 0));
+        } catch {
+          if (!cancelled) setMatureCount(null);
+        }
+      })();
+      return () => { cancelled = true; };
+    }, [user]),
   );
 
   /**
@@ -289,15 +337,7 @@ export default function ProgressScreen() {
   const windowStart = shiftDate(localDateString(), -(rangeDays - 1));
   const partialWindow = historyStartsMidWindow(windowStart);
 
-  /**
-   * Cards learned, over as much of the window as the counter can answer for.
-   *
-   * Withholding it outright — what the shared image still does — meant it never
-   * appeared here at all: every range on offer is 30 days or more, and
-   * `cardsMatured` only began on 2026-09-06. A shorter span with the span said
-   * out loud beats an absent tile on a screen with room to say it.
-   */
-  const learned = cardsLearnedIn(days ?? [], localDateString(), rangeDays);
+  const learned = matureCount;
 
   return (
     <SafeAreaView style={s.safe} edges={['top']}>
@@ -380,16 +420,7 @@ export default function ProgressScreen() {
                   counts *cards* where Reviews above counts directions — the
                   reason they carry different nouns and never one shared one. */}
               {learned !== null && (
-                <Stat
-                  s={s}
-                  label={t(nativeLanguage, 'shareStatLearned')}
-                  value={learned.count}
-                  note={learned.partial
-                    ? t(nativeLanguage, 'progressSince', {
-                      date: formatDay(nativeLanguage, learned.from),
-                    })
-                    : undefined}
-                />
+                <Stat s={s} label={t(nativeLanguage, 'shareStatLearned')} value={learned} />
               )}
             </View>
 
@@ -699,18 +730,15 @@ function describeDay(
   return parts.join(' · ');
 }
 
-function Stat({ s, label, value, note }: {
+function Stat({ s, label, value }: {
   s: ReturnType<typeof makeStyles>;
   label: string;
   value: string | number;
-  /** Qualifies the figure when it covers less than the selected range. */
-  note?: string;
 }) {
   return (
     <View style={s.stat}>
       <Text style={s.statValue}>{value}</Text>
       <Text style={s.statLabel}>{label}</Text>
-      {note !== undefined && <Text style={s.statNote}>{note}</Text>}
     </View>
   );
 }
@@ -773,7 +801,6 @@ function makeStyles(C: Palette, tabBarHeight: number) {
     stat: { flexGrow: 1, flexBasis: '45%', padding: 12, borderRadius: 12, borderWidth: 1, borderColor: C.border },
     statValue: { color: C.highlight, fontSize: 20, fontWeight: '700' },
     statLabel: { color: C.muted, fontSize: 12, marginTop: 2 },
-    statNote: { color: C.muted, fontSize: 10, opacity: 0.8, marginTop: 1 },
     sectionTitle: { color: C.text, fontSize: 14, fontWeight: '700', marginBottom: 10 },
     sectionNote: { color: C.muted, fontSize: 11, marginTop: -4, marginBottom: 10 },
     calendarRow: { flexDirection: 'row' },

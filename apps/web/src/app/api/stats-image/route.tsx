@@ -144,8 +144,6 @@ export interface ShareImageParams {
   windowDays: number;
   reviews: number;
   streak: number;
-  /** `null` means withheld, and must stay absent from the image, not render 0. */
-  learned: number | null;
   /**
    * The languages reviewed in the window, busiest first.
    *
@@ -186,15 +184,12 @@ export function readShareImageParams(q: URLSearchParams): ShareImageParams {
     windowDays,
     reviews: Math.max(0, Math.round(num('r'))),
     streak: Math.max(0, Math.round(num('s'))),
-    // Absent rather than zero: `buildShareStats` withholds a figure the window
-    // cannot honestly cover, and a 0 on a shared image is a claim, not a gap.
-    learned: q.has('l') ? Math.round(num('l')) : null,
     languages: (q.get('g') ?? '').split(',').filter(isStudyLanguage),
-    // `ret` and `d` are deliberately not read. Retention and days studied both
-    // came off the image on 2026-09-12, but mobile ships by build and the route
-    // is server-side, so an installed build goes on appending them for as long
-    // as it is there. An unread parameter is ignored; neither may ever become a
-    // parse failure.
+    // `ret`, `d` and `l` are deliberately not read. Retention, days studied and
+    // cards learned all came off the image on 2026-09-12, but mobile ships by
+    // build and the route is server-side, so an installed build goes on
+    // appending them for as long as it is there. An unread parameter is
+    // ignored; none of them may ever become a parse failure.
     cells: [...heat, ...Array(Math.max(0, windowDays - heat.length)).fill(0)],
   };
 }
@@ -214,7 +209,7 @@ export function layoutHeatmap(cells: number[], windowDays: number) {
 
 export async function GET(req: NextRequest) {
   const {
-    lang, variant, windowDays, reviews, streak, learned, languages, cells,
+    lang, variant, windowDays, reviews, streak, languages, cells,
   } = readShareImageParams(req.nextUrl.searchParams);
   const label = (key: TranslationKey, vars?: Record<string, string | number>) => t(lang, key, vars);
 
@@ -234,14 +229,13 @@ export async function GET(req: NextRequest) {
   const regular = fontData(NOTO_SANS_KR_REGULAR_BASE64);
   const bold = fontData(NOTO_SANS_KR_BOLD_BASE64);
 
-  // Days studied came off on 2026-09-12: beside a streak it read as a second
-  // opinion on the same thing, and the streak is the one people mean.
+  // One tile left, and deliberately. Days studied came off on 2026-09-12
+  // because beside a streak it read as a second opinion on the same thing, and
+  // cards learned came off because it now means an all-time figure, which
+  // cannot share a canvas with numbers that all name one window.
   const tiles: { label: string; value: string }[] = [
     { label: label('shareStatStreak'), value: formatCount(streak) },
   ];
-  if (learned !== null) {
-    tiles.push({ label: label('shareStatLearned'), value: formatCount(learned) });
-  }
 
   return new ImageResponse(
     (

@@ -4,10 +4,12 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useUser } from '@/components/UserContext';
 import { fetchRecentProgress } from '@/services/progress';
 import {
-  buildHeatmap, buildShareStats, buildTodayStats, buildWeekGrid, cardsLearnedIn,
+  CARD_COLLECTIONS, buildHeatmap, buildShareStats, buildTodayStats, buildWeekGrid,
   hasShareableHistory, localDateString, summarizeProgress,
   type DailyProgress, type StudyLanguage,
 } from '@amgi/core';
+import { backfillMatureFlags, countMatureFlashcards } from '@/services/firestore';
+import { getUserPreferences, saveUserPreferences } from '@/services/userPreferences';
 import { t } from '@/lib/i18n';
 import ShareStatsButton from '@/components/ShareStatsButton';
 
@@ -150,6 +152,57 @@ export default function ProgressPage() {
     { variant: 'today' as const, stats: todayStats },
   ].filter(option => hasShareableHistory(option.stats))), [shareStats, todayStats]);
 
+  /**
+   * Cards learned — all of them, not a window's worth.
+   *
+   * "Learned" is a *state*: a card whose interval has reached 21 days. That is
+   * readable from the card itself and always has been, for every card, with no
+   * date boundary — which is why this no longer asks the rollups. They only
+   * ever knew the *day a card crossed*, and that began on 2026-09-06, so a
+   * windowed version of this figure could not appear on any range the tab
+   * offers until October.
+   *
+   * Null while it is still being counted, and null if the count fails: an
+   * absent tile says less than a tile showing a wrong number.
+   *
+   * ⚠️ **Above the early returns, with the other hooks.** This was briefly
+   * written where the old windowed helper was called — a plain function call
+   * sitting after `if (authLoading) return null`, which is fine for a function
+   * and a rules-of-hooks violation for these two.
+   */
+  const [learned, setLearned] = useState<number | null>(null);
+
+  useEffect(() => {
+    // No `setLearned(null)` here: the tile only renders inside the signed-in
+    // branch, so a stale count cannot be shown, and clearing it synchronously
+    // in an effect body is the cascading-render pattern this file avoids.
+    if (!user) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        // The flag is written by every rating from 2026-09-12, but a card not
+        // rated since carries none — and long-interval cards are exactly the
+        // ones nobody has rated lately. So the backfill runs first, once per
+        // account, or the very first count would miss most of its subject.
+        const prefs = await getUserPreferences(user.uid);
+        if (!prefs?.matureBackfillAt) {
+          await backfillMatureFlags(user.uid);
+          await saveUserPreferences(user.uid, { matureBackfillAt: localDateString() });
+        }
+        // Cards shard per language, so the whole deck means every collection.
+        // Aggregation counts, so this is ten cheap queries rather than a read
+        // of every card.
+        const counts = await Promise.all(
+          CARD_COLLECTIONS.map(({ code }) => countMatureFlashcards(user.uid, code)),
+        );
+        if (!cancelled) setLearned(counts.reduce((total, n) => total + n, 0));
+      } catch {
+        if (!cancelled) setLearned(null);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [user]);
+
   if (authLoading) return null;
 
   if (!user) {
@@ -164,16 +217,6 @@ export default function ProgressPage() {
   }
 
   const hasHistory = summary.totalReviews > 0 || summary.totalNewCards > 0 || summary.totalPackCards > 0;
-
-  /**
-   * Cards learned, over as much of the window as the counter can answer for.
-   *
-   * Withholding it outright — what the shared image still does — meant it never
-   * appeared here at all: every range on offer is 30 days or more, and
-   * `cardsMatured` only began on 2026-09-06. A shorter span with the span said
-   * out loud beats an absent tile on a screen with room to say it.
-   */
-  const learned = cardsLearnedIn(days ?? [], localDateString(), rangeDays);
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -237,15 +280,7 @@ export default function ProgressPage() {
                 *cards* where Reviews counts directions — the reason they carry
                 different nouns and never one shared one. */}
             {learned !== null && (
-              <Stat
-                label={t(nativeLanguage, 'shareStatLearned')}
-                value={learned.count}
-                note={learned.partial
-                  ? t(nativeLanguage, 'progressSince', {
-                    date: formatDay(nativeLanguage, learned.from),
-                  })
-                  : undefined}
-              />
+              <Stat label={t(nativeLanguage, 'shareStatLearned')} value={learned} />
             )}
           </div>
 
@@ -472,19 +507,11 @@ function describeDay(
   return parts.join(' · ');
 }
 
-function Stat({ label, value, note }: {
-  label: string;
-  value: string | number;
-  /** Qualifies the figure when it covers less than the selected range. */
-  note?: string;
-}) {
+function Stat({ label, value }: { label: string; value: string | number }) {
   return (
     <div className="p-3 rounded-xl border border-[var(--color-muted)]">
       <div className="text-xl font-bold text-[var(--color-highlight)]">{value}</div>
       <div className="text-xs text-[var(--color-muted)] mt-0.5">{label}</div>
-      {note !== undefined && (
-        <div className="text-[10px] text-[var(--color-muted)] opacity-80 mt-0.5">{note}</div>
-      )}
     </div>
   );
 }

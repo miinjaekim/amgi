@@ -1,7 +1,7 @@
 import { db } from '@/config/firebase';
 import { collection, addDoc, Timestamp, query, where, orderBy, getDocs, getCountFromServer, onSnapshot, doc, updateDoc, deleteDoc, writeBatch } from 'firebase/firestore';
 import type { DocumentData, QueryDocumentSnapshot } from 'firebase/firestore';
-import { getStudyLanguageConfig, hunEum } from '@amgi/core';
+import { CARD_COLLECTIONS, getStudyLanguageConfig, hunEum, isFlashcardMature } from '@amgi/core';
 import { recordNewCards } from './progress';
 import type { Flashcard, ReviewTracking, StudyLanguage } from '@amgi/core';
 
@@ -168,6 +168,64 @@ export async function countUserFlashcards(uid: string, studyLanguage?: StudyLang
   );
   const snapshot = await getCountFromServer(q);
   return snapshot.data().count;
+}
+
+/**
+ * How many cards are learned right now, in one language.
+ *
+ * An aggregation, not a read of every card: `getCountFromServer` bills per
+ * index scan rather than per document, and two equality filters are served by
+ * merging single-field indexes, so this needs **no composite index** — which is
+ * what makes it affordable on a screen people open often. See
+ * `isFlashcardMature` for why the flag is stored rather than derived.
+ */
+export async function countMatureFlashcards(
+  uid: string,
+  studyLanguage?: StudyLanguage,
+): Promise<number> {
+  const snapshot = await getCountFromServer(query(
+    collection(db, getCardsCollection(studyLanguage)),
+    where('uid', '==', uid),
+    where('mature', '==', true),
+  ));
+  return snapshot.data().count;
+}
+
+/**
+ * Write `mature` onto the cards that earned it before the flag existed.
+ *
+ * Every rating writes the flag from 2026-09-12, but a card not rated since
+ * carries none — and a long-interval card is exactly the kind that has not been
+ * rated lately, so without this the count would miss most of what it is meant
+ * to report. Unlike a daily rollup this **can** be backfilled: the interval is
+ * current state sitting on the document, not a past event nobody recorded.
+ *
+ * Only mature cards are written. A card below the line needs no flag — the
+ * count filters on `mature == true`, which a missing field does not match — so
+ * the one-off write touches the minority rather than the whole deck.
+ *
+ * Batched at 400 like the pack import, because a single batch caps at 500 and a
+ * user well past that is precisely the user this matters most to.
+ */
+export async function backfillMatureFlags(uid: string): Promise<number> {
+  let written = 0;
+  for (const { collection: collectionName } of CARD_COLLECTIONS) {
+    const snapshot = await getDocs(query(
+      collection(db, collectionName),
+      where('uid', '==', uid),
+    ));
+    const stale = snapshot.docs.filter(entry => {
+      const data = entry.data();
+      return data.mature !== true && isFlashcardMature(data);
+    });
+    for (let i = 0; i < stale.length; i += 400) {
+      const batch = writeBatch(db);
+      for (const entry of stale.slice(i, i + 400)) batch.update(entry.ref, { mature: true });
+      await batch.commit();
+    }
+    written += stale.length;
+  }
+  return written;
 }
 
 export async function fetchAllUserFlashcards(uid: string, studyLanguage?: StudyLanguage): Promise<Flashcard[]> {

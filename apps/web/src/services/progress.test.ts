@@ -3,7 +3,6 @@ import {
   applyDelta,
   buildHeatmap,
   buildWeekGrid,
-  cardsLearnedIn,
   clampThinkTime,
   dateRange,
   deriveStreak,
@@ -239,51 +238,6 @@ describe('buildHeatmap', () => {
   it('is all zeroes when nothing was reviewed', () => {
     const cells = buildHeatmap([], '2026-08-19', 3);
     expect(cells.every(cell => cell.level === 0 && cell.reviews === 0)).toBe(true);
-  });
-});
-
-describe('cardsLearnedIn', () => {
-  const DETAILED = '2026-09-06';
-
-  it('shortens the window to where the counter starts, and says it did', () => {
-    // The case that made this exist: every range on offer is 30 days or more,
-    // so withholding meant the tile never appeared at all.
-    const learned = cardsLearnedIn(
-      [day('2026-09-10', { cardsMatured: 3 }), day('2026-09-12', { cardsMatured: 2 })],
-      '2026-09-12',
-      30,
-    );
-    expect(learned).toEqual({ count: 5, from: DETAILED, partial: true });
-  });
-
-  it('counts nothing from before the counter existed, even with rows there', () => {
-    // Days before 2026-09-06 read zero for this field whatever they contain,
-    // so including them would be an undercount dressed as a total.
-    const learned = cardsLearnedIn(
-      [day('2026-08-20', { cardsMatured: 99 }), day('2026-09-10', { cardsMatured: 1 })],
-      '2026-09-12',
-      30,
-    );
-    expect(learned?.count).toBe(1);
-  });
-
-  it('stops being partial once the window fits inside the recorded span', () => {
-    const learned = cardsLearnedIn([day('2026-10-10', { cardsMatured: 4 })], '2026-10-20', 30);
-    expect(learned).toEqual({ count: 4, from: '2026-09-21', partial: false });
-  });
-
-  it('is null only when the window ends before there was anything to count', () => {
-    expect(cardsLearnedIn([], '2026-09-05', 30)).toBeNull();
-    expect(cardsLearnedIn([], DETAILED, 30)).toEqual({ count: 0, from: DETAILED, partial: true });
-  });
-
-  it('nets a lapse back out, like the window total does', () => {
-    const learned = cardsLearnedIn(
-      [day('2026-09-08', { cardsMatured: 2 }), day('2026-09-09', { cardsMatured: -1 })],
-      '2026-09-12',
-      30,
-    );
-    expect(learned?.count).toBe(1);
   });
 });
 

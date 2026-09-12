@@ -91,19 +91,20 @@ export interface ShareStats {
   streak: number;
 
   /**
-   * Net cards that crossed the maturity line inside the window — cards, not
-   * directions — or `null` when the window reaches back before the counter
-   * existed.
+   * ⚠️ **There is deliberately no `cardsLearned` here** (removed 2026-09-12).
    *
-   * `null` rather than an undercount, following what `retentionRate` already
-   * does with a slice that has no verdicts: a figure that cannot be trusted
-   * reads as *not recorded*, never as a real number that happens to be low.
-   * Until `DETAILED_HISTORY_START` is a full window behind us this is `null`
-   * for any window long enough to be worth posting, and the image shows four
-   * numbers instead of five. It starts answering on its own, with no code
-   * change, once the window clears the boundary.
+   * "Cards learned" now means a state rather than a change — every card whose
+   * interval has reached `MATURE_INTERVAL_DAYS`, counted from the cards
+   * themselves — and that is an all-time figure. An all-time number on this
+   * image would break the rule the whole module is built on: every figure here
+   * shares one window, because an image is read at thumbnail size and out of
+   * context. Keeping a *windowed* one would be worse still, since the dashboard
+   * tile beside it wears the same words and reports a different number.
+   *
+   * The window's maturity crossings are still summed — `summarizeProgress`
+   * returns `totalCardsMatured` — so a window-scoped figure can come back here
+   * whenever it is given a label that says which window it means.
    */
-  cardsLearned: number | null;
 
   /** Seconds with a card on screen, or `null` before the counter existed. */
   studySeconds: number | null;
@@ -171,7 +172,6 @@ export function buildShareStats(days: DailyProgress[], input: ShareStatsInput): 
     windowDays,
     reviews: summary.totalReviews,
     streak,
-    cardsLearned: detailed ? summary.totalCardsMatured : null,
     studySeconds: detailed ? summary.totalStudySeconds : null,
     languages: summary.byLanguage
       .filter(entry => entry.progress.reviews > 0)
@@ -185,8 +185,8 @@ export function buildShareStats(days: DailyProgress[], input: ShareStatsInput): 
  * Today's numbers, from the rows the dashboard already has.
  *
  * A one-day window, which is all "today" is — so it inherits the filtering, the
- * gap-filling and both history boundaries rather than restating them. Note
- * `cardsLearned` is never withheld here in practice: a window that starts today
+ * gap-filling and both history boundaries rather than restating them. Note that
+ * `studySeconds` is never withheld here in practice: a window starting today
  * cannot reach back past `DETAILED_HISTORY_START`.
  */
 export function buildTodayStats(
@@ -250,7 +250,6 @@ export function shareImageQuery(
   q.set('w', String(stats.windowDays));
   q.set('r', String(stats.reviews));
   q.set('s', String(stats.streak));
-  if (stats.cardsLearned !== null) q.set('l', String(stats.cardsLearned));
   // Codes rather than display names: shorter, stable, and it leaves the label
   // in the reader's own language rather than the sharer's.
   if (stats.languages.length > 0) q.set('g', stats.languages.join(','));
