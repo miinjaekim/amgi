@@ -35,6 +35,7 @@ import {
   historyStartsMidWindow, shiftDate, summarizeProgress,
   type DailyProgress, type HeatmapCell,
 } from './progress';
+import { t } from './i18n';
 import type { StudyLanguage } from './types';
 
 /**
@@ -91,23 +92,34 @@ export interface ShareStats {
   streak: number;
 
   /**
-   * ⚠️ **There is deliberately no `cardsLearned` here** (removed 2026-09-12).
+   * Cards that crossed into maturity **inside the window**, or `null` before
+   * the counter existed.
    *
-   * "Cards learned" now means a state rather than a change — every card whose
-   * interval has reached `MATURE_INTERVAL_DAYS`, counted from the cards
-   * themselves — and that is an all-time figure. An all-time number on this
-   * image would break the rule the whole module is built on: every figure here
-   * shares one window, because an image is read at thumbnail size and out of
-   * context. Keeping a *windowed* one would be worse still, since the dashboard
-   * tile beside it wears the same words and reports a different number.
+   * ⚠️ **This is not the dashboard's "Cards learned"**, and the two must never
+   * wear the same label. That tile is a *state* — every card whose interval has
+   * reached `MATURE_INTERVAL_DAYS`, counted from the cards themselves — and so
+   * it is an all-time figure that cannot sit on a canvas where every other
+   * number names one window. This is the *change* over the window, which can,
+   * and it is rendered as "Newly learned" for exactly that reason.
    *
-   * The window's maturity crossings are still summed — `summarizeProgress`
-   * returns `totalCardsMatured` — so a window-scoped figure can come back here
-   * whenever it is given a label that says which window it means.
+   * An all-time figure was considered and rejected here on 2026-09-12; the
+   * windowed one arrived 2026-09-12 under its own label, which is the condition
+   * the rejection named.
    */
+  cardsMatured: number | null;
 
   /** Seconds with a card on screen, or `null` before the counter existed. */
   studySeconds: number | null;
+
+  /**
+   * Cards saved plus cards taken from packs, over the window.
+   *
+   * Unlike the two above this has been written since rollups began, so it is
+   * never withheld — it is subject only to `partialHistory`, the same as
+   * `reviews`. Zero is a truthful answer rather than a gap, and the render
+   * drops the tile at zero as a layout choice, not as a claim.
+   */
+  cardsAdded: number;
 
   /**
    * Which languages the window's reviews were in, busiest first.
@@ -172,7 +184,12 @@ export function buildShareStats(days: DailyProgress[], input: ShareStatsInput): 
     windowDays,
     reviews: summary.totalReviews,
     streak,
+    // Both share one boundary because both counters began the same day; a
+    // window reaching past it undercounts in a way that reads as a quiet
+    // fortnight rather than as missing data, which is why it is withheld.
+    cardsMatured: detailed ? summary.totalCardsMatured : null,
     studySeconds: detailed ? summary.totalStudySeconds : null,
+    cardsAdded: summary.totalNewCards + summary.totalPackCards,
     languages: summary.byLanguage
       .filter(entry => entry.progress.reviews > 0)
       .map(entry => entry.studyLanguage),
@@ -313,6 +330,12 @@ export function shareImageQuery(
   q.set('w', String(stats.windowDays));
   q.set('r', String(stats.reviews));
   q.set('s', String(stats.streak));
+  // Withheld figures are omitted entirely; a 0 here would be a claim. `a` is
+  // omitted at zero too, but only to keep the URL short — the route reads an
+  // absent `a` as zero and draws no tile either way.
+  if (stats.cardsMatured !== null) q.set('m', String(stats.cardsMatured));
+  if (stats.studySeconds !== null) q.set('t', String(stats.studySeconds));
+  if (stats.cardsAdded > 0) q.set('a', String(stats.cardsAdded));
   // Codes rather than display names: shorter, stable, and it leaves the label
   // in the reader's own language rather than the sharer's.
   if (stats.languages.length > 0) q.set('g', stats.languages.join(','));
@@ -346,4 +369,25 @@ export function shareImageFilename(
   return variant === 'today'
     ? `amgi-${stats.windowEnd}-today.png`
     : `amgi-${stats.windowEnd}-${stats.windowDays}d.png`;
+}
+
+/**
+ * Study time as a tile reads it: `2h 40m`, `40m`, `2h`.
+ *
+ * Rounded to the minute, because the tile is a boast rather than a stopwatch
+ * and a seconds figure invites arithmetic nobody wants to do. The wording lives
+ * in `i18n` rather than here so Korean gets 시간/분 rather than an h/m that
+ * would look machine-translated, and the hour-only case is its own key because
+ * "2시간 0분" is not something anyone writes.
+ *
+ * Anything under a minute rounds to `0m` — the render drops the tile before it
+ * gets here, so that string should never reach a canvas.
+ */
+export function formatStudyTime(seconds: number, lang?: string | null): string {
+  const minutes = Math.max(0, Math.round(seconds / 60));
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  if (hours === 0) return t(lang, 'shareTimeMinutes', { m: rest });
+  if (rest === 0) return t(lang, 'shareTimeHours', { h: hours });
+  return t(lang, 'shareTimeHoursMinutes', { h: hours, m: rest });
 }

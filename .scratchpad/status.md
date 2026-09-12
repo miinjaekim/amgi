@@ -443,15 +443,36 @@ not mid-transition when its own button is tapped, which removes the race rather
 than narrowing it. Web is untouched and keeps its `<details>` of anchors.
 
 **The preview screen offers a card per range, not per variant.** Swiping is only
-worth doing over more than two things, so it draws 30/90/364 plus today, opening
-on whichever range the Progress tab had selected. That means it needs a year of
-rows where the tab only holds the range it shows — so it runs **one** 364-day
-query of its own on open, the same single indexed read the "1yr" chip already
-does. `buildShareStats`'s no-reads promise is intact: what costs a read is the
-new screen, not the numbers. Which cards exist is `buildShareCards` in core,
-tested there, so the per-card zeroed-image gate and the ordering cannot drift
-between platforms. Errors are inline and the Share button is its own retry —
-an `Alert` fired during that same dismissal was subject to the very bug above.
+worth doing over more than two things, so it draws **30 and 90 days plus
+today**, opening on whichever range the Progress tab had selected. ⚠️ **The year
+is deliberately not offered** (user's call): 364 cells is a wall that says less
+about how you are doing lately than 30 does, and opening from the year chip
+falls through to the 30-day card. So the screen needs 90 days of rows where the
+tab holds only the range it shows — **one** 90-day query of its own on open, the
+same shape of single indexed read the range chips already do.
+`buildShareStats`'s no-reads promise is intact: what costs a read is the new
+screen, not the numbers. Which cards exist is `buildShareCards` in core, tested
+there, so the per-card zeroed-image gate and the ordering cannot drift between
+platforms. Errors are inline and the Share button is its own retry — an `Alert`
+fired during that same dismissal was subject to the very bug above.
+
+**The card carries four tiles now, and two of them are blank until October**
+(2026-09-12, user's call). Streak was the only one left after the cull earlier
+the same day; it is joined by **Newly learned**, **Time studied** and **Cards
+added**. ⚠️ **"Newly learned" is not the dashboard's "Cards learned"** — that
+tile is the all-time count of cards past `MATURE_INTERVAL_DAYS`, which cannot
+share a canvas where every other figure names one window, so this is
+`cardsMatured`, the *crossings* inside the window, under a label that says so.
+The rejection recorded here on 2026-09-12 named exactly that condition, and this
+meets it. ⚠️ **Both it and Time studied are withheld until the window clears
+`DETAILED_HISTORY_START` (2026-09-06)**: the Today card shows them immediately,
+the 30-day card from **2026-10-05** and the 90-day card from **2026-12-04**. A
+withheld figure is omitted from the URL rather than sent as 0, and the route
+draws no tile for it — so the row is built, not declared, and a card can carry
+anywhere from one to four tiles. Cards added has no such boundary and reuses the
+dashboard's own `progressStatNewCards` wording, since the two count the same
+thing. Tile type shrinks at three or more, because "Time studied" at 30px does
+not fit the ~228px a fourth tile gets.
 
 **The image names languages and will never split its figures by them.**
 `byLanguage.reviews` goes back to the start; the verdicts inside it only to

@@ -7,6 +7,7 @@ import {
   buildTodayStats,
   emptyDailyProgress,
   emptyLanguageProgress,
+  formatStudyTime,
   fullyCoveredWindow,
   hasShareableHistory,
   shareImageFilename,
@@ -401,5 +402,111 @@ describe('buildShareCards', () => {
     const names = cardsFor(busyThroughout)
       .map(card => shareImageFilename(card.stats, card.variant));
     expect(new Set(names).size).toBe(names.length);
+  });
+});
+
+describe('the tile figures', () => {
+  it('sums maturity crossings and seconds over a covered window', () => {
+    const stats = statsFor([
+      day(LATER, { reviews: 10, cardsMatured: 3, studySeconds: 240 }),
+      day(shiftDate(LATER, -1), { reviews: 4, cardsMatured: 1, studySeconds: 96 }),
+    ]);
+    expect(stats.cardsMatured).toBe(4);
+    expect(stats.studySeconds).toBe(336);
+  });
+
+  it('withholds both when the window predates the counters', () => {
+    // Null rather than an undercount: these were first written on 2026-09-06,
+    // so a window reaching further back reads as a quiet fortnight instead of
+    // as missing data — which is the whole reason the boundary exists.
+    const stats = buildShareStats(
+      [day(DETAILED_HISTORY_START, { reviews: 10, cardsMatured: 3, studySeconds: 240 })],
+      { streak: 7, endDate: DETAILED_HISTORY_START, windowDays: 30 },
+    );
+    expect(stats.cardsMatured).toBeNull();
+    expect(stats.studySeconds).toBeNull();
+  });
+
+  it('is a windowed count, never the dashboard all-time one', () => {
+    // The dashboard's "Cards learned" is every card whose interval reached 21
+    // days, all-time. This counts crossings inside the window, which is why the
+    // two carry different labels and must never be reconciled.
+    const stats = statsFor([
+      day(LATER, { cardsMatured: 2, reviews: 1 }),
+      day(shiftDate(LATER, -40), { cardsMatured: 500, reviews: 1 }),
+    ], 30);
+    expect(stats.cardsMatured).toBe(2);
+  });
+
+  it('counts cards added from both sources and never withholds them', () => {
+    // Written since rollups began, so unlike the two above this survives a
+    // window reaching back past the detailed boundary.
+    const stats = buildShareStats(
+      [day(PROGRESS_HISTORY_START, { newCards: 6, packCards: 90 })],
+      { streak: 0, endDate: PROGRESS_HISTORY_START, windowDays: 30 },
+    );
+    expect(stats.cardsAdded).toBe(96);
+  });
+
+  it('reports no cards added as zero rather than as withheld', () => {
+    expect(statsFor([day(LATER, { reviews: 4 })]).cardsAdded).toBe(0);
+  });
+});
+
+describe('shareImageQuery for the tile figures', () => {
+  it('sends each figure under its own key', () => {
+    const stats = statsFor([
+      day(LATER, { reviews: 10, cardsMatured: 3, studySeconds: 240, newCards: 5 }),
+    ]);
+    const q = new URLSearchParams(shareImageQuery(stats));
+    expect([q.get('m'), q.get('t'), q.get('a')]).toEqual(['3', '240', '5']);
+  });
+
+  it('omits a withheld figure rather than sending it as zero', () => {
+    // The contract between this and the route: absent means "the window cannot
+    // honestly cover this", and a 0 on a shared image is a claim.
+    const withheld = buildShareStats([], {
+      streak: 0, endDate: DETAILED_HISTORY_START, windowDays: 30,
+    });
+    const q = new URLSearchParams(shareImageQuery(withheld));
+    expect(q.has('m')).toBe(false);
+    expect(q.has('t')).toBe(false);
+  });
+
+  it('still sends a real zero, which means the window covered it and found none', () => {
+    const covered = statsFor([day(LATER, { reviews: 10 })]);
+    const q = new URLSearchParams(shareImageQuery(covered));
+    expect(q.get('m')).toBe('0');
+    expect(q.get('t')).toBe('0');
+  });
+
+  it('omits cards added at zero, which draws no tile either way', () => {
+    expect(new URLSearchParams(shareImageQuery(statsFor([day(LATER, { reviews: 4 })])))
+      .has('a')).toBe(false);
+  });
+});
+
+describe('formatStudyTime', () => {
+  it('writes minutes alone under an hour', () => {
+    expect(formatStudyTime(40 * 60)).toBe('40m');
+  });
+
+  it('writes hours and minutes together', () => {
+    expect(formatStudyTime(2 * 3600 + 40 * 60)).toBe('2h 40m');
+  });
+
+  it('drops the minutes on a whole hour, which nobody writes as 2h 0m', () => {
+    expect(formatStudyTime(2 * 3600)).toBe('2h');
+  });
+
+  it('rounds to the nearest minute rather than showing seconds', () => {
+    expect(formatStudyTime(100)).toBe('2m');
+    expect(formatStudyTime(89)).toBe('1m');
+  });
+
+  it('reads in Korean units when the reader is Korean', () => {
+    expect(formatStudyTime(2 * 3600 + 40 * 60, 'Korean')).toBe('2시간 40분');
+    expect(formatStudyTime(40 * 60, 'Korean')).toBe('40분');
+    expect(formatStudyTime(2 * 3600, 'Korean')).toBe('2시간');
   });
 });

@@ -23,7 +23,7 @@ corrected heatmap ramp (a palette change, so it is visible on every theme), the
 all-time cards learned tile and its per-language counts, the weekly review bar
 chart under the calendar, retention and days studied gone from the tiles and the
 language rows, and the share flow — now a full-screen preview swiped card by
-card, one per range plus today.
+card, 30 days and 90 days plus today, each carrying four tiles rather than one.
 
 ⚠️ **The sheet-based chooser this replaces never worked on iOS, and was queued
 for this same build.** It closed its own `Modal` on the way to

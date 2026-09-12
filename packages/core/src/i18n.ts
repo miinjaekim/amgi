@@ -189,6 +189,16 @@ const translations = {
     // Never "cards reviewed": `reviews` counts directions, so only this label
     // is a card count. See `ShareStats.reviews`.
     shareStatLearned: 'Cards learned',
+    // ⚠️ Deliberately *not* 'Cards learned'. That tile is an all-time state;
+    // this one counts crossings inside the window, and the two numbers differ.
+    // Sharing a label would make the image contradict the dashboard.
+    shareStatMatured: 'Newly learned',
+    shareStatTime: 'Time studied',
+    // Read at story size, so the unit is spelled the short way. The hour-only
+    // case is separate because "2h 0m" is not something anyone writes.
+    shareTimeHoursMinutes: '{h}h {m}m',
+    shareTimeHours: '{h}h',
+    shareTimeMinutes: '{m}m',
     shareWindowDays: 'Last {count} days',
     // The chooser in front of the share sheet, and the label the today card
     // wears at the top. One key for both: they name the same thing, and the
@@ -771,6 +781,11 @@ const translations = {
     shareStatReviews: '복습',
     shareStatStreak: '연속 학습',
     shareStatLearned: '익힌 카드',
+    shareStatMatured: '새로 익힘',
+    shareStatTime: '공부 시간',
+    shareTimeHoursMinutes: '{h}시간 {m}분',
+    shareTimeHours: '{h}시간',
+    shareTimeMinutes: '{m}분',
     shareWindowDays: '지난 {count}일',
     shareChoose: '무엇을 공유할까요?',
     shareVariantWindow: '이 기간',

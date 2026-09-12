@@ -67,6 +67,33 @@ describe('reading the parameters', () => {
     expect([p.reviews, p.streak]).toEqual([0, 0]);
   });
 
+  it('reads the tile figures', () => {
+    const p = parse('m=18&t=9600&a=96');
+    expect(p).toMatchObject({ cardsMatured: 18, studySeconds: 9600, cardsAdded: 96 });
+  });
+
+  it('tells a withheld figure apart from a zero one', () => {
+    // The distinction the whole `optional` helper exists for: absent means the
+    // window could not honestly cover it and the tile is not drawn, where 0
+    // means it covered it and the answer was none. Collapsing them would put a
+    // confident zero on a card that has no idea.
+    expect(parse('r=10')).toMatchObject({ cardsMatured: null, studySeconds: null });
+    expect(parse('m=0&t=0')).toMatchObject({ cardsMatured: 0, studySeconds: 0 });
+    expect(parse('m=&t=')).toMatchObject({ cardsMatured: null, studySeconds: null });
+  });
+
+  it('reads cards added as zero when absent, since it is never withheld', () => {
+    expect(parse('r=10').cardsAdded).toBe(0);
+  });
+
+  it('refuses junk in the tile figures rather than drawing it', () => {
+    expect(parse('m=abc&t=NaN')).toMatchObject({ cardsMatured: null, studySeconds: null });
+    expect(parse('m=-4&t=-9&a=-3')).toMatchObject({
+      cardsMatured: 0, studySeconds: 0, cardsAdded: 0,
+    });
+    expect(parse('t=1e999').studySeconds).toBeNull();
+  });
+
   it('treats junk as zero rather than throwing', () => {
     const p = parse('r=abc&s=NaN&w=zzz');
     expect([p.reviews, p.streak]).toEqual([0, 0]);

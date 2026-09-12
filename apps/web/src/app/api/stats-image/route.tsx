@@ -26,7 +26,7 @@
 import { ImageResponse } from 'next/og';
 import { NextRequest } from 'next/server';
 import {
-  isStudyLanguage, t,
+  formatStudyTime, isStudyLanguage, t,
   type ShareVariant, type StudyLanguage, type TranslationKey,
 } from '@amgi/core';
 import { NOTO_SANS_KR_BOLD_BASE64, NOTO_SANS_KR_REGULAR_BASE64, fontData } from './fonts';
@@ -88,12 +88,34 @@ function formatCount(value: number): string {
   return `${(value / 1000).toFixed(value < 100_000 ? 1 : 0)}K`;
 }
 
-/** One of the small figures under the hero. */
-function StatTile({ label, value }: { label: string; value: string }) {
+/**
+ * One of the small figures under the hero.
+ *
+ * `compact` is not a style preference: at three tiles the row gives each about
+ * 300px and at four about 228px, and "Time studied" at 30px does not fit 228
+ * on one line. Shrinking both sizes together keeps the value dominant over its
+ * label, which is the only thing that has to survive a thumbnail.
+ */
+function StatTile({ label, value, compact }: {
+  label: string;
+  value: string;
+  compact?: boolean;
+}) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 }}>
-      <div style={{ fontSize: 76, fontWeight: 700, color: C.text, lineHeight: 1.1 }}>{value}</div>
-      <div style={{ fontSize: 30, color: C.muted, marginTop: 10, textAlign: 'center' }}>{label}</div>
+    <div style={{
+      display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1,
+      paddingLeft: 8, paddingRight: 8,
+    }}>
+      <div style={{
+        fontSize: compact ? 58 : 76, fontWeight: 700, color: C.text, lineHeight: 1.1,
+      }}>
+        {value}
+      </div>
+      <div style={{
+        fontSize: compact ? 25 : 30, color: C.muted, marginTop: 10, textAlign: 'center',
+      }}>
+        {label}
+      </div>
     </div>
   );
 }
@@ -153,6 +175,15 @@ export interface ShareImageParams {
    * subset fonts to the nine real names.
    */
   languages: StudyLanguage[];
+  /**
+   * Cards that matured inside the window, and seconds studied in it — `null`
+   * when the window reaches back before either counter existed, which is the
+   * caller withholding them rather than reporting zero.
+   */
+  cardsMatured: number | null;
+  studySeconds: number | null;
+  /** Cards added in the window. Never withheld; zero simply draws no tile. */
+  cardsAdded: number;
   /** Exactly `windowDays` levels, 0–4, padded and truncated to fit. */
   cells: number[];
 }
@@ -167,6 +198,19 @@ export function readShareImageParams(q: URLSearchParams): ShareImageParams {
     if (value === null || value.trim() === '') return fallback;
     const raw = Number(value);
     return Number.isFinite(raw) ? raw : fallback;
+  };
+  /**
+   * A figure that may legitimately be absent, kept apart from `num`.
+   *
+   * `null` means the caller withheld it because its window could not honestly
+   * cover it; a real `0` means it covered it and the answer was none. Collapsing
+   * the two is exactly the lie `buildShareStats` withholds to avoid.
+   */
+  const optional = (key: string): number | null => {
+    const value = q.get(key);
+    if (value === null || value.trim() === '') return null;
+    const raw = Number(value);
+    return Number.isFinite(raw) ? Math.max(0, Math.round(raw)) : null;
   };
   const windowDays = Math.max(1, Math.min(400, Math.round(num('w', 30))));
 
@@ -184,12 +228,19 @@ export function readShareImageParams(q: URLSearchParams): ShareImageParams {
     windowDays,
     reviews: Math.max(0, Math.round(num('r'))),
     streak: Math.max(0, Math.round(num('s'))),
+    // Absent means withheld, which is why these cannot go through `num`: its
+    // fallback would turn "the window cannot cover this" into a drawn zero.
+    cardsMatured: optional('m'),
+    studySeconds: optional('t'),
+    cardsAdded: Math.max(0, Math.round(num('a'))),
     languages: (q.get('g') ?? '').split(',').filter(isStudyLanguage),
     // `ret`, `d` and `l` are deliberately not read. Retention, days studied and
-    // cards learned all came off the image on 2026-09-12, but mobile ships by
-    // build and the route is server-side, so an installed build goes on
-    // appending them for as long as it is there. An unread parameter is
-    // ignored; none of them may ever become a parse failure.
+    // an all-time cards learned all came off the image on 2026-09-12, but
+    // mobile ships by build and the route is server-side, so an installed build
+    // goes on appending them for as long as it is there. An unread parameter is
+    // ignored; none of them may ever become a parse failure. (`m` is the
+    // *windowed* maturity count that arrived later — a different number under a
+    // different key, so an old build's `l` can never be mistaken for it.)
     cells: [...heat, ...Array(Math.max(0, windowDays - heat.length)).fill(0)],
   };
 }
@@ -210,6 +261,7 @@ export function layoutHeatmap(cells: number[], windowDays: number) {
 export async function GET(req: NextRequest) {
   const {
     lang, variant, windowDays, reviews, streak, languages, cells,
+    cardsMatured, studySeconds, cardsAdded,
   } = readShareImageParams(req.nextUrl.searchParams);
   const label = (key: TranslationKey, vars?: Record<string, string | number>) => t(lang, key, vars);
 
@@ -229,13 +281,33 @@ export async function GET(req: NextRequest) {
   const regular = fontData(NOTO_SANS_KR_REGULAR_BASE64);
   const bold = fontData(NOTO_SANS_KR_BOLD_BASE64);
 
-  // One tile left, and deliberately. Days studied came off on 2026-09-12
-  // because beside a streak it read as a second opinion on the same thing, and
-  // cards learned came off because it now means an all-time figure, which
-  // cannot share a canvas with numbers that all name one window.
+  /**
+   * The figures under the calendar, however many of them there are.
+   *
+   * Days studied is still absent on purpose — beside a streak it read as a
+   * second opinion on the same question. The three that joined it on
+   * 2026-09-12 each name the window the rest of the card names: maturity
+   * *crossings* rather than the dashboard's all-time state, seconds actually
+   * spent, and cards added. Any of the first two can be withheld, and cards
+   * added can be zero, so this row is built rather than declared — a tile whose
+   * number the window cannot cover is not drawn at all, which is why nothing
+   * here ever renders a placeholder dash.
+   */
   const tiles: { label: string; value: string }[] = [
     { label: label('shareStatStreak'), value: formatCount(streak) },
   ];
+  if (cardsMatured !== null) {
+    tiles.push({ label: label('shareStatMatured'), value: formatCount(cardsMatured) });
+  }
+  if (studySeconds !== null && studySeconds > 0) {
+    tiles.push({ label: label('shareStatTime'), value: formatStudyTime(studySeconds, lang) });
+  }
+  if (cardsAdded > 0) {
+    // The dashboard's own words, reused rather than restated: the two surfaces
+    // count the same thing and must not name it differently.
+    tiles.push({ label: label('progressStatNewCards'), value: formatCount(cardsAdded) });
+  }
+  const compactTiles = tiles.length >= 3;
 
   return new ImageResponse(
     (
@@ -316,7 +388,12 @@ export async function GET(req: NextRequest) {
 
         <div style={{ display: 'flex', width: '100%' }}>
           {tiles.map(tile => (
-            <StatTile key={tile.label} label={tile.label} value={tile.value} />
+            <StatTile
+              key={tile.label}
+              label={tile.label}
+              value={tile.value}
+              compact={compactTiles}
+            />
           ))}
         </div>
 

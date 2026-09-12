@@ -42,13 +42,15 @@ import type { Palette } from '../src/theme';
 const API_BASE_URL = (process.env.EXPO_PUBLIC_API_BASE_URL ?? '').replace(/\/$/, '');
 
 /**
- * The windows on offer, matching the Progress tab's range chips.
+ * The windows on offer — the Progress tab's range chips **minus the year**.
  *
- * Shared shape, not a shared constant: `RANGES` there carries i18n keys for
- * chips and this carries day counts for `buildShareCards`. If one gains a range
- * the other should too, which is why they are named the same thing.
+ * Deliberately narrower than `RANGES` there (2026-09-12, user's call): a year
+ * card is a wall of 364 cells that says less about how you are doing lately
+ * than the 30-day one does, and it was the least likely of the three to be
+ * posted. Opening from the year chip lands on the 30-day card, which `openAt`
+ * already handles by falling through to the first.
  */
-const WINDOWS = [30, 90, 364] as const;
+const WINDOWS = [30, 90] as const;
 
 /** Enough rows for the longest card. One query, same as picking "1yr". */
 const HISTORY_DAYS = Math.max(...WINDOWS);
