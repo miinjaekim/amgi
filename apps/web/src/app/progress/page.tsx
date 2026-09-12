@@ -4,8 +4,9 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useUser } from '@/components/UserContext';
 import { fetchRecentProgress } from '@/services/progress';
 import {
-  buildHeatmap, buildShareStats, buildWeekGrid, detailedHistoryStartsMidWindow,
-  hasShareableHistory, localDateString, shiftDate, summarizeProgress,
+  buildHeatmap, buildShareStats, buildTodayStats, buildWeekGrid,
+  detailedHistoryStartsMidWindow, hasShareableHistory, localDateString, shiftDate,
+  summarizeProgress,
   type DailyProgress, type StudyLanguage,
 } from '@amgi/core';
 import { t } from '@/lib/i18n';
@@ -132,6 +133,24 @@ export default function ProgressPage() {
     [days, streak, rangeDays],
   );
 
+  /** Today's numbers, from the same rows — a one-day window, nothing more. */
+  const todayStats = useMemo(
+    () => buildTodayStats(days ?? [], { streak, endDate: localDateString() }),
+    [days, streak],
+  );
+
+  /**
+   * What there is to share, and nothing that would go out blank.
+   *
+   * ⚠️ **The gate is asked per variant.** A today card on a day with nothing
+   * rated is exactly the zeroed image `hasShareableHistory` exists to prevent,
+   * however full the 90-day window beside it happens to be.
+   */
+  const shareOptions = useMemo(() => ([
+    { variant: 'window' as const, stats: shareStats },
+    { variant: 'today' as const, stats: todayStats },
+  ].filter(option => hasShareableHistory(option.stats))), [shareStats, todayStats]);
+
   if (authLoading) return null;
 
   if (!user) {
@@ -187,9 +206,9 @@ export default function ProgressPage() {
         ))}
         {/* Offered only once there is something on the image. A zeroed story
             asset is not a modest result, it is a broken-looking one. */}
-        {hasShareableHistory(shareStats) && (
+        {shareOptions.length > 0 && (
           <div className="ml-auto">
-            <ShareStatsButton stats={shareStats} nativeLanguage={nativeLanguage} />
+            <ShareStatsButton options={shareOptions} nativeLanguage={nativeLanguage} />
           </div>
         )}
       </div>

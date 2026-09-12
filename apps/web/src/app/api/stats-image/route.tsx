@@ -25,7 +25,10 @@
  */
 import { ImageResponse } from 'next/og';
 import { NextRequest } from 'next/server';
-import { isStudyLanguage, t, type StudyLanguage, type TranslationKey } from '@amgi/core';
+import {
+  isStudyLanguage, t,
+  type ShareVariant, type StudyLanguage, type TranslationKey,
+} from '@amgi/core';
 import { NOTO_SANS_KR_BOLD_BASE64, NOTO_SANS_KR_REGULAR_BASE64, fontData } from './fonts';
 
 /** Story format. Instagram, KakaoTalk and every other story surface use 9:16. */
@@ -132,6 +135,12 @@ const HEATMAP_MAX_HEIGHT = 620;
  */
 export interface ShareImageParams {
   lang: string | null;
+  /**
+   * Which layout to draw. Anything unrecognised is the window card, which is
+   * also what a URL with no `v` at all means — so every link an older build
+   * ever produced keeps rendering what it always rendered.
+   */
+  variant: ShareVariant;
   windowDays: number;
   reviews: number;
   streak: number;
@@ -174,6 +183,7 @@ export function readShareImageParams(q: URLSearchParams): ShareImageParams {
     // `t` falls back to English for anything it does not recognise, so the raw
     // parameter goes straight through rather than being validated twice.
     lang: q.get('lang'),
+    variant: q.get('v') === 'today' ? 'today' : 'window',
     windowDays,
     reviews: Math.max(0, Math.round(num('r'))),
     streak: Math.max(0, Math.round(num('s'))),
@@ -205,7 +215,7 @@ export function layoutHeatmap(cells: number[], windowDays: number) {
 
 export async function GET(req: NextRequest) {
   const {
-    lang, windowDays, reviews, streak, daysStudied, learned, languages, cells,
+    lang, variant, windowDays, reviews, streak, daysStudied, learned, languages, cells,
   } = readShareImageParams(req.nextUrl.searchParams);
   const label = (key: TranslationKey, vars?: Record<string, string | number>) => t(lang, key, vars);
 
@@ -227,8 +237,12 @@ export async function GET(req: NextRequest) {
 
   const tiles: { label: string; value: string }[] = [
     { label: label('shareStatStreak'), value: formatCount(streak) },
-    { label: label('shareStatDays'), value: formatCount(daysStudied) },
   ];
+  // Days studied is a window figure. On a one-day card it can only ever read
+  // 1, which is not a statistic.
+  if (variant === 'window') {
+    tiles.push({ label: label('shareStatDays'), value: formatCount(daysStudied) });
+  }
   if (learned !== null) {
     tiles.push({ label: label('shareStatLearned'), value: formatCount(learned) });
   }
@@ -254,7 +268,9 @@ export async function GET(req: NextRequest) {
             range than the label would lie by juxtaposition. */}
         <div style={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
           <div style={{ fontSize: 34, color: C.muted, letterSpacing: 1 }}>
-            {label('shareWindowDays', { count: windowDays })}
+            {variant === 'today'
+              ? label('shareVariantToday')
+              : label('shareWindowDays', { count: windowDays })}
           </div>
         </div>
 
@@ -278,8 +294,10 @@ export async function GET(req: NextRequest) {
           )}
         </div>
 
+        {/* A calendar of one day is a single square, so the today card does
+            without one and lets the hero take the room. */}
         <div style={{ display: 'flex', flexDirection: 'column' }}>
-          {rows.map((row, y) => (
+          {variant === 'today' ? [] : rows.map((row, y) => (
             <div key={y} style={{ display: 'flex', marginBottom: y === rows.length - 1 ? 0 : gap }}>
               {row.map((level, x) => (
                 <div

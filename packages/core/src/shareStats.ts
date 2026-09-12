@@ -37,6 +37,22 @@ import {
 } from './progress';
 import type { StudyLanguage } from './types';
 
+/**
+ * Which picture to draw.
+ *
+ * **The numbers are the same builder either way** — `buildShareStats` over a
+ * one-day window is a correct set of figures for today — so this selects a
+ * *layout*, not a second pipeline. It travels in the query because the render
+ * lives behind one route: mobile cannot rasterize a view of its own without a
+ * native module that costs an EAS build and breaks Expo Go, so every variant
+ * has to come back from the same endpoint.
+ *
+ * ⚠️ **A today card is not the window template at `w=1`.** That layout is
+ * window-shaped — a hero, a wrapped calendar, a row of window figures — and one
+ * day of it is a single square and a tile reading "1 day studied".
+ */
+export type ShareVariant = 'window' | 'today';
+
 /** What the caller knows that the rows do not. */
 export interface ShareStatsInput {
   /**
@@ -169,6 +185,21 @@ export function buildShareStats(days: DailyProgress[], input: ShareStatsInput): 
 }
 
 /**
+ * Today's numbers, from the rows the dashboard already has.
+ *
+ * A one-day window, which is all "today" is — so it inherits the filtering, the
+ * gap-filling and both history boundaries rather than restating them. Note
+ * `cardsLearned` is never withheld here in practice: a window that starts today
+ * cannot reach back past `DETAILED_HISTORY_START`.
+ */
+export function buildTodayStats(
+  days: DailyProgress[],
+  input: Omit<ShareStatsInput, 'windowDays'>,
+): ShareStats {
+  return buildShareStats(days, { ...input, windowDays: 1 });
+}
+
+/**
  * The longest window, up to `preferred`, that every number can honestly fill.
  *
  * Offered so a caller can choose a shorter window over a withheld number,
@@ -210,8 +241,15 @@ export function hasShareableHistory(stats: ShareStats): boolean {
  * between this and the route: `null` means the window cannot honestly cover it,
  * and a 0 on a shared image is a claim rather than a gap.
  */
-export function shareImageQuery(stats: ShareStats, nativeLanguage?: string | null): string {
+export function shareImageQuery(
+  stats: ShareStats,
+  nativeLanguage?: string | null,
+  variant: ShareVariant = 'window',
+): string {
   const q = new URLSearchParams();
+  // Omitted for the window card, so every URL an older build ever built still
+  // means exactly what it meant.
+  if (variant !== 'window') q.set('v', variant);
   q.set('w', String(stats.windowDays));
   q.set('r', String(stats.reviews));
   q.set('s', String(stats.streak));
@@ -228,11 +266,26 @@ export function shareImageQuery(stats: ShareStats, nativeLanguage?: string | nul
 }
 
 /** The full path to the rendered image, relative to whatever host serves it. */
-export function shareImagePath(stats: ShareStats, nativeLanguage?: string | null): string {
-  return `/api/stats-image?${shareImageQuery(stats, nativeLanguage)}`;
+export function shareImagePath(
+  stats: ShareStats,
+  nativeLanguage?: string | null,
+  variant: ShareVariant = 'window',
+): string {
+  return `/api/stats-image?${shareImageQuery(stats, nativeLanguage, variant)}`;
 }
 
-/** The filename a share sheet or download offers it under. */
-export function shareImageFilename(stats: ShareStats): string {
-  return `amgi-${stats.windowEnd}-${stats.windowDays}d.png`;
+/**
+ * The filename a share sheet or download offers it under.
+ *
+ * The variant is in the name as well as the window: today's card and a 1-day
+ * window would otherwise collide, and mobile deletes by filename before
+ * downloading, so a collision there means sharing a stale picture.
+ */
+export function shareImageFilename(
+  stats: ShareStats,
+  variant: ShareVariant = 'window',
+): string {
+  return variant === 'today'
+    ? `amgi-${stats.windowEnd}-today.png`
+    : `amgi-${stats.windowEnd}-${stats.windowDays}d.png`;
 }

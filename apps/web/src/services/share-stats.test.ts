@@ -3,6 +3,7 @@ import {
   DETAILED_HISTORY_START,
   PROGRESS_HISTORY_START,
   buildShareStats,
+  buildTodayStats,
   emptyDailyProgress,
   emptyLanguageProgress,
   fullyCoveredWindow,
@@ -304,6 +305,42 @@ describe('shareImageQuery', () => {
     });
     const parsed = readShareImageParams(new URLSearchParams(shareImageQuery(stats)));
     expect(parsed.learned).toBeNull();
+  });
+});
+
+describe('the today card', () => {
+  const todayStats = (days: DailyProgress[]) =>
+    buildTodayStats(days, { streak: 4, endDate: LATER });
+
+  it('spans exactly the one day', () => {
+    const stats = todayStats([day(LATER, { reviews: 6 }), day(shiftDate(LATER, -1), { reviews: 99 })]);
+    expect(stats.windowDays).toBe(1);
+    expect(stats.windowStart).toBe(LATER);
+    expect(stats.reviews).toBe(6);
+  });
+
+  it('is offered or withheld on its own history, not the window behind it', () => {
+    // The gate has to be asked per variant: a today card on a day with nothing
+    // on it is the zeroed image the check exists to prevent, however full the
+    // 90-day window beside it is.
+    const busyWindowQuietToday = [day(shiftDate(LATER, -1), { reviews: 120 })];
+    expect(hasShareableHistory(statsFor(busyWindowQuietToday, 30))).toBe(true);
+    expect(hasShareableHistory(todayStats(busyWindowQuietToday))).toBe(false);
+  });
+
+  it('asks the route for a different picture, and only when it is today', () => {
+    const stats = todayStats([day(LATER, { reviews: 6 })]);
+    expect(new URLSearchParams(shareImageQuery(stats, null, 'today')).get('v')).toBe('today');
+    expect(new URLSearchParams(shareImageQuery(stats, null, 'window')).has('v')).toBe(false);
+    expect(new URLSearchParams(shareImageQuery(stats)).has('v')).toBe(false);
+  });
+
+  it('names its file apart from a one-day window, which would collide', () => {
+    // Mobile deletes by filename before downloading, so a collision there is a
+    // stale picture going out rather than a merely confusing name.
+    const stats = todayStats([day(LATER, { reviews: 6 })]);
+    expect(shareImageFilename(stats, 'today')).toMatch(/-today\.png$/);
+    expect(shareImageFilename(stats, 'today')).not.toBe(shareImageFilename(stats));
   });
 });
 

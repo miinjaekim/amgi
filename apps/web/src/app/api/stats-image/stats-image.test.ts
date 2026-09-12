@@ -39,6 +39,15 @@ describe('reading the parameters', () => {
     expect(parse('r=10&l=0').learned).toBe(0);
   });
 
+  it('reads the variant, defaulting to the window card', () => {
+    // Absent means window, so every URL an older build ever produced keeps
+    // rendering exactly what it rendered before the today card existed.
+    expect(parse('v=today').variant).toBe('today');
+    expect(parse('').variant).toBe('window');
+    expect(parse('v=window').variant).toBe('window');
+    expect(parse('v=nonsense').variant).toBe('window');
+  });
+
   it('keeps only real study languages out of the g parameter', () => {
     // The label is looked up as `label{code}`, so an invented code would draw
     // the key itself — and would ask the subset fonts for glyphs nobody put in

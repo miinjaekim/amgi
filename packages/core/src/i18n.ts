@@ -184,6 +184,12 @@ const translations = {
     shareStatLearned: 'Cards learned',
     shareStatDays: 'Days studied',
     shareWindowDays: 'Last {count} days',
+    // The chooser in front of the share sheet, and the label the today card
+    // wears at the top. One key for both: they name the same thing, and the
+    // image must not describe it differently from the row that picked it.
+    shareChoose: 'What to share',
+    shareVariantWindow: 'This window',
+    shareVariantToday: 'Today',
     shareFooter: 'Amgi',
     shareNothingYet: 'Study a little first — there is nothing to share yet.',
     shareFailed: 'Could not build the image.',
@@ -754,6 +760,9 @@ const translations = {
     shareStatLearned: '익힌 카드',
     shareStatDays: '공부한 날',
     shareWindowDays: '지난 {count}일',
+    shareChoose: '무엇을 공유할까요?',
+    shareVariantWindow: '이 기간',
+    shareVariantToday: '오늘',
     shareFooter: 'Amgi',
     shareNothingYet: '아직 공유할 기록이 없습니다. 조금만 더 공부해 보세요.',
     shareFailed: '이미지를 만들지 못했습니다.',

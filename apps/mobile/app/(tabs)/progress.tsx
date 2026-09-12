@@ -7,12 +7,12 @@ import { File, Paths } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import {
   PROGRESS_HISTORY_START, SUPPORTED_STUDY_LANGUAGES, buildHeatmap, buildShareStats,
-  buildWeekGrid, detailedHistoryStartsMidWindow, hasShareableHistory,
+  buildTodayStats, buildWeekGrid, detailedHistoryStartsMidWindow, hasShareableHistory,
   historyStartsMidWindow, localDateString,
   shareImageFilename, shareImagePath, shiftDate,
   summarizeProgress, t,
   type DailyProgress, type HeatmapCell, type LanguageProgress,
-  type StudyLanguage, type TranslationKey,
+  type ShareVariant, type StudyLanguage, type TranslationKey,
 } from '@amgi/core';
 import { useUser } from '../../src/context/UserContext';
 import { useTheme } from '../../src/context/ThemeContext';
@@ -72,6 +72,7 @@ export default function ProgressScreen() {
   const [days, setDays] = useState<DailyProgress[] | null>(null);
   const [rangeDays, setRangeDays] = useState<number>(90);
   const [switcherOpen, setSwitcherOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
   const [sharing, setSharing] = useState(false);
 
   // Refetch on focus, matching every other mobile screen — the review tab is
@@ -106,6 +107,24 @@ export default function ProgressScreen() {
     [days, streak, rangeDays],
   );
 
+  /** Today's numbers, from the same rows — a one-day window, nothing more. */
+  const todayStats = useMemo(
+    () => buildTodayStats(days ?? [], { streak, endDate: localDateString() }),
+    [days, streak],
+  );
+
+  /**
+   * What there is to share, and nothing that would go out blank.
+   *
+   * ⚠️ **The gate is asked per variant.** A today card on a day with nothing
+   * rated is exactly the zeroed image `hasShareableHistory` exists to prevent,
+   * however full the 90-day window beside it happens to be.
+   */
+  const shareOptions = useMemo(() => ([
+    { variant: 'window' as const, stats: shareStats, labelKey: 'shareVariantWindow' as const },
+    { variant: 'today' as const, stats: todayStats, labelKey: 'shareVariantToday' as const },
+  ].filter(option => hasShareableHistory(option.stats))), [shareStats, todayStats]);
+
   /**
    * Fetch the rendered PNG and hand it to the OS share sheet.
    *
@@ -118,20 +137,23 @@ export default function ProgressScreen() {
    * a local uri and cannot take a remote one; going through the download path
    * also avoids handling the image bytes in JS at all.
    */
-  const handleShare = async () => {
+  const handleShare = async (variant: ShareVariant) => {
     if (sharing) return;
+    setShareOpen(false);
     setSharing(true);
     try {
       if (!API_BASE_URL) throw new Error('no API base url configured');
       if (!(await Sharing.isAvailableAsync())) throw new Error('sharing unavailable');
 
-      const target = new File(Paths.cache, shareImageFilename(shareStats));
+      const stats = variant === 'today' ? todayStats : shareStats;
+      const target = new File(Paths.cache, shareImageFilename(stats, variant));
       // A cached file from an earlier share would be silently reused, so the
-      // window's own numbers could go out under a newer window's filename.
+      // window's own numbers could go out under a newer window's filename —
+      // which is also why the variant is part of that name.
       if (target.exists) target.delete();
 
       const file = await File.downloadFileAsync(
-        `${API_BASE_URL}${shareImagePath(shareStats, nativeLanguage)}`,
+        `${API_BASE_URL}${shareImagePath(stats, nativeLanguage, variant)}`,
         target,
         { idempotent: true },
       );
@@ -304,11 +326,11 @@ export default function ProgressScreen() {
               </TouchableOpacity>
             );
           })}
-          {/* Offered only once there is something on the image. A zeroed story
-              asset is not a modest result, it is a broken-looking one. */}
-          {hasShareableHistory(shareStats) && (
+          {/* Offered only once there is something on *some* image. A zeroed
+              story asset is not a modest result, it is a broken-looking one. */}
+          {shareOptions.length > 0 && (
             <TouchableOpacity
-              onPress={handleShare}
+              onPress={() => setShareOpen(true)}
               disabled={sharing}
               // The drawn chip is about 36×28, under the 44pt minimum, and it
               // sits at the very edge of the screen where a thumb is least
@@ -479,6 +501,26 @@ export default function ProgressScreen() {
         )}
       </ScrollView>
       {switcher}
+      {/* The same sheet the study-language switcher on this screen uses, rather
+          than a second kind of popover for the second thing that asks a
+          question. */}
+      <BottomSheet
+        visible={shareOpen}
+        title={t(nativeLanguage, 'shareChoose')}
+        onClose={() => setShareOpen(false)}
+      >
+        {shareOptions.map(option => (
+          <TouchableOpacity
+            key={option.variant}
+            style={s.shareOption}
+            onPress={() => handleShare(option.variant)}
+            accessibilityRole="button"
+          >
+            <Text style={s.shareOptionText}>{t(nativeLanguage, option.labelKey)}</Text>
+            <Ionicons name="share-outline" size={18} color={C.muted} />
+          </TouchableOpacity>
+        ))}
+      </BottomSheet>
     </SafeAreaView>
   );
 }
@@ -690,6 +732,12 @@ function makeStyles(C: Palette, tabBarHeight: number) {
     // text beside the icon to balance it.
     shareBtn: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, marginLeft: 'auto', flexShrink: 0, borderColor: C.highlight },
     shareBtnBusy: { opacity: 0.5 },
+    shareOption: {
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+      paddingVertical: 14, paddingHorizontal: 4,
+      borderBottomWidth: 1, borderBottomColor: C.border,
+    },
+    shareOptionText: { color: C.text, fontSize: 15 },
     rangeTextOn: { color: C.highlight, fontWeight: '700' },
     empty: { color: C.muted, fontSize: 14, paddingHorizontal: 16 },
     emptyBody: { color: C.muted, fontSize: 13, opacity: 0.7, marginTop: 8, paddingHorizontal: 16 },
