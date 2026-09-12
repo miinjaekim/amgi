@@ -993,6 +993,20 @@ export interface UserPreferences {
   longestStreak?: number;
   lastReviewDate?: string; // 'YYYY-MM-DD' in local timezone
   reviewedToday?: number;
+  /**
+   * The day the one-off `mature` backfill completed, `YYYY-MM-DD`.
+   *
+   * `mature` is written by every rating from 2026-09-12, but a card not rated
+   * since carries no flag — and those are exactly the long-interval cards a
+   * "cards learned" count is mostly made of. So the flag is backfilled once
+   * from the intervals already on the documents. Unlike a daily rollup, this
+   * *can* be backfilled: the interval is current state, not a past event.
+   *
+   * Recorded here rather than inferred, because the alternative is re-reading
+   * every card in ten collections on every visit to find out whether it is
+   * needed. Absent means it has not run for this account.
+   */
+  matureBackfillAt?: string;
 }
 
 export const SUPPORTED_NATIVE_LANGUAGES = [
@@ -1002,6 +1016,17 @@ export const SUPPORTED_NATIVE_LANGUAGES = [
 
 export const SUPPORTED_STUDY_LANGUAGES: { code: StudyLanguage; label: string; labelNative: string }[] =
   Object.values(STUDY_LANGUAGE_CONFIGS).map(({ code, label, labelNative }) => ({ code, label, labelNative }));
+
+/**
+ * Every card collection, paired with the language it holds.
+ *
+ * Cards shard per language — the collection name *is* the routing — so any
+ * question about the whole deck rather than the current language has to visit
+ * all of them. Derived from the registry rather than listed by hand, so a tenth
+ * language is not a list someone forgets to update.
+ */
+export const CARD_COLLECTIONS: { code: StudyLanguage; collection: string }[] =
+  Object.values(STUDY_LANGUAGE_CONFIGS).map(({ code, collection }) => ({ code, collection }));
 
 // Backward compat alias used by existing UI code
 export const SUPPORTED_LANGUAGES = SUPPORTED_NATIVE_LANGUAGES;

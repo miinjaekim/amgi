@@ -20,10 +20,9 @@ const parse = (query: string) => readShareImageParams(new URLSearchParams(query)
 
 describe('reading the parameters', () => {
   it('reads a full set', () => {
-    const p = parse('w=30&r=1284&s=12&d=23&l=47&ret=88&lang=Korean');
+    const p = parse('w=30&r=1284&s=12&lang=Korean');
     expect(p).toMatchObject({
-      windowDays: 30, reviews: 1284, streak: 12, daysStudied: 23,
-      learned: 47, retention: 88, lang: 'Korean',
+      windowDays: 30, reviews: 1284, streak: 12, lang: 'Korean',
     });
   });
 
@@ -31,30 +30,46 @@ describe('reading the parameters', () => {
     expect(parse('').windowDays).toBe(30);
   });
 
-  it('distinguishes a withheld figure from a zero one', () => {
-    // The distinction the whole `null` design rests on. `buildShareStats`
-    // returns null for a figure the window cannot cover; a 0 on a shared image
-    // is a claim, not a gap, so the two must not collapse here.
-    expect(parse('r=10').learned).toBeNull();
-    expect(parse('r=10').retention).toBeNull();
-    expect(parse('r=10&l=0&ret=0').learned).toBe(0);
-    expect(parse('r=10&l=0&ret=0').retention).toBe(0);
+  it('reads the variant, defaulting to the window card', () => {
+    // Absent means window, so every URL an older build ever produced keeps
+    // rendering exactly what it rendered before the today card existed.
+    expect(parse('v=today').variant).toBe('today');
+    expect(parse('').variant).toBe('window');
+    expect(parse('v=window').variant).toBe('window');
+    expect(parse('v=nonsense').variant).toBe('window');
   });
 
-  it('keeps a negative cardsLearned, which is a real value', () => {
-    // Net maturity can genuinely go negative over a window where more cards
-    // lapsed than matured. Clamping it to zero would hide that.
-    expect(parse('l=-3').learned).toBe(-3);
+  it('keeps only real study languages out of the g parameter', () => {
+    // The label is looked up as `label{code}`, so an invented code would draw
+    // the key itself — and would ask the subset fonts for glyphs nobody put in
+    // them. Both failures are silent, which is why this filters rather than
+    // trusts.
+    expect(parse('g=Korean,Japanese').languages).toEqual(['Korean', 'Japanese']);
+    expect(parse('g=Korean,Klingon,,Japanese').languages).toEqual(['Korean', 'Japanese']);
+    expect(parse('g=').languages).toEqual([]);
+    expect(parse('r=10').languages).toEqual([]);
+  });
+
+  it('ignores the parameters an older build still sends', () => {
+    // Retention, days studied and cards learned all came off the image on
+    // 2026-09-12. Mobile ships by build and this route is server-side, so an
+    // installed build goes on appending `ret`, `d` and `l` for as long as it is
+    // on the phone: they must be inert, never a failure.
+    const stale = 'r=10&ret=88&d=23&l=47';
+    expect(parse(stale)).toMatchObject({ reviews: 10 });
+    expect(parse(stale)).not.toHaveProperty('retention');
+    expect(parse(stale)).not.toHaveProperty('daysStudied');
+    expect(parse(stale)).not.toHaveProperty('learned');
   });
 
   it('floors the counts that cannot be negative', () => {
-    const p = parse('r=-5&s=-2&d=-9');
-    expect([p.reviews, p.streak, p.daysStudied]).toEqual([0, 0, 0]);
+    const p = parse('r=-5&s=-2');
+    expect([p.reviews, p.streak]).toEqual([0, 0]);
   });
 
   it('treats junk as zero rather than throwing', () => {
-    const p = parse('r=abc&s=NaN&d=&w=zzz');
-    expect([p.reviews, p.streak, p.daysStudied]).toEqual([0, 0, 0]);
+    const p = parse('r=abc&s=NaN&w=zzz');
+    expect([p.reviews, p.streak]).toEqual([0, 0]);
     expect(p.windowDays).toBe(30);
   });
 
@@ -68,14 +83,9 @@ describe('reading the parameters', () => {
     expect(parse('w=99999').windowDays).toBe(400);
   });
 
-  it('clamps retention to a percentage', () => {
-    expect(parse('ret=250').retention).toBe(100);
-    expect(parse('ret=-40').retention).toBe(0);
-  });
-
   it('rounds fractional input, since every figure is drawn as an integer', () => {
-    expect(parse('r=12.6&ret=87.4').reviews).toBe(13);
-    expect(parse('r=12.6&ret=87.4').retention).toBe(87);
+    expect(parse('r=12.6&s=4.4').reviews).toBe(13);
+    expect(parse('r=12.6&s=4.4').streak).toBe(4);
   });
 });
 

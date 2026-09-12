@@ -21,13 +21,37 @@
  * told by juxtaposition rather than by either number. So a figure the window
  * cannot honestly cover comes back `null` and the image drops it, rather than
  * appearing with a caveat nobody reads at thumbnail size.
+ *
+ * **Retention is deliberately not here** (removed 2026-09-12). Review is about
+ * how much you reviewed and how many cards you learned, not how accurately you
+ * recalled them, so the percentage stopped being shown anywhere. Only the
+ * *display* went: the four verdict counters are still written on every rating
+ * and `retentionRate` is still exported from `progress.ts`, because a rollup
+ * cannot be backfilled — stopping the write would throw the history away for
+ * good, where stopping the render costs nothing to undo.
  */
 import {
   DETAILED_HISTORY_START, buildHeatmap, detailedHistoryStartsMidWindow,
-  emptyLanguageProgress, historyStartsMidWindow, retentionRate,
-  shiftDate, summarizeProgress,
-  type DailyProgress, type HeatmapCell, type LanguageProgress,
+  historyStartsMidWindow, shiftDate, summarizeProgress,
+  type DailyProgress, type HeatmapCell,
 } from './progress';
+import type { StudyLanguage } from './types';
+
+/**
+ * Which picture to draw.
+ *
+ * **The numbers are the same builder either way** — `buildShareStats` over a
+ * one-day window is a correct set of figures for today — so this selects a
+ * *layout*, not a second pipeline. It travels in the query because the render
+ * lives behind one route: mobile cannot rasterize a view of its own without a
+ * native module that costs an EAS build and breaks Expo Go, so every variant
+ * has to come back from the same endpoint.
+ *
+ * ⚠️ **A today card is not the window template at `w=1`.** That layout is
+ * window-shaped — a hero, a wrapped calendar, a row of window figures — and one
+ * day of it is a single square and a tile reading "1 day studied".
+ */
+export type ShareVariant = 'window' | 'today';
 
 /** What the caller knows that the rows do not. */
 export interface ShareStatsInput {
@@ -63,38 +87,47 @@ export interface ShareStats {
    * has to say *reviews*.
    */
   reviews: number;
-  /** Days in the window with at least one rating. */
-  daysStudied: number;
   /** The stored streak, passed straight through. */
   streak: number;
 
   /**
-   * Net cards that crossed the maturity line inside the window — cards, not
-   * directions — or `null` when the window reaches back before the counter
-   * existed.
+   * ⚠️ **There is deliberately no `cardsLearned` here** (removed 2026-09-12).
    *
-   * `null` rather than an undercount, following what `retentionRate` already
-   * does with a slice that has no verdicts: a figure that cannot be trusted
-   * reads as *not recorded*, never as a real number that happens to be low.
-   * Until `DETAILED_HISTORY_START` is a full window behind us this is `null`
-   * for any window long enough to be worth posting, and the image shows four
-   * numbers instead of five. It starts answering on its own, with no code
-   * change, once the window clears the boundary.
-   */
-  cardsLearned: number | null;
-
-  /**
-   * Share of ratings that were not a lapse, 0–1, or `null` when nothing in the
-   * window was rated.
+   * "Cards learned" now means a state rather than a change — every card whose
+   * interval has reached `MATURE_INTERVAL_DAYS`, counted from the cards
+   * themselves — and that is an all-time figure. An all-time number on this
+   * image would break the rule the whole module is built on: every figure here
+   * shares one window, because an image is read at thumbnail size and out of
+   * context. Keeping a *windowed* one would be worse still, since the dashboard
+   * tile beside it wears the same words and reports a different number.
    *
-   * Whole-window rather than per-language, which is what makes it safe over a
-   * long window: the four verdicts have been written at day level since
-   * rollups began. Only their *per-language* split has the later boundary.
+   * The window's maturity crossings are still summed — `summarizeProgress`
+   * returns `totalCardsMatured` — so a window-scoped figure can come back here
+   * whenever it is given a label that says which window it means.
    */
-  retention: number | null;
 
   /** Seconds with a card on screen, or `null` before the counter existed. */
   studySeconds: number | null;
+
+  /**
+   * Which languages the window's reviews were in, busiest first.
+   *
+   * The image reported a review count without ever saying what was being
+   * studied. This is the answer, and it costs nothing: `byLanguage` has been
+   * written since rollups began and `summarizeProgress` already sorts it.
+   *
+   * **Only languages actually reviewed in the window.** A language that had
+   * cards added but nothing rated does not belong beside a review count.
+   *
+   * Every language is sent; the *render* decides how many fit, because how many
+   * names fit on a canvas is a layout question rather than a data one.
+   *
+   * ⚠️ **Names only — never a per-language split of the numbers here.**
+   * `byLanguage.reviews` goes back to the start, but the verdicts inside it
+   * only from 2026-09-04 and `cardsMatured` from 2026-09-06, so a per-language
+   * figure would break the one-window rule over any window worth posting.
+   */
+  languages: StudyLanguage[];
 
   /**
    * The window's calendar, for the hero. Always present and always dense —
@@ -112,24 +145,6 @@ export interface ShareStats {
    * still look complete.
    */
   partialHistory: boolean;
-}
-
-/**
- * Sum the four verdicts across the window into one slice, so `retentionRate`
- * can be reused rather than reimplemented.
- *
- * Reads the day-level counters, not `byLanguage` — the per-language split only
- * began on 2026-09-04, where the day totals go back to the start.
- */
-function windowVerdicts(days: DailyProgress[]): LanguageProgress {
-  const totals = emptyLanguageProgress();
-  for (const day of days) {
-    totals.again += day.again;
-    totals.hard += day.hard;
-    totals.good += day.good;
-    totals.easy += day.easy;
-  }
-  return totals;
 }
 
 /**
@@ -156,14 +171,29 @@ export function buildShareStats(days: DailyProgress[], input: ShareStatsInput): 
     windowEnd: endDate,
     windowDays,
     reviews: summary.totalReviews,
-    daysStudied: summary.activeDays,
     streak,
-    cardsLearned: detailed ? summary.totalCardsMatured : null,
     studySeconds: detailed ? summary.totalStudySeconds : null,
-    retention: retentionRate(windowVerdicts(inWindow)),
+    languages: summary.byLanguage
+      .filter(entry => entry.progress.reviews > 0)
+      .map(entry => entry.studyLanguage),
     heatmap: buildHeatmap(inWindow, endDate, windowDays),
     partialHistory: historyStartsMidWindow(windowStart),
   };
+}
+
+/**
+ * Today's numbers, from the rows the dashboard already has.
+ *
+ * A one-day window, which is all "today" is — so it inherits the filtering, the
+ * gap-filling and both history boundaries rather than restating them. Note that
+ * `studySeconds` is never withheld here in practice: a window starting today
+ * cannot reach back past `DETAILED_HISTORY_START`.
+ */
+export function buildTodayStats(
+  days: DailyProgress[],
+  input: Omit<ShareStatsInput, 'windowDays'>,
+): ShareStats {
+  return buildShareStats(days, { ...input, windowDays: 1 });
 }
 
 /**
@@ -208,16 +238,21 @@ export function hasShareableHistory(stats: ShareStats): boolean {
  * between this and the route: `null` means the window cannot honestly cover it,
  * and a 0 on a shared image is a claim rather than a gap.
  */
-export function shareImageQuery(stats: ShareStats, nativeLanguage?: string | null): string {
+export function shareImageQuery(
+  stats: ShareStats,
+  nativeLanguage?: string | null,
+  variant: ShareVariant = 'window',
+): string {
   const q = new URLSearchParams();
+  // Omitted for the window card, so every URL an older build ever built still
+  // means exactly what it meant.
+  if (variant !== 'window') q.set('v', variant);
   q.set('w', String(stats.windowDays));
   q.set('r', String(stats.reviews));
   q.set('s', String(stats.streak));
-  q.set('d', String(stats.daysStudied));
-  if (stats.cardsLearned !== null) q.set('l', String(stats.cardsLearned));
-  // Sent as whole percent, which is what the image draws — rounding here rather
-  // than in the route keeps the URL the same length whatever the ratio is.
-  if (stats.retention !== null) q.set('ret', String(Math.round(stats.retention * 100)));
+  // Codes rather than display names: shorter, stable, and it leaves the label
+  // in the reader's own language rather than the sharer's.
+  if (stats.languages.length > 0) q.set('g', stats.languages.join(','));
   // One character per day, oldest first. A year is 364 characters, which is
   // well inside any URL limit and far shorter than sending counts.
   q.set('h', stats.heatmap.map(cell => cell.level).join(''));
@@ -226,11 +261,26 @@ export function shareImageQuery(stats: ShareStats, nativeLanguage?: string | nul
 }
 
 /** The full path to the rendered image, relative to whatever host serves it. */
-export function shareImagePath(stats: ShareStats, nativeLanguage?: string | null): string {
-  return `/api/stats-image?${shareImageQuery(stats, nativeLanguage)}`;
+export function shareImagePath(
+  stats: ShareStats,
+  nativeLanguage?: string | null,
+  variant: ShareVariant = 'window',
+): string {
+  return `/api/stats-image?${shareImageQuery(stats, nativeLanguage, variant)}`;
 }
 
-/** The filename a share sheet or download offers it under. */
-export function shareImageFilename(stats: ShareStats): string {
-  return `amgi-${stats.windowEnd}-${stats.windowDays}d.png`;
+/**
+ * The filename a share sheet or download offers it under.
+ *
+ * The variant is in the name as well as the window: today's card and a 1-day
+ * window would otherwise collide, and mobile deletes by filename before
+ * downloading, so a collision there means sharing a stale picture.
+ */
+export function shareImageFilename(
+  stats: ShareStats,
+  variant: ShareVariant = 'window',
+): string {
+  return variant === 'today'
+    ? `amgi-${stats.windowEnd}-today.png`
+    : `amgi-${stats.windowEnd}-${stats.windowDays}d.png`;
 }

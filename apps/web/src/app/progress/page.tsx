@@ -1,13 +1,15 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { useUser } from '@/components/UserContext';
 import { fetchRecentProgress } from '@/services/progress';
 import {
-  buildHeatmap, buildShareStats, hasShareableHistory, localDateString,
-  summarizeProgress,
-  type DailyProgress, type StudyLanguage,
+  CARD_COLLECTIONS, buildHeatmap, buildShareStats, buildTodayStats, buildWeekGrid,
+  hasShareableHistory, localDateString, mergeLanguageRows, summarizeProgress, weekdayIndex,
+  type DailyProgress, type HeatmapCell, type StudyLanguage,
 } from '@amgi/core';
+import { backfillMatureFlags, countMatureFlashcards } from '@/services/firestore';
+import { getUserPreferences, saveUserPreferences } from '@/services/userPreferences';
 import { t } from '@/lib/i18n';
 import ShareStatsButton from '@/components/ShareStatsButton';
 
@@ -23,16 +25,41 @@ const RANGES = [
 
 /**
  * A day's shade. Index is `HeatmapCell.level`, so 0 is a rest day — drawn as a
- * faint outline rather than as nothing, because an empty grid cell and a
- * missing grid cell look identical and one of them is a bug.
+ * faint block rather than as nothing, because an empty grid cell and a missing
+ * grid cell look identical and one of them is a bug.
+ *
+ * Each step is a theme variable rather than an opacity on `--color-highlight`.
+ * The old alpha ramp measured wrong — on forest it made a rest day *lighter*
+ * than a studied one, and put empty and level 1 ΔE 1.4 apart under
+ * deuteranopia. See the comment on `--heat-0` in globals.css, and the identical
+ * values in mobile's `theme.ts`.
  */
 const LEVEL_STYLES = [
-  'bg-[var(--color-muted)]/15',
-  'bg-[var(--color-highlight)]/25',
-  'bg-[var(--color-highlight)]/50',
-  'bg-[var(--color-highlight)]/75',
-  'bg-[var(--color-highlight)]',
+  'bg-[var(--heat-0)]',
+  'bg-[var(--heat-1)]',
+  'bg-[var(--heat-2)]',
+  'bg-[var(--heat-3)]',
+  'bg-[var(--heat-4)]',
 ];
+
+/**
+ * Which weekday rows get a label. Seven at 12px collide; three is what GitHub's
+ * calendar labels, and it is enough to key the other four.
+ */
+const LABELLED_WEEKDAYS = [1, 3, 5];
+
+/**
+ * Sunday-first weekday names in the reader's language.
+ *
+ * Built from a known Sunday through `Intl` rather than from translation keys:
+ * seven more keys per locale to say what the platform already knows.
+ */
+function weekdayLabels(nativeLanguage: string | null | undefined): string[] {
+  const locale = nativeLanguage === 'Korean' ? 'ko-KR' : 'en-GB';
+  // 1970-01-04 was a Sunday.
+  return [0, 1, 2, 3, 4, 5, 6].map(offset => new Date(Date.UTC(1970, 0, 4 + offset, 12))
+    .toLocaleDateString(locale, { weekday: 'short' }));
+}
 
 export default function ProgressPage() {
   const { user, authLoading, nativeLanguage, streak } = useUser();
@@ -59,27 +86,59 @@ export default function ProgressPage() {
   const days = loaded?.rangeDays === rangeDays ? loaded.days : null;
 
   const summary = useMemo(() => summarizeProgress(days ?? []), [days]);
+  /** The last seven days, dense — the same builder the calendar uses. */
+  const weekCells = useMemo(
+    () => buildHeatmap(days ?? [], localDateString(), 7),
+    [days],
+  );
+
+  /**
+   * Which mark the weekly chart draws with.
+   *
+   * Web only for now, and a toggle rather than a decision: seven discrete
+   * counts read defensibly either way, so the way to choose is to look at both.
+   * Mobile stays on bars — a line there needs `react-native-svg`, which is not
+   * installed, where the DOM draws SVG on its own.
+   *
+   * ⚠️ **`useSyncExternalStore`, not `useState` + an effect.** Reading
+   * `localStorage` in a `useState` initializer is the App Router hydration
+   * mismatch recorded in lessons.md; reading it in an effect trades that bug
+   * for a `set-state-in-effect` warning, and the backlog's standing rule on
+   * those is not to add more. This is what the hook is for: `getServerSnapshot`
+   * answers "bars" on the server, so the markup matches and nothing has to be
+   * corrected after mount.
+   */
+  const weekMark = useSyncExternalStore(
+    weekMarkStore.subscribe,
+    weekMarkStore.get,
+    weekMarkStore.getServer,
+  );
   const heatmap = useMemo(
     () => buildHeatmap(days ?? [], localDateString(), rangeDays),
     [days, rangeDays],
   );
 
-  // Columns of seven, oldest first, so the grid reads left to right like a
-  // calendar rather than wrapping mid-week.
-  const weeks = useMemo(() => {
-    const columns: (typeof heatmap)[] = [];
-    for (let i = 0; i < heatmap.length; i += 7) columns.push(heatmap.slice(i, i + 7));
-    return columns;
-  }, [heatmap]);
+  /**
+   * Columns of seven, week-aligned, so a *row* is always the same weekday —
+   * which is what lets the rows carry labels at all. Chunking the window by
+   * seven put a different weekday in row 0 every day. See `buildWeekGrid`.
+   */
+  const grid = useMemo(() => buildWeekGrid(heatmap), [heatmap]);
+  const weekdays = useMemo(() => weekdayLabels(nativeLanguage), [nativeLanguage]);
 
   /**
-   * The hovered day, as its index into `heatmap`.
+   * The hovered day, as its place in the grid.
    *
-   * One tooltip node positioned from the index, rather than a hidden one inside
+   * One tooltip node positioned from that, rather than a hidden one inside
    * every cell — a year is 364 cells, and 364 permanently-mounted tooltips is a
-   * lot of DOM for something at most one of which is ever visible.
+   * lot of DOM for something at most one of which is ever visible. Carries the
+   * column and row rather than an index into `heatmap`, because the grid is
+   * padded at both ends and an index into the flat window no longer says where
+   * a cell was drawn.
    */
-  const [hovered, setHovered] = useState<number | null>(null);
+  const [hovered, setHovered] = useState<
+    { date: string; column: number; row: number } | null
+  >(null);
   /** The full day behind a cell; `HeatmapCell` only carries the review count. */
   const daysByDate = useMemo(
     () => new Map((days ?? []).map(day => [day.date, day])),
@@ -102,6 +161,87 @@ export default function ProgressPage() {
     [days, streak, rangeDays],
   );
 
+  /** Today's numbers, from the same rows — a one-day window, nothing more. */
+  const todayStats = useMemo(
+    () => buildTodayStats(days ?? [], { streak, endDate: localDateString() }),
+    [days, streak],
+  );
+
+  /**
+   * What there is to share, and nothing that would go out blank.
+   *
+   * ⚠️ **The gate is asked per variant.** A today card on a day with nothing
+   * rated is exactly the zeroed image `hasShareableHistory` exists to prevent,
+   * however full the 90-day window beside it happens to be.
+   */
+  const shareOptions = useMemo(() => ([
+    { variant: 'window' as const, stats: shareStats },
+    { variant: 'today' as const, stats: todayStats },
+  ].filter(option => hasShareableHistory(option.stats))), [shareStats, todayStats]);
+
+  /**
+   * Cards learned — all of them, not a window's worth.
+   *
+   * "Learned" is a *state*: a card whose interval has reached 21 days. That is
+   * readable from the card itself and always has been, for every card, with no
+   * date boundary — which is why this no longer asks the rollups. They only
+   * ever knew the *day a card crossed*, and that began on 2026-09-06, so a
+   * windowed version of this figure could not appear on any range the tab
+   * offers until October.
+   *
+   * Null while it is still being counted, and null if the count fails: an
+   * absent tile says less than a tile showing a wrong number.
+   *
+   * ⚠️ **Above the early returns, with the other hooks.** This was briefly
+   * written where the old windowed helper was called — a plain function call
+   * sitting after `if (authLoading) return null`, which is fine for a function
+   * and a rules-of-hooks violation for these two.
+   */
+  const [learned, setLearned] = useState<
+    { total: number; byLanguage: Partial<Record<StudyLanguage, number>> } | null
+  >(null);
+
+  useEffect(() => {
+    // No `setLearned(null)` here: the tile only renders inside the signed-in
+    // branch, so a stale count cannot be shown, and clearing it synchronously
+    // in an effect body is the cascading-render pattern this file avoids.
+    if (!user) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        // The flag is written by every rating from 2026-09-12, but a card not
+        // rated since carries none — and long-interval cards are exactly the
+        // ones nobody has rated lately. So the backfill runs first, once per
+        // account, or the very first count would miss most of its subject.
+        const prefs = await getUserPreferences(user.uid);
+        if (!prefs?.matureBackfillAt) {
+          await backfillMatureFlags(user.uid);
+          await saveUserPreferences(user.uid, { matureBackfillAt: localDateString() });
+        }
+        // Cards shard per language, so the whole deck means every collection.
+        // Aggregation counts, so this is ten cheap queries rather than a read
+        // of every card.
+        // Kept per language rather than summed on the spot: the breakdown is
+        // already in hand here, and throwing it away would mean asking for it
+        // again the moment the by-language list wanted it.
+        const counts = await Promise.all(CARD_COLLECTIONS.map(
+          async ({ code }) => [code, await countMatureFlashcards(user.uid, code)] as const,
+        ));
+        if (cancelled) return;
+        const byLanguage: Partial<Record<StudyLanguage, number>> = {};
+        let total = 0;
+        for (const [code, count] of counts) {
+          if (count > 0) byLanguage[code] = count;
+          total += count;
+        }
+        setLearned({ total, byLanguage });
+      } catch {
+        if (!cancelled) setLearned(null);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [user]);
+
   if (authLoading) return null;
 
   if (!user) {
@@ -116,6 +256,14 @@ export default function ProgressPage() {
   }
 
   const hasHistory = summary.totalReviews > 0 || summary.totalNewCards > 0 || summary.totalPackCards > 0;
+
+  /**
+   * The window's languages and the all-time learned counts, as one list.
+   *
+   * The union is what keeps a language you have not reviewed lately from
+   * disappearing along with its learned count — see `mergeLanguageRows`.
+   */
+  const languageRows = mergeLanguageRows(summary.byLanguage, learned?.byLanguage ?? {});
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -143,9 +291,9 @@ export default function ProgressPage() {
         ))}
         {/* Offered only once there is something on the image. A zeroed story
             asset is not a modest result, it is a broken-looking one. */}
-        {hasShareableHistory(shareStats) && (
+        {shareOptions.length > 0 && (
           <div className="ml-auto">
-            <ShareStatsButton stats={shareStats} nativeLanguage={nativeLanguage} />
+            <ShareStatsButton options={shareOptions} nativeLanguage={nativeLanguage} />
           </div>
         )}
       </div>
@@ -165,64 +313,109 @@ export default function ProgressPage() {
               start empty the day this ships, so deriving it would show `1` to
               someone on a 200-day streak — and two surfaces disagreeing about
               a streak is exactly the failure this dashboard should not add. */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
+          <div className={`grid grid-cols-2 gap-3 mb-8 ${
+            learned === null ? 'sm:grid-cols-3' : 'sm:grid-cols-4'
+          }`}>
             <Stat label={t(nativeLanguage, 'progressStreak')}
               value={streak === 1
                 ? t(nativeLanguage, 'progressStreakDay')
                 : t(nativeLanguage, 'progressStreakDays', { count: streak })} />
             <Stat label={t(nativeLanguage, 'progressStatReviews')} value={summary.totalReviews} />
-            <Stat label={t(nativeLanguage, 'progressStatActiveDays')} value={summary.activeDays} />
             <Stat label={t(nativeLanguage, 'progressStatAverage')} value={summary.averagePerActiveDay} />
+            {/* Shares its label with the tile on the shared image, so the two
+                surfaces cannot describe one number differently. It counts
+                *cards* where Reviews counts directions — the reason they carry
+                different nouns and never one shared one. */}
+            {learned !== null && (
+              <Stat label={t(nativeLanguage, 'shareStatLearned')} value={learned.total} />
+            )}
           </div>
 
           <section className="mb-8">
             <h2 className="text-sm font-bold text-[var(--color-text)] mb-3">
               {t(nativeLanguage, 'progressCalendar')}
             </h2>
-            {/* Scrolls on its own rather than letting the page scroll sideways:
-                a year is 52 columns and will not fit a phone. `relative` is the
-                tooltip's positioning context, and it sits inside the scroller so
-                the bubble travels with the grid instead of detaching from its
-                cell. */}
-            <div className="overflow-x-auto pb-2">
+            {/* The weekday gutter sits outside the scroller so it stays put
+                while a year of columns slides past it. */}
+            <div className="flex">
               <div
-                className="relative flex gap-1 w-max"
-                style={{ paddingTop: TOOLTIP_LANE }}
-                onMouseLeave={() => setHovered(null)}
+                className="flex flex-col gap-1 mr-1.5 shrink-0"
+                style={{ paddingTop: TOOLTIP_LANE + MONTH_ROW_HEIGHT }}
               >
-                {weeks.map((week, weekIndex) => (
-                  <div key={weekIndex} className="flex flex-col gap-1">
-                    {week.map((cell, dayIndex) => {
-                      const index = weekIndex * 7 + dayIndex;
-                      return (
-                        <button
-                          key={cell.date}
-                          type="button"
-                          aria-label={describeDay(nativeLanguage, cell.date, daysByDate.get(cell.date))}
-                          onMouseEnter={() => setHovered(index)}
-                          onFocus={() => setHovered(index)}
-                          onBlur={() => setHovered(null)}
-                          className={`w-3 h-3 rounded-sm ${LEVEL_STYLES[cell.level]} ${
-                            hovered === index ? 'ring-1 ring-[var(--color-text)]' : ''
-                          }`}
-                        />
-                      );
-                    })}
+                {weekdays.map((name, row) => (
+                  <div
+                    key={name}
+                    className="h-3 w-7 text-right text-[9px] leading-3 text-[var(--color-muted)]"
+                  >
+                    {LABELLED_WEEKDAYS.includes(row) ? name : ''}
                   </div>
                 ))}
+              </div>
+              {/* Scrolls on its own rather than letting the page scroll
+                  sideways: a year is 52 columns and will not fit a phone.
+                  `relative` is the tooltip's positioning context, and it sits
+                  inside the scroller so the bubble travels with the grid
+                  instead of detaching from its cell. */}
+              <div className="overflow-x-auto pb-2">
+                <div
+                  className="relative w-max"
+                  style={{ paddingTop: TOOLTIP_LANE }}
+                  onMouseLeave={() => setHovered(null)}
+                >
+                  <div
+                    className="relative"
+                    style={{ height: MONTH_ROW_HEIGHT, width: grid.columns.length * COLUMN_PITCH }}
+                  >
+                    {grid.months.map(tick => (
+                      <span
+                        key={tick.date}
+                        className="absolute top-0 text-[9px] text-[var(--color-muted)]"
+                        style={{ left: tick.column * COLUMN_PITCH }}
+                      >
+                        {formatMonth(nativeLanguage, tick.date)}
+                      </span>
+                    ))}
+                  </div>
+                  <div className="flex gap-1">
+                    {grid.columns.map((column, columnIndex) => (
+                      <div key={columnIndex} className="flex flex-col gap-1">
+                        {column.map((cell, row) => (cell === null
+                          // Outside the window: drawn as nothing, since an empty
+                          // square would claim it was a day nobody studied.
+                          ? <div key={`pad-${row}`} className="w-3 h-3" />
+                          : (
+                            <button
+                              key={cell.date}
+                              type="button"
+                              aria-label={describeDay(nativeLanguage, cell.date, daysByDate.get(cell.date))}
+                              onMouseEnter={() => setHovered({ date: cell.date, column: columnIndex, row })}
+                              onFocus={() => setHovered({ date: cell.date, column: columnIndex, row })}
+                              onBlur={() => setHovered(null)}
+                              className={`w-3 h-3 rounded-sm ${LEVEL_STYLES[cell.level]} ${
+                                hovered?.date === cell.date ? 'ring-1 ring-[var(--color-text)]' : ''
+                              }`}
+                            />
+                          )))}
+                      </div>
+                    ))}
+                  </div>
 
-                {hovered !== null && heatmap[hovered] && (
-                  <DayTooltip
-                    nativeLanguage={nativeLanguage}
-                    cell={heatmap[hovered]}
-                    day={daysByDate.get(heatmap[hovered].date)}
-                    index={hovered}
-                    columnCount={weeks.length}
-                  />
-                )}
+                  {hovered && (
+                    <DayTooltip
+                      nativeLanguage={nativeLanguage}
+                      date={hovered.date}
+                      day={daysByDate.get(hovered.date)}
+                      column={hovered.column}
+                      columnCount={grid.columns.length}
+                    />
+                  )}
+                </div>
               </div>
             </div>
+            {/* Named, not just graded: "Less → More" alone never says more of
+                what. */}
             <div className="flex items-center gap-1.5 mt-3 text-xs text-[var(--color-muted)]">
+              <span>{t(nativeLanguage, 'progressStatReviews')}</span>
               <span>{t(nativeLanguage, 'progressLessMore')}</span>
               {LEVEL_STYLES.map((style, level) => (
                 <div key={level} className={`w-3 h-3 rounded-sm ${style}`} />
@@ -231,13 +424,21 @@ export default function ProgressPage() {
             </div>
           </section>
 
-          {summary.byLanguage.length > 0 && (
+          <WeekChart
+            nativeLanguage={nativeLanguage}
+            cells={weekCells}
+            daysByDate={daysByDate}
+            mark={weekMark}
+            onMarkChange={weekMarkStore.set}
+          />
+
+          {languageRows.length > 0 && (
             <section>
               <h2 className="text-sm font-bold text-[var(--color-text)] mb-3">
                 {t(nativeLanguage, 'progressByLanguage')}
               </h2>
               <ul className="flex flex-col gap-2">
-                {summary.byLanguage.map(({ studyLanguage, progress }) => (
+                {languageRows.map(({ studyLanguage, progress, learned: learnedHere }) => (
                   <li
                     key={studyLanguage}
                     className="flex items-baseline justify-between gap-3 p-3 rounded-xl border border-[var(--color-muted)]"
@@ -246,7 +447,18 @@ export default function ProgressPage() {
                       {t(nativeLanguage, languageLabelKey(studyLanguage))}
                     </span>
                     <span className="text-xs text-[var(--color-muted)] text-right">
-                      {t(nativeLanguage, 'progressLanguageReviews', { count: progress.reviews })}
+                      {/* A row can be here for its learned count alone, with
+                          nothing in the window — saying "0 reviews" would read
+                          as a slump rather than as a language left alone. */}
+                      {progress.reviews === 0
+                        ? t(nativeLanguage, 'progressTooltipNoReviews')
+                        : t(nativeLanguage, 'progressLanguageReviews', { count: progress.reviews })}
+                      {learnedHere > 0 && (
+                        <>
+                          {' · '}
+                          {t(nativeLanguage, 'progressLanguageLearned', { count: learnedHere })}
+                        </>
+                      )}
                       {progress.newCards + progress.packCards > 0 && (
                         <>
                           {' · '}
@@ -273,15 +485,19 @@ export default function ProgressPage() {
 const TOOLTIP_LANE = 44;
 /** Cell (12px) plus the `gap-1` between columns (4px). */
 const COLUMN_PITCH = 16;
+/** Room above the grid for the month ticks. */
+const MONTH_ROW_HEIGHT = 14;
 
-function DayTooltip({ nativeLanguage, cell, day, index, columnCount }: {
+function DayTooltip({ nativeLanguage, date, day, column, columnCount }: {
   nativeLanguage: string | null | undefined;
-  cell: { date: string; reviews: number };
+  date: string;
   day: DailyProgress | undefined;
-  index: number;
+  column: number;
   columnCount: number;
 }) {
-  const column = Math.floor(index / 7);
+  // A day with no document is a day with no reviews, which is what the cell
+  // behind this bubble is already drawing.
+  const reviews = day?.reviews ?? 0;
   const cardsAdded = (day?.newCards ?? 0) + (day?.packCards ?? 0);
 
   /**
@@ -305,13 +521,13 @@ function DayTooltip({ nativeLanguage, cell, day, index, columnCount }: {
         border: '1px solid var(--color-muted)',
       }}
     >
-      <div className="font-bold text-[var(--color-text)]">{formatDay(nativeLanguage, cell.date)}</div>
+      <div className="font-bold text-[var(--color-text)]">{formatDay(nativeLanguage, date)}</div>
       <div className="text-[var(--color-muted)]">
-        {cell.reviews === 0
+        {reviews === 0
           ? t(nativeLanguage, 'progressTooltipNoReviews')
-          : cell.reviews === 1
+          : reviews === 1
             ? t(nativeLanguage, 'progressTooltipOneReview')
-            : t(nativeLanguage, 'progressTooltipReviews', { count: cell.reviews })}
+            : t(nativeLanguage, 'progressTooltipReviews', { count: reviews })}
         {cardsAdded > 0 && (
           <> · {cardsAdded === 1
             ? t(nativeLanguage, 'progressTooltipOneCard')
@@ -319,6 +535,341 @@ function DayTooltip({ nativeLanguage, cell, day, index, columnCount }: {
         )}
       </div>
     </div>
+  );
+}
+
+/** The plot's height in pixels; the axis ceiling fills it. */
+const WEEK_PLOT_HEIGHT = 64;
+/** Room above the plot for the hover bubble. */
+const WEEK_TOOLTIP_LANE = 44;
+/** Left gutter the axis labels sit in. */
+const WEEK_AXIS_GUTTER = 26;
+
+/**
+ * A round number at or above `value`, so the gridlines land somewhere a reader
+ * can actually read — 47 reviews gives an axis to 50, not to 47.
+ */
+function niceCeiling(value: number): number {
+  if (value <= 0) return 0;
+  const magnitude = 10 ** Math.floor(Math.log10(value));
+  for (const step of [1, 2, 2.5, 5]) {
+    const candidate = step * magnitude;
+    if (candidate >= value) return Math.round(candidate);
+  }
+  return Math.round(10 * magnitude);
+}
+
+type WeekMark = 'bars' | 'line';
+const WEEK_MARK_KEY = 'amgi_week_chart_mark';
+
+/**
+ * The remembered chart mark, as an external store.
+ *
+ * Small enough to be obvious and large enough to be worth the shape: it keeps
+ * the browser-only read out of render, gives the server a snapshot to agree
+ * with, and lets the toggle write through without a second copy of the value
+ * living in component state.
+ *
+ * `get` returns a primitive, so `useSyncExternalStore` can compare snapshots by
+ * value — returning a fresh object here is the usual way to make this hook
+ * loop forever.
+ */
+const weekMarkStore = {
+  listeners: new Set<() => void>(),
+  subscribe(listener: () => void) {
+    weekMarkStore.listeners.add(listener);
+    return () => { weekMarkStore.listeners.delete(listener); };
+  },
+  get(): WeekMark {
+    try {
+      return localStorage.getItem(WEEK_MARK_KEY) === 'line' ? 'line' : 'bars';
+    } catch {
+      // Private mode, or storage disabled. The default stands.
+      return 'bars';
+    }
+  },
+  /** What the server renders, and therefore what hydration has to match. */
+  getServer(): WeekMark {
+    return 'bars';
+  },
+  set(mark: WeekMark) {
+    try {
+      localStorage.setItem(WEEK_MARK_KEY, mark);
+    } catch {
+      // Not being able to remember the choice is no reason to refuse it — the
+      // listeners still fire, so the chart still switches for this visit.
+    }
+    for (const listener of weekMarkStore.listeners) listener();
+  },
+};
+
+/**
+ * Reviews per day for the last week, drawn as bars or as a line.
+ *
+ * Seven days is seven discrete counts, which reads defensibly either way — so
+ * the mark is a toggle rather than a decision made here. **Web only**: the
+ * line is inline SVG, which the DOM does natively, where mobile would need
+ * `react-native-svg` installed and compiled into a build.
+ *
+ * One series, so there is no legend and the title names the measure. Only the
+ * busiest day is labelled: a number over every point is noise the heights
+ * already carry. Both marks share the title, the labels and the plot height,
+ * so switching cannot shift the layout.
+ */
+function WeekChart({ nativeLanguage, cells, daysByDate, mark, onMarkChange }: {
+  nativeLanguage: string | null | undefined;
+  cells: HeatmapCell[];
+  daysByDate: Map<string, DailyProgress>;
+  mark: WeekMark;
+  onMarkChange: (mark: WeekMark) => void;
+}) {
+  const weekdays = weekdayLabels(nativeLanguage);
+  const busiest = Math.max(0, ...cells.map(cell => cell.reviews));
+  /** The axis top. Marks scale to this, not to the raw busiest day. */
+  const ceiling = niceCeiling(busiest);
+  /**
+   * The lines drawn across the plot. The midpoint earns one only when it is a
+   * whole number: a line labelled "3" sitting at 2.5 is worse than no line.
+   */
+  const ticks = ceiling === 0
+    ? [0]
+    : ceiling % 2 === 0 ? [0, ceiling / 2, ceiling] : [0, ceiling];
+
+  /** Horizontal centre of a day's slot, as a percentage of the plot's width. */
+  const centre = (index: number) => ((index + 0.5) * 100) / cells.length;
+  /** A day's height in px, so both marks sit on one scale. */
+  const heightOf = (reviews: number) => (ceiling > 0 && reviews > 0
+    ? Math.max(2, Math.round((reviews / ceiling) * WEEK_PLOT_HEIGHT))
+    : 0);
+
+  /**
+   * The hovered day, by index.
+   *
+   * The tooltip enhances rather than gates: the gridlines carry the magnitude
+   * on their own, so nothing here is the only way to read a value.
+   */
+  const [hovered, setHovered] = useState<number | null>(null);
+  const active = hovered !== null ? cells[hovered] : null;
+  const activeDay = active ? daysByDate.get(active.date) : undefined;
+  const activeCards = (activeDay?.newCards ?? 0) + (activeDay?.packCards ?? 0);
+
+  return (
+    <section className="mb-8">
+      <div className="flex items-baseline justify-between gap-3 mb-3">
+        <h2 className="text-sm font-bold text-[var(--color-text)]">
+          {t(nativeLanguage, 'progressWeekTitle')}
+        </h2>
+        <div className="flex gap-1">
+          {(['bars', 'line'] as const).map(option => (
+            <button
+              key={option}
+              type="button"
+              onClick={() => onMarkChange(option)}
+              aria-pressed={mark === option}
+              className="px-2 py-0.5 rounded-md text-[11px] font-mono border transition-colors"
+              style={mark === option
+                ? { borderColor: 'var(--color-highlight)', color: 'var(--color-highlight)' }
+                : { borderColor: 'var(--color-muted)', color: 'var(--color-muted)' }}
+            >
+              {t(nativeLanguage, option === 'bars' ? 'progressChartBars' : 'progressChartLine')}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div
+        className="relative"
+        style={{ height: WEEK_PLOT_HEIGHT + WEEK_TOOLTIP_LANE }}
+        onMouseLeave={() => setHovered(null)}
+      >
+        {/* Gridlines and their labels. Solid hairlines a shade off the surface,
+            never dashed — a dashed rule reads as a threshold or a projection
+            when it is only a scale. */}
+        {ticks.map(value => (
+          <div
+            key={value}
+            className="absolute flex items-center"
+            style={{
+              left: 0,
+              right: 0,
+              bottom: ceiling > 0 ? (value / ceiling) * WEEK_PLOT_HEIGHT : 0,
+            }}
+          >
+            <span
+              className="text-[10px] leading-none text-[var(--color-muted)] text-right shrink-0 pr-1"
+              style={{ width: WEEK_AXIS_GUTTER }}
+            >
+              {value}
+            </span>
+            <span className="flex-1 border-t border-[var(--color-muted)] opacity-30" />
+          </div>
+        ))}
+
+        {mark === 'bars' ? (
+          <div
+            className="absolute bottom-0 flex items-end gap-2"
+            style={{ left: WEEK_AXIS_GUTTER, right: 0 }}
+          >
+            {cells.map((cell, index) => (
+              <div
+                key={cell.date}
+                className="flex-1 rounded-t-sm bg-[var(--heat-4)] transition-opacity"
+                // A day with reviews keeps a visible sliver, for the same
+                // reason the calendar gives a one-review day a level of 1.
+                style={{
+                  height: Math.max(heightOf(cell.reviews), cell.reviews > 0 ? 2 : 1),
+                  opacity: hovered === null || hovered === index ? 1 : 0.55,
+                }}
+              />
+            ))}
+          </div>
+        ) : (
+          // ⚠️ The insets live on a wrapping div, and the svg fills it at 100%.
+          // An `<svg>` is a *replaced* element: given `width: auto` it takes its
+          // intrinsic size from the viewBox and the height — 100px here — and
+          // the `right` inset is simply dropped, where the bars' plain `<div>`
+          // stretches between the two. That is the whole difference between the
+          // two marks laying out correctly and one of them squeezing itself
+          // into the first seventh of the plot.
+          <div
+            className="absolute bottom-0"
+            style={{ left: WEEK_AXIS_GUTTER, right: 0, height: WEEK_PLOT_HEIGHT }}
+          >
+            <svg
+              className="overflow-visible"
+              width="100%"
+              height="100%"
+              viewBox={`0 0 100 ${WEEK_PLOT_HEIGHT}`}
+              preserveAspectRatio="none"
+              aria-hidden
+            >
+              <polyline
+                points={cells
+                  .map((cell, index) => `${centre(index)},${WEEK_PLOT_HEIGHT - heightOf(cell.reviews)}`)
+                  .join(' ')}
+                fill="none"
+                stroke="var(--heat-4)"
+                strokeWidth={2}
+                strokeLinejoin="round"
+                strokeLinecap="round"
+                // Without this the stroke is scaled by the same non-uniform
+                // transform as the geometry, so it thickens with the container.
+                vectorEffect="non-scaling-stroke"
+              />
+            </svg>
+
+            {/* The vertices, in HTML rather than as <circle>s.
+                `preserveAspectRatio="none"` stretches the svg's coordinate
+                space horizontally, which turns a circle into an ellipse that
+                gets wider with the window — the same reason the tooltip is not
+                an <svg:text>. Positioned by percentage, these stay round at any
+                width.
+
+                The hovered one grows and the rest recede, so the point being
+                read is the one that answers. `pointer-events-none` keeps them
+                decorative: the full-height buttons below own the hovering, so a
+                quiet day is as easy to hit as a busy one. */}
+            {cells.map((cell, index) => (
+              <span
+                key={cell.date}
+                aria-hidden
+                className="absolute rounded-full pointer-events-none transition-all duration-150"
+                style={{
+                  left: `${centre(index)}%`,
+                  bottom: heightOf(cell.reviews),
+                  width: hovered === index ? 12 : 8,
+                  height: hovered === index ? 12 : 8,
+                  // Half its own size in each direction, so the dot is centred
+                  // on the value rather than hanging off it — and stays centred
+                  // as it grows, since the offset is a share of its own box.
+                  transform: 'translate(-50%, 50%)',
+                  background: 'var(--heat-4)',
+                  // Punches the dot out of the line it sits on.
+                  boxShadow: '0 0 0 2px var(--color-bg)',
+                  opacity: hovered === null || hovered === index ? 1 : 0.5,
+                }}
+              />
+            ))}
+          </div>
+        )}
+
+        {/* One full-height target per day, over the marks. A quiet day's bar is
+            two pixels tall and a line has no width at all — hovering the mark
+            itself would be a game rather than a chart. */}
+        <div
+          className="absolute bottom-0 flex gap-2"
+          style={{ left: WEEK_AXIS_GUTTER, right: 0, height: WEEK_PLOT_HEIGHT }}
+        >
+          {cells.map((cell, index) => (
+            <button
+              key={cell.date}
+              type="button"
+              className="flex-1 h-full cursor-default"
+              aria-label={describeDay(nativeLanguage, cell.date, daysByDate.get(cell.date))}
+              onMouseEnter={() => setHovered(index)}
+              onFocus={() => setHovered(index)}
+              onBlur={() => setHovered(null)}
+            />
+          ))}
+        </div>
+
+        {/* Guarded on `hovered` rather than on `active`, so the index below is
+            narrowed by the compiler instead of asserted with a `!`. */}
+        {hovered !== null && active && (
+          <div
+            className={`absolute top-0 z-10 pointer-events-none px-2 py-1.5 rounded-lg text-xs whitespace-nowrap shadow-lg ${
+              hovered <= 1
+                ? 'translate-x-0'
+                : hovered >= cells.length - 2
+                  ? '-translate-x-full'
+                  : '-translate-x-1/2'
+            }`}
+            style={{
+              left: `calc(${WEEK_AXIS_GUTTER}px + ${centre(hovered)}%)`,
+              background: 'var(--color-surface)',
+              border: '1px solid var(--color-muted)',
+            }}
+          >
+            <div className="font-bold text-[var(--color-text)]">
+              {formatDay(nativeLanguage, active.date)}
+            </div>
+            <div className="text-[var(--color-muted)]">
+              {active.reviews === 0
+                ? t(nativeLanguage, 'progressTooltipNoReviews')
+                : active.reviews === 1
+                  ? t(nativeLanguage, 'progressTooltipOneReview')
+                  : t(nativeLanguage, 'progressTooltipReviews', { count: active.reviews })}
+              {activeCards > 0 && (
+                <> · {activeCards === 1
+                  ? t(nativeLanguage, 'progressTooltipOneCard')
+                  : t(nativeLanguage, 'progressTooltipCards', { count: activeCards })}</>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="flex gap-2 mt-1" style={{ marginLeft: WEEK_AXIS_GUTTER }}>
+        {cells.map(cell => (
+          <div
+            key={cell.date}
+            className="flex-1 text-center text-[10px] text-[var(--color-muted)]"
+          >
+            {/* From the cell's own date: these seven days end on today, so they
+                are not a fixed Sunday-to-Saturday run. */}
+            {weekdays[weekdayIndex(cell.date)]}
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+/** `2026-09-01` → `Sep` / `9월`, for the calendar's month ticks. */
+function formatMonth(nativeLanguage: string | null | undefined, date: string): string {
+  return new Date(`${date}T12:00:00Z`).toLocaleDateString(
+    nativeLanguage === 'Korean' ? 'ko-KR' : 'en-GB',
+    { month: 'short' },
   );
 }
 

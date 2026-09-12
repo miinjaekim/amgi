@@ -47,6 +47,17 @@ and `npm run lint` 0 errors / 21 warnings, both measured._
   per day could be reconstructed from `createdAt`; review history cannot be
   reconstructed from anything. So the calendar is near-empty for weeks by
   construction — expected, not a bug, and the empty state says so.
+- **The progress-display work landed 2026-09-12, and it reaches users in three
+  different ways.** ⚠️ Worth keeping straight before wondering why a change is
+  or isn't visible. **The shared image is server-side**, so build 15 devices
+  already get the language line and already lost the retention tile — no build,
+  no OTA, nothing to ship. **Web** has all five changes as soon as it deploys.
+  **Mobile's own screen** — the labelled calendar, the corrected ramp, the cards
+  learned tile, retention off the language row, the share chooser — waits for
+  build 16 like everything else. The reasoning is in the Decisions entry of the
+  same date; the one thing that is *not* recorded anywhere else is that none of
+  it has been looked at: the colours were computed and validated, the layouts
+  were not.
 - **부대·참모 has an eleventh section: 병과와 주특기** (2026-09-09), **word list
   approved the same day**. 24 pairs placed third, after 계급·호칭 and
   부대·편제 — the branch a soldier belongs to and the job inside it, which
@@ -258,6 +269,200 @@ once, so a path that worked on build 14 is not evidence about build 15.
 
 Closed calls, kept with their reasoning — a decision whose reasoning is lost gets
 reopened by the next person to notice the symptom. Newest first.
+
+### The progress surfaces say what they measure, and the ramp was measured (2026-09-12)
+
+Five items, queued and shipped the same day, on one framing from the user:
+**review is about how much you reviewed and how many cards you have learned, not
+how accurately you recalled them — and how long it took matters less still.**
+That sentence decided three separate things below.
+
+**Retention came off every surface, and nothing behind it changed.** The
+percentage is gone from the per-language row on mobile, the tile on the image
+and the `ret` parameter. The four verdicts are still written on every rating and
+`retentionRate` is still exported, because a rollup keeps only what it counted
+in advance: stopping the *write* would throw the history away permanently and
+make the per-language split re-earn its 2026-09-04 boundary, where stopping the
+*render* costs nothing to undo. ⚠️ **The route must go on tolerating `ret`.**
+Mobile ships by build and the route is server-side, so an installed 1.6.0 keeps
+appending it for as long as it is on the phone; it is simply unread now, and a
+test pins that.
+
+**Week alignment sits *over* `buildHeatmap`, not inside it.** The grid could not
+honestly be labelled as it stood — the window starts where it starts, both
+screens chunked by seven, so row 0 was whatever weekday the window opened on and
+it shifted daily. `buildWeekGrid` pads to the week boundary on top. Inside would
+have reached the shared image, which consumes the same cells and deliberately
+does *not* align to weeks, and whose `h` parameter is one character per day
+asserted on both sides of the URL. Padding is `null` rather than a zeroed cell:
+a slot before the window opened is not a day nobody studied.
+
+⚠️ **Month ticks walk days, not columns** — and this was a real bug, caught by a
+test rather than by reading it. Keying off each column's first cell put August
+on the 2nd and September on the **6th**, because 1 September 2026 is a Tuesday
+and 1 August a Saturday, so the column holding the 1st opens in the previous
+month. The label landed up to a whole column right of the month it names.
+
+**The heatmap ramp was replaced, and this is the call the 2026-09-07 entry
+deferred.** That entry left `levelColor` alone because restyling a shipped
+screen is a product call; asking for the data visualisations to be improved is
+that call being made. Measured, not eyeballed — the old alpha blend composited
+per theme and run through the palette validator: forest **non-monotonic** (a
+rest day rendered *lighter* than a studied one), empty versus level 1 at **ΔE
+1.4 under deuteranopia** (4.7 normal), hue spread **131°** because blending a
+pink highlight over a green ground walks the hue across the wheel, and all three
+themes below the 2:1 light-end contrast floor. The new steps are generated in
+OKLCH per theme: one hue, monotone lightness, adjacent ΔL ≥ 0.06, faintest step
+≥ 2.36:1 on its own surface, and empty kept a **categorical** break at ΔE 20
+(≥ 17 under CVD) rather than a step on the scale. Level 4 is still each theme's
+exact highlight. **Web and mobile had drifted to two different ramps** — 45% vs
+50% at level 2 — and now share one set of values.
+
+**Cards learned is windowed, on the user's call.** It reads as a lifetime figure
+and the windowed one is not that, but all-time is only derivable from the card
+documents: nine `where uid ==` queries across nine per-language collections,
+every time the tab opens, which is the exact cost `shareStats.ts` exists to
+avoid.
+
+⚠️ **Shipped withheld, and that was a defect — corrected the same day.** The
+first cut reused the image's rule and returned `null` whenever the window
+reached past 2026-09-06. Every range on offer is 30 days or more, so that meant
+*never*: 30 days back is 2026-08-14, 90 is 2026-06-15, a year is 2025-09-14, and
+the 30-day tile would not have appeared until 2026-10-05. The rule exists to
+stop a quiet fortnight reading as a low score, not to hide a figure for a month.
+A first correction shortened the window to the honest part and captioned it
+"since 6 Sep". **That was superseded the same day, and the user's question is
+what exposed the real mistake**: the interval is on every card and always has
+been, so "is this card learned" never needed the rollups at all. Only "*when*
+did it cross" did — and that is the sole thing the 2026-09-06 boundary governs.
+The tile had been answering the harder question by accident.
+
+**So "cards learned" is now a state, counted from the cards.** `isFlashcardMature`
+reads `frontToBack.interval`, `backToFront.interval` and the pre-split top-level
+`interval`, and the answer is stored as a `mature` boolean on the card.
+
+⚠️ **A stored flag rather than a derived one, for one reason: aggregation.**
+`getCountFromServer` bills per index scan rather than per document, and two
+equality filters (`uid`, `mature`) are served by merging single-field indexes —
+so **no composite index**, and ten collections cost ten cheap queries instead of
+a read of every card the user owns. Deriving it live would have meant reading
+the whole deck on every visit to a tab people open constantly.
+
+**Three writers, one definition.** The rating write, the undo write and the
+one-off backfill all call `isFlashcardMature`; three call sites each choosing
+their own field set is exactly how they would drift. It is written even when
+*false*, so a lapse clears the flag rather than leaving a card counted forever.
+Mobile gets this through `updateFlashcardReview` alone — live ratings, ratings
+flushed from the offline queue and undos all funnel through it — where web needs
+it in two places because it builds its update map inline.
+
+**And unlike a rollup, this one could be backfilled.** A card not rated since
+2026-09-12 carries no flag, and long-interval cards are precisely the ones
+nobody has rated lately, so the first count would have missed most of its
+subject. `backfillMatureFlags` walks all ten collections once per account,
+writing only the *mature* cards — a card below the line needs no flag, since
+`mature == true` does not match a missing field — and records
+`matureBackfillAt` on `users/{uid}` so it never runs twice. The interval is
+current state sitting on the document, which is the whole reason this is
+possible where a day-of-crossing never was.
+
+⚠️ **The image loses its cards-learned tile entirely.** An all-time figure
+cannot sit on a canvas where every other number names one window, and a windowed
+one would wear the same words as the dashboard tile while reporting a different
+number — the one thing this file says twice not to do. `summarizeProgress` still
+returns `totalCardsMatured`, so a window-scoped figure can come back the day it
+is given a label that says which window it means.
+
+**It needed no console step, and that was checked rather than assumed.** The
+worry was a rule constraining which fields an update may write, since `mature`
+is new on ten collections and the rules are manual and not uniform. They are
+scoped to *operations* — `read, update, delete` + `create`, or `read, write` +
+`create` — and enumerate no fields. Confirmed live the same day: the backfill
+wrote its flags and the count returned **196** on a real account, where a rule
+rejection or a missing index would have thrown and drawn no tile at all.
+
+⚠️ **The backfill has therefore already run against production data**, from a
+dev server rather than a deploy, and `matureBackfillAt` makes it one-shot.
+Clearing that field on `users/{uid}` is the only way to make the count
+recompute if it is ever wrong.
+
+**Per-language learned costs nothing extra**, because the count was always
+per-collection — ten `countMatureFlashcards` calls whose breakdown was being
+thrown away in a `reduce`. `mergeLanguageRows` now joins it to the window's
+`byLanguage`. ⚠️ **The union is the point**: taking only the window's languages
+would hide a deck left alone lately, which is exactly the one whose total you
+have forgotten; taking only the languages with learned cards would drop one
+being studied now that has matured nothing yet. A row therefore carries two
+scopes — a windowed review count beside an all-time learned count — which is
+fine on a screen being read and is why this is *not* on the shared image.
+
+**The weekly chart is bars, not the line that was asked for** (user's call, on
+the trade being named). Seven days is seven discrete counts, which is what bars
+are for, and it needs no drawing library on the phone. Worth recording that the
+dependency was not actually the obstacle: Expo SDK 57 bundles
+`react-native-svg` 15.15.4 and Skia, so a line would not have cost a dev-loop
+break — it was a form choice in the end, not a platform one. One series, so the
+title names the measure and there is no legend; only the busiest day is
+labelled, since a number over every bar is noise the heights already carry.
+
+⚠️ **A crash was caught by a grep rather than by a type.** Mobile's language bars
+took their scale from `summary.byLanguage[0]`, which was correct until the list
+being rendered became the *union* — a dormant language with learned cards makes
+that array empty while rows still exist, so `[0].progress` would have thrown.
+TypeScript does not check index access without `noUncheckedIndexedAccess`, and
+neither platform's screens have tests, so nothing else was going to catch it.
+
+**Days studied came off both surfaces** (same day, user's call). Beside a streak
+it read as a second opinion on one question, and the streak is the one people
+mean. `activeDays` stays in `summarizeProgress` — still data, no longer a tile —
+and the route tolerates a stale `d` from an installed build exactly as it does
+`ret`.
+
+**The chooser previews what it is offering.** Each row draws the actual asset at
+thumbnail size, which costs no new machinery: the picture *is* a URL, so the row
+renders the same address the share sheet is about to be handed. No second
+confirm step — you are looking at what you are about to post while picking it.
+Web keeps its anchor (the thumbnail sits inside the `<a>`, so the no-JS download
+still works) and waives `@next/next/no-img-element` deliberately, since routing
+an OG render through the image optimizer to draw 80px is worse than the raw
+request. Mobile draws it only when `EXPO_PUBLIC_API_BASE_URL` is set; without a
+host the row still shares, it just cannot show what it will send. **The
+direction this is heading is Strava's**: pick a card, see it, post it.
+
+**The image names languages and will never split its figures by them.**
+`byLanguage.reviews` goes back to the start; the verdicts inside it only to
+2026-09-04 and `cardsMatured` to 2026-09-06, so a per-language number would
+break the one-window rule over any window worth posting. Codes travel in the
+URL, not display names, so the label lands in the reader's language; the route
+filters them through `isStudyLanguage`, which also bounds what glyphs the image
+can demand.
+
+⚠️ **The font subset is a standing maintenance obligation, and it bit twice.**
+It held 53 glyphs, and **every** language name in both locales fell outside it —
+"Korean" wanted a `K` it did not have, 한국어 had 한 but neither 국 nor 어 — all
+of which renders as nothing, silently. Two regenerations took it to 122. **The
+User-Agent decides the format**: a bare `Mozilla/5.0` gets the raw TrueType
+satori needs, a modern browser UA gets WOFF, and an MSIE UA gets **EOT**, which
+is what the first attempt downloaded — its "magic" was a little-endian file
+size. Verify the cmap covers what you asked for; do not verify by looking at a
+picture. The derivation and the trap are in the header of `fonts.ts`.
+
+**The today card is a layout, not a second pipeline.** `buildShareStats` over a
+one-day window is already correct numbers for today, so `v=today` picks a
+template from the same route — which it must, since mobile cannot rasterize a
+view without a native module that costs a build and breaks Expo Go. An absent
+`v` is the window card, so every URL an older build produced is unchanged. It
+drops the calendar (one day is one square), drops Days studied (it can only read
+1) and carries no study-time tile at all, per the framing at the top.
+⚠️ **The shareable gate is asked per variant** — a today card on a blank day is
+the zeroed image that check exists to prevent, however full the window beside
+it. Web's chooser is a `<details>` of per-variant anchors rather than a button
+menu, so the no-JS download that made that component an anchor survives the
+choice.
+
+⚠️ **None of it was verified visually.** Colour is computed; layout is not. The
+calendar needs a signed-in account with history to draw at all, and mobile needs
+a build — the standing caveat under Builds.
 
 ### 병과 material is a section of 부대·참모, and its branches keep the 「-과」 (2026-09-09)
 

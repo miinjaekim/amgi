@@ -7,11 +7,12 @@ import { File, Paths } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import {
   PROGRESS_HISTORY_START, SUPPORTED_STUDY_LANGUAGES, buildHeatmap, buildShareStats,
-  hasShareableHistory, historyStartsMidWindow, localDateString, retentionRate,
+  CARD_COLLECTIONS, buildTodayStats, buildWeekGrid, hasShareableHistory,
+  historyStartsMidWindow, localDateString, mergeLanguageRows, weekdayIndex,
   shareImageFilename, shareImagePath, shiftDate,
   summarizeProgress, t,
   type DailyProgress, type HeatmapCell, type LanguageProgress,
-  type StudyLanguage, type TranslationKey,
+  type ShareVariant, type StudyLanguage, type TranslationKey,
 } from '@amgi/core';
 import { useUser } from '../../src/context/UserContext';
 import { useTheme } from '../../src/context/ThemeContext';
@@ -19,6 +20,8 @@ import BottomSheet from '../../src/components/BottomSheet';
 import StudyLanguageList from '../../src/components/StudyLanguageList';
 import { useFloatingTabBarHeight } from '../../src/components/FloatingTabBar';
 import { fetchRecentProgress } from '../../src/services/progress';
+import { backfillMatureFlags, countMatureFlashcards } from '../../src/services/firestore';
+import { getUserPreferences, saveUserPreferences } from '../../src/services/userPreferences';
 import type { Palette } from '../../src/theme';
 
 /** The web deployment that renders the share image, same host as every AI route. */
@@ -35,11 +38,33 @@ const RANGES = [
  * A day's shade, indexed by `HeatmapCell.level`. Level 0 is drawn as a faint
  * block rather than as nothing: an empty cell and a missing cell look the same
  * and one of them is a bug.
+ *
+ * Straight from the palette rather than alpha-blended, since the blend measured
+ * wrong — see the `heat` field in `theme.ts` for what and by how much.
  */
 function levelColor(C: Palette, level: HeatmapCell['level']): string {
-  if (level === 0) return C.border;
-  return C.highlight + ['', '40', '73', 'BF', 'FF'][level];
+  return C.heat[level];
 }
+
+/**
+ * Sunday-first weekday names in the reader's language.
+ *
+ * Built from a known Sunday through `Intl` rather than from translation keys:
+ * seven more keys per locale to say what the platform already knows, and any
+ * locale added later gets them for free.
+ */
+function weekdayLabels(nativeLanguage: string | null | undefined): string[] {
+  const locale = nativeLanguage === 'Korean' ? 'ko-KR' : 'en-GB';
+  // 1970-01-04 was a Sunday.
+  return [0, 1, 2, 3, 4, 5, 6].map(offset => new Date(Date.UTC(1970, 0, 4 + offset, 12))
+    .toLocaleDateString(locale, { weekday: 'short' }));
+}
+
+/**
+ * Which weekday rows get a label. Seven at 12px would collide; three is what
+ * GitHub's calendar labels, and it is enough to key the other four.
+ */
+const LABELLED_WEEKDAYS = [1, 3, 5];
 
 export default function ProgressScreen() {
   const { C } = useTheme();
@@ -49,7 +74,24 @@ export default function ProgressScreen() {
   const [days, setDays] = useState<DailyProgress[] | null>(null);
   const [rangeDays, setRangeDays] = useState<number>(90);
   const [switcherOpen, setSwitcherOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
   const [sharing, setSharing] = useState(false);
+  /**
+   * Cards learned — all of them, not a window's worth.
+   *
+   * "Learned" is a *state*: a card whose interval has reached 21 days. That is
+   * readable from the card itself and always has been, for every card, with no
+   * date boundary — which is why this no longer asks the rollups. They only
+   * ever knew the *day a card crossed*, and that began on 2026-09-06, so a
+   * windowed version could not appear on any range this tab offers until
+   * October.
+   *
+   * Null while counting, and null if the count fails: an absent tile says less
+   * than a tile showing a wrong number.
+   */
+  const [matureCount, setMatureCount] = useState<
+    { total: number; byLanguage: Partial<Record<StudyLanguage, number>> } | null
+  >(null);
 
   // Refetch on focus, matching every other mobile screen — the review tab is
   // where these numbers change, and it is one tap away.
@@ -65,6 +107,48 @@ export default function ProgressScreen() {
         .catch(() => { if (!cancelled) setDays([]); });
       return () => { cancelled = true; };
     }, [user, rangeDays]),
+  );
+
+  // Counted on focus like the rollups beside it: the review tab is one tap away
+  // and is exactly where this number changes.
+  useFocusEffect(
+    useCallback(() => {
+      if (!user) { setMatureCount(null); return; }
+      let cancelled = false;
+      (async () => {
+        try {
+          // The flag is written by every rating from 2026-09-12, but a card not
+          // rated since carries none — and long-interval cards are exactly the
+          // ones nobody has rated lately. The backfill runs first, once per
+          // account, or the very first count would miss most of its subject.
+          const prefs = await getUserPreferences(user.uid);
+          if (!prefs?.matureBackfillAt) {
+            await backfillMatureFlags(user.uid);
+            await saveUserPreferences(user.uid, { matureBackfillAt: localDateString() });
+          }
+          // Cards shard per language, so the whole deck means every collection.
+          // Aggregation counts, so this is ten cheap queries rather than a read
+          // of every card.
+          // Kept per language rather than summed on the spot: the breakdown is
+          // already in hand here, and throwing it away would mean asking for it
+          // again the moment the by-language list wanted it.
+          const counts = await Promise.all(CARD_COLLECTIONS.map(
+            async ({ code }) => [code, await countMatureFlashcards(user.uid, code)] as const,
+          ));
+          if (cancelled) return;
+          const byLanguage: Partial<Record<StudyLanguage, number>> = {};
+          let total = 0;
+          for (const [code, count] of counts) {
+            if (count > 0) byLanguage[code] = count;
+            total += count;
+          }
+          setMatureCount({ total, byLanguage });
+        } catch {
+          if (!cancelled) setMatureCount(null);
+        }
+      })();
+      return () => { cancelled = true; };
+    }, [user]),
   );
 
   /**
@@ -83,6 +167,24 @@ export default function ProgressScreen() {
     [days, streak, rangeDays],
   );
 
+  /** Today's numbers, from the same rows — a one-day window, nothing more. */
+  const todayStats = useMemo(
+    () => buildTodayStats(days ?? [], { streak, endDate: localDateString() }),
+    [days, streak],
+  );
+
+  /**
+   * What there is to share, and nothing that would go out blank.
+   *
+   * ⚠️ **The gate is asked per variant.** A today card on a day with nothing
+   * rated is exactly the zeroed image `hasShareableHistory` exists to prevent,
+   * however full the 90-day window beside it happens to be.
+   */
+  const shareOptions = useMemo(() => ([
+    { variant: 'window' as const, stats: shareStats, labelKey: 'shareVariantWindow' as const },
+    { variant: 'today' as const, stats: todayStats, labelKey: 'shareVariantToday' as const },
+  ].filter(option => hasShareableHistory(option.stats))), [shareStats, todayStats]);
+
   /**
    * Fetch the rendered PNG and hand it to the OS share sheet.
    *
@@ -95,20 +197,23 @@ export default function ProgressScreen() {
    * a local uri and cannot take a remote one; going through the download path
    * also avoids handling the image bytes in JS at all.
    */
-  const handleShare = async () => {
+  const handleShare = async (variant: ShareVariant) => {
     if (sharing) return;
+    setShareOpen(false);
     setSharing(true);
     try {
       if (!API_BASE_URL) throw new Error('no API base url configured');
       if (!(await Sharing.isAvailableAsync())) throw new Error('sharing unavailable');
 
-      const target = new File(Paths.cache, shareImageFilename(shareStats));
+      const stats = variant === 'today' ? todayStats : shareStats;
+      const target = new File(Paths.cache, shareImageFilename(stats, variant));
       // A cached file from an earlier share would be silently reused, so the
-      // window's own numbers could go out under a newer window's filename.
+      // window's own numbers could go out under a newer window's filename —
+      // which is also why the variant is part of that name.
       if (target.exists) target.delete();
 
       const file = await File.downloadFileAsync(
-        `${API_BASE_URL}${shareImagePath(shareStats, nativeLanguage)}`,
+        `${API_BASE_URL}${shareImagePath(stats, nativeLanguage, variant)}`,
         target,
         { idempotent: true },
       );
@@ -131,20 +236,28 @@ export default function ProgressScreen() {
     () => buildHeatmap(days ?? [], localDateString(), rangeDays),
     [days, rangeDays],
   );
-  const weeks = useMemo(() => {
-    const columns: HeatmapCell[][] = [];
-    for (let i = 0; i < cells.length; i += 7) columns.push(cells.slice(i, i + 7));
-    return columns;
-  }, [cells]);
+  /**
+   * The calendar in week columns, so a row is always the same weekday — which
+   * is what lets the rows carry labels at all. See `buildWeekGrid`.
+   */
+  const grid = useMemo(() => buildWeekGrid(cells), [cells]);
+  const weekdays = useMemo(() => weekdayLabels(nativeLanguage), [nativeLanguage]);
 
   /**
-   * The selected day, as its index into `cells`.
+   * The selected day, as its place in the grid.
+   *
+   * Kept as a date plus its column and row rather than an index into `cells`:
+   * the grid is padded at both ends, so an index into the flat window no longer
+   * says where a cell was drawn, and the bubble is positioned from where it was
+   * drawn.
    *
    * Selection persists rather than lasting only while a finger is down: on a
    * phone the finger is on top of the cell, so "hold to read" would mean
    * reading around your own thumb. Tapping the same cell again clears it.
    */
-  const [selected, setSelected] = useState<number | null>(null);
+  const [selected, setSelected] = useState<
+    { date: string; column: number; row: number } | null
+  >(null);
   /** The full day behind a cell; `HeatmapCell` only carries the review count. */
   const daysByDate = useMemo(
     () => new Map((days ?? []).map(day => [day.date, day])),
@@ -236,6 +349,18 @@ export default function ProgressScreen() {
   const windowStart = shiftDate(localDateString(), -(rangeDays - 1));
   const partialWindow = historyStartsMidWindow(windowStart);
 
+  const learned = matureCount;
+  /**
+   * The window's languages and the all-time learned counts, as one list — the
+   * union, so a language left alone lately keeps its learned count instead of
+   * vanishing with it.
+   */
+  const languageRows = mergeLanguageRows(summary.byLanguage, matureCount?.byLanguage ?? {});
+  /** The last seven days, dense — the same builder the calendar uses. */
+  const weekCells = buildHeatmap(days ?? [], localDateString(), 7);
+  /** Scaled against its own busiest day, the way the calendar's levels are. */
+  const weekBusiest = Math.max(0, ...weekCells.map(cell => cell.reviews));
+
   return (
     <SafeAreaView style={s.safe} edges={['top']}>
       {header}
@@ -259,11 +384,11 @@ export default function ProgressScreen() {
               </TouchableOpacity>
             );
           })}
-          {/* Offered only once there is something on the image. A zeroed story
-              asset is not a modest result, it is a broken-looking one. */}
-          {hasShareableHistory(shareStats) && (
+          {/* Offered only once there is something on *some* image. A zeroed
+              story asset is not a modest result, it is a broken-looking one. */}
+          {shareOptions.length > 0 && (
             <TouchableOpacity
-              onPress={handleShare}
+              onPress={() => setShareOpen(true)}
               disabled={sharing}
               // The drawn chip is about 36×28, under the 44pt minimum, and it
               // sits at the very edge of the screen where a thumb is least
@@ -311,58 +436,96 @@ export default function ProgressScreen() {
                   ? t(nativeLanguage, 'progressStreakDay')
                   : t(nativeLanguage, 'progressStreakDays', { count: streak })} />
               <Stat s={s} label={t(nativeLanguage, 'progressStatReviews')} value={summary.totalReviews} />
-              <Stat s={s} label={t(nativeLanguage, 'progressStatActiveDays')} value={summary.activeDays} />
               <Stat s={s} label={t(nativeLanguage, 'progressStatAverage')} value={summary.averagePerActiveDay} />
+              {/* Shares its label with the tile on the shared image, so the two
+                  surfaces cannot describe one number differently. Note it
+                  counts *cards* where Reviews above counts directions — the
+                  reason they carry different nouns and never one shared one. */}
+              {learned !== null && (
+                <Stat s={s} label={t(nativeLanguage, 'shareStatLearned')} value={learned.total} />
+              )}
             </View>
 
             <Text style={s.sectionTitle}>{t(nativeLanguage, 'progressCalendar')}</Text>
-            {/* Scrolls sideways on its own — a year is 52 columns and will not
-                fit a phone. */}
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              // Vertical room for the bubble, which is absolutely positioned and
-              // would otherwise be clipped by the scroller's own bounds.
-              contentContainerStyle={s.heatmapScroll}
-            >
-              <View style={s.heatmap}>
-                {weeks.map((week, weekIndex) => (
-                  <View key={weekIndex} style={s.heatmapCol}>
-                    {week.map((cell, dayIndex) => {
-                      const index = weekIndex * 7 + dayIndex;
-                      return (
-                        <TouchableOpacity
-                          key={cell.date}
-                          activeOpacity={0.6}
-                          onPress={() => setSelected(current => current === index ? null : index)}
-                          onLongPress={() => setSelected(index)}
-                          accessibilityRole="button"
-                          accessibilityLabel={describeDay(nativeLanguage, cell.date, daysByDate.get(cell.date))}
-                          style={[
-                            s.cell,
-                            { backgroundColor: levelColor(C, cell.level) },
-                            selected === index && { borderWidth: 1, borderColor: C.text },
-                          ]}
-                        />
-                      );
-                    })}
-                  </View>
+            {/* The weekday gutter sits *outside* the scroller so it stays put
+                while a year of columns slides past it. Everything that scrolls
+                — the month row and the grid — shares one content view, so the
+                two can never drift apart horizontally. */}
+            <View style={s.calendarRow}>
+              <View style={s.weekdayGutter}>
+                {weekdays.map((name, row) => (
+                  <Text key={name} style={s.weekdayLabel} numberOfLines={1}>
+                    {LABELLED_WEEKDAYS.includes(row) ? name : ''}
+                  </Text>
                 ))}
-
-                {selected !== null && cells[selected] && (
-                  <DayTooltip
-                    C={C}
-                    s={s}
-                    nativeLanguage={nativeLanguage}
-                    cell={cells[selected]}
-                    day={daysByDate.get(cells[selected].date)}
-                    index={selected}
-                    columnCount={weeks.length}
-                  />
-                )}
               </View>
-            </ScrollView>
+              {/* Scrolls sideways on its own — a year is 52 columns and will not
+                  fit a phone. */}
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                // Vertical room for the bubble, which is absolutely positioned
+                // and would otherwise be clipped by the scroller's own bounds.
+                contentContainerStyle={s.heatmapScroll}
+              >
+                <View>
+                  <View style={[s.monthRow, { width: grid.columns.length * PITCH }]}>
+                    {grid.months.map(tick => (
+                      <Text key={tick.date} style={[s.monthLabel, { left: tick.column * PITCH }]}>
+                        {formatMonth(nativeLanguage, tick.date)}
+                      </Text>
+                    ))}
+                  </View>
+                  <View style={s.heatmap}>
+                    {grid.columns.map((column, columnIndex) => (
+                      <View key={columnIndex} style={s.heatmapCol}>
+                        {column.map((cell, row) => (cell === null
+                          // A slot outside the window: drawn as nothing, because
+                          // an empty square would claim it was a day nobody
+                          // studied.
+                          ? <View key={`pad-${row}`} style={s.cellPad} />
+                          : (
+                            <TouchableOpacity
+                              key={cell.date}
+                              activeOpacity={0.6}
+                              onPress={() => setSelected(current => (
+                                current?.date === cell.date
+                                  ? null
+                                  : { date: cell.date, column: columnIndex, row }
+                              ))}
+                              onLongPress={() => setSelected({ date: cell.date, column: columnIndex, row })}
+                              accessibilityRole="button"
+                              accessibilityLabel={describeDay(nativeLanguage, cell.date, daysByDate.get(cell.date))}
+                              style={[
+                                s.cell,
+                                { backgroundColor: levelColor(C, cell.level) },
+                                selected?.date === cell.date && { borderWidth: 1, borderColor: C.text },
+                              ]}
+                            />
+                          )))}
+                      </View>
+                    ))}
+
+                    {selected && (
+                      <DayTooltip
+                        C={C}
+                        s={s}
+                        nativeLanguage={nativeLanguage}
+                        date={selected.date}
+                        day={daysByDate.get(selected.date)}
+                        column={selected.column}
+                        row={selected.row}
+                        columnCount={grid.columns.length}
+                      />
+                    )}
+                  </View>
+                </View>
+              </ScrollView>
+            </View>
+            {/* Named, not just graded: "Less → More" alone never says more of
+                what. */}
             <View style={s.legend}>
+              <Text style={s.legendText}>{t(nativeLanguage, 'progressStatReviews')}</Text>
               <Text style={s.legendText}>{t(nativeLanguage, 'progressLessMore')}</Text>
               {([0, 1, 2, 3, 4] as const).map(level => (
                 <View key={level} style={[s.cell, { backgroundColor: levelColor(C, level) }]} />
@@ -370,10 +533,40 @@ export default function ProgressScreen() {
               <Text style={s.legendText}>{t(nativeLanguage, 'progressMore')}</Text>
             </View>
 
-            {summary.byLanguage.length > 0 && (
+            <Text style={s.sectionTitle}>{t(nativeLanguage, 'progressWeekTitle')}</Text>
+            <View style={s.weekPlot}>
+              {weekCells.map(cell => (
+                <View key={cell.date} style={s.weekCol}>
+                  {weekBusiest > 0 && cell.reviews === weekBusiest && (
+                    <Text style={s.weekValue}>{cell.reviews}</Text>
+                  )}
+                  {/* A day with reviews keeps a visible sliver, for the same
+                      reason the calendar gives a one-review day a level 1. */}
+                  <View
+                    style={[s.weekBar, {
+                      height: weekBusiest > 0 && cell.reviews > 0
+                        ? Math.max(2, Math.round((cell.reviews / weekBusiest) * WEEK_PLOT_HEIGHT))
+                        : 1,
+                    }]}
+                  />
+                </View>
+              ))}
+            </View>
+            <View style={s.weekLabels}>
+              {weekCells.map(cell => (
+                // From the cell's own date: these seven days end on today, so
+                // they are not a fixed Sunday-to-Saturday run.
+                <Text key={cell.date} style={s.weekLabel}>
+                  {weekdays[weekdayIndex(cell.date)]}
+                </Text>
+              ))}
+            </View>
+
+            {languageRows.length > 0 && (
               <>
                 <Text style={s.sectionTitle}>{t(nativeLanguage, 'progressByLanguage')}</Text>
-                {summary.byLanguage.map(({ studyLanguage: language, progress }) => (
+                <Text style={s.sectionNote}>{t(nativeLanguage, 'progressBarScale')}</Text>
+                {languageRows.map(({ studyLanguage: language, progress, learned: learnedHere }) => (
                   <LanguageRow
                     key={language}
                     s={s}
@@ -381,11 +574,16 @@ export default function ProgressScreen() {
                     nativeLanguage={nativeLanguage}
                     language={language}
                     progress={progress}
+                    learned={learnedHere}
                     // Share of the busiest language rather than of the total:
                     // with one language the bar would otherwise always be full
                     // and say nothing, and with five it is the comparison
                     // between them that is being read.
-                    busiest={summary.byLanguage[0].progress.reviews}
+                    // From the list actually being drawn, not from the window's
+                    // own ranking: a language can now be in this list for its
+                    // learned count alone, in which case `summary.byLanguage`
+                    // may be empty while there are still rows to scale.
+                    busiest={languageRows[0]?.progress.reviews ?? 0}
                   />
                 ))}
               </>
@@ -394,45 +592,76 @@ export default function ProgressScreen() {
         )}
       </ScrollView>
       {switcher}
+      {/* The same sheet the study-language switcher on this screen uses, rather
+          than a second kind of popover for the second thing that asks a
+          question. */}
+      <BottomSheet
+        visible={shareOpen}
+        title={t(nativeLanguage, 'shareChoose')}
+        onClose={() => setShareOpen(false)}
+      >
+        {shareOptions.map(option => (
+          <TouchableOpacity
+            key={option.variant}
+            style={s.shareOption}
+            onPress={() => handleShare(option.variant)}
+            accessibilityRole="button"
+          >
+            {/* The picture itself, before it goes anywhere. It costs no new
+                machinery — the asset is a URL, so this is the same address the
+                share sheet is about to be handed. Only drawn when there is a
+                host to ask; without one the row still works and still shares,
+                it just cannot show what it is about to send. */}
+            {API_BASE_URL !== '' && (
+              <Image
+                source={{
+                  uri: `${API_BASE_URL}${shareImagePath(option.stats, nativeLanguage, option.variant)}`,
+                }}
+                style={s.shareThumb}
+                resizeMode="contain"
+                accessibilityIgnoresInvertColors
+              />
+            )}
+            <Text style={s.shareOptionText}>{t(nativeLanguage, option.labelKey)}</Text>
+            <Ionicons name="share-outline" size={18} color={C.muted} />
+          </TouchableOpacity>
+        ))}
+      </BottomSheet>
     </SafeAreaView>
   );
 }
 
 /**
- * One language's slice of the window: a bar for volume, the counts under it,
- * and — once there is anything to say — how much of it stuck.
+ * One language's slice of the window: a bar for volume and the counts under it.
  *
  * The bar is what turns this from a list into an answer. "Which languages am I
  * learning and how far along" was already in the data (`byLanguage` has been
  * written since rollups began); it was just never drawn.
+ *
+ * It carried a retention percentage until 2026-09-12. That came off because
+ * review is about how much you reviewed and how many cards you have learned,
+ * not how accurately you recalled them — the verdict counters behind it are
+ * still written, and `retentionRate` still computes it for whoever needs it
+ * next.
  */
-function LanguageRow({ s, C, nativeLanguage, language, progress, busiest }: {
+function LanguageRow({ s, C, nativeLanguage, language, progress, learned, busiest }: {
   s: ReturnType<typeof makeStyles>;
   C: Palette;
   nativeLanguage: string | null | undefined;
   language: StudyLanguage;
   progress: LanguageProgress;
+  /** All-time cards over the maturity line, unlike everything else on the row. */
+  learned: number;
   busiest: number;
 }) {
   const cardsAdded = progress.newCards + progress.packCards;
-  const retention = retentionRate(progress);
   const share = busiest > 0 ? progress.reviews / busiest : 0;
 
   return (
     <View style={s.langRow}>
-      <View style={s.langHead}>
-        <Text style={s.langName} numberOfLines={1}>
-          {t(nativeLanguage, languageLabelKey(language))}
-        </Text>
-        {/* Absent, not zero, for every day recorded before verdicts were kept
-            per language — `retentionRate` returns null rather than claiming
-            100% for a slice that was never asked. */}
-        {retention !== null && (
-          <Text style={s.langRetention}>
-            {t(nativeLanguage, 'progressRetention', { percent: Math.round(retention * 100) })}
-          </Text>
-        )}
-      </View>
+      <Text style={s.langName} numberOfLines={1}>
+        {t(nativeLanguage, languageLabelKey(language))}
+      </Text>
       <View style={s.langBarTrack}>
         <View
           style={[
@@ -444,7 +673,15 @@ function LanguageRow({ s, C, nativeLanguage, language, progress, busiest }: {
         />
       </View>
       <Text style={s.langStat}>
-        {t(nativeLanguage, 'progressLanguageReviews', { count: progress.reviews })}
+        {/* A row can be here for its learned count alone, with nothing in the
+            window — "0 reviews" would read as a slump rather than as a language
+            left alone for a while. */}
+        {progress.reviews === 0
+          ? t(nativeLanguage, 'progressTooltipNoReviews')
+          : t(nativeLanguage, 'progressLanguageReviews', { count: progress.reviews })}
+        {learned > 0
+          ? ` · ${t(nativeLanguage, 'progressLanguageLearned', { count: learned })}`
+          : ''}
         {cardsAdded > 0
           ? ` · ${t(nativeLanguage, 'progressStatNewCards')} ${cardsAdded}`
           : ''}
@@ -464,18 +701,24 @@ const PITCH = CELL + GAP;
 /** Fixed so the bubble can be centred exactly without measuring its text. */
 const TOOLTIP_WIDTH = 150;
 const TOOLTIP_HEIGHT = 42;
+/** Room above the grid for the month ticks. */
+const MONTH_ROW_HEIGHT = 14;
+/** The weekly plot's height in pixels; the tallest bar fills it. */
+const WEEK_PLOT_HEIGHT = 64;
 
-function DayTooltip({ C, s, nativeLanguage, cell, day, index, columnCount }: {
+function DayTooltip({ C, s, nativeLanguage, date, day, column, row, columnCount }: {
   C: Palette;
   s: ReturnType<typeof makeStyles>;
   nativeLanguage: string | null | undefined;
-  cell: HeatmapCell;
+  date: string;
   day: DailyProgress | undefined;
-  index: number;
+  column: number;
+  row: number;
   columnCount: number;
 }) {
-  const column = Math.floor(index / 7);
-  const row = index % 7;
+  // A day with no document is a day with no reviews, which is what the cell
+  // behind this bubble is already drawing.
+  const reviews = day?.reviews ?? 0;
   const cardsAdded = (day?.newCards ?? 0) + (day?.packCards ?? 0);
 
   // Centred on the cell, then clamped so neither end runs past the grid.
@@ -493,13 +736,13 @@ function DayTooltip({ C, s, nativeLanguage, cell, day, index, columnCount }: {
 
   return (
     <View style={[s.tooltip, { left, top, width: TOOLTIP_WIDTH, borderColor: C.muted, backgroundColor: C.surface }]}>
-      <Text style={s.tooltipDate}>{formatDay(nativeLanguage, cell.date)}</Text>
+      <Text style={s.tooltipDate}>{formatDay(nativeLanguage, date)}</Text>
       <Text style={s.tooltipDetail} numberOfLines={1}>
-        {cell.reviews === 0
+        {reviews === 0
           ? t(nativeLanguage, 'progressTooltipNoReviews')
-          : cell.reviews === 1
+          : reviews === 1
             ? t(nativeLanguage, 'progressTooltipOneReview')
-            : t(nativeLanguage, 'progressTooltipReviews', { count: cell.reviews })}
+            : t(nativeLanguage, 'progressTooltipReviews', { count: reviews })}
         {cardsAdded > 0
           ? ` · ${cardsAdded === 1
             ? t(nativeLanguage, 'progressTooltipOneCard')
@@ -507,6 +750,14 @@ function DayTooltip({ C, s, nativeLanguage, cell, day, index, columnCount }: {
           : ''}
       </Text>
     </View>
+  );
+}
+
+/** `2026-09-01` → `Sep` / `9월`, for the calendar's month ticks. */
+function formatMonth(nativeLanguage: string | null | undefined, date: string): string {
+  return new Date(`${date}T12:00:00Z`).toLocaleDateString(
+    nativeLanguage === 'Korean' ? 'ko-KR' : 'en-GB',
+    { month: 'short' },
   );
 }
 
@@ -599,6 +850,18 @@ function makeStyles(C: Palette, tabBarHeight: number) {
     // text beside the icon to balance it.
     shareBtn: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, marginLeft: 'auto', flexShrink: 0, borderColor: C.highlight },
     shareBtnBusy: { opacity: 0.5 },
+    shareOption: {
+      flexDirection: 'row', alignItems: 'center',
+      paddingVertical: 12, paddingHorizontal: 4,
+      borderBottomWidth: 1, borderBottomColor: C.border,
+    },
+    // 9:16, the canvas the image is drawn on. The border colour shows through
+    // while the PNG is still loading, so the row does not jump.
+    shareThumb: {
+      width: 54, height: 96, borderRadius: 6,
+      backgroundColor: C.border, marginRight: 12,
+    },
+    shareOptionText: { flex: 1, color: C.text, fontSize: 15 },
     rangeTextOn: { color: C.highlight, fontWeight: '700' },
     empty: { color: C.muted, fontSize: 14, paddingHorizontal: 16 },
     emptyBody: { color: C.muted, fontSize: 13, opacity: 0.7, marginTop: 8, paddingHorizontal: 16 },
@@ -607,12 +870,25 @@ function makeStyles(C: Palette, tabBarHeight: number) {
     statValue: { color: C.highlight, fontSize: 20, fontWeight: '700' },
     statLabel: { color: C.muted, fontSize: 12, marginTop: 2 },
     sectionTitle: { color: C.text, fontSize: 14, fontWeight: '700', marginBottom: 10 },
+    sectionNote: { color: C.muted, fontSize: 11, marginTop: -4, marginBottom: 10 },
+    calendarRow: { flexDirection: 'row' },
+    // Padded down by the month row plus the scroller's own top inset, so row 0
+    // of the labels lines up with row 0 of the cells.
+    weekdayGutter: { marginRight: 6, paddingTop: 48 + MONTH_ROW_HEIGHT },
+    weekdayLabel: {
+      height: CELL, marginBottom: GAP, width: 22, textAlign: 'right',
+      color: C.muted, fontSize: 9, lineHeight: CELL,
+    },
+    monthRow: { height: MONTH_ROW_HEIGHT, position: 'relative' },
+    monthLabel: { position: 'absolute', top: 0, color: C.muted, fontSize: 9 },
     // The bubble sits above or below a cell and is absolutely positioned, so
     // the scroller needs room for it or it gets clipped at the grid's edge.
     heatmapScroll: { paddingTop: 48, paddingBottom: 24 },
     heatmap: { flexDirection: 'row', gap: GAP, position: 'relative' },
     heatmapCol: { flexDirection: 'column', gap: GAP },
     cell: { width: CELL, height: CELL, borderRadius: 2 },
+    // Holds a slot's place in the column without drawing anything in it.
+    cellPad: { width: CELL, height: CELL },
     tooltip: {
       position: 'absolute', zIndex: 10, paddingHorizontal: 8, paddingVertical: 5,
       borderRadius: 8, borderWidth: 1,
@@ -621,10 +897,23 @@ function makeStyles(C: Palette, tabBarHeight: number) {
     tooltipDetail: { fontSize: 11, color: C.muted, marginTop: 1 },
     legend: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 10, marginBottom: 24 },
     legendText: { color: C.muted, fontSize: 11 },
+    // Bars rather than a line: seven days is seven discrete counts, and it
+    // keeps both platforms on one picture without a drawing library here.
+    weekPlot: {
+      flexDirection: 'row', alignItems: 'flex-end', gap: 8,
+      height: WEEK_PLOT_HEIGHT + 14,
+      borderBottomWidth: 1, borderBottomColor: C.border,
+    },
+    weekCol: { flex: 1, alignItems: 'center', justifyContent: 'flex-end' },
+    weekBar: { width: '100%', borderTopLeftRadius: 2, borderTopRightRadius: 2, backgroundColor: C.heat[4] },
+    weekValue: { color: C.muted, fontSize: 10, lineHeight: 12 },
+    weekLabels: { flexDirection: 'row', gap: 8, marginTop: 4, marginBottom: 24 },
+    weekLabel: { flex: 1, textAlign: 'center', color: C.muted, fontSize: 10 },
     langRow: { padding: 12, borderRadius: 12, borderWidth: 1, borderColor: C.border, marginBottom: 8 },
-    langHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 10 },
-    langName: { flex: 1, color: C.text, fontSize: 14, fontWeight: '700' },
-    langRetention: { color: C.highlight, fontSize: 12, fontWeight: '700' },
+    // No `flex: 1`: the name sits directly in the card's column now that the
+    // retention figure is gone, where flex would stretch it vertically rather
+    // than fill the row it used to share.
+    langName: { color: C.text, fontSize: 14, fontWeight: '700' },
     langBarTrack: {
       height: 6, borderRadius: 3, backgroundColor: C.border,
       overflow: 'hidden', marginTop: 8, marginBottom: 6,

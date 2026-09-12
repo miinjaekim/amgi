@@ -1,8 +1,16 @@
 'use client';
 
 import React, { useState } from 'react';
-import { shareImageFilename, shareImagePath, type ShareStats } from '@amgi/core';
+import {
+  shareImageFilename, shareImagePath,
+  type ShareStats, type ShareVariant,
+} from '@amgi/core';
 import { t } from '@/lib/i18n';
+
+export interface ShareOption {
+  variant: ShareVariant;
+  stats: ShareStats;
+}
 
 /**
  * Share the stats image.
@@ -18,68 +26,138 @@ import { t } from '@/lib/i18n';
  * sheet — Instagram, KakaoTalk — where a download only reaches the camera roll.
  * Desktop mostly cannot share files, which is why the fallback is the default
  * rather than an error path.
+ *
+ * **Choosing between pictures keeps that property.** With more than one on
+ * offer the control becomes a `<details>` disclosure whose every row is its own
+ * anchor to its own URL — so the no-JS download survives the chooser instead of
+ * being traded for it. A menu built out of buttons and an onClick would not.
  */
 export default function ShareStatsButton({
-  stats,
+  options,
   nativeLanguage,
 }: {
-  stats: ShareStats;
+  options: ShareOption[];
   nativeLanguage: string | null | undefined;
 }) {
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
 
-  const href = shareImagePath(stats, nativeLanguage);
-  const filename = shareImageFilename(stats);
+  /**
+   * Try the share sheet, fall back to the anchor's own download.
+   *
+   * `canShare` has to be asked with the actual file: a browser can implement
+   * `navigator.share` for links and still refuse files, and the only way to
+   * find out is to construct one. So the fetch happens before the decision, and
+   * anything that goes wrong falls through to the anchor's default action.
+   */
+  const handleClick = (href: string, filename: string) =>
+    async (event: React.MouseEvent<HTMLAnchorElement>) => {
+      if (typeof navigator === 'undefined' || !navigator.canShare) return;
 
-  const handleClick = async (event: React.MouseEvent<HTMLAnchorElement>) => {
-    // `canShare` has to be asked with the actual file: a browser can implement
-    // `navigator.share` for links and still refuse files, and the only way to
-    // find out is to construct one. So the fetch happens before the decision,
-    // and anything that goes wrong falls through to the anchor's own download.
-    if (typeof navigator === 'undefined' || !navigator.canShare) return;
+      event.preventDefault();
+      setBusy(true);
+      setFailed(false);
+      try {
+        const response = await fetch(href);
+        if (!response.ok) throw new Error(`render failed: ${response.status}`);
+        const file = new File([await response.blob()], filename, { type: 'image/png' });
 
-    event.preventDefault();
-    setBusy(true);
-    setFailed(false);
-    try {
-      const response = await fetch(href);
-      if (!response.ok) throw new Error(`render failed: ${response.status}`);
-      const file = new File([await response.blob()], filename, { type: 'image/png' });
-
-      if (navigator.canShare({ files: [file] })) {
-        await navigator.share({ files: [file] });
-        return;
+        if (navigator.canShare({ files: [file] })) {
+          await navigator.share({ files: [file] });
+          return;
+        }
+        // Shareable API, unshareable file — save it instead rather than telling
+        // the user something went wrong, because nothing did.
+        const url = URL.createObjectURL(file);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        link.click();
+        URL.revokeObjectURL(url);
+      } catch (error) {
+        // A cancelled share sheet rejects with AbortError. That is the user
+        // saying no, not a failure, and must not raise an error message.
+        if (!(error instanceof DOMException && error.name === 'AbortError')) setFailed(true);
+      } finally {
+        setBusy(false);
       }
-      // Shareable API, unshareable file — save it instead rather than telling
-      // the user something went wrong, because nothing did.
-      const url = URL.createObjectURL(file);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = filename;
-      link.click();
-      URL.revokeObjectURL(url);
-    } catch (error) {
-      // A cancelled share sheet rejects with AbortError. That is the user
-      // saying no, not a failure, and must not raise an error message.
-      if (!(error instanceof DOMException && error.name === 'AbortError')) setFailed(true);
-    } finally {
-      setBusy(false);
-    }
+    };
+
+  const linkFor = (option: ShareOption, children: React.ReactNode, className: string) => {
+    const href = shareImagePath(option.stats, nativeLanguage, option.variant);
+    const filename = shareImageFilename(option.stats, option.variant);
+    return (
+      <a
+        key={option.variant}
+        href={href}
+        download={filename}
+        onClick={handleClick(href, filename)}
+        aria-busy={busy}
+        className={className}
+      >
+        {children}
+      </a>
+    );
   };
+
+  /**
+   * The actual picture, at thumbnail size.
+   *
+   * A real preview costs nothing to build here: the asset *is* a URL, so the
+   * same address the share sheet will send is the one this renders. There is no
+   * second confirm step — you are looking at what you are about to post while
+   * choosing it, which is the whole point of choosing.
+   */
+  const preview = (option: ShareOption) => (
+    // next/image would route a 1080x1920 OG render through the optimizer to
+    // draw an 80px thumbnail of a same-origin API route. The raw request is the
+    // cheaper and more predictable one, so the rule is waived here on purpose
+    // rather than by accident — the directive has to sit on the line directly
+    // above the element it excuses.
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={shareImagePath(option.stats, nativeLanguage, option.variant)}
+      alt=""
+      loading="lazy"
+      className="w-20 rounded-md border border-[var(--color-muted)]"
+    />
+  );
+
+  const label = (option: ShareOption) => t(
+    nativeLanguage,
+    option.variant === 'today' ? 'shareVariantToday' : 'shareVariantWindow',
+  );
+
+  const chip = 'px-3 py-1.5 rounded-lg text-sm font-mono border transition-colors hover:opacity-80';
+  const chipStyle = 'border-[var(--color-highlight)] text-[var(--color-highlight)]';
+
+  if (options.length === 0) return null;
 
   return (
     <div className="flex flex-col items-end gap-1">
-      <a
-        href={href}
-        download={filename}
-        onClick={handleClick}
-        aria-busy={busy}
-        className="px-3 py-1.5 rounded-lg text-sm font-mono border transition-colors hover:opacity-80"
-        style={{ borderColor: 'var(--color-highlight)', color: 'var(--color-highlight)' }}
-      >
-        {t(nativeLanguage, 'shareTitle')}
-      </a>
+      {options.length === 1
+        // One picture, one link — no disclosure to open first.
+        ? linkFor(options[0], t(nativeLanguage, 'shareTitle'), `${chip} ${chipStyle}`)
+        : (
+          <details className="relative">
+            <summary
+              className={`${chip} ${chipStyle} cursor-pointer list-none`}
+              aria-label={t(nativeLanguage, 'shareChoose')}
+            >
+              {t(nativeLanguage, 'shareTitle')}
+            </summary>
+            <div className="absolute right-0 mt-1 z-10 flex gap-2 p-2 rounded-xl border border-[var(--color-muted)] bg-[var(--color-surface)] whitespace-nowrap">
+              {options.map(option => linkFor(
+                option,
+                <span className="flex flex-col items-center gap-1.5">
+                  {preview(option)}
+                  <span>{label(option)}</span>
+                </span>,
+                'p-1.5 rounded-lg text-xs font-mono hover:opacity-80 text-[var(--color-text)]',
+              ))}
+            </div>
+          </details>
+        )}
       {failed && (
         <span className="text-xs" style={{ color: 'var(--color-error, #FC5D7C)' }}>
           {t(nativeLanguage, 'shareFailed')}

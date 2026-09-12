@@ -3,7 +3,9 @@ import {
   DETAILED_HISTORY_START,
   PROGRESS_HISTORY_START,
   buildShareStats,
+  buildTodayStats,
   emptyDailyProgress,
+  emptyLanguageProgress,
   fullyCoveredWindow,
   hasShareableHistory,
   shareImageFilename,
@@ -16,6 +18,15 @@ import { readShareImageParams } from '@/app/api/stats-image/route';
 /** A day with only the fields a test cares about; the rest stay zero. */
 function day(date: string, patch: Partial<DailyProgress> = {}): DailyProgress {
   return { ...emptyDailyProgress(date), ...patch };
+}
+
+/** A day whose reviews are attributed to one language, for the `g` parameter. */
+function dayIn(date: string, language: string, reviews: number): DailyProgress {
+  return {
+    ...emptyDailyProgress(date),
+    reviews,
+    byLanguage: { [language]: { ...emptyLanguageProgress(), reviews } },
+  };
 }
 
 /** A window ending well clear of both boundaries, so coverage is not the subject. */
@@ -49,7 +60,6 @@ describe('buildShareStats window', () => {
       day(LATER, { reviews: 1 }),
     ], 30);
     expect(stats.reviews).toBe(2);
-    expect(stats.daysStudied).toBe(2);
   });
 
   it('fills gaps in the heatmap so an unstudied day is drawn, not missing', () => {
@@ -66,27 +76,24 @@ describe('buildShareStats numbers', () => {
     expect(statsFor([]).streak).toBe(7);
   });
 
-  it('counts days studied by ratings, not by cards added', () => {
+  it('no longer carries days studied, which the streak already answered', () => {
     const stats = statsFor([
       day(LATER, { reviews: 2 }),
       day(shiftDate(LATER, -1), { newCards: 40, packCards: 474 }),
     ]);
-    expect(stats.daysStudied).toBe(1);
+    expect(stats).not.toHaveProperty('daysStudied');
+    expect(new URLSearchParams(shareImageQuery(stats)).has('d')).toBe(false);
   });
 
-  it('computes retention over the whole window, not per language', () => {
-    // 3 of 4 ratings were not a lapse. `hard` counts as a recall that hurt,
-    // matching what SM-2 does with it.
+  it('keeps counting verdicts even though nothing renders them', () => {
+    // Retention came off both surfaces on 2026-09-12, display only: the four
+    // verdicts are still written on every rating, because a rollup cannot be
+    // backfilled and stopping the write would lose the history for good.
     const stats = statsFor([
       day(LATER, { reviews: 4, again: 1, hard: 1, good: 1, easy: 1 }),
     ]);
-    expect(stats.retention).toBeCloseTo(0.75);
-  });
-
-  it('reports retention as null rather than 100% when nothing was rated', () => {
-    // The distinction the Progress tab already makes: an unrecorded slice must
-    // read as "not recorded", never as a perfect one.
-    expect(statsFor([day(LATER, { newCards: 5 })]).retention).toBeNull();
+    expect(stats.reviews).toBe(4);
+    expect(stats).not.toHaveProperty('retention');
   });
 
   it('sums the detailed counters across the window', () => {
@@ -94,16 +101,16 @@ describe('buildShareStats numbers', () => {
       day(LATER, { reviews: 10, cardsMatured: 3, studySeconds: 240 }),
       day(shiftDate(LATER, -1), { reviews: 4, cardsMatured: 1, studySeconds: 96 }),
     ]);
-    expect(stats.cardsLearned).toBe(4);
     expect(stats.studySeconds).toBe(336);
   });
 
-  it('nets a card that matured and later lapsed back out', () => {
-    const stats = statsFor([
-      day(LATER, { reviews: 1, cardsMatured: -1 }),
-      day(shiftDate(LATER, -1), { reviews: 1, cardsMatured: 1 }),
-    ]);
-    expect(stats.cardsLearned).toBe(0);
+  it('carries no cards-learned figure at all', () => {
+    // It became an all-time number on 2026-09-12, and an all-time number cannot
+    // sit on a canvas where every other figure names one window. The window's
+    // crossings are still summed by summarizeProgress for whoever wants them.
+    const stats = statsFor([day(LATER, { reviews: 10, cardsMatured: 3 })]);
+    expect(stats).not.toHaveProperty('cardsLearned');
+    expect(new URLSearchParams(shareImageQuery(stats)).has('l')).toBe(false);
   });
 });
 
@@ -116,7 +123,6 @@ describe('the two history boundaries', () => {
       [day(endDate, { reviews: 20, cardsMatured: 2, studySeconds: 300 })],
       { streak: 3, endDate, windowDays: 30 },
     );
-    expect(stats.cardsLearned).toBeNull();
     expect(stats.studySeconds).toBeNull();
     // The numbers that were always written are unaffected by that boundary.
     expect(stats.reviews).toBe(20);
@@ -126,10 +132,10 @@ describe('the two history boundaries', () => {
     // No code change between this and the case above — only the calendar.
     const endDate = shiftDate(DETAILED_HISTORY_START, 29);
     const stats = buildShareStats(
-      [day(endDate, { reviews: 20, cardsMatured: 2 })],
+      [day(endDate, { reviews: 20, cardsMatured: 2, studySeconds: 120 })],
       { streak: 3, endDate, windowDays: 30 },
     );
-    expect(stats.cardsLearned).toBe(2);
+    expect(stats.studySeconds).toBe(120);
   });
 
   it('flags a window reaching back before any rollup exists', () => {
@@ -150,7 +156,7 @@ describe('the two history boundaries', () => {
     const endDate = shiftDate(DETAILED_HISTORY_START, 1);
     const stats = buildShareStats([], { streak: 0, endDate, windowDays: 14 });
     expect(stats.partialHistory).toBe(false);
-    expect(stats.cardsLearned).toBeNull();
+    expect(stats.studySeconds).toBeNull();
   });
 });
 
@@ -176,10 +182,10 @@ describe('fullyCoveredWindow', () => {
       const endDate = shiftDate(DETAILED_HISTORY_START, offset);
       const windowDays = fullyCoveredWindow(endDate, 30);
       const stats = buildShareStats(
-        [day(endDate, { reviews: 1, cardsMatured: 1 })],
+        [day(endDate, { reviews: 1, studySeconds: 30 })],
         { streak: 1, endDate, windowDays },
       );
-      expect(stats.cardsLearned).not.toBeNull();
+      expect(stats.studySeconds).not.toBeNull();
     }
   });
 });
@@ -215,30 +221,35 @@ describe('shareImageQuery', () => {
     expect(q.get('w')).toBe('30');
     expect(q.get('r')).toBe('40');
     expect(q.get('s')).toBe('7');
-    expect(q.get('l')).toBe('3');
     expect(q.get('lang')).toBe('Korean');
   });
 
-  it('omits a withheld figure rather than sending zero', () => {
-    // The contract between `buildShareStats` and the route. Sending `l=0` would
-    // draw a "0 cards learned" tile, which is a claim the data cannot support.
-    const endDate = shiftDate(DETAILED_HISTORY_START, 2);
-    const stats = buildShareStats([day(endDate, { reviews: 5 })], {
-      streak: 1, endDate, windowDays: 30,
-    });
-    expect(stats.cardsLearned).toBeNull();
-    const q = new URLSearchParams(shareImageQuery(stats));
-    expect(q.has('l')).toBe(false);
-    expect(q.has('r')).toBe(true);
-  });
-
-  it('sends retention as a whole percent', () => {
+  it('no longer sends retention, however many verdicts the window holds', () => {
     const q = query([day(LATER, { reviews: 4, again: 1, hard: 1, good: 1, easy: 1 })]);
-    expect(q.get('ret')).toBe('75');
+    expect(q.has('ret')).toBe(false);
   });
 
-  it('omits retention when nothing was rated', () => {
-    expect(query([day(LATER, { newCards: 3 })]).has('ret')).toBe(false);
+  it('names the languages reviewed in the window, busiest first', () => {
+    const q = query([
+      dayIn(LATER, 'Korean', 3),
+      dayIn(shiftDate(LATER, -1), 'Japanese', 9),
+    ]);
+    expect(q.get('g')).toBe('Japanese,Korean');
+  });
+
+  it('leaves out a language that was never reviewed', () => {
+    // Cards added is not studying, and a name beside a review count that
+    // contributed none of it is a claim the window does not support.
+    const q = query([
+      dayIn(LATER, 'Korean', 4),
+      { ...emptyDailyProgress(shiftDate(LATER, -1)), newCards: 60,
+        byLanguage: { Japanese: { ...emptyLanguageProgress(), newCards: 60 } } },
+    ]);
+    expect(q.get('g')).toBe('Korean');
+  });
+
+  it('omits the parameter rather than sending an empty one', () => {
+    expect(query([day(LATER, { reviews: 2 })]).has('g')).toBe(false);
   });
 
   it('sends one heat character per day in the window', () => {
@@ -267,19 +278,43 @@ describe('shareImageQuery', () => {
     const parsed = readShareImageParams(new URLSearchParams(shareImageQuery(stats, 'Korean')));
     expect(parsed.reviews).toBe(stats.reviews);
     expect(parsed.streak).toBe(stats.streak);
-    expect(parsed.daysStudied).toBe(stats.daysStudied);
-    expect(parsed.learned).toBe(stats.cardsLearned);
-    expect(parsed.retention).toBe(Math.round((stats.retention ?? 0) * 100));
     expect(parsed.cells).toEqual(stats.heatmap.map(c => c.level));
   });
+});
 
-  it('round-trips a withheld figure as withheld', () => {
-    const endDate = shiftDate(DETAILED_HISTORY_START, 2);
-    const stats = buildShareStats([day(endDate, { reviews: 5 })], {
-      streak: 1, endDate, windowDays: 30,
-    });
-    const parsed = readShareImageParams(new URLSearchParams(shareImageQuery(stats)));
-    expect(parsed.learned).toBeNull();
+describe('the today card', () => {
+  const todayStats = (days: DailyProgress[]) =>
+    buildTodayStats(days, { streak: 4, endDate: LATER });
+
+  it('spans exactly the one day', () => {
+    const stats = todayStats([day(LATER, { reviews: 6 }), day(shiftDate(LATER, -1), { reviews: 99 })]);
+    expect(stats.windowDays).toBe(1);
+    expect(stats.windowStart).toBe(LATER);
+    expect(stats.reviews).toBe(6);
+  });
+
+  it('is offered or withheld on its own history, not the window behind it', () => {
+    // The gate has to be asked per variant: a today card on a day with nothing
+    // on it is the zeroed image the check exists to prevent, however full the
+    // 90-day window beside it is.
+    const busyWindowQuietToday = [day(shiftDate(LATER, -1), { reviews: 120 })];
+    expect(hasShareableHistory(statsFor(busyWindowQuietToday, 30))).toBe(true);
+    expect(hasShareableHistory(todayStats(busyWindowQuietToday))).toBe(false);
+  });
+
+  it('asks the route for a different picture, and only when it is today', () => {
+    const stats = todayStats([day(LATER, { reviews: 6 })]);
+    expect(new URLSearchParams(shareImageQuery(stats, null, 'today')).get('v')).toBe('today');
+    expect(new URLSearchParams(shareImageQuery(stats, null, 'window')).has('v')).toBe(false);
+    expect(new URLSearchParams(shareImageQuery(stats)).has('v')).toBe(false);
+  });
+
+  it('names its file apart from a one-day window, which would collide', () => {
+    // Mobile deletes by filename before downloading, so a collision there is a
+    // stale picture going out rather than a merely confusing name.
+    const stats = todayStats([day(LATER, { reviews: 6 })]);
+    expect(shareImageFilename(stats, 'today')).toMatch(/-today\.png$/);
+    expect(shareImageFilename(stats, 'today')).not.toBe(shareImageFilename(stats));
   });
 });
 

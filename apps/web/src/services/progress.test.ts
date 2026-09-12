@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   applyDelta,
   buildHeatmap,
+  buildWeekGrid,
   clampThinkTime,
   dateRange,
   deriveStreak,
@@ -10,6 +11,7 @@ import {
   historyStartsMidWindow,
   localDateString,
   mergeDeltas,
+  mergeLanguageRows,
   negateDelta,
   newCardsDelta,
   parseDailyProgress,
@@ -20,6 +22,7 @@ import {
   THINK_TIME_CAP_SECONDS,
   shiftDate,
   summarizeProgress,
+  weekdayIndex,
   type DailyProgress,
   type LanguageProgress,
 } from '@amgi/core';
@@ -236,6 +239,128 @@ describe('buildHeatmap', () => {
   it('is all zeroes when nothing was reviewed', () => {
     const cells = buildHeatmap([], '2026-08-19', 3);
     expect(cells.every(cell => cell.level === 0 && cell.reviews === 0)).toBe(true);
+  });
+});
+
+describe('mergeLanguageRows', () => {
+  it('attaches the all-time count to the language it belongs to', () => {
+    const rows = mergeLanguageRows(
+      [{ studyLanguage: 'Korean', progress: lang({ reviews: 40 }) }],
+      { Korean: 148 },
+    );
+    expect(rows).toEqual([
+      { studyLanguage: 'Korean', progress: lang({ reviews: 40 }), learned: 148 },
+    ]);
+  });
+
+  it('keeps a language that has learned cards but no reviews in the window', () => {
+    // The case the union exists for: a deck you have not touched lately is
+    // exactly the one whose total you have forgotten, and taking only the
+    // window's languages would hide it from the only place it appears.
+    const rows = mergeLanguageRows(
+      [{ studyLanguage: 'Korean', progress: lang({ reviews: 40 }) }],
+      { Korean: 148, Spanish: 10 },
+    );
+    expect(rows.map(row => row.studyLanguage)).toEqual(['Korean', 'Spanish']);
+    expect(rows[1].progress).toEqual(emptyLanguageProgress());
+    expect(rows[1].learned).toBe(10);
+  });
+
+  it('keeps a language being studied that has matured nothing yet', () => {
+    const rows = mergeLanguageRows(
+      [{ studyLanguage: 'Japanese', progress: lang({ reviews: 9 }) }],
+      {},
+    );
+    expect(rows).toEqual([
+      { studyLanguage: 'Japanese', progress: lang({ reviews: 9 }), learned: 0 },
+    ]);
+  });
+
+  it('leaves out a language with nothing to say on either count', () => {
+    expect(mergeLanguageRows([], { Korean: 0 })).toEqual([]);
+  });
+
+  it('orders by the window, then by learned, then stably', () => {
+    const rows = mergeLanguageRows(
+      [
+        { studyLanguage: 'Korean', progress: lang({ reviews: 5 }) },
+        { studyLanguage: 'Japanese', progress: lang({ reviews: 40 }) },
+      ],
+      { Swedish: 30, French: 30 },
+    );
+    // Reviewed languages first by volume; the dormant pair after them, tied on
+    // learned and broken by code so the list cannot reshuffle between renders.
+    expect(rows.map(row => row.studyLanguage)).toEqual(['Japanese', 'Korean', 'French', 'Swedish']);
+  });
+});
+
+describe('buildWeekGrid', () => {
+  it('knows which weekday a date falls on', () => {
+    expect(weekdayIndex('2026-08-16')).toBe(0); // a Sunday
+    expect(weekdayIndex('2026-08-19')).toBe(3);
+  });
+
+  it('pads the opening column so a row always means one weekday', () => {
+    // The whole point. `buildHeatmap` starts the window wherever the window
+    // starts, so without this, row 0 is a different weekday every day and a
+    // weekday label would be wrong rather than merely absent.
+    const cells = buildHeatmap([], '2026-08-19', 7); // opens Thu 2026-08-13
+    const { columns } = buildWeekGrid(cells);
+    expect(columns[0].slice(0, 4)).toEqual([null, null, null, null]);
+    expect(columns[0][4]?.date).toBe('2026-08-13'); // Thursday, row 4
+  });
+
+  it('pads with null rather than a zeroed day', () => {
+    // A slot before the window opened is not a day the user failed to study,
+    // and a level-0 cell would draw exactly that claim.
+    const { columns } = buildWeekGrid(buildHeatmap([], '2026-08-19', 7));
+    expect(columns[0][0]).toBeNull();
+    expect(columns.flat().filter(cell => cell !== null)).toHaveLength(7);
+  });
+
+  it('keeps every column seven tall, including the last', () => {
+    for (const days of [1, 7, 30, 90, 364]) {
+      const { columns } = buildWeekGrid(buildHeatmap([], '2026-08-19', days));
+      expect(columns.every(column => column.length === 7)).toBe(true);
+      expect(columns.flat().filter(cell => cell !== null)).toHaveLength(days);
+    }
+  });
+
+  it('keeps the days in order across the padding', () => {
+    const dates = buildWeekGrid(buildHeatmap([], '2026-08-19', 30))
+      .columns.flat().filter((cell): cell is NonNullable<typeof cell> => cell !== null)
+      .map(cell => cell.date);
+    expect(dates).toEqual([...dates].sort());
+  });
+
+  it('ticks a month at the column its first day lands in', () => {
+    // 60 days back from 15 September opens on 18 July, so August and September
+    // both begin inside the window and both earn a tick. July earns none: the
+    // opening column starts mid-month.
+    const { columns, months } = buildWeekGrid(buildHeatmap([], '2026-09-15', 60));
+    expect(months.map(tick => tick.date)).toEqual(['2026-08-01', '2026-09-01']);
+    // The tick has to sit on the column actually holding that day. Keying off
+    // each column's *first* cell instead put August on the 2nd and September on
+    // the 6th — a label up to a whole column right of the month it names,
+    // because 1 September 2026 is a Tuesday and 1 August a Saturday.
+    for (const tick of months) {
+      expect(columns[tick.column].some(cell => cell?.date === tick.date)).toBe(true);
+    }
+  });
+
+  it('labels the opening column when the window starts on the 1st', () => {
+    const { months } = buildWeekGrid(buildHeatmap([], '2026-08-31', 31));
+    expect(months[0]).toEqual({ column: 0, date: '2026-08-01' });
+  });
+
+  it('does not label the opening column when it starts mid-month', () => {
+    // The label would name a month whose beginning is not on screen.
+    const { months } = buildWeekGrid(buildHeatmap([], '2026-08-19', 7));
+    expect(months).toEqual([]);
+  });
+
+  it('is empty for an empty window rather than throwing', () => {
+    expect(buildWeekGrid([])).toEqual({ columns: [], months: [] });
   });
 });
 

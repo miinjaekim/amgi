@@ -25,7 +25,10 @@
  */
 import { ImageResponse } from 'next/og';
 import { NextRequest } from 'next/server';
-import { t, type TranslationKey } from '@amgi/core';
+import {
+  isStudyLanguage, t,
+  type ShareVariant, type StudyLanguage, type TranslationKey,
+} from '@amgi/core';
 import { NOTO_SANS_KR_BOLD_BASE64, NOTO_SANS_KR_REGULAR_BASE64, fontData } from './fonts';
 
 /** Story format. Instagram, KakaoTalk and every other story surface use 9:16. */
@@ -132,13 +135,24 @@ const HEATMAP_MAX_HEIGHT = 620;
  */
 export interface ShareImageParams {
   lang: string | null;
+  /**
+   * Which layout to draw. Anything unrecognised is the window card, which is
+   * also what a URL with no `v` at all means — so every link an older build
+   * ever produced keeps rendering what it always rendered.
+   */
+  variant: ShareVariant;
   windowDays: number;
   reviews: number;
   streak: number;
-  daysStudied: number;
-  /** `null` means withheld, and must stay absent from the image, not render 0. */
-  learned: number | null;
-  retention: number | null;
+  /**
+   * The languages reviewed in the window, busiest first.
+   *
+   * Filtered to codes the app actually knows: the label is looked up as
+   * `label{code}`, so an invented code in a hand-edited URL would otherwise
+   * draw the key itself. It also bounds the glyphs this can demand of the
+   * subset fonts to the nine real names.
+   */
+  languages: StudyLanguage[];
   /** Exactly `windowDays` levels, 0–4, padded and truncated to fit. */
   cells: number[];
 }
@@ -166,14 +180,16 @@ export function readShareImageParams(q: URLSearchParams): ShareImageParams {
     // `t` falls back to English for anything it does not recognise, so the raw
     // parameter goes straight through rather than being validated twice.
     lang: q.get('lang'),
+    variant: q.get('v') === 'today' ? 'today' : 'window',
     windowDays,
     reviews: Math.max(0, Math.round(num('r'))),
     streak: Math.max(0, Math.round(num('s'))),
-    daysStudied: Math.max(0, Math.round(num('d'))),
-    // Absent rather than zero: `buildShareStats` withholds a figure the window
-    // cannot honestly cover, and a 0 on a shared image is a claim, not a gap.
-    learned: q.has('l') ? Math.round(num('l')) : null,
-    retention: q.has('ret') ? Math.max(0, Math.min(100, Math.round(num('ret')))) : null,
+    languages: (q.get('g') ?? '').split(',').filter(isStudyLanguage),
+    // `ret`, `d` and `l` are deliberately not read. Retention, days studied and
+    // cards learned all came off the image on 2026-09-12, but mobile ships by
+    // build and the route is server-side, so an installed build goes on
+    // appending them for as long as it is there. An unread parameter is
+    // ignored; none of them may ever become a parse failure.
     cells: [...heat, ...Array(Math.max(0, windowDays - heat.length)).fill(0)],
   };
 }
@@ -193,24 +209,33 @@ export function layoutHeatmap(cells: number[], windowDays: number) {
 
 export async function GET(req: NextRequest) {
   const {
-    lang, windowDays, reviews, streak, daysStudied, learned, retention, cells,
+    lang, variant, windowDays, reviews, streak, languages, cells,
   } = readShareImageParams(req.nextUrl.searchParams);
   const label = (key: TranslationKey, vars?: Record<string, string | number>) => t(lang, key, vars);
+
+  /**
+   * What was being studied, under the number that counts it.
+   *
+   * Three names at most. A fourth does not fit the width at this size, and a
+   * remainder is more honestly a count than a truncated list.
+   */
+  const named = languages.slice(0, 3).map(code => label(`label${code}` as TranslationKey));
+  const rest = languages.length - named.length;
+  const languageLine = named.length === 0
+    ? null
+    : `${named.join(' · ')}${rest > 0 ? ` +${rest}` : ''}`;
   const { gap, cell, rows } = layoutHeatmap(cells, windowDays);
 
   const regular = fontData(NOTO_SANS_KR_REGULAR_BASE64);
   const bold = fontData(NOTO_SANS_KR_BOLD_BASE64);
 
+  // One tile left, and deliberately. Days studied came off on 2026-09-12
+  // because beside a streak it read as a second opinion on the same thing, and
+  // cards learned came off because it now means an all-time figure, which
+  // cannot share a canvas with numbers that all name one window.
   const tiles: { label: string; value: string }[] = [
     { label: label('shareStatStreak'), value: formatCount(streak) },
-    { label: label('shareStatDays'), value: formatCount(daysStudied) },
   ];
-  if (learned !== null) {
-    tiles.push({ label: label('shareStatLearned'), value: formatCount(learned) });
-  }
-  if (retention !== null) {
-    tiles.push({ label: label('shareStatRetention'), value: `${retention}%` });
-  }
 
   return new ImageResponse(
     (
@@ -233,7 +258,9 @@ export async function GET(req: NextRequest) {
             range than the label would lie by juxtaposition. */}
         <div style={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
           <div style={{ fontSize: 34, color: C.muted, letterSpacing: 1 }}>
-            {label('shareWindowDays', { count: windowDays })}
+            {variant === 'today'
+              ? label('shareVariantToday')
+              : label('shareWindowDays', { count: windowDays })}
           </div>
         </div>
 
@@ -248,26 +275,44 @@ export async function GET(req: NextRequest) {
           <div style={{ fontSize: 46, color: C.text, marginTop: 12 }}>
             {label('shareStatReviews')}
           </div>
+          {/* Directly under the figure it qualifies: "1,204 reviews" never said
+              of what. The window line at the top stays the window. */}
+          {languageLine !== null && (
+            <div style={{ fontSize: 30, color: C.muted, marginTop: 16 }}>
+              {languageLine}
+            </div>
+          )}
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
-          {rows.map((row, y) => (
-            <div key={y} style={{ display: 'flex', marginBottom: y === rows.length - 1 ? 0 : gap }}>
-              {row.map((level, x) => (
-                <div
-                  key={x}
-                  style={{
-                    width: cell,
-                    height: cell,
-                    marginRight: x === row.length - 1 ? 0 : gap,
-                    borderRadius: 8,
-                    backgroundColor: cellColor(level),
-                  }}
-                />
-              ))}
-            </div>
-          ))}
-        </div>
+        {/* A calendar of one day is a single square, so the today card does
+            without one.
+
+            ⚠️ **The element goes, not just its children.** The root is
+            `justify-content: space-between`, so an empty div still claims a
+            slot and spreads the remaining ones apart — which left about a third
+            of the today card as dead green and read as something that had
+            failed to load. Emptying the children is not the same as removing
+            the child. */}
+        {variant === 'window' && (
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            {rows.map((row, y) => (
+              <div key={y} style={{ display: 'flex', marginBottom: y === rows.length - 1 ? 0 : gap }}>
+                {row.map((level, x) => (
+                  <div
+                    key={x}
+                    style={{
+                      width: cell,
+                      height: cell,
+                      marginRight: x === row.length - 1 ? 0 : gap,
+                      borderRadius: 8,
+                      backgroundColor: cellColor(level),
+                    }}
+                  />
+                ))}
+              </div>
+            ))}
+          </div>
+        )}
 
         <div style={{ display: 'flex', width: '100%' }}>
           {tiles.map(tile => (

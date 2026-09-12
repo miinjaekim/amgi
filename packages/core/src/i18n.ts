@@ -148,7 +148,6 @@ const translations = {
     progressRangeQuarter: '90 days',
     progressRangeYear: 'Year',
     progressStatReviews: 'Reviews',
-    progressStatActiveDays: 'Days studied',
     progressStatAverage: 'Average per day',
     progressStatNewCards: 'Cards added',
     progressStreak: 'Current streak',
@@ -158,12 +157,23 @@ const translations = {
     progressLessMore: 'Less',
     progressMore: 'More',
     progressByLanguage: 'By language',
+    // The bar is a share of the busiest language, not of the total — with one
+    // language it would otherwise always be full and say nothing. Said out loud
+    // because a bar with no axis is otherwise read as a share of everything.
+    progressBarScale: 'Bars compare each language to your busiest one.',
     progressLanguageReviews: '{count} reviews',
+    // Sits beside the window's review count on the same row, so it has to name
+    // its own scope: this one is all-time, read off the cards.
+    progressLanguageLearned: '{count} learned',
+    // Names the measure, since the chart carries one series and therefore no
+    // legend — the title is what says what the bars are.
+    progressWeekTitle: 'Reviews, last 7 days',
+    progressChartBars: 'Bars',
+    progressChartLine: 'Line',
     // Rollups began 2026-08-20 and cannot be reconstructed, so a window
     // reaching further back is shorter than it looks. Say so rather than
     // showing a total that quietly means something narrower.
     progressHistoryNote: 'Recorded from {date} onwards.',
-    progressRetention: '{percent}% recalled',
     progressCardsFromPacks: '{count} from packs',
     progressTooltipReviews: '{count} reviews',
     progressTooltipOneReview: '1 review',
@@ -179,9 +189,13 @@ const translations = {
     // Never "cards reviewed": `reviews` counts directions, so only this label
     // is a card count. See `ShareStats.reviews`.
     shareStatLearned: 'Cards learned',
-    shareStatDays: 'Days studied',
-    shareStatRetention: 'Retention',
     shareWindowDays: 'Last {count} days',
+    // The chooser in front of the share sheet, and the label the today card
+    // wears at the top. One key for both: they name the same thing, and the
+    // image must not describe it differently from the row that picked it.
+    shareChoose: 'What to share',
+    shareVariantWindow: 'This window',
+    shareVariantToday: 'Today',
     shareFooter: 'Amgi',
     shareNothingYet: 'Study a little first — there is nothing to share yet.',
     shareFailed: 'Could not build the image.',
@@ -724,11 +738,9 @@ const translations = {
     progressRangeQuarter: '90일',
     progressRangeYear: '1년',
     progressStatReviews: '복습',
-    progressStatActiveDays: '공부한 날',
     progressStatAverage: '하루 평균',
     progressStatNewCards: '담은 카드',
     progressHistoryNote: '{date}부터의 기록입니다.',
-    progressRetention: '{percent}% 기억',
     progressStreak: '연속 학습',
     progressStreakDays: '{count}일',
     progressStreakDay: '1일',
@@ -736,7 +748,12 @@ const translations = {
     progressLessMore: '적음',
     progressMore: '많음',
     progressByLanguage: '언어별',
+    progressBarScale: '막대는 가장 많이 복습한 언어를 기준으로 비교한 것입니다.',
     progressLanguageReviews: '{count}개 복습',
+    progressLanguageLearned: '{count}개 익힘',
+    progressWeekTitle: '최근 7일 복습',
+    progressChartBars: '막대',
+    progressChartLine: '선',
     progressCardsFromPacks: '단어팩에서 {count}개',
     progressTooltipReviews: '{count}개 복습',
     progressTooltipOneReview: '1개 복습',
@@ -750,9 +767,10 @@ const translations = {
     shareStatReviews: '복습',
     shareStatStreak: '연속 학습',
     shareStatLearned: '익힌 카드',
-    shareStatDays: '공부한 날',
-    shareStatRetention: '기억률',
     shareWindowDays: '지난 {count}일',
+    shareChoose: '무엇을 공유할까요?',
+    shareVariantWindow: '이 기간',
+    shareVariantToday: '오늘',
     shareFooter: 'Amgi',
     shareNothingYet: '아직 공유할 기록이 없습니다. 조금만 더 공부해 보세요.',
     shareFailed: '이미지를 만들지 못했습니다.',

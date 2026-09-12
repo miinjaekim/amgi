@@ -581,6 +581,63 @@ export function summarizeProgress(days: DailyProgress[]): ProgressSummary {
   };
 }
 
+/** One row of the by-language list: the window's activity, plus the all-time count. */
+export interface LanguageRow {
+  studyLanguage: StudyLanguage;
+  /** The window's counters. All zero for a language with no activity in it. */
+  progress: LanguageProgress;
+  /** Cards past the maturity line right now — all time, not this window. */
+  learned: number;
+}
+
+/**
+ * The by-language list: what happened in the window, beside what has been
+ * learned overall.
+ *
+ * ⚠️ **Two scopes on one row, deliberately.** `progress` is the selected
+ * window; `learned` is every card over the line right now, because that is the
+ * only thing "learned" can mean once it is read off the card rather than off a
+ * rollup. On a screen being read that is fine if the labels say so — it is a
+ * shared *image*, read at thumbnail size, where mixed scopes lie.
+ *
+ * **The union is the point.** Taking only the window's languages would hide a
+ * language with learned cards that has not been reviewed lately — and the
+ * dormant deck is exactly the one whose total you have forgotten and would most
+ * want to see. Taking only the languages with learned cards would drop a
+ * language being studied right now that has not matured anything yet.
+ *
+ * Ordered by the window's reviews so the list still reads as "what I have been
+ * doing", with learned breaking ties and the code last, so the order is stable
+ * rather than dependent on map insertion.
+ */
+export function mergeLanguageRows(
+  byLanguage: { studyLanguage: StudyLanguage; progress: LanguageProgress }[],
+  learned: Partial<Record<StudyLanguage, number>>,
+): LanguageRow[] {
+  const rows = new Map<StudyLanguage, LanguageRow>();
+  for (const entry of byLanguage) {
+    rows.set(entry.studyLanguage, {
+      ...entry,
+      learned: learned[entry.studyLanguage] ?? 0,
+    });
+  }
+  for (const [language, count] of Object.entries(learned) as [StudyLanguage, number][]) {
+    // A zero here is a language with nothing learned *and* nothing in the
+    // window — a row that would say nothing at all.
+    if (count <= 0 || rows.has(language)) continue;
+    rows.set(language, {
+      studyLanguage: language,
+      progress: emptyLanguageProgress(),
+      learned: count,
+    });
+  }
+  return [...rows.values()].sort((a, b) => (
+    b.progress.reviews - a.progress.reviews
+    || b.learned - a.learned
+    || a.studyLanguage.localeCompare(b.studyLanguage)
+  ));
+}
+
 export interface HeatmapCell {
   date: string;
   reviews: number;
@@ -609,4 +666,85 @@ export function buildHeatmap(days: DailyProgress[], endDate: string, dayCount: n
     }
     return { date, reviews, level };
   });
+}
+
+/**
+ * The day of the week a `YYYY-MM-DD` falls on, 0 = Sunday.
+ *
+ * Parsed at UTC noon like every other date helper here, so the answer cannot be
+ * moved by a timezone or a DST boundary.
+ */
+export function weekdayIndex(date: string): number {
+  return new Date(`${date}T12:00:00Z`).getUTCDay();
+}
+
+/** Sunday, matching the calendars both locales print. */
+export const WEEK_STARTS_ON = 0;
+
+/** Where a month label goes: the column its first drawn day lands in. */
+export interface MonthTick {
+  column: number;
+  /** The first date of that month *inside the window*, not the 1st. */
+  date: string;
+}
+
+export interface WeekGrid {
+  /**
+   * Columns of seven, oldest first, each running Sunday→Saturday.
+   *
+   * `null` is a slot outside the window — before it opened or after it ends —
+   * and is **not** a day nobody studied. A zeroed cell would claim it was.
+   */
+  columns: (HeatmapCell | null)[][];
+  months: MonthTick[];
+}
+
+/**
+ * A heatmap laid out in week columns, so a *row* means a weekday.
+ *
+ * **Why this is not `buildHeatmap`'s job.** That returns exactly `dayCount`
+ * cells starting `dayCount - 1` days before the end, and both dashboards chunk
+ * them by seven — so row 0 is whatever weekday the window happens to open on,
+ * and it shifts by one every day. Labelling those rows would label them
+ * *wrong*, which is worse than leaving them bare.
+ *
+ * Aligning inside `buildHeatmap` was the alternative and is worse still: the
+ * shared image consumes the same cells and deliberately does **not** align to
+ * weeks — it wraps at roughly `sqrt(days × 2.2)` to keep its block square — and
+ * its `h` parameter is one character per day, asserted on both sides of the
+ * URL. So alignment lives here, over the top, for the two surfaces that draw a
+ * calendar and label it.
+ */
+export function buildWeekGrid(cells: HeatmapCell[]): WeekGrid {
+  if (cells.length === 0) return { columns: [], months: [] };
+
+  const lead = (weekdayIndex(cells[0].date) - WEEK_STARTS_ON + 7) % 7;
+  const slots: (HeatmapCell | null)[] = [...Array<null>(lead).fill(null), ...cells];
+  // The final week is padded out too, so every column is seven tall and the
+  // renderer never has to special-case a short one.
+  while (slots.length % 7 !== 0) slots.push(null);
+
+  const columns: (HeatmapCell | null)[][] = [];
+  for (let i = 0; i < slots.length; i += 7) columns.push(slots.slice(i, i + 7));
+
+  // Walked day by day rather than column by column. A month almost never begins
+  // on the day a column opens — 1 September 2026 is a Tuesday, 1 August a
+  // Saturday — so keying off each column's first cell pushed the label into the
+  // *next* column, up to six days to the right of the month it names.
+  const months: MonthTick[] = [];
+  let seen = cells[0].date.slice(0, 7);
+  // The window almost always opens mid-month, and a label there names a month
+  // whose beginning is not on screen. It earns one only when the window starts
+  // on the 1st itself.
+  if (cells[0].date.endsWith('-01')) months.push({ column: 0, date: cells[0].date });
+  cells.forEach((cell, offset) => {
+    const month = cell.date.slice(0, 7);
+    if (month === seen) return;
+    seen = month;
+    // No minimum spacing between ticks: a month is at least 28 days, so two
+    // consecutive ones can never land closer than four columns apart.
+    months.push({ column: Math.floor((lead + offset) / 7), date: cell.date });
+  });
+
+  return { columns, months };
 }

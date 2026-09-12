@@ -431,9 +431,42 @@ Three things worth keeping:
 
 ## Next.js / web
 
+- ⚠️ **Turbopack dev can serve a stale `globals.css` while components are
+  fresh, and the symptom impersonates missing data.** Measured 2026-09-12: the
+  calendar and the weekly chart rendered completely blank on localhost. The
+  cause was not the query and not the rollups — `page.tsx` had been rebuilt and
+  asked for `var(--heat-0)`…`var(--heat-4)`, but the CSS chunk predated the
+  commit that defined them, and **an undefined custom property computes to
+  nothing**, so every cell and bar painted transparent. Diagnosis that actually
+  settles it, rather than guessing at the data: fetch the served stylesheet and
+  grep it for the definition beside one you know works —
+  `curl -s localhost:3000/<route> | grep -oE '/_next/static/[^"]+\.css'`, then
+  grep that chunk for `--heat-0:` against `--color-bg:`. Three of one and none
+  of the other is the whole answer. Fix is `rm -rf apps/web/.next` and restart;
+  hard-reload the browser too, since it has the old chunk as well. **A styling
+  bug that hides marks looks like an empty dataset — check the CSS before
+  re-deriving the query.**
+- ⚠️ **An absolutely positioned `<svg>` ignores `right` and renders at its
+  intrinsic size.** Measured 2026-09-12 on the weekly chart: the same
+  `left: 26px; right: 0` insets stretched the bars' plain `<div>` across the
+  plot and squeezed the line into the first **100 pixels** of it. An `<svg>` is
+  a *replaced* element, so `width: auto` resolves to the intrinsic width its
+  `viewBox` and `height` imply — `0 0 100 64` at 64px tall is exactly 100px —
+  and the over-constrained `right` is then dropped. **Put the insets on a
+  wrapping `<div>` and let the svg fill it with `width="100%" height="100%"`.**
+  The tell is worth memorising: the axis labels, the gridlines and the weekday
+  ticks all span the full width while *only the plotted mark* does not. Every
+  one of those is a non-replaced element; the mark is the one thing that isn't.
 - Reading `localStorage` in a `useState` initializer causes a hydration
-  mismatch in the App Router. Always read it in a `useEffect` — or, for
-  render-blocking state like theme, in a pre-paint inline script in `layout.tsx`.
+  mismatch in the App Router. Read it in a `useEffect` — or, for render-blocking
+  state like theme, in a pre-paint inline script in `layout.tsx`.
+  **Better still, where the value is a small external thing the page also
+  writes: `useSyncExternalStore` with a real `getServerSnapshot`.** That is what
+  the third argument is for — the server renders the default, the markup
+  matches, and nothing needs correcting after mount. It also avoids the
+  `set-state-in-effect` warning the effect route adds, which
+  [backlog.md](backlog.md) says not to accumulate more of. The weekly chart's
+  bars/line toggle in `progress/page.tsx` is the worked example.
 - `nativeLanguage` uses `undefined` (not yet loaded) vs `null` (loaded, not set)
   vs `string` (set). That three-way distinction is what drives the language
   modal; collapsing it to a nullable breaks first-load behavior.
