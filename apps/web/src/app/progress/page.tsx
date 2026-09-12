@@ -757,6 +757,39 @@ function WeekChart({ nativeLanguage, cells, daysByDate, mark, onMarkChange }: {
                 vectorEffect="non-scaling-stroke"
               />
             </svg>
+
+            {/* The vertices, in HTML rather than as <circle>s.
+                `preserveAspectRatio="none"` stretches the svg's coordinate
+                space horizontally, which turns a circle into an ellipse that
+                gets wider with the window — the same reason the tooltip is not
+                an <svg:text>. Positioned by percentage, these stay round at any
+                width.
+
+                The hovered one grows and the rest recede, so the point being
+                read is the one that answers. `pointer-events-none` keeps them
+                decorative: the full-height buttons below own the hovering, so a
+                quiet day is as easy to hit as a busy one. */}
+            {cells.map((cell, index) => (
+              <span
+                key={cell.date}
+                aria-hidden
+                className="absolute rounded-full pointer-events-none transition-all duration-150"
+                style={{
+                  left: `${centre(index)}%`,
+                  bottom: heightOf(cell.reviews),
+                  width: hovered === index ? 12 : 8,
+                  height: hovered === index ? 12 : 8,
+                  // Half its own size in each direction, so the dot is centred
+                  // on the value rather than hanging off it — and stays centred
+                  // as it grows, since the offset is a share of its own box.
+                  transform: 'translate(-50%, 50%)',
+                  background: 'var(--heat-4)',
+                  // Punches the dot out of the line it sits on.
+                  boxShadow: '0 0 0 2px var(--color-bg)',
+                  opacity: hovered === null || hovered === index ? 1 : 0.5,
+                }}
+              />
+            ))}
           </div>
         )}
 
