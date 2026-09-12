@@ -83,7 +83,7 @@ export default function ShareStatsButton({
       }
     };
 
-  const linkFor = (option: ShareOption, label: string, className: string) => {
+  const linkFor = (option: ShareOption, children: React.ReactNode, className: string) => {
     const href = shareImagePath(option.stats, nativeLanguage, option.variant);
     const filename = shareImageFilename(option.stats, option.variant);
     return (
@@ -95,10 +95,33 @@ export default function ShareStatsButton({
         aria-busy={busy}
         className={className}
       >
-        {label}
+        {children}
       </a>
     );
   };
+
+  /**
+   * The actual picture, at thumbnail size.
+   *
+   * A real preview costs nothing to build here: the asset *is* a URL, so the
+   * same address the share sheet will send is the one this renders. There is no
+   * second confirm step — you are looking at what you are about to post while
+   * choosing it, which is the whole point of choosing.
+   */
+  const preview = (option: ShareOption) => (
+    // next/image would route a 1080x1920 OG render through the optimizer to
+    // draw an 80px thumbnail of a same-origin API route. The raw request is the
+    // cheaper and more predictable one, so the rule is waived here on purpose
+    // rather than by accident — the directive has to sit on the line directly
+    // above the element it excuses.
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={shareImagePath(option.stats, nativeLanguage, option.variant)}
+      alt=""
+      loading="lazy"
+      className="w-20 rounded-md border border-[var(--color-muted)]"
+    />
+  );
 
   const label = (option: ShareOption) => t(
     nativeLanguage,
@@ -123,11 +146,14 @@ export default function ShareStatsButton({
             >
               {t(nativeLanguage, 'shareTitle')}
             </summary>
-            <div className="absolute right-0 mt-1 z-10 flex flex-col gap-1 p-1 rounded-xl border border-[var(--color-muted)] bg-[var(--color-surface)] whitespace-nowrap">
+            <div className="absolute right-0 mt-1 z-10 flex gap-2 p-2 rounded-xl border border-[var(--color-muted)] bg-[var(--color-surface)] whitespace-nowrap">
               {options.map(option => linkFor(
                 option,
-                label(option),
-                'px-3 py-1.5 rounded-lg text-sm font-mono text-left hover:opacity-80 text-[var(--color-text)]',
+                <span className="flex flex-col items-center gap-1.5">
+                  {preview(option)}
+                  <span>{label(option)}</span>
+                </span>,
+                'p-1.5 rounded-lg text-xs font-mono hover:opacity-80 text-[var(--color-text)]',
               ))}
             </div>
           </details>

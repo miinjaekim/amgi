@@ -520,6 +520,21 @@ export default function ProgressScreen() {
             onPress={() => handleShare(option.variant)}
             accessibilityRole="button"
           >
+            {/* The picture itself, before it goes anywhere. It costs no new
+                machinery — the asset is a URL, so this is the same address the
+                share sheet is about to be handed. Only drawn when there is a
+                host to ask; without one the row still works and still shares,
+                it just cannot show what it is about to send. */}
+            {API_BASE_URL !== '' && (
+              <Image
+                source={{
+                  uri: `${API_BASE_URL}${shareImagePath(option.stats, nativeLanguage, option.variant)}`,
+                }}
+                style={s.shareThumb}
+                resizeMode="contain"
+                accessibilityIgnoresInvertColors
+              />
+            )}
             <Text style={s.shareOptionText}>{t(nativeLanguage, option.labelKey)}</Text>
             <Ionicons name="share-outline" size={18} color={C.muted} />
           </TouchableOpacity>
@@ -740,11 +755,17 @@ function makeStyles(C: Palette, tabBarHeight: number) {
     shareBtn: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, marginLeft: 'auto', flexShrink: 0, borderColor: C.highlight },
     shareBtnBusy: { opacity: 0.5 },
     shareOption: {
-      flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-      paddingVertical: 14, paddingHorizontal: 4,
+      flexDirection: 'row', alignItems: 'center',
+      paddingVertical: 12, paddingHorizontal: 4,
       borderBottomWidth: 1, borderBottomColor: C.border,
     },
-    shareOptionText: { color: C.text, fontSize: 15 },
+    // 9:16, the canvas the image is drawn on. The border colour shows through
+    // while the PNG is still loading, so the row does not jump.
+    shareThumb: {
+      width: 54, height: 96, borderRadius: 6,
+      backgroundColor: C.border, marginRight: 12,
+    },
+    shareOptionText: { flex: 1, color: C.text, fontSize: 15 },
     rangeTextOn: { color: C.highlight, fontWeight: '700' },
     empty: { color: C.muted, fontSize: 14, paddingHorizontal: 16 },
     emptyBody: { color: C.muted, fontSize: 13, opacity: 0.7, marginTop: 8, paddingHorizontal: 16 },
