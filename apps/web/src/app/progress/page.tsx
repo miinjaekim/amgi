@@ -724,28 +724,40 @@ function WeekChart({ nativeLanguage, cells, daysByDate, mark, onMarkChange }: {
             ))}
           </div>
         ) : (
-          <svg
-            className="absolute bottom-0 overflow-visible"
-            style={{ left: WEEK_AXIS_GUTTER, right: 0, width: 'auto' }}
-            height={WEEK_PLOT_HEIGHT}
-            viewBox={`0 0 100 ${WEEK_PLOT_HEIGHT}`}
-            preserveAspectRatio="none"
-            aria-hidden
+          // ⚠️ The insets live on a wrapping div, and the svg fills it at 100%.
+          // An `<svg>` is a *replaced* element: given `width: auto` it takes its
+          // intrinsic size from the viewBox and the height — 100px here — and
+          // the `right` inset is simply dropped, where the bars' plain `<div>`
+          // stretches between the two. That is the whole difference between the
+          // two marks laying out correctly and one of them squeezing itself
+          // into the first seventh of the plot.
+          <div
+            className="absolute bottom-0"
+            style={{ left: WEEK_AXIS_GUTTER, right: 0, height: WEEK_PLOT_HEIGHT }}
           >
-            <polyline
-              points={cells
-                .map((cell, index) => `${centre(index)},${WEEK_PLOT_HEIGHT - heightOf(cell.reviews)}`)
-                .join(' ')}
-              fill="none"
-              stroke="var(--heat-4)"
-              strokeWidth={2}
-              strokeLinejoin="round"
-              strokeLinecap="round"
-              // Without this the stroke is scaled by the same non-uniform
-              // transform as the geometry, so it thickens with the container.
-              vectorEffect="non-scaling-stroke"
-            />
-          </svg>
+            <svg
+              className="overflow-visible"
+              width="100%"
+              height="100%"
+              viewBox={`0 0 100 ${WEEK_PLOT_HEIGHT}`}
+              preserveAspectRatio="none"
+              aria-hidden
+            >
+              <polyline
+                points={cells
+                  .map((cell, index) => `${centre(index)},${WEEK_PLOT_HEIGHT - heightOf(cell.reviews)}`)
+                  .join(' ')}
+                fill="none"
+                stroke="var(--heat-4)"
+                strokeWidth={2}
+                strokeLinejoin="round"
+                strokeLinecap="round"
+                // Without this the stroke is scaled by the same non-uniform
+                // transform as the geometry, so it thickens with the container.
+                vectorEffect="non-scaling-stroke"
+              />
+            </svg>
+          </div>
         )}
 
         {/* One full-height target per day, over the marks. A quiet day's bar is

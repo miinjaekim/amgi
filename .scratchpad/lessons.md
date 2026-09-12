@@ -446,6 +446,17 @@ Three things worth keeping:
   hard-reload the browser too, since it has the old chunk as well. **A styling
   bug that hides marks looks like an empty dataset — check the CSS before
   re-deriving the query.**
+- ⚠️ **An absolutely positioned `<svg>` ignores `right` and renders at its
+  intrinsic size.** Measured 2026-09-12 on the weekly chart: the same
+  `left: 26px; right: 0` insets stretched the bars' plain `<div>` across the
+  plot and squeezed the line into the first **100 pixels** of it. An `<svg>` is
+  a *replaced* element, so `width: auto` resolves to the intrinsic width its
+  `viewBox` and `height` imply — `0 0 100 64` at 64px tall is exactly 100px —
+  and the over-constrained `right` is then dropped. **Put the insets on a
+  wrapping `<div>` and let the svg fill it with `width="100%" height="100%"`.**
+  The tell is worth memorising: the axis labels, the gridlines and the weekday
+  ticks all span the full width while *only the plotted mark* does not. Every
+  one of those is a non-replaced element; the mark is the one thing that isn't.
 - Reading `localStorage` in a `useState` initializer causes a hydration
   mismatch in the App Router. Read it in a `useEffect` — or, for render-blocking
   state like theme, in a pre-paint inline script in `layout.tsx`.
