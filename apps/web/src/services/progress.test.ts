@@ -13,6 +13,8 @@ import {
   mergeDeltas,
   mergeLanguageRows,
   negateDelta,
+  niceCeiling,
+  weekAxisTicks,
   newCardsDelta,
   parseDailyProgress,
   ratedTotal,
@@ -36,6 +38,59 @@ function day(date: string, patch: Partial<DailyProgress> = {}): DailyProgress {
 function lang(patch: Partial<LanguageProgress> = {}): LanguageProgress {
   return { ...emptyLanguageProgress(), ...patch };
 }
+
+describe('the weekly chart axis', () => {
+  it('rounds up to somewhere a reader can read', () => {
+    expect(niceCeiling(47)).toBe(50);
+    expect(niceCeiling(3)).toBe(5);
+    expect(niceCeiling(12)).toBe(20);
+    expect(niceCeiling(21)).toBe(25);
+    expect(niceCeiling(260)).toBe(500);
+  });
+
+  it('leaves a value that is already round alone', () => {
+    // Otherwise the busiest bar would stop short of the top of its own plot.
+    for (const value of [1, 2, 5, 10, 20, 25, 50, 100]) {
+      expect(niceCeiling(value)).toBe(value);
+    }
+  });
+
+  it('never returns a ceiling below the value it has to hold', () => {
+    for (let value = 1; value <= 400; value += 1) {
+      expect(niceCeiling(value)).toBeGreaterThanOrEqual(value);
+    }
+  });
+
+  it('has no axis for a week with nothing in it', () => {
+    expect(niceCeiling(0)).toBe(0);
+    expect(niceCeiling(-5)).toBe(0);
+  });
+
+  it('rules a midpoint only when it is a whole number', () => {
+    // A gridline labelled 3 sitting at 2.5 is worse than no gridline.
+    expect(weekAxisTicks(50)).toEqual([0, 25, 50]);
+    expect(weekAxisTicks(20)).toEqual([0, 10, 20]);
+    expect(weekAxisTicks(5)).toEqual([0, 5]);
+    expect(weekAxisTicks(25)).toEqual([0, 25]);
+  });
+
+  it('rules only the floor when there is nothing to scale', () => {
+    expect(weekAxisTicks(0)).toEqual([0]);
+    expect(weekAxisTicks(-1)).toEqual([0]);
+  });
+
+  it('agrees with the ceiling it is given, for every plausible week', () => {
+    // The two are one scale: a tick above the ceiling would be drawn off the
+    // top of the plot, and a fractional one would be labelled with a decimal.
+    for (let busiest = 1; busiest <= 400; busiest += 1) {
+      const ceiling = niceCeiling(busiest);
+      for (const tick of weekAxisTicks(ceiling)) {
+        expect(tick).toBeLessThanOrEqual(ceiling);
+        expect(Number.isInteger(tick)).toBe(true);
+      }
+    }
+  });
+});
 
 describe('date helpers', () => {
   it('formats a local date as YYYY-MM-DD', () => {

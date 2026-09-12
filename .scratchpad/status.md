@@ -233,6 +233,14 @@ introspect` passes came back clean — 1.4.0's `entitlements: {}` confirms
 `withoutPushEntitlement` still strips `aps-environment`. 1.4.0 is also the first
 iOS release carrying `expo-dev-client`, `expo-dev-launcher` and `expo-dev-menu`.
 
+⚠️ **The next build is a native-module build too: `react-native-svg` 15.15.4**,
+added 2026-09-12 for the weekly chart's line mark. It is in Expo Go's own
+bundled set, so the dev loop is untouched and `npx expo start` needs nothing —
+but the binary does, and **an `expo config --type introspect` pass is owed
+before cutting it**, per the checklist below. Nothing about it is
+configuration-bearing (no plugin, no entitlement, no permission), which is the
+expected result rather than a reason to skip the check.
+
 ⚠️ **Never verified on a real binary**, on any build so far — the logic is
 tested, the native bindings are not: pronunciation audio, CSV/Anki export,
 sharing — including the stats image's `File.downloadFileAsync` →
@@ -398,14 +406,35 @@ being studied now that has matured nothing yet. A row therefore carries two
 scopes — a windowed review count beside an all-time learned count — which is
 fine on a screen being read and is why this is *not* on the shared image.
 
-**The weekly chart is bars, not the line that was asked for** (user's call, on
-the trade being named). Seven days is seven discrete counts, which is what bars
-are for, and it needs no drawing library on the phone. Worth recording that the
-dependency was not actually the obstacle: Expo SDK 57 bundles
-`react-native-svg` 15.15.4 and Skia, so a line would not have cost a dev-loop
-break — it was a form choice in the end, not a platform one. One series, so the
-title names the measure and there is no legend; only the busiest day is
-labelled, since a number over every bar is noise the heights already carry.
+**The weekly chart was bars only — reversed 2026-09-12, and mobile now carries
+both marks.** The original call was the user's, on the trade being named: seven
+days is seven discrete counts, which is what bars are for. That entry already
+recorded that the dependency was never the obstacle — Expo SDK 57 bundles
+`react-native-svg` 15.15.4 and Skia — so when the user asked for parity there
+was nothing to weigh. It was a form choice, and the form choice changed.
+
+**Mobile is now the web chart's twin**: the same title, the same two marks
+behind a toggle, the same `niceCeiling` scale and gridlines, and per-day detail.
+What differs is only what must — the line is `react-native-svg` rather than
+inline SVG, and the detail is a **tap** rather than a hover, since a phone has
+no pointer to rest. The remembered mark sits in `AsyncStorage` under
+`amgi_week_chart_mark`, mirroring web's `localStorage` key; web keeps its
+`useSyncExternalStore` because it has a server snapshot to hydrate against and
+mobile does not.
+
+⚠️ **`niceCeiling` and `weekAxisTicks` live in core, and must stay there.** The
+ceiling decides how tall every mark is drawn, so two copies drifting would make
+one week look like two different weeks on the two platforms. They are the first
+chart logic this project has unit-tested (`progress.test.ts`), which is worth
+something on surfaces that otherwise have no tests at all.
+
+⚠️ **The old mobile plot scaled to its own busiest day**, which guarantees
+exactly one full-height bar and therefore says nothing about how big a week it
+was. That — not the missing line — was the real defect behind "make them match".
+One series, so the title names the measure and there is no legend. **No day is
+labelled inline any more**: the sentence here used to claim the busiest one was,
+which web never actually did, so the two are now honestly the same — the
+gridlines carry the magnitude and a tap carries the rest.
 
 ⚠️ **A crash was caught by a grep rather than by a type.** Mobile's language bars
 took their scale from `summary.byLanguage[0]`, which was correct until the list

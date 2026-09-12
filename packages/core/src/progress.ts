@@ -669,6 +669,39 @@ export function buildHeatmap(days: DailyProgress[], endDate: string, dayCount: n
 }
 
 /**
+ * A round number at or above `value`, so the gridlines land somewhere a reader
+ * can actually read — 47 reviews gives an axis to 50, not to 47.
+ *
+ * ⚠️ **Shared rather than copied per platform, and that is the point.** The
+ * ceiling decides how tall every mark is drawn: a chart scaled to the raw
+ * busiest day always has one full-height bar and therefore no scale at all,
+ * which is what mobile did until 2026-09-12. Two copies of this rule drifting
+ * would make one week look like two different weeks on the two platforms.
+ */
+export function niceCeiling(value: number): number {
+  if (value <= 0) return 0;
+  const magnitude = 10 ** Math.floor(Math.log10(value));
+  for (const step of [1, 2, 2.5, 5]) {
+    const candidate = step * magnitude;
+    if (candidate >= value) return Math.round(candidate);
+  }
+  return Math.round(10 * magnitude);
+}
+
+/**
+ * The values to rule a gridline across the weekly plot at, floor first.
+ *
+ * The midpoint earns one only when it is a whole number: a line labelled "3"
+ * sitting at 2.5 is worse than no line. Shared with `niceCeiling` for the same
+ * reason — the ticks are the scale, and a scale that differs by platform is
+ * two charts wearing one title.
+ */
+export function weekAxisTicks(ceiling: number): number[] {
+  if (ceiling <= 0) return [0];
+  return ceiling % 2 === 0 ? [0, ceiling / 2, ceiling] : [0, ceiling];
+}
+
+/**
  * The day of the week a `YYYY-MM-DD` falls on, 0 = Sunday.
  *
  * Parsed at UTC noon like every other date helper here, so the answer cannot be
