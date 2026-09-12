@@ -47,6 +47,17 @@ and `npm run lint` 0 errors / 21 warnings, both measured._
   per day could be reconstructed from `createdAt`; review history cannot be
   reconstructed from anything. So the calendar is near-empty for weeks by
   construction — expected, not a bug, and the empty state says so.
+- **The progress-display work landed 2026-09-12, and it reaches users in three
+  different ways.** ⚠️ Worth keeping straight before wondering why a change is
+  or isn't visible. **The shared image is server-side**, so build 15 devices
+  already get the language line and already lost the retention tile — no build,
+  no OTA, nothing to ship. **Web** has all five changes as soon as it deploys.
+  **Mobile's own screen** — the labelled calendar, the corrected ramp, the cards
+  learned tile, retention off the language row, the share chooser — waits for
+  build 16 like everything else. The reasoning is in the Decisions entry of the
+  same date; the one thing that is *not* recorded anywhere else is that none of
+  it has been looked at: the colours were computed and validated, the layouts
+  were not.
 - **부대·참모 has an eleventh section: 병과와 주특기** (2026-09-09), **word list
   approved the same day**. 24 pairs placed third, after 계급·호칭 and
   부대·편제 — the branch a soldier belongs to and the job inside it, which
@@ -258,6 +269,96 @@ once, so a path that worked on build 14 is not evidence about build 15.
 
 Closed calls, kept with their reasoning — a decision whose reasoning is lost gets
 reopened by the next person to notice the symptom. Newest first.
+
+### The progress surfaces say what they measure, and the ramp was measured (2026-09-12)
+
+Five items, queued and shipped the same day, on one framing from the user:
+**review is about how much you reviewed and how many cards you have learned, not
+how accurately you recalled them — and how long it took matters less still.**
+That sentence decided three separate things below.
+
+**Retention came off every surface, and nothing behind it changed.** The
+percentage is gone from the per-language row on mobile, the tile on the image
+and the `ret` parameter. The four verdicts are still written on every rating and
+`retentionRate` is still exported, because a rollup keeps only what it counted
+in advance: stopping the *write* would throw the history away permanently and
+make the per-language split re-earn its 2026-09-04 boundary, where stopping the
+*render* costs nothing to undo. ⚠️ **The route must go on tolerating `ret`.**
+Mobile ships by build and the route is server-side, so an installed 1.6.0 keeps
+appending it for as long as it is on the phone; it is simply unread now, and a
+test pins that.
+
+**Week alignment sits *over* `buildHeatmap`, not inside it.** The grid could not
+honestly be labelled as it stood — the window starts where it starts, both
+screens chunked by seven, so row 0 was whatever weekday the window opened on and
+it shifted daily. `buildWeekGrid` pads to the week boundary on top. Inside would
+have reached the shared image, which consumes the same cells and deliberately
+does *not* align to weeks, and whose `h` parameter is one character per day
+asserted on both sides of the URL. Padding is `null` rather than a zeroed cell:
+a slot before the window opened is not a day nobody studied.
+
+⚠️ **Month ticks walk days, not columns** — and this was a real bug, caught by a
+test rather than by reading it. Keying off each column's first cell put August
+on the 2nd and September on the **6th**, because 1 September 2026 is a Tuesday
+and 1 August a Saturday, so the column holding the 1st opens in the previous
+month. The label landed up to a whole column right of the month it names.
+
+**The heatmap ramp was replaced, and this is the call the 2026-09-07 entry
+deferred.** That entry left `levelColor` alone because restyling a shipped
+screen is a product call; asking for the data visualisations to be improved is
+that call being made. Measured, not eyeballed — the old alpha blend composited
+per theme and run through the palette validator: forest **non-monotonic** (a
+rest day rendered *lighter* than a studied one), empty versus level 1 at **ΔE
+1.4 under deuteranopia** (4.7 normal), hue spread **131°** because blending a
+pink highlight over a green ground walks the hue across the wheel, and all three
+themes below the 2:1 light-end contrast floor. The new steps are generated in
+OKLCH per theme: one hue, monotone lightness, adjacent ΔL ≥ 0.06, faintest step
+≥ 2.36:1 on its own surface, and empty kept a **categorical** break at ΔE 20
+(≥ 17 under CVD) rather than a step on the scale. Level 4 is still each theme's
+exact highlight. **Web and mobile had drifted to two different ramps** — 45% vs
+50% at level 2 — and now share one set of values.
+
+**Cards learned is windowed, on the user's call.** It reads as a lifetime figure
+and the windowed one is not that, but all-time is only derivable from the card
+documents: nine `where uid ==` queries across nine per-language collections,
+every time the tab opens, which is the exact cost `shareStats.ts` exists to
+avoid. Withheld rather than shown low before 2026-09-06, so it stays absent
+rather than dashed and starts answering on its own.
+
+**The image names languages and will never split its figures by them.**
+`byLanguage.reviews` goes back to the start; the verdicts inside it only to
+2026-09-04 and `cardsMatured` to 2026-09-06, so a per-language number would
+break the one-window rule over any window worth posting. Codes travel in the
+URL, not display names, so the label lands in the reader's language; the route
+filters them through `isStudyLanguage`, which also bounds what glyphs the image
+can demand.
+
+⚠️ **The font subset is a standing maintenance obligation, and it bit twice.**
+It held 53 glyphs, and **every** language name in both locales fell outside it —
+"Korean" wanted a `K` it did not have, 한국어 had 한 but neither 국 nor 어 — all
+of which renders as nothing, silently. Two regenerations took it to 122. **The
+User-Agent decides the format**: a bare `Mozilla/5.0` gets the raw TrueType
+satori needs, a modern browser UA gets WOFF, and an MSIE UA gets **EOT**, which
+is what the first attempt downloaded — its "magic" was a little-endian file
+size. Verify the cmap covers what you asked for; do not verify by looking at a
+picture. The derivation and the trap are in the header of `fonts.ts`.
+
+**The today card is a layout, not a second pipeline.** `buildShareStats` over a
+one-day window is already correct numbers for today, so `v=today` picks a
+template from the same route — which it must, since mobile cannot rasterize a
+view without a native module that costs a build and breaks Expo Go. An absent
+`v` is the window card, so every URL an older build produced is unchanged. It
+drops the calendar (one day is one square), drops Days studied (it can only read
+1) and carries no study-time tile at all, per the framing at the top.
+⚠️ **The shareable gate is asked per variant** — a today card on a blank day is
+the zeroed image that check exists to prevent, however full the window beside
+it. Web's chooser is a `<details>` of per-variant anchors rather than a button
+menu, so the no-JS download that made that component an anchor survives the
+choice.
+
+⚠️ **None of it was verified visually.** Colour is computed; layout is not. The
+calendar needs a signed-in account with history to draw at all, and mobile needs
+a build — the standing caveat under Builds.
 
 ### 병과 material is a section of 부대·참모, and its branches keep the 「-과」 (2026-09-09)
 
