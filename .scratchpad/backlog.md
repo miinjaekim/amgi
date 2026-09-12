@@ -30,15 +30,25 @@ are simply absent — the rows still share. Worth one look on the build, since i
 is the first thing on that screen that fails by showing less rather than by
 erroring.
 
-⚠️ **Console step, and it blocks correctness rather than polish: `mature` is a
-new field on all ten card collections.** Security rules are manual, and
-[lessons.md](lessons.md) records that **two different rule shapes** are in use
-across those collections. If any of them lists the fields an update may write,
-every rating on that language starts failing at runtime — and nothing in CI or
-in a local typecheck sees it. Check the rules before the build, not after.
-The read side needs nothing: `mature == true` plus `uid ==` is two equality
-filters, which Firestore serves by merging single-field indexes, so unlike the
-card queries this needs **no composite index**.
+**No console step is needed for `mature`, and this was checked rather than
+assumed** (2026-09-12). The worry was that a new field on ten card collections
+might hit a rule listing which fields an update may write. It does not: the two
+shapes [lessons.md](lessons.md) records are scoped to *operations*
+(`read, update, delete` + `create`, or `read, write` + `create`), and nothing in
+them enumerates fields. Confirmed against the live project as well — the
+backfill wrote flags and the count came back **196** on a real account, where a
+rule rejection or a missing index would have thrown and shown no tile at all.
+The read side needs nothing either: `mature == true` plus `uid ==` is two
+equality filters, which Firestore serves by merging single-field indexes, so
+unlike the card queries this needs **no composite index**.
+
+⚠️ **`matureBackfillAt` makes the backfill one-shot, which cuts both ways.** It
+has already run against production data from a dev server, so the flags are
+really written. If the count is ever wrong, clearing that field on
+`users/{uid}` is the only thing that makes it recompute — and a language never
+studied has had its rules unexercised by the backfill, since nothing there
+needed flagging. The rating path writes the same field, so that would surface
+on the first review in it.
 
 ⚠️ **Do not read that list as "the progress work is unreleased".** The shared
 image renders server-side, so build 15 devices *already* draw the language line

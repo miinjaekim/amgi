@@ -373,11 +373,18 @@ number — the one thing this file says twice not to do. `summarizeProgress` sti
 returns `totalCardsMatured`, so a window-scoped figure can come back the day it
 is given a label that says which window it means.
 
-⚠️ **This adds a console step that nothing local can catch.** `mature` is a new
-field written to ten card collections whose security rules are **manual and not
-uniform** — two different rule shapes are in use, per lessons.md. If any of them
-constrains which fields an update may write, ratings start failing at runtime
-with nothing in CI to warn first.
+**It needed no console step, and that was checked rather than assumed.** The
+worry was a rule constraining which fields an update may write, since `mature`
+is new on ten collections and the rules are manual and not uniform. They are
+scoped to *operations* — `read, update, delete` + `create`, or `read, write` +
+`create` — and enumerate no fields. Confirmed live the same day: the backfill
+wrote its flags and the count returned **196** on a real account, where a rule
+rejection or a missing index would have thrown and drawn no tile at all.
+
+⚠️ **The backfill has therefore already run against production data**, from a
+dev server rather than a deploy, and `matureBackfillAt` makes it one-shot.
+Clearing that field on `users/{uid}` is the only way to make the count
+recompute if it is ever wrong.
 
 **Days studied came off both surfaces** (same day, user's call). Beside a streak
 it read as a second opinion on one question, and the streak is the one people
