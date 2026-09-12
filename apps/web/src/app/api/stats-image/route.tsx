@@ -285,25 +285,34 @@ export async function GET(req: NextRequest) {
         </div>
 
         {/* A calendar of one day is a single square, so the today card does
-            without one and lets the hero take the room. */}
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
-          {variant === 'today' ? [] : rows.map((row, y) => (
-            <div key={y} style={{ display: 'flex', marginBottom: y === rows.length - 1 ? 0 : gap }}>
-              {row.map((level, x) => (
-                <div
-                  key={x}
-                  style={{
-                    width: cell,
-                    height: cell,
-                    marginRight: x === row.length - 1 ? 0 : gap,
-                    borderRadius: 8,
-                    backgroundColor: cellColor(level),
-                  }}
-                />
-              ))}
-            </div>
-          ))}
-        </div>
+            without one.
+
+            ⚠️ **The element goes, not just its children.** The root is
+            `justify-content: space-between`, so an empty div still claims a
+            slot and spreads the remaining ones apart — which left about a third
+            of the today card as dead green and read as something that had
+            failed to load. Emptying the children is not the same as removing
+            the child. */}
+        {variant === 'window' && (
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            {rows.map((row, y) => (
+              <div key={y} style={{ display: 'flex', marginBottom: y === rows.length - 1 ? 0 : gap }}>
+                {row.map((level, x) => (
+                  <div
+                    key={x}
+                    style={{
+                      width: cell,
+                      height: cell,
+                      marginRight: x === row.length - 1 ? 0 : gap,
+                      borderRadius: 8,
+                      backgroundColor: cellColor(level),
+                    }}
+                  />
+                ))}
+              </div>
+            ))}
+          </div>
+        )}
 
         <div style={{ display: 'flex', width: '100%' }}>
           {tiles.map(tile => (
