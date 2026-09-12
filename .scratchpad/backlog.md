@@ -81,36 +81,160 @@ Android is the exception — no review, so a fix there ships the same day._
 
 ## High
 
-**One item.** The Hanja queue that sat here — a study language, three-sided
-cards, and the five 급수 packs — shipped whole on 2026-09-09 and left this file
-per the convention in [README.md](README.md); its reasoning is in three
-Decisions entries in [status.md](status.md), the compatibility-ideograph gotcha
-is in [lessons.md](lessons.md), and the one row it left open (省's English) was
-answered on 2026-09-09. What remains below is the last of the 2026-08-31 queue — everything else
-there either shipped (Spanish and Kikuyu packs, the pronunciation speed dial in
+**Five items, one subject: what the progress surfaces show.** Queued
+2026-09-12. The mobile UI redesign that stood here is finished — its last item,
+per-context pronunciation speed, moved to Medium the same day rather than
+closing, since nothing about it was decided. Everything else in the 2026-08-31
+queue either shipped (Spanish and Kikuyu packs, the pronunciation speed dial in
 build 14, the shareable stats asset across four commits on 2026-09-07) or was
-cancelled, with the reasoning in the same place.
+cancelled, with the reasoning in the Decisions entries in [status.md](status.md).
 
-### What is left of the mobile UI redesign — queued 2026-09-01
+### Reading the progress data better — queued 2026-09-12
 
-Five of the six items have shipped: the tab rearrange, the Progress tab, the
-settings redesign and the quick study-language switcher on 2026-09-04, which
-moved pieces of the same screen and were built together for that reason, then
-the shareable stats asset on 2026-09-07. **One remains**, and it depends on
-nothing above.
+The rollups are richer than the dashboard reads them. A day already carries
+per-language slices, per-hour counts, maturity crossings and study seconds; the
+tab draws four tiles, a grid of unlabelled squares and a bar per language.
+**Every item below is a display change over data already written** — none needs
+a new counter, and none blocks another.
 
-⚠️ **The per-language write-path decision was taken with them** and is not
-reopenable cheaply — verdict counts now live inside `byLanguage`, so retention
-per language is derivable from 2026-09-04 onward and from no earlier date.
-Reasoning in the Decisions entry in [status.md](status.md); the shape is in
-[data-model.md](data-model.md).
+Each lands in **two or three places**: `apps/mobile/app/(tabs)/progress.tsx` and
+`apps/web/src/app/progress/page.tsx` are near-identical surfaces built from the
+same `@amgi/core` helpers, and the shared asset is rendered server-side by
+`apps/web/src/app/api/stats-image/route.tsx` from numbers `packages/core/src/
+shareStats.ts` computes. Put anything derived in core, where it is testable —
+the render route's raster **cannot** be unit-tested (resvg's wasm does not
+initialise under vitest), which is the reason that split exists at all.
 
-- [ ] **Per-context pronunciation speed.** One setting drives every play button
-      today, and the comment above the speed selector in `app/settings.tsx` says
-      why: term, translation and example all render the same `PronounceButton`,
-      so a second setting had nothing to name. The ask names two things it could
-      split on — **content** (term vs example sentence) and **surface**
-      (browsing vs learn/review).
+⚠️ **Three settled rules govern every number here.** They are decided, recorded
+in [status.md](status.md), and not to be relitigated while doing display work:
+**(1)** a figure the window cannot honestly cover comes back `null` and is
+dropped, never rendered as 0 — `PROGRESS_HISTORY_START` (2026-08-20) bounds the
+rows, `DETAILED_HISTORY_START` (2026-09-06) bounds `cardsMatured`,
+`studySeconds` and `byHour`, and the per-language verdict split starts
+2026-09-04. **(2)** every figure on the shared image spans **one** window, or is
+withheld — juxtaposition is what lies, not any single number. **(3)** `reviews`
+counts **directions** and `cardsMatured` counts **cards**, so the two may never
+share a label or a grid row without saying which is which.
+
+- [ ] **Pick which asset you are sharing, one of them today's review.** The
+      share affordance renders exactly one picture today: the selected window's
+      numbers through `shareImagePath`. The ask is a chooser in front of it,
+      with **"what I reviewed today"** as one of the options.
+      ⚠️ **A today asset is not the existing template at `w=1`.** That layout is
+      window-shaped — a hero count, a wrapped calendar, a tile row — and one day
+      of it is a single square. So this is a **second template inside the same
+      route**, selected by a query parameter; keep one route, because one route
+      for both platforms is the reason the asset works on mobile at all (mobile
+      cannot rasterize a view without `react-native-view-shot`, which costs an
+      EAS build and breaks Expo Go).
+      ⚠️ **`hasShareableHistory` has to be asked per variant.** It currently
+      gates the button on the *window* having reviews; a today asset offered on
+      a day with none is exactly the zeroed image that gate exists to prevent,
+      even when the 90-day window behind it is full.
+      **The chooser is a new surface on both platforms.** Mobile has
+      `BottomSheet` already, used by the study-language switcher on this very
+      screen — follow it. Web is the constraint: `ShareStatsButton` is an
+      **anchor with `download`**, deliberately, so the base case needs no JS and
+      cannot fail into nothing. Whatever the picker is, each variant must end at
+      its own `href` so that property survives.
+      ⚠️ **New copy on the image can render blank.** The Noto faces are base64
+      `text=` subsets (~10KB against ~5.7MB); a glyph outside the subset draws as
+      nothing, silently. Regenerate them with the template. Satori rules too:
+      flexbox only, explicit `display: flex` on any multi-child container.
+
+- [ ] **Show cards learned on the dashboard, not only on the shared image.**
+      `summarizeProgress` already returns `totalCardsMatured` and the asset
+      already renders it as `shareStatLearned` ("Cards learned" / "익힌 카드").
+      The tab has never shown it — the stat grid is streak, reviews, days
+      studied, average, on both platforms.
+      ⚠️ **It undercounts before 2026-09-06 and the asset handles that; the
+      dashboard would not.** `buildShareStats` returns `null` when the window
+      reaches past `DETAILED_HISTORY_START`, and `fullyCoveredWindow` exists to
+      offer a shorter honest window instead. Reuse both. A quiet low number in a
+      90-day tile is the failure mode.
+      ⚠️ **Decide first whether the wanted number is all-time.** "Cards I have
+      learned" reads as a lifetime figure, and the windowed one is not that. An
+      all-time count *is* derivable from the card documents via `isCardMature`
+      — at the cost of nine `where uid ==` queries across nine per-language
+      collections, which is precisely what `shareStats.ts` was built to avoid
+      ("a promise that sharing costs no reads"). That is a read-cost call, not a
+      layout one; take it before building either.
+
+- [ ] **Label the calendar's days, and the other figures while there.** The
+      heatmap is seven rows per column with nothing naming a row, so which row
+      is Monday is unanswerable; the columns name no months either.
+      ⚠️ **The grid is not weekday-aligned, so labels would currently be
+      wrong** — worse than absent. `buildHeatmap` starts at `endDate − (n−1)`
+      and chunks by seven from there, so row 0 is whatever weekday the window
+      happens to open on and it shifts every day. The "364 rather than 365 so
+      the calendar is a whole number of weeks" comment on both `RANGES` is true
+      of the *count* only. **Padding to the week boundary comes first**, in
+      `buildHeatmap` where it is shared and tested, not in each renderer.
+      **What else is drawn without being labelled:** the per-language bar is a
+      share of the *busiest* language and never says so; the legend reads
+      Less → More without naming the quantity; and `byHour` has been collected
+      since 2026-09-06 and is **drawn nowhere at all** — "when do you study" is
+      written down and never shown.
+      ⚠️ **The app's heatmap ramp is measurably wrong and was left alone
+      deliberately** (Decisions, 2026-09-07): `levelColor` alpha-blends the
+      highlight, so its lightness is not monotonic — the busiest day renders
+      *darker* than a rest day — and empty versus level 1 are ΔE 1.4 apart under
+      deuteranopia. The corrected ramp already exists in `route.tsx`. It was
+      held back because restyling a shipped screen is a product call; **if this
+      item restyles the grid anyway, take the fix with it** rather than leaving
+      two ramps in the repo.
+
+- [ ] **Say which languages the shared image is about.** It reports reviews, a
+      streak, days studied and a calendar without ever naming what was studied.
+      `summary.byLanguage` is in hand at both call sites and has been written
+      since rollups began, so this costs no read.
+      ⚠️ **Numbers are passed in, never looked up** — the route takes no uid,
+      touches no Firestore, and that is the privacy design rather than an
+      optimisation. Languages travel the same way: `shareImageQuery` grows a
+      parameter. Use the `label{StudyLanguage}` keys, which exist in both
+      locales already, and **regenerate the font subsets** — 한국어 and friends
+      are new glyphs on that canvas.
+      ⚠️ **Name them, and their review counts if wanted; do not split retention
+      or maturity per language on this image.** `byLanguage.reviews`,
+      `newCards` and `packCards` go back to the start; the verdicts inside
+      `byLanguage` only start 2026-09-04 and `cardsMatured` 2026-09-06, so those
+      break rule (2) above over any window worth posting.
+      The canvas is full — window label, hero, calendar, tiles, footer — so this
+      is a layout call, not an insertion.
+
+- [ ] **Take retention off both surfaces; keep every counter behind it.**
+      Review is about how much you reviewed and how many cards you have learned,
+      not how accurately you recalled them, and time taken matters less still —
+      so the percentage stops being displayed.
+      **Three display sites, and nothing else:** the per-language row on mobile
+      (`progressRetention`, "{percent}% recalled" / "{percent}% 기억" — web's
+      language list never showed it), the `shareStatRetention` tile in
+      `route.tsx`, and the `ret` parameter `shareImageQuery` sends. Both i18n
+      keys become dead in both locales; delete them with the render.
+      ⚠️ **Do not touch the write path.** `again`/`hard`/`good`/`easy` keep
+      being written, `retentionRate` and `ratedTotal` stay exported. A rollup
+      keeps only what it counted in advance and cannot be backfilled, so
+      stopping the write throws away history permanently — and the per-language
+      split would have to re-earn its 2026-09-04 boundary from scratch.
+      ⚠️ **The route must keep *accepting* `ret` while ignoring it.** Mobile
+      ships by build, the route is server-side: build 15 goes on appending `ret`
+      to the URL for as long as it is installed. (The flip side is free — the
+      tile disappears from already-shipped builds the moment the route stops
+      drawing it.)
+      Tests to follow down: `share-stats.test.ts` (four cases) and
+      `stats-image.test.ts` (four more) assert on it. The parse cases guard a
+      real bug class and should keep asserting the parameter is *tolerated*.
+
+## Medium
+
+- [ ] **Per-context pronunciation speed** — the last of the mobile UI redesign
+      queued 2026-09-01, moved here 2026-09-12 on the user's call. Nothing about
+      it was decided; it is the axis question below that keeps it unscoped.
+      One setting drives every play button today, and the comment above the
+      speed selector in `app/settings.tsx` says why: term, translation and
+      example all render the same `PronounceButton`, so a second setting had
+      nothing to name. The ask names two things it could split on — **content**
+      (term vs example sentence) and **surface** (browsing vs learn/review).
       ⚠️ **Pick one axis.** Both is a 2×2 — four controls for something a user
       sets once and forgets.
       Mechanically cheap: rate is applied at playback (`setPlaybackRate` native,
@@ -123,8 +247,6 @@ Reasoning in the Decisions entry in [status.md](status.md); the shape is in
       Web has the same button and the same context, so this lands on both. And
       `settingsPronunciationSpeedDesc` ("applies to terms, translations, and
       example sentences", both locales) becomes false the moment it ships.
-
-## Medium
 
 - [ ] **Watch the kanji deck on the "All" chip.** The kanji pack is the first
       single-glyph pack laid out as a `list`, because its back carries readings

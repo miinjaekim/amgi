@@ -859,9 +859,11 @@ item said it was best done *after* the cache "which is where the results would
 live". ~600 model calls with no store behind them is a one-off spend that
 expires when the deck changes.
 
-**What the file looks like now.** High holds one item (per-context pronunciation
-speed); Medium holds seven; the rest is Bigger bets, Parked, Housekeeping and
-one clarification. Two long meta-notes were compressed rather than kept —
+**What the file looked like after this pass.** High held one item (per-context
+pronunciation speed); Medium held seven; the rest was Bigger bets, Parked,
+Housekeeping and one clarification. Both sections have moved on since — High
+was refilled on 2026-09-12 and that item went to Medium — so read
+[backlog.md](backlog.md) for the shape rather than this sentence. Two long meta-notes were compressed rather than kept —
 why build-checking is not tracked, and what left the High section — since both
 were already recorded here in full.
 
