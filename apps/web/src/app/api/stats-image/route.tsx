@@ -25,7 +25,7 @@
  */
 import { ImageResponse } from 'next/og';
 import { NextRequest } from 'next/server';
-import { t, type TranslationKey } from '@amgi/core';
+import { isStudyLanguage, t, type StudyLanguage, type TranslationKey } from '@amgi/core';
 import { NOTO_SANS_KR_BOLD_BASE64, NOTO_SANS_KR_REGULAR_BASE64, fontData } from './fonts';
 
 /** Story format. Instagram, KakaoTalk and every other story surface use 9:16. */
@@ -138,6 +138,15 @@ export interface ShareImageParams {
   daysStudied: number;
   /** `null` means withheld, and must stay absent from the image, not render 0. */
   learned: number | null;
+  /**
+   * The languages reviewed in the window, busiest first.
+   *
+   * Filtered to codes the app actually knows: the label is looked up as
+   * `label{code}`, so an invented code in a hand-edited URL would otherwise
+   * draw the key itself. It also bounds the glyphs this can demand of the
+   * subset fonts to the nine real names.
+   */
+  languages: StudyLanguage[];
   /** Exactly `windowDays` levels, 0–4, padded and truncated to fit. */
   cells: number[];
 }
@@ -172,6 +181,7 @@ export function readShareImageParams(q: URLSearchParams): ShareImageParams {
     // Absent rather than zero: `buildShareStats` withholds a figure the window
     // cannot honestly cover, and a 0 on a shared image is a claim, not a gap.
     learned: q.has('l') ? Math.round(num('l')) : null,
+    languages: (q.get('g') ?? '').split(',').filter(isStudyLanguage),
     // `ret` is deliberately not read. Retention came off the image on
     // 2026-09-12, but mobile ships by build and the route is server-side, so an
     // installed 1.6.0 goes on appending it for as long as it is there. An
@@ -195,9 +205,21 @@ export function layoutHeatmap(cells: number[], windowDays: number) {
 
 export async function GET(req: NextRequest) {
   const {
-    lang, windowDays, reviews, streak, daysStudied, learned, cells,
+    lang, windowDays, reviews, streak, daysStudied, learned, languages, cells,
   } = readShareImageParams(req.nextUrl.searchParams);
   const label = (key: TranslationKey, vars?: Record<string, string | number>) => t(lang, key, vars);
+
+  /**
+   * What was being studied, under the number that counts it.
+   *
+   * Three names at most. A fourth does not fit the width at this size, and a
+   * remainder is more honestly a count than a truncated list.
+   */
+  const named = languages.slice(0, 3).map(code => label(`label${code}` as TranslationKey));
+  const rest = languages.length - named.length;
+  const languageLine = named.length === 0
+    ? null
+    : `${named.join(' · ')}${rest > 0 ? ` +${rest}` : ''}`;
   const { gap, cell, rows } = layoutHeatmap(cells, windowDays);
 
   const regular = fontData(NOTO_SANS_KR_REGULAR_BASE64);
@@ -247,6 +269,13 @@ export async function GET(req: NextRequest) {
           <div style={{ fontSize: 46, color: C.text, marginTop: 12 }}>
             {label('shareStatReviews')}
           </div>
+          {/* Directly under the figure it qualifies: "1,204 reviews" never said
+              of what. The window line at the top stays the window. */}
+          {languageLine !== null && (
+            <div style={{ fontSize: 30, color: C.muted, marginTop: 16 }}>
+              {languageLine}
+            </div>
+          )}
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column' }}>

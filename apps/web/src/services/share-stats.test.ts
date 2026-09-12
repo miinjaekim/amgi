@@ -4,6 +4,7 @@ import {
   PROGRESS_HISTORY_START,
   buildShareStats,
   emptyDailyProgress,
+  emptyLanguageProgress,
   fullyCoveredWindow,
   hasShareableHistory,
   shareImageFilename,
@@ -16,6 +17,15 @@ import { readShareImageParams } from '@/app/api/stats-image/route';
 /** A day with only the fields a test cares about; the rest stay zero. */
 function day(date: string, patch: Partial<DailyProgress> = {}): DailyProgress {
   return { ...emptyDailyProgress(date), ...patch };
+}
+
+/** A day whose reviews are attributed to one language, for the `g` parameter. */
+function dayIn(date: string, language: string, reviews: number): DailyProgress {
+  return {
+    ...emptyDailyProgress(date),
+    reviews,
+    byLanguage: { [language]: { ...emptyLanguageProgress(), reviews } },
+  };
 }
 
 /** A window ending well clear of both boundaries, so coverage is not the subject. */
@@ -231,6 +241,29 @@ describe('shareImageQuery', () => {
   it('no longer sends retention, however many verdicts the window holds', () => {
     const q = query([day(LATER, { reviews: 4, again: 1, hard: 1, good: 1, easy: 1 })]);
     expect(q.has('ret')).toBe(false);
+  });
+
+  it('names the languages reviewed in the window, busiest first', () => {
+    const q = query([
+      dayIn(LATER, 'Korean', 3),
+      dayIn(shiftDate(LATER, -1), 'Japanese', 9),
+    ]);
+    expect(q.get('g')).toBe('Japanese,Korean');
+  });
+
+  it('leaves out a language that was never reviewed', () => {
+    // Cards added is not studying, and a name beside a review count that
+    // contributed none of it is a claim the window does not support.
+    const q = query([
+      dayIn(LATER, 'Korean', 4),
+      { ...emptyDailyProgress(shiftDate(LATER, -1)), newCards: 60,
+        byLanguage: { Japanese: { ...emptyLanguageProgress(), newCards: 60 } } },
+    ]);
+    expect(q.get('g')).toBe('Korean');
+  });
+
+  it('omits the parameter rather than sending an empty one', () => {
+    expect(query([day(LATER, { reviews: 2 })]).has('g')).toBe(false);
   });
 
   it('sends one heat character per day in the window', () => {

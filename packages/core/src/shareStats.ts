@@ -35,6 +35,7 @@ import {
   historyStartsMidWindow, shiftDate, summarizeProgress,
   type DailyProgress, type HeatmapCell,
 } from './progress';
+import type { StudyLanguage } from './types';
 
 /** What the caller knows that the rows do not. */
 export interface ShareStatsInput {
@@ -94,6 +95,26 @@ export interface ShareStats {
   studySeconds: number | null;
 
   /**
+   * Which languages the window's reviews were in, busiest first.
+   *
+   * The image reported a review count without ever saying what was being
+   * studied. This is the answer, and it costs nothing: `byLanguage` has been
+   * written since rollups began and `summarizeProgress` already sorts it.
+   *
+   * **Only languages actually reviewed in the window.** A language that had
+   * cards added but nothing rated does not belong beside a review count.
+   *
+   * Every language is sent; the *render* decides how many fit, because how many
+   * names fit on a canvas is a layout question rather than a data one.
+   *
+   * ⚠️ **Names only — never a per-language split of the numbers here.**
+   * `byLanguage.reviews` goes back to the start, but the verdicts inside it
+   * only from 2026-09-04 and `cardsMatured` from 2026-09-06, so a per-language
+   * figure would break the one-window rule over any window worth posting.
+   */
+  languages: StudyLanguage[];
+
+  /**
    * The window's calendar, for the hero. Always present and always dense —
    * `buildHeatmap` fills gaps with zeroes, so an unstudied day is a drawn empty
    * cell rather than a missing one.
@@ -139,6 +160,9 @@ export function buildShareStats(days: DailyProgress[], input: ShareStatsInput): 
     streak,
     cardsLearned: detailed ? summary.totalCardsMatured : null,
     studySeconds: detailed ? summary.totalStudySeconds : null,
+    languages: summary.byLanguage
+      .filter(entry => entry.progress.reviews > 0)
+      .map(entry => entry.studyLanguage),
     heatmap: buildHeatmap(inWindow, endDate, windowDays),
     partialHistory: historyStartsMidWindow(windowStart),
   };
@@ -193,6 +217,9 @@ export function shareImageQuery(stats: ShareStats, nativeLanguage?: string | nul
   q.set('s', String(stats.streak));
   q.set('d', String(stats.daysStudied));
   if (stats.cardsLearned !== null) q.set('l', String(stats.cardsLearned));
+  // Codes rather than display names: shorter, stable, and it leaves the label
+  // in the reader's own language rather than the sharer's.
+  if (stats.languages.length > 0) q.set('g', stats.languages.join(','));
   // One character per day, oldest first. A year is 364 characters, which is
   // well inside any URL limit and far shorter than sending counts.
   q.set('h', stats.heatmap.map(cell => cell.level).join(''));

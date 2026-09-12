@@ -39,6 +39,17 @@ describe('reading the parameters', () => {
     expect(parse('r=10&l=0').learned).toBe(0);
   });
 
+  it('keeps only real study languages out of the g parameter', () => {
+    // The label is looked up as `label{code}`, so an invented code would draw
+    // the key itself — and would ask the subset fonts for glyphs nobody put in
+    // them. Both failures are silent, which is why this filters rather than
+    // trusts.
+    expect(parse('g=Korean,Japanese').languages).toEqual(['Korean', 'Japanese']);
+    expect(parse('g=Korean,Klingon,,Japanese').languages).toEqual(['Korean', 'Japanese']);
+    expect(parse('g=').languages).toEqual([]);
+    expect(parse('r=10').languages).toEqual([]);
+  });
+
   it('ignores the retention parameter an older build still sends', () => {
     // Retention came off the image on 2026-09-12. Mobile ships by build and
     // this route is server-side, so an installed 1.6.0 goes on appending `ret`
