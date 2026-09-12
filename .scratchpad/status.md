@@ -330,12 +330,54 @@ reached past 2026-09-06. Every range on offer is 30 days or more, so that meant
 *never*: 30 days back is 2026-08-14, 90 is 2026-06-15, a year is 2025-09-14, and
 the 30-day tile would not have appeared until 2026-10-05. The rule exists to
 stop a quiet fortnight reading as a low score, not to hide a figure for a month.
-`cardsLearnedIn` now shortens the window to the part that can answer and reports
-where it started, so the tile carries a real number with **"since 6 Sep"** under
-it; the caption removes itself once the range fits inside the recorded span.
-**The image still withholds** — a caption qualifying one figure is fine on a
-screen being read, but at thumbnail size beside "Last 30 days" it is exactly the
-juxtaposition the one-window rule exists to prevent.
+A first correction shortened the window to the honest part and captioned it
+"since 6 Sep". **That was superseded the same day, and the user's question is
+what exposed the real mistake**: the interval is on every card and always has
+been, so "is this card learned" never needed the rollups at all. Only "*when*
+did it cross" did — and that is the sole thing the 2026-09-06 boundary governs.
+The tile had been answering the harder question by accident.
+
+**So "cards learned" is now a state, counted from the cards.** `isFlashcardMature`
+reads `frontToBack.interval`, `backToFront.interval` and the pre-split top-level
+`interval`, and the answer is stored as a `mature` boolean on the card.
+
+⚠️ **A stored flag rather than a derived one, for one reason: aggregation.**
+`getCountFromServer` bills per index scan rather than per document, and two
+equality filters (`uid`, `mature`) are served by merging single-field indexes —
+so **no composite index**, and ten collections cost ten cheap queries instead of
+a read of every card the user owns. Deriving it live would have meant reading
+the whole deck on every visit to a tab people open constantly.
+
+**Three writers, one definition.** The rating write, the undo write and the
+one-off backfill all call `isFlashcardMature`; three call sites each choosing
+their own field set is exactly how they would drift. It is written even when
+*false*, so a lapse clears the flag rather than leaving a card counted forever.
+Mobile gets this through `updateFlashcardReview` alone — live ratings, ratings
+flushed from the offline queue and undos all funnel through it — where web needs
+it in two places because it builds its update map inline.
+
+**And unlike a rollup, this one could be backfilled.** A card not rated since
+2026-09-12 carries no flag, and long-interval cards are precisely the ones
+nobody has rated lately, so the first count would have missed most of its
+subject. `backfillMatureFlags` walks all ten collections once per account,
+writing only the *mature* cards — a card below the line needs no flag, since
+`mature == true` does not match a missing field — and records
+`matureBackfillAt` on `users/{uid}` so it never runs twice. The interval is
+current state sitting on the document, which is the whole reason this is
+possible where a day-of-crossing never was.
+
+⚠️ **The image loses its cards-learned tile entirely.** An all-time figure
+cannot sit on a canvas where every other number names one window, and a windowed
+one would wear the same words as the dashboard tile while reporting a different
+number — the one thing this file says twice not to do. `summarizeProgress` still
+returns `totalCardsMatured`, so a window-scoped figure can come back the day it
+is given a label that says which window it means.
+
+⚠️ **This adds a console step that nothing local can catch.** `mature` is a new
+field written to ten card collections whose security rules are **manual and not
+uniform** — two different rule shapes are in use, per lessons.md. If any of them
+constrains which fields an update may write, ratings start failing at runtime
+with nothing in CI to warn first.
 
 **Days studied came off both surfaces** (same day, user's call). Beside a streak
 it read as a second opinion on one question, and the streak is the one people

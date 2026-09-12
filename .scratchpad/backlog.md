@@ -30,6 +30,16 @@ are simply absent — the rows still share. Worth one look on the build, since i
 is the first thing on that screen that fails by showing less rather than by
 erroring.
 
+⚠️ **Console step, and it blocks correctness rather than polish: `mature` is a
+new field on all ten card collections.** Security rules are manual, and
+[lessons.md](lessons.md) records that **two different rule shapes** are in use
+across those collections. If any of them lists the fields an update may write,
+every rating on that language starts failing at runtime — and nothing in CI or
+in a local typecheck sees it. Check the rules before the build, not after.
+The read side needs nothing: `mature == true` plus `uid ==` is two equality
+filters, which Firestore serves by merging single-field indexes, so unlike the
+card queries this needs **no composite index**.
+
 ⚠️ **Do not read that list as "the progress work is unreleased".** The shared
 image renders server-side, so build 15 devices *already* draw the language line
 and *already* lost the retention tile — an app that is two builds old renders
