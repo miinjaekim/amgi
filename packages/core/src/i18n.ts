@@ -163,7 +163,6 @@ const translations = {
     // reaching further back is shorter than it looks. Say so rather than
     // showing a total that quietly means something narrower.
     progressHistoryNote: 'Recorded from {date} onwards.',
-    progressRetention: '{percent}% recalled',
     progressCardsFromPacks: '{count} from packs',
     progressTooltipReviews: '{count} reviews',
     progressTooltipOneReview: '1 review',
@@ -180,7 +179,6 @@ const translations = {
     // is a card count. See `ShareStats.reviews`.
     shareStatLearned: 'Cards learned',
     shareStatDays: 'Days studied',
-    shareStatRetention: 'Retention',
     shareWindowDays: 'Last {count} days',
     shareFooter: 'Amgi',
     shareNothingYet: 'Study a little first — there is nothing to share yet.',
@@ -728,7 +726,6 @@ const translations = {
     progressStatAverage: '하루 평균',
     progressStatNewCards: '담은 카드',
     progressHistoryNote: '{date}부터의 기록입니다.',
-    progressRetention: '{percent}% 기억',
     progressStreak: '연속 학습',
     progressStreakDays: '{count}일',
     progressStreakDay: '1일',
@@ -751,7 +748,6 @@ const translations = {
     shareStatStreak: '연속 학습',
     shareStatLearned: '익힌 카드',
     shareStatDays: '공부한 날',
-    shareStatRetention: '기억률',
     shareWindowDays: '지난 {count}일',
     shareFooter: 'Amgi',
     shareNothingYet: '아직 공유할 기록이 없습니다. 조금만 더 공부해 보세요.',

@@ -138,7 +138,6 @@ export interface ShareImageParams {
   daysStudied: number;
   /** `null` means withheld, and must stay absent from the image, not render 0. */
   learned: number | null;
-  retention: number | null;
   /** Exactly `windowDays` levels, 0–4, padded and truncated to fit. */
   cells: number[];
 }
@@ -173,7 +172,10 @@ export function readShareImageParams(q: URLSearchParams): ShareImageParams {
     // Absent rather than zero: `buildShareStats` withholds a figure the window
     // cannot honestly cover, and a 0 on a shared image is a claim, not a gap.
     learned: q.has('l') ? Math.round(num('l')) : null,
-    retention: q.has('ret') ? Math.max(0, Math.min(100, Math.round(num('ret')))) : null,
+    // `ret` is deliberately not read. Retention came off the image on
+    // 2026-09-12, but mobile ships by build and the route is server-side, so an
+    // installed 1.6.0 goes on appending it for as long as it is there. An
+    // unread parameter is ignored; it must never become a parse failure.
     cells: [...heat, ...Array(Math.max(0, windowDays - heat.length)).fill(0)],
   };
 }
@@ -193,7 +195,7 @@ export function layoutHeatmap(cells: number[], windowDays: number) {
 
 export async function GET(req: NextRequest) {
   const {
-    lang, windowDays, reviews, streak, daysStudied, learned, retention, cells,
+    lang, windowDays, reviews, streak, daysStudied, learned, cells,
   } = readShareImageParams(req.nextUrl.searchParams);
   const label = (key: TranslationKey, vars?: Record<string, string | number>) => t(lang, key, vars);
   const { gap, cell, rows } = layoutHeatmap(cells, windowDays);
@@ -207,9 +209,6 @@ export async function GET(req: NextRequest) {
   ];
   if (learned !== null) {
     tiles.push({ label: label('shareStatLearned'), value: formatCount(learned) });
-  }
-  if (retention !== null) {
-    tiles.push({ label: label('shareStatRetention'), value: `${retention}%` });
   }
 
   return new ImageResponse(

@@ -20,10 +20,10 @@ const parse = (query: string) => readShareImageParams(new URLSearchParams(query)
 
 describe('reading the parameters', () => {
   it('reads a full set', () => {
-    const p = parse('w=30&r=1284&s=12&d=23&l=47&ret=88&lang=Korean');
+    const p = parse('w=30&r=1284&s=12&d=23&l=47&lang=Korean');
     expect(p).toMatchObject({
       windowDays: 30, reviews: 1284, streak: 12, daysStudied: 23,
-      learned: 47, retention: 88, lang: 'Korean',
+      learned: 47, lang: 'Korean',
     });
   });
 
@@ -36,9 +36,15 @@ describe('reading the parameters', () => {
     // returns null for a figure the window cannot cover; a 0 on a shared image
     // is a claim, not a gap, so the two must not collapse here.
     expect(parse('r=10').learned).toBeNull();
-    expect(parse('r=10').retention).toBeNull();
-    expect(parse('r=10&l=0&ret=0').learned).toBe(0);
-    expect(parse('r=10&l=0&ret=0').retention).toBe(0);
+    expect(parse('r=10&l=0').learned).toBe(0);
+  });
+
+  it('ignores the retention parameter an older build still sends', () => {
+    // Retention came off the image on 2026-09-12. Mobile ships by build and
+    // this route is server-side, so an installed 1.6.0 goes on appending `ret`
+    // for as long as it is on the phone: it must be inert, never a failure.
+    expect(parse('r=10&ret=88')).toMatchObject({ reviews: 10 });
+    expect(parse('r=10&ret=88')).not.toHaveProperty('retention');
   });
 
   it('keeps a negative cardsLearned, which is a real value', () => {
@@ -68,14 +74,9 @@ describe('reading the parameters', () => {
     expect(parse('w=99999').windowDays).toBe(400);
   });
 
-  it('clamps retention to a percentage', () => {
-    expect(parse('ret=250').retention).toBe(100);
-    expect(parse('ret=-40').retention).toBe(0);
-  });
-
   it('rounds fractional input, since every figure is drawn as an integer', () => {
-    expect(parse('r=12.6&ret=87.4').reviews).toBe(13);
-    expect(parse('r=12.6&ret=87.4').retention).toBe(87);
+    expect(parse('r=12.6&d=4.4').reviews).toBe(13);
+    expect(parse('r=12.6&d=4.4').daysStudied).toBe(4);
   });
 });
 

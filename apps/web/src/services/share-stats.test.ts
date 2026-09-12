@@ -74,19 +74,15 @@ describe('buildShareStats numbers', () => {
     expect(stats.daysStudied).toBe(1);
   });
 
-  it('computes retention over the whole window, not per language', () => {
-    // 3 of 4 ratings were not a lapse. `hard` counts as a recall that hurt,
-    // matching what SM-2 does with it.
+  it('keeps counting verdicts even though nothing renders them', () => {
+    // Retention came off both surfaces on 2026-09-12, display only: the four
+    // verdicts are still written on every rating, because a rollup cannot be
+    // backfilled and stopping the write would lose the history for good.
     const stats = statsFor([
       day(LATER, { reviews: 4, again: 1, hard: 1, good: 1, easy: 1 }),
     ]);
-    expect(stats.retention).toBeCloseTo(0.75);
-  });
-
-  it('reports retention as null rather than 100% when nothing was rated', () => {
-    // The distinction the Progress tab already makes: an unrecorded slice must
-    // read as "not recorded", never as a perfect one.
-    expect(statsFor([day(LATER, { newCards: 5 })]).retention).toBeNull();
+    expect(stats.reviews).toBe(4);
+    expect(stats).not.toHaveProperty('retention');
   });
 
   it('sums the detailed counters across the window', () => {
@@ -232,13 +228,9 @@ describe('shareImageQuery', () => {
     expect(q.has('r')).toBe(true);
   });
 
-  it('sends retention as a whole percent', () => {
+  it('no longer sends retention, however many verdicts the window holds', () => {
     const q = query([day(LATER, { reviews: 4, again: 1, hard: 1, good: 1, easy: 1 })]);
-    expect(q.get('ret')).toBe('75');
-  });
-
-  it('omits retention when nothing was rated', () => {
-    expect(query([day(LATER, { newCards: 3 })]).has('ret')).toBe(false);
+    expect(q.has('ret')).toBe(false);
   });
 
   it('sends one heat character per day in the window', () => {
@@ -269,7 +261,6 @@ describe('shareImageQuery', () => {
     expect(parsed.streak).toBe(stats.streak);
     expect(parsed.daysStudied).toBe(stats.daysStudied);
     expect(parsed.learned).toBe(stats.cardsLearned);
-    expect(parsed.retention).toBe(Math.round((stats.retention ?? 0) * 100));
     expect(parsed.cells).toEqual(stats.heatmap.map(c => c.level));
   });
 

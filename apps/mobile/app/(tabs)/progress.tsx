@@ -7,7 +7,7 @@ import { File, Paths } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import {
   PROGRESS_HISTORY_START, SUPPORTED_STUDY_LANGUAGES, buildHeatmap, buildShareStats,
-  hasShareableHistory, historyStartsMidWindow, localDateString, retentionRate,
+  hasShareableHistory, historyStartsMidWindow, localDateString,
   shareImageFilename, shareImagePath, shiftDate,
   summarizeProgress, t,
   type DailyProgress, type HeatmapCell, type LanguageProgress,
@@ -399,12 +399,17 @@ export default function ProgressScreen() {
 }
 
 /**
- * One language's slice of the window: a bar for volume, the counts under it,
- * and — once there is anything to say — how much of it stuck.
+ * One language's slice of the window: a bar for volume and the counts under it.
  *
  * The bar is what turns this from a list into an answer. "Which languages am I
  * learning and how far along" was already in the data (`byLanguage` has been
  * written since rollups began); it was just never drawn.
+ *
+ * It carried a retention percentage until 2026-09-12. That came off because
+ * review is about how much you reviewed and how many cards you have learned,
+ * not how accurately you recalled them — the verdict counters behind it are
+ * still written, and `retentionRate` still computes it for whoever needs it
+ * next.
  */
 function LanguageRow({ s, C, nativeLanguage, language, progress, busiest }: {
   s: ReturnType<typeof makeStyles>;
@@ -415,24 +420,13 @@ function LanguageRow({ s, C, nativeLanguage, language, progress, busiest }: {
   busiest: number;
 }) {
   const cardsAdded = progress.newCards + progress.packCards;
-  const retention = retentionRate(progress);
   const share = busiest > 0 ? progress.reviews / busiest : 0;
 
   return (
     <View style={s.langRow}>
-      <View style={s.langHead}>
-        <Text style={s.langName} numberOfLines={1}>
-          {t(nativeLanguage, languageLabelKey(language))}
-        </Text>
-        {/* Absent, not zero, for every day recorded before verdicts were kept
-            per language — `retentionRate` returns null rather than claiming
-            100% for a slice that was never asked. */}
-        {retention !== null && (
-          <Text style={s.langRetention}>
-            {t(nativeLanguage, 'progressRetention', { percent: Math.round(retention * 100) })}
-          </Text>
-        )}
-      </View>
+      <Text style={s.langName} numberOfLines={1}>
+        {t(nativeLanguage, languageLabelKey(language))}
+      </Text>
       <View style={s.langBarTrack}>
         <View
           style={[
@@ -622,9 +616,10 @@ function makeStyles(C: Palette, tabBarHeight: number) {
     legend: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 10, marginBottom: 24 },
     legendText: { color: C.muted, fontSize: 11 },
     langRow: { padding: 12, borderRadius: 12, borderWidth: 1, borderColor: C.border, marginBottom: 8 },
-    langHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 10 },
-    langName: { flex: 1, color: C.text, fontSize: 14, fontWeight: '700' },
-    langRetention: { color: C.highlight, fontSize: 12, fontWeight: '700' },
+    // No `flex: 1`: the name sits directly in the card's column now that the
+    // retention figure is gone, where flex would stretch it vertically rather
+    // than fill the row it used to share.
+    langName: { color: C.text, fontSize: 14, fontWeight: '700' },
     langBarTrack: {
       height: 6, borderRadius: 3, backgroundColor: C.border,
       overflow: 'hidden', marginTop: 8, marginBottom: 6,

@@ -21,12 +21,19 @@
  * told by juxtaposition rather than by either number. So a figure the window
  * cannot honestly cover comes back `null` and the image drops it, rather than
  * appearing with a caveat nobody reads at thumbnail size.
+ *
+ * **Retention is deliberately not here** (removed 2026-09-12). Review is about
+ * how much you reviewed and how many cards you learned, not how accurately you
+ * recalled them, so the percentage stopped being shown anywhere. Only the
+ * *display* went: the four verdict counters are still written on every rating
+ * and `retentionRate` is still exported from `progress.ts`, because a rollup
+ * cannot be backfilled — stopping the write would throw the history away for
+ * good, where stopping the render costs nothing to undo.
  */
 import {
   DETAILED_HISTORY_START, buildHeatmap, detailedHistoryStartsMidWindow,
-  emptyLanguageProgress, historyStartsMidWindow, retentionRate,
-  shiftDate, summarizeProgress,
-  type DailyProgress, type HeatmapCell, type LanguageProgress,
+  historyStartsMidWindow, shiftDate, summarizeProgress,
+  type DailyProgress, type HeatmapCell,
 } from './progress';
 
 /** What the caller knows that the rows do not. */
@@ -83,16 +90,6 @@ export interface ShareStats {
    */
   cardsLearned: number | null;
 
-  /**
-   * Share of ratings that were not a lapse, 0–1, or `null` when nothing in the
-   * window was rated.
-   *
-   * Whole-window rather than per-language, which is what makes it safe over a
-   * long window: the four verdicts have been written at day level since
-   * rollups began. Only their *per-language* split has the later boundary.
-   */
-  retention: number | null;
-
   /** Seconds with a card on screen, or `null` before the counter existed. */
   studySeconds: number | null;
 
@@ -112,24 +109,6 @@ export interface ShareStats {
    * still look complete.
    */
   partialHistory: boolean;
-}
-
-/**
- * Sum the four verdicts across the window into one slice, so `retentionRate`
- * can be reused rather than reimplemented.
- *
- * Reads the day-level counters, not `byLanguage` — the per-language split only
- * began on 2026-09-04, where the day totals go back to the start.
- */
-function windowVerdicts(days: DailyProgress[]): LanguageProgress {
-  const totals = emptyLanguageProgress();
-  for (const day of days) {
-    totals.again += day.again;
-    totals.hard += day.hard;
-    totals.good += day.good;
-    totals.easy += day.easy;
-  }
-  return totals;
 }
 
 /**
@@ -160,7 +139,6 @@ export function buildShareStats(days: DailyProgress[], input: ShareStatsInput): 
     streak,
     cardsLearned: detailed ? summary.totalCardsMatured : null,
     studySeconds: detailed ? summary.totalStudySeconds : null,
-    retention: retentionRate(windowVerdicts(inWindow)),
     heatmap: buildHeatmap(inWindow, endDate, windowDays),
     partialHistory: historyStartsMidWindow(windowStart),
   };
@@ -215,9 +193,6 @@ export function shareImageQuery(stats: ShareStats, nativeLanguage?: string | nul
   q.set('s', String(stats.streak));
   q.set('d', String(stats.daysStudied));
   if (stats.cardsLearned !== null) q.set('l', String(stats.cardsLearned));
-  // Sent as whole percent, which is what the image draws — rounding here rather
-  // than in the route keeps the URL the same length whatever the ratio is.
-  if (stats.retention !== null) q.set('ret', String(Math.round(stats.retention * 100)));
   // One character per day, oldest first. A year is 364 characters, which is
   // well inside any URL limit and far shorter than sending counts.
   q.set('h', stats.heatmap.map(cell => cell.level).join(''));
