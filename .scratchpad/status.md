@@ -505,9 +505,24 @@ it. Web's chooser is a `<details>` of per-variant anchors rather than a button
 menu, so the no-JS download that made that component an anchor survives the
 choice.
 
-⚠️ **None of it was verified visually.** Colour is computed; layout is not. The
-calendar needs a signed-in account with history to draw at all, and mobile needs
-a build — the standing caveat under Builds.
+**The image itself finally was verified visually** (2026-09-12) — the first
+thing on this entry that has been. `next dev` serves the route, so
+`curl localhost:3000/api/stats-image?…` writes a real PNG that can simply be
+looked at; no build, no account, no device. Both locales, the today card and the
+30-day card, one tile through four.
+
+⚠️ **It immediately caught a bug that reading could not.** Korean writes 2h 40m
+as 「2시간 40분」 — eight full-width glyphs that cannot fit the ~228px a fourth
+tile gets at any legible size, so the value wrapped, grew its tile, and shoved
+its own label below the other three. English never wraps and looked perfect.
+The fix is a **fixed two-line box around every tile value**, so a label sits on
+the same line whether or not a neighbour wrapped. The lesson generalises past
+this tile: *any* label or value on this canvas has to be checked in Korean, at
+the tightest column it can land in, and the check costs one curl.
+
+⚠️ **Still unverified: the mobile screen around it.** The carousel, its paging
+and the OS share sheet need a device — the standing caveat under Builds. The
+calendar also needs a signed-in account with history to draw real data.
 
 ### 병과 material is a section of 부대·참모, and its branches keep the 「-과」 (2026-09-09)
 

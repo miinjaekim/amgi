@@ -101,18 +101,29 @@ function StatTile({ label, value, compact }: {
   value: string;
   compact?: boolean;
 }) {
+  const size = compact ? 58 : 76;
   return (
     <div style={{
       display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1,
       paddingLeft: 8, paddingRight: 8,
     }}>
+      {/* ⚠️ **Fixed at two lines' worth, deliberately.** A value is not always
+          one line: Korean writes 2h 40m as 「2시간 40분」, eight full-width
+          glyphs that cannot fit the ~228px a fourth tile gets at any legible
+          size, so it wraps. Left to size itself, that tile grew and shoved its
+          own label below the other three, breaking the row — caught by
+          rendering the Korean card, not by reading the code. Reserving the
+          space unconditionally keeps every label on one line whether or not a
+          neighbour wrapped, and costs a short value nothing but air. */}
       <div style={{
-        fontSize: compact ? 58 : 76, fontWeight: 700, color: C.text, lineHeight: 1.1,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        height: Math.round(size * 1.1 * 2), textAlign: 'center',
+        fontSize: size, fontWeight: 700, color: C.text, lineHeight: 1.1,
       }}>
         {value}
       </div>
       <div style={{
-        fontSize: compact ? 25 : 30, color: C.muted, marginTop: 10, textAlign: 'center',
+        fontSize: compact ? 25 : 30, color: C.muted, textAlign: 'center',
       }}>
         {label}
       </div>
@@ -296,7 +307,13 @@ export async function GET(req: NextRequest) {
   const tiles: { label: string; value: string }[] = [
     { label: label('shareStatStreak'), value: formatCount(streak) },
   ];
-  if (cardsMatured !== null) {
+  // ⚠️ **Zero hides the tile, and that is a render rule, not a data one.** The
+  // null/zero distinction is load-bearing upstream — withheld and none are
+  // different facts, which is why the parser keeps them apart — but neither is
+  // worth a tile: "0 Newly learned" beside a streak reads as a rebuke on a
+  // today card that simply is not finished yet. Applied to all three so the row
+  // cannot be inconsistent about it, which it was until this line existed.
+  if (cardsMatured !== null && cardsMatured > 0) {
     tiles.push({ label: label('shareStatMatured'), value: formatCount(cardsMatured) });
   }
   if (studySeconds !== null && studySeconds > 0) {
