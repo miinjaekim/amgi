@@ -79,9 +79,9 @@ export default function ReviewScreen() {
   const { C } = useTheme();
   const tabBarHeight = useFloatingTabBarHeight();
   const s = useMemo(() => makeStyles(C, tabBarHeight), [C, tabBarHeight]);
-  const { user, nativeLanguage, studyLanguage, hanjaPartition, recordReview, undoReview } = useUser();
+  const { user, interfaceLanguage, deckNativeLanguage, studyLanguage, hanjaPartition, recordReview, undoReview } = useUser();
   const config = getStudyLanguageConfig(studyLanguage);
-  const backConfig = getBackSideConfig(studyLanguage, nativeLanguage);
+  const backConfig = getBackSideConfig(studyLanguage, deckNativeLanguage);
   const { isOnline, pendingCount, sync } = usePendingReviewSync(user?.uid);
   const [cards, setCards] = useState<Flashcard[]>([]);
   /**
@@ -135,7 +135,8 @@ export default function ReviewScreen() {
   } = useCardEnrichment({
     card: queue[index]?.card,
     studyLanguage,
-    nativeLanguage,
+    interfaceLanguage,
+    deckNativeLanguage,
     // The queue owns the card, so the queue has to store what enrichment
     // wrote — the reveal panel is remounted on every advance and on every
     // hide, and anything held inside it dies with it.
@@ -337,8 +338,8 @@ export default function ReviewScreen() {
   );
 
   const collections = useMemo(
-    () => buildReviewCollections(reviewedCards, studyLanguage, nativeLanguage),
-    [reviewedCards, studyLanguage, nativeLanguage]
+    () => buildReviewCollections(reviewedCards, studyLanguage, interfaceLanguage),
+    [reviewedCards, studyLanguage, interfaceLanguage]
   );
 
   /**
@@ -584,7 +585,7 @@ export default function ReviewScreen() {
     // The reminder exists because cards were due and today had no review; both
     // may have just stopped being true, so it is re-planned rather than left
     // to fire for work already done.
-    void refreshReminders(user.uid, nativeLanguage);
+    void refreshReminders(user.uid, interfaceLanguage);
 
     setSubmitting(null);
     resetCardState();
@@ -632,7 +633,7 @@ export default function ReviewScreen() {
     void sync();
     // The card is due again, so what the reminders were planned around has
     // moved back.
-    void refreshReminders(user.uid, nativeLanguage);
+    void refreshReminders(user.uid, interfaceLanguage);
 
     // Back onto the card, flipped, with the typed answer and its grade as they
     // were — the point is to re-rate, not to answer it again.
@@ -736,7 +737,7 @@ export default function ReviewScreen() {
   if (!user) {
     return (
       <SafeAreaView style={s.center}>
-        <Text style={s.emptyText}>{t(nativeLanguage, 'signInToReview')}</Text>
+        <Text style={s.emptyText}>{t(interfaceLanguage, 'signInToReview')}</Text>
       </SafeAreaView>
     );
   }
@@ -755,7 +756,7 @@ export default function ReviewScreen() {
           helpPointsKey="helpReviewPoints"
           streak
         />
-        <SkeletonGroup label={t(nativeLanguage, 'loadingFlashcards')} style={s.pickerScroll}>
+        <SkeletonGroup label={t(interfaceLanguage, 'loadingFlashcards')} style={s.pickerScroll}>
           <SkeletonBar width={150} height={15} />
           <SkeletonRows count={3} render={() => (
             <View style={s.pickerRow}>
@@ -787,10 +788,10 @@ export default function ReviewScreen() {
         <View style={s.centerFill}>
           <Text style={s.emptyText}>
             {uncachedLanguage
-              ? t(nativeLanguage, 'offlineNoCachedCards', {
-                  language: t(nativeLanguage, config.studyLabelKey),
+              ? t(interfaceLanguage, 'offlineNoCachedCards', {
+                  language: t(interfaceLanguage, config.studyLabelKey),
                 })
-              : t(nativeLanguage, 'noFlashcardsForReview')}
+              : t(interfaceLanguage, 'noFlashcardsForReview')}
           </Text>
         </View>
       </SafeAreaView>
@@ -803,11 +804,11 @@ export default function ReviewScreen() {
   const offlineNotice = (!isOnline || pendingCount > 0) && (
     <View style={s.offlineNotice}>
       {!isOnline && (
-        <Text style={s.offlineNoticeText}>{t(nativeLanguage, 'offlineReviewBanner')}</Text>
+        <Text style={s.offlineNoticeText}>{t(interfaceLanguage, 'offlineReviewBanner')}</Text>
       )}
       {pendingCount > 0 && (
         <Text style={s.offlineNoticePending}>
-          {t(nativeLanguage, 'offlinePendingReviews', { count: pendingCount })}
+          {t(interfaceLanguage, 'offlinePendingReviews', { count: pendingCount })}
         </Text>
       )}
     </View>
@@ -824,8 +825,8 @@ export default function ReviewScreen() {
    * or the collection name is.
    */
   const sessionSyncSuffix = [
-    !isOnline ? t(nativeLanguage, 'offlineShort') : null,
-    pendingCount > 0 ? t(nativeLanguage, 'offlinePendingShort', { count: pendingCount }) : null,
+    !isOnline ? t(interfaceLanguage, 'offlineShort') : null,
+    pendingCount > 0 ? t(interfaceLanguage, 'offlinePendingShort', { count: pendingCount }) : null,
   ].filter(Boolean).join(' · ');
 
   /**
@@ -843,12 +844,12 @@ export default function ReviewScreen() {
         </Text>
         <Text style={[s.pickerDue, collection.dueCount > 0 && { color: C.highlight }]}>
           {collection.dueCount > 0
-            ? t(nativeLanguage, 'reviewCollectionDue', { count: collection.dueCount })
-            : t(nativeLanguage, 'reviewCollectionCaughtUp')}
+            ? t(interfaceLanguage, 'reviewCollectionDue', { count: collection.dueCount })
+            : t(interfaceLanguage, 'reviewCollectionCaughtUp')}
         </Text>
       </View>
       <Text style={s.pickerCount}>
-        {t(nativeLanguage, 'deckEntryCount', { count: collection.cardCount })}
+        {t(interfaceLanguage, 'deckEntryCount', { count: collection.cardCount })}
       </Text>
     </TouchableOpacity>
   );
@@ -875,15 +876,15 @@ export default function ReviewScreen() {
           {openCollection ? (
             <>
               <TouchableOpacity onPress={() => setOpenPack(null)} hitSlop={12}>
-                <Text style={s.pickerBack}>← {t(nativeLanguage, 'reviewBackToCollections')}</Text>
+                <Text style={s.pickerBack}>← {t(interfaceLanguage, 'reviewBackToCollections')}</Text>
               </TouchableOpacity>
               <Text style={s.pickerGroupName}>{openCollection.name}</Text>
-              <Text style={s.pickerTitle}>{t(nativeLanguage, 'reviewPickSubpack')}</Text>
+              <Text style={s.pickerTitle}>{t(interfaceLanguage, 'reviewPickSubpack')}</Text>
               {/* The whole pack first, and deliberately offered: once you have
                   worked through the sections, reviewing them one at a time is
                   the same material several times over. */}
               {renderPickerRow(openCollection, {
-                label: t(nativeLanguage, 'reviewWholePack'),
+                label: t(interfaceLanguage, 'reviewWholePack'),
                 onPress: () => setSelectedKey(collectionKey(openCollection)),
               })}
               {openCollection.subcollections.map(sub =>
@@ -892,7 +893,7 @@ export default function ReviewScreen() {
             </>
           ) : (
             <>
-              <Text style={s.pickerTitle}>{t(nativeLanguage, 'reviewPickCollection')}</Text>
+              <Text style={s.pickerTitle}>{t(interfaceLanguage, 'reviewPickCollection')}</Text>
               {collections.map(collection =>
                 renderPickerRow(collection, collection.subcollections.length > 0
                   // Opens a second choice rather than starting a session.
@@ -912,7 +913,7 @@ export default function ReviewScreen() {
   // collection is not a choice, and a control for it would only be noise.
   const changeCollectionButton = pickable.length > 1 && (
     <TouchableOpacity style={s.changeBtn} onPress={() => { setSelectedKey(undefined); setOpenPack(null); }}>
-      <Text style={s.changeBtnText}>{t(nativeLanguage, 'reviewChangeCollection')}</Text>
+      <Text style={s.changeBtnText}>{t(interfaceLanguage, 'reviewChangeCollection')}</Text>
     </TouchableOpacity>
   );
 
@@ -941,11 +942,11 @@ export default function ReviewScreen() {
           <View style={s.centerFill}>
             {offlineNotice}
             {pickable.length > 1 && <Text style={s.collectionLabel}>{collectionName}</Text>}
-            <Text style={s.doneTitle}>{t(nativeLanguage, 'allCaughtUp')}</Text>
-            <Text style={s.doneBody}>{t(nativeLanguage, 'reviewCompleteMessage')}</Text>
+            <Text style={s.doneTitle}>{t(interfaceLanguage, 'allCaughtUp')}</Text>
+            <Text style={s.doneBody}>{t(interfaceLanguage, 'reviewCompleteMessage')}</Text>
             {nextDate && (
               <Text style={s.nextDate}>
-                {t(nativeLanguage, 'nextReviewOn')} {nextDate.toLocaleDateString()}
+                {t(interfaceLanguage, 'nextReviewOn')} {nextDate.toLocaleDateString()}
               </Text>
             )}
             {changeCollectionButton}
@@ -978,8 +979,8 @@ export default function ReviewScreen() {
               >
                 <Text style={[s.pillText, directionFilter === dir && s.pillTextOn]}>
                   {dir === 'both'
-                    ? t(nativeLanguage, 'directionBoth')
-                    : directionLabel(nativeLanguage, studyLanguage, dir, hanjaPartition)}
+                    ? t(interfaceLanguage, 'directionBoth')
+                    : directionLabel(interfaceLanguage, studyLanguage, deckNativeLanguage, dir, hanjaPartition)}
                 </Text>
               </TouchableOpacity>
             ))}
@@ -992,7 +993,7 @@ export default function ReviewScreen() {
             onPress={() => setTypingEnabled(v => !v)}
           >
             <Text style={[s.pillText, typingEnabled && s.pillTextOn]}>
-              {t(nativeLanguage, 'typedReviewToggle')}
+              {t(interfaceLanguage, 'typedReviewToggle')}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -1001,13 +1002,13 @@ export default function ReviewScreen() {
             onPress={() => startSession(reviewedCards, cardsCollectionId, directionFilter)}
           >
             <Text style={s.startBtnText}>
-              {t(nativeLanguage, 'reviewStartCount', { count: filteredDueCount })}
+              {t(interfaceLanguage, 'reviewStartCount', { count: filteredDueCount })}
             </Text>
           </TouchableOpacity>
           {/* Only the other direction has cards left. Saying so beats a dead
               button with no explanation. */}
           {filteredDueCount === 0 && (
-            <Text style={s.startNote}>{t(nativeLanguage, 'reviewNothingInDirection')}</Text>
+            <Text style={s.startNote}>{t(interfaceLanguage, 'reviewNothingInDirection')}</Text>
           )}
           {changeCollectionButton}
         </ScrollView>
@@ -1024,24 +1025,24 @@ export default function ReviewScreen() {
       <SafeAreaView style={s.center}>
         {offlineNotice}
         {pickable.length > 1 && <Text style={s.collectionLabel}>{collectionName}</Text>}
-        <Text style={s.stoppedTitle}>{t(nativeLanguage, 'reviewStoppedTitle')}</Text>
+        <Text style={s.stoppedTitle}>{t(interfaceLanguage, 'reviewStoppedTitle')}</Text>
         <Text style={s.doneBody}>
           {reviewedCount > 0
-            ? t(nativeLanguage, 'reviewStoppedSummary', { count: reviewedCount })
-            : t(nativeLanguage, 'reviewStoppedNone')}
+            ? t(interfaceLanguage, 'reviewStoppedSummary', { count: reviewedCount })
+            : t(interfaceLanguage, 'reviewStoppedNone')}
         </Text>
         {remaining > 0 && (
           <Text style={s.nextDate}>
-            {t(nativeLanguage, 'reviewStoppedRemaining', { count: remaining })}
+            {t(interfaceLanguage, 'reviewStoppedRemaining', { count: remaining })}
           </Text>
         )}
         <TouchableOpacity style={s.resumeBtn} onPress={() => setStopped(false)}>
-          <Text style={s.resumeBtnText}>{t(nativeLanguage, 'reviewResume')}</Text>
+          <Text style={s.resumeBtnText}>{t(interfaceLanguage, 'reviewResume')}</Text>
         </TouchableOpacity>
         {/* Back to the start screen rather than out of Review — that is where
             the direction and the collection are both changeable. */}
         <TouchableOpacity style={s.changeBtn} onPress={endSession}>
-          <Text style={s.changeBtnText}>{t(nativeLanguage, 'exitReview')}</Text>
+          <Text style={s.changeBtnText}>{t(interfaceLanguage, 'exitReview')}</Text>
         </TouchableOpacity>
         {changeCollectionButton}
       </SafeAreaView>
@@ -1060,15 +1061,15 @@ export default function ReviewScreen() {
         {pickable.length > 1 && <Text style={s.collectionLabel}>{collectionName}</Text>}
         {filteredDueCount > 0 ? (
           <>
-            <Text style={s.stoppedTitle}>{t(nativeLanguage, 'reviewSessionFinished')}</Text>
+            <Text style={s.stoppedTitle}>{t(interfaceLanguage, 'reviewSessionFinished')}</Text>
             <Text style={s.doneBody}>
-              {t(nativeLanguage, 'reviewMissedStillDue', { count: filteredDueCount })}
+              {t(interfaceLanguage, 'reviewMissedStillDue', { count: filteredDueCount })}
             </Text>
             <TouchableOpacity
               style={s.resumeBtn}
               onPress={() => startSession(reviewedCards, cardsCollectionId, directionFilter)}
             >
-              <Text style={s.resumeBtnText}>{t(nativeLanguage, 'reviewAgainMissed')}</Text>
+              <Text style={s.resumeBtnText}>{t(interfaceLanguage, 'reviewAgainMissed')}</Text>
             </TouchableOpacity>
           </>
         ) : (
@@ -1076,19 +1077,19 @@ export default function ReviewScreen() {
           // other way round may still hold cards. "All caught up" is claimed
           // one tap later, on the start screen, and only when it is true.
           <>
-            <Text style={s.doneTitle}>{t(nativeLanguage, 'reviewComplete')}</Text>
-            <Text style={s.doneBody}>{t(nativeLanguage, 'reviewCompleteMessage')}</Text>
+            <Text style={s.doneTitle}>{t(interfaceLanguage, 'reviewComplete')}</Text>
+            <Text style={s.doneBody}>{t(interfaceLanguage, 'reviewCompleteMessage')}</Text>
           </>
         )}
         {/* The last card of a session is exactly where a misclick had no
             recourse: answering it ends the session, and the card is gone. */}
         {lastRating && (
           <TouchableOpacity style={s.changeBtn} onPress={handleUndo}>
-            <Text style={s.changeBtnText}>↺ {t(nativeLanguage, 'undoRating')}</Text>
+            <Text style={s.changeBtnText}>↺ {t(interfaceLanguage, 'undoRating')}</Text>
           </TouchableOpacity>
         )}
         <TouchableOpacity style={s.changeBtn} onPress={endSession}>
-          <Text style={s.changeBtnText}>{t(nativeLanguage, 'exitReview')}</Text>
+          <Text style={s.changeBtnText}>{t(interfaceLanguage, 'exitReview')}</Text>
         </TouchableOpacity>
         {changeCollectionButton}
       </SafeAreaView>
@@ -1098,7 +1099,7 @@ export default function ReviewScreen() {
   const { card, direction } = queue[index];
   const isFront = direction === 'frontToBack';
   const studySide = getStudyLangSide(card);
-  const backSide = getBackSide(card, nativeLanguage);
+  const backSide = getBackSide(card, deckNativeLanguage);
   /**
    * The two faces of the card, which on Hanja are not the study side and the
    * back. A hanja card has three parts and the learner chose which one leads,
@@ -1121,7 +1122,7 @@ export default function ReviewScreen() {
    * of the first.
    */
   const hanjaGloss =
-    studyLanguage === 'Hanja' && nativeLanguage !== 'Korean' ? card.english : undefined;
+    studyLanguage === 'Hanja' && deckNativeLanguage !== 'Korean' ? card.english : undefined;
   /**
    * Rides the study side wherever that lands — the front on `frontToBack`, the
    * revealed back on `backToFront` — which is what web does, and the only
@@ -1162,7 +1163,7 @@ export default function ReviewScreen() {
    * on screen until the reveal. Showing it early on one direction only would
    * put it in two different places depending on the draw.
    */
-  const reading = getReading(card, studyLanguage, nativeLanguage);
+  const reading = getReading(card, studyLanguage, deckNativeLanguage);
   const readingBadge = reading ? (
     <View style={s.readingBadge}>
       <Text style={s.readingText}>{reading}</Text>
@@ -1211,10 +1212,10 @@ export default function ReviewScreen() {
   };
 
   const RATINGS: { key: Rating; label: string; color: string }[] = [
-    { key: 'again', label: t(nativeLanguage, 'ratingAgain'), color: '#c0392b' },
-    { key: 'hard', label: t(nativeLanguage, 'ratingHard'), color: '#e67e22' },
-    { key: 'good', label: t(nativeLanguage, 'ratingGood'), color: C.highlight },
-    { key: 'easy', label: t(nativeLanguage, 'ratingEasy'), color: '#2980b9' },
+    { key: 'again', label: t(interfaceLanguage, 'ratingAgain'), color: '#c0392b' },
+    { key: 'hard', label: t(interfaceLanguage, 'ratingHard'), color: '#e67e22' },
+    { key: 'good', label: t(interfaceLanguage, 'ratingGood'), color: C.highlight },
+    { key: 'easy', label: t(interfaceLanguage, 'ratingEasy'), color: '#2980b9' },
   ];
 
   return (
@@ -1247,7 +1248,7 @@ export default function ReviewScreen() {
               disabled={!!submitting}
               hitSlop={12}
               accessibilityRole="button"
-              accessibilityLabel={t(nativeLanguage, 'undoRating')}
+              accessibilityLabel={t(interfaceLanguage, 'undoRating')}
             >
               <Text style={s.undoBtnText}>↺</Text>
             </TouchableOpacity>
@@ -1274,7 +1275,7 @@ export default function ReviewScreen() {
             onPress={() => setStopped(true)}
             hitSlop={12}
             accessibilityRole="button"
-            accessibilityLabel={t(nativeLanguage, 'exitReview')}
+            accessibilityLabel={t(interfaceLanguage, 'exitReview')}
           >
             <Text style={s.stopBtnText}>✕</Text>
           </TouchableOpacity>
@@ -1282,7 +1283,7 @@ export default function ReviewScreen() {
 
         {/* Direction label */}
         <Text style={s.directionLabel}>
-          {directionLabel(nativeLanguage, studyLanguage, isFront ? 'frontToBack' : 'backToFront', hanjaPartition)}
+          {directionLabel(interfaceLanguage, studyLanguage, deckNativeLanguage, isFront ? 'frontToBack' : 'backToFront', hanjaPartition)}
         </Text>
 
         {/* The card and the space under it are one dismiss target, the way
@@ -1350,14 +1351,14 @@ export default function ReviewScreen() {
             {/* Edit form */}
             {editing && editDraft ? (
               <View style={s.editForm}>
-                <Text style={s.editLabel}>{t(nativeLanguage, config.studyLabelKey)}</Text>
+                <Text style={s.editLabel}>{t(interfaceLanguage, config.studyLabelKey)}</Text>
                 <TextInput
                   style={s.editInput}
                   value={editDraft[config.studyField] ?? ''}
                   onChangeText={v => setEditDraft(d => d ? { ...d, [config.studyField]: v } : d)}
                   autoFocus
                 />
-                <Text style={s.editLabel}>{t(nativeLanguage, backConfig.backLabelKey)}</Text>
+                <Text style={s.editLabel}>{t(interfaceLanguage, backConfig.backLabelKey)}</Text>
                 <TextInput
                   style={s.editInput}
                   value={editDraft[backConfig.backField] ?? ''}
@@ -1393,7 +1394,7 @@ export default function ReviewScreen() {
                   // not on screen then — see `typedKeyboardUp`. Blurring on
                   // submit is what brings the row back for the reveal.
                   onSubmitEditing={handleSubmitTyped}
-                  placeholder={typedAnswerPlaceholder(nativeLanguage, studyLanguage)}
+                  placeholder={typedAnswerPlaceholder(interfaceLanguage, studyLanguage)}
                   placeholderTextColor={C.muted}
                   autoFocus
                   returnKeyType="done"
@@ -1441,10 +1442,10 @@ export default function ReviewScreen() {
                     {typedGrade && (
                       <Text style={s.typedVerdict}>
                         <Text style={typedGrade.correct ? s.typedVerdictOk : s.typedVerdictMiss}>
-                          {t(nativeLanguage, typedGrade.correct ? 'typedAnswerCorrect' : 'typedAnswerMissed')}
+                          {t(interfaceLanguage, typedGrade.correct ? 'typedAnswerCorrect' : 'typedAnswerMissed')}
                         </Text>
                         {!typedGrade.correct && (
-                          <Text>{` · ${t(nativeLanguage, 'typedAnswerYours')}: ${typedAnswer}`}</Text>
+                          <Text>{` · ${t(interfaceLanguage, 'typedAnswerYours')}: ${typedAnswer}`}</Text>
                         )}
                       </Text>
                     )}
@@ -1453,7 +1454,7 @@ export default function ReviewScreen() {
                         something to read or something to write. */}
                     <TouchableOpacity style={s.detailsBtn} onPress={() => setShowDetails(v => !v)}>
                       <Text style={s.detailsBtnText}>
-                        {t(nativeLanguage, showDetails ? 'hideDetails' : 'showDetails')}
+                        {t(interfaceLanguage, showDetails ? 'hideDetails' : 'showDetails')}
                       </Text>
                     </TouchableOpacity>
 
@@ -1461,27 +1462,27 @@ export default function ReviewScreen() {
                       <View style={s.definitionWrap}>
                         {!!definition && (
                           <View style={s.detailSection}>
-                            <Text style={s.detailLabel}>{t(nativeLanguage, 'sectionDefinition')}</Text>
+                            <Text style={s.detailLabel}>{t(interfaceLanguage, 'sectionDefinition')}</Text>
                             <Markdown style={s.definitionText}>{definition}</Markdown>
                           </View>
                         )}
                         {!!characterBreakdown && (
                           <View style={s.detailSection}>
-                            <Text style={s.detailLabel}>{t(nativeLanguage, characterSectionKey)}</Text>
+                            <Text style={s.detailLabel}>{t(interfaceLanguage, characterSectionKey)}</Text>
                             <Markdown style={s.definitionText}>{characterBreakdown}</Markdown>
                           </View>
                         )}
                         {!!shownCard.notes && (
                           <View style={s.detailSection}>
-                            <Text style={s.detailLabel}>{t(nativeLanguage, 'sectionNotes')}</Text>
+                            <Text style={s.detailLabel}>{t(interfaceLanguage, 'sectionNotes')}</Text>
                             <Markdown style={s.definitionText}>{shownCard.notes}</Markdown>
                           </View>
                         )}
                         {hasExamples && (
                           <View style={s.detailSection}>
-                            <Text style={s.detailLabel}>{t(nativeLanguage, 'sectionExamples')}</Text>
+                            <Text style={s.detailLabel}>{t(interfaceLanguage, 'sectionExamples')}</Text>
                             {shownCard.examples!.map((ex, i) => {
-                              const sides = getExampleSides(ex, studyLanguage, nativeLanguage);
+                              const sides = getExampleSides(ex, studyLanguage, deckNativeLanguage);
                               return (
                                 <View key={i} style={s.exampleItem}>
                                   <View style={s.exampleStudyRow}>
@@ -1518,8 +1519,8 @@ export default function ReviewScreen() {
                               >
                                 <Text style={s.detailsBtnText}>
                                   {enrichRunning('depth')
-                                    ? t(nativeLanguage, 'cardEnriching')
-                                    : t(nativeLanguage, 'loadDefinition')}
+                                    ? t(interfaceLanguage, 'cardEnriching')
+                                    : t(interfaceLanguage, 'loadDefinition')}
                                 </Text>
                               </TouchableOpacity>
                             )}
@@ -1531,8 +1532,8 @@ export default function ReviewScreen() {
                               >
                                 <Text style={s.detailsBtnText}>
                                   {enrichRunning('examples')
-                                    ? t(nativeLanguage, 'cardEnriching')
-                                    : t(nativeLanguage, 'loadExamples')}
+                                    ? t(interfaceLanguage, 'cardEnriching')
+                                    : t(interfaceLanguage, 'loadExamples')}
                                 </Text>
                               </TouchableOpacity>
                             )}
@@ -1590,18 +1591,18 @@ export default function ReviewScreen() {
                 onPress={handleSubmitTyped}
                 disabled={!typedAnswer.trim()}
               >
-                <Text style={s.showBtnText}>{t(nativeLanguage, 'typedAnswerCheck')}</Text>
+                <Text style={s.showBtnText}>{t(interfaceLanguage, 'typedAnswerCheck')}</Text>
               </TouchableOpacity>
               {/* The per-card way out. A card you cannot type — no IME to hand,
                   or you simply don't want to — flips exactly as it would with
                   typing off, and grades nothing, because nothing was asserted. */}
               <TouchableOpacity onPress={handleReveal} hitSlop={8}>
-                <Text style={s.typedRevealText}>{t(nativeLanguage, 'typedAnswerReveal')}</Text>
+                <Text style={s.typedRevealText}>{t(interfaceLanguage, 'typedAnswerReveal')}</Text>
               </TouchableOpacity>
             </View>
           ) : (
             <TouchableOpacity style={s.showBtn} onPress={handleReveal}>
-              <Text style={s.showBtnText}>{t(nativeLanguage, 'showAnswer')}</Text>
+              <Text style={s.showBtnText}>{t(interfaceLanguage, 'showAnswer')}</Text>
             </TouchableOpacity>
           )
         )}

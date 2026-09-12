@@ -17,7 +17,7 @@ export default function DrillScreen() {
   const { packId, section: sectionId } = useLocalSearchParams<{ packId: string; section?: string }>();
   const { C } = useTheme();
   const s = useMemo(() => makeStyles(C), [C]);
-  const { nativeLanguage, studyLanguage } = useUser();
+  const { interfaceLanguage, deckNativeLanguage, studyLanguage } = useUser();
   const langConfig = getStudyLanguageConfig(studyLanguage);
   const pack = getVocabPack(studyLanguage, packId);
 
@@ -33,7 +33,7 @@ export default function DrillScreen() {
       <TouchableOpacity onPress={() => router.back()} hitSlop={12}>
         <Text style={s.back}>←</Text>
       </TouchableOpacity>
-      <Text style={s.headerLabel}>{t(nativeLanguage, 'drillBackToDeck')}</Text>
+      <Text style={s.headerLabel}>{t(interfaceLanguage, 'drillBackToDeck')}</Text>
     </View>
   );
 
@@ -44,7 +44,7 @@ export default function DrillScreen() {
     return (
       <SafeAreaView style={s.safe} edges={['top', 'bottom']}>
         {header}
-        <Text style={s.empty}>{t(nativeLanguage, 'deckNotFound')}</Text>
+        <Text style={s.empty}>{t(interfaceLanguage, 'deckNotFound')}</Text>
       </SafeAreaView>
     );
   }
@@ -81,11 +81,11 @@ export default function DrillScreen() {
       <SafeAreaView style={s.safe} edges={['top', 'bottom']}>
         {header}
         <ScrollView contentContainerStyle={s.centered}>
-          <Text style={s.title}>{getPackText(pack.name, nativeLanguage)}</Text>
+          <Text style={s.title}>{getPackText(pack.name, interfaceLanguage)}</Text>
           {/* The pack still names the screen — the subpack is a scope inside
               it, not somewhere else. */}
           {section && (
-            <Text style={s.subtitle}>{getPackText(section.name, nativeLanguage)}</Text>
+            <Text style={s.subtitle}>{getPackText(section.name, interfaceLanguage)}</Text>
           )}
 
           <View style={s.pillRow}>
@@ -96,7 +96,7 @@ export default function DrillScreen() {
                 style={[s.pill, direction === dir && s.pillOn]}
               >
                 <Text style={[s.pillText, direction === dir && s.pillTextOn]}>
-                  {directionLabel(nativeLanguage, studyLanguage, dir === 'studyToBack' ? 'frontToBack' : 'backToFront')}
+                  {directionLabel(interfaceLanguage, studyLanguage, deckNativeLanguage, dir === 'studyToBack' ? 'frontToBack' : 'backToFront')}
                 </Text>
               </TouchableOpacity>
             ))}
@@ -112,8 +112,8 @@ export default function DrillScreen() {
                 >
                   <Text style={[s.pillText, size === option && s.pillTextOn]}>
                     {option === null
-                      ? t(nativeLanguage, 'drillSizeAll', { count: entries.length })
-                      : t(nativeLanguage, 'drillSizeCards', { count: option })}
+                      ? t(interfaceLanguage, 'drillSizeAll', { count: entries.length })
+                      : t(interfaceLanguage, 'drillSizeCards', { count: option })}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -121,10 +121,10 @@ export default function DrillScreen() {
           )}
 
           <TouchableOpacity style={s.primaryBtn} onPress={() => begin(entries, size)}>
-            <Text style={s.primaryBtnText}>{t(nativeLanguage, 'drillStart')}</Text>
+            <Text style={s.primaryBtnText}>{t(interfaceLanguage, 'drillStart')}</Text>
           </TouchableOpacity>
 
-          <Text style={s.note}>{t(nativeLanguage, 'drillNoProgress')}</Text>
+          <Text style={s.note}>{t(interfaceLanguage, 'drillNoProgress')}</Text>
         </ScrollView>
       </SafeAreaView>
     );
@@ -137,25 +137,25 @@ export default function DrillScreen() {
       <SafeAreaView style={s.safe} edges={['top', 'bottom']}>
         {header}
         <ScrollView contentContainerStyle={s.centered}>
-          <Text style={s.title}>{t(nativeLanguage, 'drillDoneTitle')}</Text>
+          <Text style={s.title}>{t(interfaceLanguage, 'drillDoneTitle')}</Text>
           {/* Ending a drill before answering anything leaves nothing to score. */}
           {total > 0 && (
             <Text style={s.score}>
               {missed.length === 0
-                ? t(nativeLanguage, 'drillScorePerfect', { total })
-                : t(nativeLanguage, 'drillScore', { correct, total })}
+                ? t(interfaceLanguage, 'drillScorePerfect', { total })
+                : t(interfaceLanguage, 'drillScore', { correct, total })}
             </Text>
           )}
 
           {missed.length > 0 && (
             <TouchableOpacity style={s.primaryBtn} onPress={() => begin(missed, null)}>
               <Text style={s.primaryBtnText}>
-                {t(nativeLanguage, 'drillMissedAgain', { count: missed.length })}
+                {t(interfaceLanguage, 'drillMissedAgain', { count: missed.length })}
               </Text>
             </TouchableOpacity>
           )}
           <TouchableOpacity style={s.secondaryBtn} onPress={() => begin(entries, size)}>
-            <Text style={s.secondaryBtnText}>{t(nativeLanguage, 'drillAgain')}</Text>
+            <Text style={s.secondaryBtnText}>{t(interfaceLanguage, 'drillAgain')}</Text>
           </TouchableOpacity>
         </ScrollView>
       </SafeAreaView>
@@ -168,22 +168,22 @@ export default function DrillScreen() {
     <SafeAreaView style={s.safe} edges={['top', 'bottom']}>
       <View style={s.sessionBar}>
         <Text style={s.remaining}>
-          {t(nativeLanguage, 'drillRemaining', { count: queue.length })}
+          {t(interfaceLanguage, 'drillRemaining', { count: queue.length })}
         </Text>
         <TouchableOpacity onPress={() => setQueue([])} hitSlop={12}>
-          <Text style={s.endText}>{t(nativeLanguage, 'drillEnd')}</Text>
+          <Text style={s.endText}>{t(interfaceLanguage, 'drillEnd')}</Text>
         </TouchableOpacity>
       </View>
 
       <View style={s.body}>
         <View style={s.card}>
-          <Text style={s.prompt}>{drillPrompt(current, direction, studyLanguage, nativeLanguage)}</Text>
+          <Text style={s.prompt}>{drillPrompt(current, direction, studyLanguage, deckNativeLanguage)}</Text>
           {/* The answer and the pronounce button are always in the layout and
               only toggle visibility. Mounting them on reveal grew the card by a
               whole button, which pushed the grading row down — the answer text
               alone was never the thing that moved. */}
           <Text style={[s.answer, !revealed && s.hidden]}>
-            {revealed ? drillAnswer(current, direction, studyLanguage, nativeLanguage) : ' '}
+            {revealed ? drillAnswer(current, direction, studyLanguage, deckNativeLanguage) : ' '}
           </Text>
           {pack.pronounceable && (
             <View style={!revealed && s.hidden} pointerEvents={revealed ? 'auto' : 'none'}>
@@ -195,15 +195,15 @@ export default function DrillScreen() {
         {revealed ? (
           <View style={s.gradeRow}>
             <TouchableOpacity style={[s.gradeBtn, s.secondaryBtn]} onPress={() => grade(false)}>
-              <Text style={s.secondaryBtnText}>{t(nativeLanguage, 'drillMissed')}</Text>
+              <Text style={s.secondaryBtnText}>{t(interfaceLanguage, 'drillMissed')}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={[s.gradeBtn, s.primaryBtn]} onPress={() => grade(true)}>
-              <Text style={s.primaryBtnText}>{t(nativeLanguage, 'drillKnew')}</Text>
+              <Text style={s.primaryBtnText}>{t(interfaceLanguage, 'drillKnew')}</Text>
             </TouchableOpacity>
           </View>
         ) : (
           <TouchableOpacity style={s.revealBtn} onPress={() => setRevealed(true)}>
-            <Text style={s.revealBtnText}>{t(nativeLanguage, 'showAnswer')}</Text>
+            <Text style={s.revealBtnText}>{t(interfaceLanguage, 'showAnswer')}</Text>
           </TouchableOpacity>
         )}
       </View>

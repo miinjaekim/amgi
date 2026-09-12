@@ -5,9 +5,9 @@ import { getNavItems } from './nav-items';
 
 export default function BottomNav() {
   const pathname = usePathname();
-  const { nativeLanguage } = useUser();
+  const { interfaceLanguage } = useUser();
 
-  const items = getNavItems(nativeLanguage, pathname);
+  const items = getNavItems(interfaceLanguage, pathname);
 
   return (
     <nav

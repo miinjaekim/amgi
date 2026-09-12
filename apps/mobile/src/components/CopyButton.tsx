@@ -21,10 +21,10 @@ type State = 'idle' | 'copied' | 'failed';
  */
 export default function CopyButton({
   text,
-  nativeLanguage,
+  interfaceLanguage,
 }: {
   text: string;
-  nativeLanguage: string | null | undefined;
+  interfaceLanguage: string | null | undefined;
 }) {
   const { C } = useTheme();
   const s = useMemo(() => makeStyles(C), [C]);
@@ -53,7 +53,7 @@ export default function CopyButton({
       onPress={handleCopy}
       accessibilityRole="button"
     >
-      <Text style={[s.text, state === 'copied' && s.textCopied]}>{t(nativeLanguage, label)}</Text>
+      <Text style={[s.text, state === 'copied' && s.textCopied]}>{t(interfaceLanguage, label)}</Text>
     </TouchableOpacity>
   );
 }

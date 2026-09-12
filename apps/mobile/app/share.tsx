@@ -61,7 +61,7 @@ const ASPECT = 9 / 16;
 export default function ShareScreen() {
   const { C } = useTheme();
   const s = useMemo(() => makeStyles(C), [C]);
-  const { user, nativeLanguage, streak } = useUser();
+  const { user, interfaceLanguage, streak } = useUser();
   // Which card to open on, so the preview starts where the reader just was.
   const { range } = useLocalSearchParams<{ range?: string }>();
 
@@ -180,13 +180,13 @@ export default function ShareScreen() {
       if (target.exists) target.delete();
 
       const file = await withTimeout(File.downloadFileAsync(
-        `${API_BASE_URL}${shareImagePath(card.stats, nativeLanguage, card.variant)}`,
+        `${API_BASE_URL}${shareImagePath(card.stats, interfaceLanguage, card.variant)}`,
         target,
       ));
       await Sharing.shareAsync(file.uri, {
         mimeType: 'image/png',
         UTI: 'public.png',
-        dialogTitle: t(nativeLanguage, 'shareTitle'),
+        dialogTitle: t(interfaceLanguage, 'shareTitle'),
       });
     } catch {
       // Inline rather than an `Alert`: the reader is looking at the button they
@@ -205,11 +205,11 @@ export default function ShareScreen() {
         onPress={() => router.back()}
         hitSlop={12}
         accessibilityRole="button"
-        accessibilityLabel={t(nativeLanguage, 'shareBack')}
+        accessibilityLabel={t(interfaceLanguage, 'shareBack')}
       >
         <Ionicons name="chevron-back" size={24} color={C.text} />
       </TouchableOpacity>
-      <Text style={s.headerTitle}>{t(nativeLanguage, 'shareTitle')}</Text>
+      <Text style={s.headerTitle}>{t(interfaceLanguage, 'shareTitle')}</Text>
       {/* Balances the back arrow so the title sits centred. */}
       <View style={s.headerSpacer} />
     </View>
@@ -229,7 +229,7 @@ export default function ShareScreen() {
       <SafeAreaView style={s.safe} edges={['top', 'bottom']}>
         {header}
         <View style={s.center}>
-          <Text style={s.empty}>{t(nativeLanguage, 'shareNothingYet')}</Text>
+          <Text style={s.empty}>{t(interfaceLanguage, 'shareNothingYet')}</Text>
         </View>
       </SafeAreaView>
     );
@@ -268,7 +268,7 @@ export default function ShareScreen() {
                 ) : (
                   <Image
                     source={{
-                      uri: `${API_BASE_URL}${shareImagePath(card.stats, nativeLanguage, card.variant)}`,
+                      uri: `${API_BASE_URL}${shareImagePath(card.stats, interfaceLanguage, card.variant)}`,
                     }}
                     style={[s.card, { width: cardWidth, height: cardWidth / ASPECT }]}
                     resizeMode="contain"
@@ -282,7 +282,7 @@ export default function ShareScreen() {
       </View>
 
       <Text style={s.label}>
-        {t(nativeLanguage, current.labelKey, { count: current.windowDays })}
+        {t(interfaceLanguage, current.labelKey, { count: current.windowDays })}
       </Text>
 
       {/* Only worth drawing once there is more than one card to be on. */}
@@ -295,17 +295,17 @@ export default function ShareScreen() {
       )}
 
       <View style={s.footer}>
-        {failed && <Text style={s.error}>{t(nativeLanguage, 'shareFailed')}</Text>}
+        {failed && <Text style={s.error}>{t(interfaceLanguage, 'shareFailed')}</Text>}
         <TouchableOpacity
           style={[s.shareBtn, sharing && s.shareBtnBusy]}
           onPress={() => shareCard(current)}
           disabled={sharing}
           accessibilityRole="button"
-          accessibilityLabel={t(nativeLanguage, 'shareTitle')}
+          accessibilityLabel={t(interfaceLanguage, 'shareTitle')}
         >
           {sharing
             ? <ActivityIndicator color={C.bg} size="small" />
-            : <Text style={s.shareBtnText}>{t(nativeLanguage, 'shareTitle')}</Text>}
+            : <Text style={s.shareBtnText}>{t(interfaceLanguage, 'shareTitle')}</Text>}
         </TouchableOpacity>
       </View>
     </SafeAreaView>

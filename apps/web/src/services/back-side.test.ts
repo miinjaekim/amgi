@@ -155,16 +155,36 @@ describe('composed direction strings', () => {
   // These replaced 20 hardcoded keys. The pairs that already existed have to
   // come out byte-identical, or the change is a silent copy rewrite.
   it('matches the strings the old keys held', () => {
-    expect(directionLabel('English', 'Japanese', 'frontToBack')).toBe('Japanese → English');
-    expect(directionLabel('English', 'Japanese', 'backToFront')).toBe('English → Japanese');
-    expect(directionLabel('Korean', 'Japanese', 'frontToBack')).toBe('일본어 → 한국어');
-    expect(directionPrompt('English', 'Japanese', 'frontToBack')).toBe('What does this mean in English?');
-    expect(directionPrompt('English', 'Japanese', 'backToFront')).toBe('How do you say this in Japanese?');
+    expect(directionLabel('English', 'Japanese', 'English', 'frontToBack')).toBe('Japanese → English');
+    expect(directionLabel('English', 'Japanese', 'English', 'backToFront')).toBe('English → Japanese');
+    expect(directionLabel('Korean', 'Japanese', 'Korean', 'frontToBack')).toBe('일본어 → 한국어');
+    expect(directionPrompt('English', 'Japanese', 'English', 'frontToBack')).toBe('What does this mean in English?');
+    expect(directionPrompt('English', 'Japanese', 'English', 'backToFront')).toBe('How do you say this in Japanese?');
+  });
+
+  /**
+   * The sentence the old single-argument version could not produce, and the
+   * reason the argument was split.
+   *
+   * Running Amgi in English while studying Japanese from Korean backs has to
+   * read "Japanese → Korean" **in English**: the words come from the interface
+   * language, and which language is named on the back comes from the deck.
+   * With one argument those were forced to agree, so this pair was unsayable —
+   * it came out either as "일본어 → 한국어" or as "Japanese → English", and
+   * both are wrong about something.
+   */
+  it('names the deck\'s back language in the interface language', () => {
+    expect(directionLabel('English', 'Japanese', 'Korean', 'frontToBack')).toBe('Japanese → Korean');
+    expect(directionLabel('English', 'Japanese', 'Korean', 'backToFront')).toBe('Korean → Japanese');
+    expect(directionPrompt('English', 'Japanese', 'Korean', 'frontToBack'))
+      .toBe('What does this mean in Korean?');
+    // And the mirror: a Korean interface over a deck explained in English.
+    expect(directionLabel('Korean', 'Japanese', 'English', 'frontToBack')).toBe('일본어 → 영어');
   });
 
   it('names the back language a Korean learner actually sees', () => {
-    expect(directionLabel('Korean', 'Swedish', 'frontToBack')).toBe('스웨덴어 → 한국어');
-    expect(directionPrompt('Korean', 'Swedish', 'frontToBack')).toBe('이 단어는 한국어로 무슨 뜻인가요?');
-    expect(directionPrompt('Korean', 'Swedish', 'backToFront')).toBe('이것을 스웨덴어로 어떻게 말하나요?');
+    expect(directionLabel('Korean', 'Swedish', 'Korean', 'frontToBack')).toBe('스웨덴어 → 한국어');
+    expect(directionPrompt('Korean', 'Swedish', 'Korean', 'frontToBack')).toBe('이 단어는 한국어로 무슨 뜻인가요?');
+    expect(directionPrompt('Korean', 'Swedish', 'Korean', 'backToFront')).toBe('이것을 스웨덴어로 어떻게 말하나요?');
   });
 });

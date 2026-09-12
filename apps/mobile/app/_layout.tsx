@@ -13,8 +13,8 @@ import LanguageSetupModal from '../src/components/LanguageSetupModal';
  * because it commits both answers on the last tap, not as they are given.
  */
 function FirstRun() {
-  const { authLoading, nativeLanguage } = useUser();
-  if (authLoading || nativeLanguage !== null) return null;
+  const { authLoading, interfaceLanguage } = useUser();
+  if (authLoading || interfaceLanguage !== null) return null;
   return <LanguageSetupModal />;
 }
 

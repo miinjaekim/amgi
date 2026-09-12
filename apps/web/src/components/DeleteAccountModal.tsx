@@ -8,16 +8,26 @@ import { t } from '@/lib/i18n';
 
 /**
  * Local caches that would otherwise outlive the account. Nothing here is
- * authoritative, but leaving a deleted user's language and streak on the device
- * makes a completed deletion look unfinished.
+ * authoritative, but leaving a deleted user's languages and streak on the
+ * device makes a completed deletion look unfinished.
+ *
+ * ⚠️ **Every `amgi_` language key has to be listed here.** The interface
+ * language and the language list were added 2026-09-12, and leaving either
+ * behind would let the next sign-up silently adopt a deleted account's decks —
+ * the adoption path in `UserContext` reads exactly these keys.
  *
  * The theme is deliberately kept: it is a preference for this browser, not data
  * about the person, and resetting it would read as a bug.
  */
-const LOCAL_KEYS = ['amgi_native_language', 'amgi_study_language'];
+const LOCAL_KEYS = [
+  'amgi_native_language',
+  'amgi_interface_language',
+  'amgi_languages',
+  'amgi_study_language',
+];
 
 export default function DeleteAccountModal({ onClose }: { onClose: () => void }) {
-  const { user, nativeLanguage } = useUser();
+  const { user, interfaceLanguage } = useUser();
   const [typed, setTyped] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -57,7 +67,7 @@ export default function DeleteAccountModal({ onClose }: { onClose: () => void })
       // A cancelled reauthentication popup is a decision, not a failure.
       const code = (err as { code?: string }).code;
       if (code !== 'auth/popup-closed-by-user' && code !== 'auth/cancelled-popup-request') {
-        setError(t(nativeLanguage, 'deleteAccountFailed'));
+        setError(t(interfaceLanguage, 'deleteAccountFailed'));
       }
       setBusy(false);
     }
@@ -75,17 +85,17 @@ export default function DeleteAccountModal({ onClose }: { onClose: () => void })
         style={{ background: 'var(--color-surface)', borderColor: 'var(--color-muted)', color: 'var(--color-text)' }}
         onClick={e => e.stopPropagation()}
       >
-        <h2 className="text-lg font-bold">{t(nativeLanguage, 'deleteAccountConfirmTitle')}</h2>
-        <p className="text-sm text-[var(--color-muted)]">{t(nativeLanguage, 'deleteAccountWarning')}</p>
+        <h2 className="text-lg font-bold">{t(interfaceLanguage, 'deleteAccountConfirmTitle')}</h2>
+        <p className="text-sm text-[var(--color-muted)]">{t(interfaceLanguage, 'deleteAccountWarning')}</p>
         <p className="text-sm text-[var(--color-muted)]">
-          {t(nativeLanguage, 'deleteAccountExportHint')}{' '}
+          {t(interfaceLanguage, 'deleteAccountExportHint')}{' '}
           <Link href="/cards" className="underline" onClick={onClose}>
-            {t(nativeLanguage, 'navCards')}
+            {t(interfaceLanguage, 'navCards')}
           </Link>
         </p>
 
         <label className="block text-sm">
-          <span className="block mb-1">{t(nativeLanguage, 'deleteAccountTypeEmail', { email })}</span>
+          <span className="block mb-1">{t(interfaceLanguage, 'deleteAccountTypeEmail', { email })}</span>
           <input
             type="email"
             autoComplete="off"
@@ -106,7 +116,7 @@ export default function DeleteAccountModal({ onClose }: { onClose: () => void })
             className="px-4 py-2 rounded-lg border text-sm font-semibold disabled:opacity-50"
             style={{ borderColor: 'var(--color-muted)', color: 'var(--color-text)' }}
           >
-            {t(nativeLanguage, 'cancel')}
+            {t(interfaceLanguage, 'cancel')}
           </button>
           <button
             onClick={handleDelete}
@@ -114,7 +124,7 @@ export default function DeleteAccountModal({ onClose }: { onClose: () => void })
             className="px-4 py-2 rounded-lg text-sm font-semibold disabled:opacity-40"
             style={{ background: '#c0392b', color: '#fff' }}
           >
-            {busy ? t(nativeLanguage, 'deleteAccountWorking') : t(nativeLanguage, 'deleteAccountAction')}
+            {busy ? t(interfaceLanguage, 'deleteAccountWorking') : t(interfaceLanguage, 'deleteAccountAction')}
           </button>
         </div>
       </div>

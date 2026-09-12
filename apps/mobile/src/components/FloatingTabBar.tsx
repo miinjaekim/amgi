@@ -38,7 +38,7 @@ export function useFloatingTabBarHeight() {
 export default function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
   const { C, resolvedTheme } = useTheme();
-  const { nativeLanguage } = useUser();
+  const { interfaceLanguage } = useUser();
   const tint = resolvedTheme === 'paper' ? 'light' : 'dark';
 
   return (
@@ -68,7 +68,7 @@ export default function FloatingTabBar({ state, navigation }: BottomTabBarProps)
               accessibilityRole="tab"
               accessibilityState={{ selected: focused }}
               accessibilityLabel={
-                LABEL_KEYS[route.name] ? t(nativeLanguage, LABEL_KEYS[route.name]) : route.name
+                LABEL_KEYS[route.name] ? t(interfaceLanguage, LABEL_KEYS[route.name]) : route.name
               }
             >
               {focused && <View style={[s.activePill, { backgroundColor: C.highlight + '22' }]} />}

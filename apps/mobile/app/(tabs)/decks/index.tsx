@@ -16,7 +16,7 @@ export default function DecksScreen() {
   const { C } = useTheme();
   const tabBarHeight = useFloatingTabBarHeight();
   const s = useMemo(() => makeStyles(C, tabBarHeight), [C, tabBarHeight]);
-  const { user, nativeLanguage, studyLanguage } = useUser();
+  const { user, interfaceLanguage, studyLanguage } = useUser();
   const packs = getVocabPacks(studyLanguage);
   const [savedTerms, setSavedTerms] = useState<Set<string> | null>(null);
 
@@ -49,8 +49,8 @@ export default function DecksScreen() {
         // most of them. It says what a pack is rather than promising one:
         // nothing is committed to a date.
         <View style={s.emptyWrap}>
-          <Text style={s.empty}>{t(nativeLanguage, 'decksEmpty')}</Text>
-          <Text style={s.emptyBody}>{t(nativeLanguage, 'decksEmptyBody')}</Text>
+          <Text style={s.empty}>{t(interfaceLanguage, 'decksEmpty')}</Text>
+          <Text style={s.emptyBody}>{t(interfaceLanguage, 'decksEmptyBody')}</Text>
         </View>
       ) : (
         <ScrollView contentContainerStyle={s.scroll}>
@@ -64,11 +64,11 @@ export default function DecksScreen() {
                 onPress={() => router.push(`/decks/${pack.id}`)}
               >
                 <View style={s.packTitleRow}>
-                  <Text style={s.packName}>{getPackText(pack.name, nativeLanguage)}</Text>
+                  <Text style={s.packName}>{getPackText(pack.name, interfaceLanguage)}</Text>
                   <Text style={s.packCount}>
                     {saved !== null
-                      ? t(nativeLanguage, 'packsSaved', { added: saved, total })
-                      : t(nativeLanguage, 'deckEntryCount', { count: total })}
+                      ? t(interfaceLanguage, 'packsSaved', { added: saved, total })
+                      : t(interfaceLanguage, 'deckEntryCount', { count: total })}
                   </Text>
                 </View>
                 {/* Title and count only. The description is a paragraph, and

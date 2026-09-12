@@ -23,9 +23,11 @@ export default function ImportModal({
   onClose: () => void;
   onSaved: (count: number) => void;
 }) {
-  const { user, nativeLanguage, studyLanguage } = useUser();
+  const { user, interfaceLanguage, deckNativeLanguage, studyLanguage } = useUser();
   const langConfig = getStudyLanguageConfig(studyLanguage);
-  const backConfig = getBackSideConfig(studyLanguage, nativeLanguage);
+  // The deck's language, not the interface's: this picks the slot every
+  // imported card's back is written into.
+  const backConfig = getBackSideConfig(studyLanguage, deckNativeLanguage);
   const [input, setInput] = useState('');
   const [items, setItems] = useState<ImportItem[]>([]);
   const [step, setStep] = useState<'input' | 'processing' | 'done'>('input');
@@ -52,7 +54,11 @@ export default function ImportModal({
           // `exact`: an import has nowhere to show "showing results for X" and
           // saves what comes back, so it looks up the word as written rather
           // than quietly importing a card for a different one.
-          body: JSON.stringify({ term: words[i], nativeLanguage: nativeLanguage ?? 'English', studyLanguage, exact: true }),
+          //
+          // `nativeLanguage` is the route's parameter name and it means the
+          // language to write the card in — the deck's, never the interface's.
+          // These definitions are stored on the card and never regenerated.
+          body: JSON.stringify({ term: words[i], nativeLanguage: deckNativeLanguage, studyLanguage, exact: true }),
         });
         const data = await res.json();
         if (data.ambiguous) {
@@ -109,7 +115,7 @@ export default function ImportModal({
         style={{ background: 'var(--color-surface)', maxHeight: '80vh' }}
       >
         <div className="flex items-center justify-between p-6 pb-4 shrink-0">
-          <h2 className="text-xl font-bold text-[var(--color-highlight)]">{t(nativeLanguage, 'importTitle')}</h2>
+          <h2 className="text-xl font-bold text-[var(--color-highlight)]">{t(interfaceLanguage, 'importTitle')}</h2>
           <button
             onClick={() => { abortRef.current = true; onClose(); }}
             className="text-[var(--color-muted)] hover:text-[var(--color-text)] text-2xl leading-none"
@@ -121,7 +127,7 @@ export default function ImportModal({
         <div className="flex-1 overflow-y-auto px-6 pb-6">
           {step === 'input' && (
             <>
-              <p className="text-sm text-[var(--color-muted)] mb-3">{t(nativeLanguage, 'importPastePrompt')}</p>
+              <p className="text-sm text-[var(--color-muted)] mb-3">{t(interfaceLanguage, 'importPastePrompt')}</p>
               <textarea
                 value={input}
                 onChange={e => setInput(e.target.value)}
@@ -131,7 +137,7 @@ export default function ImportModal({
               />
               {words.length > 0 && (
                 <p className="text-xs text-[var(--color-muted)] mt-2">
-                  {t(nativeLanguage, words.length === 1 ? 'importWordCountOne' : 'importWordCount', { count: words.length })}
+                  {t(interfaceLanguage, words.length === 1 ? 'importWordCountOne' : 'importWordCount', { count: words.length })}
                 </p>
               )}
               <button
@@ -140,7 +146,7 @@ export default function ImportModal({
                 className="mt-4 w-full py-2.5 rounded-lg font-semibold text-sm transition-colors disabled:opacity-40"
                 style={{ background: 'var(--color-highlight)', color: 'var(--color-bg)' }}
               >
-                {t(nativeLanguage, 'importStart')}
+                {t(interfaceLanguage, 'importStart')}
               </button>
             </>
           )}
@@ -149,8 +155,8 @@ export default function ImportModal({
             <>
               <p className="text-sm text-[var(--color-muted)] mb-4">
                 {step === 'processing'
-                  ? t(nativeLanguage, 'importProcessing', { done: doneCount, total: items.length })
-                  : t(nativeLanguage, 'importDoneSummary', { success: successCount, total: items.length, selected: selected.size })}
+                  ? t(interfaceLanguage, 'importProcessing', { done: doneCount, total: items.length })
+                  : t(interfaceLanguage, 'importDoneSummary', { success: successCount, total: items.length, selected: selected.size })}
               </p>
               <div className="flex flex-col gap-2">
                 {items.map((item, i) => (
@@ -174,12 +180,15 @@ export default function ImportModal({
                         <span className="font-semibold text-sm text-[var(--color-text)]">{item.word}</span>
                         {item.status === 'loading' && <Spinner className="w-3 h-3" />}
                         {item.status === 'pending' && <span className="text-xs text-[var(--color-muted)]">—</span>}
-                        {item.status === 'error' && <span className="text-xs opacity-60" style={{ color: 'var(--color-highlight)' }}>{t(nativeLanguage, 'importStatusFailed')}</span>}
-                        {item.status === 'ambiguous' && <span className="text-xs text-[var(--color-muted)]">{t(nativeLanguage, 'importStatusAmbiguous')}</span>}
+                        {item.status === 'error' && <span className="text-xs opacity-60" style={{ color: 'var(--color-highlight)' }}>{t(interfaceLanguage, 'importStatusFailed')}</span>}
+                        {item.status === 'ambiguous' && <span className="text-xs text-[var(--color-muted)]">{t(interfaceLanguage, 'importStatusAmbiguous')}</span>}
                         {item.status === 'success' && item.data && (
                           <span className="text-xs text-[var(--color-muted)]">
+                            {/* The part of speech is a fact about the card, so
+                                it reads in the deck's language beside the back
+                                it describes. */}
                             {item.data[langConfig.studyField]} · {item.data[backConfig.backField] || item.data.english}
-                            {partOfSpeechLabel(nativeLanguage, item.data) && ` · ${partOfSpeechLabel(nativeLanguage, item.data)}`}
+                            {partOfSpeechLabel(deckNativeLanguage, item.data) && ` · ${partOfSpeechLabel(deckNativeLanguage, item.data)}`}
                             {item.data.formality && item.data.formality !== 'N/A' && ` · ${item.data.formality}`}
                           </span>
                         )}
@@ -202,8 +211,8 @@ export default function ImportModal({
                   style={{ background: 'var(--color-highlight)', color: 'var(--color-bg)' }}
                 >
                   {saving
-                    ? <><Spinner className="w-4 h-4" /> {t(nativeLanguage, 'importSaving')}</>
-                    : t(nativeLanguage, selected.size === 1 ? 'importSaveCardsOne' : 'importSaveCards', { count: selected.size })}
+                    ? <><Spinner className="w-4 h-4" /> {t(interfaceLanguage, 'importSaving')}</>
+                    : t(interfaceLanguage, selected.size === 1 ? 'importSaveCardsOne' : 'importSaveCards', { count: selected.size })}
                 </button>
               )}
             </>

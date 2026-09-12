@@ -19,7 +19,7 @@ function isPublicLegalPage(pathname: string | null): boolean {
 }
 
 export default function LayoutWithUser({ children }: { children: React.ReactNode }) {
-  const { authLoading, nativeLanguage } = useUser();
+  const { authLoading, interfaceLanguage } = useUser();
   const pathname = usePathname();
   const [navCollapsed, setNavCollapsed] = useState(false);
 
@@ -42,17 +42,21 @@ export default function LayoutWithUser({ children }: { children: React.ReactNode
     <>
       <Header />
       <SideNav collapsed={navCollapsed} onToggle={toggleNav} />
-      {/* Stays mounted through its own third step because it commits both
-          answers on the last tap, not as they are given — see the modal.
+      {/* Gated on the *interface* language, which is the first thing setup
+          asks and the one answer that is not per-deck. `undefined` means
+          preferences are still loading; only `null` is a real "unanswered".
+
+          Stays mounted through its own last step because it commits every
+          answer at the end, not as they are given — see the modal.
 
           Never on the privacy policy. That page is reached from mobile's
           Settings through an in-app browser, which carries no auth and no
-          localStorage — so `nativeLanguage` is null there for a signed-in user
-          who answered these questions months ago, and the modal covered the
+          localStorage — so this is null there for a signed-in user who
+          answered these questions months ago, and the modal covered the
           policy with a setup flow that has no dismiss. It is also the page
           Apple opens under 5.1.1(v), and a legal page nobody can read is worse
           than one nobody has styled. */}
-      {!authLoading && nativeLanguage === null && !isPublicLegalPage(pathname) && <LanguageSetupModal />}
+      {!authLoading && interfaceLanguage === null && !isPublicLegalPage(pathname) && <LanguageSetupModal />}
       <main className="sm:ml-[var(--sidenav-w,14rem)] container mx-auto px-4 py-6 sm:py-8 pb-24 sm:pb-8 transition-[margin] duration-200">
         {children}
       </main>

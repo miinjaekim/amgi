@@ -38,6 +38,16 @@ and `npm run lint` 0 errors / 21 warnings, both measured._
   chips, and that is written down in its Decisions entry, not waiting on a list.
 - **Mobile merges are unblocked.** The freeze held only until submission; the
   next mobile change waits for build 16.
+- ⚠️ **Languages became per-deck on 2026-09-12, on a branch
+  (`feat/per-language-native`) and not yet merged or released.** Each study
+  language now carries the language it is explained in, and the app's own
+  language is a separate setting — see the Decisions entry below. Two things to
+  know before it ships. It **migrates every existing account on first load**,
+  seeding the language list from the collections that hold cards, and nobody has
+  watched that run against a real multi-deck account yet. And it reaches the two
+  platforms differently, as usual: web on merge, mobile only on build 16, which
+  is why `nativeLanguage` is still written alongside `interfaceLanguage` —
+  build 15 is in testers' hands and reads the old field.
 - **The progress dashboard is on both platforms** (2026-08-20) but only in users'
   hands on web, since mobile ships by build. Daily rollups are written on every
   rating and every card save. The Firestore security rule for
@@ -279,6 +289,59 @@ once, so a path that worked on build 14 is not evidence about build 15.
 
 Closed calls, kept with their reasoning — a decision whose reasoning is lost gets
 reopened by the next person to notice the symptom. Newest first.
+
+### A native language per deck, and an interface language beside it (2026-09-12)
+
+**`nativeLanguage` was doing three jobs, and the third is why it had to
+split.** It picked the card's back slot, it was interpolated into every
+`/api/explain` prompt, *and* it was the language of the app's own chrome.
+Reading them as one made "Japanese explained in Korean, app in English"
+unsayable. The user's call, asked before any code: **backs and explanations
+follow the deck; chrome becomes its own setting.**
+
+The deciding argument for putting explanations on the deck side is that they
+are **stored on the card and never regenerated** — `definition`, `notes`,
+`characterBreakdown`, `briefDefinition` are `Flashcard` fields. Tying them to a
+setting that changes later would leave a card whose back is Korean beside a
+definition in English, permanently. Shape, migration and the collection
+constraint are in [data-model.md](data-model.md).
+
+**The collision resolvers are deleted rather than deprecated**, and that is the
+part worth knowing before anyone re-derives them. `resolveStudyLanguage` and
+`resolveNativeLanguage` repaired one situation *after* it happened — studying
+the language Amgi was speaking to you in — by moving the other setting out from
+under the user. With a native language per deck, `nativeOptionsFor` drops the
+study language at the point of choosing, so the pair cannot be built; and the
+interface language is independent of every deck, so switching decks cannot move
+it. That also **retires the one-tap-switch confirmation dialog** recorded in the
+2026-09-04 entry below, along with its three i18n keys. The dialog was correct
+for as long as a switch could re-language the whole interface. It no longer can.
+
+**The compiler was made to find the call sites, because it otherwise cannot.**
+Both values are `string`, so a miscategorised one is silent — a Korean back
+beside an English definition, or an app that flips language on a deck switch.
+So the context stopped exposing `nativeLanguage` at all and now exposes
+`interfaceLanguage` and `deckNativeLanguage`: every one of the ~40 consuming
+files failed to compile and had to be re-read and classified deliberately. Two
+useful findings fell out of that pass. `directionLabel`/`directionPrompt` were
+genuinely *mixed* — they translate chrome **and** derive the back slot from the
+same argument — so they take both languages now, which is what lets a chip read
+"Japanese → Korean" *in English*; there is a test pinning exactly that sentence,
+because it is the one the old signature could not produce. And
+`DeleteAccountModal`'s `LOCAL_KEYS` had to learn the two new cache keys, or a
+deleted account would leave its language list behind for the next sign-up to
+adopt.
+
+**Not done, deliberately:** no backfill of stored explanations. A card written
+in English before this stays in English; the deck's language governs what is
+written *next*. Rewriting existing cards would spend a model call per card to
+change text the learner may have already read and scheduled.
+
+⚠️ **Verified by typecheck and the web suite, not on a device.** Web is
+619/619 with both apps clean under `tsc --noEmit`. `npm test` at the root still
+fails on `@amgi/mobile` having no `test` script — pre-existing, and the reason
+mobile's half is an `expo export` instead. Nobody has yet watched the migration
+run against a real multi-deck account, which is the thing to watch first.
 
 ### The progress surfaces say what they measure, and the ramp was measured (2026-09-12)
 

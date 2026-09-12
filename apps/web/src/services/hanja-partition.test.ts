@@ -82,22 +82,22 @@ describe('direction copy for Hanja', () => {
   // what the language-pair version would have said, since 훈음 is Korean and
   // so is the deck's own locale.
   it('names the parts on both sides of the arrow', () => {
-    expect(directionLabel('Korean', 'Hanja', 'frontToBack', 'character')).toBe('한자 → 훈 · 음');
-    expect(directionLabel('Korean', 'Hanja', 'backToFront', 'character')).toBe('훈 · 음 → 한자');
-    expect(directionLabel('Korean', 'Hanja', 'frontToBack', 'hun')).toBe('훈 → 한자 · 음');
-    expect(directionLabel('English', 'Hanja', 'frontToBack', 'eum')).toBe('음 → character · 훈');
+    expect(directionLabel('Korean', 'Hanja', 'Korean', 'frontToBack', 'character')).toBe('한자 → 훈 · 음');
+    expect(directionLabel('Korean', 'Hanja', 'Korean', 'backToFront', 'character')).toBe('훈 · 음 → 한자');
+    expect(directionLabel('Korean', 'Hanja', 'Korean', 'frontToBack', 'hun')).toBe('훈 → 한자 · 음');
+    expect(directionLabel('English', 'Hanja', 'English', 'frontToBack', 'eum')).toBe('음 → character · 훈');
   });
 
   it('asks for whatever the direction hides', () => {
-    expect(directionPrompt('Korean', 'Hanja', 'frontToBack', 'character')).toBe('훈 · 음, 무엇일까요?');
-    expect(directionPrompt('Korean', 'Hanja', 'backToFront', 'character')).toBe('한자, 무엇일까요?');
-    expect(directionPrompt('English', 'Hanja', 'frontToBack', 'hun')).toBe('Recall the character · 음.');
+    expect(directionPrompt('Korean', 'Hanja', 'Korean', 'frontToBack', 'character')).toBe('훈 · 음, 무엇일까요?');
+    expect(directionPrompt('Korean', 'Hanja', 'Korean', 'backToFront', 'character')).toBe('한자, 무엇일까요?');
+    expect(directionPrompt('English', 'Hanja', 'English', 'frontToBack', 'hun')).toBe('Recall the character · 음.');
   });
 
   // Every other deck keeps the language-pair wording it has always had.
   it('leaves other languages alone', () => {
-    expect(directionLabel('English', 'Japanese', 'frontToBack')).toBe('Japanese → English');
-    expect(directionPrompt('English', 'Japanese', 'backToFront')).toBe('How do you say this in Japanese?');
+    expect(directionLabel('English', 'Japanese', 'English', 'frontToBack')).toBe('Japanese → English');
+    expect(directionPrompt('English', 'Japanese', 'English', 'backToFront')).toBe('How do you say this in Japanese?');
   });
 });
 

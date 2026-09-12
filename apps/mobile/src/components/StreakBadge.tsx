@@ -25,7 +25,7 @@ import type { Palette } from '../theme';
  * titles did before `PAGE_TITLE_SIZE`.
  */
 export default function StreakBadge({ style }: { style?: StyleProp<ViewStyle> }) {
-  const { user, nativeLanguage, streak, reviewedToday } = useUser();
+  const { user, interfaceLanguage, streak, reviewedToday } = useUser();
   const { C } = useTheme();
   const s = useMemo(() => makeStyles(C), [C]);
 
@@ -36,16 +36,16 @@ export default function StreakBadge({ style }: { style?: StyleProp<ViewStyle> })
       style={[s.badge, style]}
       onPress={() => router.navigate('/progress')}
       accessibilityRole="button"
-      accessibilityLabel={t(nativeLanguage, 'progressTitle')}
+      accessibilityLabel={t(interfaceLanguage, 'progressTitle')}
       hitSlop={8}
     >
       <Text style={s.flame}>🔥</Text>
       <Text style={s.days}>
-        {nativeLanguage === 'Korean' ? `${streak}일` : `${streak} ${streak === 1 ? 'day' : 'days'}`}
+        {interfaceLanguage === 'Korean' ? `${streak}일` : `${streak} ${streak === 1 ? 'day' : 'days'}`}
       </Text>
       <Text style={s.sep}>·</Text>
       <Text style={s.today}>
-        {nativeLanguage === 'Korean'
+        {interfaceLanguage === 'Korean'
           ? `오늘 ${reviewedToday}개`
           : `${reviewedToday} ${reviewedToday === 1 ? 'card' : 'cards'} today`}
       </Text>

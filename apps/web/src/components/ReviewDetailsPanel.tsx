@@ -15,7 +15,13 @@ function isExamplePairArray(arr: unknown[]): arr is ExamplePair[] {
 interface Props {
   card: Flashcard;
   studyLanguage: StudyLanguage;
-  nativeLanguage: string | null | undefined;
+  /** Section headings and button copy — chrome. */
+  interfaceLanguage: string | null | undefined;
+  /**
+   * The language this deck is explained in. Picks which side of an example
+   * sentence is the back, and which language new depth is generated in.
+   */
+  deckNativeLanguage: string;
   /**
    * The card after enrichment wrote to it.
    *
@@ -40,11 +46,14 @@ interface Props {
  * not enough is precisely when you fail to recall it — so the fix belongs here
  * rather than only on a screen you would have to leave the session to reach.
  */
-export default function ReviewDetailsPanel({ card, studyLanguage, nativeLanguage, onChanged }: Props) {
+export default function ReviewDetailsPanel({
+  card, studyLanguage, interfaceLanguage, deckNativeLanguage, onChanged,
+}: Props) {
   const { saved, isRunning, error, enrich } = useCardEnrichment({
     card,
     studyLanguage,
-    nativeLanguage,
+    interfaceLanguage,
+    deckNativeLanguage,
     onChanged,
   });
   // `saved` is the card plus anything just generated; fall back to the prop so
@@ -68,21 +77,21 @@ export default function ReviewDetailsPanel({ card, studyLanguage, nativeLanguage
 
       {shown.definition && (
         <div className="mb-4">
-          <div className="font-semibold text-[var(--color-highlight)] text-sm mb-1">{t(nativeLanguage, 'sectionDefinition')}</div>
+          <div className="font-semibold text-[var(--color-highlight)] text-sm mb-1">{t(interfaceLanguage, 'sectionDefinition')}</div>
           <Markdown className="text-[var(--color-text)] opacity-90">{shown.definition}</Markdown>
         </div>
       )}
 
       {characterBreakdown && (
         <div className="mb-4">
-          <div className="font-semibold text-[var(--color-highlight)] text-sm mb-1">{t(nativeLanguage, characterSectionKey)}</div>
+          <div className="font-semibold text-[var(--color-highlight)] text-sm mb-1">{t(interfaceLanguage, characterSectionKey)}</div>
           <Markdown className="text-[var(--color-text)] opacity-90">{characterBreakdown}</Markdown>
         </div>
       )}
 
       {hasExamples && (
         <div className="mb-4">
-          <div className="font-semibold text-[var(--color-highlight)] text-sm mb-1">{t(nativeLanguage, 'sectionExamples')}</div>
+          <div className="font-semibold text-[var(--color-highlight)] text-sm mb-1">{t(interfaceLanguage, 'sectionExamples')}</div>
           <ul className="list-disc list-inside text-[var(--color-text)] opacity-90 space-y-2">
             {(() => {
               const raw = examples as unknown[];
@@ -90,7 +99,9 @@ export default function ReviewDetailsPanel({ card, studyLanguage, nativeLanguage
                 return (raw as string[]).map((ex, i) => <li key={i}>{ex}</li>);
               } else if (Array.isArray(raw) && isExamplePairArray(raw)) {
                 return (raw as ExamplePair[]).map((ex, i) => {
-                  const sides = getExampleSides(ex, studyLanguage, nativeLanguage);
+                  // The deck's language, not the interface's: this picks which
+                  // stored side of the sentence is the back.
+                  const sides = getExampleSides(ex, studyLanguage, deckNativeLanguage);
                   return (
                     <li key={i}>
                       <div>
@@ -110,7 +121,7 @@ export default function ReviewDetailsPanel({ card, studyLanguage, nativeLanguage
 
       {shown.notes && (
         <div className="mt-2">
-          <div className="font-semibold text-[var(--color-highlight)] text-sm mb-1">{t(nativeLanguage, 'sectionNotes')}</div>
+          <div className="font-semibold text-[var(--color-highlight)] text-sm mb-1">{t(interfaceLanguage, 'sectionNotes')}</div>
           <Markdown className="text-[var(--color-text)] opacity-70 text-sm">{shown.notes}</Markdown>
         </div>
       )}
@@ -127,7 +138,7 @@ export default function ReviewDetailsPanel({ card, studyLanguage, nativeLanguage
               disabled={isRunning('depth')}
               className="px-3 py-1 rounded text-sm border border-[var(--color-muted)] text-[var(--color-text)] hover:bg-[var(--color-muted)]/20 transition-colors disabled:opacity-50"
             >
-              {isRunning('depth') ? t(nativeLanguage, 'cardEnriching') : t(nativeLanguage, 'loadDefinition')}
+              {isRunning('depth') ? t(interfaceLanguage, 'cardEnriching') : t(interfaceLanguage, 'loadDefinition')}
             </button>
           )}
           {!hasExamples && (
@@ -136,7 +147,7 @@ export default function ReviewDetailsPanel({ card, studyLanguage, nativeLanguage
               disabled={isRunning('examples')}
               className="px-3 py-1 rounded text-sm border border-[var(--color-muted)] text-[var(--color-text)] hover:bg-[var(--color-muted)]/20 transition-colors disabled:opacity-50"
             >
-              {isRunning('examples') ? t(nativeLanguage, 'cardEnriching') : t(nativeLanguage, 'loadExamples')}
+              {isRunning('examples') ? t(interfaceLanguage, 'cardEnriching') : t(interfaceLanguage, 'loadExamples')}
             </button>
           )}
           {error && <span className="text-xs text-[var(--color-muted)]">{error}</span>}

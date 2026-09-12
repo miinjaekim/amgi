@@ -41,7 +41,16 @@ interface Props {
   packId?: string;
   uid?: string;
   studyLanguage?: StudyLanguage;
-  nativeLanguage: string | null | undefined;
+  /** Section headings, buttons and confirmations — chrome. */
+  interfaceLanguage: string | null | undefined;
+  /**
+   * The language this deck is explained in.
+   *
+   * Everything *on the card* reads from this: which slot holds the back, which
+   * reading is shown, the part-of-speech badge, and the language any depth
+   * generated here is written in.
+   */
+  deckNativeLanguage: string;
   onClose: () => void;
   /** Fired after anything is written, so the owner can reload its list. */
   onChanged?: () => void;
@@ -63,14 +72,14 @@ interface Props {
  * something once.
  */
 export default function CardDetailModal({
-  card, entry, packId, uid, studyLanguage, nativeLanguage, onClose, onChanged,
+  card, entry, packId, uid, studyLanguage, interfaceLanguage, deckNativeLanguage, onClose, onChanged,
 }: Props) {
   const lang: StudyLanguage = studyLanguage ?? card?.studyLanguage ?? 'Korean';
   const {
     saved, setSaved, isRunning, savingEntry, error, setError, canEnrich,
     save: handleSave, enrich,
   } = useCardEnrichment({
-    card, entry, packId, uid, studyLanguage: lang, nativeLanguage,
+    card, entry, packId, uid, studyLanguage: lang, interfaceLanguage, deckNativeLanguage,
     onChanged: () => onChanged?.(),
   });
   /** Non-null while the back is being edited. */
@@ -86,8 +95,8 @@ export default function CardDetailModal({
   // unsaved entry is projected onto the two fields it can fill.
   const studySide = saved ? getStudyLangSide(saved) : entry?.study ?? '';
   const backSide = saved
-    ? getBackSide(saved, nativeLanguage)
-    : entry ? resolvePackBack(entry.back, lang, nativeLanguage) : '';
+    ? getBackSide(saved, deckNativeLanguage)
+    : entry ? resolvePackBack(entry.back, lang, deckNativeLanguage) : '';
 
   /**
    * A hanja card's back is 훈음 for every reader, and an English native gets
@@ -96,13 +105,16 @@ export default function CardDetailModal({
    * the language *pair* points at: 물 수 for a Korean native, "water" for an
    * English one, which silently drops the 훈음 for the reader least able to
    * supply it themselves.
+   *
+   * Keyed on the *deck's* language, not the interface's: this is about which
+   * slot the card's back was written into.
    */
   const hunEumLine = lang === 'Hanja'
     ? (saved ? hunEum(saved) : entry?.back.Korean ?? '')
     : '';
-  const glossLine = lang === 'Hanja' && nativeLanguage !== 'Korean' ? backSide : '';
+  const glossLine = lang === 'Hanja' && deckNativeLanguage !== 'Korean' ? backSide : '';
 
-  const { backField } = getBackSideConfig(lang, nativeLanguage);
+  const { backField } = getBackSideConfig(lang, deckNativeLanguage);
   const characterBreakdown = saved ? getCharacterBreakdown(saved) : undefined;
   const characterSectionKey = getStudyLanguageConfig(lang).characterSectionKey ?? 'sectionHanja';
   const examples = saved?.examples;
@@ -126,13 +138,13 @@ export default function CardDetailModal({
       setEditDraft(null);
       onChanged?.();
     } catch {
-      setError(t(nativeLanguage, 'errorSaveChanges'));
+      setError(t(interfaceLanguage, 'errorSaveChanges'));
     }
   }
 
   async function handleArchiveToggle() {
     if (!saved?.id) return;
-    if (!saved.archived && !window.confirm(t(nativeLanguage, 'confirmArchive'))) return;
+    if (!saved.archived && !window.confirm(t(interfaceLanguage, 'confirmArchive'))) return;
     setError(null);
     try {
       const next = !saved.archived;
@@ -140,19 +152,19 @@ export default function CardDetailModal({
       setSaved(prev => (prev ? { ...prev, archived: next } : prev));
       onChanged?.();
     } catch {
-      setError(t(nativeLanguage, saved.archived ? 'errorRestoreFlashcard' : 'errorArchiveFlashcard'));
+      setError(t(interfaceLanguage, saved.archived ? 'errorRestoreFlashcard' : 'errorArchiveFlashcard'));
     }
   }
 
   async function handleDelete() {
     if (!saved?.id) return;
-    if (!window.confirm(t(nativeLanguage, 'confirmDelete'))) return;
+    if (!window.confirm(t(interfaceLanguage, 'confirmDelete'))) return;
     try {
       await deleteFlashcard(saved.id, lang);
       onChanged?.();
       onClose();
     } catch {
-      setError(t(nativeLanguage, 'errorDeleteFlashcard'));
+      setError(t(interfaceLanguage, 'errorDeleteFlashcard'));
     }
   }
 
@@ -176,9 +188,11 @@ export default function CardDetailModal({
             <div className="flex items-center gap-3 flex-wrap">
               <h2 className="text-2xl font-bold" style={{ color: 'var(--color-highlight)' }}>{studySide}</h2>
               <PronounceButton text={studySide} furigana={saved?.furigana} eum={saved?.eum} studyLanguage={lang} />
-              {saved && partOfSpeechLabel(nativeLanguage, saved) && (
+              {/* A fact about the word, so it reads in the deck's language
+                  beside the back it describes. */}
+              {saved && partOfSpeechLabel(deckNativeLanguage, saved) && (
                 <span className="px-2 py-0.5 text-xs rounded-full border" style={{ borderColor: 'var(--color-muted)', color: 'var(--color-muted)' }}>
-                  {partOfSpeechLabel(nativeLanguage, saved)}
+                  {partOfSpeechLabel(deckNativeLanguage, saved)}
                 </span>
               )}
               {saved?.formality && saved.formality !== 'N/A' && (
@@ -191,9 +205,9 @@ export default function CardDetailModal({
                   {saved.gender}
                 </span>
               )}
-              {saved && getReading(saved, lang, nativeLanguage) && (
+              {saved && getReading(saved, lang, deckNativeLanguage) && (
                 <span className="px-2 py-0.5 text-xs rounded-full border" style={{ borderColor: 'var(--color-muted)', color: 'var(--color-muted)' }}>
-                  {getReading(saved, lang, nativeLanguage)}
+                  {getReading(saved, lang, deckNativeLanguage)}
                 </span>
               )}
             </div>
@@ -230,7 +244,7 @@ export default function CardDetailModal({
               className={actionClass}
               style={{ background: 'var(--color-highlight)', color: 'var(--color-bg)', borderColor: 'var(--color-highlight)' }}
             >
-              {savingEntry ? t(nativeLanguage, 'cardSaving') : t(nativeLanguage, 'cardSaveEntry')}
+              {savingEntry ? t(interfaceLanguage, 'cardSaving') : t(interfaceLanguage, 'cardSaveEntry')}
             </button>
           )}
           {/* Only offered where the section is missing: a card that already has
@@ -244,7 +258,7 @@ export default function CardDetailModal({
               className={actionClass}
               style={{ borderColor: 'var(--color-muted)', color: 'var(--color-text)' }}
             >
-              {isRunning('depth') ? t(nativeLanguage, 'cardEnriching') : t(nativeLanguage, 'loadDefinition')}
+              {isRunning('depth') ? t(interfaceLanguage, 'cardEnriching') : t(interfaceLanguage, 'loadDefinition')}
             </button>
           )}
           {!hasExamples && (
@@ -254,7 +268,7 @@ export default function CardDetailModal({
               className={actionClass}
               style={{ borderColor: 'var(--color-muted)', color: 'var(--color-text)' }}
             >
-              {isRunning('examples') ? t(nativeLanguage, 'cardEnriching') : t(nativeLanguage, 'loadExamples')}
+              {isRunning('examples') ? t(interfaceLanguage, 'cardEnriching') : t(interfaceLanguage, 'loadExamples')}
             </button>
           )}
 
@@ -268,7 +282,7 @@ export default function CardDetailModal({
                   className={actionClass}
                   style={{ borderColor: 'var(--color-muted)', color: 'var(--color-muted)' }}
                 >
-                  {t(nativeLanguage, 'edit')}
+                  {t(interfaceLanguage, 'edit')}
                 </button>
               )}
               <button
@@ -277,7 +291,7 @@ export default function CardDetailModal({
                 className={actionClass}
                 style={{ borderColor: 'var(--color-muted)', color: 'var(--color-muted)' }}
               >
-                {t(nativeLanguage, saved.archived ? 'restore' : 'archive')}
+                {t(interfaceLanguage, saved.archived ? 'restore' : 'archive')}
               </button>
               <button
                 onClick={handleDelete}
@@ -285,7 +299,7 @@ export default function CardDetailModal({
                 className={`${actionClass} hover:border-red-400 hover:text-red-400`}
                 style={{ borderColor: 'var(--color-muted)', color: 'var(--color-muted)' }}
               >
-                {t(nativeLanguage, 'delete')}
+                {t(interfaceLanguage, 'delete')}
               </button>
             </>
           )}
@@ -308,21 +322,21 @@ export default function CardDetailModal({
               className={actionClass}
               style={{ background: 'var(--color-highlight)', color: 'var(--color-bg)', borderColor: 'var(--color-highlight)' }}
             >
-              {t(nativeLanguage, 'save')}
+              {t(interfaceLanguage, 'save')}
             </button>
             <button
               onClick={() => setEditDraft(null)}
               className={actionClass}
               style={{ borderColor: 'var(--color-muted)', color: 'var(--color-muted)' }}
             >
-              {t(nativeLanguage, 'cancel')}
+              {t(interfaceLanguage, 'cancel')}
             </button>
           </div>
         )}
 
         {(!saved || error) && (
           <div className="px-6 pt-2 text-xs" style={{ color: error ? 'var(--color-error, #f87171)' : 'var(--color-muted)' }}>
-            {error ?? t(nativeLanguage, 'cardEnrichHint')}
+            {error ?? t(interfaceLanguage, 'cardEnrichHint')}
           </div>
         )}
 
@@ -330,14 +344,14 @@ export default function CardDetailModal({
         <div className="p-6 space-y-5">
           {!hasDetails ? (
             <p className="text-sm" style={{ color: 'var(--color-muted)' }}>
-              {t(nativeLanguage, 'noCardDetails')}
+              {t(interfaceLanguage, 'noCardDetails')}
             </p>
           ) : (
             <>
               {saved?.definition && (
                 <div>
                   <h3 className="text-xs font-semibold uppercase tracking-widest mb-2" style={{ color: 'var(--color-muted)' }}>
-                    {t(nativeLanguage, 'sectionDefinition')}
+                    {t(interfaceLanguage, 'sectionDefinition')}
                   </h3>
                   <Markdown className="text-sm text-[var(--color-text)]">{saved.definition}</Markdown>
                 </div>
@@ -346,7 +360,7 @@ export default function CardDetailModal({
               {characterBreakdown && (
                 <div>
                   <h3 className="text-xs font-semibold uppercase tracking-widest mb-2" style={{ color: 'var(--color-muted)' }}>
-                    {t(nativeLanguage, characterSectionKey)}
+                    {t(interfaceLanguage, characterSectionKey)}
                   </h3>
                   <Markdown className="text-sm text-[var(--color-text)]">{characterBreakdown}</Markdown>
                 </div>
@@ -355,7 +369,7 @@ export default function CardDetailModal({
               {saved?.notes && (
                 <div>
                   <h3 className="text-xs font-semibold uppercase tracking-widest mb-2" style={{ color: 'var(--color-muted)' }}>
-                    {t(nativeLanguage, 'sectionContext')}
+                    {t(interfaceLanguage, 'sectionContext')}
                   </h3>
                   <Markdown className="text-sm text-[var(--color-text)]">{saved.notes}</Markdown>
                 </div>
@@ -364,7 +378,7 @@ export default function CardDetailModal({
               {hasExamples && (
                 <div>
                   <h3 className="text-xs font-semibold uppercase tracking-widest mb-2" style={{ color: 'var(--color-muted)' }}>
-                    {t(nativeLanguage, 'sectionExamples')}
+                    {t(interfaceLanguage, 'sectionExamples')}
                   </h3>
                   <ul className="space-y-3">
                     {(() => {
@@ -375,7 +389,7 @@ export default function CardDetailModal({
                         ));
                       } else if (Array.isArray(raw) && isExamplePairArray(raw)) {
                         return (raw as ExamplePair[]).map((ex, i) => {
-                          const sides = getExampleSides(ex, lang);
+                          const sides = getExampleSides(ex, lang, deckNativeLanguage);
                           return (
                             <li key={i}>
                               <div className="text-sm" style={{ color: 'var(--color-text)' }}>

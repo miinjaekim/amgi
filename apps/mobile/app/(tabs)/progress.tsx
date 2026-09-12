@@ -53,8 +53,8 @@ function levelColor(C: Palette, level: HeatmapCell['level']): string {
  * seven more keys per locale to say what the platform already knows, and any
  * locale added later gets them for free.
  */
-function weekdayLabels(nativeLanguage: string | null | undefined): string[] {
-  const locale = nativeLanguage === 'Korean' ? 'ko-KR' : 'en-GB';
+function weekdayLabels(interfaceLanguage: string | null | undefined): string[] {
+  const locale = interfaceLanguage === 'Korean' ? 'ko-KR' : 'en-GB';
   // 1970-01-04 was a Sunday.
   return [0, 1, 2, 3, 4, 5, 6].map(offset => new Date(Date.UTC(1970, 0, 4 + offset, 12))
     .toLocaleDateString(locale, { weekday: 'short' }));
@@ -70,7 +70,7 @@ export default function ProgressScreen() {
   const { C } = useTheme();
   const tabBarHeight = useFloatingTabBarHeight();
   const s = useMemo(() => makeStyles(C, tabBarHeight), [C, tabBarHeight]);
-  const { user, nativeLanguage, studyLanguage, streak, handleSignIn } = useUser();
+  const { user, interfaceLanguage, studyLanguage, streak, handleSignIn } = useUser();
   const [days, setDays] = useState<DailyProgress[] | null>(null);
   const [rangeDays, setRangeDays] = useState<number>(90);
   const [switcherOpen, setSwitcherOpen] = useState(false);
@@ -159,7 +159,7 @@ export default function ProgressScreen() {
    * is what lets the rows carry labels at all. See `buildWeekGrid`.
    */
   const grid = useMemo(() => buildWeekGrid(cells), [cells]);
-  const weekdays = useMemo(() => weekdayLabels(nativeLanguage), [nativeLanguage]);
+  const weekdays = useMemo(() => weekdayLabels(interfaceLanguage), [interfaceLanguage]);
 
   /**
    * The selected day, as its place in the grid.
@@ -207,13 +207,13 @@ export default function ProgressScreen() {
       }
       <View style={s.headerText}>
         <Text style={s.headerName} numberOfLines={1}>
-          {user?.displayName ?? user?.email ?? t(nativeLanguage, 'settingsNotSignedIn')}
+          {user?.displayName ?? user?.email ?? t(interfaceLanguage, 'settingsNotSignedIn')}
         </Text>
         <TouchableOpacity
           onPress={() => setSwitcherOpen(true)}
           hitSlop={6}
           accessibilityRole="button"
-          accessibilityLabel={t(nativeLanguage, 'settingsStudyLanguage')}
+          accessibilityLabel={t(interfaceLanguage, 'settingsStudyLanguage')}
         >
           <Text style={s.headerLang} numberOfLines={1}>
             {currentStudy?.label ?? studyLanguage}
@@ -225,7 +225,7 @@ export default function ProgressScreen() {
         onPress={() => router.push('/settings')}
         hitSlop={12}
         accessibilityRole="button"
-        accessibilityLabel={t(nativeLanguage, 'settingsTitle')}
+        accessibilityLabel={t(interfaceLanguage, 'settingsTitle')}
       >
         <Ionicons name="settings-outline" size={22} color={C.muted} />
       </TouchableOpacity>
@@ -235,7 +235,7 @@ export default function ProgressScreen() {
   const switcher = (
     <BottomSheet
       visible={switcherOpen}
-      title={t(nativeLanguage, 'settingsStudyLanguage')}
+      title={t(interfaceLanguage, 'settingsStudyLanguage')}
       onClose={() => setSwitcherOpen(false)}
     >
       <StudyLanguageList onSelect={() => setSwitcherOpen(false)} />
@@ -250,9 +250,9 @@ export default function ProgressScreen() {
     return (
       <SafeAreaView style={s.safe} edges={['top']}>
         {header}
-        <Text style={s.empty}>{t(nativeLanguage, 'progressSignedOut')}</Text>
+        <Text style={s.empty}>{t(interfaceLanguage, 'progressSignedOut')}</Text>
         <TouchableOpacity style={s.signInBtn} onPress={handleSignIn}>
-          <Text style={s.signInBtnText}>{t(nativeLanguage, 'settingsSignInWithGoogle')}</Text>
+          <Text style={s.signInBtnText}>{t(interfaceLanguage, 'settingsSignInWithGoogle')}</Text>
         </TouchableOpacity>
         {switcher}
       </SafeAreaView>
@@ -283,7 +283,7 @@ export default function ProgressScreen() {
     <SafeAreaView style={s.safe} edges={['top']}>
       {header}
       <ScrollView contentContainerStyle={s.content}>
-        <Text style={s.description}>{t(nativeLanguage, 'progressDescription')}</Text>
+        <Text style={s.description}>{t(interfaceLanguage, 'progressDescription')}</Text>
 
         {/* Share sits in the range row rather than in the header, so the window
             being shared is the one selected right beside it. */}
@@ -297,7 +297,7 @@ export default function ProgressScreen() {
                 style={[s.rangeBtn, selected && s.rangeBtnOn]}
               >
                 <Text style={[s.rangeText, selected && s.rangeTextOn]}>
-                  {t(nativeLanguage, range.key)}
+                  {t(interfaceLanguage, range.key)}
                 </Text>
               </TouchableOpacity>
             );
@@ -321,7 +321,7 @@ export default function ProgressScreen() {
               hitSlop={{ top: 10, bottom: 10, left: 6, right: 16 }}
               style={[s.rangeBtn, s.shareBtn]}
               accessibilityRole="button"
-              accessibilityLabel={t(nativeLanguage, 'shareTitle')}
+              accessibilityLabel={t(interfaceLanguage, 'shareTitle')}
             >
               {/* Icon only, unlike web. Three labelled range chips plus a
                   labelled Share overflow the row on a phone — and because the
@@ -336,18 +336,18 @@ export default function ProgressScreen() {
 
         {partialWindow && (
           <Text style={s.historyNote}>
-            {t(nativeLanguage, 'progressHistoryNote', {
-              date: formatDay(nativeLanguage, PROGRESS_HISTORY_START, true),
+            {t(interfaceLanguage, 'progressHistoryNote', {
+              date: formatDay(interfaceLanguage, PROGRESS_HISTORY_START, true),
             })}
           </Text>
         )}
 
         {days === null ? (
-          <Text style={s.empty}>{t(nativeLanguage, 'progressLoading')}</Text>
+          <Text style={s.empty}>{t(interfaceLanguage, 'progressLoading')}</Text>
         ) : !hasHistory ? (
           <View>
-            <Text style={s.empty}>{t(nativeLanguage, 'progressEmpty')}</Text>
-            <Text style={s.emptyBody}>{t(nativeLanguage, 'progressEmptyBody')}</Text>
+            <Text style={s.empty}>{t(interfaceLanguage, 'progressEmpty')}</Text>
+            <Text style={s.emptyBody}>{t(interfaceLanguage, 'progressEmptyBody')}</Text>
           </View>
         ) : (
           <>
@@ -355,22 +355,22 @@ export default function ProgressScreen() {
                 these rows — they start empty the day this ships, so deriving
                 would show `1` to someone on a 200-day streak. */}
             <View style={s.statGrid}>
-              <Stat s={s} label={t(nativeLanguage, 'progressStreak')}
+              <Stat s={s} label={t(interfaceLanguage, 'progressStreak')}
                 value={streak === 1
-                  ? t(nativeLanguage, 'progressStreakDay')
-                  : t(nativeLanguage, 'progressStreakDays', { count: streak })} />
-              <Stat s={s} label={t(nativeLanguage, 'progressStatReviews')} value={summary.totalReviews} />
-              <Stat s={s} label={t(nativeLanguage, 'progressStatAverage')} value={summary.averagePerActiveDay} />
+                  ? t(interfaceLanguage, 'progressStreakDay')
+                  : t(interfaceLanguage, 'progressStreakDays', { count: streak })} />
+              <Stat s={s} label={t(interfaceLanguage, 'progressStatReviews')} value={summary.totalReviews} />
+              <Stat s={s} label={t(interfaceLanguage, 'progressStatAverage')} value={summary.averagePerActiveDay} />
               {/* Shares its label with the tile on the shared image, so the two
                   surfaces cannot describe one number differently. Note it
                   counts *cards* where Reviews above counts directions — the
                   reason they carry different nouns and never one shared one. */}
               {learned !== null && (
-                <Stat s={s} label={t(nativeLanguage, 'shareStatLearned')} value={learned.total} />
+                <Stat s={s} label={t(interfaceLanguage, 'shareStatLearned')} value={learned.total} />
               )}
             </View>
 
-            <Text style={s.sectionTitle}>{t(nativeLanguage, 'progressCalendar')}</Text>
+            <Text style={s.sectionTitle}>{t(interfaceLanguage, 'progressCalendar')}</Text>
             {/* The weekday gutter sits *outside* the scroller so it stays put
                 while a year of columns slides past it. Everything that scrolls
                 — the month row and the grid — shares one content view, so the
@@ -396,7 +396,7 @@ export default function ProgressScreen() {
                   <View style={[s.monthRow, { width: grid.columns.length * PITCH }]}>
                     {grid.months.map(tick => (
                       <Text key={tick.date} style={[s.monthLabel, { left: tick.column * PITCH }]}>
-                        {formatMonth(nativeLanguage, tick.date)}
+                        {formatMonth(interfaceLanguage, tick.date)}
                       </Text>
                     ))}
                   </View>
@@ -419,7 +419,7 @@ export default function ProgressScreen() {
                               ))}
                               onLongPress={() => setSelected({ date: cell.date, column: columnIndex, row })}
                               accessibilityRole="button"
-                              accessibilityLabel={describeDay(nativeLanguage, cell.date, daysByDate.get(cell.date))}
+                              accessibilityLabel={describeDay(interfaceLanguage, cell.date, daysByDate.get(cell.date))}
                               style={[
                                 s.cell,
                                 { backgroundColor: levelColor(C, cell.level) },
@@ -434,7 +434,7 @@ export default function ProgressScreen() {
                       <DayTooltip
                         C={C}
                         s={s}
-                        nativeLanguage={nativeLanguage}
+                        interfaceLanguage={interfaceLanguage}
                         date={selected.date}
                         day={daysByDate.get(selected.date)}
                         {...heatmapTooltipAt(selected.column, selected.row, grid.columns.length)}
@@ -447,18 +447,18 @@ export default function ProgressScreen() {
             {/* Named, not just graded: "Less → More" alone never says more of
                 what. */}
             <View style={s.legend}>
-              <Text style={s.legendText}>{t(nativeLanguage, 'progressStatReviews')}</Text>
-              <Text style={s.legendText}>{t(nativeLanguage, 'progressLessMore')}</Text>
+              <Text style={s.legendText}>{t(interfaceLanguage, 'progressStatReviews')}</Text>
+              <Text style={s.legendText}>{t(interfaceLanguage, 'progressLessMore')}</Text>
               {([0, 1, 2, 3, 4] as const).map(level => (
                 <View key={level} style={[s.cell, { backgroundColor: levelColor(C, level) }]} />
               ))}
-              <Text style={s.legendText}>{t(nativeLanguage, 'progressMore')}</Text>
+              <Text style={s.legendText}>{t(interfaceLanguage, 'progressMore')}</Text>
             </View>
 
             <WeekChart
               C={C}
               s={s}
-              nativeLanguage={nativeLanguage}
+              interfaceLanguage={interfaceLanguage}
               cells={weekCells}
               daysByDate={daysByDate}
               weekdays={weekdays}
@@ -466,14 +466,14 @@ export default function ProgressScreen() {
 
             {languageRows.length > 0 && (
               <>
-                <Text style={s.sectionTitle}>{t(nativeLanguage, 'progressByLanguage')}</Text>
-                <Text style={s.sectionNote}>{t(nativeLanguage, 'progressBarScale')}</Text>
+                <Text style={s.sectionTitle}>{t(interfaceLanguage, 'progressByLanguage')}</Text>
+                <Text style={s.sectionNote}>{t(interfaceLanguage, 'progressBarScale')}</Text>
                 {languageRows.map(({ studyLanguage: language, progress, learned: learnedHere }) => (
                   <LanguageRow
                     key={language}
                     s={s}
                     C={C}
-                    nativeLanguage={nativeLanguage}
+                    interfaceLanguage={interfaceLanguage}
                     language={language}
                     progress={progress}
                     learned={learnedHere}
@@ -511,10 +511,10 @@ export default function ProgressScreen() {
  * still written, and `retentionRate` still computes it for whoever needs it
  * next.
  */
-function LanguageRow({ s, C, nativeLanguage, language, progress, learned, busiest }: {
+function LanguageRow({ s, C, interfaceLanguage, language, progress, learned, busiest }: {
   s: ReturnType<typeof makeStyles>;
   C: Palette;
-  nativeLanguage: string | null | undefined;
+  interfaceLanguage: string | null | undefined;
   language: StudyLanguage;
   progress: LanguageProgress;
   /** All-time cards over the maturity line, unlike everything else on the row. */
@@ -527,7 +527,7 @@ function LanguageRow({ s, C, nativeLanguage, language, progress, learned, busies
   return (
     <View style={s.langRow}>
       <Text style={s.langName} numberOfLines={1}>
-        {t(nativeLanguage, languageLabelKey(language))}
+        {t(interfaceLanguage, languageLabelKey(language))}
       </Text>
       <View style={s.langBarTrack}>
         <View
@@ -544,13 +544,13 @@ function LanguageRow({ s, C, nativeLanguage, language, progress, learned, busies
             window — "0 reviews" would read as a slump rather than as a language
             left alone for a while. */}
         {progress.reviews === 0
-          ? t(nativeLanguage, 'progressTooltipNoReviews')
-          : t(nativeLanguage, 'progressLanguageReviews', { count: progress.reviews })}
+          ? t(interfaceLanguage, 'progressTooltipNoReviews')
+          : t(interfaceLanguage, 'progressLanguageReviews', { count: progress.reviews })}
         {learned > 0
-          ? ` · ${t(nativeLanguage, 'progressLanguageLearned', { count: learned })}`
+          ? ` · ${t(interfaceLanguage, 'progressLanguageLearned', { count: learned })}`
           : ''}
         {cardsAdded > 0
-          ? ` · ${t(nativeLanguage, 'progressStatNewCards')} ${cardsAdded}`
+          ? ` · ${t(interfaceLanguage, 'progressStatNewCards')} ${cardsAdded}`
           : ''}
       </Text>
     </View>
@@ -603,10 +603,10 @@ function heatmapTooltipAt(column: number, row: number, columnCount: number) {
  * out — a second bubble component would be two things to keep saying the same
  * sentence, and this one already says it in both locales.
  */
-function DayTooltip({ C, s, nativeLanguage, date, day, left, top }: {
+function DayTooltip({ C, s, interfaceLanguage, date, day, left, top }: {
   C: Palette;
   s: ReturnType<typeof makeStyles>;
-  nativeLanguage: string | null | undefined;
+  interfaceLanguage: string | null | undefined;
   date: string;
   day: DailyProgress | undefined;
   left: number;
@@ -619,17 +619,17 @@ function DayTooltip({ C, s, nativeLanguage, date, day, left, top }: {
 
   return (
     <View style={[s.tooltip, { left, top, width: TOOLTIP_WIDTH, borderColor: C.muted, backgroundColor: C.surface }]}>
-      <Text style={s.tooltipDate}>{formatDay(nativeLanguage, date)}</Text>
+      <Text style={s.tooltipDate}>{formatDay(interfaceLanguage, date)}</Text>
       <Text style={s.tooltipDetail} numberOfLines={1}>
         {reviews === 0
-          ? t(nativeLanguage, 'progressTooltipNoReviews')
+          ? t(interfaceLanguage, 'progressTooltipNoReviews')
           : reviews === 1
-            ? t(nativeLanguage, 'progressTooltipOneReview')
-            : t(nativeLanguage, 'progressTooltipReviews', { count: reviews })}
+            ? t(interfaceLanguage, 'progressTooltipOneReview')
+            : t(interfaceLanguage, 'progressTooltipReviews', { count: reviews })}
         {cardsAdded > 0
           ? ` · ${cardsAdded === 1
-            ? t(nativeLanguage, 'progressTooltipOneCard')
-            : t(nativeLanguage, 'progressTooltipCards', { count: cardsAdded })}`
+            ? t(interfaceLanguage, 'progressTooltipOneCard')
+            : t(interfaceLanguage, 'progressTooltipCards', { count: cardsAdded })}`
           : ''}
       </Text>
     </View>
@@ -653,10 +653,10 @@ const WEEK_MARK_KEY = 'amgi_week_chart_mark';
  * therefore says nothing about how big a week it was. Ruling it against a
  * rounded ceiling is what turns seven heights into seven readable numbers.
  */
-function WeekChart({ C, s, nativeLanguage, cells, daysByDate, weekdays }: {
+function WeekChart({ C, s, interfaceLanguage, cells, daysByDate, weekdays }: {
   C: Palette;
   s: ReturnType<typeof makeStyles>;
-  nativeLanguage: string | null | undefined;
+  interfaceLanguage: string | null | undefined;
   cells: HeatmapCell[];
   daysByDate: Map<string, DailyProgress>;
   weekdays: string[];
@@ -719,7 +719,7 @@ function WeekChart({ C, s, nativeLanguage, cells, daysByDate, weekdays }: {
   return (
     <>
       <View style={s.weekHeader}>
-        <Text style={s.sectionTitle}>{t(nativeLanguage, 'progressWeekTitle')}</Text>
+        <Text style={s.sectionTitle}>{t(interfaceLanguage, 'progressWeekTitle')}</Text>
         <View style={s.weekMarkRow}>
           {(['bars', 'line'] as const).map(option => (
             <TouchableOpacity
@@ -734,7 +734,7 @@ function WeekChart({ C, s, nativeLanguage, cells, daysByDate, weekdays }: {
               ]}
             >
               <Text style={[s.weekMarkText, { color: mark === option ? C.highlight : C.muted }]}>
-                {t(nativeLanguage, option === 'bars' ? 'progressChartBars' : 'progressChartLine')}
+                {t(interfaceLanguage, option === 'bars' ? 'progressChartBars' : 'progressChartLine')}
               </Text>
             </TouchableOpacity>
           ))}
@@ -824,7 +824,7 @@ function WeekChart({ C, s, nativeLanguage, cells, daysByDate, weekdays }: {
               style={s.weekTarget}
               onPress={() => setSelected(current => (current === index ? null : index))}
               accessibilityRole="button"
-              accessibilityLabel={describeDay(nativeLanguage, cell.date, daysByDate.get(cell.date))}
+              accessibilityLabel={describeDay(interfaceLanguage, cell.date, daysByDate.get(cell.date))}
             />
           ))}
         </View>
@@ -833,7 +833,7 @@ function WeekChart({ C, s, nativeLanguage, cells, daysByDate, weekdays }: {
           <DayTooltip
             C={C}
             s={s}
-            nativeLanguage={nativeLanguage}
+            interfaceLanguage={interfaceLanguage}
             date={active.date}
             day={daysByDate.get(active.date)}
             left={WEEK_AXIS_GUTTER + Math.max(0, Math.min(
@@ -859,9 +859,9 @@ function WeekChart({ C, s, nativeLanguage, cells, daysByDate, weekdays }: {
 }
 
 /** `2026-09-01` → `Sep` / `9월`, for the calendar's month ticks. */
-function formatMonth(nativeLanguage: string | null | undefined, date: string): string {
+function formatMonth(interfaceLanguage: string | null | undefined, date: string): string {
   return new Date(`${date}T12:00:00Z`).toLocaleDateString(
-    nativeLanguage === 'Korean' ? 'ko-KR' : 'en-GB',
+    interfaceLanguage === 'Korean' ? 'ko-KR' : 'en-GB',
     { month: 'short' },
   );
 }
@@ -874,32 +874,32 @@ function formatMonth(nativeLanguage: string | null | undefined, date: string): s
  * answer the moment a second August exists.
  */
 function formatDay(
-  nativeLanguage: string | null | undefined,
+  interfaceLanguage: string | null | undefined,
   date: string,
   withYear = false,
 ): string {
   // Parsed at UTC noon so the date can't slip a day either side of the line.
   return new Date(`${date}T12:00:00Z`).toLocaleDateString(
-    nativeLanguage === 'Korean' ? 'ko-KR' : 'en-GB',
+    interfaceLanguage === 'Korean' ? 'ko-KR' : 'en-GB',
     { month: 'long', day: 'numeric', ...(withYear ? { year: 'numeric' } : {}) },
   );
 }
 
 /** The same content as the tooltip, flattened for screen readers. */
 function describeDay(
-  nativeLanguage: string | null | undefined,
+  interfaceLanguage: string | null | undefined,
   date: string,
   day: DailyProgress | undefined,
 ): string {
   const reviews = day?.reviews ?? 0;
   const cardsAdded = (day?.newCards ?? 0) + (day?.packCards ?? 0);
   const parts = [
-    formatDay(nativeLanguage, date),
+    formatDay(interfaceLanguage, date),
     reviews === 0
-      ? t(nativeLanguage, 'progressTooltipNoReviews')
-      : t(nativeLanguage, 'progressTooltipReviews', { count: reviews }),
+      ? t(interfaceLanguage, 'progressTooltipNoReviews')
+      : t(interfaceLanguage, 'progressTooltipReviews', { count: reviews }),
   ];
-  if (cardsAdded > 0) parts.push(t(nativeLanguage, 'progressTooltipCards', { count: cardsAdded }));
+  if (cardsAdded > 0) parts.push(t(interfaceLanguage, 'progressTooltipCards', { count: cardsAdded }));
   return parts.join(' · ');
 }
 

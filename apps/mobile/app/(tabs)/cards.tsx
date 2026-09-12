@@ -31,9 +31,9 @@ export default function CardsScreen() {
   const { C } = useTheme();
   const tabBarHeight = useFloatingTabBarHeight();
   const s = useMemo(() => makeStyles(C, tabBarHeight), [C, tabBarHeight]);
-  const { user, nativeLanguage, studyLanguage } = useUser();
+  const { user, interfaceLanguage, deckNativeLanguage, studyLanguage } = useUser();
   const config = getStudyLanguageConfig(studyLanguage);
-  const backConfig = getBackSideConfig(studyLanguage, nativeLanguage);
+  const backConfig = getBackSideConfig(studyLanguage, deckNativeLanguage);
   const [allCards, setAllCards] = useState<Flashcard[]>([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
@@ -85,8 +85,8 @@ export default function CardsScreen() {
   // deck retires its chip, and a selection left pointing at a chip that is no
   // longer on screen shows an empty list with no visible reason.
   const deckFilters = useMemo(
-    () => buildDeckFilters(allCards, studyLanguage, nativeLanguage),
-    [allCards, studyLanguage, nativeLanguage]
+    () => buildDeckFilters(allCards, studyLanguage, interfaceLanguage),
+    [allCards, studyLanguage, interfaceLanguage]
   );
   const activeDeck = deckFilters.some(d => d.id === deckKey) ? deckKey : DEFAULT_DECK_FILTER;
   const deckCards = useMemo(
@@ -102,7 +102,7 @@ export default function CardsScreen() {
       const q = search.trim().toLowerCase();
       cards = cards.filter(c =>
         getStudyLangSide(c).toLowerCase().includes(q) ||
-        getBackSide(c, nativeLanguage).toLowerCase().includes(q)
+        getBackSide(c, deckNativeLanguage).toLowerCase().includes(q)
       );
     }
     if (sortKey === 'newest') return [...cards].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
@@ -132,17 +132,17 @@ export default function CardsScreen() {
 
   const handleBulkArchive = () => {
     if (selectedIds.size === 0) return;
-    Alert.alert('', t(nativeLanguage, 'bulkConfirmArchive'), [
-      { text: t(nativeLanguage, 'cancel'), style: 'cancel' },
+    Alert.alert('', t(interfaceLanguage, 'bulkConfirmArchive'), [
+      { text: t(interfaceLanguage, 'cancel'), style: 'cancel' },
       {
-        text: t(nativeLanguage, 'archive'), style: 'destructive',
+        text: t(interfaceLanguage, 'archive'), style: 'destructive',
         onPress: async () => {
           setBulkWorking(true);
           try {
             await Promise.all([...selectedIds].map(id => archiveFlashcard(id, studyLanguage)));
             setAllCards(prev => prev.map(c => selectedIds.has(c.id!) ? { ...c, archived: true } : c));
             exitSelectMode();
-          } catch { setError(t(nativeLanguage, 'errorArchiveFlashcard')); }
+          } catch { setError(t(interfaceLanguage, 'errorArchiveFlashcard')); }
           finally { setBulkWorking(false); }
         },
       },
@@ -151,17 +151,17 @@ export default function CardsScreen() {
 
   const handleBulkDelete = () => {
     if (selectedIds.size === 0) return;
-    Alert.alert('', t(nativeLanguage, 'bulkConfirmDelete'), [
-      { text: t(nativeLanguage, 'cancel'), style: 'cancel' },
+    Alert.alert('', t(interfaceLanguage, 'bulkConfirmDelete'), [
+      { text: t(interfaceLanguage, 'cancel'), style: 'cancel' },
       {
-        text: t(nativeLanguage, 'delete'), style: 'destructive',
+        text: t(interfaceLanguage, 'delete'), style: 'destructive',
         onPress: async () => {
           setBulkWorking(true);
           try {
             await Promise.all([...selectedIds].map(id => deleteFlashcard(id, studyLanguage)));
             setAllCards(prev => prev.filter(c => !selectedIds.has(c.id!)));
             exitSelectMode();
-          } catch { setError(t(nativeLanguage, 'errorDeleteFlashcard')); }
+          } catch { setError(t(interfaceLanguage, 'errorDeleteFlashcard')); }
           finally { setBulkWorking(false); }
         },
       },
@@ -191,14 +191,14 @@ export default function CardsScreen() {
     const rows = [[config.label, backConfig.backLanguage, 'Part of speech', 'Formality', 'Definition', 'Characters', 'Notes', 'Examples', 'Saved', 'Status']];
     for (const c of visibleCards) {
       const examples = c.examples?.map(e => {
-        const sides = getExampleSides(e, studyLanguage, nativeLanguage);
+        const sides = getExampleSides(e, studyLanguage, deckNativeLanguage);
         return `${sides.study} / ${sides.back}`;
       }).join(' | ') ?? '';
       const saved = c.createdAt instanceof Date ? c.createdAt.toISOString().slice(0, 10) : '';
       rows.push([
-        getStudyLangSide(c), getBackSide(c, nativeLanguage),
+        getStudyLangSide(c), getBackSide(c, deckNativeLanguage),
         // The label, not the code — the column is read by a person.
-        partOfSpeechLabel(nativeLanguage, c) || '', c.formality || '', c.definition || '',
+        partOfSpeechLabel(deckNativeLanguage, c) || '', c.formality || '', c.definition || '',
         getCharacterBreakdown(c) || '', c.notes || '', examples, saved, c.archived ? 'archived' : 'active',
       ]);
     }
@@ -209,7 +209,7 @@ export default function CardsScreen() {
   const exportAnki = () => {
     const lines = ['#separator:Tab', '#html:false', '#notetype:Basic', '#deck:Amgi'];
     for (const c of visibleCards) {
-      const backParts = [getBackSide(c, nativeLanguage)];
+      const backParts = [getBackSide(c, deckNativeLanguage)];
       if (c.briefDefinition) backParts.push(c.briefDefinition);
       else if (c.definition) backParts.push(c.definition);
       lines.push(`${getStudyLangSide(c)}\t${backParts.join(' — ')}`);
@@ -219,10 +219,10 @@ export default function CardsScreen() {
 
   const promptExport = () => {
     if (visibleCards.length === 0) return;
-    Alert.alert(t(nativeLanguage, 'cardsExport'), undefined, [
-      { text: t(nativeLanguage, 'cardsExportCSV'), onPress: exportCSV },
-      { text: t(nativeLanguage, 'cardsExportAnki'), onPress: exportAnki },
-      { text: t(nativeLanguage, 'cancel'), style: 'cancel' },
+    Alert.alert(t(interfaceLanguage, 'cardsExport'), undefined, [
+      { text: t(interfaceLanguage, 'cardsExportCSV'), onPress: exportCSV },
+      { text: t(interfaceLanguage, 'cardsExportAnki'), onPress: exportAnki },
+      { text: t(interfaceLanguage, 'cancel'), style: 'cancel' },
     ]);
   };
 
@@ -230,7 +230,7 @@ export default function CardsScreen() {
     setShowImport(false);
     // The imported cards arrive on their own — the listener reports the batch
     // as it lands, so there is nothing to go and fetch.
-    setImportSuccess(t(nativeLanguage, count === 1 ? 'importSavedToastOne' : 'importSavedToast', { count }));
+    setImportSuccess(t(interfaceLanguage, count === 1 ? 'importSavedToastOne' : 'importSavedToast', { count }));
     setTimeout(() => setImportSuccess(null), 4000);
   };
 
@@ -242,19 +242,19 @@ export default function CardsScreen() {
       setAllCards(prev => prev.map(c => c.id === card.id ? { ...c, ...editDraft } : c));
       setEditingCardId(null);
       setEditDraft(null);
-    } catch { setError(t(nativeLanguage, 'errorSaveChanges')); }
+    } catch { setError(t(interfaceLanguage, 'errorSaveChanges')); }
   };
 
   const handleArchive = (card: Flashcard) => {
-    Alert.alert('', t(nativeLanguage, 'confirmArchive'), [
-      { text: t(nativeLanguage, 'cancel'), style: 'cancel' },
+    Alert.alert('', t(interfaceLanguage, 'confirmArchive'), [
+      { text: t(interfaceLanguage, 'cancel'), style: 'cancel' },
       {
-        text: t(nativeLanguage, 'archive'), style: 'destructive',
+        text: t(interfaceLanguage, 'archive'), style: 'destructive',
         onPress: async () => {
           try {
             await archiveFlashcard(card.id!, studyLanguage);
             setAllCards(prev => prev.map(c => c.id === card.id ? { ...c, archived: true } : c));
-          } catch { setError(t(nativeLanguage, 'errorArchiveFlashcard')); }
+          } catch { setError(t(interfaceLanguage, 'errorArchiveFlashcard')); }
         },
       },
     ]);
@@ -264,34 +264,34 @@ export default function CardsScreen() {
     try {
       await restoreFlashcard(card.id!, studyLanguage);
       setAllCards(prev => prev.map(c => c.id === card.id ? { ...c, archived: false } : c));
-    } catch { setError(t(nativeLanguage, 'errorRestoreFlashcard')); }
+    } catch { setError(t(interfaceLanguage, 'errorRestoreFlashcard')); }
   };
 
   const handleDelete = (card: Flashcard) => {
-    Alert.alert('', t(nativeLanguage, 'confirmDelete'), [
-      { text: t(nativeLanguage, 'cancel'), style: 'cancel' },
+    Alert.alert('', t(interfaceLanguage, 'confirmDelete'), [
+      { text: t(interfaceLanguage, 'cancel'), style: 'cancel' },
       {
-        text: t(nativeLanguage, 'delete'), style: 'destructive',
+        text: t(interfaceLanguage, 'delete'), style: 'destructive',
         onPress: async () => {
           try {
             await deleteFlashcard(card.id!, studyLanguage);
             setAllCards(prev => prev.filter(c => c.id !== card.id));
-          } catch { setError(t(nativeLanguage, 'errorDeleteFlashcard')); }
+          } catch { setError(t(interfaceLanguage, 'errorDeleteFlashcard')); }
         },
       },
     ]);
   };
 
   const FILTERS: { key: FilterKey; label: string; count: number }[] = [
-    { key: 'active', label: t(nativeLanguage, 'cardsFilterActive'), count: activeCount },
-    { key: 'archived', label: t(nativeLanguage, 'cardsFilterArchived'), count: archivedCount },
-    { key: 'all', label: t(nativeLanguage, 'cardsFilterAll'), count: deckCards.length },
+    { key: 'active', label: t(interfaceLanguage, 'cardsFilterActive'), count: activeCount },
+    { key: 'archived', label: t(interfaceLanguage, 'cardsFilterArchived'), count: archivedCount },
+    { key: 'all', label: t(interfaceLanguage, 'cardsFilterAll'), count: deckCards.length },
   ];
 
   const SORTS: { key: SortKey; label: string }[] = [
-    { key: 'newest', label: t(nativeLanguage, 'cardsSortNewest') },
-    { key: 'oldest', label: t(nativeLanguage, 'cardsSortOldest') },
-    { key: 'az', label: t(nativeLanguage, 'cardsSortAZ') },
+    { key: 'newest', label: t(interfaceLanguage, 'cardsSortNewest') },
+    { key: 'oldest', label: t(interfaceLanguage, 'cardsSortOldest') },
+    { key: 'az', label: t(interfaceLanguage, 'cardsSortAZ') },
   ];
 
   // Three groups behind one button. The deck group is left out entirely when
@@ -299,13 +299,13 @@ export default function CardsScreen() {
   // and a group holding two chips that select the same list is noise.
   const filterGroups: FilterGroup[] = [
     ...(deckFilters.length > 0 ? [{
-      title: t(nativeLanguage, 'cardsFilterDeckGroup'),
+      title: t(interfaceLanguage, 'cardsFilterDeckGroup'),
       options: deckFilters.map(d => ({ key: d.id, label: d.name, count: d.count })),
       selected: activeDeck,
       onSelect: (key: string) => { setDeckKey(key); exitSelectMode(); },
     }] : []),
     {
-      title: t(nativeLanguage, 'cardsFilterStatusGroup'),
+      title: t(interfaceLanguage, 'cardsFilterStatusGroup'),
       options: FILTERS.map(f => ({ key: f.key, label: f.label, count: f.count })),
       selected: filterKey,
       onSelect: (key: string) => { setFilterKey(key as FilterKey); exitSelectMode(); },
@@ -313,7 +313,7 @@ export default function CardsScreen() {
     {
       // No counts: sorting reorders the same rows, so every count would be the
       // same number three times.
-      title: t(nativeLanguage, 'cardsFilterSortGroup'),
+      title: t(interfaceLanguage, 'cardsFilterSortGroup'),
       options: SORTS,
       selected: sortKey,
       onSelect: (key: string) => setSortKey(key as SortKey),
@@ -347,10 +347,10 @@ export default function CardsScreen() {
             />
             <View style={s.editActions}>
               <TouchableOpacity style={s.editSaveBtn} onPress={() => handleEditSave(card)}>
-                <Text style={s.editSaveBtnText}>{t(nativeLanguage, 'save')}</Text>
+                <Text style={s.editSaveBtnText}>{t(interfaceLanguage, 'save')}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={s.editCancelBtn} onPress={() => { setEditingCardId(null); setEditDraft(null); }}>
-                <Text style={s.editCancelBtnText}>{t(nativeLanguage, 'cancel')}</Text>
+                <Text style={s.editCancelBtnText}>{t(interfaceLanguage, 'cancel')}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -371,10 +371,10 @@ export default function CardsScreen() {
               >
                 <View style={s.cardContent}>
                   <Text style={s.cardKorean}>{getStudyLangSide(card)}</Text>
-                  <Text style={s.cardEnglish}>{getBackSide(card, nativeLanguage)}</Text>
+                  <Text style={s.cardEnglish}>{getBackSide(card, deckNativeLanguage)}</Text>
                   <Text style={s.cardDate}>
-                    {t(nativeLanguage, 'savedAt')} {new Date(card.createdAt).toLocaleDateString()}
-                    {card.archived ? `  ·  ${t(nativeLanguage, 'cardsFilterArchived')}` : ''}
+                    {t(interfaceLanguage, 'savedAt')} {new Date(card.createdAt).toLocaleDateString()}
+                    {card.archived ? `  ·  ${t(interfaceLanguage, 'cardsFilterArchived')}` : ''}
                   </Text>
                 </View>
               </TouchableOpacity>
@@ -384,21 +384,21 @@ export default function CardsScreen() {
                     <>
                       <TouchableOpacity style={s.actionBtn} onPress={() => {
                         setEditingCardId(card.id!);
-                        setEditDraft({ [config.studyField]: getStudyLangSide(card), [backConfig.backField]: getBackSide(card, nativeLanguage) });
+                        setEditDraft({ [config.studyField]: getStudyLangSide(card), [backConfig.backField]: getBackSide(card, deckNativeLanguage) });
                       }}>
-                        <Text style={s.actionBtnText}>{t(nativeLanguage, 'edit')}</Text>
+                        <Text style={s.actionBtnText}>{t(interfaceLanguage, 'edit')}</Text>
                       </TouchableOpacity>
                       <TouchableOpacity style={[s.actionBtn, s.actionBtnMuted]} onPress={() => handleArchive(card)}>
-                        <Text style={s.actionBtnMutedText}>{t(nativeLanguage, 'archive')}</Text>
+                        <Text style={s.actionBtnMutedText}>{t(interfaceLanguage, 'archive')}</Text>
                       </TouchableOpacity>
                     </>
                   ) : (
                     <TouchableOpacity style={[s.actionBtn, s.actionBtnMuted]} onPress={() => handleRestore(card)}>
-                      <Text style={s.actionBtnMutedText}>{t(nativeLanguage, 'restore')}</Text>
+                      <Text style={s.actionBtnMutedText}>{t(interfaceLanguage, 'restore')}</Text>
                     </TouchableOpacity>
                   )}
                   <TouchableOpacity style={[s.actionBtn, s.actionBtnDelete]} onPress={() => handleDelete(card)}>
-                    <Text style={s.actionBtnDeleteText}>{t(nativeLanguage, 'delete')}</Text>
+                    <Text style={s.actionBtnDeleteText}>{t(interfaceLanguage, 'delete')}</Text>
                   </TouchableOpacity>
                 </View>
               )}
@@ -413,23 +413,23 @@ export default function CardsScreen() {
     <SafeAreaView style={s.root} edges={['top']}>
       <View style={s.header}>
         <View style={s.headerTop}>
-          <Text style={s.title}>{t(nativeLanguage, 'cardsPageTitle')}</Text>
+          <Text style={s.title}>{t(interfaceLanguage, 'cardsPageTitle')}</Text>
           {user && (
             <View style={s.headerActions}>
               <TouchableOpacity style={s.headerBtn} onPress={() => setShowImport(true)}>
-                <Text style={s.headerBtnText}>{t(nativeLanguage, 'cardsImport')}</Text>
+                <Text style={s.headerBtnText}>{t(interfaceLanguage, 'cardsImport')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[s.headerBtn, visibleCards.length === 0 && s.headerBtnDisabled]}
                 onPress={promptExport}
                 disabled={visibleCards.length === 0}
               >
-                <Text style={s.headerBtnText}>{t(nativeLanguage, 'cardsExport')}</Text>
+                <Text style={s.headerBtnText}>{t(interfaceLanguage, 'cardsExport')}</Text>
               </TouchableOpacity>
             </View>
           )}
         </View>
-        <Text style={s.subtitle}>{t(nativeLanguage, 'cardsPageDescription')}</Text>
+        <Text style={s.subtitle}>{t(interfaceLanguage, 'cardsPageDescription')}</Text>
       </View>
 
       {importSuccess && (
@@ -440,7 +440,7 @@ export default function CardsScreen() {
 
       {!user ? (
         <View style={s.emptyState}>
-          <Text style={s.emptyText}>{t(nativeLanguage, 'cardsSignInPrompt')}</Text>
+          <Text style={s.emptyText}>{t(interfaceLanguage, 'cardsSignInPrompt')}</Text>
         </View>
       ) : (
         <>
@@ -449,7 +449,7 @@ export default function CardsScreen() {
               style={s.searchInput}
               value={search}
               onChangeText={setSearch}
-              placeholder={t(nativeLanguage, 'cardsSearchPlaceholder')}
+              placeholder={t(interfaceLanguage, 'cardsSearchPlaceholder')}
               placeholderTextColor={C.muted}
             />
 
@@ -467,7 +467,7 @@ export default function CardsScreen() {
                     style={s.filterBtn}
                     onPress={() => setShowFilters(true)}
                     accessibilityRole="button"
-                    accessibilityLabel={t(nativeLanguage, 'cardsFilterButtonLabel')}
+                    accessibilityLabel={t(interfaceLanguage, 'cardsFilterButtonLabel')}
                     accessibilityValue={{ text: filterSummary }}
                   >
                     <Text style={s.filterBtnText} numberOfLines={1}>{filterSummary}</Text>
@@ -478,18 +478,18 @@ export default function CardsScreen() {
                     onPress={() => setSelectMode(true)}
                     disabled={visibleCards.length === 0}
                   >
-                    <Text style={s.selectBtnText}>{t(nativeLanguage, 'bulkSelect')}</Text>
+                    <Text style={s.selectBtnText}>{t(interfaceLanguage, 'bulkSelect')}</Text>
                   </TouchableOpacity>
                 </>
               ) : (
                 <View style={s.selectControls}>
                   <TouchableOpacity style={s.selectBtn} onPress={toggleSelectAll}>
                     <Text style={s.selectBtnText}>
-                      {allVisibleSelected ? t(nativeLanguage, 'bulkDeselectAll') : t(nativeLanguage, 'bulkSelectAll')}
+                      {allVisibleSelected ? t(interfaceLanguage, 'bulkDeselectAll') : t(interfaceLanguage, 'bulkSelectAll')}
                     </Text>
                   </TouchableOpacity>
                   <TouchableOpacity style={s.selectBtn} onPress={exitSelectMode}>
-                    <Text style={s.selectBtnText}>{t(nativeLanguage, 'bulkCancel')}</Text>
+                    <Text style={s.selectBtnText}>{t(interfaceLanguage, 'bulkCancel')}</Text>
                   </TouchableOpacity>
                 </View>
               )}
@@ -505,7 +505,7 @@ export default function CardsScreen() {
           {loading ? (
             // The row shape you are about to get, at its real height, so the
             // list does not jump when the query lands. Six is roughly a screen.
-            <SkeletonGroup label={t(nativeLanguage, 'loadingFlashcards')} style={s.list}>
+            <SkeletonGroup label={t(interfaceLanguage, 'loadingFlashcards')} style={s.list}>
               <SkeletonRows count={6} render={() => (
                 <View style={s.cardRow}>
                   <SkeletonBar width={140} height={19} />
@@ -523,7 +523,7 @@ export default function CardsScreen() {
             </SkeletonGroup>
           ) : visibleCards.length === 0 ? (
             <View style={s.emptyState}>
-              <Text style={s.emptyText}>{t(nativeLanguage, 'cardsEmpty')}</Text>
+              <Text style={s.emptyText}>{t(interfaceLanguage, 'cardsEmpty')}</Text>
             </View>
           ) : (
             <FlatList
@@ -543,7 +543,7 @@ export default function CardsScreen() {
       {selectMode && (
         <View style={s.bulkBar}>
           <Text style={s.bulkCount}>
-            {nativeLanguage === 'Korean' ? `${selectedIds.size}개 선택됨` : `${selectedIds.size} selected`}
+            {interfaceLanguage === 'Korean' ? `${selectedIds.size}개 선택됨` : `${selectedIds.size} selected`}
           </Text>
           <View style={s.bulkActions}>
             {filterKey !== 'archived' && (
@@ -552,7 +552,7 @@ export default function CardsScreen() {
                 onPress={handleBulkArchive}
                 disabled={selectedIds.size === 0 || bulkWorking}
               >
-                <Text style={s.bulkBtnText}>{t(nativeLanguage, 'bulkArchiveSelected')}</Text>
+                <Text style={s.bulkBtnText}>{t(interfaceLanguage, 'bulkArchiveSelected')}</Text>
               </TouchableOpacity>
             )}
             <TouchableOpacity
@@ -560,7 +560,7 @@ export default function CardsScreen() {
               onPress={handleBulkDelete}
               disabled={selectedIds.size === 0 || bulkWorking}
             >
-              <Text style={s.bulkBtnDeleteText}>{t(nativeLanguage, 'bulkDeleteSelected')}</Text>
+              <Text style={s.bulkBtnDeleteText}>{t(interfaceLanguage, 'bulkDeleteSelected')}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -569,7 +569,7 @@ export default function CardsScreen() {
       {showFilters && (
         <FilterSheet
           groups={filterGroups}
-          nativeLanguage={nativeLanguage}
+          interfaceLanguage={interfaceLanguage}
           onClose={() => setShowFilters(false)}
         />
       )}
@@ -584,7 +584,8 @@ export default function CardsScreen() {
         <CardDetailModal
           card={detailCard}
           studyLanguage={studyLanguage}
-          nativeLanguage={nativeLanguage}
+          interfaceLanguage={interfaceLanguage}
+          deckNativeLanguage={deckNativeLanguage}
           onClose={() => setDetailCard(null)}
           // The modal writes — enrichment, an edited back, archive, delete —
           // and the listener above reports every one of them, so this list no

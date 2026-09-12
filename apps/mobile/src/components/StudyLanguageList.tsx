@@ -1,75 +1,82 @@
-import React, { useMemo } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { SUPPORTED_STUDY_LANGUAGES, resolveNativeLanguage, t } from '@amgi/core';
-import type { StudyLanguage, TranslationKey } from '@amgi/core';
+import { getStudyLanguageConfig, t } from '@amgi/core';
 import { useUser } from '../context/UserContext';
 import { useTheme } from '../context/ThemeContext';
+import AddLanguageSheet from './AddLanguageSheet';
 import type { Palette } from '../theme';
 
 /**
- * The study-language options, with a check on the one in force.
+ * The languages you have added, with a check on the one in force.
  *
- * Mirrors web's `StudyLanguageList` export and exists for the same reason: the
+ * ⚠️ **Only added languages appear**, where this used to list all nine the app
+ * supports. That change is what removes the confirmation dialog this component
+ * used to carry: the warning existed because picking the language Amgi was
+ * speaking to you in would relocate your *native* language and re-language the
+ * whole interface. Neither half of that can happen now — the interface language
+ * is its own setting, and a deck's explanation language is chosen when the deck
+ * is added. `resolveNativeLanguage` is gone from the codebase entirely.
+ *
+ * Each row names the pair, because that is what a deck is: the language, and
+ * the language it is explained in.
+ *
+ * Mirrors web's `StudyLanguageList` and exists for the same reason: the
  * settings screen and the quick switcher on Progress both offer this choice,
  * and a switch that behaves differently depending on where it was made is a
- * switch nobody trusts. In particular the confirmation below belongs to the
- * *choice*, not to either surface — settings never had it and should have.
+ * switch nobody trusts.
  */
 export default function StudyLanguageList({ onSelect }: { onSelect?: () => void }) {
   const { C } = useTheme();
   const s = useMemo(() => makeStyles(C), [C]);
-  const { nativeLanguage, studyLanguage, setStudyLanguage } = useUser();
+  const { interfaceLanguage, languages, studyLanguage, setStudyLanguage } = useUser();
+  const [addOpen, setAddOpen] = useState(false);
 
-  const labelFor = (code: string) => t(nativeLanguage, `label${code}` as TranslationKey);
-
-  const choose = (code: StudyLanguage) => {
-    const commit = () => { void setStudyLanguage(code); onSelect?.(); };
-
-    // Choosing the language Amgi is currently speaking to you in moves your
-    // *native* language — `setStudyLanguage` runs `resolveNativeLanguage`, so
-    // the whole interface changes language on the next render. That is
-    // defensible from a settings screen and alarming from a one-tap chip, so
-    // it is confirmed here rather than at either call site, and named: the
-    // dialog says which language the app is about to start speaking.
-    const nextNative = resolveNativeLanguage(code, nativeLanguage, studyLanguage);
-    if (nextNative && nextNative !== nativeLanguage) {
-      Alert.alert(
-        t(nativeLanguage, 'switchNativeWarningTitle'),
-        t(nativeLanguage, 'switchNativeWarningBody', {
-          study: labelFor(code),
-          native: labelFor(nextNative),
-        }),
-        [
-          { text: t(nativeLanguage, 'cancel'), style: 'cancel' },
-          { text: t(nativeLanguage, 'switchNativeWarningConfirm'), onPress: commit },
-        ],
-      );
-      return;
-    }
-    commit();
-  };
+  const nativeLabel = (native: string) =>
+    t(interfaceLanguage, native === 'Korean' ? 'labelKorean' : 'labelEnglish');
 
   return (
     <View>
-      {SUPPORTED_STUDY_LANGUAGES.map(({ code, label, labelNative }) => {
-        const active = studyLanguage === code;
+      {languages.map(pair => {
+        const active = studyLanguage === pair.study;
         return (
           <TouchableOpacity
-            key={code}
+            key={pair.study}
             style={s.row}
-            onPress={() => choose(code)}
+            onPress={() => { void setStudyLanguage(pair.study); onSelect?.(); }}
             accessibilityRole="button"
             accessibilityState={{ selected: active }}
           >
-            <Text style={[s.label, active && s.labelActive]} numberOfLines={1}>
-              {label}
-              {labelNative !== label && <Text style={s.native}>{`  ${labelNative}`}</Text>}
-            </Text>
+            <View style={s.rowMain}>
+              <Text style={[s.label, active && s.labelActive]} numberOfLines={1}>
+                {t(interfaceLanguage, getStudyLanguageConfig(pair.study).studyLabelKey)}
+              </Text>
+              {/* The half that used to be invisible. Without it two decks read
+                  as the same choice made twice. */}
+              <Text style={s.native} numberOfLines={1}>
+                {t(interfaceLanguage, 'languagePairSummary', { native: nativeLabel(pair.native) })}
+              </Text>
+            </View>
             {active && <Ionicons name="checkmark" size={18} color={C.highlight} />}
           </TouchableOpacity>
         );
       })}
+
+      <TouchableOpacity
+        style={[s.row, s.addRow]}
+        onPress={() => setAddOpen(true)}
+        accessibilityRole="button"
+      >
+        <Ionicons name="add" size={18} color={C.muted} />
+        <Text style={s.addLabel}>{t(interfaceLanguage, 'addLanguage')}</Text>
+      </TouchableOpacity>
+
+      {addOpen && (
+        <AddLanguageSheet
+          onClose={() => setAddOpen(false)}
+          onAdded={() => { setAddOpen(false); onSelect?.(); }}
+        />
+      )}
     </View>
   );
 }
@@ -80,8 +87,11 @@ function makeStyles(C: Palette) {
       flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
       gap: 12, paddingVertical: 13, paddingHorizontal: 20,
     },
-    label: { flex: 1, fontSize: 15, color: C.text },
+    rowMain: { flex: 1 },
+    label: { fontSize: 15, color: C.text },
     labelActive: { color: C.highlight, fontWeight: '700' },
-    native: { color: C.muted, fontWeight: '400' },
+    native: { fontSize: 12, color: C.muted, marginTop: 1 },
+    addRow: { justifyContent: 'flex-start', borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: C.border },
+    addLabel: { fontSize: 15, color: C.muted },
   });
 }

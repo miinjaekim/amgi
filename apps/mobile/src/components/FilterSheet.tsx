@@ -21,7 +21,7 @@ export interface FilterGroup {
 interface Props {
   groups: FilterGroup[];
   onClose: () => void;
-  nativeLanguage: string | null | undefined;
+  interfaceLanguage: string | null | undefined;
 }
 
 /**
@@ -41,7 +41,7 @@ interface Props {
  * closes. A sheet that could be cancelled would need a Cancel, and undoing a
  * filter is already one tap.
  */
-export default function FilterSheet({ groups, onClose, nativeLanguage }: Props) {
+export default function FilterSheet({ groups, onClose, interfaceLanguage }: Props) {
   const { C } = useTheme();
   const s = useMemo(() => makeStyles(C), [C]);
 
@@ -56,7 +56,7 @@ export default function FilterSheet({ groups, onClose, nativeLanguage }: Props) 
           style={StyleSheet.absoluteFill}
           onPress={onClose}
           accessibilityRole="button"
-          accessibilityLabel={t(nativeLanguage, 'cardsFilterDone')}
+          accessibilityLabel={t(interfaceLanguage, 'cardsFilterDone')}
         />
         <View style={s.sheet}>
           <ScrollView style={s.bodyScroll} contentContainerStyle={s.body}>
@@ -85,7 +85,7 @@ export default function FilterSheet({ groups, onClose, nativeLanguage }: Props) 
             ))}
           </ScrollView>
           <TouchableOpacity style={s.doneBtn} onPress={onClose}>
-            <Text style={s.doneBtnText}>{t(nativeLanguage, 'cardsFilterDone')}</Text>
+            <Text style={s.doneBtnText}>{t(interfaceLanguage, 'cardsFilterDone')}</Text>
           </TouchableOpacity>
         </View>
       </View>

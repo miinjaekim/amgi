@@ -18,8 +18,9 @@ import {
   readReminderPreferences, refreshReminders, writeReminderPreferences,
 } from '../src/services/reminders';
 import {
-  HANJA_PARTITIONS, SUPPORTED_LANGUAGES, SUPPORTED_STUDY_LANGUAGES, formatReminderTime,
-  reminderTimeOptions, t, type HanjaPartition, type ReminderPreferences,
+  HANJA_PARTITIONS, SUPPORTED_LANGUAGES, formatReminderTime,
+  getStudyLanguageConfig, reminderTimeOptions, t,
+  type HanjaPartition, type ReminderPreferences, type StudyLanguage,
 } from '@amgi/core';
 import { THEMES } from '../src/theme';
 import type { Palette } from '../src/theme';
@@ -38,7 +39,11 @@ export default function SettingsScreen() {
   const { C, theme, setTheme } = useTheme();
   const { speed, setSpeed, speeds } = usePronunciation();
   const s = useMemo(() => makeStyles(C), [C]);
-  const { user, authLoading, nativeLanguage, studyLanguage, hanjaPartition, setNativeLanguage, setHanjaPartition, deleteAccount, handleSignIn, handleSignOut } = useUser();
+  const {
+    user, authLoading, interfaceLanguage, languages, studyLanguage, hanjaPartition,
+    setInterfaceLanguage, setHanjaPartition, removeLanguage,
+    deleteAccount, handleSignIn, handleSignOut,
+  } = useUser();
   const [deleting, setDeleting] = useState(false);
   const [reminders, setReminders] = useState<ReminderPreferences | null>(null);
   const [remindersBlocked, setRemindersBlocked] = useState(false);
@@ -54,6 +59,9 @@ export default function SettingsScreen() {
    * Persist, then re-plan. Permission is requested on the way *in* to the first
    * reminder — iOS shows that dialog once ever, so it is spent where the reason
    * is obvious rather than on a cold launch. Turning something off never asks.
+   *
+   * The copy is chrome: a notification is Amgi speaking to you, not a card
+   * explaining itself, so it takes the interface language.
    */
   const updateReminders = useCallback(async (next: ReminderPreferences) => {
     const turningOn = (next.wordOfTheDay && !reminders?.wordOfTheDay)
@@ -65,19 +73,38 @@ export default function SettingsScreen() {
     setRemindersBlocked(false);
     setReminders(next);
     await writeReminderPreferences(next);
-    await refreshReminders(user?.uid, nativeLanguage);
-  }, [reminders, user, nativeLanguage]);
+    await refreshReminders(user?.uid, interfaceLanguage);
+  }, [reminders, user, interfaceLanguage]);
 
-  const currentStudy = SUPPORTED_STUDY_LANGUAGES.find(lang => lang.code === studyLanguage);
-  const studyLanguageLabel = currentStudy
-    ? (currentStudy.label !== currentStudy.labelNative
-        ? `${currentStudy.label} · ${currentStudy.labelNative}`
-        : currentStudy.label)
-    : studyLanguage;
+  const nativeLabel = (native: string) =>
+    t(interfaceLanguage, native === 'Korean' ? 'labelKorean' : 'labelEnglish');
+  const current = languages.find(pair => pair.study === studyLanguage);
+  const studyLanguageLabel = t(interfaceLanguage, getStudyLanguageConfig(studyLanguage).studyLabelKey);
 
   const openPrivacyPolicy = () => {
-    const url = nativeLanguage === 'Korean' ? `${PRIVACY_URL_BASE}/ko` : PRIVACY_URL_BASE;
+    const url = interfaceLanguage === 'Korean' ? `${PRIVACY_URL_BASE}/ko` : PRIVACY_URL_BASE;
     WebBrowser.openBrowserAsync(url);
+  };
+
+  /**
+   * Removing a deck takes it off the switcher and leaves every card where it
+   * is — which the dialog says, because "remove" next to a language is
+   * otherwise easy to read as "erase everything I have learned in it".
+   */
+  const confirmRemove = (study: StudyLanguage) => {
+    const name = t(interfaceLanguage, getStudyLanguageConfig(study).studyLabelKey);
+    Alert.alert(
+      t(interfaceLanguage, 'removeLanguageTitle', { study: name }),
+      t(interfaceLanguage, 'removeLanguageBody'),
+      [
+        { text: t(interfaceLanguage, 'cancel'), style: 'cancel' },
+        {
+          text: t(interfaceLanguage, 'removeLanguage'),
+          style: 'destructive',
+          onPress: () => { void removeLanguage(study); },
+        },
+      ],
+    );
   };
 
   /**
@@ -88,19 +115,19 @@ export default function SettingsScreen() {
    */
   const handleDeleteAccount = () => {
     Alert.alert(
-      t(nativeLanguage, 'deleteAccountConfirmTitle'),
-      `${t(nativeLanguage, 'deleteAccountWarning')}\n\n${t(nativeLanguage, 'deleteAccountExportHint')}`,
+      t(interfaceLanguage, 'deleteAccountConfirmTitle'),
+      `${t(interfaceLanguage, 'deleteAccountWarning')}\n\n${t(interfaceLanguage, 'deleteAccountExportHint')}`,
       [
-        { text: t(nativeLanguage, 'cancel'), style: 'cancel' },
+        { text: t(interfaceLanguage, 'cancel'), style: 'cancel' },
         {
-          text: t(nativeLanguage, 'deleteAccount'),
+          text: t(interfaceLanguage, 'deleteAccount'),
           style: 'destructive',
           onPress: () => Alert.alert(
-            t(nativeLanguage, 'deleteAccountConfirmTitle'),
-            t(nativeLanguage, 'deleteAccountWarning'),
+            t(interfaceLanguage, 'deleteAccountConfirmTitle'),
+            t(interfaceLanguage, 'deleteAccountWarning'),
             [
-              { text: t(nativeLanguage, 'cancel'), style: 'cancel' },
-              { text: t(nativeLanguage, 'deleteAccountAction'), style: 'destructive', onPress: runDelete },
+              { text: t(interfaceLanguage, 'cancel'), style: 'cancel' },
+              { text: t(interfaceLanguage, 'deleteAccountAction'), style: 'destructive', onPress: runDelete },
             ],
           ),
         },
@@ -116,11 +143,11 @@ export default function SettingsScreen() {
       // sweeping Firestore server-side; everything here is the device catching
       // up with a decision that has been made.
       await clearAllLocalData();
-      Alert.alert(t(nativeLanguage, 'deleteAccountSignedOut'));
+      Alert.alert(t(interfaceLanguage, 'deleteAccountSignedOut'));
     } catch (error) {
       // Backing out of the Google prompt is a decision, not a failure.
       if ((error as Error)?.message !== 'Reauthentication cancelled.') {
-        Alert.alert(t(nativeLanguage, 'deleteAccountFailed'));
+        Alert.alert(t(interfaceLanguage, 'deleteAccountFailed'));
       }
     } finally {
       setDeleting(false);
@@ -134,7 +161,7 @@ export default function SettingsScreen() {
       <TouchableOpacity onPress={() => router.back()} hitSlop={12} accessibilityRole="button">
         <Text style={s.back}>←</Text>
       </TouchableOpacity>
-      <Text style={s.headerLabel}>{t(nativeLanguage, 'settingsTitle')}</Text>
+      <Text style={s.headerLabel}>{t(interfaceLanguage, 'settingsTitle')}</Text>
     </View>
   );
 
@@ -152,7 +179,7 @@ export default function SettingsScreen() {
       {header}
       <ScrollView contentContainerStyle={s.scroll}>
         {/* Account */}
-        <Text style={s.sectionLabel}>{t(nativeLanguage, 'settingsAccount')}</Text>
+        <Text style={s.sectionLabel}>{t(interfaceLanguage, 'settingsAccount')}</Text>
         <View style={s.card}>
           {user ? (
             <View style={s.accountRow}>
@@ -170,46 +197,17 @@ export default function SettingsScreen() {
               </View>
             </View>
           ) : (
-            <Text style={s.signedOutText}>{t(nativeLanguage, 'settingsNotSignedIn')}</Text>
+            <Text style={s.signedOutText}>{t(interfaceLanguage, 'settingsNotSignedIn')}</Text>
           )}
         </View>
 
-        {/* Native language */}
-        <Text style={s.sectionLabel}>{t(nativeLanguage, 'settingsNativeLanguage')}</Text>
+        {/* Study language. A disclosure row rather than the chip grid the rows
+            below use: the list now carries a second line per row — the language
+            each deck is explained in — and a chip cannot hold two lines. */}
+        <Text style={s.sectionLabel}>{t(interfaceLanguage, 'settingsStudyLanguage')}</Text>
         <View style={s.card}>
           <Text style={s.settingDescription}>
-            {t(nativeLanguage, 'settingsNativeLanguageDesc')}
-          </Text>
-          <View style={s.langRow}>
-            {SUPPORTED_LANGUAGES.map(({ code, label }) => {
-              // No fallback highlight for an unset native language: showing
-              // English as selected claimed a preference nothing had stored.
-              // First run now answers this before settings is reachable, so
-              // an empty row here means the value is genuinely absent.
-              const active = nativeLanguage === code;
-              return (
-                <TouchableOpacity
-                  key={code}
-                  style={[s.langChip, active && s.langChipActive]}
-                  onPress={() => setNativeLanguage(code)}
-                >
-                  <Text style={[s.langChipText, active && s.langChipTextActive]}>
-                    {label}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        </View>
-
-        {/* Study language. A disclosure row rather than the chip grid the
-            rows below still use: nine languages wrapped to three lines and grow
-            with every one added, where native/theme/speed are bounded at two or
-            three and will stay that way. Web made the same split. */}
-        <Text style={s.sectionLabel}>{t(nativeLanguage, 'settingsStudyLanguage')}</Text>
-        <View style={s.card}>
-          <Text style={s.settingDescription}>
-            {t(nativeLanguage, 'settingsStudyLanguageDesc')}
+            {t(interfaceLanguage, 'settingsStudyLanguageDesc')}
           </Text>
           <TouchableOpacity
             style={s.disclosure}
@@ -217,7 +215,14 @@ export default function SettingsScreen() {
             accessibilityRole="button"
             accessibilityState={{ expanded: studyListOpen }}
           >
-            <Text style={s.disclosureValue}>{studyLanguageLabel}</Text>
+            <View style={s.disclosureMain}>
+              <Text style={s.disclosureValue}>{studyLanguageLabel}</Text>
+              {current && (
+                <Text style={s.disclosureNative}>
+                  {t(interfaceLanguage, 'languagePairSummary', { native: nativeLabel(current.native) })}
+                </Text>
+              )}
+            </View>
             <Ionicons
               name={studyListOpen ? 'chevron-up' : 'chevron-down'}
               size={18}
@@ -231,6 +236,72 @@ export default function SettingsScreen() {
           )}
         </View>
 
+        {/* Your languages — the management view, where a deck can be removed.
+            Separate from the switcher above on purpose: switching is a thing
+            you do daily and removing is a thing you do once, so a destructive
+            control does not sit in the row you tap to change decks. Hidden
+            while there is only one, where removing it is refused anyway. */}
+        {languages.length > 1 && (
+          <>
+            <Text style={s.sectionLabel}>{t(interfaceLanguage, 'settingsYourLanguages')}</Text>
+            <View style={s.card}>
+              <Text style={s.settingDescription}>
+                {t(interfaceLanguage, 'settingsYourLanguagesDesc')}
+              </Text>
+              {languages.map(pair => (
+                <View key={pair.study} style={s.pairRow}>
+                  <View style={s.pairMain}>
+                    <Text style={s.pairName} numberOfLines={1}>
+                      {t(interfaceLanguage, getStudyLanguageConfig(pair.study).studyLabelKey)}
+                    </Text>
+                    <Text style={s.pairNative} numberOfLines={1}>
+                      {t(interfaceLanguage, 'languagePairSummary', { native: nativeLabel(pair.native) })}
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    onPress={() => confirmRemove(pair.study)}
+                    hitSlop={8}
+                    accessibilityRole="button"
+                  >
+                    <Text style={s.removeText}>{t(interfaceLanguage, 'removeLanguage')}</Text>
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </View>
+          </>
+        )}
+
+        {/* App language. Deliberately no longer called "native language": it
+            does not decide what your cards are explained in any more — each
+            deck carries that itself — so naming it for the app is what stops
+            it reading as a second answer to the question above. */}
+        <Text style={s.sectionLabel}>{t(interfaceLanguage, 'settingsAppLanguage')}</Text>
+        <View style={s.card}>
+          <Text style={s.settingDescription}>
+            {t(interfaceLanguage, 'settingsAppLanguageDesc')}
+          </Text>
+          <View style={s.langRow}>
+            {SUPPORTED_LANGUAGES.map(({ code, label }) => {
+              // No fallback highlight for an unset language: showing English as
+              // selected claimed a preference nothing had stored. First run now
+              // answers this before settings is reachable, so an empty row here
+              // means the value is genuinely absent.
+              const active = interfaceLanguage === code;
+              return (
+                <TouchableOpacity
+                  key={code}
+                  style={[s.langChip, active && s.langChipActive]}
+                  onPress={() => { void setInterfaceLanguage(code); }}
+                >
+                  <Text style={[s.langChipText, active && s.langChipTextActive]}>
+                    {label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+
         {/* The hanja partition — which part of the card leads. A stacked list
             rather than the chip row below, because each option carries an
             example (水 → 물 수) that a chip cannot hold.
@@ -241,10 +312,10 @@ export default function SettingsScreen() {
             question. Chosen once, like the study language above. */}
         {studyLanguage === 'Hanja' && (
           <>
-            <Text style={s.sectionLabel}>{t(nativeLanguage, 'settingsHanjaPartition')}</Text>
+            <Text style={s.sectionLabel}>{t(interfaceLanguage, 'settingsHanjaPartition')}</Text>
             <View style={s.card}>
               <Text style={s.settingDescription}>
-                {t(nativeLanguage, 'settingsHanjaPartitionDesc')}
+                {t(interfaceLanguage, 'settingsHanjaPartitionDesc')}
               </Text>
               {HANJA_PARTITIONS.map(partition => {
                 const active = hanjaPartition === partition;
@@ -257,10 +328,10 @@ export default function SettingsScreen() {
                     accessibilityState={{ selected: active }}
                   >
                     <Text style={[s.partitionLabel, active && s.partitionLabelActive]}>
-                      {t(nativeLanguage, PARTITION_KEYS[partition].label)}
+                      {t(interfaceLanguage, PARTITION_KEYS[partition].label)}
                     </Text>
                     <Text style={[s.partitionDesc, active && s.partitionDescActive]}>
-                      {t(nativeLanguage, PARTITION_KEYS[partition].example)}
+                      {t(interfaceLanguage, PARTITION_KEYS[partition].example)}
                     </Text>
                   </TouchableOpacity>
                 );
@@ -270,7 +341,7 @@ export default function SettingsScreen() {
         )}
 
         {/* Theme */}
-        <Text style={s.sectionLabel}>{t(nativeLanguage, 'settingsTheme')}</Text>
+        <Text style={s.sectionLabel}>{t(interfaceLanguage, 'settingsTheme')}</Text>
         <View style={s.card}>
           <View style={s.langRow}>
             {THEMES.map(({ value, labelKey }) => {
@@ -282,7 +353,7 @@ export default function SettingsScreen() {
                   onPress={() => setTheme(value)}
                 >
                   <Text style={[s.langChipText, active && s.langChipTextActive]}>
-                    {t(nativeLanguage, labelKey)}
+                    {t(interfaceLanguage, labelKey)}
                   </Text>
                 </TouchableOpacity>
               );
@@ -293,10 +364,10 @@ export default function SettingsScreen() {
         {/* Pronunciation speed. One control for every play button in the app —
             term, translation and example sentences all render the same
             PronounceButton, so a second setting would have nothing to name. */}
-        <Text style={s.sectionLabel}>{t(nativeLanguage, 'settingsPronunciationSpeed')}</Text>
+        <Text style={s.sectionLabel}>{t(interfaceLanguage, 'settingsPronunciationSpeed')}</Text>
         <View style={s.card}>
           <Text style={s.settingDescription}>
-            {t(nativeLanguage, 'settingsPronunciationSpeedDesc')}
+            {t(interfaceLanguage, 'settingsPronunciationSpeedDesc')}
           </Text>
           <View style={s.langRow}>
             {speeds.map(({ value, labelKey }) => {
@@ -308,7 +379,7 @@ export default function SettingsScreen() {
                   onPress={() => setSpeed(value)}
                 >
                   <Text style={[s.langChipText, active && s.langChipTextActive]}>
-                    {t(nativeLanguage, labelKey)}
+                    {t(interfaceLanguage, labelKey)}
                   </Text>
                 </TouchableOpacity>
               );
@@ -320,12 +391,12 @@ export default function SettingsScreen() {
             who never asked is the dark pattern that comes before the copy. */}
         {user && reminders && (
           <>
-            <Text style={s.sectionLabel}>{t(nativeLanguage, 'settingsReminders')}</Text>
+            <Text style={s.sectionLabel}>{t(interfaceLanguage, 'settingsReminders')}</Text>
             <View style={s.card}>
               <View style={s.toggleRow}>
                 <View style={s.toggleLabel}>
-                  <Text style={s.linkRowText}>{t(nativeLanguage, 'reminderWordOfTheDay')}</Text>
-                  <Text style={s.toggleDesc}>{t(nativeLanguage, 'reminderWordOfTheDayDesc')}</Text>
+                  <Text style={s.linkRowText}>{t(interfaceLanguage, 'reminderWordOfTheDay')}</Text>
+                  <Text style={s.toggleDesc}>{t(interfaceLanguage, 'reminderWordOfTheDayDesc')}</Text>
                 </View>
                 <Switch
                   value={reminders.wordOfTheDay}
@@ -338,8 +409,8 @@ export default function SettingsScreen() {
 
               <View style={s.toggleRow}>
                 <View style={s.toggleLabel}>
-                  <Text style={s.linkRowText}>{t(nativeLanguage, 'reminderReview')}</Text>
-                  <Text style={s.toggleDesc}>{t(nativeLanguage, 'reminderReviewDesc')}</Text>
+                  <Text style={s.linkRowText}>{t(interfaceLanguage, 'reminderReview')}</Text>
+                  <Text style={s.toggleDesc}>{t(interfaceLanguage, 'reminderReviewDesc')}</Text>
                 </View>
                 <Switch
                   value={reminders.reviewReminder}
@@ -353,7 +424,7 @@ export default function SettingsScreen() {
                   setting without a decision behind it. */}
               {reminders.reviewReminder && (
                 <TouchableOpacity style={s.timeRow} onPress={() => setTimePickerOpen(true)}>
-                  <Text style={s.toggleDesc}>{t(nativeLanguage, 'reminderTime')}</Text>
+                  <Text style={s.toggleDesc}>{t(interfaceLanguage, 'reminderTime')}</Text>
                   <Text style={s.timeValue}>
                     {formatReminderTime(reminders.reviewHour, reminders.reviewMinute)}
                   </Text>
@@ -362,7 +433,7 @@ export default function SettingsScreen() {
 
               {remindersBlocked && (
                 <TouchableOpacity style={s.blockedRow} onPress={() => Linking.openSettings()}>
-                  <Text style={s.blockedText}>{t(nativeLanguage, 'reminderBlocked')}</Text>
+                  <Text style={s.blockedText}>{t(interfaceLanguage, 'reminderBlocked')}</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -371,16 +442,16 @@ export default function SettingsScreen() {
 
         {/* What is held, in plain language, on the screen that also erases it —
             a privacy policy behind a link is not the same as telling someone. */}
-        <Text style={s.sectionLabel}>{t(nativeLanguage, 'settingsYourData')}</Text>
+        <Text style={s.sectionLabel}>{t(interfaceLanguage, 'settingsYourData')}</Text>
         <View style={s.card}>
-          <Text style={s.blurbText}>{t(nativeLanguage, 'settingsYourDataBlurb')}</Text>
+          <Text style={s.blurbText}>{t(interfaceLanguage, 'settingsYourDataBlurb')}</Text>
         </View>
 
         {/* About */}
-        <Text style={s.sectionLabel}>{t(nativeLanguage, 'settingsAbout')}</Text>
+        <Text style={s.sectionLabel}>{t(interfaceLanguage, 'settingsAbout')}</Text>
         <View style={s.card}>
           <TouchableOpacity style={s.linkRow} onPress={openPrivacyPolicy}>
-            <Text style={s.linkRowText}>{t(nativeLanguage, 'settingsPrivacyPolicy')}</Text>
+            <Text style={s.linkRowText}>{t(interfaceLanguage, 'settingsPrivacyPolicy')}</Text>
             <Ionicons name="open-outline" size={18} color={C.muted} />
           </TouchableOpacity>
         </View>
@@ -390,7 +461,7 @@ export default function SettingsScreen() {
           {user ? (
             <>
               <TouchableOpacity style={s.signOutBtn} onPress={handleSignOut}>
-                <Text style={s.signOutBtnText}>{t(nativeLanguage, 'signOut')}</Text>
+                <Text style={s.signOutBtnText}>{t(interfaceLanguage, 'signOut')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={s.deleteBtn}
@@ -400,14 +471,14 @@ export default function SettingsScreen() {
                 {deleting ? (
                   <ActivityIndicator size="small" color={C.error} />
                 ) : (
-                  <Text style={s.deleteBtnText}>{t(nativeLanguage, 'deleteAccount')}</Text>
+                  <Text style={s.deleteBtnText}>{t(interfaceLanguage, 'deleteAccount')}</Text>
                 )}
               </TouchableOpacity>
-              <Text style={s.deleteHint}>{t(nativeLanguage, 'deleteAccountBlurb')}</Text>
+              <Text style={s.deleteHint}>{t(interfaceLanguage, 'deleteAccountBlurb')}</Text>
             </>
           ) : (
             <TouchableOpacity style={s.signInBtn} onPress={handleSignIn}>
-              <Text style={s.signInBtnText}>{t(nativeLanguage, 'settingsSignInWithGoogle')}</Text>
+              <Text style={s.signInBtnText}>{t(interfaceLanguage, 'settingsSignInWithGoogle')}</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -416,7 +487,7 @@ export default function SettingsScreen() {
       {reminders && (
         <BottomSheet
           visible={timePickerOpen}
-          title={t(nativeLanguage, 'reminderTime')}
+          title={t(interfaceLanguage, 'reminderTime')}
           onClose={() => setTimePickerOpen(false)}
         >
           {reminderTimeOptions().map(({ hour, minute }) => (
@@ -475,6 +546,16 @@ function makeStyles(C: Palette) {
   langChipText: { fontSize: 15, color: C.text, fontWeight: '500' },
   langChipTextActive: { color: C.bg, fontWeight: '700' },
 
+  // Your languages — one row per pair, with the way to drop one.
+  pairRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    gap: 12, paddingVertical: 10, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: C.border,
+  },
+  pairMain: { flex: 1 },
+  pairName: { fontSize: 15, color: C.text, fontWeight: '500' },
+  pairNative: { fontSize: 12, color: C.muted, marginTop: 1 },
+  removeText: { fontSize: 13, color: C.error, fontWeight: '600' },
+
   // Hanja partition — a stacked list, because each row carries an example
   // under its name and a chip row cannot hold two lines.
   partitionRow: {
@@ -493,7 +574,9 @@ function makeStyles(C: Palette) {
     gap: 12, paddingHorizontal: 14, paddingVertical: 12,
     borderRadius: 12, borderWidth: 1, borderColor: C.border, backgroundColor: C.bg,
   },
-  disclosureValue: { flex: 1, fontSize: 15, color: C.text, fontWeight: '500' },
+  disclosureMain: { flex: 1 },
+  disclosureValue: { fontSize: 15, color: C.text, fontWeight: '500' },
+  disclosureNative: { fontSize: 12, color: C.muted, marginTop: 1 },
   // Negative side margins so the list's own row padding lines up with the card
   // edge rather than sitting inset twice over.
   disclosureList: {

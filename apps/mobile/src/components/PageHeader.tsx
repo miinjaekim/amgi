@@ -54,7 +54,7 @@ interface Props {
  * checklist was rejected for being.
  */
 export default function PageHeader({ titleKey, helpTitleKey, helpLeadKey, helpPointsKey, streak }: Props) {
-  const { nativeLanguage } = useUser();
+  const { interfaceLanguage } = useUser();
   const { C } = useTheme();
   const s = useMemo(() => makeStyles(C), [C]);
   const [helpOpen, setHelpOpen] = useState(false);
@@ -62,12 +62,12 @@ export default function PageHeader({ titleKey, helpTitleKey, helpLeadKey, helpPo
   return (
     <>
       <View style={s.header}>
-        <Text style={s.title}>{t(nativeLanguage, titleKey)}</Text>
+        <Text style={s.title}>{t(interfaceLanguage, titleKey)}</Text>
         <TouchableOpacity
           style={s.helpBtn}
           onPress={() => setHelpOpen(true)}
           accessibilityRole="button"
-          accessibilityLabel={t(nativeLanguage, 'helpButtonLabel')}
+          accessibilityLabel={t(interfaceLanguage, 'helpButtonLabel')}
           // The icon is small by design; this keeps the tap target honest.
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
         >
@@ -106,10 +106,10 @@ export default function PageHeader({ titleKey, helpTitleKey, helpLeadKey, helpPo
             style={StyleSheet.absoluteFill}
             onPress={() => setHelpOpen(false)}
             accessibilityRole="button"
-            accessibilityLabel={t(nativeLanguage, 'helpClose')}
+            accessibilityLabel={t(interfaceLanguage, 'helpClose')}
           />
           <View style={s.sheet}>
-            <Text style={s.helpTitle}>{t(nativeLanguage, helpTitleKey)}</Text>
+            <Text style={s.helpTitle}>{t(interfaceLanguage, helpTitleKey)}</Text>
             {/* Shaped rather than merely shortened: one sentence that answers
                 the question, then the mechanics a user cannot infer from the
                 screen. Someone who taps "?" wants to stop reading quickly, and
@@ -119,8 +119,8 @@ export default function PageHeader({ titleKey, helpTitleKey, helpLeadKey, helpPo
                 than the normal case — the copy fits without it on a typical
                 phone, which is the point. */}
             <ScrollView style={s.bodyScroll} contentContainerStyle={s.bodyContent}>
-              <Text style={s.helpLead}>{t(nativeLanguage, helpLeadKey)}</Text>
-              {t(nativeLanguage, helpPointsKey).split('\n').map(point => (
+              <Text style={s.helpLead}>{t(interfaceLanguage, helpLeadKey)}</Text>
+              {t(interfaceLanguage, helpPointsKey).split('\n').map(point => (
                 <View key={point} style={s.pointRow}>
                   <Text style={s.bullet}>·</Text>
                   {/* `flex: 1` so a wrapped second line stays aligned with the
@@ -130,7 +130,7 @@ export default function PageHeader({ titleKey, helpTitleKey, helpLeadKey, helpPo
               ))}
             </ScrollView>
             <TouchableOpacity style={s.closeBtn} onPress={() => setHelpOpen(false)}>
-              <Text style={s.closeBtnText}>{t(nativeLanguage, 'helpClose')}</Text>
+              <Text style={s.closeBtnText}>{t(interfaceLanguage, 'helpClose')}</Text>
             </TouchableOpacity>
           </View>
         </View>

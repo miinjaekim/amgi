@@ -38,7 +38,10 @@ interface Props {
   packId?: string;
   uid?: string;
   studyLanguage?: StudyLanguage;
-  nativeLanguage: string | null | undefined;
+  /** Buttons, headings and confirmations — chrome. */
+  interfaceLanguage: string | null | undefined;
+  /** Everything *on the card*: the back slot, the reading, the badges. */
+  deckNativeLanguage: string;
   onClose: () => void;
   /** Fired after anything is written, so the owner can reload its list. */
   onChanged?: () => void;
@@ -61,7 +64,7 @@ function isExamplePairArray(arr: unknown[]): arr is ExamplePair[] {
  * show something once.
  */
 export default function CardDetailModal({
-  card, entry, packId, uid, studyLanguage, nativeLanguage, onClose, onChanged,
+  card, entry, packId, uid, studyLanguage, interfaceLanguage, deckNativeLanguage, onClose, onChanged,
 }: Props) {
   const { C } = useTheme();
   const s = useMemo(() => makeStyles(C), [C]);
@@ -70,7 +73,7 @@ export default function CardDetailModal({
     saved, setSaved, isRunning, savingEntry, error, setError, canEnrich,
     save: handleSave, enrich,
   } = useCardEnrichment({
-    card, entry, packId, uid, studyLanguage: lang, nativeLanguage,
+    card, entry, packId, uid, studyLanguage: lang, interfaceLanguage, deckNativeLanguage,
     onChanged: () => onChanged?.(),
   });
   /** Non-null while the back is being edited. */
@@ -80,8 +83,8 @@ export default function CardDetailModal({
   // unsaved entry is projected onto the two fields it can fill.
   const studySide = saved ? getStudyLangSide(saved) : entry?.study ?? '';
   const backSide = saved
-    ? getBackSide(saved, nativeLanguage)
-    : entry ? resolvePackBack(entry.back, lang, nativeLanguage) : '';
+    ? getBackSide(saved, deckNativeLanguage)
+    : entry ? resolvePackBack(entry.back, lang, deckNativeLanguage) : '';
 
   /**
    * A hanja card's back is 훈음 for every reader, and an English native gets
@@ -94,9 +97,9 @@ export default function CardDetailModal({
   const hunEumLine = lang === 'Hanja'
     ? (saved ? hunEum(saved) : entry?.back.Korean ?? '')
     : '';
-  const glossLine = lang === 'Hanja' && nativeLanguage !== 'Korean' ? backSide : '';
+  const glossLine = lang === 'Hanja' && deckNativeLanguage !== 'Korean' ? backSide : '';
 
-  const { backField } = getBackSideConfig(lang, nativeLanguage);
+  const { backField } = getBackSideConfig(lang, deckNativeLanguage);
   const characterBreakdown = saved ? getCharacterBreakdown(saved) : undefined;
   const characterSectionKey = getStudyLanguageConfig(lang).characterSectionKey ?? 'sectionHanja';
   const examples = saved?.examples;
@@ -104,10 +107,10 @@ export default function CardDetailModal({
   const hasDepth = !!(saved?.definition || characterBreakdown || saved?.notes);
   const hasDetails = hasDepth || hasExamples;
   const badges = [
-    saved ? partOfSpeechLabel(nativeLanguage, saved) : undefined,
+    saved ? partOfSpeechLabel(deckNativeLanguage, saved) : undefined,
     saved?.formality && saved.formality !== 'N/A' ? saved.formality : null,
     saved?.gender,
-    saved ? getReading(saved, lang, nativeLanguage) : undefined,
+    saved ? getReading(saved, lang, deckNativeLanguage) : undefined,
   ].filter(Boolean) as string[];
 
   /**
@@ -125,7 +128,7 @@ export default function CardDetailModal({
       setEditDraft(null);
       onChanged?.();
     } catch {
-      setError(t(nativeLanguage, 'errorSaveChanges'));
+      setError(t(interfaceLanguage, 'errorSaveChanges'));
     }
   };
 
@@ -139,30 +142,30 @@ export default function CardDetailModal({
         setSaved(prev => (prev ? { ...prev, archived: !restoring } : prev));
         onChanged?.();
       } catch {
-        setError(t(nativeLanguage, restoring ? 'errorRestoreFlashcard' : 'errorArchiveFlashcard'));
+        setError(t(interfaceLanguage, restoring ? 'errorRestoreFlashcard' : 'errorArchiveFlashcard'));
       }
     };
     if (restoring) { run(); return; }
-    Alert.alert(t(nativeLanguage, 'confirmArchive'), undefined, [
-      { text: t(nativeLanguage, 'cancel'), style: 'cancel' },
-      { text: t(nativeLanguage, 'archive'), style: 'destructive', onPress: run },
+    Alert.alert(t(interfaceLanguage, 'confirmArchive'), undefined, [
+      { text: t(interfaceLanguage, 'cancel'), style: 'cancel' },
+      { text: t(interfaceLanguage, 'archive'), style: 'destructive', onPress: run },
     ]);
   };
 
   const handleDelete = () => {
     if (!saved?.id) return;
     const id = saved.id;
-    Alert.alert(t(nativeLanguage, 'confirmDelete'), undefined, [
-      { text: t(nativeLanguage, 'cancel'), style: 'cancel' },
+    Alert.alert(t(interfaceLanguage, 'confirmDelete'), undefined, [
+      { text: t(interfaceLanguage, 'cancel'), style: 'cancel' },
       {
-        text: t(nativeLanguage, 'delete'), style: 'destructive',
+        text: t(interfaceLanguage, 'delete'), style: 'destructive',
         onPress: async () => {
           try {
             await deleteFlashcard(id, lang);
             onChanged?.();
             onClose();
           } catch {
-            setError(t(nativeLanguage, 'errorDeleteFlashcard'));
+            setError(t(interfaceLanguage, 'errorDeleteFlashcard'));
           }
         },
       },
@@ -201,7 +204,7 @@ export default function CardDetailModal({
                 disabled={savingEntry || !canEnrich}
               >
                 <Text style={s.primaryBtnText}>
-                  {savingEntry ? t(nativeLanguage, 'cardSaving') : t(nativeLanguage, 'cardSaveEntry')}
+                  {savingEntry ? t(interfaceLanguage, 'cardSaving') : t(interfaceLanguage, 'cardSaveEntry')}
                 </Text>
               </TouchableOpacity>
             )}
@@ -215,7 +218,7 @@ export default function CardDetailModal({
                 disabled={isRunning('depth') || !canEnrich}
               >
                 <Text style={s.secondaryBtnText}>
-                  {isRunning('depth') ? t(nativeLanguage, 'cardEnriching') : t(nativeLanguage, 'loadDefinition')}
+                  {isRunning('depth') ? t(interfaceLanguage, 'cardEnriching') : t(interfaceLanguage, 'loadDefinition')}
                 </Text>
               </TouchableOpacity>
             )}
@@ -226,7 +229,7 @@ export default function CardDetailModal({
                 disabled={isRunning('examples') || !canEnrich}
               >
                 <Text style={s.secondaryBtnText}>
-                  {isRunning('examples') ? t(nativeLanguage, 'cardEnriching') : t(nativeLanguage, 'loadExamples')}
+                  {isRunning('examples') ? t(interfaceLanguage, 'cardEnriching') : t(interfaceLanguage, 'loadExamples')}
                 </Text>
               </TouchableOpacity>
             )}
@@ -239,15 +242,15 @@ export default function CardDetailModal({
                 onPress={() => setEditDraft(saved[backField] ?? saved.english ?? saved.translation ?? '')}
                 disabled={savingEntry}
               >
-                <Text style={s.mutedBtnText}>{t(nativeLanguage, 'edit')}</Text>
+                <Text style={s.mutedBtnText}>{t(interfaceLanguage, 'edit')}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={s.secondaryBtn} onPress={handleArchiveToggle} disabled={savingEntry}>
                 <Text style={s.mutedBtnText}>
-                  {t(nativeLanguage, saved.archived ? 'restore' : 'archive')}
+                  {t(interfaceLanguage, saved.archived ? 'restore' : 'archive')}
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity style={s.secondaryBtn} onPress={handleDelete} disabled={savingEntry}>
-                <Text style={[s.mutedBtnText, { color: C.error }]}>{t(nativeLanguage, 'delete')}</Text>
+                <Text style={[s.mutedBtnText, { color: C.error }]}>{t(interfaceLanguage, 'delete')}</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -261,46 +264,46 @@ export default function CardDetailModal({
                 autoFocus
               />
               <TouchableOpacity style={s.primaryBtn} onPress={handleEditSave} disabled={savingEntry}>
-                <Text style={s.primaryBtnText}>{t(nativeLanguage, 'save')}</Text>
+                <Text style={s.primaryBtnText}>{t(interfaceLanguage, 'save')}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={s.secondaryBtn} onPress={() => setEditDraft(null)}>
-                <Text style={s.mutedBtnText}>{t(nativeLanguage, 'cancel')}</Text>
+                <Text style={s.mutedBtnText}>{t(interfaceLanguage, 'cancel')}</Text>
               </TouchableOpacity>
             </View>
           )}
 
           {(!saved || error) && (
             <Text style={[s.notice, error ? { color: C.error } : null]}>
-              {error ?? t(nativeLanguage, 'cardEnrichHint')}
+              {error ?? t(interfaceLanguage, 'cardEnrichHint')}
             </Text>
           )}
 
           <ScrollView contentContainerStyle={s.body}>
             {!hasDetails ? (
-              <Text style={s.muted}>{t(nativeLanguage, 'noCardDetails')}</Text>
+              <Text style={s.muted}>{t(interfaceLanguage, 'noCardDetails')}</Text>
             ) : (
               <>
                 {!!saved?.definition && (
                   <View style={s.section}>
-                    <Text style={s.sectionLabel}>{t(nativeLanguage, 'sectionDefinition')}</Text>
+                    <Text style={s.sectionLabel}>{t(interfaceLanguage, 'sectionDefinition')}</Text>
                     <Markdown>{saved.definition}</Markdown>
                   </View>
                 )}
                 {!!characterBreakdown && (
                   <View style={s.section}>
-                    <Text style={s.sectionLabel}>{t(nativeLanguage, characterSectionKey)}</Text>
+                    <Text style={s.sectionLabel}>{t(interfaceLanguage, characterSectionKey)}</Text>
                     <Markdown>{characterBreakdown}</Markdown>
                   </View>
                 )}
                 {!!saved?.notes && (
                   <View style={s.section}>
-                    <Text style={s.sectionLabel}>{t(nativeLanguage, 'sectionContext')}</Text>
+                    <Text style={s.sectionLabel}>{t(interfaceLanguage, 'sectionContext')}</Text>
                     <Markdown>{saved.notes}</Markdown>
                   </View>
                 )}
                 {hasExamples && (
                   <View style={s.section}>
-                    <Text style={s.sectionLabel}>{t(nativeLanguage, 'sectionExamples')}</Text>
+                    <Text style={s.sectionLabel}>{t(interfaceLanguage, 'sectionExamples')}</Text>
                     {(() => {
                       const raw = examples as unknown[];
                       if (raw.length > 0 && typeof raw[0] === 'string') {

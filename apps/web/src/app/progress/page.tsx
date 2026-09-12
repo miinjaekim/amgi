@@ -55,15 +55,15 @@ const LABELLED_WEEKDAYS = [1, 3, 5];
  * Built from a known Sunday through `Intl` rather than from translation keys:
  * seven more keys per locale to say what the platform already knows.
  */
-function weekdayLabels(nativeLanguage: string | null | undefined): string[] {
-  const locale = nativeLanguage === 'Korean' ? 'ko-KR' : 'en-GB';
+function weekdayLabels(interfaceLanguage: string | null | undefined): string[] {
+  const locale = interfaceLanguage === 'Korean' ? 'ko-KR' : 'en-GB';
   // 1970-01-04 was a Sunday.
   return [0, 1, 2, 3, 4, 5, 6].map(offset => new Date(Date.UTC(1970, 0, 4 + offset, 12))
     .toLocaleDateString(locale, { weekday: 'short' }));
 }
 
 export default function ProgressPage() {
-  const { user, authLoading, nativeLanguage, streak } = useUser();
+  const { user, authLoading, interfaceLanguage, streak } = useUser();
   const [rangeDays, setRangeDays] = useState<number>(90);
   /**
    * The result carries the range it was fetched for, so switching range reads
@@ -125,7 +125,7 @@ export default function ProgressPage() {
    * seven put a different weekday in row 0 every day. See `buildWeekGrid`.
    */
   const grid = useMemo(() => buildWeekGrid(heatmap), [heatmap]);
-  const weekdays = useMemo(() => weekdayLabels(nativeLanguage), [nativeLanguage]);
+  const weekdays = useMemo(() => weekdayLabels(interfaceLanguage), [interfaceLanguage]);
 
   /**
    * The hovered day, as its place in the grid.
@@ -249,9 +249,9 @@ export default function ProgressPage() {
     return (
       <div className="max-w-2xl mx-auto">
         <h1 className="text-2xl font-bold text-[var(--color-highlight)] mb-6">
-          {t(nativeLanguage, 'progressTitle')}
+          {t(interfaceLanguage, 'progressTitle')}
         </h1>
-        <p className="text-[var(--color-muted)]">{t(nativeLanguage, 'progressSignedOut')}</p>
+        <p className="text-[var(--color-muted)]">{t(interfaceLanguage, 'progressSignedOut')}</p>
       </div>
     );
   }
@@ -269,10 +269,10 @@ export default function ProgressPage() {
   return (
     <div className="max-w-2xl mx-auto">
       <h1 className="text-2xl font-bold text-[var(--color-highlight)] mb-1">
-        {t(nativeLanguage, 'progressTitle')}
+        {t(interfaceLanguage, 'progressTitle')}
       </h1>
       <p className="text-sm text-[var(--color-muted)] mb-6">
-        {t(nativeLanguage, 'progressDescription')}
+        {t(interfaceLanguage, 'progressDescription')}
       </p>
 
       {/* Share sits in the range row rather than by the title, so the window
@@ -287,25 +287,25 @@ export default function ProgressPage() {
               ? { borderColor: 'var(--color-highlight)', color: 'var(--color-highlight)', fontWeight: 700 }
               : { borderColor: 'var(--color-muted)', color: 'var(--color-muted)' }}
           >
-            {t(nativeLanguage, range.key)}
+            {t(interfaceLanguage, range.key)}
           </button>
         ))}
         {/* Offered only once there is something on the image. A zeroed story
             asset is not a modest result, it is a broken-looking one. */}
         {shareOptions.length > 0 && (
           <div className="ml-auto">
-            <ShareStatsButton options={shareOptions} nativeLanguage={nativeLanguage} />
+            <ShareStatsButton options={shareOptions} interfaceLanguage={interfaceLanguage} />
           </div>
         )}
       </div>
 
       {days === null ? (
-        <p className="text-[var(--color-muted)]">{t(nativeLanguage, 'progressLoading')}</p>
+        <p className="text-[var(--color-muted)]">{t(interfaceLanguage, 'progressLoading')}</p>
       ) : !hasHistory ? (
         <div>
-          <p className="text-[var(--color-muted)]">{t(nativeLanguage, 'progressEmpty')}</p>
+          <p className="text-[var(--color-muted)]">{t(interfaceLanguage, 'progressEmpty')}</p>
           <p className="text-sm text-[var(--color-muted)] opacity-70 mt-2">
-            {t(nativeLanguage, 'progressEmptyBody')}
+            {t(interfaceLanguage, 'progressEmptyBody')}
           </p>
         </div>
       ) : (
@@ -317,24 +317,24 @@ export default function ProgressPage() {
           <div className={`grid grid-cols-2 gap-3 mb-8 ${
             learned === null ? 'sm:grid-cols-3' : 'sm:grid-cols-4'
           }`}>
-            <Stat label={t(nativeLanguage, 'progressStreak')}
+            <Stat label={t(interfaceLanguage, 'progressStreak')}
               value={streak === 1
-                ? t(nativeLanguage, 'progressStreakDay')
-                : t(nativeLanguage, 'progressStreakDays', { count: streak })} />
-            <Stat label={t(nativeLanguage, 'progressStatReviews')} value={summary.totalReviews} />
-            <Stat label={t(nativeLanguage, 'progressStatAverage')} value={summary.averagePerActiveDay} />
+                ? t(interfaceLanguage, 'progressStreakDay')
+                : t(interfaceLanguage, 'progressStreakDays', { count: streak })} />
+            <Stat label={t(interfaceLanguage, 'progressStatReviews')} value={summary.totalReviews} />
+            <Stat label={t(interfaceLanguage, 'progressStatAverage')} value={summary.averagePerActiveDay} />
             {/* Shares its label with the tile on the shared image, so the two
                 surfaces cannot describe one number differently. It counts
                 *cards* where Reviews counts directions — the reason they carry
                 different nouns and never one shared one. */}
             {learned !== null && (
-              <Stat label={t(nativeLanguage, 'shareStatLearned')} value={learned.total} />
+              <Stat label={t(interfaceLanguage, 'shareStatLearned')} value={learned.total} />
             )}
           </div>
 
           <section className="mb-8">
             <h2 className="text-sm font-bold text-[var(--color-text)] mb-3">
-              {t(nativeLanguage, 'progressCalendar')}
+              {t(interfaceLanguage, 'progressCalendar')}
             </h2>
             {/* The weekday gutter sits outside the scroller so it stays put
                 while a year of columns slides past it. */}
@@ -373,7 +373,7 @@ export default function ProgressPage() {
                         className="absolute top-0 text-[9px] text-[var(--color-muted)]"
                         style={{ left: tick.column * COLUMN_PITCH }}
                       >
-                        {formatMonth(nativeLanguage, tick.date)}
+                        {formatMonth(interfaceLanguage, tick.date)}
                       </span>
                     ))}
                   </div>
@@ -388,7 +388,7 @@ export default function ProgressPage() {
                             <button
                               key={cell.date}
                               type="button"
-                              aria-label={describeDay(nativeLanguage, cell.date, daysByDate.get(cell.date))}
+                              aria-label={describeDay(interfaceLanguage, cell.date, daysByDate.get(cell.date))}
                               onMouseEnter={() => setHovered({ date: cell.date, column: columnIndex, row })}
                               onFocus={() => setHovered({ date: cell.date, column: columnIndex, row })}
                               onBlur={() => setHovered(null)}
@@ -403,7 +403,7 @@ export default function ProgressPage() {
 
                   {hovered && (
                     <DayTooltip
-                      nativeLanguage={nativeLanguage}
+                      interfaceLanguage={interfaceLanguage}
                       date={hovered.date}
                       day={daysByDate.get(hovered.date)}
                       column={hovered.column}
@@ -416,17 +416,17 @@ export default function ProgressPage() {
             {/* Named, not just graded: "Less → More" alone never says more of
                 what. */}
             <div className="flex items-center gap-1.5 mt-3 text-xs text-[var(--color-muted)]">
-              <span>{t(nativeLanguage, 'progressStatReviews')}</span>
-              <span>{t(nativeLanguage, 'progressLessMore')}</span>
+              <span>{t(interfaceLanguage, 'progressStatReviews')}</span>
+              <span>{t(interfaceLanguage, 'progressLessMore')}</span>
               {LEVEL_STYLES.map((style, level) => (
                 <div key={level} className={`w-3 h-3 rounded-sm ${style}`} />
               ))}
-              <span>{t(nativeLanguage, 'progressMore')}</span>
+              <span>{t(interfaceLanguage, 'progressMore')}</span>
             </div>
           </section>
 
           <WeekChart
-            nativeLanguage={nativeLanguage}
+            interfaceLanguage={interfaceLanguage}
             cells={weekCells}
             daysByDate={daysByDate}
             mark={weekMark}
@@ -436,7 +436,7 @@ export default function ProgressPage() {
           {languageRows.length > 0 && (
             <section>
               <h2 className="text-sm font-bold text-[var(--color-text)] mb-3">
-                {t(nativeLanguage, 'progressByLanguage')}
+                {t(interfaceLanguage, 'progressByLanguage')}
               </h2>
               <ul className="flex flex-col gap-2">
                 {languageRows.map(({ studyLanguage, progress, learned: learnedHere }) => (
@@ -445,25 +445,25 @@ export default function ProgressPage() {
                     className="flex items-baseline justify-between gap-3 p-3 rounded-xl border border-[var(--color-muted)]"
                   >
                     <span className="font-bold text-[var(--color-text)]">
-                      {t(nativeLanguage, languageLabelKey(studyLanguage))}
+                      {t(interfaceLanguage, languageLabelKey(studyLanguage))}
                     </span>
                     <span className="text-xs text-[var(--color-muted)] text-right">
                       {/* A row can be here for its learned count alone, with
                           nothing in the window — saying "0 reviews" would read
                           as a slump rather than as a language left alone. */}
                       {progress.reviews === 0
-                        ? t(nativeLanguage, 'progressTooltipNoReviews')
-                        : t(nativeLanguage, 'progressLanguageReviews', { count: progress.reviews })}
+                        ? t(interfaceLanguage, 'progressTooltipNoReviews')
+                        : t(interfaceLanguage, 'progressLanguageReviews', { count: progress.reviews })}
                       {learnedHere > 0 && (
                         <>
                           {' · '}
-                          {t(nativeLanguage, 'progressLanguageLearned', { count: learnedHere })}
+                          {t(interfaceLanguage, 'progressLanguageLearned', { count: learnedHere })}
                         </>
                       )}
                       {progress.newCards + progress.packCards > 0 && (
                         <>
                           {' · '}
-                          {t(nativeLanguage, 'progressStatNewCards')} {progress.newCards + progress.packCards}
+                          {t(interfaceLanguage, 'progressStatNewCards')} {progress.newCards + progress.packCards}
                         </>
                       )}
                     </span>
@@ -489,8 +489,8 @@ const COLUMN_PITCH = 16;
 /** Room above the grid for the month ticks. */
 const MONTH_ROW_HEIGHT = 14;
 
-function DayTooltip({ nativeLanguage, date, day, column, columnCount }: {
-  nativeLanguage: string | null | undefined;
+function DayTooltip({ interfaceLanguage, date, day, column, columnCount }: {
+  interfaceLanguage: string | null | undefined;
   date: string;
   day: DailyProgress | undefined;
   column: number;
@@ -522,17 +522,17 @@ function DayTooltip({ nativeLanguage, date, day, column, columnCount }: {
         border: '1px solid var(--color-muted)',
       }}
     >
-      <div className="font-bold text-[var(--color-text)]">{formatDay(nativeLanguage, date)}</div>
+      <div className="font-bold text-[var(--color-text)]">{formatDay(interfaceLanguage, date)}</div>
       <div className="text-[var(--color-muted)]">
         {reviews === 0
-          ? t(nativeLanguage, 'progressTooltipNoReviews')
+          ? t(interfaceLanguage, 'progressTooltipNoReviews')
           : reviews === 1
-            ? t(nativeLanguage, 'progressTooltipOneReview')
-            : t(nativeLanguage, 'progressTooltipReviews', { count: reviews })}
+            ? t(interfaceLanguage, 'progressTooltipOneReview')
+            : t(interfaceLanguage, 'progressTooltipReviews', { count: reviews })}
         {cardsAdded > 0 && (
           <> · {cardsAdded === 1
-            ? t(nativeLanguage, 'progressTooltipOneCard')
-            : t(nativeLanguage, 'progressTooltipCards', { count: cardsAdded })}</>
+            ? t(interfaceLanguage, 'progressTooltipOneCard')
+            : t(interfaceLanguage, 'progressTooltipCards', { count: cardsAdded })}</>
         )}
       </div>
     </div>
@@ -603,14 +603,14 @@ const weekMarkStore = {
  * already carry. Both marks share the title, the labels and the plot height,
  * so switching cannot shift the layout.
  */
-function WeekChart({ nativeLanguage, cells, daysByDate, mark, onMarkChange }: {
-  nativeLanguage: string | null | undefined;
+function WeekChart({ interfaceLanguage, cells, daysByDate, mark, onMarkChange }: {
+  interfaceLanguage: string | null | undefined;
   cells: HeatmapCell[];
   daysByDate: Map<string, DailyProgress>;
   mark: WeekMark;
   onMarkChange: (mark: WeekMark) => void;
 }) {
-  const weekdays = weekdayLabels(nativeLanguage);
+  const weekdays = weekdayLabels(interfaceLanguage);
   const busiest = Math.max(0, ...cells.map(cell => cell.reviews));
   /** The axis top. Marks scale to this, not to the raw busiest day. */
   const ceiling = niceCeiling(busiest);
@@ -639,7 +639,7 @@ function WeekChart({ nativeLanguage, cells, daysByDate, mark, onMarkChange }: {
     <section className="mb-8">
       <div className="flex items-baseline justify-between gap-3 mb-3">
         <h2 className="text-sm font-bold text-[var(--color-text)]">
-          {t(nativeLanguage, 'progressWeekTitle')}
+          {t(interfaceLanguage, 'progressWeekTitle')}
         </h2>
         <div className="flex gap-1">
           {(['bars', 'line'] as const).map(option => (
@@ -653,7 +653,7 @@ function WeekChart({ nativeLanguage, cells, daysByDate, mark, onMarkChange }: {
                 ? { borderColor: 'var(--color-highlight)', color: 'var(--color-highlight)' }
                 : { borderColor: 'var(--color-muted)', color: 'var(--color-muted)' }}
             >
-              {t(nativeLanguage, option === 'bars' ? 'progressChartBars' : 'progressChartLine')}
+              {t(interfaceLanguage, option === 'bars' ? 'progressChartBars' : 'progressChartLine')}
             </button>
           ))}
         </div>
@@ -787,7 +787,7 @@ function WeekChart({ nativeLanguage, cells, daysByDate, mark, onMarkChange }: {
               key={cell.date}
               type="button"
               className="flex-1 h-full cursor-default"
-              aria-label={describeDay(nativeLanguage, cell.date, daysByDate.get(cell.date))}
+              aria-label={describeDay(interfaceLanguage, cell.date, daysByDate.get(cell.date))}
               onMouseEnter={() => setHovered(index)}
               onFocus={() => setHovered(index)}
               onBlur={() => setHovered(null)}
@@ -813,18 +813,18 @@ function WeekChart({ nativeLanguage, cells, daysByDate, mark, onMarkChange }: {
             }}
           >
             <div className="font-bold text-[var(--color-text)]">
-              {formatDay(nativeLanguage, active.date)}
+              {formatDay(interfaceLanguage, active.date)}
             </div>
             <div className="text-[var(--color-muted)]">
               {active.reviews === 0
-                ? t(nativeLanguage, 'progressTooltipNoReviews')
+                ? t(interfaceLanguage, 'progressTooltipNoReviews')
                 : active.reviews === 1
-                  ? t(nativeLanguage, 'progressTooltipOneReview')
-                  : t(nativeLanguage, 'progressTooltipReviews', { count: active.reviews })}
+                  ? t(interfaceLanguage, 'progressTooltipOneReview')
+                  : t(interfaceLanguage, 'progressTooltipReviews', { count: active.reviews })}
               {activeCards > 0 && (
                 <> · {activeCards === 1
-                  ? t(nativeLanguage, 'progressTooltipOneCard')
-                  : t(nativeLanguage, 'progressTooltipCards', { count: activeCards })}</>
+                  ? t(interfaceLanguage, 'progressTooltipOneCard')
+                  : t(interfaceLanguage, 'progressTooltipCards', { count: activeCards })}</>
               )}
             </div>
           </div>
@@ -848,37 +848,37 @@ function WeekChart({ nativeLanguage, cells, daysByDate, mark, onMarkChange }: {
 }
 
 /** `2026-09-01` → `Sep` / `9월`, for the calendar's month ticks. */
-function formatMonth(nativeLanguage: string | null | undefined, date: string): string {
+function formatMonth(interfaceLanguage: string | null | undefined, date: string): string {
   return new Date(`${date}T12:00:00Z`).toLocaleDateString(
-    nativeLanguage === 'Korean' ? 'ko-KR' : 'en-GB',
+    interfaceLanguage === 'Korean' ? 'ko-KR' : 'en-GB',
     { month: 'short' },
   );
 }
 
 /** `2026-08-19` → `19 August` / `8월 19일`, in the reader's language. */
-function formatDay(nativeLanguage: string | null | undefined, date: string): string {
+function formatDay(interfaceLanguage: string | null | undefined, date: string): string {
   // Parsed at UTC noon so the date can't slip a day either side of the line.
   return new Date(`${date}T12:00:00Z`).toLocaleDateString(
-    nativeLanguage === 'Korean' ? 'ko-KR' : 'en-GB',
+    interfaceLanguage === 'Korean' ? 'ko-KR' : 'en-GB',
     { month: 'long', day: 'numeric' },
   );
 }
 
 /** The same content as the tooltip, flattened for screen readers. */
 function describeDay(
-  nativeLanguage: string | null | undefined,
+  interfaceLanguage: string | null | undefined,
   date: string,
   day: DailyProgress | undefined,
 ): string {
   const reviews = day?.reviews ?? 0;
   const cardsAdded = (day?.newCards ?? 0) + (day?.packCards ?? 0);
   const parts = [
-    formatDay(nativeLanguage, date),
+    formatDay(interfaceLanguage, date),
     reviews === 0
-      ? t(nativeLanguage, 'progressTooltipNoReviews')
-      : t(nativeLanguage, 'progressTooltipReviews', { count: reviews }),
+      ? t(interfaceLanguage, 'progressTooltipNoReviews')
+      : t(interfaceLanguage, 'progressTooltipReviews', { count: reviews }),
   ];
-  if (cardsAdded > 0) parts.push(t(nativeLanguage, 'progressTooltipCards', { count: cardsAdded }));
+  if (cardsAdded > 0) parts.push(t(interfaceLanguage, 'progressTooltipCards', { count: cardsAdded }));
   return parts.join(' · ');
 }
 

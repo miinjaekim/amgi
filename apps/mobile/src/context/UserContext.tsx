@@ -11,22 +11,37 @@ import { auth } from '../config/firebase';
 import {
   getUserPreferencesFromServer, saveUserPreferences, subscribeToUserPreferences,
 } from '../services/userPreferences';
+import { countUserFlashcards } from '../services/firestore';
 import { refreshReminders } from '../services/reminders';
 import {
   markStreakSynced, readCachedStreak, writeCachedStreak,
 } from '../services/offlineReview';
 import { recordProgress } from '../services/progress';
 import {
-  advanceStreak, DEFAULT_HANJA_PARTITION, hourKey, isHanjaPartition, isStudyLanguage, mergeStreakState,
-  negateDelta, resolveNativeLanguage,
-  resolveStudyLanguage, reviewDelta,
+  CARD_COLLECTIONS, DEFAULT_HANJA_PARTITION,
+  addLanguagePair, advanceStreak, hourKey, isHanjaPartition, isNativeLanguage,
+  isStudyLanguage, mergeStreakState, nativeForStudy,
+  negateDelta, parseLanguagePairs, removeLanguagePair, reviewDelta, seedLanguagePairs,
   type RatingContext, type RecordedReview, type ReviewVerdict, type StreakState,
-  type HanjaPartition, type StudyLanguage, type UserPreferences,
+  type HanjaPartition, type StudyLanguage, type StudyLanguagePair,
+  type UserPreferences,
 } from '@amgi/core';
 
 WebBrowser.maybeCompleteAuthSession();
 
+/**
+ * ⚠️ **`amgi_native_language` is deliberately still read and written.**
+ *
+ * It is what every device that has ever run Amgi has in it, and it is the seed
+ * the interface language migrates from — so dropping it would put a returning
+ * user back through first run. New writes keep it in step with the interface
+ * language, which also means a TestFlight build older than this change keeps
+ * working against the same account. There is no OTA here, so that is not a
+ * hypothetical.
+ */
 const LANG_CACHE_KEY = 'amgi_native_language';
+const INTERFACE_LANG_CACHE_KEY = 'amgi_interface_language';
+const LANGUAGES_CACHE_KEY = 'amgi_languages';
 const STUDY_LANG_CACHE_KEY = 'amgi_study_language';
 const HANJA_PARTITION_CACHE_KEY = 'amgi_hanja_partition';
 
@@ -53,6 +68,25 @@ function streakFromPreferences(prefs: UserPreferences | null): StreakState {
     reviewedToday: prefs?.reviewedToday ?? 0,
     dirty: false,
   };
+}
+
+/** Language pairs out of AsyncStorage, or `[]` if there is nothing usable. */
+async function readCachedLanguages(): Promise<StudyLanguagePair[]> {
+  try {
+    return parseLanguagePairs(JSON.parse(await AsyncStorage.getItem(LANGUAGES_CACHE_KEY) ?? 'null'));
+  } catch {
+    // Half-written or unparseable. An empty list reads as "not set up yet",
+    // which every caller already handles.
+    return [];
+  }
+}
+
+async function writeCachedLanguages(pairs: StudyLanguagePair[]): Promise<void> {
+  try {
+    await AsyncStorage.setItem(LANGUAGES_CACHE_KEY, JSON.stringify(pairs));
+  } catch {
+    // Not being able to remember is no reason to refuse the change.
+  }
 }
 
 // In Expo Go, makeRedirectUri always returns exp://... which Google rejects.
@@ -99,14 +133,31 @@ const nativeRedirectUri =
 interface UserContextType {
   user: User | null;
   authLoading: boolean;
-  nativeLanguage: string | null | undefined;
+  /**
+   * What Amgi speaks to the user in — every `t()` call takes this.
+   *
+   * `undefined` means preferences are still loading and `null` means they are
+   * loaded and unanswered, which is what the first-run modal gates on.
+   */
+  interfaceLanguage: string | null | undefined;
+  /**
+   * The language the *current deck* is explained in — its card backs, its
+   * depth, its examples. Never used for chrome.
+   */
+  deckNativeLanguage: string;
+  /** Every language added, in the order they should be offered. */
+  languages: StudyLanguagePair[];
   studyLanguage: StudyLanguage;
   /** Which part of a hanja card is on the front. Meaningless on other decks. */
   hanjaPartition: HanjaPartition;
   streak: number;
   reviewedToday: number;
-  setNativeLanguage: (lang: string) => Promise<void>;
+  setInterfaceLanguage: (lang: string) => Promise<void>;
+  /** Switches decks. Only ever called with a language already added. */
   setStudyLanguage: (lang: StudyLanguage) => Promise<void>;
+  /** Adds a deck, or changes the language an existing deck is explained in. */
+  addLanguage: (pair: StudyLanguagePair) => Promise<void>;
+  removeLanguage: (study: StudyLanguage) => Promise<void>;
   setHanjaPartition: (partition: HanjaPartition) => Promise<void>;
   /** Returns the receipt `undoReview` needs — the day counted and what was written. */
   recordReview: (verdict: ReviewVerdict, context?: RatingContext) => RecordedReview;
@@ -121,7 +172,8 @@ const UserContext = createContext<UserContextType | undefined>(undefined);
 export function UserProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
-  const [nativeLanguage, setNativeLanguageState] = useState<string | null | undefined>(undefined);
+  const [interfaceLanguage, setInterfaceLanguageState] = useState<string | null | undefined>(undefined);
+  const [languages, setLanguagesState] = useState<StudyLanguagePair[]>([]);
   const [studyLanguage, setStudyLanguageState] = useState<StudyLanguage>('Korean');
   const [hanjaPartition, setHanjaPartitionState] = useState<HanjaPartition>(DEFAULT_HANJA_PARTITION);
   /**
@@ -174,7 +226,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     }
   }, [response]);
 
-  // Keep user + nativeLanguage in sync with Firebase auth state
+  // Keep user + languages in sync with Firebase auth state
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       setUser(firebaseUser);
@@ -193,34 +245,43 @@ export function UserProvider({ children }: { children: ReactNode }) {
           // Fall through to whatever this device already knows.
         }
 
-        const cachedLang = await AsyncStorage.getItem(LANG_CACHE_KEY);
+        // Preferring the interface key and falling back to the one every older
+        // launch wrote — that fallback is the whole migration on this device.
+        const cachedInterface = (await AsyncStorage.getItem(INTERFACE_LANG_CACHE_KEY))
+          ?? (await AsyncStorage.getItem(LANG_CACHE_KEY));
         const cachedStudy = await AsyncStorage.getItem(STUDY_LANG_CACHE_KEY);
         const cachedPartition = await AsyncStorage.getItem(HANJA_PARTITION_CACHE_KEY);
+        const cachedLanguages = await readCachedLanguages();
 
         // A brand-new account inherits what this device already answered.
         // Without this, anyone who completes first run signed out is asked the
-        // same two questions again the instant they sign up — the account is
-        // new, the person and the device are not. Gated on there being no
-        // preferences document at all: a document that exists and omits the
+        // same questions again the instant they sign up — the account is new,
+        // the person and the device are not. Gated on there being no
+        // preferences document at all: a document that exists and omits a
         // field is a real "unset", not a gap to fill. Account deletion wipes
         // every `amgi_` key, so a fresh start stays a fresh start.
-        const adopting = reachedServer && prefs === null && !!cachedLang;
+        const adopting = reachedServer && prefs === null && !!cachedInterface;
 
-        const lang = reachedServer
-          ? (adopting ? cachedLang : (prefs?.nativeLanguage ?? null))
-          : cachedLang;
-        setNativeLanguageState(lang);
-        if (lang) {
-          await AsyncStorage.setItem(LANG_CACHE_KEY, lang);
+        const nextInterface = reachedServer
+          ? (adopting
+              ? cachedInterface
+              : (prefs?.interfaceLanguage ?? prefs?.nativeLanguage ?? null))
+          : cachedInterface;
+        setInterfaceLanguageState(nextInterface);
+        if (nextInterface) {
+          await AsyncStorage.setItem(INTERFACE_LANG_CACHE_KEY, nextInterface);
+          await AsyncStorage.setItem(LANG_CACHE_KEY, nextInterface);
         } else if (reachedServer) {
           // Only the server may say the preference is genuinely unset.
+          await AsyncStorage.removeItem(INTERFACE_LANG_CACHE_KEY);
           await AsyncStorage.removeItem(LANG_CACHE_KEY);
         }
 
         const study = reachedServer && !adopting ? prefs?.studyLanguage : cachedStudy;
-        if (isStudyLanguage(study)) {
-          setStudyLanguageState(study);
-          await AsyncStorage.setItem(STUDY_LANG_CACHE_KEY, study);
+        const nextStudy = isStudyLanguage(study) ? study : undefined;
+        if (nextStudy) {
+          setStudyLanguageState(nextStudy);
+          await AsyncStorage.setItem(STUDY_LANG_CACHE_KEY, nextStudy);
         }
 
         // Same server-or-cache rule as the study language above, for the same
@@ -232,13 +293,48 @@ export function UserProvider({ children }: { children: ReactNode }) {
           await AsyncStorage.setItem(HANJA_PARTITION_CACHE_KEY, partition);
         }
 
-        if (adopting && cachedLang) {
+        /**
+         * The language list, migrating an account that predates it.
+         *
+         * ⚠️ **Only ever migrated on a launch that reached the server.** The
+         * seed reads which collections hold cards, and `getCountFromServer`
+         * has no offline answer — an underground launch would seed from the
+         * current deck alone and then write that narrow list down as if it
+         * were the truth, quietly hiding every other deck. Offline we keep
+         * what the device already holds and try again next launch.
+         */
+        let nextLanguages = adopting
+          ? cachedLanguages
+          : (reachedServer ? parseLanguagePairs(prefs?.languages) : cachedLanguages);
+        const migrating = reachedServer && !adopting && prefs !== null && nextLanguages.length === 0;
+        if (migrating) {
+          const withCards: StudyLanguage[] = [];
+          try {
+            const counts = await Promise.all(CARD_COLLECTIONS.map(
+              async ({ code }) => [code, await countUserFlashcards(uid, code)] as const,
+            ));
+            for (const [code, count] of counts) if (count > 0) withCards.push(code);
+          } catch {
+            // Counted nothing; `seedLanguagePairs` still returns the current
+            // deck so the switcher is never empty, and nothing is written
+            // below on a throw, so the next launch tries again.
+          }
+          nextLanguages = seedLanguagePairs(
+            { nativeLanguage: prefs?.nativeLanguage ?? 'English', studyLanguage: nextStudy },
+            withCards,
+          );
+        }
+        setLanguagesState(nextLanguages);
+        await writeCachedLanguages(nextLanguages);
+
+        if ((adopting && cachedInterface) || migrating) {
           // Not awaited: this is a convenience write, and nothing below it
           // depends on the round trip.
           saveUserPreferences(uid, {
-            nativeLanguage: cachedLang,
-            ...(isStudyLanguage(study) ? { studyLanguage: study } : {}),
-          }).catch(() => { /* Asked again next launch; harmless. */ });
+            ...(nextInterface ? { nativeLanguage: nextInterface, interfaceLanguage: nextInterface } : {}),
+            ...(nextStudy ? { studyLanguage: nextStudy } : {}),
+            languages: nextLanguages,
+          }).catch(() => { /* Retried on the next launch; harmless. */ });
         }
 
         const merged = mergeStreakState(
@@ -263,13 +359,12 @@ export function UserProvider({ children }: { children: ReactNode }) {
           await writeCachedStreak(uid, merged);
         }
       } else {
-        // `null`, not a default: an unanswered native language is what the
-        // first-run modal watches for. Defaulting to 'Korean' here, against a
-        // `studyLanguage` whose initial state was independently also 'Korean',
-        // is how a new user ended up natively speaking the language they were
-        // studying — the collision the setup modal exists to prevent.
-        const cached = await AsyncStorage.getItem(LANG_CACHE_KEY);
-        setNativeLanguageState(cached ?? null);
+        // `null`, not a default: an unanswered interface language is what the
+        // first-run modal watches for.
+        const cached = (await AsyncStorage.getItem(INTERFACE_LANG_CACHE_KEY))
+          ?? (await AsyncStorage.getItem(LANG_CACHE_KEY));
+        setInterfaceLanguageState(cached ?? null);
+        setLanguagesState(await readCachedLanguages());
         const cachedStudy = await AsyncStorage.getItem(STUDY_LANG_CACHE_KEY);
         if (isStudyLanguage(cachedStudy)) setStudyLanguageState(cachedStudy);
         const cachedPartition = await AsyncStorage.getItem(HANJA_PARTITION_CACHE_KEY);
@@ -302,11 +397,10 @@ export function UserProvider({ children }: { children: ReactNode }) {
    *   would do anyway — worth doing now because reminders are planned from the
    *   cached `lastReviewDate`, so a laptop review also stops the phone nagging
    *   about work already done.
-   * - **Streak fields only.** The document also carries the languages, and
-   *   `nativeLanguage` going momentarily null is what the first-run modal
-   *   watches for — a snapshot racing the setup flow would pop it over someone
-   *   mid-answer. Languages are read at launch and changed on one device at a
-   *   time; the streak is the field that genuinely moves elsewhere.
+   * - **Never the interface language.** It going momentarily null is what the
+   *   first-run modal watches for, and a snapshot racing the setup flow would
+   *   pop it over someone mid-answer. Languages *are* taken, but only when the
+   *   document actually carries some — see below.
    *
    * Gated on `authLoading` so the launch reconcile settles first, otherwise the
    * server's copy would show for a frame before the device's own is even read.
@@ -333,6 +427,19 @@ export function UserProvider({ children }: { children: ReactNode }) {
         setHanjaPartitionState(
           isHanjaPartition(prefs.hanjaPartition) ? prefs.hanjaPartition : DEFAULT_HANJA_PARTITION,
         );
+
+        // A language added on the laptop, reaching the phone without a restart.
+        //
+        // ⚠️ **Only applied when the document actually carries some.** An empty
+        // or missing list is what a mid-setup account looks like, and assigning
+        // it here would empty the switcher underneath someone — or race the
+        // migration above and undo what it just wrote.
+        const incoming = parseLanguagePairs(prefs.languages);
+        if (incoming.length > 0) {
+          setLanguagesState(incoming);
+          void writeCachedLanguages(incoming);
+        }
+
         const merged = mergeStreakState(streakRef.current, streakFromPreferences(prefs));
         commitStreak(merged);
         if (!merged.dirty) void writeCachedStreak(signedInUid, merged);
@@ -351,54 +458,77 @@ export function UserProvider({ children }: { children: ReactNode }) {
    * language for the copy, or simply returning to the app after enough time
    * that yesterday's plan is stale. Signing out passes no uid, which cancels
    * everything rather than leaving a stranger's reminders on the device.
+   *
+   * The copy is chrome, so it takes the interface language — a notification is
+   * Amgi speaking to you, not a card explaining itself.
    */
   useEffect(() => {
-    void refreshReminders(user?.uid, nativeLanguage);
+    void refreshReminders(user?.uid, interfaceLanguage);
     const subscription = AppState.addEventListener('change', state => {
-      if (state === 'active') void refreshReminders(user?.uid, nativeLanguage);
+      if (state === 'active') void refreshReminders(user?.uid, interfaceLanguage);
     });
     return () => subscription.remove();
-  }, [user, nativeLanguage]);
+  }, [user, interfaceLanguage]);
 
-  const setNativeLanguage = async (lang: string) => {
-    setNativeLanguageState(lang);
+  /**
+   * The interface language. Writes `nativeLanguage` too, so a TestFlight build
+   * older than this change still finds the field it reads.
+   */
+  const setInterfaceLanguage = async (lang: string) => {
+    if (!isNativeLanguage(lang)) return;
+    setInterfaceLanguageState(lang);
+    await AsyncStorage.setItem(INTERFACE_LANG_CACHE_KEY, lang);
     await AsyncStorage.setItem(LANG_CACHE_KEY, lang);
-
-    // Switching native language can leave the study language set to the user's
-    // own language; move it off silently rather than making them fix it.
-    const nextStudy = resolveStudyLanguage(lang, studyLanguage, nativeLanguage);
-    const studyChanged = nextStudy !== studyLanguage;
-    if (studyChanged) {
-      setStudyLanguageState(nextStudy);
-      await AsyncStorage.setItem(STUDY_LANG_CACHE_KEY, nextStudy);
-    }
-
     if (user) {
-      await saveUserPreferences(user.uid, {
-        nativeLanguage: lang,
-        ...(studyChanged ? { studyLanguage: nextStudy } : {}),
-      });
+      await saveUserPreferences(user.uid, { interfaceLanguage: lang, nativeLanguage: lang });
     }
   };
 
+  /**
+   * Switch decks. Nothing is resolved or corrected on the way through: the
+   * language being switched to already carries its own explanation language,
+   * and the interface is not a deck's business any more.
+   */
   const setStudyLanguage = async (lang: StudyLanguage) => {
     setStudyLanguageState(lang);
     await AsyncStorage.setItem(STUDY_LANG_CACHE_KEY, lang);
+    if (user) await saveUserPreferences(user.uid, { studyLanguage: lang });
+  };
 
-    // Choosing to study your own language says the native language is wrong;
-    // move it to the language just being studied. This also switches the UI.
-    const nextNative = resolveNativeLanguage(lang, nativeLanguage, studyLanguage);
-    const nativeChanged = !!nextNative && nextNative !== nativeLanguage;
-    if (nativeChanged) {
-      setNativeLanguageState(nextNative);
-      await AsyncStorage.setItem(LANG_CACHE_KEY, nextNative);
-    }
-
+  /**
+   * Add a deck, or change the language an existing one is explained in.
+   *
+   * Switching to it is part of adding it: someone who has just said what they
+   * want to learn wants to be looking at it.
+   */
+  const addLanguage = async (pair: StudyLanguagePair) => {
+    const next = addLanguagePair(languages, pair);
+    setLanguagesState(next);
+    await writeCachedLanguages(next);
+    setStudyLanguageState(pair.study);
+    await AsyncStorage.setItem(STUDY_LANG_CACHE_KEY, pair.study);
     if (user) {
-      await saveUserPreferences(user.uid, {
-        studyLanguage: lang,
-        ...(nativeChanged ? { nativeLanguage: nextNative } : {}),
-      });
+      await saveUserPreferences(user.uid, { languages: next, studyLanguage: pair.study });
+    }
+  };
+
+  /**
+   * Drop a deck from the switcher. The cards are left exactly where they are —
+   * removing the last one is refused rather than leaving nothing to study.
+   */
+  const removeLanguage = async (study: StudyLanguage) => {
+    const next = removeLanguagePair(languages, study);
+    if (next.length === 0) return;
+    setLanguagesState(next);
+    await writeCachedLanguages(next);
+
+    const nextStudy = study === studyLanguage ? next[0].study : studyLanguage;
+    if (nextStudy !== studyLanguage) {
+      setStudyLanguageState(nextStudy);
+      await AsyncStorage.setItem(STUDY_LANG_CACHE_KEY, nextStudy);
+    }
+    if (user) {
+      await saveUserPreferences(user.uid, { languages: next, studyLanguage: nextStudy });
     }
   };
 
@@ -538,8 +668,10 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const reviewedToday =
     streakState.lastReviewDate === getTodayString() ? streakState.reviewedToday : 0;
 
+  const deckNativeLanguage = nativeForStudy(languages, studyLanguage);
+
   return (
-    <UserContext.Provider value={{ user, authLoading, nativeLanguage, studyLanguage, hanjaPartition, streak: streakState.streak, reviewedToday, setNativeLanguage, setStudyLanguage, setHanjaPartition, recordReview, undoReview, deleteAccount, handleSignIn, handleSignOut }}>
+    <UserContext.Provider value={{ user, authLoading, interfaceLanguage, deckNativeLanguage, languages, studyLanguage, hanjaPartition, streak: streakState.streak, reviewedToday, setInterfaceLanguage, setStudyLanguage, addLanguage, removeLanguage, setHanjaPartition, recordReview, undoReview, deleteAccount, handleSignIn, handleSignOut }}>
       {children}
     </UserContext.Provider>
   );

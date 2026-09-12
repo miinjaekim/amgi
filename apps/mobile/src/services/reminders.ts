@@ -159,7 +159,8 @@ async function countDueCards(uid: string): Promise<number> {
  */
 export async function refreshReminders(
   uid: string | undefined,
-  nativeLanguage: string | null | undefined,
+  /** Notification copy is Amgi speaking, so it takes the interface language. */
+  interfaceLanguage: string | null | undefined,
 ): Promise<void> {
   if (!uid) {
     await cancelAllReminders();
@@ -173,12 +174,12 @@ export async function refreshReminders(
     lastReviewDate: streak?.lastReviewDate ?? null,
     copy: {
       wordOfTheDay: {
-        title: t(nativeLanguage, 'reminderWotdTitle'),
-        body: t(nativeLanguage, 'reminderWotdBody'),
+        title: t(interfaceLanguage, 'reminderWotdTitle'),
+        body: t(interfaceLanguage, 'reminderWotdBody'),
       },
       reviewReminder: {
-        title: t(nativeLanguage, 'reminderReviewTitle'),
-        body: t(nativeLanguage, 'reminderReviewBody'),
+        title: t(interfaceLanguage, 'reminderReviewTitle'),
+        body: t(interfaceLanguage, 'reminderReviewBody'),
       },
     },
   });
