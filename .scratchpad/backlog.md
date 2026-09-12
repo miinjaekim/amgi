@@ -20,8 +20,15 @@ costs ~20 minutes rather than an App Review cycle.
 **Build 16 is queued, as of 2026-09-12.** What is waiting on it, all on the
 Progress tab: the week-aligned calendar with its weekday and month labels, the
 corrected heatmap ramp (a palette change, so it is visible on every theme), the
-cards learned tile, retention gone from the language rows, and the share chooser
-with its today card.
+cards learned tile with its "since" caption, retention and days studied gone
+from the tiles and the language rows, and the share chooser — with its today
+card and a thumbnail of each asset in the sheet.
+
+⚠️ **The share sheet's thumbnails need a reachable `EXPO_PUBLIC_API_BASE_URL`.**
+They are the deployed route's own render, so on a build pointed at nothing they
+are simply absent — the rows still share. Worth one look on the build, since it
+is the first thing on that screen that fails by showing less rather than by
+erroring.
 
 ⚠️ **Do not read that list as "the progress work is unreleased".** The shared
 image renders server-side, so build 15 devices *already* draw the language line

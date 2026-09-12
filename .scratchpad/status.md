@@ -322,8 +322,37 @@ exact highlight. **Web and mobile had drifted to two different ramps** — 45% v
 and the windowed one is not that, but all-time is only derivable from the card
 documents: nine `where uid ==` queries across nine per-language collections,
 every time the tab opens, which is the exact cost `shareStats.ts` exists to
-avoid. Withheld rather than shown low before 2026-09-06, so it stays absent
-rather than dashed and starts answering on its own.
+avoid.
+
+⚠️ **Shipped withheld, and that was a defect — corrected the same day.** The
+first cut reused the image's rule and returned `null` whenever the window
+reached past 2026-09-06. Every range on offer is 30 days or more, so that meant
+*never*: 30 days back is 2026-08-14, 90 is 2026-06-15, a year is 2025-09-14, and
+the 30-day tile would not have appeared until 2026-10-05. The rule exists to
+stop a quiet fortnight reading as a low score, not to hide a figure for a month.
+`cardsLearnedIn` now shortens the window to the part that can answer and reports
+where it started, so the tile carries a real number with **"since 6 Sep"** under
+it; the caption removes itself once the range fits inside the recorded span.
+**The image still withholds** — a caption qualifying one figure is fine on a
+screen being read, but at thumbnail size beside "Last 30 days" it is exactly the
+juxtaposition the one-window rule exists to prevent.
+
+**Days studied came off both surfaces** (same day, user's call). Beside a streak
+it read as a second opinion on one question, and the streak is the one people
+mean. `activeDays` stays in `summarizeProgress` — still data, no longer a tile —
+and the route tolerates a stale `d` from an installed build exactly as it does
+`ret`.
+
+**The chooser previews what it is offering.** Each row draws the actual asset at
+thumbnail size, which costs no new machinery: the picture *is* a URL, so the row
+renders the same address the share sheet is about to be handed. No second
+confirm step — you are looking at what you are about to post while picking it.
+Web keeps its anchor (the thumbnail sits inside the `<a>`, so the no-JS download
+still works) and waives `@next/next/no-img-element` deliberately, since routing
+an OG render through the image optimizer to draw 80px is worse than the raw
+request. Mobile draws it only when `EXPO_PUBLIC_API_BASE_URL` is set; without a
+host the row still shares, it just cannot show what it will send. **The
+direction this is heading is Strava's**: pick a card, see it, post it.
 
 **The image names languages and will never split its figures by them.**
 `byLanguage.reviews` goes back to the start; the verdicts inside it only to
