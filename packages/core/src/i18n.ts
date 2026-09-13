@@ -448,6 +448,11 @@ const translations = {
     packAddedBadge: 'saved',
     packTapHint: 'Tap any entry to see it, save it, and go deeper.',
     packTapHintCards: 'Tap a character to open it, or the speaker to hear it.',
+    // Mobile only. The deck screen there saves on tap instead of opening, so a
+    // run of words can be kept without stopping at a card each time — which
+    // makes the hint a different sentence rather than the same one reworded.
+    packTapSaveHint: 'Tap a word to save it. Tap a saved word to open it, or hold to read one first.',
+    packTapSaveHintCards: 'Tap a character to save it, hold to open it, or tap the speaker to hear it.',
     generateLink: 'Generate words for a goal',
     generateComingSoon: 'Describe why you\'re learning and get a word list made for you — this feature is on its way.',
     comingSoon: 'Coming soon',
@@ -890,6 +895,8 @@ const translations = {
     packAddedBadge: '저장됨',
     packTapHint: '단어를 누르면 뜻을 보고 저장하거나 더 자세히 볼 수 있어요.',
     packTapHintCards: '글자를 누르면 자세히 볼 수 있고, 스피커를 누르면 발음을 들을 수 있어요.',
+    packTapSaveHint: '단어를 누르면 바로 저장돼요. 저장한 단어를 다시 누르면 자세히 볼 수 있고, 길게 누르면 저장하기 전에 먼저 볼 수 있어요.',
+    packTapSaveHintCards: '글자를 누르면 바로 저장돼요. 길게 누르면 자세히 볼 수 있고, 스피커를 누르면 발음을 들을 수 있어요.',
     generateLink: '목표에 맞는 단어 만들기',
     generateComingSoon: '학습 목적을 알려주면 딱 맞는 단어 목록을 만들어주는 기능을 준비하고 있어요.',
     comingSoon: '준비 중',
