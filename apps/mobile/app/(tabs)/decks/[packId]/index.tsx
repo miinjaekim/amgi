@@ -80,6 +80,26 @@ export default function DeckDetailScreen() {
   const knowsSaved = savedTerms !== null;
 
   /**
+   * Words tapped to save whose write the listener has not reported back yet.
+   *
+   * Tapping is now how a word gets kept, so a run of eight taps has eight
+   * round trips in flight at once. Without this the rows stay untouched until
+   * each one lands, which reads as taps being dropped and invites the user to
+   * tap them again.
+   */
+  const [pendingSaves, setPendingSaves] = useState<ReadonlySet<string>>(new Set());
+
+  // Once the listener confirms one, the local tick has done its job. Holding on
+  // to it would keep a row ticked after the card behind it was deleted.
+  useEffect(() => {
+    if (!savedTerms) return;
+    setPendingSaves(prev => {
+      const next = new Set([...prev].filter(key => !savedTerms.has(key)));
+      return next.size === prev.size ? prev : next;
+    });
+  }, [savedTerms]);
+
+  /**
    * The card behind each pack term, whichever way it got there — preferring one
    * this deck produced when there are both, because the question the deck asks
    * when you tap an entry is "what do I already have for this word".
@@ -212,14 +232,73 @@ export default function DeckDetailScreen() {
   };
   const detailCard = detail ? cardsByTerm.get(detail.entry.study.toLowerCase()) : undefined;
 
+  /** Saved as far as this screen is concerned, a tap the listener has not
+   *  reported back yet included. */
+  const isSaved = (entry: PackEntry) => {
+    const key = entry.study.toLowerCase();
+    return (savedTerms?.has(key) ?? false) || pendingSaves.has(key);
+  };
+
+  /**
+   * Keep one word, on the tap that used to open it.
+   *
+   * Wanting eight words out of a section of forty is ordinary, and the route to
+   * that was eight taps, eight modals and eight dismissals — enough friction
+   * that saving the whole section was the easier move, which is how sections
+   * nobody wanted ended up in review.
+   *
+   * A one-card batch rather than `saveFlashcardToFirestore`, so a tapped word is
+   * filed exactly where the section's own button would file it: same draft, same
+   * subpack, and counted as a pack card rather than as a lookup.
+   */
+  const saveOne = async (entry: PackEntry, section: PackSection) => {
+    if (!user) { setError(t(interfaceLanguage, 'signInToSave')); return; }
+    const key = entry.study.toLowerCase();
+    setPendingSaves(prev => new Set(prev).add(key));
+    setError(null);
+    try {
+      await saveFlashcardsBatch(
+        [buildPackCardDraft(
+          entry, packRefId(pack.id, section.id), user.uid, studyLanguage,
+        ) as Omit<Flashcard, 'createdAt' | 'id'>],
+        studyLanguage,
+      );
+    } catch {
+      // Take the tick back — the row has been showing as saved since the tap.
+      setPendingSaves(prev => {
+        const next = new Set(prev);
+        next.delete(key);
+        return next;
+      });
+      setError(t(interfaceLanguage, 'errorSaveFlashcard'));
+    }
+  };
+
+  /**
+   * What a tap does, which depends on whether the word is already yours.
+   *
+   * Unsaved, it saves and stays put. Saved, it opens — by then there is a card
+   * with depth to ask for, which is what the modal is for. The detail of an
+   * unsaved word is a long press away, so nothing reachable became unreachable;
+   * signed out, where there is nothing to save to, tap still opens it.
+   */
+  const tapEntry = (entry: PackEntry, section: PackSection) => {
+    if (isSaved(entry) || !user) { setDetail({ entry, section }); return; }
+    // Not knowing what is already saved is what enrolled whole decks twice.
+    // One tapped word is the same bug, smaller.
+    if (!knowsSaved) { setError(t(interfaceLanguage, 'deckCardsUnavailable')); return; }
+    saveOne(entry, section);
+  };
+
   const renderGridTile = (entry: PackEntry, section: PackSection) => {
-    const saved = savedTerms?.has(entry.study.toLowerCase()) ?? false;
+    const saved = isSaved(entry);
     return (
       <View key={entry.study} style={[s.cardTile, saved && s.dimmed]}>
         <TouchableOpacity
-          onPress={() => setDetail({ entry, section })}
+          onPress={() => tapEntry(entry, section)}
+          onLongPress={() => setDetail({ entry, section })}
           style={s.cardTapArea}
-          accessibilityLabel={`Open ${entry.study}`}
+          accessibilityLabel={`${saved ? 'Open' : 'Save'} ${entry.study}`}
         >
           <Text style={s.cardStudy}>{entry.study}</Text>
           <Text style={s.cardBack}>
@@ -236,12 +315,14 @@ export default function DeckDetailScreen() {
   // Words need a row, not a tile: 뒷받침하다 does not fit in the 68px box that
   // makes 71 kana scannable.
   const renderListRow = (entry: PackEntry, section: PackSection) => {
-    const saved = savedTerms?.has(entry.study.toLowerCase()) ?? false;
+    const saved = isSaved(entry);
     return (
       <TouchableOpacity
         key={entry.study}
         style={[s.entryRow, saved && s.dimmed]}
-        onPress={() => setDetail({ entry, section })}
+        onPress={() => tapEntry(entry, section)}
+        onLongPress={() => setDetail({ entry, section })}
+        accessibilityLabel={`${saved ? 'Open' : 'Save'} ${entry.study}`}
       >
         <Text style={s.entryStudy}>{entry.study}</Text>
         <Text style={s.entryBack} numberOfLines={1}>
@@ -326,7 +407,7 @@ export default function DeckDetailScreen() {
         </View>
         <Text style={s.desc}>{getPackText(pack.description, interfaceLanguage)}</Text>
         <Text style={s.hint}>
-          {t(interfaceLanguage, pack.layout === 'grid' ? 'packTapHintCards' : 'packTapHint')}
+          {t(interfaceLanguage, pack.layout === 'grid' ? 'packTapSaveHintCards' : 'packTapSaveHint')}
         </Text>
 
         {/* Every pack is enrollable and drillable now that every pack is
@@ -371,9 +452,10 @@ export default function DeckDetailScreen() {
         {shownSections.map(renderSection)}
       </ScrollView>
 
-      {/* One tap opens the card, saved or not. This replaces both the old
-          save-on-tap and the deck's own management panel, and it is what makes
-          the deck→Learn round trip optional rather than mandatory. */}
+      {/* Opened by a tap on a word you already hold, or a long press on one you
+          don't. It is still the only card surface here — the deck has no
+          management panel of its own — and still what makes the deck→Learn
+          round trip optional rather than mandatory. */}
       {detail && (
         <CardDetailModal
           card={detailCard}

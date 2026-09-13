@@ -290,6 +290,39 @@ once, so a path that worked on build 14 is not evidence about build 15.
 Closed calls, kept with their reasoning — a decision whose reasoning is lost gets
 reopened by the next person to notice the symptom. Newest first.
 
+### A tap on a mobile pack saves the word; detail moves to the second tap (2026-09-13)
+
+On mobile, tapping an **unsaved** entry in a pack now saves it where it stands.
+Tapping a **saved** one opens `CardDetailModal` as before, and a **long press**
+opens either. The unit this adds is the one the screen was missing: sections are
+a sitting, the whole deck is a course, and *these eight words* was previously
+eight taps, eight modals and eight dismissals — enough friction that saving the
+whole section was the easier move, which is how sections nobody wanted ended up
+in review.
+
+**Detail was not removed, it was re-ordered.** The second tap is a better moment
+for it anyway: by then there is a card to hang depth and examples on, which is
+what the modal is for. The modal is still the only card surface here and still
+carries edit/archive/delete, so a mis-tap is undone by tapping the word again
+and deleting — no separate unsave.
+
+⚠️ **Web deliberately did not move.** One tap opens there, and the hint copy is
+now two pairs of keys rather than one: `packTapHint`/`packTapHintCards` for web,
+`packTapSaveHint`/`packTapSaveHintCards` for mobile. A pointer is not a finger —
+on web the modal is cheap to open and dismiss, and the cost this removes is a
+sheet that covers the list you are reading down.
+
+**Two guards came from enrolment's own scars.** A tapped word writes through
+`saveFlashcardsBatch` as a one-card batch rather than
+`saveFlashcardToFirestore`, so it lands in the section's subpack via
+`buildPackCardDraft` exactly as the section button would file it, and counts as
+a pack card rather than a lookup. And when `savedTerms` is still null — the
+fetch in flight or failed — a tap **refuses and says so** rather than saving,
+because reading unknown as "not saved" is precisely what once enrolled all 71
+katakana twice. A local `pendingSaves` set ticks the row on tap so a run of
+eight does not read as taps being dropped, and is pruned once the listener
+confirms, so a later delete cannot leave a row ticked.
+
 ### A native language per deck, and an interface language beside it (2026-09-12)
 
 **`nativeLanguage` was doing three jobs, and the third is why it had to
