@@ -144,6 +144,136 @@ in [status.md](status.md).
 
 ## Medium
 
+- [ ] **French A1 grammar — one concept, end to end.** Scoped 2026-09-14. Read the
+      Decisions entry in [status.md](status.md) first: it carries the scope line,
+      the three constraints the user set, and everything this rules out.
+      **Not High, deliberately** — nobody is blocked and the user is explicitly not
+      its user, so it earns a slot by being cheap to be wrong about.
+      **The structure, which is the whole insight: a grammar point is a *subpack*,
+      and its practice items are the *entries*.** One pack per level
+      (`French Grammar A1`), one subpack per concept (`le présent des verbes en
+      -er`, `la négation ne…pas`), and each entry is one authored cloze. That maps
+      onto shipped machinery end to end — enrol, collection, review picker,
+      progress — with **no nesting change**, since packs are exactly one subpack
+      deep and level → concept → item is exactly two.
+      **This does not contradict "a grammar point is not a card"**
+      ([vision.md](vision.md)). What was rejected was one card *per pattern* with a
+      gloss on the back — the lookup-table row. Here the concept is the subpack and
+      the cards are *instances of exercising it*, which is the distinction that
+      argument turns on. Don't lose it: it is what keeps this from being the thing
+      that already failed.
+      **Its own row in the review picker** — the user's call. Grammar and vocab are
+      never interleaved in one sitting, which `collections.ts` already prefers
+      ("no 'everything' collection", deliberately).
+      ⚠️ **Give grammar sets a real `id` and `ReviewCollection.kind` stays
+      deleted.** `kind` only ever existed because a patterns row and your own cards
+      were *both* `id: null`. A grammar pack carries a pack-shaped id, so
+      `collectionKey = id ?? ''` still resolves and the discriminator the removal
+      deleted does not come back. This is strictly better than what was there.
+      **Zero model calls.** Items are authored, graded locally by `typedAnswer.ts`,
+      single-direction. That answers three of the four reasons the old feature
+      failed — heavy, slow, grading variance — by construction rather than by
+      tuning. `getPatternExercise` and `gradeFromReview` stay dead.
+      ⚠️ **Ship one concept before authoring a level.** ~30–60 concepts × ~6 items
+      is 200–350 sourced entries — the size of the 급수 pack, i.e. the largest
+      content job this repo has done. One subpack proves the shape for ~20.
+      ⚠️ **Sourcing is the gate, and CEFR does not publish a grammar syllabus** —
+      it is a can-do scale. What exists is per-language: for French, the Council of
+      Europe / Didier *niveau A1 pour le français* référentiel. **Verify that
+      before relying on it** — `docs/packs/README.md` governs this and its rule is
+      that the model is not a source. A référentiel that turns out not to be
+      citable changes the level ladder, not just a footnote.
+      **Open, not decided:** whether a grammar item is literally a `Flashcard` in
+      its own collection with only `frontToBack` populated (cheapest — reuses SM-2,
+      the queue, offline review and the rollups untouched) or a second source
+      `buildReviewCollections` has to learn about. The first is recommended and
+      unproven.
+
+- [ ] **Writing returns as the diagnostic — third, after the ladder exists.**
+      Scoped 2026-09-14; the reasoning and the revision it makes to an earlier call
+      are in the Decisions entry in [status.md](status.md).
+      ⚠️ **Do not start this before the two items above.** A finding needs an
+      authored concept to point at; without the ladder it has to invent one, which
+      is exactly what failed. The ordering is also the **gate**: writing comes back
+      only if the ladder gets used.
+      **The job is routing, not practice.** A finding classifies into the closed
+      set of authored concepts — the `normalizePartOfSpeech` move, match or drop —
+      and enrols that subpack. No exercise generation. `getPatternExercise` and
+      `gradeFromReview` stay dead.
+      **Most of it is already built and deployed.** `/api/writing` is one
+      `gemini-2.5-flash` call at temp 0.1; `parseWritingReview`, the four
+      `FindingKind`s, `WritingCardCandidate.gap` and `buildWritingCardDraft` all
+      still work. What is new is the classifier and the counts.
+      **Persist findings, not prose** — concept ids and counts only. Keeps the
+      ephemeral-submissions decision intact while giving the grammar collection its
+      best ordering: *the learner's own error counts over authored content*.
+      **Placement — one input, no toggle.** The Word/Passage toggle is what was
+      disliked, not Learn itself: it forced a mode choice up front on a surface
+      whose job is one box. ⚠️ **An offer, not a route** — a phrase lookup is
+      legitimate (the idioms pack), so the input must never be silently
+      reinterpreted. Same shape as the spellcheck override, "a request, not a
+      filter".
+
+      **The input, designed 2026-09-14.** No value on its own — it ships with this
+      item, not before it, or it is a button with nothing behind it.
+
+      ⚠️ **This supersedes an earlier line in this item** that had the offer appear
+      *after* submission, beside the explanation. Moved *before* submission: a
+      paragraph submitted to `/api/explain` spends a model call and renders a
+      nonsense result, and both are avoidable by asking first.
+
+      **An auto-growing field, and the growth is also the signal.** Starts at
+      exactly today's height, grows a line at a time as it wraps, caps ~8 lines
+      then scrolls internally. **One line → only `Learn`, nothing about today
+      changes. Two lines → the writing action appears.** The affordance arrives at
+      the moment the box visibly becomes a writing surface, so it needs no
+      explaining copy. The existing button never moves; the new action sits under
+      the field.
+      ⚠️ **Wrapping, never a character count.** Ten study languages with different
+      density — 15 Korean characters is a sentence, 15 French characters is most of
+      `anniversaire`. A threshold means a `writingThreshold` in
+      `STUDY_LANGUAGE_CONFIGS`, i.e. the per-language conditional that registry
+      exists to prevent. Wrapping is measured in rendered space and is
+      script-neutral for free. **Bias it generous** — a spurious button is ignored,
+      a missing one means nobody finds the feature.
+
+      ⚠️ **Mobile: it must grow *downward*, and this is load-bearing.**
+      `app/(tabs)/index.tsx:535` holds the keyboard's space open so the field never
+      lifts on focus — "a search bar that jumps as you tap it is the thing being
+      fixed here". Growth does not violate that (motion the user's own keystrokes
+      caused is legible where an unearned jump is not), **but only downward**, into
+      the `keyboardReserve` band, covering the word of the day the way the keyboard
+      already does. Upward growth pushes the tagline and reinstates exactly the
+      feeling that comment exists to prevent.
+      **`searchRow` needs `alignItems: 'flex-end'`** — it sets none today, so it
+      defaults to `stretch`, which is invisible at one line and a slab of highlight
+      colour at eight. Bottom-pinned keeps the button under the thumb.
+      **It lands twice**: the empty state (`:519`) and the results state (`:603`)
+      render the row separately. They already share `s.searchInput` — extract the
+      field rather than editing both.
+
+      **Enter.** Free today on both platforms (native form on web,
+      `returnKeyType="search"` + `onSubmitEditing` on mobile), and a multiline field
+      takes that away. Web: Enter still submits, Shift+Enter newlines. Mobile: once
+      multiline the return key newlines and submission moves to the button — same
+      line-count signal. ⚠️ **Losing a passage to a stray Return is unrecoverable**;
+      nobody retypes it.
+
+      ⚠️ **Copy decides whether anyone finds this.** All three strings say *term* —
+      `inputPlaceholder` ("Enter a term..." / "단어를 입력하세요..."), `tagline`
+      ("Look up any word or phrase."). That actively says *not* to paste a sentence,
+      so the feature stays invisible however good the box is. The placeholder must
+      still be honest for the one-word case, which stays almost all use. Korean
+      natural, not a literal render of the English.
+      **Counter only near the 1000-char ceiling**, never on a one-word lookup.
+
+      **Rejected: an "expand" icon opening a writing composer** — the Word/Passage
+      toggle again with a smaller target, mode choice back up front.
+      **Scope:** field type + a growth handler + one alignment prop + a conditional
+      button + three strings. No redesign.
+
+      **The gap card is the cheapest win** and can ship with this or ahead of it.
+
 - [ ] **Per-context pronunciation speed** — the last of the mobile UI redesign
       queued 2026-09-01, moved here 2026-09-12 on the user's call. Nothing about
       it was decided; it is the axis question below that keeps it unscoped.
@@ -234,6 +364,16 @@ green. What's left is what those two now *show*.
       Google Cloud OAuth consent screen → Branding → App name. Console-side, no
       build, no code — but it is shown to **every** user signing in, on iOS and
       web as much as Android.
+
+- [ ] ⚠️ **Split 2026-09-14 — `writing.ts` is no longer deletable.** The grammar
+      plan above brings writing back as the diagnostic (Decisions in
+      [status.md](status.md)), and it wants `parseWritingReview`, the finding
+      types, `WritingCardCandidate.gap` and `buildWritingCardDraft` — all still
+      correct, plus `/api/writing` itself, unchanged. **Keep `writing.ts` and its
+      route.** `grammar.ts` is the opposite case and can still go on the condition
+      below: `getPatternExercise` and `gradeFromReview` are the generation and
+      model-grading the new design explicitly rejects, so nothing will want them
+      back. Treat the item below as being about `grammar.ts` only.
 
 - [ ] **Delete `packages/core/src/writing.ts`, `grammar.ts` and the two API
       routes that keep them alive.** **The gate is open**: it was "once no build

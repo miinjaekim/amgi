@@ -290,6 +290,159 @@ once, so a path that worked on build 14 is not evidence about build 15.
 Closed calls, kept with their reasoning — a decision whose reasoning is lost gets
 reopened by the next person to notice the symptom. Newest first.
 
+### Grammar returns as content, not as a mode — and not as its own app (2026-09-14)
+
+**The question was whether grammar belongs in Amgi at all**, reopened after the
+2026-08-18 removal and with a separate grammar app on the table the way Hwasul
+is for speaking. The answer: **the half of grammar that is authored content
+belongs, as a pack. The half that is diagnosis stays removed.** No new tab, no
+mode, no second app.
+
+⚠️ **First, why the 2026-08 removal happened, because it was recorded nowhere.**
+The commit, the merge and the entry below all say "the user's call" and list what
+was deleted; none of them says why — so answering this required asking the user
+rather than reading. This is the exact failure this section exists to prevent.
+All four reasons fired at once: **it made the app feel unfocused, the practice
+itself was not good, it went unused, and it was heavy and slow.** And one fact
+sets the bar for anything replacing it — **the user is not its user**: "I want it
+to exist, but I'm not the user."
+
+**The decisive observation: verb conjugation is not the thing that was removed.**
+The ask that reopened this named French conjugation, and that sits on the
+opposite side of every axis the removed feature failed on. What was removed was
+errors-as-syllabus — emergent from your own writing, model-*generated* per turn,
+model-*graded* free production, carrying its own queue and collection. A
+conjugation paradigm is **closed, finite, externally authored, gradable by string
+comparison, and needs no model call at all**. So the four removal reasons do not
+transfer: it is a pack rather than a toggle (focus), the exercise is a published
+table rather than an invention (quality), it costs nothing while unused
+(adoption), and it has no round trip (weight). Naming it "grammar" is what made
+these look like one question.
+
+**The research already said this and was read backwards.** `docs/grammar-research.md`
+§1 finds the explicit-practice advantage **concentrated in easy rules** — short
+scope, high reliability, few exceptions — and not significant for hard ones. A
+conjugation paradigm is the paradigm case of an easy rule. Amgi built the hard
+end, where the evidence is weakest, and skipped the end the evidence actually
+supports.
+
+**The precedent is the kana packs, and it transfers exactly.** `vision.md` admits
+them against its own not-for-beginners rule because **a writing system is a
+prerequisite, not vocabulary** — an adult who reads Chinese still cannot read
+かな. An adult with 500 French words still cannot conjugate *mettre*. A
+paradigm table is infrastructure in the same sense, and it is literally the same
+*shape*: `layout: 'grid'` exists for a wall of cells that has to stay scannable.
+
+**And `vision.md` amended itself on 2026-09-09, after the removal, in a way that
+reopens this.** Per-level *content* is now allowed where the ladder "comes from
+somewhere real — a published curriculum or exam sequence someone thought about."
+That amendment was made for 급수 and it covers a conjugation table for the same
+reason. **It does not reopen the curriculum**: what stays refused is the app
+deciding what a learner is ready for, and a pack of tables decides nothing.
+
+**Why not a separate app.** The test is **whether it needs new nouns.** Speaking
+does — a session, a turn, a recording, realtime latency — which is why Hwasul is
+a coherent idea. Conjugation needs **zero**: it is `VocabPack` + `layout: 'grid'`
++ the existing `/decks/[packId]/drill`, all built. Against that, a second app
+costs its own auth, habit, retention, store listing and Beta App Review cycle —
+and the no-OTA model already makes each of those expensive here. Spending that on
+a feature already removed once for being unused, for a user the builder is not,
+is the highest-cost and lowest-signal option available.
+
+**Three constraints the user set the same day, and they sharpen the shape rather
+than complicate it.**
+
+1. **Grammar review is never pooled with vocabulary review.** Its own row in the
+   review picker. This is already the house rule — `collections.ts` keeps
+   collections apart rather than pooling and filtering, and refuses an
+   "everything" collection outright. ⚠️ **And the research does not object**, which
+   is easy to get backwards: the interleaving finding measured grammar points
+   against *each other*, never grammar against vocabulary. The entry below already
+   records that as an extrapolation. So the instinct is backed rather than
+   tolerated.
+2. **Levels are the spine — A1 first, building up as users need more.** See the
+   `vision.md` amendment of this date, which this reverses a line of.
+3. **One concept at a time, authored — not a format that fits whatever turns up.**
+   This is the exercise *generator* being rejected, and it is what kills the
+   remaining machinery: `getPatternExercise` and `gradeFromReview` stay dead.
+   Items are written by hand, graded locally by `typedAnswer.ts`, single
+   direction. Zero model calls.
+
+**The structural insight that makes all of this cheap: a grammar point is a
+*subpack*, and its practice items are the *entries*.** One pack per level, one
+subpack per concept, each entry an authored cloze. Level → concept → item is two
+levels, and packs are exactly one subpack deep, so this needs **no nesting
+change** and inherits enrolment, the review picker, progress and drill as they
+stand.
+
+⚠️ **This does not contradict "a grammar point is not a card."** That argument
+rejected one card *per pattern* carrying a gloss — the lookup-table row that
+teaches the card instead of the function. Here the concept is the subpack and the
+cards are *instances of exercising it*. Losing that distinction is how this
+becomes the thing that already failed.
+
+⚠️ **`ReviewCollection.kind` does not come back.** It existed only because a
+patterns row and your own cards were both `id: null`; a grammar pack carries a
+pack-shaped id, so `collectionKey = id ?? ''` still resolves. The separation is
+cheaper now than the version that was deleted.
+
+**Writing comes back — as the diagnostic, never as the practice** (added later the
+same day, on the user's ask). ⚠️ **This revises the line that stood here**, which
+said writing review stays dead. It is revised for a reason inside this entry
+rather than because it was asked for: the `vision.md` amendment above justifies
+the levels reversal on the grounds that **errors-as-syllabus lost its sensor**.
+Writing *was* the sensor. Bringing it back restores the premise, so the
+conclusion has to be re-examined rather than quietly kept.
+
+**The two were built as competitors and are actually complements.** The old
+design had a finding *generate* a `GrammarPattern` and then *generate* exercises
+for it — two model calls per practice turn, unbounded scope, invented exercises.
+With an authored ladder in place a finding instead **classifies into a closed
+set**: "this is `la négation ne…pas`, A1 #7", which already has its items
+written. That is the same move `normalizePartOfSpeech` makes — match a closed
+code list, drop what does not fit — and it is far more reliable than generation.
+
+**The cost profile inverts, which answers the "heavy and slow" failure
+directly.** The old design put the model **inside the daily loop**, a call per
+turn. This puts it **only at the diagnostic moment** — `/api/writing` is one
+`gemini-2.5-flash` call at temperature 0.1, already deployed and unchanged. Daily
+practice stays authored, local and offline.
+
+**One real change to a recorded decision: submissions stay ephemeral, findings do
+not.** Store the **concept ids and counts**, never the prose — "missed `la
+négation` four times" is the syllabus signal, and the passage still is not kept.
+Strictly less persistence than the version that was rejected, and it is the piece
+that turns a one-shot review into a syllabus. It also earns the best surface in
+the plan: **the grammar collection ordered by the learner's own error counts.**
+That is the whole synthesis in one line — **authored content, emergent
+ordering.** Neither half was sufficient alone, which is why both previous
+attempts failed.
+
+**The gap card returns for free** — `WritingCardCandidate.gap` is implemented,
+the prompt already specifies it, and the route is deployed. It is vocabulary, so
+it feeds the ordinary card flow. Cheapest win here by a distance.
+
+**What stays dead, and this is still the load-bearing half:** generated
+exercises, model-graded free production, and writing as a *practice* surface.
+`getPatternExercise` and `gradeFromReview` do not come back. Writing diagnoses;
+authored clozes practise; the two never swap jobs.
+
+⚠️ **Sequencing is the whole risk control, and writing is third.** A finding has
+nowhere to point until the ladder exists, so: (1) one concept end to end, (2) the
+French A1 ladder, (3) writing as the router into it. That ordering doubles as a
+**gate** — writing returns only if (1) and (2) get used, which is the honest
+response to "it went unused" from a builder who is not the user. It buys the
+option rather than the commitment.
+
+⚠️ **Do not oversell what this buys.** Authored cloze is Paulston's *controlled*
+rung, and the same research is blunt that controlled practice alone does not
+build form-meaning mapping — Bunpro is the shipped cautionary case, and with
+production removed and no writing surface, Amgi now buys its ceiling knowingly.
+Accepted for now rather than solved. This does **not** fill the
+sentence × production cell `vision.md` wants and must not be described as doing
+so. **First language is French, A1** — and one concept ships end to end before a
+level is authored.
+
 ### A tap on a mobile pack saves the word; detail moves to the second tap (2026-09-13)
 
 On mobile, tapping an **unsaved** entry in a pack now saves it where it stands.

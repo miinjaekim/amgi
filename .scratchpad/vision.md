@@ -154,6 +154,29 @@ configured version of this and is not wanted. The patterns you practise are the
 ones your own writing showed you needed, plus the ones you asked about. Your
 errors are the syllabus.
 
+**Reversed 2026-09-14 — a levelled grammar syllabus is now the plan.** _Set by
+the user; the full call is in Decisions in [status.md](status.md)._ The paragraph
+above stands as the record of what was believed and why, but its conclusion no
+longer holds, and the reason is mechanical rather than a change of taste:
+**errors-as-syllabus lost its sensor.** It required writing review to observe the
+errors, and writing review was removed in 2026-08. So the choice is no longer
+"emergent or configured" — it is **configured or nothing**, because nothing in
+the app can now see what a learner gets wrong.
+
+Two things keep this from being a straight contradiction. The 2026-09-09
+amendment above already admits a ladder that "comes from somewhere real — a
+published curriculum or exam sequence someone thought about", and a CEFR level is
+that in the strongest available form. And what stays refused is unchanged: **the
+app still does not decide what you are ready for.** A levelled pack is content
+you pick from the outside, exactly as a 급수 pack is; there is still no placement
+test, no level setting, and no adaptivity reading your level off anything.
+
+⚠️ **CEFR is a can-do scale and does not publish a grammar syllabus.** The ladder
+has to come from a per-language reference level description, which exists for
+some languages and not others — so "levels" is the right idea while "CEFR" is the
+right *name* only where a citable référentiel backs it. For Korean the real
+ladder is TOPIK, which is the precedent 급수 already set here.
+
 This fills the ladder's **sentence × production** cell properly — writing review
 diagnoses at sentence level, and this is the drilling that follows a diagnosis —
 and opens **sentence × comprehension**, which is still empty.
