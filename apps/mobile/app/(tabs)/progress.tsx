@@ -9,7 +9,7 @@ import { router, useFocusEffect } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Svg, { Polyline } from 'react-native-svg';
 import {
-  PROGRESS_HISTORY_START, SUPPORTED_STUDY_LANGUAGES, buildHeatmap,
+  PROGRESS_HISTORY_START, SUPPORTED_STUDY_LANGUAGES, buildCardsAddedSeries, buildHeatmap,
   CARD_COLLECTIONS, buildWeekGrid,
   historyStartsMidWindow, localDateString, mergeLanguageRows, niceCeiling, weekdayIndex,
   shiftDate, weekAxisTicks,
@@ -74,6 +74,15 @@ export default function ProgressScreen() {
   const [days, setDays] = useState<DailyProgress[] | null>(null);
   const [rangeDays, setRangeDays] = useState<number>(90);
   const [switcherOpen, setSwitcherOpen] = useState(false);
+  /**
+   * Which measure the weekly chart draws.
+   *
+   * Session state rather than a remembered preference, unlike the mark beside
+   * it: the mark is how you like charts drawn, where this is a question you ask
+   * once and come back from. A second AsyncStorage key would also be a second
+   * thing to keep in step with web for no gain.
+   */
+  const [weekMeasure, setWeekMeasure] = useState<WeekMeasure>('reviews');
   /**
    * Cards learned — all of them, not a window's worth.
    *
@@ -278,6 +287,16 @@ export default function ProgressScreen() {
   // Scaled against a rounded ceiling rather than its own busiest day — see
   // `niceCeiling`. The chart owns that now, so nothing is derived here.
   const weekCells = buildHeatmap(days ?? [], localDateString(), 7);
+  /**
+   * The seven values the chart plots, in the same order as `weekCells`.
+   *
+   * `buildCardsAddedSeries` over a seven-day window buckets daily, so its rows
+   * line up one-to-one with the cells — which is what lets the two measures
+   * share every other part of the chart.
+   */
+  const weekValues = weekMeasure === 'reviews'
+    ? weekCells.map(cell => cell.reviews)
+    : buildCardsAddedSeries(days ?? [], localDateString(), 7).map(bucket => bucket.total);
 
   return (
     <SafeAreaView style={s.safe} edges={['top']}>
@@ -460,8 +479,11 @@ export default function ProgressScreen() {
               s={s}
               interfaceLanguage={interfaceLanguage}
               cells={weekCells}
+              values={weekValues}
               daysByDate={daysByDate}
               weekdays={weekdays}
+              measure={weekMeasure}
+              onMeasureChange={setWeekMeasure}
             />
 
             {languageRows.length > 0 && (
@@ -510,6 +532,11 @@ export default function ProgressScreen() {
  * not how accurately you recalled them — the verdict counters behind it are
  * still written, and `retentionRate` still computes it for whoever needs it
  * next.
+ *
+ * **It opens the per-language detail as of 2026-09-15.** The row was a dead
+ * element on both platforms until then — it drew three numbers and answered
+ * nothing further. The detail costs no read this screen was not already
+ * paying for, since `byLanguage` carries every counter.
  */
 function LanguageRow({ s, C, interfaceLanguage, language, progress, learned, busiest }: {
   s: ReturnType<typeof makeStyles>;
@@ -525,10 +552,24 @@ function LanguageRow({ s, C, interfaceLanguage, language, progress, learned, bus
   const share = busiest > 0 ? progress.reviews / busiest : 0;
 
   return (
-    <View style={s.langRow}>
-      <Text style={s.langName} numberOfLines={1}>
-        {t(interfaceLanguage, languageLabelKey(language))}
-      </Text>
+    <TouchableOpacity
+      style={s.langRow}
+      activeOpacity={0.7}
+      onPress={() => router.push({
+        pathname: '/progress/[language]',
+        params: { language },
+      })}
+      accessibilityRole="button"
+      accessibilityLabel={t(interfaceLanguage, languageLabelKey(language))}
+    >
+      <View style={s.langNameRow}>
+        <Text style={s.langName} numberOfLines={1}>
+          {t(interfaceLanguage, languageLabelKey(language))}
+        </Text>
+        {/* The affordance the row lacked. Without it a card that happens to be
+            tappable is indistinguishable from one that is not. */}
+        <Ionicons name="chevron-forward" size={16} color={C.muted} />
+      </View>
       <View style={s.langBarTrack}>
         <View
           style={[
@@ -553,7 +594,7 @@ function LanguageRow({ s, C, interfaceLanguage, language, progress, learned, bus
           ? ` · ${t(interfaceLanguage, 'progressStatNewCards')} ${cardsAdded}`
           : ''}
       </Text>
-    </View>
+    </TouchableOpacity>
   );
 }
 
@@ -637,8 +678,19 @@ function DayTooltip({ C, s, interfaceLanguage, date, day, left, top }: {
 }
 
 type WeekMark = 'bars' | 'line';
+/** What the weekly chart is counting. Both are per-day counts over seven days. */
+type WeekMeasure = 'reviews' | 'cards';
 /** Device-local, like the theme and the pronunciation speed beside it. */
 const WEEK_MARK_KEY = 'amgi_week_chart_mark';
+
+/**
+ * The measure's own name. Reused from the tiles rather than given keys of its
+ * own, so the chart and the number above it cannot describe one thing in two
+ * ways.
+ */
+function measureKey(measure: WeekMeasure): TranslationKey {
+  return measure === 'reviews' ? 'progressStatReviews' : 'progressStatNewCards';
+}
 
 /**
  * Reviews per day for the last week, drawn as bars or as a line.
@@ -653,13 +705,19 @@ const WEEK_MARK_KEY = 'amgi_week_chart_mark';
  * therefore says nothing about how big a week it was. Ruling it against a
  * rounded ceiling is what turns seven heights into seven readable numbers.
  */
-function WeekChart({ C, s, interfaceLanguage, cells, daysByDate, weekdays }: {
+function WeekChart({
+  C, s, interfaceLanguage, cells, values, daysByDate, weekdays, measure, onMeasureChange,
+}: {
   C: Palette;
   s: ReturnType<typeof makeStyles>;
   interfaceLanguage: string | null | undefined;
   cells: HeatmapCell[];
+  /** What to plot, one per cell — see `weekValues`. */
+  values: number[];
   daysByDate: Map<string, DailyProgress>;
   weekdays: string[];
+  measure: WeekMeasure;
+  onMeasureChange: (measure: WeekMeasure) => void;
 }) {
   /**
    * The remembered mark.
@@ -683,6 +741,8 @@ function WeekChart({ C, s, interfaceLanguage, cells, daysByDate, weekdays }: {
   const [selected, setSelected] = useState<number | null>(null);
   /** The plot's drawn width, measured — the line needs real pixels. */
   const [plotWidth, setPlotWidth] = useState(0);
+  /** Whether the measure dropdown is showing. */
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const choose = (next: WeekMark) => {
     setMark(next);
@@ -690,7 +750,9 @@ function WeekChart({ C, s, interfaceLanguage, cells, daysByDate, weekdays }: {
     AsyncStorage.setItem(WEEK_MARK_KEY, next).catch(() => undefined);
   };
 
-  const busiest = Math.max(0, ...cells.map(cell => cell.reviews));
+  /** A day's plotted value, by position. Zero if the series is somehow short. */
+  const valueAt = (index: number) => values[index] ?? 0;
+  const busiest = Math.max(0, ...values);
   /** The axis top. Marks scale to this, not to the raw busiest day. */
   const ceiling = niceCeiling(busiest);
   const ticks = weekAxisTicks(ceiling);
@@ -719,7 +781,48 @@ function WeekChart({ C, s, interfaceLanguage, cells, daysByDate, weekdays }: {
   return (
     <>
       <View style={s.weekHeader}>
-        <Text style={s.sectionTitle}>{t(interfaceLanguage, 'progressWeekTitle')}</Text>
+        {/* The measure is a dropdown rather than a fixed title: the same seven
+            days answer two questions, and the scale, the marks and the bubble
+            below are identical for both. */}
+        <View>
+          <TouchableOpacity
+            style={s.weekMeasureBtn}
+            onPress={() => setMenuOpen(open => !open)}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={t(interfaceLanguage, measureKey(measure))}
+          >
+            <Text style={s.sectionTitle}>{t(interfaceLanguage, measureKey(measure))}</Text>
+            <Text style={s.weekMeasureChevron}>▾</Text>
+            <Text style={s.weekLast7}>{t(interfaceLanguage, 'progressWeekLast7')}</Text>
+          </TouchableOpacity>
+          {menuOpen && (
+            <View style={s.weekMeasureMenu}>
+              {(['reviews', 'cards'] as const).map(option => (
+                <TouchableOpacity
+                  key={option}
+                  style={s.weekMeasureItem}
+                  onPress={() => {
+                    onMeasureChange(option);
+                    setMenuOpen(false);
+                    // The bubble names a day's numbers for the old measure, so
+                    // it would be describing a bar that is no longer there.
+                    setSelected(null);
+                  }}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: measure === option }}
+                >
+                  <Text style={[s.weekMeasureItemText, {
+                    color: measure === option ? C.highlight : C.text,
+                    fontWeight: measure === option ? '700' : '400',
+                  }]}>
+                    {t(interfaceLanguage, measureKey(option))}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+        </View>
         <View style={s.weekMarkRow}>
           {(['bars', 'line'] as const).map(option => (
             <TouchableOpacity
@@ -764,10 +867,10 @@ function WeekChart({ C, s, interfaceLanguage, cells, daysByDate, weekdays }: {
               {cells.map((cell, index) => (
                 <View
                   key={cell.date}
-                  // A day with reviews keeps a visible sliver, for the same
+                  // A day with any activity keeps a visible sliver, for the same
                   // reason the calendar gives a one-review day a level of 1.
                   style={[s.weekBar, {
-                    height: Math.max(heightOf(cell.reviews), cell.reviews > 0 ? 2 : 1),
+                    height: Math.max(heightOf(valueAt(index)), valueAt(index) > 0 ? 2 : 1),
                     opacity: selected === null || selected === index ? 1 : 0.55,
                   }]}
                 />
@@ -778,7 +881,7 @@ function WeekChart({ C, s, interfaceLanguage, cells, daysByDate, weekdays }: {
               <Svg width={plotWidth} height={WEEK_PLOT_HEIGHT}>
                 <Polyline
                   points={cells
-                    .map((cell, index) => `${centre(index)},${WEEK_PLOT_HEIGHT - heightOf(cell.reviews)}`)
+                    .map((cell, index) => `${centre(index)},${WEEK_PLOT_HEIGHT - heightOf(valueAt(index))}`)
                     .join(' ')}
                   fill="none"
                   stroke={C.heat[4]}
@@ -801,7 +904,7 @@ function WeekChart({ C, s, interfaceLanguage, cells, daysByDate, weekdays }: {
                       height: size,
                       borderRadius: size / 2,
                       left: centre(index) - size / 2,
-                      bottom: heightOf(cell.reviews) - size / 2,
+                      bottom: heightOf(valueAt(index)) - size / 2,
                       backgroundColor: C.heat[4],
                       borderColor: C.bg,
                       opacity: selected === null || on ? 1 : 0.5,
@@ -989,10 +1092,23 @@ function makeStyles(C: Palette, tabBarHeight: number) {
     tooltipDetail: { fontSize: 11, color: C.muted, marginTop: 1 },
     legend: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 10, marginBottom: 24 },
     legendText: { color: C.muted, fontSize: 11 },
+    // `zIndex` so the measure dropdown draws over the plot below it rather than
+    // under it — the menu is absolutely positioned inside this row.
     weekHeader: {
       flexDirection: 'row', alignItems: 'baseline',
       justifyContent: 'space-between', gap: 12,
+      position: 'relative', zIndex: 20,
     },
+    weekMeasureBtn: { flexDirection: 'row', alignItems: 'baseline', gap: 4 },
+    weekMeasureChevron: { color: C.muted, fontSize: 10 },
+    weekLast7: { color: C.muted, fontSize: 11, marginLeft: 2 },
+    weekMeasureMenu: {
+      position: 'absolute', top: 22, left: 0, zIndex: 30, minWidth: 150,
+      borderRadius: 10, borderWidth: 1, borderColor: C.border,
+      backgroundColor: C.surface, paddingVertical: 4,
+    },
+    weekMeasureItem: { paddingHorizontal: 12, paddingVertical: 9 },
+    weekMeasureItemText: { fontSize: 13 },
     weekMarkRow: { flexDirection: 'row', gap: 4 },
     weekMarkBtn: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, borderWidth: 1 },
     weekMarkText: { fontSize: 11 },
@@ -1023,10 +1139,10 @@ function makeStyles(C: Palette, tabBarHeight: number) {
     },
     weekLabel: { flex: 1, textAlign: 'center', color: C.muted, fontSize: 10 },
     langRow: { padding: 12, borderRadius: 12, borderWidth: 1, borderColor: C.border, marginBottom: 8 },
-    // No `flex: 1`: the name sits directly in the card's column now that the
-    // retention figure is gone, where flex would stretch it vertically rather
-    // than fill the row it used to share.
-    langName: { color: C.text, fontSize: 14, fontWeight: '700' },
+    // The name shares its line with the chevron again, so it takes the space
+    // left over rather than sitting directly in the card's column.
+    langNameRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    langName: { color: C.text, fontSize: 14, fontWeight: '700', flex: 1 },
     langBarTrack: {
       height: 6, borderRadius: 3, backgroundColor: C.border,
       overflow: 'hidden', marginTop: 8, marginBottom: 6,

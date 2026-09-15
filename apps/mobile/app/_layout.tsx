@@ -47,6 +47,11 @@ export default function RootLayout() {
                 the rest of the session. A pushed screen is not mid-transition
                 when its own button is tapped, so the race cannot happen. */}
             <Stack.Screen name="share" />
+            {/* The per-language progress detail, opened from a "By language"
+                row. A pushed screen rather than a sheet, matching share above:
+                it is a place you go and come back from, and the row it opens
+                from is the thing you come back to. */}
+            <Stack.Screen name="progress/[language]" />
           </Stack>
           <FirstRun />
         </PronunciationProvider>

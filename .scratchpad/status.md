@@ -295,6 +295,248 @@ once, so a path that worked on build 14 is not evidence about build 15.
 Closed calls, kept with their reasoning — a decision whose reasoning is lost gets
 reopened by the next person to notice the symptom. Newest first.
 
+### The streak chip and the Progress tab kept two copies of one number (2026-09-15)
+
+**Found by the user, from a three-review gap**: the chip on Learn and Review
+read 202 where the Progress tab's bar for today read 205. The instinct was that
+these are two different measures — cards reviewed versus reviews — and that
+distinction is real *in this codebase*, but it is not what these two numbers
+were. **They are the same unit and should have been identical.**
+
+`recordReview` fires once per rating, at one call site per platform, and makes
+**two independent fire-and-forget writes**: `recordProgress` (a `merge:true`
+write of `increment()`, no read-modify-write) and `recordReviewStreak` (a
+**transaction** on `users/{uid}`, with a swallowing `.catch`). `advanceStreak`
+does `reviewedToday + 1` and is not even *given* the card or the direction, so
+it structurally cannot dedupe by card. Both count directions.
+
+⚠️ **Three drift mechanisms, and they pull in both directions** — which is why
+the gap never looked like a systematic offset:
+
+1. **A dropped streak transaction.** Rapid ratings contend on one document; a
+   transaction that exhausts its retries is discarded silently while the
+   rollup's increment still lands. **Chip reads low.** Three in 205 (~1.5%) is
+   an ordinary fast session.
+2. **`mergeStreakState` takes `Math.max`, not a sum** (`offlineReview.ts:181`)
+   where the rollup *adds* across devices. The comment directly above it says
+   reviews "should add up rather than one erasing the other", which `Math.max`
+   does not do. **Chip reads low.**
+3. **Undo reverses the rollup and deliberately never the streak fields.** **Chip
+   reads high** — one per undo, for the rest of the day.
+
+**The fix is to stop keeping two copies**, on the user's call. The chip now
+reads the day rollup — the same document and field the Progress tab draws — so
+they cannot disagree by construction, and undo moves the chip for free.
+
+⚠️ **The two platforms get there differently, and the reason is the cache.**
+Web subscribes (`subscribeToProgressDay`, an `onSnapshot` on today's row), which
+is exact. **Mobile cannot**: the Firestore SDK's cache on React Native is
+memory-only, so a listener goes blank the moment the app is offline — the one
+moment a streak chip most needs to keep counting. So mobile seeds from
+`fetchTodayReviews` (which replays the unsent AsyncStorage queue over the
+server's copy, exactly as the dashboard does) and then moves the number in step
+with each rating and undo.
+
+⚠️ **`reviewedToday` is still written and still load-bearing** — it is what
+`advanceStreak` carries and what the streak is computed from. It is simply no
+longer *displayed*, which also makes `mergeStreakState`'s `Math.max` inert for
+anything a user sees. Left alone rather than "fixed": changing a same-day merge
+to add is its own double-counting edge case on re-sync, and nothing reads the
+result now.
+
+**It was also a labelling error, and that half is a real bug.** Mobile's badge
+said "12 **cards** today" while counting directions — the exact noun collision
+`progress.ts` warns against twice ("the two may never share an axis or a
+label"). Both locales now say reviews, through `progressChipReviewsToday`.
+
+**Hence the ⓘ.** One `StreakInfo` on web for both chips (`SideNav` and
+`Header` render the same streak and would have drifted — the argument that made
+mobile's `StreakBadge` shared), a `BottomSheet` on mobile. The sentence it
+exists for is that a card studied both ways counts twice, so the number looks
+too high until you know what it counts. It is a separate target from the chip
+deliberately: the chip navigates to Progress, and one control that navigates or
+explains depending on which glyph you hit is worse than two.
+
+### The "By language" row opens a detail view, and the charts follow the range (2026-09-15)
+
+Two of the three Progress items scoped the same day, built on
+`feat/progress-language-detail`. **Three calls were the user's**, each one the
+backlog had deliberately left open, and all three went to the recommendation.
+
+**Where the detail lives: a dedicated surface, not an expanding row.** Web gets
+`/progress/[language]`, mobile a pushed screen (`app/progress/[language].tsx`),
+matching the share carousel's precedent. The deciding argument is what the item
+asked for — *room for the charts below*. An expanding row keeps the comparison
+between languages on screen, which is the genuine cost of this choice, but a
+cumulative curve inside a list item on a phone is not a chart. The range travels
+in the link (`?range=`, `params.range`), so the detail opens on the window being
+looked at rather than making it be chosen again.
+
+**The charts follow the range chip, bucketed by week past 30 days.** Until now
+the chip governed only the calendar; the weekly chart ignored it. One bar per
+day to 30, one per week at 90 and a year — so 90 days is 13 bars rather than 90,
+and a year is 52 rather than 364, which is the wall the heatmap already draws
+better. `chartBucketDays` is in core for `niceCeiling`'s reason: the grain
+decides what a bar *is*, and two platforms disagreeing would put two different
+charts under one title.
+
+⚠️ **Bars are chunked backwards from today, never aligned to Sundays.** Week
+alignment would leave the newest bar partial six days out of seven, and a final
+bar that dips because the week is not over reads as a slump rather than as a
+Tuesday. The cost moves to the *oldest* bar, which is short whenever the window
+is not a multiple of seven (90 days is twelve weeks and six days) — the better
+end to put it, since a bar carries its own date range and nobody reads a trend
+off the left edge.
+
+**Cards added is stacked, not summed.** The backlog called summing the
+consistent default and stacking the more informative one; stacking turns out to
+be both, because the bar *total* still equals `progressStatNewCards` exactly —
+pinned by a test against `summarizeProgress`. So the dashboard tile and the
+shared image keep their number while the chart can still say that Wednesday's
+spike was a 474-card pack import rather than an enormous study day. A test holds
+that total; without it the two surfaces could drift apart silently.
+
+⚠️ **Neither new chart takes the mark toggle, and that dissolves a hazard the
+item flagged.** `amgi_week_chart_mark` is a single key shared by both platforms,
+so a second consumer would mean switching one chart silently switched another.
+It never arises: a stacked pair has no line form (two series as one polyline is
+a different chart), and a cumulative curve has no bar form (bars would draw each
+one as its own contribution — a level read as a rate). The form follows the data
+here rather than being offered, so there is nothing to remember.
+
+⚠️ **The learned curve reaches one day further back than you would expect, and
+that is not an off-by-one.** `LEARNED_SERIES_START` is `DETAILED_HISTORY_START`
+**minus a day** (2026-09-05, not 09-06). The curve is walked backwards from
+today's all-time count by subtracting crossings, so the value at the end of day
+D needs every crossing on the days *after* D — for 09-05 those are 09-06
+onwards, all recorded. There is a test pinning exactly this, because it is the
+thing most likely to be "corrected" into being wrong.
+
+**Everything before it is `null`, never 0, and the line stops.** A curve running
+off the left edge into a flat zero claims nothing had been learned then, which
+is the one thing the missing data does not say. Both platforms draw only the
+known run and caption where it begins, or the chart would look truncated by a
+bug.
+
+⚠️ **The mature backfill guard is repeated on both detail surfaces**, rather
+than assumed to have run on the dashboard. These are routes, so either can be
+the first progress surface an account opens; `matureBackfillAt` keeps it
+one-shot, so repeating it costs one preferences read and never a second walk.
+Without it a deep-linked first visit would anchor the curve on an undercount.
+
+**Retention stayed off, deliberately.** The verdict counters are per-language
+only from 2026-09-04 and the display came off every surface on 2026-09-12; a
+detail view is exactly where it would have crept back in because the data is
+sitting right there. `byHour` is likewise still not per-language, so "when do
+you study Korean" remains a question these rows cannot answer.
+
+**Three follow-up calls the same day, all the user's, after seeing it.**
+**Seven days joined the detail screen's ranges and is its default** — a detail
+view answers "how is this deck going lately", where the dashboard is read for
+the shape of a season, and it is also the one window where both charts sit
+entirely inside recorded history. ⚠️ **The range hand-off was dropped to make
+that possible**: every arrival is from a row on the dashboard, so an inherited
+`?range=` would have meant the screen opened on 90 every time and seven days
+would never have been the default.
+
+⚠️ **The stacked bar was reversed one day after it shipped**, for legibility
+rather than taste: at 52 bars each band is a few pixels, and the two colours are
+steps of one ramp because the ramp is what is theme-safe on both platforms. It
+is a **source filter** now — nothing selected means the total, so the resting
+state still equals `progressStatNewCards` and the consistency argument that
+justified stacking survives intact. Tapping the selected chip clears it, so the
+control is its own reset and needs no third chip.
+
+**The weekly chart's title became a measure dropdown** (Reviews / Cards added),
+which is the first thing to make the range row's neighbour answer more than one
+question. A seven-day `buildCardsAddedSeries` buckets daily, so its rows line up
+one-to-one with the heatmap cells — which is what lets both measures share the
+scale, the marks, the tooltip and the labels. Session state, not a remembered
+preference: the mark is how you like charts drawn, this is a question you ask
+and come back from.
+
+**The cards-added bars carry their own numbers, and the axis gave way to them**
+(later the same day, on the user's ask — they were looking at the Korean chart
+and wanted it more satisfying to read). **An axis exists to let a level be read
+off a shape that cannot be labelled** — which is the learned curve, not this.
+Labelling every bar states the same quantity *exactly*, so keeping both is two
+encodings of one number. The gridlines therefore collapse to the zero line when
+the labels are on. ⚠️ **The gutter stays** even with only a "0" in it: dropping
+it would win ~30px of bar width and cost the left-edge alignment with the curve
+directly below, which is the more valuable of the two.
+
+⚠️ **Three constraints on those labels, and each exists for a reason that is not
+obvious from the code.** `LABELLED_BAR_MAX` is keyed on **bar count, never the
+window** — the grain changes underneath it, so 7 days is 7 bars and 90 days is
+13 weekly ones (both fit) while 30 daily bars and a year's 52 do not; rewriting
+this as a range check would silently label the 30-day view into a collision.
+**Only non-zero bars get a number**, because cards added is a *sparse* series —
+most days you add nothing, and a row of zeroes is noise. And a zero day keeps a
+**1px stub** rather than vanishing, since an absent bar and a zero bar look
+identical and only one of them is true.
+
+**Weekday labels replaced the two end dates when a bar is a day**, matching what
+the dashboard's weekly chart already does, so the two read as one family. Taken
+from each bucket's own date rather than a fixed Sunday-to-Saturday run, because
+these seven days end on today. A weekday means nothing on a bar covering seven
+of them, so weekly buckets take dated ticks instead — see below.
+
+**The learned curve gained a dot per point, and the axis gained middle ticks**
+(later the same day, on the user's ask). Both charts now decorate their marks
+individually under **one** threshold, `DECORATED_MARK_MAX` — a number over every
+bar, a dot on every point. ⚠️ **It is deliberately a single constant covering
+both plots**: they sit one above the other, so two constants sharing a value
+would drift and the charts would change character at different windows, which
+reads as a bug in whichever one changed second. It also renamed from
+`LABELLED_BAR_MAX`, which had stopped describing what it governs. Dots are drawn
+from `known`, so the curve and its vertices stop at the same place rather than
+the dots running on past where the data does.
+
+⚠️ **`AxisLabels` is gone, and naming only the two ends was the defect.** It said
+how long the window was and nothing about where anything inside it sat — on a
+90-day chart every point between the two labels was unplaceable without hovering
+it. `DateTicks` spreads up to four dates instead, each positioned at the *centre
+of the mark it names* rather than evenly across the width, so a tick sits under
+its own data. The indices are deduped: rounding can otherwise land two ticks on
+one mark on a short series. Mobile needs the measured plot width for this, for
+the same reason its line does — React Native has no percentage translate.
+
+**A fourth tile: average per day, per language** (later the same day, user's
+call). It reuses `progressStatAverage` rather than taking copy of its own,
+because it is the dashboard's measure narrowed rather than a different one.
+⚠️ **The narrowing is the whole content of `languageAveragePerActiveDay`:
+"active" means the days *this language* was studied, not the days the account
+was.** A day spent entirely on Japanese is not a quiet Korean day, it is not a
+Korean day at all — averaging those in would make every language look worse the
+more languages you study, so the figure would be measuring how divided your
+attention is rather than how much you do when you sit down with a deck. Rounded
+and zero-safe to match `summarizeProgress` exactly, so the two tiles cannot come
+to disagree about what the words mean.
+
+⚠️ **The tile asked for first was "cards reviewed", and it is not a
+rollup-shaped question.** Worth recording, because the gap is easy to notice
+again and expensive to re-derive. Distinct cards **cannot be summed across
+days**: a per-day distinct-card counter double-counts anything reviewed on two
+days, so unlike `reviewedToday` this is not a missing counter. Counting cards
+whose *last* review falls in the window is the correct dedupe, and the last
+review **is** recoverable — `getNextReviewData` sets `nextReview` to `now +
+interval` on a pass and to `now` on a lapse. So the honest route is a stored
+`lastReviewedAt` plus `uid ==` and a range filter, which needs a **composite
+index on all ten card collections**, built by hand (lessons.md). **Unlike every
+other counter here it would be backfillable**, from that same interval
+arithmetic, the way `backfillMatureFlags` recovered maturity — so "from today or
+from never" does not apply to it. Not built; the free tile was taken instead.
+
+⚠️ **Verified by suite and compiler, not by eye.** Web is 635/635 with 20 new
+assertions, both apps clean under `tsc --noEmit`, lint unchanged at 21 warnings
+/ 0 errors, and `expo export` bundles — which is the check that matters most
+here, since `app/progress/[language].tsx` sits beside the existing
+`(tabs)/progress.tsx` route and a collision is invisible to TypeScript.
+**Nobody has looked at either screen**, on a device or in a browser: the
+stacked bars, the curve, the two tooltips and the Korean labels at 52 bars are
+all unseen. No new native module — `react-native-svg` was already counted for
+the weekly chart — so the build story is unchanged.
+
 ### Grammar returns as content, not as a mode — and not as its own app (2026-09-14)
 
 **The question was whether grammar belongs in Amgi at all**, reopened after the

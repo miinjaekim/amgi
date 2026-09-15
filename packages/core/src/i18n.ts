@@ -144,9 +144,16 @@ const translations = {
     // starts now rather than implying something is broken or missing.
     progressEmpty: 'Nothing recorded yet.',
     progressEmptyBody: 'Your history starts with your next review — this fills in as you study.',
+    // 7 days leads, and is the per-language detail's default. The dashboard
+    // still opens on 90 — a detail view is read to answer "how is this deck
+    // going lately", where the dashboard is read for the shape of a season.
+    progressRangeWeek: '7 days',
     progressRangeMonth: '30 days',
     progressRangeQuarter: '90 days',
     progressRangeYear: 'Year',
+    // The weekly chart picks its measure from a dropdown now, so its title is
+    // the measure's own name plus this rather than a sentence of its own.
+    progressWeekLast7: 'last 7 days',
     progressStatReviews: 'Reviews',
     progressStatAverage: 'Average per day',
     progressStatNewCards: 'Cards added',
@@ -165,9 +172,6 @@ const translations = {
     // Sits beside the window's review count on the same row, so it has to name
     // its own scope: this one is all-time, read off the cards.
     progressLanguageLearned: '{count} learned',
-    // Names the measure, since the chart carries one series and therefore no
-    // legend — the title is what says what the bars are.
-    progressWeekTitle: 'Reviews, last 7 days',
     progressChartBars: 'Bars',
     progressChartLine: 'Line',
     // Rollups began 2026-08-20 and cannot be reconstructed, so a window
@@ -180,6 +184,35 @@ const translations = {
     progressTooltipNoReviews: 'No reviews',
     progressTooltipCards: '{count} cards added',
     progressTooltipOneCard: '1 card added',
+    // The per-language detail screen, opened from a "By language" row.
+    // Its two charts reuse `progressStatNewCards` and `shareStatLearned` as
+    // their titles rather than taking keys of their own — a chart and the tile
+    // above it counting the same thing must not wear two different labels.
+    progressBackToAll: 'All languages',
+    // The two halves of a stacked bar. Counted apart because enrolling in a
+    // 474-card pack and looking up one word are not the same event, and a bar
+    // that hides the difference reads as an enormous study day.
+    progressChartLookup: 'Looked up',
+    progressChartPack: 'From packs',
+    // The learned curve is walked backwards from today's count, so it reaches
+    // only as far as the day crossings started being recorded. Said out loud
+    // where it stops, because a line that simply ended would look like a bug.
+    progressChartLearnedCutoff: 'Tracked from {date} onwards.',
+    progressChartWeeklyNote: 'Each bar is one week.',
+    progressChartEmpty: 'Nothing added in this window.',
+    // The streak chip, and the panel behind the ⓘ beside it.
+    //
+    // ⚠️ **"reviews", never "cards".** This number counts *directions* — the
+    // same thing `reviews` counts — and mobile called them cards until
+    // 2026-09-15, which is the noun collision `progress.ts` warns about twice.
+    progressChipReviewsToday: '{count} reviews today',
+    progressInfoOpen: 'How these numbers are counted',
+    progressInfoTitle: 'How these are counted',
+    progressInfoStreak: 'Your streak counts days with at least one review. Today not being done yet does not break it — the day is not over.',
+    // The sentence the whole panel exists for: it explains a number that looks
+    // too high until you know what it counts.
+    progressInfoReviews: 'Reviews counts each direction on its own, so a card you study both ways counts twice. It is the same number the Progress tab shows for today.',
+    progressChartRange: '{start} – {end}',
     // Shareable stats image. Deliberately short — these are read at story
     // size and sometimes at thumbnail size, where a two-word label is already
     // at the limit.
@@ -790,9 +823,11 @@ const translations = {
     progressLoading: '기록을 불러오는 중...',
     progressEmpty: '아직 기록이 없습니다.',
     progressEmptyBody: '다음 복습부터 기록이 쌓입니다.',
+    progressRangeWeek: '7일',
     progressRangeMonth: '30일',
     progressRangeQuarter: '90일',
     progressRangeYear: '1년',
+    progressWeekLast7: '최근 7일',
     progressStatReviews: '복습',
     progressStatAverage: '하루 평균',
     progressStatNewCards: '담은 카드',
@@ -807,7 +842,6 @@ const translations = {
     progressBarScale: '막대는 가장 많이 복습한 언어를 기준으로 비교한 것입니다.',
     progressLanguageReviews: '{count}개 복습',
     progressLanguageLearned: '{count}개 익힘',
-    progressWeekTitle: '최근 7일 복습',
     progressChartBars: '막대',
     progressChartLine: '선',
     progressCardsFromPacks: '단어팩에서 {count}개',
@@ -816,6 +850,18 @@ const translations = {
     progressTooltipNoReviews: '복습 없음',
     progressTooltipCards: '카드 {count}개 추가',
     progressTooltipOneCard: '카드 1개 추가',
+    progressBackToAll: '전체 언어',
+    progressChartLookup: '직접 검색',
+    progressChartPack: '단어팩',
+    progressChartLearnedCutoff: '{date}부터 기록된 값입니다.',
+    progressChartWeeklyNote: '막대 하나가 1주일입니다.',
+    progressChartEmpty: '이 기간에 담은 카드가 없습니다.',
+    progressChipReviewsToday: '오늘 {count}개 복습',
+    progressInfoOpen: '계산 방식 보기',
+    progressInfoTitle: '어떻게 세는 건가요?',
+    progressInfoStreak: '복습을 한 번이라도 한 날을 연속으로 셉니다. 오늘 아직 하지 않았더라도 하루가 끝나기 전까지는 끊기지 않습니다.',
+    progressInfoReviews: '복습 수는 방향마다 따로 셉니다. 앞뒤 양쪽으로 공부한 카드는 두 번으로 계산됩니다. 학습 기록 탭에 표시되는 오늘 수치와 같은 값입니다.',
+    progressChartRange: '{start} – {end}',
     // Shareable stats image. Reuses the dashboard's own words where they fit
     // ('복습', '공부한 날', '연속 학습') so the image and the screen behind it
     // cannot describe the same number differently.

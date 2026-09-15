@@ -3,6 +3,7 @@ import React, { useRef, useState, useEffect } from 'react';
 import Link from 'next/link';
 import AmgiLogo from './AmgiLogo';
 import SettingsMenu from './SettingsMenu';
+import StreakInfo from './StreakInfo';
 import { useUser } from '@/components/UserContext';
 import { SUPPORTED_STUDY_LANGUAGES } from '@/services/userPreferences';
 import { t } from '@/lib/i18n';
@@ -52,14 +53,18 @@ const Header: React.FC = () => {
           <div
             className="flex items-center gap-1.5 font-mono text-sm"
             style={{ color: 'var(--color-text)' }}
-            title={interfaceLanguage === 'Korean' ? `${streak}일 연속 · 오늘 ${reviewedToday}개` : `${streak}-day streak · ${reviewedToday} reviewed today`}
+            title={`${interfaceLanguage === 'Korean' ? `${streak}일 연속` : `${streak}-day streak`} · ${t(interfaceLanguage, 'progressChipReviewsToday', { count: reviewedToday })}`}
           >
             <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor" style={{ color: 'var(--color-highlight)' }}>
               <path d="M12 2C12 2 7 8 7 13a5 5 0 0010 0c0-5-5-11-5-11zm0 15a3 3 0 01-3-3c0-2.5 2-5.5 3-7 1 1.5 3 4.5 3 7a3 3 0 01-3 3z" />
             </svg>
+            {/* The count stays out of the bar itself — this is the narrow-screen
+                header and three numbers do not fit beside a language chip. It is
+                in the tooltip above, and the ⓘ carries the explanation. */}
             <span className="font-semibold">
               {interfaceLanguage === 'Korean' ? `${streak}일` : `${streak} ${streak === 1 ? 'day' : 'days'}`}
             </span>
+            <StreakInfo />
           </div>
         )}
         {authLoading ? null : (

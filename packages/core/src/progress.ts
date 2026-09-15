@@ -638,6 +638,35 @@ export function mergeLanguageRows(
   ));
 }
 
+/**
+ * Mean reviews on the days this language was actually studied.
+ *
+ * The per-language twin of `ProgressSummary.averagePerActiveDay`, and the part
+ * worth reading is what counts as *active*: a day spent entirely on Japanese is
+ * not a quiet Korean day, it is not a Korean day at all. Averaging those in
+ * would make every language look worse the more languages you study — the
+ * figure would measure how divided your attention is rather than how much you
+ * do when you sit down with a deck.
+ *
+ * Rounded and zero-safe exactly as the whole-account figure is, so the two
+ * tiles cannot come to disagree about what "average per day" means. Adding
+ * cards is not studying here either, matching `isStudyDay`.
+ */
+export function languageAveragePerActiveDay(
+  days: DailyProgress[],
+  language: StudyLanguage,
+): number {
+  let reviews = 0;
+  let activeDays = 0;
+  for (const day of days) {
+    const count = day.byLanguage[language]?.reviews ?? 0;
+    if (count <= 0) continue;
+    reviews += count;
+    activeDays += 1;
+  }
+  return activeDays === 0 ? 0 : Math.round(reviews / activeDays);
+}
+
 export interface HeatmapCell {
   date: string;
   reviews: number;
@@ -780,4 +809,200 @@ export function buildWeekGrid(cells: HeatmapCell[]): WeekGrid {
   });
 
   return { columns, months };
+}
+
+/**
+ * The longest window still drawn one bar per day.
+ *
+ * Past it the bars become weeks. 90 days is 90 bars at about three pixels each
+ * on a phone and a year is 364 — a wall the calendar above already draws, and
+ * draws better, because a heatmap cell is allowed to be three pixels and a bar
+ * is not.
+ */
+export const DAILY_CHART_MAX_DAYS = 30;
+
+/**
+ * How many days one bar covers, for a window of `windowDays`.
+ *
+ * ⚠️ **In core rather than on each screen, for `niceCeiling`'s reason.** The
+ * grain decides what every bar *is*: two platforms disagreeing about whether a
+ * bar is a day or a week would put two different charts under one title, and
+ * the bug would only show at the ranges nobody checks by hand.
+ */
+export function chartBucketDays(windowDays: number): number {
+  return windowDays <= DAILY_CHART_MAX_DAYS ? 1 : 7;
+}
+
+/** One bar's span. `start` and `end` are equal when the grain is a day. */
+export interface ChartBucket {
+  start: string;
+  end: string;
+}
+
+interface DatedBucket extends ChartBucket {
+  dates: string[];
+}
+
+/**
+ * The window cut into bars, oldest first.
+ *
+ * **Chunked backwards from `endDate`, not aligned to calendar weeks.** The
+ * newest bar is therefore always a whole seven days. Aligning to Sundays would
+ * leave it partial on six days out of seven, and a final bar that dips because
+ * the week is not over yet is read as a slump rather than as a Tuesday — the
+ * one misreading a chart of "how much am I adding" must not invite.
+ *
+ * The cost lands on the *oldest* bar instead, which is short whenever the
+ * window is not a multiple of the grain (90 days is twelve weeks and six days).
+ * That is the better end to put it: a bar carries its own `start` and `end`, so
+ * the range a reader asks about names itself, and the left edge of a chart is
+ * where a reader already expects the window to begin mid-something.
+ */
+function chartBuckets(endDate: string, dayCount: number, bucketDays: number): DatedBucket[] {
+  const buckets: DatedBucket[] = [];
+  let end = endDate;
+  let remaining = dayCount;
+  while (remaining > 0) {
+    const span = Math.min(bucketDays, remaining);
+    const start = shiftDate(end, -(span - 1));
+    buckets.push({ start, end, dates: dateRange(start, end) });
+    remaining -= span;
+    end = shiftDate(start, -1);
+  }
+  return buckets.reverse();
+}
+
+/**
+ * One day's counters, whole-day or narrowed to a single language.
+ *
+ * The narrowing is what lets the per-language detail screen reuse these
+ * builders rather than growing its own: `byLanguage` has carried every counter
+ * since rollups began, so a language's series costs no read the dashboard was
+ * not already paying for.
+ */
+function sliceFor(day: DailyProgress | undefined, language?: StudyLanguage): LanguageProgress {
+  if (!day) return emptyLanguageProgress();
+  if (!language) return day;
+  return day.byLanguage[language] ?? emptyLanguageProgress();
+}
+
+/** One bar of the cards-added chart: the two sources, and their sum. */
+export interface CardsAddedBucket extends ChartBucket {
+  /** Cards added one at a time — a lookup, an import, an enrichment. */
+  lookup: number;
+  /** Cards added by enrolling in a pack. */
+  pack: number;
+  /** `lookup + pack` — exactly what `progressStatNewCards` counts. */
+  total: number;
+}
+
+/**
+ * Cards added per bar, kept split by where they came from.
+ *
+ * **Free, unlike the curve below.** `newCards` and `packCards` are per-language
+ * and per-day since rollups began on 2026-08-20, so this needs no schema change
+ * and no backfill, and it is honest over every window the tab offers.
+ *
+ * ⚠️ **The two are drawn stacked, and `total` is why that is safe.** They are
+ * counted apart because enrolling in a 474-card pack and looking up one word
+ * are not the same event, and a chart where one import dwarfs every real day is
+ * worse than no chart. Stacking shows the import as its own band while the bar
+ * still adds up to the figure the dashboard tile and the shared image both
+ * show — so the reader gains the split without the surfaces contradicting each
+ * other.
+ */
+export function buildCardsAddedSeries(
+  days: DailyProgress[],
+  endDate: string,
+  dayCount: number,
+  language?: StudyLanguage,
+): CardsAddedBucket[] {
+  const byDate = new Map(days.map(day => [day.date, day]));
+  return chartBuckets(endDate, dayCount, chartBucketDays(dayCount)).map(bucket => {
+    let lookup = 0;
+    let pack = 0;
+    for (const date of bucket.dates) {
+      const slice = sliceFor(byDate.get(date), language);
+      lookup += slice.newCards;
+      pack += slice.packCards;
+    }
+    return { start: bucket.start, end: bucket.end, lookup, pack, total: lookup + pack };
+  });
+}
+
+/**
+ * The oldest day the learned curve can honestly reach.
+ *
+ * ⚠️ **A day *before* `DETAILED_HISTORY_START`, and that is not an off-by-one.**
+ * The curve is walked backwards from today's count by subtracting crossings, so
+ * the value at the end of day D needs every crossing on the days *after* D. For
+ * D = 2026-09-05 those are 09-06 onwards, all of which were recorded. For
+ * 09-04 it would need 09-05's, which never were.
+ */
+export const LEARNED_SERIES_START = shiftDate(DETAILED_HISTORY_START, -1);
+
+/** One point of the learned curve. `null` is "not knowable", never zero. */
+export interface LearnedPoint extends ChartBucket {
+  /**
+   * Cards over the maturity line at the end of this bar, or `null` where the
+   * baseline was never recorded.
+   *
+   * A renderer must **stop the line** at a null rather than drawing through it
+   * — a curve running off the left edge into a flat zero is a claim that
+   * nothing had been learned, which is the one thing the missing data does not
+   * say.
+   */
+  learned: number | null;
+}
+
+/**
+ * "Cards learned over time", derived rather than stored — and honest about how
+ * far back it can see.
+ *
+ * ⚠️ **This is not a series anyone recorded, and it cannot be backfilled.** The
+ * all-time count is *state*, read off the cards themselves (`mature`), and the
+ * only per-day record is `cardsMatured` — net crossings, written from
+ * 2026-09-06. So the curve anchors at `learnedNow` and walks backwards
+ * subtracting each bar's crossings: exact back to `LEARNED_SERIES_START`, and
+ * `null` before it.
+ *
+ * ⚠️ **`cardsMatured` is net and can go negative** — a lapse clears the flag —
+ * so this is arithmetic rather than a running maximum, and a relearned card
+ * must not count twice.
+ *
+ * ⚠️ **It counts cards where `reviews` counts directions.** The two may never
+ * share an axis or a label.
+ *
+ * `learnedNow` is the all-time count for whatever scope is being drawn: the
+ * whole account, or one language's own count when `language` is given.
+ */
+export function buildLearnedSeries(
+  days: DailyProgress[],
+  endDate: string,
+  dayCount: number,
+  learnedNow: number,
+  language?: StudyLanguage,
+): LearnedPoint[] {
+  const byDate = new Map(days.map(day => [day.date, day]));
+  const buckets = chartBuckets(endDate, dayCount, chartBucketDays(dayCount));
+
+  const points: LearnedPoint[] = [];
+  // Clamped on the way in, and again on each step: the anchor is counted off
+  // the cards while the crossings come from the rollups, so the two are
+  // separate sources and a negative count would be drawn on a real axis.
+  let running = Math.max(0, learnedNow);
+  for (let index = buckets.length - 1; index >= 0; index -= 1) {
+    const bucket = buckets[index];
+    points.push({
+      start: bucket.start,
+      end: bucket.end,
+      learned: bucket.end >= LEARNED_SERIES_START ? running : null,
+    });
+    // Taking this bar's crossings off gives the count at the end of the bar
+    // before it, which is the next point the walk will write.
+    let matured = 0;
+    for (const date of bucket.dates) matured += sliceFor(byDate.get(date), language).cardsMatured;
+    running = Math.max(0, running - matured);
+  }
+  return points.reverse();
 }

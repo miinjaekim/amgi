@@ -275,3 +275,20 @@ export function fetchRecentProgress(uid: string, days: number): Promise<DailyPro
   const today = localDateString();
   return fetchProgressRange(uid, shiftDate(today, -(days - 1)), today);
 }
+
+/**
+ * Today's review count — the server's copy with anything still queued replayed
+ * over it.
+ *
+ * ⚠️ **Mobile cannot use web's `subscribeToProgressDay` here**, and the reason
+ * is the one this whole file exists for: the Firestore SDK's cache on React
+ * Native is memory-only, so a snapshot listener goes blank exactly when the app
+ * is offline — which is when a streak chip most needs to keep counting.
+ * `fetchProgressRange` already replays the unsent queue, so this returns the
+ * same number the dashboard draws, by the same route, online or not.
+ */
+export async function fetchTodayReviews(uid: string): Promise<number> {
+  const today = localDateString();
+  const [day] = await fetchProgressRange(uid, today, today);
+  return day?.reviews ?? 0;
+}
