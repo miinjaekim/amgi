@@ -7,140 +7,122 @@ doesn't get reopened from here. Priority mirrors the user's Google Tasks list;
 this is the scoped version of it.
 
 **Mobile ships by build — no OTA.** Iterate in Expo Go (`npx expo start`), cut a
-production build when a batch is worth a release. Once one native module is in a
-build, a second rides along free rather than costing a build of its own.
-**Android auth work is the exception**: it cannot run in Expo Go, so it needs a
-development build — and Android release builds face no review, so a fix there
-costs ~20 minutes rather than an App Review cycle.
+production build when a batch is worth a release; once one native module is in a
+build, a second rides along free. **Android auth work is the exception**: it
+cannot run in Expo Go, so it needs a development build — and Android release
+builds face no review, so a fix there costs ~20 minutes rather than an App
+Review cycle. The procedure for cutting one is at the end of this file; what is
+queued, released or unverified is under Builds in [status.md](status.md).
 
 ---
 
-## Cutting a build
-
-**Build 16 is queued, as of 2026-09-12.** What is waiting on it, all on the
-Progress tab: the week-aligned calendar with its weekday and month labels, the
-corrected heatmap ramp (a palette change, so it is visible on every theme), the
-all-time cards learned tile and its per-language counts, the weekly review
-chart — now the web one's twin, bars or line behind a toggle, ruled against a
-rounded ceiling instead of its own busiest day — retention and days studied gone
-from the tiles and the language rows, and the share flow, now a full-screen
-preview swiped card by card, 30 days and 90 days plus today, each carrying four
-tiles rather than one.
-
-⚠️ **This build is a native-module build**, unlike the last few: the chart's
-line mark added `react-native-svg` 15.15.4 on 2026-09-12. Expo Go bundles it, so
-nothing about the dev loop changed, but the binary needs it compiled in and step
-3 below (`expo config --type introspect`) is therefore **not** skippable this
-time.
-
-⚠️ **The sheet-based chooser this replaces never worked on iOS, and was queued
-for this same build.** It closed its own `Modal` on the way to
-`Sharing.shareAsync`, which iOS refuses to present mid-dismissal — so the share
-sheet never appeared, the promise never settled, and the Share button stayed
-disabled for the rest of the session. Replaced 2026-09-12 with a pushed screen,
-which cannot be mid-transition when its own button is tapped. The full account
-is in the share entry under Decisions in [status.md](status.md).
-
-⚠️ **The preview needs a reachable `EXPO_PUBLIC_API_BASE_URL`.** The card is the
-deployed route's own render, so on a build pointed at nothing the preview is a
-blank placeholder — and unlike the old thumbnail, *sharing* needs that host too,
-since the download is what feeds the OS sheet. Worth one look on the build.
-
-**No console step is needed for `mature`, and this was checked rather than
-assumed** (2026-09-12). The worry was that a new field on ten card collections
-might hit a rule listing which fields an update may write. It does not: the two
-shapes [lessons.md](lessons.md) records are scoped to *operations*
-(`read, update, delete` + `create`, or `read, write` + `create`), and nothing in
-them enumerates fields. Confirmed against the live project as well — the
-backfill wrote flags and the count came back **196** on a real account, where a
-rule rejection or a missing index would have thrown and shown no tile at all.
-The read side needs nothing either: `mature == true` plus `uid ==` is two
-equality filters, which Firestore serves by merging single-field indexes, so
-unlike the card queries this needs **no composite index**.
-
-⚠️ **`matureBackfillAt` makes the backfill one-shot, which cuts both ways.** It
-has already run against production data from a dev server, so the flags are
-really written. If the count is ever wrong, clearing that field on
-`users/{uid}` is the only thing that makes it recompute — and a language never
-studied has had its rules unexercised by the backfill, since nothing there
-needed flagging. The rating path writes the same field, so that would surface
-on the first review in it.
-
-⚠️ **Do not read that list as "the progress work is unreleased".** The shared
-image renders server-side, so build 15 devices *already* draw the language line
-and *already* lost the retention tile — an app that is two builds old renders
-the current picture, because it only ever asked a URL for one. Web gets
-everything on deploy. Only mobile's own screen waits.
-
-Build 15 (1.6.0) went out 2026-09-10 — the mobile UI redesign, Expo SDK 57,
-Hanja and its 급수 pack, subpacks, the shareable stats image, readings in mobile
-review, the 병과와 주특기 section — and was approved for external testing the
-same day. It also cleared the raw-slug regression build 14 could not.
-
-⚠️ **Checking a build is not tracked here** (2026-09-04). The ranked list of what
-a release has never been exercised on came off this file — all of it is reached
-by using the app, so it surfaces in use rather than in a sitting spent working
-down a list. The durable halves live elsewhere: the never-verified-on-a-binary
-caveat under Builds in [status.md](status.md), and the Slow speed's fallback in
-that file's Decisions entry.
-
-**Pre-flight**, in order. Steps 2–6 were all exercised cutting 1.6.0; step 1
-never has been, on any build:
-
-1. Smoke-test in Expo Go, then verify the native-adjacent paths on the build
-   itself — Expo Go runs the SDK's own bundled native modules, so a clean pass
-   there says nothing about audio, notifications, sharing, the file system or
-   the auth redirect. ⚠️ **This has never happened**, through fifteen builds; see
-   the never-verified caveat under Builds in [status.md](status.md) for what is
-   on it and why working down the list is not tracked as a task.
-2. Bump `version` in `app.json` **before** starting the build. EAS
-   auto-increments the *build* number and never the version, so nothing catches
-   this for you.
-3. `expo config --type introspect` if any native module or `app.json` native
-   config changed — this is where an unasked-for entitlement shows up before a
-   cloud build finds it. 1.6.0's came back `entitlements: {}`, which is what
-   `withoutPushEntitlement` is there to produce.
-4. Rewrite What to Test in `docs/testflight-beta-info.md` and **re-check the
-   rest of the file** — the description and the Apple review notes go stale too.
-   1.4.0 shipped with both describing features removed in August; 1.6.0 caught
-   review notes that still routed the reviewer to a Settings tab the redesign
-   had removed, which is a 5.1.1(v) problem because account deletion lives
-   behind it.
-5. **Diff the listing copy's character set against the version Apple last
-   accepted** before pasting — not read it, diff it. That is what catches a
-   non-BMP character, and blank error bullets are all App Store Connect will
-   tell you. See [lessons.md](lessons.md).
-6. Submit (`ascAppId` is in `eas.json`), then paste the copy into Test
-   Information in **both ko and en**.
-
-⚠️ **What to Test is a skimmable list of what's new and nothing else** (set
-2026-09-02, on the user's call). No "use it for a few days" opener, no roll-call
-of what hasn't been verified, one short clause per bullet — the 1.4.0 form was
-long enough that a tester would bounce off it. A caveat about *shipped content*
-still earns its clause; a request to go and test something does not.
-
-⚠️ **Cut the build without `--non-interactive`.** It does not skip prompts, it
-turns one into an error — 1.4.0 died on an unanswerable Apple Team ID question
-and burned build 12. The flag is for CI.
-
-⚠️ **Don't hand-run the OTA workflow.** `.github/workflows/mobile-ota-update.yml`
-is `workflow_dispatch`-only and its push trigger is commented out, which is the
-only thing that stopped the #111 merge from publishing an update to a binary two
-SDKs behind it. OTA is abandoned (2026-07-23); leave the workflow alone rather
-than tidying it up, so the option stays open.
-
-_A version bump queues another Beta App Review; 1.6.0's external approval covers
-1.6.0 only. Batch changes into a build rather than cutting one per feature.
-Android is the exception — no review, so a fix there ships the same day._
-
 ## High
 
-_Empty as of 2026-09-12._ The five progress-display items queued that morning
-all shipped the same day — the share chooser with a today card, cards learned on
-the dashboard, the calendar's weekday and month labels, the languages named on
-the shared image, and retention off both surfaces. They leave this file per the
-convention in [README.md](README.md); what outlives them is the Decisions entry
-in [status.md](status.md).
+_Three Progress items, scoped 2026-09-15. They share one refactor and one
+constraint: the rollup stores cards added per language since day one, and
+maturity crossings only since 2026-09-06._
+
+- [ ] **The "By language" row opens a per-language detail view.**
+      Today the row is a dead element on both platforms — a `<li>` at
+      `apps/web/src/app/progress/page.tsx:443`, a `View` at
+      `apps/mobile/app/(tabs)/progress.tsx:514` (`LanguageRow`) — drawing
+      reviews · learned · cards added on one line. The ask is those numbers *for
+      one language*, with room for the charts below.
+      **It needs no new reads.** `summarizeProgress` already returns a full
+      `LanguageProgress` per language — all nine counters, not just the three
+      drawn — and `learned.byLanguage` already carries the per-language mature
+      counts both tabs fetch on load. A detail view over rows the tab is already
+      holding costs nothing, which is the promise `shareStats.ts` makes and is
+      worth keeping here.
+      ⚠️ **Two scopes on one screen, and more exposed than the row is.** `learned`
+      is all-time, read off the `mature` flag on the cards; every other number is
+      the selected window. `mergeLanguageRows` says that is fine *if the labels
+      say so* — a detail view puts more numbers in one place, so it needs that
+      more, not less.
+      ⚠️ **Don't restore retention just because the data is there.** The verdict
+      counters are per-language only from 2026-09-04, and the display was removed
+      on purpose 2026-09-12 (Decisions in [status.md](status.md)). Same for
+      `byHour`: it is deliberately **not** per-language, so "when do you study
+      Korean" is not a question these rows can answer. `studySeconds` and
+      `cardsMatured` are per-language but honest only from 2026-09-06 —
+      `detailedHistoryStartsMidWindow` is the existing check.
+      **Open, not decided: where it lives.** Mobile has a precedent — the share
+      carousel is a *pushed screen*, chosen because a modal broke the iOS share
+      sheet — and web has none. A route (`/progress/[language]`) is linkable and
+      matches mobile; an expanding row keeps the comparison between languages on
+      screen, which is what the list is for. Don't pick it here.
+
+- [ ] **A cards-added chart, and the honest version of "learned over time".**
+      Two series, and they are not equally available — that is the content of this
+      item.
+      **Cards added is free.** `newCards` and `packCards` are per-language and
+      per-day since rollups began (2026-08-20), so this needs no schema change and
+      no backfill. They are counted apart deliberately — enrolling in a 474-card
+      pack and looking up one word are both "new cards", and a chart where one
+      import dwarfs every real day is worse than no chart. The dashboard tile and
+      the shared image both **sum** them (`progressStatNewCards`), so summing is
+      the consistent default and stacking the more informative one. Pick one.
+      ⚠️ **"Learned over time" is not a stored series and cannot be backfilled.**
+      The all-time count is *state* — cards whose interval passed
+      `MATURE_INTERVAL_DAYS`, counted off the cards themselves. The only per-day
+      record is `cardsMatured`, net crossings, **written from 2026-09-06 only**.
+      So a cumulative curve means anchoring at today's known all-time count and
+      walking backwards subtracting each day's `cardsMatured`: exact back to
+      2026-09-06, **unknowable before it**, because the baseline was never
+      recorded. A curve that runs off the left edge into a flat line is a lie —
+      stop the series and say so, the way `partialHistory` already does.
+      ⚠️ **`cardsMatured` is net and can go negative** (a lapse clears the flag),
+      so the walk is arithmetic, not a running maximum. It also counts **cards**
+      where `reviews` counts **directions**; the two may never share an axis or a
+      label.
+      **Build it as one chart, not a third one.** `WeekChart` is already two
+      near-twins (`page.tsx:606` inline SVG, `progress.tsx:656`
+      `react-native-svg`), both hardcoding seven days of `reviews` and both taking
+      the mark toggle, the tooltip and the `niceCeiling`/`weekAxisTicks` scale
+      from core so the platforms cannot drift. Parameterise it by series *before*
+      adding a second, or the toggle and the scale end up existing four times.
+      ⚠️ **The remembered mark is one key.** `amgi_week_chart_mark` (`localStorage`
+      via `weekMarkStore` on web, AsyncStorage on mobile) — two charts sharing it
+      means switching one switches the other.
+      **Open, not decided: the window.** The reviews chart is always seven days
+      whatever range chip is selected. Following the range (30/90/365) is what
+      "over time" suggests, but 365 bars is a wall the heatmap already covers
+      better.
+
+- [ ] **Share a chart as an asset.** Depends on the chart above existing. The
+      shipped share pipeline answers most of this, and its two hard constraints
+      decide the rest.
+      ⚠️ **It must be server-rendered by `/api/stats-image`.** Mobile cannot
+      rasterize a view without `react-native-view-shot` — a native module that
+      costs an EAS build *and* stops the feature working in Expo Go. That is why
+      one route draws every variant and both platforms only ever fetch a URL.
+      ⚠️ **The series travels in the query string**, because the route takes no
+      uid and never touches Firestore — the privacy design, not an optimisation: a
+      route that resolved a uid would let anyone render anyone's stats. `h` is the
+      precedent (one character per day, 364 for a year) but it sends *levels* 0–4
+      precisely so the route need not know the window's busiest day. A labelled
+      axis needs real counts, so this wants its own parameter and the route
+      calling `niceCeiling` itself — it is in core, so the asset gets the same
+      scale the app drew.
+      **A new variant is backward compatible by construction.** `ShareVariant` is
+      `'window' | 'today'` and the parser reads anything unrecognised as
+      `'window'`, so every URL an installed build produces keeps rendering what it
+      always did. The rule that no parameter may ever become a parse failure
+      applies to the new one too. `buildShareCards` then offers the card and
+      `hasShareableHistory` gates it, per card.
+      ⚠️ **Satori is flexbox-only, and the line mark may not survive it.** Bars are
+      divs with heights; the line is SVG on both platforms, which `next/og` does
+      not draw the way either of them does. **Check this before promising both
+      marks** — bars-only on the shared asset is a fine answer, silently dropping
+      the line is not.
+      ⚠️ **A per-language chart re-opens a rule `shareStats.ts` closed.** It sends
+      language *names only*, never a per-language split of the numbers, because
+      `byLanguage.reviews` reaches back to the start while `cardsMatured` only
+      reaches 2026-09-06 — so a per-language figure breaks the one-window rule
+      over any window worth posting. A **cards-added** chart is exempt (full
+      per-language history since 2026-08-20); a **learned** chart is not, and must
+      be withheld over a window reaching past that date exactly as `cardsMatured`
+      already is.
 
 ## Medium
 
@@ -155,25 +137,12 @@ in [status.md](status.md).
       -er`, `la négation ne…pas`), and each entry is one authored cloze. That maps
       onto shipped machinery end to end — enrol, collection, review picker,
       progress — with **no nesting change**, since packs are exactly one subpack
-      deep and level → concept → item is exactly two.
-      **This does not contradict "a grammar point is not a card"**
-      ([vision.md](vision.md)). What was rejected was one card *per pattern* with a
-      gloss on the back — the lookup-table row. Here the concept is the subpack and
-      the cards are *instances of exercising it*, which is the distinction that
-      argument turns on. Don't lose it: it is what keeps this from being the thing
-      that already failed.
-      **Its own row in the review picker** — the user's call. Grammar and vocab are
-      never interleaved in one sitting, which `collections.ts` already prefers
-      ("no 'everything' collection", deliberately).
-      ⚠️ **Give grammar sets a real `id` and `ReviewCollection.kind` stays
-      deleted.** `kind` only ever existed because a patterns row and your own cards
-      were *both* `id: null`. A grammar pack carries a pack-shaped id, so
-      `collectionKey = id ?? ''` still resolves and the discriminator the removal
-      deleted does not come back. This is strictly better than what was there.
-      **Zero model calls.** Items are authored, graded locally by `typedAnswer.ts`,
-      single-direction. That answers three of the four reasons the old feature
-      failed — heavy, slow, grading variance — by construction rather than by
-      tuning. `getPatternExercise` and `gradeFromReview` stay dead.
+      deep and level → concept → item is exactly two. Its own row in the review
+      picker; zero model calls, graded locally by `typedAnswer.ts`.
+      ⚠️ **Two distinctions the Decisions entry turns on — don't lose them by
+      paraphrase**: why this doesn't contradict "a grammar point is not a card",
+      and why `ReviewCollection.kind` does not come back (a grammar pack carries a
+      pack-shaped id, so `collectionKey = id ?? ''` still resolves).
       ⚠️ **Ship one concept before authoring a level.** ~30–60 concepts × ~6 items
       is 200–350 sourced entries — the size of the 급수 pack, i.e. the largest
       content job this repo has done. One subpack proves the shape for ~20.
@@ -190,23 +159,19 @@ in [status.md](status.md).
       unproven.
 
 - [ ] **Writing returns as the diagnostic — third, after the ladder exists.**
-      Scoped 2026-09-14; the reasoning and the revision it makes to an earlier call
-      are in the Decisions entry in [status.md](status.md).
-      ⚠️ **Do not start this before the two items above.** A finding needs an
-      authored concept to point at; without the ladder it has to invent one, which
-      is exactly what failed. The ordering is also the **gate**: writing comes back
+      Scoped 2026-09-14; the reasoning, the revision it makes to an earlier call,
+      and what stays dead are in the Decisions entry in [status.md](status.md).
+      ⚠️ **Do not start this before the item above.** A finding needs an authored
+      concept to point at; without the ladder it has to invent one, which is
+      exactly what failed. The ordering is also the **gate**: writing comes back
       only if the ladder gets used.
-      **The job is routing, not practice.** A finding classifies into the closed
-      set of authored concepts — the `normalizePartOfSpeech` move, match or drop —
-      and enrols that subpack. No exercise generation. `getPatternExercise` and
-      `gradeFromReview` stay dead.
-      **Most of it is already built and deployed.** `/api/writing` is one
-      `gemini-2.5-flash` call at temp 0.1; `parseWritingReview`, the four
-      `FindingKind`s, `WritingCardCandidate.gap` and `buildWritingCardDraft` all
-      still work. What is new is the classifier and the counts.
-      **Persist findings, not prose** — concept ids and counts only. Keeps the
-      ephemeral-submissions decision intact while giving the grammar collection its
-      best ordering: *the learner's own error counts over authored content*.
+      **The job is routing, not practice** — a finding classifies into the closed
+      set of authored concepts and enrols that subpack. Most of it is already built
+      and deployed (`/api/writing`, `parseWritingReview`, the four `FindingKind`s,
+      `WritingCardCandidate.gap`, `buildWritingCardDraft`); what is new is the
+      classifier and the counts.
+      **The gap card is the cheapest win** and can ship with this or ahead of it.
+
       **Placement — one input, no toggle.** The Word/Passage toggle is what was
       disliked, not Learn itself: it forced a mode choice up front on a surface
       whose job is one box. ⚠️ **An offer, not a route** — a phrase lookup is
@@ -215,12 +180,10 @@ in [status.md](status.md).
       filter".
 
       **The input, designed 2026-09-14.** No value on its own — it ships with this
-      item, not before it, or it is a button with nothing behind it.
-
-      ⚠️ **This supersedes an earlier line in this item** that had the offer appear
-      *after* submission, beside the explanation. Moved *before* submission: a
-      paragraph submitted to `/api/explain` spends a model call and renders a
-      nonsense result, and both are avoidable by asking first.
+      item, not before it, or it is a button with nothing behind it. The offer
+      appears **before** submission, not beside the explanation after it: a
+      paragraph sent to `/api/explain` spends a model call and renders a nonsense
+      result, and both are avoidable by asking first.
 
       **An auto-growing field, and the growth is also the signal.** Starts at
       exactly today's height, grows a line at a time as it wraps, caps ~8 lines
@@ -271,8 +234,6 @@ in [status.md](status.md).
       toggle again with a smaller target, mode choice back up front.
       **Scope:** field type + a growth handler + one alignment prop + a conditional
       button + three strings. No redesign.
-
-      **The gap card is the cheapest win** and can ship with this or ahead of it.
 
 - [ ] **Per-context pronunciation speed** — the last of the mobile UI redesign
       queued 2026-09-01, moved here 2026-09-12 on the user's call. Nothing about
@@ -365,33 +326,30 @@ green. What's left is what those two now *show*.
       build, no code — but it is shown to **every** user signing in, on iOS and
       web as much as Android.
 
-- [ ] ⚠️ **Split 2026-09-14 — `writing.ts` is no longer deletable.** The grammar
-      plan above brings writing back as the diagnostic (Decisions in
-      [status.md](status.md)), and it wants `parseWritingReview`, the finding
-      types, `WritingCardCandidate.gap` and `buildWritingCardDraft` — all still
-      correct, plus `/api/writing` itself, unchanged. **Keep `writing.ts` and its
-      route.** `grammar.ts` is the opposite case and can still go on the condition
-      below: `getPatternExercise` and `gradeFromReview` are the generation and
-      model-grading the new design explicitly rejects, so nothing will want them
-      back. Treat the item below as being about `grammar.ts` only.
-
-- [ ] **Delete `packages/core/src/writing.ts`, `grammar.ts` and the two API
-      routes that keep them alive.** **The gate is open**: it was "once no build
-      predating the 2026-08-18 grammar removal is still in use". What is left is
-      not a condition but a fact to check — that testers have actually updated,
-      since an un-updated 1.3.0 device still has the UI compiled in and calls
-      those routes. Two releases now sit between them and it, which makes this
-      cheaper to believe than it was, but it is still console state rather than a
-      repo fact. Both files carry a `DO NOT DELETE AS DEAD CODE` header; the
-      reasoning is in [status.md](status.md). **`typedAnswer.ts` is not part of
-      this** — `grammar.ts` imports its folding rules rather than owning them
-      now, so the deletion takes the importer and leaves the module.
+- [ ] **Delete `packages/core/src/grammar.ts` and its API route.** ⚠️ **Split
+      2026-09-14 — `writing.ts` is no longer part of this.** The grammar plan above
+      brings writing back as the diagnostic, and it wants `parseWritingReview`, the
+      finding types, `WritingCardCandidate.gap` and `buildWritingCardDraft` — all
+      still correct, plus `/api/writing` itself, unchanged. **Keep `writing.ts` and
+      its route.** `grammar.ts` is the opposite case: `getPatternExercise` and
+      `gradeFromReview` are the generation and model-grading the new design
+      explicitly rejects, so nothing will want them back.
+      **The gate is open**: it was "once no build predating the 2026-08-18 grammar
+      removal is still in use". What is left is not a condition but a fact to
+      check — that testers have actually updated, since an un-updated 1.3.0 device
+      still has the UI compiled in and calls the route. Two releases now sit
+      between them and it, which makes this cheaper to believe than it was, but it
+      is still console state rather than a repo fact. The file carries a
+      `DO NOT DELETE AS DEAD CODE` header; the reasoning is in
+      [status.md](status.md). **`typedAnswer.ts` is not part of this** —
+      `grammar.ts` imports its folding rules rather than owning them, so the
+      deletion takes the importer and leaves the module.
 
 - [ ] **Two callerless functions in `apps/web/src/services/firestore.ts`** —
       `countUserFlashcards` and `fetchArchivedFlashcards`, neither imported
-      anywhere. Unlike `writing.ts`/`grammar.ts` these have **no build to keep
-      alive**: they are web-only, so nothing pins them. Left in place while the
-      subscribe change was landing to keep that diff to one subject.
+      anywhere. Unlike `grammar.ts` these have **no build to keep alive**: they are
+      web-only, so nothing pins them. Left in place while the subscribe change was
+      landing to keep that diff to one subject.
 
 - [ ] **The mobile screen gutter is 20, hardcoded in four stylesheets.** Cards
       sat at 16 until 2026-09-04, so tabbing to it shifted every left edge by
@@ -427,3 +385,58 @@ green. What's left is what those two now *show*.
 
 - [ ] **Personalised explanation preferences** — emphasis knobs (etymology,
       cultural context, example-heavy). Store in `users/{uid}`, include in prompt.
+
+---
+
+## Cutting a build
+
+Reference, not open work — what you need at the moment you cut one. Scope set
+2026-09-04 (Decisions in [status.md](status.md)): the pre-flight order, the What
+to Test rule, and the `--non-interactive` warning. What a build *carries* is
+derivable from its commit; what is queued, released or never verified on a
+binary is under Builds in [status.md](status.md).
+
+**Pre-flight**, in order. Steps 2–6 were all exercised cutting 1.6.0; step 1
+never has been, on any build:
+
+1. Smoke-test in Expo Go, then verify the native-adjacent paths on the build
+   itself — Expo Go runs the SDK's own bundled native modules, so a clean pass
+   there says nothing about audio, notifications, sharing, the file system or
+   the auth redirect. ⚠️ **This has never happened**, through fifteen builds; the
+   list of what it covers, and why working down it is not tracked as a task, is
+   in the never-verified ⚠️ under Builds in [status.md](status.md).
+2. Bump `version` in `app.json` **before** starting the build. EAS
+   auto-increments the *build* number and never the version, so nothing catches
+   this for you.
+3. `expo config --type introspect` if any native module or `app.json` native
+   config changed — this is where an unasked-for entitlement shows up before a
+   cloud build finds it. 1.6.0's came back `entitlements: {}`, which is what
+   `withoutPushEntitlement` is there to produce. ⚠️ **Not skippable on the next
+   build**: `react-native-svg` makes it a native-module build (Builds in
+   [status.md](status.md)).
+4. Rewrite What to Test in `docs/testflight-beta-info.md` and **re-check the
+   rest of the file** — the description and the Apple review notes go stale too.
+   1.4.0 shipped with both describing features removed in August; 1.6.0 caught
+   review notes that still routed the reviewer to a Settings tab the redesign
+   had removed, which is a 5.1.1(v) problem because account deletion lives
+   behind it.
+5. **Diff the listing copy's character set against the version Apple last
+   accepted** before pasting — not read it, diff it. That is what catches a
+   non-BMP character, and blank error bullets are all App Store Connect will
+   tell you. See [lessons.md](lessons.md).
+6. Submit (`ascAppId` is in `eas.json`), then paste the copy into Test
+   Information in **both ko and en**.
+
+⚠️ **What to Test is a skimmable list of what's new and nothing else** (set
+2026-09-02, on the user's call). No "use it for a few days" opener, no roll-call
+of what hasn't been verified, one short clause per bullet — the 1.4.0 form was
+long enough that a tester would bounce off it. A caveat about *shipped content*
+still earns its clause; a request to go and test something does not.
+
+⚠️ **Cut the build without `--non-interactive`.** It does not skip prompts, it
+turns one into an error — 1.4.0 died on an unanswerable Apple Team ID question
+and burned build 12. The flag is for CI.
+
+_A version bump queues another Beta App Review; 1.6.0's external approval covers
+1.6.0 only. Batch changes into a build rather than cutting one per feature.
+Android is the exception — no review, so a fix there ships the same day._

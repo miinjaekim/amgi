@@ -247,7 +247,8 @@ iOS release carrying `expo-dev-client`, `expo-dev-launcher` and `expo-dev-menu`.
 added 2026-09-12 for the weekly chart's line mark. It is in Expo Go's own
 bundled set, so the dev loop is untouched and `npx expo start` needs nothing —
 but the binary does, and **an `expo config --type introspect` pass is owed
-before cutting it**, per the checklist below. Nothing about it is
+before cutting it**, per the pre-flight checklist in [backlog.md](backlog.md).
+Nothing about it is
 configuration-bearing (no plugin, no entitlement, no permission), which is the
 expected result rather than a reason to skip the check.
 
@@ -260,7 +261,11 @@ to be broken all along**, found by reading rather than by running on 2026-09-12
 across a force-kill and reconnect, the review reminder
 firing *and* disappearing once you review, and account deletion against the
 production `EXPO_PUBLIC_API_BASE_URL`. (The 1.3.0 copy button left this list
-with the writing rewrite it belonged to.) 1.4.0's What to Test asks for these by
+with the writing rewrite it belonged to.) ⚠️ **The share preview needs that same
+host**: the card is the deployed route's own render, so on a build pointed at
+nothing the preview draws a blank placeholder — and *sharing* needs it too, since
+the download is what feeds the OS sheet. Worth one look on build 16.
+1.4.0's What to Test asks for these by
 name and puts **offline review first**; **neither 1.5.0's nor 1.6.0's does** —
 both were cut to what's new, so no release now asks for this list. **This paragraph is where the
 list lives**: tracking it as work was dropped 2026-09-04 (Decisions), so what
