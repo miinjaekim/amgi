@@ -135,119 +135,17 @@ Android is the exception — no review, so a fix there ships the same day._
 
 ## High
 
-- [ ] **Payments proof-of-concept — Stripe on web, staged.** Scoped 2026-09-15.
-      **The goal is not a pricing model, and saying so is the scope control.**
-      It is to prove funds can actually reach a bank account, and to learn the
-      moving parts — the user has not built payments before and is taking this as
-      the vehicle for it. So **prefer the boring, legible path over the clever
-      one** at every fork here. The commitment/deposit model that prompted this is
-      parked with its analysis in the Decisions entry in [status.md](status.md);
-      nothing below depends on which pricing model eventually wins.
+_Empty as of 2026-09-15._ Payments was added here that morning and **parked the
+same day** on the user's call — the scoping survives under Parked, only the
+implementation is deferred. The unauthenticated-routes item found while scoping it
+went to **Medium** rather than being parked alongside: it is not a payments
+problem, and it does not go away because payments did.
 
-      **Web only.** ⚠️ **iOS cannot sell anything, and that is a constraint rather
-      than a sequencing preference.** The app is on Tegi's **Individual** Apple
-      account, TestFlight-only, bundle id `com.tegi.amgi`, which
-      [status.md](status.md) already records as disposable with no transfer path.
-      Money taken through it is **Tegi's** income, into Tegi's bank account, under
-      Tegi's tax id. And an IAP subscription binds to the app record, so the
-      eventual relaunch under the user's own account **strands every subscriber** —
-      they do not migrate, they re-buy. Nothing is sold on iOS until the app is on
-      the user's own Apple account.
-      **The upside of that: this work is not blocked on build 16 or any release.**
-      It is entirely web, no native module, no App Review, no OTA question.
-
-      ⚠️ **THE GATE — Stripe does not support Korea as a business location.**
-      Verified 2026-09-15 against Stripe's own pages rather than recalled, because
-      it is exactly the kind of fact that goes stale. South Korea is absent from
-      [stripe.com/global](https://stripe.com/global) — not supported, not preview,
-      not extended network — and absent from the business-locations list on
-      [Stripe's own Korea page](https://docs.stripe.com/payments/countries/korea).
-      ⚠️ **`SK` in that list is Slovakia.** `KR` is the code that would mean Korea
-      and it is not there. Easiest misread on the page, and it would send someone
-      down a month of the wrong path.
-      **What "Korea support" on Stripe actually means:** that page's own first line
-      is *"accept wallets and all local cards in South Korea **without a local
-      entity**"* — it is about **selling to** Korean customers from a foreign
-      entity, never about **being** a Korean business. Reported separately and
-      consistent with the above: Stripe does not pay out to Korean bank accounts.
-
-      **So the entity decision is upstream of any code, and it is open.** Two
-      paths, and they are not close in cost:
-      - **A supported-country entity** (US the usual one; UK/EU/HK/SG/JP also on
-        the list). Stripe Atlas is the standard unlock — **$500, Delaware, ~2
-        business days**, serves founders in 175+ countries. ⚠️ **Confirm Korean-
-        resident eligibility with Stripe directly**; the Atlas page does not name
-        Korea, and this is the one fact here nobody should assume.
-      - **A Korean entity**, which means Stripe is off the table entirely and the
-        first integration is a Korean PG — 토스페이먼츠, NHN KCP, 이니시스 — each
-        needing 사업자등록증 and a Korean bank account.
-      ⚠️ **Do not start stage 1 before this is settled.** Test mode works
-      regardless, so the temptation is to build first; but "can I receive funds" is
-      the entire question this item exists to answer, and it is answered by the
-      entity, not by the code.
-
-      **The genuinely good news, and it reverses an assumption from the same
-      conversation: 카카오페이 and 네이버페이 are Stripe payment methods,
-      _with recurring support_** — Samsung Pay and PAYCO too, one-time only. So the
-      user's "Toss/Kakao/Naver would be nice later" may need **no second PG at
-      all**; it needs a supported-country entity and a Dashboard toggle. That
-      materially raises the value of the Atlas path over the Korean-PG path.
-
-      **Stage 1 — Payment Link, dashboard only, no code.** A product and a Payment
-      Link in the Stripe Dashboard, the URL on a page in the web app. Proves funds
-      arrive and teaches the half that has nothing to do with programming: account
-      activation, test vs live mode, and the payout delay to a real bank. Same-day.
-
-      **Stage 2 — the real skeleton.** `/api/checkout` creates a Checkout Session
-      (`mode: 'subscription'` — barely harder than `payment` and it is the thing
-      actually being learned), and `/api/stripe/webhook` verifies the signature and
-      writes the entitlement. Four traps, all classic and all cheap to avoid up
-      front:
-      - ⚠️ **Never grant entitlement on the redirect back.** `?success=true` is
-        forgeable by anyone who reads the URL. The entitlement comes from the
-        **webhook**, server-side, or it is decorative. This is the same class of
-        bug as the client-written rollups in the item below.
-      - ⚠️ **Signature verification needs the raw body** — `await req.text()`, not
-        `req.json()`. In App Router this is the usual first hour lost.
-      - ⚠️ **Webhooks retry, so the write must be idempotent** — `set()` with merge
-        on a known doc id, never an increment. Note this is the *opposite* call
-        from `progress_daily`, which is deliberately non-idempotent
-        ([status.md](status.md)); a double-counted review is a rounding error, a
-        double-granted month is not.
-      - ⚠️ **Link the Stripe customer to the Firebase uid at session creation**
-        (`metadata: { uid }` / `client_reference_id`), and store
-        `stripeCustomerId` on the user. The webhook otherwise receives a customer
-        id it cannot resolve, and retrofitting this once live accounts exist is
-        genuinely unpleasant.
-
-      ⚠️ **The entitlement must not live in `UserPreferences`.** That doc is
-      client-writable by its own rule (`allow read, write: if ... uid == uid`), so
-      a paid flag there is self-grantable from a browser console. It wants its own
-      path under `users/{uid}` with **client writes denied**, written only by the
-      webhook through `firebase-admin` — which is already a dependency (`^14.1.0`)
-      and already initialised in `apps/web/src/lib/firebaseAdmin.ts`. Keeping it
-      under `users/{uid}` buys deletion for free: the Delete User Data extension is
-      configured `users/{UID}` recursive.
-
-      **Provision through the Vercel Marketplace, not `npm install stripe`** —
-      `vercel integration add stripe` wires the env vars and gives unified billing.
-      ⚠️ **The Vercel CLI is not installed** (`npm i -g vercel`), so this is a step
-      zero rather than a footnote. `stripe listen --forward-to
-      localhost:3000/api/stripe/webhook` is how stage 2 gets tested locally; test
-      card `4242 4242 4242 4242`.
-
-      ⚠️ **Korean consumer law constrains any subscription sold to Korean
-      customers**, per Stripe's own Korea page — worth recording now because it is
-      expensive to discover after launch. A **full refund within 7 days** of signup
-      if unused; **pro-rated refund on cancellation at any time**; **30 days'
-      notice** before a price increase or before charging for a previously free
-      service; and a **payment reminder 7 days** before each charge. The pro-rata
-      and 7-day rights interact directly with the parked deposit model — read them
-      before reviving it.
+## Medium
 
 - [ ] **Every API route is unauthenticated.** Found 2026-09-15 while scoping
-      payments; **not a payments blocker** — the POC above gates nothing, so the
-      two are independent and this one stands on its own merits.
+      payments, and **deliberately not parked with it** — payments gated nothing,
+      so the two were always independent and this stands on its own merits.
       All ten routes in `apps/web/src/app/api` take no token and check no user:
       no `authorization` header is read anywhere, and `firebase-admin` is imported
       by the migration scripts and `lib/firebaseAdmin.ts` but by **no route**. Nine
@@ -269,10 +167,11 @@ Android is the exception — no review, so a fix there ships the same day._
       spends a full model call and is recorded nowhere. That is precisely the
       number a quota would be denominated in. Same "from today or from never"
       argument this file makes about every rollup: each week without the counter
-      is a week that cannot be priced from retroactively. **Cheapest item here and
-      the only one with a deadline.**
-
-## Medium
+      is a week that cannot be priced from retroactively. **Cheapest item here.**
+      ⚠️ **Amended 2026-09-15 — no longer urgent.** That deadline was about being
+      able to price from real usage, and pricing is parked. The counter stays cheap
+      and stays unrecoverable retroactively, so it is still worth doing — it is
+      just no longer a reason to hurry.
 
 - [ ] **French A1 grammar — one concept, end to end.** Scoped 2026-09-14. Read the
       Decisions entry in [status.md](status.md) first: it carries the scope line,
@@ -479,6 +378,64 @@ _Empty as of 2026-09-08 — the gloss ceiling was the only item here, and it
 closed (Decisions in [status.md](status.md))._
 
 ## Parked
+
+- [ ] **Payments — Stripe proof-of-concept on web.** Scoped and **parked the same
+      day, 2026-09-15, on the user's call**: *"i don't think it's the right time to
+      work on payment features right now."* The scoping stands and nothing below
+      has to be re-derived; only the implementation is deferred.
+      **The goal was never a pricing model** — it was proving funds can reach a
+      bank account, and learning the moving parts, since the user has not built
+      payments before. The commitment/deposit model that prompted it (pay $30, earn
+      it back a day at a time for reviewing) is sketched and unbuilt.
+      ⚠️ **Remember its structural flaw before reviving it: revenue arrives only
+      when the learner fails.** A user who studies all 30 days is refunded in full
+      and cost a month of Gemini and TTS, so the best users are negative margin and
+      every difficulty knob acquires a quiet financial gradient — which
+      [vision.md](vision.md)'s no-dark-patterns line forbids. The fixes are to
+      split an optional stake from a flat subscription, or to keep a
+      non-refundable service portion. It also cuts against the 2026-09-12 call that
+      **review is about how much you reviewed, not how well** — retention came off
+      every surface for reading as judgement, and money judges harder.
+
+      ⚠️ **THE GATE, upstream of any code: Stripe does not support Korea as a
+      business location.** Verified 2026-09-15 rather than recalled, because it is
+      the kind of fact that goes stale. Korea is absent from
+      [stripe.com/global](https://stripe.com/global) and from the business-locations
+      list on [Stripe's own Korea page](https://docs.stripe.com/payments/countries/korea).
+      ⚠️ **`SK` in that list is Slovakia** — `KR` is the code that would mean Korea
+      and it is not there. Easiest misread available, and an expensive one.
+      **"Korea support" there means selling *to* Korean customers from a foreign
+      entity, never *being* a Korean business**; Stripe does not pay out to Korean
+      banks. So the first decision is the entity: a supported-country one (Stripe
+      Atlas — $500, Delaware, ~2 business days, 175+ countries, ⚠️ Korean-resident
+      eligibility **unconfirmed**, ask Stripe directly), or a Korean one, which
+      drops Stripe entirely for a PG (토스페이먼츠 / KCP / 이니시스) needing
+      사업자등록증 and a Korean bank account.
+      **카카오페이 and 네이버페이 are Stripe payment methods with recurring
+      support** (Samsung Pay and PAYCO one-time only) — so the Korean rails may
+      need no second PG at all, which tilts the entity choice toward Atlas.
+
+      ⚠️ **iOS sells nothing until the app is off Tegi's Apple account.** An IAP
+      subscription binds to the app record, so the eventual relaunch under the
+      user's own account **strands every subscriber** rather than migrating them.
+      That is why this was web-only, and why it needed no build.
+
+      **The shape, if it comes back:** (1) a Payment Link from the Dashboard, no
+      code, to prove funds arrive and learn activation, test-vs-live and payout
+      timing; (2) `/api/checkout` plus a signature-verified `/api/stripe/webhook`
+      writing the entitlement. ⚠️ Entitlement comes from the **webhook**, never a
+      `?success=true` redirect (forgeable); raw body via `req.text()`, not
+      `req.json()`; idempotent `set()` rather than an increment — the **opposite**
+      call from `progress_daily`, which is deliberately non-idempotent; and link
+      customer↔uid at session creation (`metadata: { uid }`) or retrofitting it
+      against live accounts is genuinely unpleasant. The entitlement must **not**
+      live in `UserPreferences`, which is client-writable by its own rule.
+      Provision via `vercel integration add stripe`, not `npm install stripe`.
+      ⚠️ **Korean consumer law** binds any subscription sold to Korean customers,
+      per Stripe's own page: full refund within 7 days if unused, pro-rated refund
+      on cancellation at any time, 30 days' notice before a price rise, and a
+      reminder 7 days before each charge. The first two bear directly on the
+      deposit model.
 
 - [ ] **Goal-based generation** — vocab lists and card generation from a goal.
       Deprioritized 2026-07-24: it generates word lists for a user who hasn't
