@@ -129,6 +129,10 @@ drifted — see `isDue` in [status.md](status.md).
   abandoned, because publishing on every merge burned CI time and EAS update
   quota on updates nobody received. The pipeline is kept, not deleted, in case
   OTA is ever revisited; needs the `EXPO_TOKEN` secret.
+  ⚠️ **Don't hand-run it, and don't tidy it up either.** That commented-out push
+  trigger is the only thing that stopped the #111 merge from publishing an update
+  to a binary two SDKs behind it. Inert is what keeps the option open without it
+  firing by accident.
 
 There is **no lint or test gate in CI** — see the housekeeping section of
 [backlog.md](backlog.md).
