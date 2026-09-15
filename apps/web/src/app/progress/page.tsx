@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
+import Link from 'next/link';
 import { useUser } from '@/components/UserContext';
 import { fetchRecentProgress } from '@/services/progress';
 import {
@@ -440,33 +441,40 @@ export default function ProgressPage() {
               </h2>
               <ul className="flex flex-col gap-2">
                 {languageRows.map(({ studyLanguage, progress, learned: learnedHere }) => (
-                  <li
-                    key={studyLanguage}
-                    className="flex items-baseline justify-between gap-3 p-3 rounded-xl border border-[var(--color-muted)]"
-                  >
-                    <span className="font-bold text-[var(--color-text)]">
-                      {t(interfaceLanguage, languageLabelKey(studyLanguage))}
-                    </span>
-                    <span className="text-xs text-[var(--color-muted)] text-right">
-                      {/* A row can be here for its learned count alone, with
-                          nothing in the window — saying "0 reviews" would read
-                          as a slump rather than as a language left alone. */}
-                      {progress.reviews === 0
-                        ? t(interfaceLanguage, 'progressTooltipNoReviews')
-                        : t(interfaceLanguage, 'progressLanguageReviews', { count: progress.reviews })}
-                      {learnedHere > 0 && (
-                        <>
-                          {' · '}
-                          {t(interfaceLanguage, 'progressLanguageLearned', { count: learnedHere })}
-                        </>
-                      )}
-                      {progress.newCards + progress.packCards > 0 && (
-                        <>
-                          {' · '}
-                          {t(interfaceLanguage, 'progressStatNewCards')} {progress.newCards + progress.packCards}
-                        </>
-                      )}
-                    </span>
+                  <li key={studyLanguage}>
+                    {/* The row was a dead element until 2026-09-15. It opens the
+                        per-language detail now, and carries the selected range
+                        so the detail opens on the window being looked at rather
+                        than making it be chosen again. */}
+                    <Link
+                      href={`/progress/${studyLanguage}?range=${rangeDays}`}
+                      className="flex items-baseline justify-between gap-3 p-3 rounded-xl border border-[var(--color-muted)] hover:border-[var(--color-highlight)] transition-colors"
+                    >
+                      <span className="font-bold text-[var(--color-text)]">
+                        {t(interfaceLanguage, languageLabelKey(studyLanguage))}
+                      </span>
+                      <span className="text-xs text-[var(--color-muted)] text-right">
+                        {/* A row can be here for its learned count alone, with
+                            nothing in the window — saying "0 reviews" would read
+                            as a slump rather than as a language left alone. */}
+                        {progress.reviews === 0
+                          ? t(interfaceLanguage, 'progressTooltipNoReviews')
+                          : t(interfaceLanguage, 'progressLanguageReviews', { count: progress.reviews })}
+                        {learnedHere > 0 && (
+                          <>
+                            {' · '}
+                            {t(interfaceLanguage, 'progressLanguageLearned', { count: learnedHere })}
+                          </>
+                        )}
+                        {progress.newCards + progress.packCards > 0 && (
+                          <>
+                            {' · '}
+                            {t(interfaceLanguage, 'progressStatNewCards')} {progress.newCards + progress.packCards}
+                          </>
+                        )}
+                        <span className="ml-1.5 opacity-60">›</span>
+                      </span>
+                    </Link>
                   </li>
                 ))}
               </ul>

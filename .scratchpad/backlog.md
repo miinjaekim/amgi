@@ -18,78 +18,15 @@ queued, released or unverified is under Builds in [status.md](status.md).
 
 ## High
 
-_Three Progress items, scoped 2026-09-15. They share one refactor and one
-constraint: the rollup stores cards added per language since day one, and
-maturity crossings only since 2026-09-06._
+_One of the three Progress items scoped 2026-09-15 is left. The other two — the
+per-language detail view and both charts — are built on
+`feat/progress-language-detail`, which is what unblocks this one. The three
+calls the user made on them, and the boundary finding that came out of building
+them, are in the Decisions entry of that date in [status.md](status.md)._
 
-- [ ] **The "By language" row opens a per-language detail view.**
-      Today the row is a dead element on both platforms — a `<li>` at
-      `apps/web/src/app/progress/page.tsx:443`, a `View` at
-      `apps/mobile/app/(tabs)/progress.tsx:514` (`LanguageRow`) — drawing
-      reviews · learned · cards added on one line. The ask is those numbers *for
-      one language*, with room for the charts below.
-      **It needs no new reads.** `summarizeProgress` already returns a full
-      `LanguageProgress` per language — all nine counters, not just the three
-      drawn — and `learned.byLanguage` already carries the per-language mature
-      counts both tabs fetch on load. A detail view over rows the tab is already
-      holding costs nothing, which is the promise `shareStats.ts` makes and is
-      worth keeping here.
-      ⚠️ **Two scopes on one screen, and more exposed than the row is.** `learned`
-      is all-time, read off the `mature` flag on the cards; every other number is
-      the selected window. `mergeLanguageRows` says that is fine *if the labels
-      say so* — a detail view puts more numbers in one place, so it needs that
-      more, not less.
-      ⚠️ **Don't restore retention just because the data is there.** The verdict
-      counters are per-language only from 2026-09-04, and the display was removed
-      on purpose 2026-09-12 (Decisions in [status.md](status.md)). Same for
-      `byHour`: it is deliberately **not** per-language, so "when do you study
-      Korean" is not a question these rows can answer. `studySeconds` and
-      `cardsMatured` are per-language but honest only from 2026-09-06 —
-      `detailedHistoryStartsMidWindow` is the existing check.
-      **Open, not decided: where it lives.** Mobile has a precedent — the share
-      carousel is a *pushed screen*, chosen because a modal broke the iOS share
-      sheet — and web has none. A route (`/progress/[language]`) is linkable and
-      matches mobile; an expanding row keeps the comparison between languages on
-      screen, which is what the list is for. Don't pick it here.
-
-- [ ] **A cards-added chart, and the honest version of "learned over time".**
-      Two series, and they are not equally available — that is the content of this
-      item.
-      **Cards added is free.** `newCards` and `packCards` are per-language and
-      per-day since rollups began (2026-08-20), so this needs no schema change and
-      no backfill. They are counted apart deliberately — enrolling in a 474-card
-      pack and looking up one word are both "new cards", and a chart where one
-      import dwarfs every real day is worse than no chart. The dashboard tile and
-      the shared image both **sum** them (`progressStatNewCards`), so summing is
-      the consistent default and stacking the more informative one. Pick one.
-      ⚠️ **"Learned over time" is not a stored series and cannot be backfilled.**
-      The all-time count is *state* — cards whose interval passed
-      `MATURE_INTERVAL_DAYS`, counted off the cards themselves. The only per-day
-      record is `cardsMatured`, net crossings, **written from 2026-09-06 only**.
-      So a cumulative curve means anchoring at today's known all-time count and
-      walking backwards subtracting each day's `cardsMatured`: exact back to
-      2026-09-06, **unknowable before it**, because the baseline was never
-      recorded. A curve that runs off the left edge into a flat line is a lie —
-      stop the series and say so, the way `partialHistory` already does.
-      ⚠️ **`cardsMatured` is net and can go negative** (a lapse clears the flag),
-      so the walk is arithmetic, not a running maximum. It also counts **cards**
-      where `reviews` counts **directions**; the two may never share an axis or a
-      label.
-      **Build it as one chart, not a third one.** `WeekChart` is already two
-      near-twins (`page.tsx:606` inline SVG, `progress.tsx:656`
-      `react-native-svg`), both hardcoding seven days of `reviews` and both taking
-      the mark toggle, the tooltip and the `niceCeiling`/`weekAxisTicks` scale
-      from core so the platforms cannot drift. Parameterise it by series *before*
-      adding a second, or the toggle and the scale end up existing four times.
-      ⚠️ **The remembered mark is one key.** `amgi_week_chart_mark` (`localStorage`
-      via `weekMarkStore` on web, AsyncStorage on mobile) — two charts sharing it
-      means switching one switches the other.
-      **Open, not decided: the window.** The reviews chart is always seven days
-      whatever range chip is selected. Following the range (30/90/365) is what
-      "over time" suggests, but 365 bars is a wall the heatmap already covers
-      better.
-
-- [ ] **Share a chart as an asset.** Depends on the chart above existing. The
+- [ ] **Share a chart as an asset.** The chart it depends on now exists:
+      `buildCardsAddedSeries` and `buildLearnedSeries` are in core, per-language,
+      and both platforms draw them. The
       shipped share pipeline answers most of this, and its two hard constraints
       decide the rest.
       ⚠️ **It must be server-rendered by `/api/stats-image`.** Mobile cannot

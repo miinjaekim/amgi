@@ -122,6 +122,27 @@ Backlog priority mirrors the user's Google Tasks list — `backlog.md` is the
 scoped version of it. Keep entries at the size that says what to do next; the
 argument behind a call goes in `status.md`, not in the item.
 
+_This pass **made the "By language" row go somewhere** and gave the range chip
+something to govern besides the calendar. Two of the three Progress items are
+built; the third (sharing a chart) is unblocked and still open. **Three calls
+were the user's** and all three are in the 2026-09-15 Decisions entry in
+[status.md](status.md): a dedicated route and pushed screen rather than an
+expanding row, bars that follow the range bucketed by week past 30 days, and
+cards added **stacked** rather than summed — which keeps the bar total equal to
+`progressStatNewCards`, so the chart gained the lookup/pack split without the
+tile and the shared image losing their number._
+
+_Two findings worth knowing before touching the charts. **The learned curve
+reaches one day further back than `DETAILED_HISTORY_START`** — 09-05, not 09-06
+— because walking backwards from today's count needs the crossings *after* a
+day, not on it; a test pins it, since it is exactly the kind of thing that gets
+"corrected" into being wrong. And **neither new chart takes the mark toggle**,
+which dissolves the shared-`amgi_week_chart_mark` hazard the item flagged rather
+than working around it: a stacked pair has no line form and a cumulative curve
+has no bar form, so there is no choice to remember. ⚠️ **Nothing has been looked
+at** — 635/635, both `tsc` clean and `expo export` bundling is the whole of the
+verification._
+
 _This pass **cleaned out the backlog** on the user's call — no code, seven items
 gone. One closed by being finished: **a speaker read the Kikuyu Basics list and
 it stands as written**, which also cut a false clause from tester-facing copy in

@@ -295,6 +295,89 @@ once, so a path that worked on build 14 is not evidence about build 15.
 Closed calls, kept with their reasoning — a decision whose reasoning is lost gets
 reopened by the next person to notice the symptom. Newest first.
 
+### The "By language" row opens a detail view, and the charts follow the range (2026-09-15)
+
+Two of the three Progress items scoped the same day, built on
+`feat/progress-language-detail`. **Three calls were the user's**, each one the
+backlog had deliberately left open, and all three went to the recommendation.
+
+**Where the detail lives: a dedicated surface, not an expanding row.** Web gets
+`/progress/[language]`, mobile a pushed screen (`app/progress/[language].tsx`),
+matching the share carousel's precedent. The deciding argument is what the item
+asked for — *room for the charts below*. An expanding row keeps the comparison
+between languages on screen, which is the genuine cost of this choice, but a
+cumulative curve inside a list item on a phone is not a chart. The range travels
+in the link (`?range=`, `params.range`), so the detail opens on the window being
+looked at rather than making it be chosen again.
+
+**The charts follow the range chip, bucketed by week past 30 days.** Until now
+the chip governed only the calendar; the weekly chart ignored it. One bar per
+day to 30, one per week at 90 and a year — so 90 days is 13 bars rather than 90,
+and a year is 52 rather than 364, which is the wall the heatmap already draws
+better. `chartBucketDays` is in core for `niceCeiling`'s reason: the grain
+decides what a bar *is*, and two platforms disagreeing would put two different
+charts under one title.
+
+⚠️ **Bars are chunked backwards from today, never aligned to Sundays.** Week
+alignment would leave the newest bar partial six days out of seven, and a final
+bar that dips because the week is not over reads as a slump rather than as a
+Tuesday. The cost moves to the *oldest* bar, which is short whenever the window
+is not a multiple of seven (90 days is twelve weeks and six days) — the better
+end to put it, since a bar carries its own date range and nobody reads a trend
+off the left edge.
+
+**Cards added is stacked, not summed.** The backlog called summing the
+consistent default and stacking the more informative one; stacking turns out to
+be both, because the bar *total* still equals `progressStatNewCards` exactly —
+pinned by a test against `summarizeProgress`. So the dashboard tile and the
+shared image keep their number while the chart can still say that Wednesday's
+spike was a 474-card pack import rather than an enormous study day. A test holds
+that total; without it the two surfaces could drift apart silently.
+
+⚠️ **Neither new chart takes the mark toggle, and that dissolves a hazard the
+item flagged.** `amgi_week_chart_mark` is a single key shared by both platforms,
+so a second consumer would mean switching one chart silently switched another.
+It never arises: a stacked pair has no line form (two series as one polyline is
+a different chart), and a cumulative curve has no bar form (bars would draw each
+one as its own contribution — a level read as a rate). The form follows the data
+here rather than being offered, so there is nothing to remember.
+
+⚠️ **The learned curve reaches one day further back than you would expect, and
+that is not an off-by-one.** `LEARNED_SERIES_START` is `DETAILED_HISTORY_START`
+**minus a day** (2026-09-05, not 09-06). The curve is walked backwards from
+today's all-time count by subtracting crossings, so the value at the end of day
+D needs every crossing on the days *after* D — for 09-05 those are 09-06
+onwards, all recorded. There is a test pinning exactly this, because it is the
+thing most likely to be "corrected" into being wrong.
+
+**Everything before it is `null`, never 0, and the line stops.** A curve running
+off the left edge into a flat zero claims nothing had been learned then, which
+is the one thing the missing data does not say. Both platforms draw only the
+known run and caption where it begins, or the chart would look truncated by a
+bug.
+
+⚠️ **The mature backfill guard is repeated on both detail surfaces**, rather
+than assumed to have run on the dashboard. These are routes, so either can be
+the first progress surface an account opens; `matureBackfillAt` keeps it
+one-shot, so repeating it costs one preferences read and never a second walk.
+Without it a deep-linked first visit would anchor the curve on an undercount.
+
+**Retention stayed off, deliberately.** The verdict counters are per-language
+only from 2026-09-04 and the display came off every surface on 2026-09-12; a
+detail view is exactly where it would have crept back in because the data is
+sitting right there. `byHour` is likewise still not per-language, so "when do
+you study Korean" remains a question these rows cannot answer.
+
+⚠️ **Verified by suite and compiler, not by eye.** Web is 635/635 with 20 new
+assertions, both apps clean under `tsc --noEmit`, lint unchanged at 21 warnings
+/ 0 errors, and `expo export` bundles — which is the check that matters most
+here, since `app/progress/[language].tsx` sits beside the existing
+`(tabs)/progress.tsx` route and a collision is invisible to TypeScript.
+**Nobody has looked at either screen**, on a device or in a browser: the
+stacked bars, the curve, the two tooltips and the Korean labels at 52 bars are
+all unseen. No new native module — `react-native-svg` was already counted for
+the weekly chart — so the build story is unchanged.
+
 ### Grammar returns as content, not as a mode — and not as its own app (2026-09-14)
 
 **The question was whether grammar belongs in Amgi at all**, reopened after the

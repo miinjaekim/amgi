@@ -180,6 +180,23 @@ const translations = {
     progressTooltipNoReviews: 'No reviews',
     progressTooltipCards: '{count} cards added',
     progressTooltipOneCard: '1 card added',
+    // The per-language detail screen, opened from a "By language" row.
+    // Its two charts reuse `progressStatNewCards` and `shareStatLearned` as
+    // their titles rather than taking keys of their own — a chart and the tile
+    // above it counting the same thing must not wear two different labels.
+    progressBackToAll: 'All languages',
+    // The two halves of a stacked bar. Counted apart because enrolling in a
+    // 474-card pack and looking up one word are not the same event, and a bar
+    // that hides the difference reads as an enormous study day.
+    progressChartLookup: 'Looked up',
+    progressChartPack: 'From packs',
+    // The learned curve is walked backwards from today's count, so it reaches
+    // only as far as the day crossings started being recorded. Said out loud
+    // where it stops, because a line that simply ended would look like a bug.
+    progressChartLearnedCutoff: 'Tracked from {date} onwards.',
+    progressChartWeeklyNote: 'Each bar is one week.',
+    progressChartEmpty: 'Nothing added in this window.',
+    progressChartRange: '{start} – {end}',
     // Shareable stats image. Deliberately short — these are read at story
     // size and sometimes at thumbnail size, where a two-word label is already
     // at the limit.
@@ -816,6 +833,13 @@ const translations = {
     progressTooltipNoReviews: '복습 없음',
     progressTooltipCards: '카드 {count}개 추가',
     progressTooltipOneCard: '카드 1개 추가',
+    progressBackToAll: '전체 언어',
+    progressChartLookup: '직접 검색',
+    progressChartPack: '단어팩',
+    progressChartLearnedCutoff: '{date}부터 기록된 값입니다.',
+    progressChartWeeklyNote: '막대 하나가 1주일입니다.',
+    progressChartEmpty: '이 기간에 담은 카드가 없습니다.',
+    progressChartRange: '{start} – {end}',
     // Shareable stats image. Reuses the dashboard's own words where they fit
     // ('복습', '공부한 날', '연속 학습') so the image and the screen behind it
     // cannot describe the same number differently.

@@ -477,6 +477,9 @@ export default function ProgressScreen() {
                     language={language}
                     progress={progress}
                     learned={learnedHere}
+                    // Travels so the detail opens on the window being looked
+                    // at, rather than making it be chosen again.
+                    rangeDays={rangeDays}
                     // Share of the busiest language rather than of the total:
                     // with one language the bar would otherwise always be full
                     // and say nothing, and with five it is the comparison
@@ -510,8 +513,13 @@ export default function ProgressScreen() {
  * not how accurately you recalled them — the verdict counters behind it are
  * still written, and `retentionRate` still computes it for whoever needs it
  * next.
+ *
+ * **It opens the per-language detail as of 2026-09-15.** The row was a dead
+ * element on both platforms until then — it drew three numbers and answered
+ * nothing further. The detail costs no read this screen was not already
+ * paying for, since `byLanguage` carries every counter.
  */
-function LanguageRow({ s, C, interfaceLanguage, language, progress, learned, busiest }: {
+function LanguageRow({ s, C, interfaceLanguage, language, progress, learned, rangeDays, busiest }: {
   s: ReturnType<typeof makeStyles>;
   C: Palette;
   interfaceLanguage: string | null | undefined;
@@ -519,16 +527,32 @@ function LanguageRow({ s, C, interfaceLanguage, language, progress, learned, bus
   progress: LanguageProgress;
   /** All-time cards over the maturity line, unlike everything else on the row. */
   learned: number;
+  /** The selected window, carried through so the detail opens on it. */
+  rangeDays: number;
   busiest: number;
 }) {
   const cardsAdded = progress.newCards + progress.packCards;
   const share = busiest > 0 ? progress.reviews / busiest : 0;
 
   return (
-    <View style={s.langRow}>
-      <Text style={s.langName} numberOfLines={1}>
-        {t(interfaceLanguage, languageLabelKey(language))}
-      </Text>
+    <TouchableOpacity
+      style={s.langRow}
+      activeOpacity={0.7}
+      onPress={() => router.push({
+        pathname: '/progress/[language]',
+        params: { language, range: String(rangeDays) },
+      })}
+      accessibilityRole="button"
+      accessibilityLabel={t(interfaceLanguage, languageLabelKey(language))}
+    >
+      <View style={s.langNameRow}>
+        <Text style={s.langName} numberOfLines={1}>
+          {t(interfaceLanguage, languageLabelKey(language))}
+        </Text>
+        {/* The affordance the row lacked. Without it a card that happens to be
+            tappable is indistinguishable from one that is not. */}
+        <Ionicons name="chevron-forward" size={16} color={C.muted} />
+      </View>
       <View style={s.langBarTrack}>
         <View
           style={[
@@ -553,7 +577,7 @@ function LanguageRow({ s, C, interfaceLanguage, language, progress, learned, bus
           ? ` · ${t(interfaceLanguage, 'progressStatNewCards')} ${cardsAdded}`
           : ''}
       </Text>
-    </View>
+    </TouchableOpacity>
   );
 }
 
@@ -1023,10 +1047,10 @@ function makeStyles(C: Palette, tabBarHeight: number) {
     },
     weekLabel: { flex: 1, textAlign: 'center', color: C.muted, fontSize: 10 },
     langRow: { padding: 12, borderRadius: 12, borderWidth: 1, borderColor: C.border, marginBottom: 8 },
-    // No `flex: 1`: the name sits directly in the card's column now that the
-    // retention figure is gone, where flex would stretch it vertically rather
-    // than fill the row it used to share.
-    langName: { color: C.text, fontSize: 14, fontWeight: '700' },
+    // The name shares its line with the chevron again, so it takes the space
+    // left over rather than sitting directly in the card's column.
+    langNameRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    langName: { color: C.text, fontSize: 14, fontWeight: '700', flex: 1 },
     langBarTrack: {
       height: 6, borderRadius: 3, backgroundColor: C.border,
       overflow: 'hidden', marginTop: 8, marginBottom: 6,

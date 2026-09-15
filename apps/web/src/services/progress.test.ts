@@ -3,6 +3,9 @@ import {
   applyDelta,
   buildHeatmap,
   buildWeekGrid,
+  buildCardsAddedSeries,
+  buildLearnedSeries,
+  chartBucketDays,
   clampThinkTime,
   dateRange,
   deriveStreak,
@@ -21,6 +24,8 @@ import {
   retentionRate,
   reviewDelta,
   PROGRESS_HISTORY_START,
+  DETAILED_HISTORY_START,
+  LEARNED_SERIES_START,
   THINK_TIME_CAP_SECONDS,
   shiftDate,
   summarizeProgress,
@@ -601,6 +606,146 @@ describe('byHour', () => {
       day('2026-09-06', { reviews: 1, byHour: { '23': 1 } }),
     ]);
     expect(summary.byHour).toEqual({ '22': 2, '23': 2 });
+  });
+});
+
+describe('chart buckets', () => {
+  it('draws a bar per day up to 30 days and a bar per week beyond', () => {
+    expect(chartBucketDays(7)).toBe(1);
+    expect(chartBucketDays(30)).toBe(1);
+    expect(chartBucketDays(90)).toBe(7);
+    expect(chartBucketDays(364)).toBe(7);
+  });
+
+  it('gives a 30-day window one bucket per day', () => {
+    const series = buildCardsAddedSeries([], '2026-09-15', 30);
+    expect(series).toHaveLength(30);
+    expect(series[0]).toMatchObject({ start: '2026-08-17', end: '2026-08-17' });
+    expect(series[29]).toMatchObject({ start: '2026-09-15', end: '2026-09-15' });
+  });
+
+  it('ends the newest bar on today rather than on a week boundary', () => {
+    // Chunked backwards from today, so the newest bar is always a whole seven
+    // days. Aligning to Sundays would leave it partial six days out of seven,
+    // and a final bar that dips because the week is not over reads as a slump.
+    const series = buildCardsAddedSeries([], '2026-09-15', 90);
+    expect(series[series.length - 1]).toMatchObject({ start: '2026-09-09', end: '2026-09-15' });
+  });
+
+  it('covers the whole window, leaving the oldest bar short if it must', () => {
+    // 90 days is twelve weeks and six days. The short bar goes at the left,
+    // where it carries its own date range and nobody reads a trend off it.
+    const series = buildCardsAddedSeries([], '2026-09-15', 90);
+    expect(series).toHaveLength(13);
+    expect(series[0].start).toBe(shiftDate('2026-09-15', -89));
+    expect(dateRange(series[0].start, series[0].end)).toHaveLength(6);
+  });
+
+  it('covers a year in 52 whole weeks', () => {
+    const series = buildCardsAddedSeries([], '2026-09-15', 364);
+    expect(series).toHaveLength(52);
+    expect(series.every(bucket => dateRange(bucket.start, bucket.end).length === 7)).toBe(true);
+  });
+});
+
+describe('buildCardsAddedSeries', () => {
+  it('keeps lookups and pack cards apart, and still totals them', () => {
+    const series = buildCardsAddedSeries(
+      [day('2026-09-15', { newCards: 3, packCards: 474 })],
+      '2026-09-15', 30,
+    );
+    expect(series[29]).toMatchObject({ lookup: 3, pack: 474, total: 477 });
+  });
+
+  it('adds up to exactly what the tile and the shared image show', () => {
+    // The reason stacking is safe: the bar total has to equal
+    // `progressStatNewCards`, or the chart and the tile above it disagree.
+    const days = [
+      day('2026-09-14', { newCards: 2, packCards: 10 }),
+      day('2026-09-15', { newCards: 1 }),
+    ];
+    const summary = summarizeProgress(days);
+    const total = buildCardsAddedSeries(days, '2026-09-15', 30)
+      .reduce((sum, bucket) => sum + bucket.total, 0);
+    expect(total).toBe(summary.totalNewCards + summary.totalPackCards);
+  });
+
+  it('sums a whole week into one bar', () => {
+    const days = [
+      day('2026-09-09', { newCards: 1 }),
+      day('2026-09-15', { packCards: 5 }),
+    ];
+    const series = buildCardsAddedSeries(days, '2026-09-15', 90);
+    expect(series[series.length - 1]).toMatchObject({ lookup: 1, pack: 5, total: 6 });
+  });
+
+  it('narrows to one language without touching the others', () => {
+    const days = [day('2026-09-15', {
+      newCards: 5,
+      byLanguage: { Korean: lang({ newCards: 4 }), French: lang({ newCards: 1 }) },
+    })];
+    expect(buildCardsAddedSeries(days, '2026-09-15', 30, 'Korean')[29].lookup).toBe(4);
+    expect(buildCardsAddedSeries(days, '2026-09-15', 30, 'French')[29].lookup).toBe(1);
+  });
+});
+
+describe('buildLearnedSeries', () => {
+  it('anchors the newest point on the count read off the cards', () => {
+    const series = buildLearnedSeries([], '2026-09-15', 7, 196);
+    expect(series[series.length - 1].learned).toBe(196);
+  });
+
+  it('walks backwards by subtracting each bar’s crossings', () => {
+    const days = [
+      day('2026-09-14', { cardsMatured: 4 }),
+      day('2026-09-15', { cardsMatured: 2 }),
+    ];
+    const series = buildLearnedSeries(days, '2026-09-15', 7, 196);
+    const at = (date: string) => series.find(point => point.end === date)?.learned;
+    expect(at('2026-09-15')).toBe(196);
+    expect(at('2026-09-14')).toBe(194);
+    expect(at('2026-09-13')).toBe(190);
+  });
+
+  it('adds a lapsed card back on the way past it, since crossings are net', () => {
+    // `cardsMatured` goes negative when a lapse clears the flag, so the walk is
+    // arithmetic — a relearned card must not be counted twice.
+    const series = buildLearnedSeries([day('2026-09-15', { cardsMatured: -1 })], '2026-09-15', 7, 10);
+    expect(series[series.length - 1].learned).toBe(10);
+    expect(series[series.length - 2].learned).toBe(11);
+  });
+
+  it('stops where the baseline was never recorded rather than flattening', () => {
+    // The whole content of the item: a curve running off the left edge into a
+    // flat zero claims nothing had been learned, which is the one thing the
+    // missing data does not say.
+    const series = buildLearnedSeries([], '2026-09-15', 30, 196);
+    const known = series.filter(point => point.learned !== null);
+    expect(known[0].end).toBe(LEARNED_SERIES_START);
+    expect(series.slice(0, series.indexOf(known[0])).every(point => point.learned === null)).toBe(true);
+  });
+
+  it('knows the count at the end of the day before crossings began', () => {
+    // Not an off-by-one. The count at the end of 09-05 needs only the crossings
+    // from 09-06 onwards, and every one of those was recorded.
+    expect(LEARNED_SERIES_START).toBe(shiftDate(DETAILED_HISTORY_START, -1));
+    const series = buildLearnedSeries([], '2026-09-15', 30, 196);
+    expect(series.find(point => point.end === '2026-09-05')?.learned).toBe(196);
+    expect(series.find(point => point.end === '2026-09-04')?.learned).toBeNull();
+  });
+
+  it('is knowable end to end for a window opening after crossings began', () => {
+    expect(buildLearnedSeries([], '2026-09-15', 7, 40).every(point => point.learned !== null)).toBe(true);
+  });
+
+  it('narrows to one language, anchored on that language’s own count', () => {
+    const days = [day('2026-09-15', {
+      cardsMatured: 3,
+      byLanguage: { Korean: lang({ cardsMatured: 2 }), French: lang({ cardsMatured: 1 }) },
+    })];
+    const series = buildLearnedSeries(days, '2026-09-15', 7, 50, 'Korean');
+    expect(series[series.length - 1].learned).toBe(50);
+    expect(series[series.length - 2].learned).toBe(48);
   });
 });
 
