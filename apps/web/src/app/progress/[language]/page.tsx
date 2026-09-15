@@ -69,14 +69,23 @@ const AXIS_GUTTER = 30;
 const TOOLTIP_LANE = 44;
 
 /**
- * The most bars that can each carry their own value on top.
+ * The most marks a chart can decorate one by one — a number over every bar, a
+ * dot on every point of the curve.
  *
- * Keyed on bar *count* rather than on the window, because the grain changes
- * underneath it: 7 days is 7 bars and 90 days is 13 weekly ones, so both fit,
- * while 30 daily bars and a year's 52 do not. Past this the axis comes back and
- * the bubble carries the exact figure instead.
+ * Keyed on mark *count* rather than on the window, because the grain changes
+ * underneath it: 7 days is 7 marks and 90 days is 13 weekly ones, so both fit,
+ * while 30 daily marks and a year's 52 do not. Past this the axis comes back on
+ * the bars, the curve keeps only its hovered vertex, and the bubble carries the
+ * exact figure instead.
+ *
+ * **One constant for both charts on purpose.** Two with the same value would
+ * drift, and the two plots sit one above the other — switching decoration at
+ * different windows would read as a bug in whichever one changed second.
  */
-const LABELLED_BAR_MAX = 14;
+const DECORATED_MARK_MAX = 14;
+
+/** How many dated ticks an axis carries when a label per mark is too many. */
+const DATE_TICK_MAX = 4;
 
 /** Room reserved above the bars for those labels, so a full-height bar's number
  *  has somewhere to sit rather than overflowing into the bubble's lane. */
@@ -310,7 +319,7 @@ function AddedChart({ interfaceLanguage, series, weekly }: {
    * stays, which also keeps the gutter and so keeps this chart aligned with the
    * one under it.
    */
-  const showValues = series.length <= LABELLED_BAR_MAX;
+  const showValues = series.length <= DECORATED_MARK_MAX;
   /** A weekday under each bar only makes sense when a bar *is* a day. */
   const showWeekdays = showValues && !weekly;
   const ticks = showValues ? [0] : weekAxisTicks(ceiling);
@@ -417,7 +426,7 @@ function AddedChart({ interfaceLanguage, series, weekly }: {
 
           {showWeekdays
             ? <WeekdayLabels interfaceLanguage={interfaceLanguage} series={series} />
-            : <AxisLabels interfaceLanguage={interfaceLanguage} series={series} />}
+            : <DateTicks interfaceLanguage={interfaceLanguage} series={series} />}
 
           {weekly && (
             <div className="mt-2 text-xs text-[var(--color-muted)] text-right">
@@ -455,6 +464,19 @@ function LearnedChart({ interfaceLanguage, series, weekly }: {
   const active = hovered === null ? null : series[hovered];
   /** True once any point had to be withheld, which is what earns the note. */
   const partial = series.some(point => point.learned === null);
+
+  /**
+   * Whether every point gets a dot, or only the one being pointed at.
+   *
+   * The same threshold the bars above use for their numbers, so the two plots
+   * change character at the same window rather than one of them looking broken.
+   * At 52 weekly points a dot on each is a beaded string rather than a curve;
+   * at seven they say "these are seven discrete readings", which is true and is
+   * what a cumulative line otherwise hides.
+   */
+  const showDots = series.length <= DECORATED_MARK_MAX;
+  /** A weekday under each point only makes sense when a point *is* a day. */
+  const showWeekdays = showDots && !weekly;
 
   const centre = (index: number) => ((index + 0.5) * 100) / series.length;
   const heightOf = (value: number) => (ceiling > 0 && value > 0
@@ -519,24 +541,33 @@ function LearnedChart({ interfaceLanguage, series, weekly }: {
             />
           </svg>
 
-          {/* Only the hovered vertex is drawn. At 52 weekly points a dot on
-              every one is a beaded string rather than a curve, and the line
-              already carries the shape. */}
-          {hovered !== null && active?.learned != null && (
-            <span
-              aria-hidden
-              className="absolute rounded-full pointer-events-none"
-              style={{
-                left: `${centre(hovered)}%`,
-                bottom: heightOf(active.learned),
-                width: 10,
-                height: 10,
-                transform: 'translate(-50%, 50%)',
-                background: 'var(--heat-4)',
-                boxShadow: '0 0 0 2px var(--color-bg)',
-              }}
-            />
-          )}
+          {/* A dot per known point when there are few enough to tell apart,
+              otherwise only the hovered one. Drawn from `known`, so a point the
+              data cannot reach gets no vertex — the curve and its dots stop at
+              the same place. The hovered one grows, so the point being read is
+              the one that answers. */}
+          {known
+            .filter(({ index }) => showDots || index === hovered)
+            .map(({ point, index }) => (
+              <span
+                key={point.start}
+                aria-hidden
+                className="absolute rounded-full pointer-events-none transition-all duration-150"
+                style={{
+                  left: `${centre(index)}%`,
+                  bottom: heightOf(point.learned),
+                  width: hovered === index ? 10 : 7,
+                  height: hovered === index ? 10 : 7,
+                  // Half its own size each way, so a dot is centred on its value
+                  // and stays centred as it grows.
+                  transform: 'translate(-50%, 50%)',
+                  background: 'var(--heat-4)',
+                  // Punches the dot out of the line it sits on.
+                  boxShadow: '0 0 0 2px var(--color-bg)',
+                  opacity: hovered === null || hovered === index ? 1 : 0.55,
+                }}
+              />
+            ))}
         </div>
 
         {/* One full-height target per point, over the line — a curve has no
@@ -568,7 +599,9 @@ function LearnedChart({ interfaceLanguage, series, weekly }: {
         )}
       </div>
 
-      <AxisLabels interfaceLanguage={interfaceLanguage} series={series} />
+      {showWeekdays
+        ? <WeekdayLabels interfaceLanguage={interfaceLanguage} series={series} />
+        : <DateTicks interfaceLanguage={interfaceLanguage} series={series} />}
 
       <div className="flex gap-3 mt-2 text-xs text-[var(--color-muted)]">
         {/* Where the line begins, and why it begins there rather than at the
@@ -625,13 +658,6 @@ function Gridlines({ ticks, ceiling }: { ticks: number[]; ceiling: number }) {
 }
 
 /**
- * The ends of the window, named.
- *
- * Only two labels: at 52 bars a label per bar is unreadable and a label every
- * nth bar lands on an arbitrary date. The tooltip carries the rest, and the
- * bars are in order, so the two ends are enough to place everything between.
- */
-/**
  * Sunday-first weekday names in the reader's language.
  *
  * Built from a known Sunday through `Intl` rather than from translation keys:
@@ -652,7 +678,7 @@ function weekdayLabels(interfaceLanguage: string | null | undefined): string[] {
  * from a fixed Sunday-to-Saturday run, because these days end on today.
  *
  * The gap matches the bars' own, which is always 2 here — a labelled chart is
- * at most `LABELLED_BAR_MAX` bars and the 1px gap only applies past 26.
+ * at most `DECORATED_MARK_MAX` marks and the 1px gap only applies past 26.
  */
 function WeekdayLabels({ interfaceLanguage, series }: {
   interfaceLanguage: string | null | undefined;
@@ -673,19 +699,65 @@ function WeekdayLabels({ interfaceLanguage, series }: {
   );
 }
 
-function AxisLabels({ interfaceLanguage, series }: {
+/**
+ * Which marks earn a dated tick: evenly spread, always including both ends.
+ *
+ * Deduped, because rounding can land two of them on the same mark on a very
+ * short series — four ticks over five marks would otherwise label one twice.
+ */
+function tickIndices(count: number): number[] {
+  const wanted = Math.min(DATE_TICK_MAX, count);
+  if (wanted <= 1) return count > 0 ? [0] : [];
+  const step = (count - 1) / (wanted - 1);
+  return [...new Set(
+    Array.from({ length: wanted }, (_, i) => Math.round(i * step)),
+  )];
+}
+
+/**
+ * A handful of dates along the axis, positioned under the marks they name.
+ *
+ * ⚠️ **This replaced a pair of labels at the two outer edges.** Naming only the
+ * ends says how long the window is and nothing about where anything in it sits
+ * — on a 90-day chart every point between them was unplaceable without hovering
+ * it. Spreading four ticks costs no more room and makes the middle readable.
+ *
+ * Positioned at the mark's own centre rather than spaced evenly across the
+ * width, so a tick sits under the thing it names. The ends flip their alignment
+ * instead of being measured, the same way the bubble does.
+ */
+function DateTicks({ interfaceLanguage, series }: {
   interfaceLanguage: string | null | undefined;
-  series: { start: string; end: string }[];
+  series: { start: string }[];
 }) {
   if (series.length === 0) return null;
+  const indices = tickIndices(series.length);
   return (
-    <div
-      className="flex justify-between mt-1 text-[10px] text-[var(--color-muted)]"
-      style={{ marginLeft: AXIS_GUTTER }}
-    >
-      <span>{formatDay(interfaceLanguage, series[0].start)}</span>
-      <span>{formatDay(interfaceLanguage, series[series.length - 1].end)}</span>
+    <div className="relative mt-1" style={{ marginLeft: AXIS_GUTTER, height: 14 }}>
+      {indices.map((index, at) => (
+        <span
+          key={series[index].start}
+          className={`absolute top-0 text-[10px] leading-none whitespace-nowrap text-[var(--color-muted)] ${
+            at === 0
+              ? 'translate-x-0'
+              : at === indices.length - 1
+                ? '-translate-x-full'
+                : '-translate-x-1/2'
+          }`}
+          style={{ left: `${((index + 0.5) * 100) / series.length}%` }}
+        >
+          {formatShortDay(interfaceLanguage, series[index].start)}
+        </span>
+      ))}
     </div>
+  );
+}
+
+/** `2026-09-09` → `9 Sep` / `9월 9일`. Short enough for four across an axis. */
+function formatShortDay(interfaceLanguage: string | null | undefined, date: string): string {
+  return new Date(`${date}T12:00:00Z`).toLocaleDateString(
+    interfaceLanguage === 'Korean' ? 'ko-KR' : 'en-GB',
+    { month: 'short', day: 'numeric' },
   );
 }
 

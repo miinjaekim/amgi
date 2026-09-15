@@ -72,14 +72,26 @@ const TOOLTIP_LANE = 44;
 const TOOLTIP_WIDTH = 190;
 
 /**
- * The most bars that can each carry their own value on top.
+ * The most marks a chart can decorate one by one — a number over every bar, a
+ * dot on every point of the curve.
  *
- * Keyed on bar *count* rather than on the window, because the grain changes
- * underneath it: 7 days is 7 bars and 90 days is 13 weekly ones, so both fit,
- * while 30 daily bars and a year's 52 do not. Past this the axis comes back and
- * the bubble carries the exact figure instead.
+ * Keyed on mark *count* rather than on the window, because the grain changes
+ * underneath it: 7 days is 7 marks and 90 days is 13 weekly ones, so both fit,
+ * while 30 daily marks and a year's 52 do not. Past this the axis comes back on
+ * the bars, the curve keeps only its selected vertex, and the bubble carries
+ * the exact figure instead.
+ *
+ * **One constant for both charts on purpose.** Two with the same value would
+ * drift, and the two plots sit one above the other — switching decoration at
+ * different windows would read as a bug in whichever one changed second.
  */
-const LABELLED_BAR_MAX = 14;
+const DECORATED_MARK_MAX = 14;
+
+/** How many dated ticks an axis carries when a label per mark is too many. */
+const DATE_TICK_MAX = 4;
+
+/** Fixed, so a tick can be centred on its mark without measuring its text. */
+const DATE_TICK_WIDTH = 60;
 
 /** Room reserved above the bars for those labels, so a full-height bar's number
  *  has somewhere to sit rather than overflowing into the bubble's lane. */
@@ -316,7 +328,7 @@ function AddedChart({ C, s, interfaceLanguage, series, weekly }: {
    * stays, which also keeps the gutter and so keeps this chart aligned with the
    * one under it.
    */
-  const showValues = series.length <= LABELLED_BAR_MAX;
+  const showValues = series.length <= DECORATED_MARK_MAX;
   /** A weekday under each bar only makes sense when a bar *is* a day. */
   const showWeekdays = showValues && !weekly;
   const ticks = showValues ? [0] : weekAxisTicks(ceiling);
@@ -422,7 +434,7 @@ function AddedChart({ C, s, interfaceLanguage, series, weekly }: {
 
       {showWeekdays
         ? <WeekdayLabels s={s} interfaceLanguage={interfaceLanguage} series={series} />
-        : <AxisLabels s={s} interfaceLanguage={interfaceLanguage} series={series} />}
+        : <DateTicks s={s} interfaceLanguage={interfaceLanguage} series={series} plotWidth={plotWidth} />}
 
       {weekly && (
         <View style={s.legendRow}>
@@ -462,6 +474,19 @@ function LearnedChart({ C, s, interfaceLanguage, series, weekly }: {
   const ticks = weekAxisTicks(ceiling);
   const active = selected === null ? null : series[selected];
   const partial = series.some(point => point.learned === null);
+
+  /**
+   * Whether every point gets a dot, or only the one being tapped.
+   *
+   * The same threshold the bars above use for their numbers, so the two plots
+   * change character at the same window rather than one of them looking broken.
+   * At 52 weekly points a dot on each is a beaded string rather than a curve;
+   * at seven they say "these are seven discrete readings", which is true and is
+   * what a cumulative line otherwise hides.
+   */
+  const showDots = series.length <= DECORATED_MARK_MAX;
+  /** A weekday under each point only makes sense when a point *is* a day. */
+  const showWeekdays = showDots && !weekly;
 
   const centre = (index: number) => ((index + 0.5) * plotWidth) / Math.max(1, series.length);
   const heightOf = (value: number) => (ceiling > 0 && value > 0
@@ -515,17 +540,30 @@ function LearnedChart({ C, s, interfaceLanguage, series, weekly }: {
                   strokeLinecap="round"
                 />
               </Svg>
-              {/* Only the selected vertex is drawn. At 52 weekly points a dot
-                  on every one is a beaded string rather than a curve, and the
-                  line already carries the shape. */}
-              {selected !== null && active?.learned != null && (
-                <View style={[s.dot, {
-                  left: centre(selected) - 5,
-                  bottom: heightOf(active.learned) - 5,
-                  backgroundColor: C.heat[4],
-                  borderColor: C.bg,
-                }]} />
-              )}
+              {/* A dot per known point when there are few enough to tell
+                  apart, otherwise only the selected one. Drawn from `known`, so
+                  a point the data cannot reach gets no vertex — the curve and
+                  its dots stop at the same place. */}
+              {known
+                .filter(({ index }) => showDots || index === selected)
+                .map(({ point, index }) => {
+                  const size = selected === index ? 12 : 7;
+                  return (
+                    <View
+                      key={point.start}
+                      style={[s.dot, {
+                        width: size,
+                        height: size,
+                        borderRadius: size / 2,
+                        left: centre(index) - size / 2,
+                        bottom: heightOf(point.learned) - size / 2,
+                        backgroundColor: C.heat[4],
+                        borderColor: C.bg,
+                        opacity: selected === null || selected === index ? 1 : 0.55,
+                      }]}
+                    />
+                  );
+                })}
             </>
           )}
         </View>
@@ -556,7 +594,9 @@ function LearnedChart({ C, s, interfaceLanguage, series, weekly }: {
         )}
       </View>
 
-      <AxisLabels s={s} interfaceLanguage={interfaceLanguage} series={series} />
+      {showWeekdays
+        ? <WeekdayLabels s={s} interfaceLanguage={interfaceLanguage} series={series} />
+        : <DateTicks s={s} interfaceLanguage={interfaceLanguage} series={series} plotWidth={plotWidth} />}
 
       <View style={s.legendRow}>
         {/* Where the line begins, and why it begins there rather than at the
@@ -604,13 +644,6 @@ function Gridlines({ s, ticks, ceiling }: {
 }
 
 /**
- * The ends of the window, named.
- *
- * Only two labels: at 52 bars a label per bar is unreadable and a label every
- * nth bar lands on an arbitrary date. The bubble carries the rest, and the bars
- * are in order, so the two ends place everything between them.
- */
-/**
  * Sunday-first weekday names in the reader's language.
  *
  * Built from a known Sunday through `Intl` rather than from translation keys:
@@ -647,19 +680,67 @@ function WeekdayLabels({ s, interfaceLanguage, series }: {
   );
 }
 
-function AxisLabels({ s, interfaceLanguage, series }: {
+/**
+ * Which marks earn a dated tick: evenly spread, always including both ends.
+ *
+ * Deduped, because rounding can land two of them on the same mark on a very
+ * short series — four ticks over five marks would otherwise label one twice.
+ */
+function tickIndices(count: number): number[] {
+  const wanted = Math.min(DATE_TICK_MAX, count);
+  if (wanted <= 1) return count > 0 ? [0] : [];
+  const step = (count - 1) / (wanted - 1);
+  return [...new Set(
+    Array.from({ length: wanted }, (_, i) => Math.round(i * step)),
+  )];
+}
+
+/**
+ * A handful of dates along the axis, positioned under the marks they name.
+ *
+ * ⚠️ **This replaced a pair of labels at the two outer edges.** Naming only the
+ * ends says how long the window is and nothing about where anything in it sits
+ * — on a 90-day chart every point between them was unplaceable without tapping
+ * it. Spreading four ticks costs no more room and makes the middle readable.
+ *
+ * Positioned at the mark's own centre rather than spaced evenly across the
+ * width, so a tick sits under the thing it names, then clamped so neither end
+ * runs past the plot. Needs the measured width for the same reason the line
+ * does — there is no percentage translate in React Native.
+ */
+function DateTicks({ s, interfaceLanguage, series, plotWidth }: {
   s: ReturnType<typeof makeStyles>;
   interfaceLanguage: string | null | undefined;
-  series: { start: string; end: string }[];
+  series: { start: string }[];
+  plotWidth: number;
 }) {
-  if (series.length === 0) return null;
+  if (series.length === 0 || plotWidth <= 0) return null;
+  const centre = (index: number) => ((index + 0.5) * plotWidth) / series.length;
   return (
-    <View style={s.axisRow}>
-      <Text style={s.axisLabel}>{formatDay(interfaceLanguage, series[0].start)}</Text>
-      <Text style={s.axisLabel}>
-        {formatDay(interfaceLanguage, series[series.length - 1].end)}
-      </Text>
+    <View style={s.dateTickRow}>
+      {tickIndices(series.length).map(index => (
+        <Text
+          key={series[index].start}
+          numberOfLines={1}
+          style={[s.dateTick, {
+            left: Math.max(0, Math.min(
+              centre(index) - DATE_TICK_WIDTH / 2,
+              Math.max(0, plotWidth - DATE_TICK_WIDTH),
+            )),
+          }]}
+        >
+          {formatShortDay(interfaceLanguage, series[index].start)}
+        </Text>
+      ))}
     </View>
+  );
+}
+
+/** `2026-09-09` → `9 Sep` / `9월 9일`. Short enough for four across an axis. */
+function formatShortDay(interfaceLanguage: string | null | undefined, date: string): string {
+  return new Date(`${date}T12:00:00Z`).toLocaleDateString(
+    interfaceLanguage === 'Korean' ? 'ko-KR' : 'en-GB',
+    { month: 'short', day: 'numeric' },
   );
 }
 
@@ -820,7 +901,7 @@ function makeStyles(C: Palette) {
     },
     // The gap matches the bars' own, which is always 2 on a labelled chart —
     // the 1px gap only applies past 26 bars, and a labelled chart is at most
-    // `LABELLED_BAR_MAX`.
+    // `DECORATED_MARK_MAX`.
     weekdayRow: { flexDirection: 'row', gap: 2, marginLeft: AXIS_GUTTER, marginTop: 4 },
     weekdayLabel: { flex: 1, textAlign: 'center', color: C.muted, fontSize: 10 },
     targets: {
@@ -835,11 +916,13 @@ function makeStyles(C: Palette) {
     },
     tooltipTitle: { fontSize: 11, fontWeight: '700', color: C.text },
     tooltipDetail: { fontSize: 11, color: C.muted, marginTop: 1 },
-    axisRow: {
-      flexDirection: 'row', justifyContent: 'space-between',
-      marginLeft: AXIS_GUTTER, marginTop: 4,
+    // Absolutely positioned children, so the row needs its own height — it has
+    // no flow content to derive one from.
+    dateTickRow: { height: 14, marginLeft: AXIS_GUTTER, marginTop: 4, position: 'relative' },
+    dateTick: {
+      position: 'absolute', top: 0, width: DATE_TICK_WIDTH,
+      textAlign: 'center', color: C.muted, fontSize: 10,
     },
-    axisLabel: { color: C.muted, fontSize: 10 },
     legendRow: {
       flexDirection: 'row', alignItems: 'center', gap: 12,
       marginTop: 8, marginBottom: 24, flexWrap: 'wrap',

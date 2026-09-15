@@ -478,8 +478,28 @@ identical and only one of them is true.
 **Weekday labels replaced the two end dates when a bar is a day**, matching what
 the dashboard's weekly chart already does, so the two read as one family. Taken
 from each bucket's own date rather than a fixed Sunday-to-Saturday run, because
-these seven days end on today. Weekly buckets keep the end dates — a weekday
-means nothing on a bar covering seven of them.
+these seven days end on today. A weekday means nothing on a bar covering seven
+of them, so weekly buckets take dated ticks instead — see below.
+
+**The learned curve gained a dot per point, and the axis gained middle ticks**
+(later the same day, on the user's ask). Both charts now decorate their marks
+individually under **one** threshold, `DECORATED_MARK_MAX` — a number over every
+bar, a dot on every point. ⚠️ **It is deliberately a single constant covering
+both plots**: they sit one above the other, so two constants sharing a value
+would drift and the charts would change character at different windows, which
+reads as a bug in whichever one changed second. It also renamed from
+`LABELLED_BAR_MAX`, which had stopped describing what it governs. Dots are drawn
+from `known`, so the curve and its vertices stop at the same place rather than
+the dots running on past where the data does.
+
+⚠️ **`AxisLabels` is gone, and naming only the two ends was the defect.** It said
+how long the window was and nothing about where anything inside it sat — on a
+90-day chart every point between the two labels was unplaceable without hovering
+it. `DateTicks` spreads up to four dates instead, each positioned at the *centre
+of the mark it names* rather than evenly across the width, so a tick sits under
+its own data. The indices are deduped: rounding can otherwise land two ticks on
+one mark on a short series. Mobile needs the measured plot width for this, for
+the same reason its line does — React Native has no percentage translate.
 
 ⚠️ **Verified by suite and compiler, not by eye.** Web is 635/635 with 20 new
 assertions, both apps clean under `tsc --noEmit`, lint unchanged at 21 warnings
