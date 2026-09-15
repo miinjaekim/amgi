@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useUser } from '@/components/UserContext';
 import { fetchRecentProgress } from '@/services/progress';
 import {
-  CARD_COLLECTIONS, buildHeatmap, buildShareStats, buildTodayStats, buildWeekGrid,
+  CARD_COLLECTIONS, buildCardsAddedSeries, buildHeatmap, buildShareStats, buildTodayStats, buildWeekGrid,
   hasShareableHistory, localDateString, mergeLanguageRows, niceCeiling, summarizeProgress,
   weekAxisTicks, weekdayIndex,
   type DailyProgress, type HeatmapCell, type StudyLanguage,
@@ -115,6 +115,28 @@ export default function ProgressPage() {
     weekMarkStore.get,
     weekMarkStore.getServer,
   );
+  /**
+   * Which measure the weekly chart draws.
+   *
+   * Session state rather than a remembered preference, unlike the mark beside
+   * it: the mark is how you like charts drawn, where this is a question you ask
+   * once and come back from. A second `localStorage` key would also be a second
+   * thing to keep in step with mobile for no gain.
+   */
+  const [weekMeasure, setWeekMeasure] = useState<WeekMeasure>('reviews');
+
+  /**
+   * The seven values the chart plots, in the same order as `weekCells`.
+   *
+   * `buildCardsAddedSeries` over a seven-day window buckets daily, so its rows
+   * line up one-to-one with the cells — which is what lets the two measures
+   * share every other part of the chart.
+   */
+  const weekValues = useMemo(() => (weekMeasure === 'reviews'
+    ? weekCells.map(cell => cell.reviews)
+    : buildCardsAddedSeries(days ?? [], localDateString(), 7).map(bucket => bucket.total)
+  ), [weekMeasure, weekCells, days]);
+
   const heatmap = useMemo(
     () => buildHeatmap(days ?? [], localDateString(), rangeDays),
     [days, rangeDays],
@@ -429,9 +451,12 @@ export default function ProgressPage() {
           <WeekChart
             interfaceLanguage={interfaceLanguage}
             cells={weekCells}
+            values={weekValues}
             daysByDate={daysByDate}
             mark={weekMark}
             onMarkChange={weekMarkStore.set}
+            measure={weekMeasure}
+            onMeasureChange={setWeekMeasure}
           />
 
           {languageRows.length > 0 && (
@@ -442,12 +467,12 @@ export default function ProgressPage() {
               <ul className="flex flex-col gap-2">
                 {languageRows.map(({ studyLanguage, progress, learned: learnedHere }) => (
                   <li key={studyLanguage}>
-                    {/* The row was a dead element until 2026-09-15. It opens the
-                        per-language detail now, and carries the selected range
-                        so the detail opens on the window being looked at rather
-                        than making it be chosen again. */}
+                    {/* The row was a dead element until 2026-09-15; it opens the
+                        per-language detail now. The selected range deliberately
+                        does *not* travel — the detail opens on seven days, and
+                        an inherited window would override that every time. */}
                     <Link
-                      href={`/progress/${studyLanguage}?range=${rangeDays}`}
+                      href={`/progress/${studyLanguage}`}
                       className="flex items-baseline justify-between gap-3 p-3 rounded-xl border border-[var(--color-muted)] hover:border-[var(--color-highlight)] transition-colors"
                     >
                       <span className="font-bold text-[var(--color-text)]">
@@ -555,6 +580,8 @@ const WEEK_TOOLTIP_LANE = 44;
 const WEEK_AXIS_GUTTER = 26;
 
 type WeekMark = 'bars' | 'line';
+/** What the weekly chart is counting. Both are per-day counts over seven days. */
+type WeekMeasure = 'reviews' | 'cards';
 const WEEK_MARK_KEY = 'amgi_week_chart_mark';
 
 /**
@@ -611,15 +638,23 @@ const weekMarkStore = {
  * already carry. Both marks share the title, the labels and the plot height,
  * so switching cannot shift the layout.
  */
-function WeekChart({ interfaceLanguage, cells, daysByDate, mark, onMarkChange }: {
+function WeekChart({
+  interfaceLanguage, cells, values, daysByDate, mark, onMarkChange, measure, onMeasureChange,
+}: {
   interfaceLanguage: string | null | undefined;
   cells: HeatmapCell[];
+  /** What to plot, one per cell — see `weekValues`. */
+  values: number[];
   daysByDate: Map<string, DailyProgress>;
   mark: WeekMark;
   onMarkChange: (mark: WeekMark) => void;
+  measure: WeekMeasure;
+  onMeasureChange: (measure: WeekMeasure) => void;
 }) {
   const weekdays = weekdayLabels(interfaceLanguage);
-  const busiest = Math.max(0, ...cells.map(cell => cell.reviews));
+  /** A day's plotted value, by position. Zero if the series is somehow short. */
+  const valueAt = (index: number) => values[index] ?? 0;
+  const busiest = Math.max(0, ...values);
   /** The axis top. Marks scale to this, not to the raw busiest day. */
   const ceiling = niceCeiling(busiest);
   /** The lines drawn across the plot — the same rule mobile rules its plot by. */
@@ -646,9 +681,24 @@ function WeekChart({ interfaceLanguage, cells, daysByDate, mark, onMarkChange }:
   return (
     <section className="mb-8">
       <div className="flex items-baseline justify-between gap-3 mb-3">
-        <h2 className="text-sm font-bold text-[var(--color-text)]">
-          {t(interfaceLanguage, 'progressWeekTitle')}
-        </h2>
+        {/* The measure is a dropdown rather than a fixed title: the same seven
+            days answer two questions, and everything below — the scale, the
+            marks, the tooltip — is identical for both. A native `select` keeps
+            the keyboard and screen-reader behaviour for free. */}
+        <label className="flex items-baseline gap-1.5 text-sm font-bold text-[var(--color-text)]">
+          <select
+            value={measure}
+            onChange={event => onMeasureChange(event.target.value as WeekMeasure)}
+            aria-label={t(interfaceLanguage, 'progressWeekLast7')}
+            className="bg-transparent font-bold text-[var(--color-text)] border-b border-dotted border-[var(--color-muted)] cursor-pointer focus:outline-none"
+          >
+            <option value="reviews">{t(interfaceLanguage, 'progressStatReviews')}</option>
+            <option value="cards">{t(interfaceLanguage, 'progressStatNewCards')}</option>
+          </select>
+          <span className="font-normal text-[var(--color-muted)] text-xs">
+            {t(interfaceLanguage, 'progressWeekLast7')}
+          </span>
+        </label>
         <div className="flex gap-1">
           {(['bars', 'line'] as const).map(option => (
             <button
@@ -704,10 +754,10 @@ function WeekChart({ interfaceLanguage, cells, daysByDate, mark, onMarkChange }:
               <div
                 key={cell.date}
                 className="flex-1 rounded-t-sm bg-[var(--heat-4)] transition-opacity"
-                // A day with reviews keeps a visible sliver, for the same
+                // A day with any activity keeps a visible sliver, for the same
                 // reason the calendar gives a one-review day a level of 1.
                 style={{
-                  height: Math.max(heightOf(cell.reviews), cell.reviews > 0 ? 2 : 1),
+                  height: Math.max(heightOf(valueAt(index)), valueAt(index) > 0 ? 2 : 1),
                   opacity: hovered === null || hovered === index ? 1 : 0.55,
                 }}
               />
@@ -735,7 +785,7 @@ function WeekChart({ interfaceLanguage, cells, daysByDate, mark, onMarkChange }:
             >
               <polyline
                 points={cells
-                  .map((cell, index) => `${centre(index)},${WEEK_PLOT_HEIGHT - heightOf(cell.reviews)}`)
+                  .map((cell, index) => `${centre(index)},${WEEK_PLOT_HEIGHT - heightOf(valueAt(index))}`)
                   .join(' ')}
                 fill="none"
                 stroke="var(--heat-4)"
@@ -766,7 +816,7 @@ function WeekChart({ interfaceLanguage, cells, daysByDate, mark, onMarkChange }:
                 className="absolute rounded-full pointer-events-none transition-all duration-150"
                 style={{
                   left: `${centre(index)}%`,
-                  bottom: heightOf(cell.reviews),
+                  bottom: heightOf(valueAt(index)),
                   width: hovered === index ? 12 : 8,
                   height: hovered === index ? 12 : 8,
                   // Half its own size in each direction, so the dot is centred

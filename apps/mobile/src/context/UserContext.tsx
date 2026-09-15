@@ -16,7 +16,7 @@ import { refreshReminders } from '../services/reminders';
 import {
   markStreakSynced, readCachedStreak, writeCachedStreak,
 } from '../services/offlineReview';
-import { recordProgress } from '../services/progress';
+import { fetchTodayReviews, recordProgress } from '../services/progress';
 import {
   CARD_COLLECTIONS, DEFAULT_HANJA_PARTITION,
   addLanguagePair, advanceStreak, hourKey, isHanjaPartition, isNativeLanguage,
@@ -196,6 +196,32 @@ export function UserProvider({ children }: { children: ReactNode }) {
     streakRef.current = next;
     setStreakState(next);
   }, []);
+
+  /**
+   * Today's reviews, read from the day rollup rather than counted separately.
+   *
+   * `null` until the first read lands, which is what lets the stored streak
+   * counter stand in meanwhile instead of the chip flashing zero.
+   *
+   * ⚠️ **Seeded once and then moved locally**, unlike web, which simply
+   * subscribes. A Firestore listener is no good here: the SDK's cache on React
+   * Native is memory-only, so it goes blank offline — the one moment this
+   * number must keep moving. `fetchTodayReviews` replays the unsent queue over
+   * the server's copy, and every rating below adjusts it in place, so the chip
+   * stays right through a whole underground session.
+   */
+  const [todayReviews, setTodayReviews] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!user) { setTodayReviews(null); return; }
+    let cancelled = false;
+    fetchTodayReviews(user.uid)
+      .then(count => { if (!cancelled) setTodayReviews(count); })
+      // Offline on a cold start, with nothing cached to replay. The stored
+      // counter stands in, which is what it did for this number until now.
+      .catch(() => undefined);
+    return () => { cancelled = true; };
+  }, [user]);
 
   const [, response, promptAsync] = Google.useAuthRequest({
     webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
@@ -552,6 +578,9 @@ export function UserProvider({ children }: { children: ReactNode }) {
     // fail differently: the streak can be reconstructed from the server's copy
     // on the next launch, where an uncounted day is uncounted forever.
     void recordProgress(user.uid, delta, today);
+    // Moved in step with the queue write above rather than re-read: the rollup
+    // is the source, and this is the same increment it will land.
+    setTodayReviews(current => (current === null ? current : current + (delta.reviews ?? 0)));
 
     // `advanceStreak` is the same pure rule web runs inside its transaction —
     // including restarting `reviewedToday` on a new day rather than
@@ -601,6 +630,14 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const undoReview = ({ date, delta }: RecordedReview) => {
     if (!user) return;
     void recordProgress(user.uid, negateDelta(delta), date);
+    // Only when the rating being undone was counted *today* — a session carried
+    // across midnight takes its tally mark off yesterday, which this number is
+    // not showing.
+    if (date === getTodayString()) {
+      setTodayReviews(current => (
+        current === null ? current : Math.max(0, current - (delta.reviews ?? 0))
+      ));
+    }
   };
 
   const handleSignIn = async () => {
@@ -662,11 +699,24 @@ export function UserProvider({ children }: { children: ReactNode }) {
     await signOut(auth);
   };
 
-  // Derived rather than stored: `reviewedToday` counts *for a day*, so a count
-  // left over from a day that is over displays as zero without the stored value
-  // — which is still what the streak is computed from — being rewritten.
-  const reviewedToday =
-    streakState.lastReviewDate === getTodayString() ? streakState.reviewedToday : 0;
+  /**
+   * How much of today is done.
+   *
+   * ⚠️ **From the day rollup, not the streak document** — changed 2026-09-15.
+   * The two used to be independent counters written by two fire-and-forget
+   * calls on every rating, and they drifted in *both* directions: a
+   * `saveUserPreferences` that never landed left the chip reading low, while an
+   * undo reverses the rollup and deliberately never the streak fields, leaving
+   * it reading high. The rollup is the number the Progress tab draws, so the
+   * chip and the tab can no longer disagree.
+   *
+   * The stored counter stands in until the first read lands, and remains what
+   * the streak itself is computed from — it counts *for a day*, so one left
+   * over from a day that is over reads as zero rather than being rewritten.
+   */
+  const reviewedToday = todayReviews ?? (
+    streakState.lastReviewDate === getTodayString() ? streakState.reviewedToday : 0
+  );
 
   const deckNativeLanguage = nativeForStudy(languages, studyLanguage);
 

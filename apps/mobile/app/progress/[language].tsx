@@ -38,12 +38,30 @@ import { backfillMatureFlags, countMatureFlashcards } from '../../src/services/f
 import { getUserPreferences, saveUserPreferences } from '../../src/services/userPreferences';
 import type { Palette } from '../../src/theme';
 
-/** The same three windows the tab offers, so the chips cannot disagree. */
+/**
+ * The tab's windows plus a seven-day one, which only exists here.
+ *
+ * A detail view is opened to answer "how is this deck going lately", and a
+ * month is already too coarse for that. It is also the one window where both
+ * charts sit entirely inside recorded history, so the learned curve never has
+ * to stop short.
+ */
 const RANGES = [
+  { days: 7, key: 'progressRangeWeek' },
   { days: 30, key: 'progressRangeMonth' },
   { days: 90, key: 'progressRangeQuarter' },
   { days: 364, key: 'progressRangeYear' },
 ] as const;
+
+/**
+ * ⚠️ **The tab's selected range is deliberately *not* carried in.**
+ *
+ * It used to arrive as a `range` param, which cannot coexist with a default:
+ * every arrival is from a row on the tab, so an inherited range would mean this
+ * screen opened on 90 every time and seven days would never be the default it
+ * is meant to be.
+ */
+const DEFAULT_RANGE_DAYS = 7;
 
 /** Taller than the weekly plot: this one can carry 52 bars rather than seven. */
 const PLOT_HEIGHT = 96;
@@ -57,7 +75,7 @@ export default function LanguageProgressScreen() {
   const { C } = useTheme();
   const s = useMemo(() => makeStyles(C), [C]);
   const { user, interfaceLanguage } = useUser();
-  const { language, range } = useLocalSearchParams<{ language?: string; range?: string }>();
+  const { language } = useLocalSearchParams<{ language?: string }>();
 
   /**
    * The route's language, resolved against the registry rather than trusted —
@@ -66,11 +84,11 @@ export default function LanguageProgressScreen() {
   const entry = SUPPORTED_STUDY_LANGUAGES.find(candidate => candidate.code === language);
   const code = entry?.code;
 
-  /** Opens on the window the tab had selected, rather than asking again. */
-  const [rangeDays, setRangeDays] = useState<number>(() => {
-    const wanted = Number(range);
-    return RANGES.some(option => option.days === wanted) ? wanted : 90;
-  });
+  /**
+   * Held in state rather than read off the route, so switching chips does not
+   * stack navigation entries the back gesture then has to undo one at a time.
+   */
+  const [rangeDays, setRangeDays] = useState<number>(DEFAULT_RANGE_DAYS);
 
   const [days, setDays] = useState<DailyProgress[] | null>(null);
   const [learned, setLearned] = useState<number | null>(null);
@@ -237,13 +255,22 @@ export default function LanguageProgressScreen() {
 }
 
 /**
- * Cards added per bar, lookups and pack cards stacked.
+ * Cards added per bar, filtered by source rather than stacked.
  *
- * ⚠️ **No mark toggle, unlike the weekly reviews chart, and deliberately so
- * twice over.** A stacked pair has no sensible line form — two series drawn as
- * one polyline is a different chart, not the same one restyled. And the
- * remembered mark is a single key (`amgi_week_chart_mark`), so a second
- * consumer would mean switching one chart silently switched the other.
+ * ⚠️ **This replaced a stacked bar on 2026-09-15, for legibility rather than
+ * taste.** The two segments were genuinely hard to tell apart: at 52 bars each
+ * band is a few pixels, and the two colours are steps of one ramp because the
+ * ramp is what is theme-safe on both platforms. Filtering answers the same
+ * question one number at a time, and answers it exactly.
+ *
+ * **Nothing selected means the total** — the figure the dashboard tile and the
+ * shared image both show — so this chart's resting state still agrees with
+ * every other surface, and picking a source narrows rather than switching to a
+ * different measure.
+ *
+ * ⚠️ **No mark toggle.** The remembered mark is a single key
+ * (`amgi_week_chart_mark`), so a second consumer of it would mean switching one
+ * chart silently switched another.
  */
 function AddedChart({ C, s, interfaceLanguage, series, weekly }: {
   C: Palette;
@@ -254,7 +281,14 @@ function AddedChart({ C, s, interfaceLanguage, series, weekly }: {
 }) {
   const [selected, setSelected] = useState<number | null>(null);
   const [plotWidth, setPlotWidth] = useState(0);
-  const busiest = Math.max(0, ...series.map(bucket => bucket.total));
+  const [source, setSource] = useState<AddedSource>(null);
+
+  /** The value being drawn: one source, or both together. */
+  const valueOf = (bucket: CardsAddedBucket) => (
+    source === null ? bucket.total : bucket[source]
+  );
+
+  const busiest = Math.max(0, ...series.map(valueOf));
   const ceiling = niceCeiling(busiest);
   const ticks = weekAxisTicks(ceiling);
   const active = selected === null ? null : series[selected];
@@ -263,10 +297,36 @@ function AddedChart({ C, s, interfaceLanguage, series, weekly }: {
     ? Math.max(1, Math.round((value / ceiling) * PLOT_HEIGHT))
     : 0);
 
+  /**
+   * The filter. Tapping the selected chip clears it, which is the only way back
+   * to the total — so the control is its own reset and needs no third chip.
+   */
+  const header = (
+    <View style={s.chartHeader}>
+      <Text style={s.sectionTitle}>{t(interfaceLanguage, 'progressStatNewCards')}</Text>
+      <View style={s.filterRow}>
+        {(['lookup', 'pack'] as const).map(option => (
+          <TouchableOpacity
+            key={option}
+            onPress={() => setSource(current => (current === option ? null : option))}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityState={{ selected: source === option }}
+            style={[s.filterBtn, { borderColor: source === option ? C.highlight : C.border }]}
+          >
+            <Text style={[s.filterText, { color: source === option ? C.highlight : C.muted }]}>
+              {t(interfaceLanguage, option === 'lookup' ? 'progressChartLookup' : 'progressChartPack')}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+    </View>
+  );
+
   if (busiest === 0) {
     return (
       <>
-        <Text style={s.sectionTitle}>{t(interfaceLanguage, 'progressStatNewCards')}</Text>
+        {header}
         <Text style={s.chartEmpty}>{t(interfaceLanguage, 'progressChartEmpty')}</Text>
       </>
     );
@@ -274,14 +334,13 @@ function AddedChart({ C, s, interfaceLanguage, series, weekly }: {
 
   return (
     <>
-      <Text style={s.sectionTitle}>{t(interfaceLanguage, 'progressStatNewCards')}</Text>
+      {header}
 
       <View style={s.plot}>
         <Gridlines s={s} ticks={ticks} ceiling={ceiling} />
 
-        {/* The bars and the tap targets in one. A stacked bar is never so short
-            that it cannot be hit, because the full-height column behind it
-            takes the tap. */}
+        {/* The bars and the tap targets in one: the column behind a bar is full
+            height, so a quiet day is as easy to hit as a busy one. */}
         <View
           style={[s.marksLayer, { gap: series.length > 26 ? 1 : 2 }]}
           onLayout={(event: LayoutChangeEvent) => {
@@ -298,22 +357,13 @@ function AddedChart({ C, s, interfaceLanguage, series, weekly }: {
               }]}
               onPress={() => setSelected(current => (current === index ? null : index))}
               accessibilityRole="button"
-              accessibilityLabel={describeAdded(interfaceLanguage, bucket)}
+              accessibilityLabel={describeAdded(interfaceLanguage, bucket, source)}
             >
-              {/* Packs sit on top of lookups: the everyday activity is the
-                  baseline, and the occasional import is the thing rising out of
-                  it rather than the thing the rest stands on. */}
               <View style={[s.barSegment, {
-                height: heightOf(bucket.pack),
-                backgroundColor: C.heat[2],
+                height: heightOf(valueOf(bucket)),
+                backgroundColor: C.heat[4],
                 borderTopLeftRadius: 2,
                 borderTopRightRadius: 2,
-              }]} />
-              <View style={[s.barSegment, {
-                height: heightOf(bucket.lookup),
-                backgroundColor: C.heat[4],
-                borderTopLeftRadius: bucket.pack === 0 ? 2 : 0,
-                borderTopRightRadius: bucket.pack === 0 ? 2 : 0,
               }]} />
             </TouchableOpacity>
           ))}
@@ -324,7 +374,7 @@ function AddedChart({ C, s, interfaceLanguage, series, weekly }: {
             C={C}
             s={s}
             range={bucketLabel(interfaceLanguage, active)}
-            detail={describeAdded(interfaceLanguage, active)}
+            detail={describeAdded(interfaceLanguage, active, source)}
             left={tooltipLeft(selected, series.length, plotWidth)}
           />
         )}
@@ -332,22 +382,13 @@ function AddedChart({ C, s, interfaceLanguage, series, weekly }: {
 
       <AxisLabels s={s} interfaceLanguage={interfaceLanguage} series={series} />
 
-      {/* A legend, because this is the one chart here carrying two series. */}
-      <View style={s.legendRow}>
-        <View style={s.legendItem}>
-          <View style={[s.legendSwatch, { backgroundColor: C.heat[4] }]} />
-          <Text style={s.legendText}>{t(interfaceLanguage, 'progressChartLookup')}</Text>
-        </View>
-        <View style={s.legendItem}>
-          <View style={[s.legendSwatch, { backgroundColor: C.heat[2] }]} />
-          <Text style={s.legendText}>{t(interfaceLanguage, 'progressChartPack')}</Text>
-        </View>
-        {weekly && (
+      {weekly && (
+        <View style={s.legendRow}>
           <Text style={[s.legendText, s.legendNote]}>
             {t(interfaceLanguage, 'progressChartWeeklyNote')}
           </Text>
-        )}
-      </View>
+        </View>
+      )}
     </>
   );
 }
@@ -581,13 +622,21 @@ function bucketLabel(
   });
 }
 
-/** The stacked pair, flattened — also what a screen reader is given. */
+/** Which half of "cards added" is being looked at, or both together. */
+type AddedSource = 'lookup' | 'pack' | null;
+
+/** The bar's value, flattened — also what a screen reader is given. */
 function describeAdded(
   interfaceLanguage: string | null | undefined,
   bucket: CardsAddedBucket,
+  source: AddedSource,
 ): string {
+  if (source === 'lookup') return `${t(interfaceLanguage, 'progressChartLookup')} ${bucket.lookup}`;
+  if (source === 'pack') return `${t(interfaceLanguage, 'progressChartPack')} ${bucket.pack}`;
+
   const parts = [`${t(interfaceLanguage, 'progressStatNewCards')} ${bucket.total}`];
-  // The split only earns its words when both halves are actually present.
+  // Unfiltered, the split still earns its words when both halves are present —
+  // which is what tells a reader the filter is worth reaching for.
   if (bucket.pack > 0 && bucket.lookup > 0) {
     parts.push(`${t(interfaceLanguage, 'progressChartLookup')} ${bucket.lookup}`);
     parts.push(`${t(interfaceLanguage, 'progressChartPack')} ${bucket.pack}`);
@@ -705,9 +754,16 @@ function makeStyles(C: Palette) {
       flexDirection: 'row', alignItems: 'center', gap: 12,
       marginTop: 8, marginBottom: 24, flexWrap: 'wrap',
     },
-    legendItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-    legendSwatch: { width: 10, height: 10, borderRadius: 2 },
     legendText: { color: C.muted, fontSize: 11 },
     legendNote: { marginLeft: 'auto' },
+    // The title and its source filter share a line, the way the weekly chart's
+    // title shares one with its mark toggle.
+    chartHeader: {
+      flexDirection: 'row', alignItems: 'baseline',
+      justifyContent: 'space-between', gap: 12,
+    },
+    filterRow: { flexDirection: 'row', gap: 4 },
+    filterBtn: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, borderWidth: 1 },
+    filterText: { fontSize: 11 },
   });
 }

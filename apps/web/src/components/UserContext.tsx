@@ -4,7 +4,7 @@ import { auth, googleProvider } from '@/config/firebase';
 import { signInWithPopup, signOut, onAuthStateChanged, User } from 'firebase/auth';
 import { getUserPreferences, recordReviewStreak, saveUserPreferences, subscribeToUserPreferences } from '@/services/userPreferences';
 import { countUserFlashcards } from '@/services/firestore';
-import { recordProgress } from '@/services/progress';
+import { recordProgress, subscribeToProgressDay } from '@/services/progress';
 import { CARD_COLLECTIONS, DEFAULT_HANJA_PARTITION, addLanguagePair, hourKey, isHanjaPartition, isNativeLanguage, isStudyLanguage, nativeForStudy, negateDelta, parseLanguagePairs, removeLanguagePair, reviewDelta, seedLanguagePairs, type HanjaPartition, type RatingContext, type RecordedReview, type ReviewVerdict, type StudyLanguage, type StudyLanguagePair } from '@amgi/core';
 
 /**
@@ -214,19 +214,17 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
    * second device disagreed and nothing ever noticed. Now the document is the
    * only copy, and every writer's result arrives here.
    *
-   * `reviewedToday` is zeroed when the stored date isn't today — the field
-   * counts a day, and a stale one belongs to a day that is over. The rollover
-   * lands on the next review rather than at midnight, which is what the stored
-   * counter has always done.
+   * ⚠️ **`reviewedToday` is no longer read from here.** The document still
+   * carries it and `recordReviewStreak` still writes it, but the number shown
+   * comes from the day rollup below — see `subscribeToProgressDay` for why two
+   * copies of one count could not be kept in agreement.
    */
   useEffect(() => {
     if (!user) return;
     const unsubscribe = subscribeToUserPreferences(
       user.uid,
       prefs => {
-        const today = getTodayString();
         setStreak(prefs?.streak ?? 0);
-        setReviewedToday(prefs?.lastReviewDate === today ? (prefs?.reviewedToday ?? 0) : 0);
         // Read live like the streak beside it, and for the same reason: this is
         // a durable choice a learner makes once, so the copy in the document is
         // the only copy. A document with no field means unset, which is the
@@ -250,6 +248,31 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       error => console.error('[UserContext] preferences subscription failed:', error),
     );
     return unsubscribe;
+  }, [user]);
+
+  /**
+   * How much of today is done, read from the day rollup rather than counted
+   * separately.
+   *
+   * This is the same document and the same field the progress dashboard reads,
+   * so the chip and the tab cannot report different numbers — they used to, by
+   * three reviews on a busy day. It also makes undo work on the chip for free:
+   * `undoReview` reverses this rollup, where the streak counter it used to read
+   * was deliberately never reversed and so read one high per undo for the rest
+   * of the day.
+   *
+   * The date is captured when the effect runs. A session held open across
+   * midnight keeps watching yesterday until something re-runs this, which is
+   * the same rollover the stored counter has always had.
+   */
+  useEffect(() => {
+    if (!user) return;
+    return subscribeToProgressDay(
+      user.uid,
+      getTodayString(),
+      day => setReviewedToday(day.reviews),
+      error => console.error('[UserContext] progress subscription failed:', error),
+    );
   }, [user]);
 
   /**

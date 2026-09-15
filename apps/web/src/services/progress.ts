@@ -13,7 +13,7 @@
  */
 import { db } from '@/config/firebase';
 import {
-  collection, doc, documentId, getDocs, increment, query, setDoc, where,
+  collection, doc, documentId, getDocs, increment, onSnapshot, query, setDoc, where,
 } from 'firebase/firestore';
 import {
   COUNTER_KEYS, localDateString, newCardsDelta, parseDailyProgress, shiftDate,
@@ -129,4 +129,32 @@ export async function fetchProgressRange(
 export function fetchRecentProgress(uid: string, days: number): Promise<DailyProgress[]> {
   const today = localDateString();
   return fetchProgressRange(uid, shiftDate(today, -(days - 1)), today);
+}
+
+/**
+ * Watch one day's rollup.
+ *
+ * ⚠️ **This exists so the streak chip can stop keeping its own copy of a number
+ * this document already holds.** Until 2026-09-15 "reviews today" was written
+ * twice on every rating — once here as an `increment()`, and once on
+ * `users/{uid}` as `reviewedToday` inside a transaction — and the two drifted in
+ * both directions. A transaction that exhausted its retries was swallowed by a
+ * fire-and-forget `catch`, so the chip read *low*; an undo reversed this rollup
+ * and deliberately never the streak fields, so it read *high*. A single source
+ * cannot disagree with itself, and undo now moves the chip for free.
+ *
+ * A day with no document yet parses to zeroes rather than being an error — the
+ * first review of the day is what creates it.
+ */
+export function subscribeToProgressDay(
+  uid: string,
+  date: string,
+  onDay: (day: DailyProgress) => void,
+  onError?: (error: Error) => void,
+): () => void {
+  return onSnapshot(
+    progressRef(uid, date),
+    snapshot => onDay(parseDailyProgress(date, snapshot.data())),
+    error => onError?.(error),
+  );
 }

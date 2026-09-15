@@ -21,9 +21,9 @@
  * so "when do you study Korean" is not a question these rows can answer either.
  */
 
-import React, { Suspense, useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { useParams, useSearchParams } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { useUser } from '@/components/UserContext';
 import { fetchRecentProgress } from '@/services/progress';
 import {
@@ -36,12 +36,31 @@ import { backfillMatureFlags, countMatureFlashcards } from '@/services/firestore
 import { getUserPreferences, saveUserPreferences } from '@/services/userPreferences';
 import { t } from '@/lib/i18n';
 
-/** The same three windows the dashboard offers, so the chips cannot disagree. */
+/**
+ * The dashboard's windows plus a seven-day one, which only exists here.
+ *
+ * A detail view is opened to answer "how is this deck going lately", and a
+ * month is already too coarse for that — where the dashboard is read for the
+ * shape of a season. It is also the one window where both charts are entirely
+ * within recorded history, so the learned curve never has to stop short.
+ */
 const RANGES = [
+  { days: 7, key: 'progressRangeWeek' },
   { days: 30, key: 'progressRangeMonth' },
   { days: 90, key: 'progressRangeQuarter' },
   { days: 364, key: 'progressRangeYear' },
 ] as const;
+
+/**
+ * ⚠️ **The dashboard's selected range is deliberately *not* carried in.**
+ *
+ * It used to arrive as `?range=`, which cannot coexist with a default: every
+ * arrival is from a row on the dashboard, so an inherited range would mean this
+ * screen opened on 90 every time and seven days would never be the default it
+ * is meant to be. Landing on the same window every time is also the more
+ * predictable read.
+ */
+const DEFAULT_RANGE_DAYS = 7;
 
 /** Taller than the weekly plot: this one can carry 52 bars rather than seven. */
 const PLOT_HEIGHT = 96;
@@ -49,24 +68,8 @@ const AXIS_GUTTER = 30;
 /** Room above a plot for its hover bubble, so appearing never shifts the page. */
 const TOOLTIP_LANE = 44;
 
-/**
- * `useSearchParams` forces the tree under it out of static prerendering unless
- * it sits behind a Suspense boundary, which is a build error rather than a
- * warning. The range is worth carrying — arriving here on the window you were
- * just looking at is the whole reason the link passes it — so the boundary is
- * the cheaper side of that trade.
- */
 export default function LanguageProgressPage() {
-  return (
-    <Suspense fallback={null}>
-      <LanguageProgress />
-    </Suspense>
-  );
-}
-
-function LanguageProgress() {
   const { language } = useParams<{ language: string }>();
-  const searchParams = useSearchParams();
   const { user, authLoading, interfaceLanguage } = useUser();
 
   /**
@@ -77,14 +80,10 @@ function LanguageProgress() {
   const code = entry?.code;
 
   /**
-   * Opens on the window the dashboard had selected. Read once into state rather
-   * than driven by the URL, so switching chips here does not push history
-   * entries the back button then has to be tapped through.
+   * Held in state rather than driven by the URL, so switching chips does not
+   * push history entries the back button then has to be tapped through.
    */
-  const [rangeDays, setRangeDays] = useState<number>(() => {
-    const wanted = Number(searchParams.get('range'));
-    return RANGES.some(range => range.days === wanted) ? wanted : 90;
-  });
+  const [rangeDays, setRangeDays] = useState<number>(DEFAULT_RANGE_DAYS);
 
   /**
    * The result carries the range it was fetched for, so switching range reads
@@ -249,14 +248,26 @@ function LanguageProgress() {
   );
 }
 
+/** Which half of "cards added" is being looked at, or both together. */
+type AddedSource = 'lookup' | 'pack' | null;
+
 /**
- * Cards added per bar, lookups and pack cards stacked.
+ * Cards added per bar, filtered by source rather than stacked.
  *
- * ⚠️ **No mark toggle, unlike the weekly reviews chart, and that is deliberate
- * twice over.** A stacked pair has no sensible line form — two series drawn as
- * one polyline is a different chart, not the same one restyled. And the
- * remembered mark is a single key (`amgi_week_chart_mark`), so a second
- * consumer of it would mean switching one chart silently switched another.
+ * ⚠️ **This replaced a stacked bar on 2026-09-15, and the reason is legibility
+ * rather than taste.** The two segments were genuinely hard to tell apart at a
+ * glance — at 52 bars each band is a few pixels, and the colours are two steps
+ * of one ramp because the ramp is what is theme-safe. Filtering answers the
+ * same question one number at a time, and answers it exactly.
+ *
+ * **Nothing selected means the total**, which is the figure the dashboard tile
+ * and the shared image both show — so the default state of this chart still
+ * agrees with every other surface, and selecting a source is a narrowing rather
+ * than a different measure.
+ *
+ * ⚠️ **No mark toggle.** The remembered mark is a single key
+ * (`amgi_week_chart_mark`), so a second consumer of it would mean switching one
+ * chart silently switched another.
  */
 function AddedChart({ interfaceLanguage, series, weekly }: {
   interfaceLanguage: string | null | undefined;
@@ -264,100 +275,112 @@ function AddedChart({ interfaceLanguage, series, weekly }: {
   weekly: boolean;
 }) {
   const [hovered, setHovered] = useState<number | null>(null);
-  const busiest = Math.max(0, ...series.map(bucket => bucket.total));
+  const [source, setSource] = useState<AddedSource>(null);
+
+  /** The value being drawn: one source, or both together. */
+  const valueOf = (bucket: CardsAddedBucket) => (
+    source === null ? bucket.total : bucket[source]
+  );
+
+  const busiest = Math.max(0, ...series.map(valueOf));
   const ceiling = niceCeiling(busiest);
   const ticks = weekAxisTicks(ceiling);
   const active = hovered === null ? null : series[hovered];
 
-  /** A value's height in px, on the same scale both stacked halves share. */
   const heightOf = (value: number) => (ceiling > 0 && value > 0
     ? Math.max(1, Math.round((value / ceiling) * PLOT_HEIGHT))
     : 0);
 
-  if (busiest === 0) {
-    return (
-      <section className="mb-8">
-        <ChartHeading interfaceLanguage={interfaceLanguage} titleKey="progressStatNewCards" />
-        <p className="text-sm text-[var(--color-muted)]">
-          {t(interfaceLanguage, 'progressChartEmpty')}
-        </p>
-      </section>
-    );
-  }
+  /**
+   * The filter. Pressing the selected one clears it, which is the only way back
+   * to the total — so the control is its own reset and needs no third chip.
+   */
+  const filter = (
+    <div className="flex gap-1">
+      {(['lookup', 'pack'] as const).map(option => (
+        <button
+          key={option}
+          type="button"
+          onClick={() => setSource(current => (current === option ? null : option))}
+          aria-pressed={source === option}
+          className="px-2 py-0.5 rounded-md text-[11px] font-mono border transition-colors"
+          style={source === option
+            ? { borderColor: 'var(--color-highlight)', color: 'var(--color-highlight)' }
+            : { borderColor: 'var(--color-muted)', color: 'var(--color-muted)' }}
+        >
+          {t(interfaceLanguage, option === 'lookup' ? 'progressChartLookup' : 'progressChartPack')}
+        </button>
+      ))}
+    </div>
+  );
 
   return (
     <section className="mb-8">
-      <ChartHeading interfaceLanguage={interfaceLanguage} titleKey="progressStatNewCards" />
+      <div className="flex items-baseline justify-between gap-3 mb-3">
+        <h2 className="text-sm font-bold text-[var(--color-text)]">
+          {t(interfaceLanguage, 'progressStatNewCards')}
+        </h2>
+        {filter}
+      </div>
 
-      <div
-        className="relative"
-        style={{ height: PLOT_HEIGHT + TOOLTIP_LANE }}
-        onMouseLeave={() => setHovered(null)}
-      >
-        <Gridlines ticks={ticks} ceiling={ceiling} />
+      {busiest === 0 ? (
+        <p className="text-sm text-[var(--color-muted)]">
+          {t(interfaceLanguage, 'progressChartEmpty')}
+        </p>
+      ) : (
+        <>
+          <div
+            className="relative"
+            style={{ height: PLOT_HEIGHT + TOOLTIP_LANE }}
+            onMouseLeave={() => setHovered(null)}
+          >
+            <Gridlines ticks={ticks} ceiling={ceiling} />
 
-        {/* The bars, and the hover targets in one. Unlike the weekly chart
-            these are full-height columns already — a stacked bar is never so
-            short that it cannot be pointed at, because the column behind it
-            takes the pointer. */}
-        <div
-          className="absolute bottom-0 flex items-end"
-          style={{ left: AXIS_GUTTER, right: 0, height: PLOT_HEIGHT, gap: series.length > 26 ? 1 : 2 }}
-        >
-          {series.map((bucket, index) => (
-            <button
-              key={bucket.start}
-              type="button"
-              className="flex-1 h-full flex flex-col justify-end cursor-default"
-              aria-label={describeAdded(interfaceLanguage, bucket)}
-              onMouseEnter={() => setHovered(index)}
-              onFocus={() => setHovered(index)}
-              onBlur={() => setHovered(null)}
-              style={{ opacity: hovered === null || hovered === index ? 1 : 0.55 }}
+            {/* The bars and the hover targets in one: the column behind a bar
+                is full height, so a quiet day is as easy to point at as a busy
+                one. */}
+            <div
+              className="absolute bottom-0 flex items-end"
+              style={{ left: AXIS_GUTTER, right: 0, height: PLOT_HEIGHT, gap: series.length > 26 ? 1 : 2 }}
             >
-              {/* Packs sit on top of lookups: the everyday activity is the
-                  baseline, and the occasional import is the thing rising out
-                  of it rather than the thing the rest stands on. */}
-              <div
-                className="w-full rounded-t-sm"
-                style={{ height: heightOf(bucket.pack), background: 'var(--heat-2)' }}
+              {series.map((bucket, index) => (
+                <button
+                  key={bucket.start}
+                  type="button"
+                  className="flex-1 h-full flex flex-col justify-end cursor-default"
+                  aria-label={describeAdded(interfaceLanguage, bucket, source)}
+                  onMouseEnter={() => setHovered(index)}
+                  onFocus={() => setHovered(index)}
+                  onBlur={() => setHovered(null)}
+                  style={{ opacity: hovered === null || hovered === index ? 1 : 0.55 }}
+                >
+                  <div
+                    className="w-full rounded-t-sm"
+                    style={{ height: heightOf(valueOf(bucket)), background: 'var(--heat-4)' }}
+                  />
+                </button>
+              ))}
+            </div>
+
+            {hovered !== null && active && (
+              <ChartTooltip
+                index={hovered}
+                count={series.length}
+                range={bucketLabel(interfaceLanguage, active)}
+                detail={describeAdded(interfaceLanguage, active, source)}
               />
-              <div
-                className="w-full"
-                style={{
-                  height: heightOf(bucket.lookup),
-                  background: 'var(--heat-4)',
-                  borderRadius: bucket.pack === 0 ? '2px 2px 0 0' : 0,
-                }}
-              />
-            </button>
-          ))}
-        </div>
+            )}
+          </div>
 
-        {hovered !== null && active && (
-          <ChartTooltip
-            index={hovered}
-            count={series.length}
-            range={bucketLabel(interfaceLanguage, active)}
-            detail={describeAdded(interfaceLanguage, active)}
-          />
-        )}
-      </div>
+          <AxisLabels interfaceLanguage={interfaceLanguage} series={series} />
 
-      <AxisLabels interfaceLanguage={interfaceLanguage} series={series} />
-
-      {/* A legend, because this is the one chart here carrying two series. */}
-      <div className="flex items-center gap-4 mt-2 text-xs text-[var(--color-muted)]">
-        <span className="flex items-center gap-1.5">
-          <span className="w-3 h-3 rounded-sm" style={{ background: 'var(--heat-4)' }} />
-          {t(interfaceLanguage, 'progressChartLookup')}
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span className="w-3 h-3 rounded-sm" style={{ background: 'var(--heat-2)' }} />
-          {t(interfaceLanguage, 'progressChartPack')}
-        </span>
-        {weekly && <span className="ml-auto">{t(interfaceLanguage, 'progressChartWeeklyNote')}</span>}
-      </div>
+          {weekly && (
+            <div className="mt-2 text-xs text-[var(--color-muted)] text-right">
+              {t(interfaceLanguage, 'progressChartWeeklyNote')}
+            </div>
+          )}
+        </>
+      )}
     </section>
   );
 }
@@ -621,10 +644,18 @@ function bucketLabel(interfaceLanguage: string | null | undefined, bucket: { sta
   });
 }
 
-/** The stacked pair, flattened — also what a screen reader is given. */
-function describeAdded(interfaceLanguage: string | null | undefined, bucket: CardsAddedBucket): string {
+/** The bar's value, flattened — also what a screen reader is given. */
+function describeAdded(
+  interfaceLanguage: string | null | undefined,
+  bucket: CardsAddedBucket,
+  source: AddedSource,
+): string {
+  if (source === 'lookup') return `${t(interfaceLanguage, 'progressChartLookup')} ${bucket.lookup}`;
+  if (source === 'pack') return `${t(interfaceLanguage, 'progressChartPack')} ${bucket.pack}`;
+
   const parts = [`${t(interfaceLanguage, 'progressStatNewCards')} ${bucket.total}`];
-  // The split only earns its words when both halves are actually present.
+  // Unfiltered, the split still earns its words when both halves are present —
+  // which is what tells a reader the filter is worth reaching for.
   if (bucket.pack > 0 && bucket.lookup > 0) {
     parts.push(`${t(interfaceLanguage, 'progressChartLookup')} ${bucket.lookup}`);
     parts.push(`${t(interfaceLanguage, 'progressChartPack')} ${bucket.pack}`);

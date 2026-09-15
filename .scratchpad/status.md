@@ -295,6 +295,68 @@ once, so a path that worked on build 14 is not evidence about build 15.
 Closed calls, kept with their reasoning — a decision whose reasoning is lost gets
 reopened by the next person to notice the symptom. Newest first.
 
+### The streak chip and the Progress tab kept two copies of one number (2026-09-15)
+
+**Found by the user, from a three-review gap**: the chip on Learn and Review
+read 202 where the Progress tab's bar for today read 205. The instinct was that
+these are two different measures — cards reviewed versus reviews — and that
+distinction is real *in this codebase*, but it is not what these two numbers
+were. **They are the same unit and should have been identical.**
+
+`recordReview` fires once per rating, at one call site per platform, and makes
+**two independent fire-and-forget writes**: `recordProgress` (a `merge:true`
+write of `increment()`, no read-modify-write) and `recordReviewStreak` (a
+**transaction** on `users/{uid}`, with a swallowing `.catch`). `advanceStreak`
+does `reviewedToday + 1` and is not even *given* the card or the direction, so
+it structurally cannot dedupe by card. Both count directions.
+
+⚠️ **Three drift mechanisms, and they pull in both directions** — which is why
+the gap never looked like a systematic offset:
+
+1. **A dropped streak transaction.** Rapid ratings contend on one document; a
+   transaction that exhausts its retries is discarded silently while the
+   rollup's increment still lands. **Chip reads low.** Three in 205 (~1.5%) is
+   an ordinary fast session.
+2. **`mergeStreakState` takes `Math.max`, not a sum** (`offlineReview.ts:181`)
+   where the rollup *adds* across devices. The comment directly above it says
+   reviews "should add up rather than one erasing the other", which `Math.max`
+   does not do. **Chip reads low.**
+3. **Undo reverses the rollup and deliberately never the streak fields.** **Chip
+   reads high** — one per undo, for the rest of the day.
+
+**The fix is to stop keeping two copies**, on the user's call. The chip now
+reads the day rollup — the same document and field the Progress tab draws — so
+they cannot disagree by construction, and undo moves the chip for free.
+
+⚠️ **The two platforms get there differently, and the reason is the cache.**
+Web subscribes (`subscribeToProgressDay`, an `onSnapshot` on today's row), which
+is exact. **Mobile cannot**: the Firestore SDK's cache on React Native is
+memory-only, so a listener goes blank the moment the app is offline — the one
+moment a streak chip most needs to keep counting. So mobile seeds from
+`fetchTodayReviews` (which replays the unsent AsyncStorage queue over the
+server's copy, exactly as the dashboard does) and then moves the number in step
+with each rating and undo.
+
+⚠️ **`reviewedToday` is still written and still load-bearing** — it is what
+`advanceStreak` carries and what the streak is computed from. It is simply no
+longer *displayed*, which also makes `mergeStreakState`'s `Math.max` inert for
+anything a user sees. Left alone rather than "fixed": changing a same-day merge
+to add is its own double-counting edge case on re-sync, and nothing reads the
+result now.
+
+**It was also a labelling error, and that half is a real bug.** Mobile's badge
+said "12 **cards** today" while counting directions — the exact noun collision
+`progress.ts` warns against twice ("the two may never share an axis or a
+label"). Both locales now say reviews, through `progressChipReviewsToday`.
+
+**Hence the ⓘ.** One `StreakInfo` on web for both chips (`SideNav` and
+`Header` render the same streak and would have drifted — the argument that made
+mobile's `StreakBadge` shared), a `BottomSheet` on mobile. The sentence it
+exists for is that a card studied both ways counts twice, so the number looks
+too high until you know what it counts. It is a separate target from the chip
+deliberately: the chip navigates to Progress, and one control that navigates or
+explains depending on which glyph you hit is worse than two.
+
 ### The "By language" row opens a detail view, and the charts follow the range (2026-09-15)
 
 Two of the three Progress items scoped the same day, built on
@@ -367,6 +429,31 @@ only from 2026-09-04 and the display came off every surface on 2026-09-12; a
 detail view is exactly where it would have crept back in because the data is
 sitting right there. `byHour` is likewise still not per-language, so "when do
 you study Korean" remains a question these rows cannot answer.
+
+**Three follow-up calls the same day, all the user's, after seeing it.**
+**Seven days joined the detail screen's ranges and is its default** — a detail
+view answers "how is this deck going lately", where the dashboard is read for
+the shape of a season, and it is also the one window where both charts sit
+entirely inside recorded history. ⚠️ **The range hand-off was dropped to make
+that possible**: every arrival is from a row on the dashboard, so an inherited
+`?range=` would have meant the screen opened on 90 every time and seven days
+would never have been the default.
+
+⚠️ **The stacked bar was reversed one day after it shipped**, for legibility
+rather than taste: at 52 bars each band is a few pixels, and the two colours are
+steps of one ramp because the ramp is what is theme-safe on both platforms. It
+is a **source filter** now — nothing selected means the total, so the resting
+state still equals `progressStatNewCards` and the consistency argument that
+justified stacking survives intact. Tapping the selected chip clears it, so the
+control is its own reset and needs no third chip.
+
+**The weekly chart's title became a measure dropdown** (Reviews / Cards added),
+which is the first thing to make the range row's neighbour answer more than one
+question. A seven-day `buildCardsAddedSeries` buckets daily, so its rows line up
+one-to-one with the heatmap cells — which is what lets both measures share the
+scale, the marks, the tooltip and the labels. Session state, not a remembered
+preference: the mark is how you like charts drawn, this is a question you ask
+and come back from.
 
 ⚠️ **Verified by suite and compiler, not by eye.** Web is 635/635 with 20 new
 assertions, both apps clean under `tsc --noEmit`, lint unchanged at 21 warnings

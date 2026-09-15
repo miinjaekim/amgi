@@ -29,6 +29,13 @@ them, are in the Decisions entry of that date in [status.md](status.md)._
       and both platforms draw them. The
       shipped share pipeline answers most of this, and its two hard constraints
       decide the rest.
+      **Two things changed under this item on 2026-09-15.** Cards added is no
+      longer stacked but **filtered** by source, so a shared chart has to decide
+      whether the filter travels — it is one more query parameter, and the
+      backward-compatibility rule below covers it. And the charts now **follow
+      the range, bucketed by week past 30 days** (`chartBucketDays`), so the
+      asset's series is not necessarily one value per day: the route must be
+      told the grain or be handed the buckets, not infer either.
       ⚠️ **It must be server-rendered by `/api/stats-image`.** Mobile cannot
       rasterize a view without `react-native-view-shot` — a native module that
       costs an EAS build *and* stops the feature working in Expo Go. That is why
