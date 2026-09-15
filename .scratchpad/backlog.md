@@ -135,12 +135,142 @@ Android is the exception — no review, so a fix there ships the same day._
 
 ## High
 
-_Empty as of 2026-09-12._ The five progress-display items queued that morning
-all shipped the same day — the share chooser with a today card, cards learned on
-the dashboard, the calendar's weekday and month labels, the languages named on
-the shared image, and retention off both surfaces. They leave this file per the
-convention in [README.md](README.md); what outlives them is the Decisions entry
-in [status.md](status.md).
+- [ ] **Payments proof-of-concept — Stripe on web, staged.** Scoped 2026-09-15.
+      **The goal is not a pricing model, and saying so is the scope control.**
+      It is to prove funds can actually reach a bank account, and to learn the
+      moving parts — the user has not built payments before and is taking this as
+      the vehicle for it. So **prefer the boring, legible path over the clever
+      one** at every fork here. The commitment/deposit model that prompted this is
+      parked with its analysis in the Decisions entry in [status.md](status.md);
+      nothing below depends on which pricing model eventually wins.
+
+      **Web only.** ⚠️ **iOS cannot sell anything, and that is a constraint rather
+      than a sequencing preference.** The app is on Tegi's **Individual** Apple
+      account, TestFlight-only, bundle id `com.tegi.amgi`, which
+      [status.md](status.md) already records as disposable with no transfer path.
+      Money taken through it is **Tegi's** income, into Tegi's bank account, under
+      Tegi's tax id. And an IAP subscription binds to the app record, so the
+      eventual relaunch under the user's own account **strands every subscriber** —
+      they do not migrate, they re-buy. Nothing is sold on iOS until the app is on
+      the user's own Apple account.
+      **The upside of that: this work is not blocked on build 16 or any release.**
+      It is entirely web, no native module, no App Review, no OTA question.
+
+      ⚠️ **THE GATE — Stripe does not support Korea as a business location.**
+      Verified 2026-09-15 against Stripe's own pages rather than recalled, because
+      it is exactly the kind of fact that goes stale. South Korea is absent from
+      [stripe.com/global](https://stripe.com/global) — not supported, not preview,
+      not extended network — and absent from the business-locations list on
+      [Stripe's own Korea page](https://docs.stripe.com/payments/countries/korea).
+      ⚠️ **`SK` in that list is Slovakia.** `KR` is the code that would mean Korea
+      and it is not there. Easiest misread on the page, and it would send someone
+      down a month of the wrong path.
+      **What "Korea support" on Stripe actually means:** that page's own first line
+      is *"accept wallets and all local cards in South Korea **without a local
+      entity**"* — it is about **selling to** Korean customers from a foreign
+      entity, never about **being** a Korean business. Reported separately and
+      consistent with the above: Stripe does not pay out to Korean bank accounts.
+
+      **So the entity decision is upstream of any code, and it is open.** Two
+      paths, and they are not close in cost:
+      - **A supported-country entity** (US the usual one; UK/EU/HK/SG/JP also on
+        the list). Stripe Atlas is the standard unlock — **$500, Delaware, ~2
+        business days**, serves founders in 175+ countries. ⚠️ **Confirm Korean-
+        resident eligibility with Stripe directly**; the Atlas page does not name
+        Korea, and this is the one fact here nobody should assume.
+      - **A Korean entity**, which means Stripe is off the table entirely and the
+        first integration is a Korean PG — 토스페이먼츠, NHN KCP, 이니시스 — each
+        needing 사업자등록증 and a Korean bank account.
+      ⚠️ **Do not start stage 1 before this is settled.** Test mode works
+      regardless, so the temptation is to build first; but "can I receive funds" is
+      the entire question this item exists to answer, and it is answered by the
+      entity, not by the code.
+
+      **The genuinely good news, and it reverses an assumption from the same
+      conversation: 카카오페이 and 네이버페이 are Stripe payment methods,
+      _with recurring support_** — Samsung Pay and PAYCO too, one-time only. So the
+      user's "Toss/Kakao/Naver would be nice later" may need **no second PG at
+      all**; it needs a supported-country entity and a Dashboard toggle. That
+      materially raises the value of the Atlas path over the Korean-PG path.
+
+      **Stage 1 — Payment Link, dashboard only, no code.** A product and a Payment
+      Link in the Stripe Dashboard, the URL on a page in the web app. Proves funds
+      arrive and teaches the half that has nothing to do with programming: account
+      activation, test vs live mode, and the payout delay to a real bank. Same-day.
+
+      **Stage 2 — the real skeleton.** `/api/checkout` creates a Checkout Session
+      (`mode: 'subscription'` — barely harder than `payment` and it is the thing
+      actually being learned), and `/api/stripe/webhook` verifies the signature and
+      writes the entitlement. Four traps, all classic and all cheap to avoid up
+      front:
+      - ⚠️ **Never grant entitlement on the redirect back.** `?success=true` is
+        forgeable by anyone who reads the URL. The entitlement comes from the
+        **webhook**, server-side, or it is decorative. This is the same class of
+        bug as the client-written rollups in the item below.
+      - ⚠️ **Signature verification needs the raw body** — `await req.text()`, not
+        `req.json()`. In App Router this is the usual first hour lost.
+      - ⚠️ **Webhooks retry, so the write must be idempotent** — `set()` with merge
+        on a known doc id, never an increment. Note this is the *opposite* call
+        from `progress_daily`, which is deliberately non-idempotent
+        ([status.md](status.md)); a double-counted review is a rounding error, a
+        double-granted month is not.
+      - ⚠️ **Link the Stripe customer to the Firebase uid at session creation**
+        (`metadata: { uid }` / `client_reference_id`), and store
+        `stripeCustomerId` on the user. The webhook otherwise receives a customer
+        id it cannot resolve, and retrofitting this once live accounts exist is
+        genuinely unpleasant.
+
+      ⚠️ **The entitlement must not live in `UserPreferences`.** That doc is
+      client-writable by its own rule (`allow read, write: if ... uid == uid`), so
+      a paid flag there is self-grantable from a browser console. It wants its own
+      path under `users/{uid}` with **client writes denied**, written only by the
+      webhook through `firebase-admin` — which is already a dependency (`^14.1.0`)
+      and already initialised in `apps/web/src/lib/firebaseAdmin.ts`. Keeping it
+      under `users/{uid}` buys deletion for free: the Delete User Data extension is
+      configured `users/{UID}` recursive.
+
+      **Provision through the Vercel Marketplace, not `npm install stripe`** —
+      `vercel integration add stripe` wires the env vars and gives unified billing.
+      ⚠️ **The Vercel CLI is not installed** (`npm i -g vercel`), so this is a step
+      zero rather than a footnote. `stripe listen --forward-to
+      localhost:3000/api/stripe/webhook` is how stage 2 gets tested locally; test
+      card `4242 4242 4242 4242`.
+
+      ⚠️ **Korean consumer law constrains any subscription sold to Korean
+      customers**, per Stripe's own Korea page — worth recording now because it is
+      expensive to discover after launch. A **full refund within 7 days** of signup
+      if unused; **pro-rated refund on cancellation at any time**; **30 days'
+      notice** before a price increase or before charging for a previously free
+      service; and a **payment reminder 7 days** before each charge. The pro-rata
+      and 7-day rights interact directly with the parked deposit model — read them
+      before reviving it.
+
+- [ ] **Every API route is unauthenticated.** Found 2026-09-15 while scoping
+      payments; **not a payments blocker** — the POC above gates nothing, so the
+      two are independent and this one stands on its own merits.
+      All ten routes in `apps/web/src/app/api` take no token and check no user:
+      no `authorization` header is read anywhere, and `firebase-admin` is imported
+      by the migration scripts and `lib/firebaseAdmin.ts` but by **no route**. Nine
+      of the ten spend a `gemini-2.5-flash` call (`explain`, `depth`,
+      `depth-stream`, `examples`, `examples-stream`, `vocab-list`,
+      `word-of-the-day`, `writing`, `grammar/exercise`); `pronounce` spends Google
+      Cloud TTS. Anyone with the URL can drain the budget today.
+      **What makes this urgent later rather than only untidy now:** metering is
+      impossible without attribution, so *any* usage-based pricing is blocked on
+      it. ⚠️ **And `users/{uid}/progress/{day}` is client-written** by a rule that
+      permits any value — harmless for a dashboard, fraud the moment a payout or a
+      quota reads it. `status.md` also records those increments as deliberately
+      non-idempotent. Server-authoritative review recording is a real
+      architectural change and it collides with mobile's offline-first rating
+      queue; **do not scope that here**, just don't let a pricing model assume it.
+
+      ⚠️ **Nothing counts lookups.** `progress.ts` counts `newCards` — cards
+      *saved*, tagged `CardSource = 'lookup' | 'pack'` — so a lookup nobody saves
+      spends a full model call and is recorded nowhere. That is precisely the
+      number a quota would be denominated in. Same "from today or from never"
+      argument this file makes about every rollup: each week without the counter
+      is a week that cannot be priced from retroactively. **Cheapest item here and
+      the only one with a deadline.**
 
 ## Medium
 
