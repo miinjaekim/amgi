@@ -638,6 +638,35 @@ export function mergeLanguageRows(
   ));
 }
 
+/**
+ * Mean reviews on the days this language was actually studied.
+ *
+ * The per-language twin of `ProgressSummary.averagePerActiveDay`, and the part
+ * worth reading is what counts as *active*: a day spent entirely on Japanese is
+ * not a quiet Korean day, it is not a Korean day at all. Averaging those in
+ * would make every language look worse the more languages you study — the
+ * figure would measure how divided your attention is rather than how much you
+ * do when you sit down with a deck.
+ *
+ * Rounded and zero-safe exactly as the whole-account figure is, so the two
+ * tiles cannot come to disagree about what "average per day" means. Adding
+ * cards is not studying here either, matching `isStudyDay`.
+ */
+export function languageAveragePerActiveDay(
+  days: DailyProgress[],
+  language: StudyLanguage,
+): number {
+  let reviews = 0;
+  let activeDays = 0;
+  for (const day of days) {
+    const count = day.byLanguage[language]?.reviews ?? 0;
+    if (count <= 0) continue;
+    reviews += count;
+    activeDays += 1;
+  }
+  return activeDays === 0 ? 0 : Math.round(reviews / activeDays);
+}
+
 export interface HeatmapCell {
   date: string;
   reviews: number;

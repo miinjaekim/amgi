@@ -28,8 +28,8 @@ import { useUser } from '@/components/UserContext';
 import { fetchRecentProgress } from '@/services/progress';
 import {
   DETAILED_HISTORY_START, SUPPORTED_STUDY_LANGUAGES, buildCardsAddedSeries,
-  buildLearnedSeries, chartBucketDays, localDateString, niceCeiling, summarizeProgress,
-  weekAxisTicks, weekdayIndex,
+  buildLearnedSeries, chartBucketDays, languageAveragePerActiveDay, localDateString,
+  niceCeiling, summarizeProgress, weekAxisTicks, weekdayIndex,
   type CardsAddedBucket, type DailyProgress, type LearnedPoint, type StudyLanguage,
 } from '@amgi/core';
 import { backfillMatureFlags, countMatureFlashcards } from '@/services/firestore';
@@ -212,6 +212,7 @@ export default function LanguageProgressPage() {
 
   const cardsAdded = (progress?.newCards ?? 0) + (progress?.packCards ?? 0);
   const reviews = progress?.reviews ?? 0;
+  const averagePerDay = languageAveragePerActiveDay(days ?? [], code);
   const weekly = chartBucketDays(rangeDays) > 1;
 
   return (
@@ -240,14 +241,20 @@ export default function LanguageProgressPage() {
         <p className="text-[var(--color-muted)]">{t(interfaceLanguage, 'progressLoading')}</p>
       ) : (
         <>
-          {/* Two of these name the window and one names all time, which is why
-              the learned tile keeps the label it wears everywhere else. */}
-          <div className={`grid grid-cols-2 gap-3 mb-8 ${learned === null ? '' : 'sm:grid-cols-3'}`}>
+          {/* Three of these name the window and one names all time, which is
+              why the learned tile keeps the label it wears everywhere else. */}
+          <div className={`grid grid-cols-2 gap-3 mb-8 ${
+            learned === null ? 'sm:grid-cols-3' : 'sm:grid-cols-4'
+          }`}>
             <Stat label={t(interfaceLanguage, 'progressStatReviews')} value={reviews} />
             <Stat label={t(interfaceLanguage, 'progressStatNewCards')} value={cardsAdded} />
             {learned !== null && (
               <Stat label={t(interfaceLanguage, 'shareStatLearned')} value={learned} />
             )}
+            {/* Shares the dashboard's label because it is the same measure,
+                narrowed — the days counted are the ones *this* language was
+                studied on. See `languageAveragePerActiveDay`. */}
+            <Stat label={t(interfaceLanguage, 'progressStatAverage')} value={averagePerDay} />
           </div>
 
           <AddedChart

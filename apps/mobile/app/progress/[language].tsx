@@ -26,8 +26,8 @@ import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import Svg, { Polyline } from 'react-native-svg';
 import {
   DETAILED_HISTORY_START, SUPPORTED_STUDY_LANGUAGES, buildCardsAddedSeries,
-  buildLearnedSeries, chartBucketDays, localDateString, niceCeiling, summarizeProgress,
-  weekAxisTicks, weekdayIndex, t,
+  buildLearnedSeries, chartBucketDays, languageAveragePerActiveDay, localDateString,
+  niceCeiling, summarizeProgress, weekAxisTicks, weekdayIndex, t,
   type CardsAddedBucket, type DailyProgress, type LearnedPoint,
   type StudyLanguage, type TranslationKey,
 } from '@amgi/core';
@@ -217,6 +217,7 @@ export default function LanguageProgressScreen() {
 
   const reviews = progress?.reviews ?? 0;
   const cardsAdded = (progress?.newCards ?? 0) + (progress?.packCards ?? 0);
+  const averagePerDay = languageAveragePerActiveDay(days ?? [], code);
   const weekly = chartBucketDays(rangeDays) > 1;
 
   return (
@@ -244,14 +245,20 @@ export default function LanguageProgressScreen() {
           <Text style={s.empty}>{t(interfaceLanguage, 'progressLoading')}</Text>
         ) : (
           <>
-            {/* Two of these name the window and one names all time, which is
-                why the learned tile keeps the label it wears everywhere. */}
+            {/* Three of these name the window and one names all time, which is
+                why the learned tile keeps the label it wears everywhere. The
+                grid wraps at `flexBasis: '45%'`, so four tiles land as 2×2 with
+                no layout change. */}
             <View style={s.statGrid}>
               <Stat s={s} label={t(interfaceLanguage, 'progressStatReviews')} value={reviews} />
               <Stat s={s} label={t(interfaceLanguage, 'progressStatNewCards')} value={cardsAdded} />
               {learned !== null && (
                 <Stat s={s} label={t(interfaceLanguage, 'shareStatLearned')} value={learned} />
               )}
+              {/* Shares the tab's label because it is the same measure,
+                  narrowed — the days counted are the ones *this* language was
+                  studied on. See `languageAveragePerActiveDay`. */}
+              <Stat s={s} label={t(interfaceLanguage, 'progressStatAverage')} value={averagePerDay} />
             </View>
 
             <AddedChart

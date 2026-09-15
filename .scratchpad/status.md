@@ -501,6 +501,32 @@ its own data. The indices are deduped: rounding can otherwise land two ticks on
 one mark on a short series. Mobile needs the measured plot width for this, for
 the same reason its line does — React Native has no percentage translate.
 
+**A fourth tile: average per day, per language** (later the same day, user's
+call). It reuses `progressStatAverage` rather than taking copy of its own,
+because it is the dashboard's measure narrowed rather than a different one.
+⚠️ **The narrowing is the whole content of `languageAveragePerActiveDay`:
+"active" means the days *this language* was studied, not the days the account
+was.** A day spent entirely on Japanese is not a quiet Korean day, it is not a
+Korean day at all — averaging those in would make every language look worse the
+more languages you study, so the figure would be measuring how divided your
+attention is rather than how much you do when you sit down with a deck. Rounded
+and zero-safe to match `summarizeProgress` exactly, so the two tiles cannot come
+to disagree about what the words mean.
+
+⚠️ **The tile asked for first was "cards reviewed", and it is not a
+rollup-shaped question.** Worth recording, because the gap is easy to notice
+again and expensive to re-derive. Distinct cards **cannot be summed across
+days**: a per-day distinct-card counter double-counts anything reviewed on two
+days, so unlike `reviewedToday` this is not a missing counter. Counting cards
+whose *last* review falls in the window is the correct dedupe, and the last
+review **is** recoverable — `getNextReviewData` sets `nextReview` to `now +
+interval` on a pass and to `now` on a lapse. So the honest route is a stored
+`lastReviewedAt` plus `uid ==` and a range filter, which needs a **composite
+index on all ten card collections**, built by hand (lessons.md). **Unlike every
+other counter here it would be backfillable**, from that same interval
+arithmetic, the way `backfillMatureFlags` recovered maturity — so "from today or
+from never" does not apply to it. Not built; the free tile was taken instead.
+
 ⚠️ **Verified by suite and compiler, not by eye.** Web is 635/635 with 20 new
 assertions, both apps clean under `tsc --noEmit`, lint unchanged at 21 warnings
 / 0 errors, and `expo export` bundles — which is the check that matters most

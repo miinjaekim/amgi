@@ -14,6 +14,7 @@ import {
   historyStartsMidWindow,
   localDateString,
   mergeDeltas,
+  languageAveragePerActiveDay,
   mergeLanguageRows,
   negateDelta,
   niceCeiling,
@@ -606,6 +607,47 @@ describe('byHour', () => {
       day('2026-09-06', { reviews: 1, byHour: { '23': 1 } }),
     ]);
     expect(summary.byHour).toEqual({ '22': 2, '23': 2 });
+  });
+});
+
+describe('languageAveragePerActiveDay', () => {
+  it('averages over the days that language was studied, not over every day', () => {
+    // The whole point: a day spent entirely on Japanese is not a quiet Korean
+    // day, it is not a Korean day at all. Counting it would make every language
+    // look worse the more languages you study.
+    const days = [
+      day('2026-09-13', { reviews: 10, byLanguage: { Korean: lang({ reviews: 10 }) } }),
+      day('2026-09-14', { reviews: 4, byLanguage: { Japanese: lang({ reviews: 4 }) } }),
+      day('2026-09-15', { reviews: 20, byLanguage: { Korean: lang({ reviews: 20 }) } }),
+    ];
+    expect(languageAveragePerActiveDay(days, 'Korean')).toBe(15);
+    expect(languageAveragePerActiveDay(days, 'Japanese')).toBe(4);
+  });
+
+  it('ignores a day that only added cards, matching isStudyDay', () => {
+    const days = [
+      day('2026-09-14', { byLanguage: { Korean: lang({ newCards: 12 }) } }),
+      day('2026-09-15', { reviews: 6, byLanguage: { Korean: lang({ reviews: 6 }) } }),
+    ];
+    expect(languageAveragePerActiveDay(days, 'Korean')).toBe(6);
+  });
+
+  it('is zero rather than NaN when the language has no reviews in the window', () => {
+    expect(languageAveragePerActiveDay([], 'Korean')).toBe(0);
+    expect(languageAveragePerActiveDay(
+      [day('2026-09-15', { reviews: 5, byLanguage: { Japanese: lang({ reviews: 5 }) } })],
+      'Korean',
+    )).toBe(0);
+  });
+
+  it('rounds the way the whole-account figure does', () => {
+    const days = [
+      day('2026-09-14', { byLanguage: { Korean: lang({ reviews: 3 }) } }),
+      day('2026-09-15', { byLanguage: { Korean: lang({ reviews: 4 }) } }),
+    ];
+    // 7 over 2 active days is 3.5, and `summarizeProgress` rounds — so this
+    // must too, or one tile reads 3 where the other reads 4.
+    expect(languageAveragePerActiveDay(days, 'Korean')).toBe(4);
   });
 });
 
