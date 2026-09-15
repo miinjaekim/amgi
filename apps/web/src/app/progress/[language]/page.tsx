@@ -29,7 +29,7 @@ import { fetchRecentProgress } from '@/services/progress';
 import {
   DETAILED_HISTORY_START, SUPPORTED_STUDY_LANGUAGES, buildCardsAddedSeries,
   buildLearnedSeries, chartBucketDays, localDateString, niceCeiling, summarizeProgress,
-  weekAxisTicks,
+  weekAxisTicks, weekdayIndex,
   type CardsAddedBucket, type DailyProgress, type LearnedPoint, type StudyLanguage,
 } from '@amgi/core';
 import { backfillMatureFlags, countMatureFlashcards } from '@/services/firestore';
@@ -67,6 +67,20 @@ const PLOT_HEIGHT = 96;
 const AXIS_GUTTER = 30;
 /** Room above a plot for its hover bubble, so appearing never shifts the page. */
 const TOOLTIP_LANE = 44;
+
+/**
+ * The most bars that can each carry their own value on top.
+ *
+ * Keyed on bar *count* rather than on the window, because the grain changes
+ * underneath it: 7 days is 7 bars and 90 days is 13 weekly ones, so both fit,
+ * while 30 daily bars and a year's 52 do not. Past this the axis comes back and
+ * the bubble carries the exact figure instead.
+ */
+const LABELLED_BAR_MAX = 14;
+
+/** Room reserved above the bars for those labels, so a full-height bar's number
+ *  has somewhere to sit rather than overflowing into the bubble's lane. */
+const VALUE_LABEL_HEIGHT = 14;
 
 export default function LanguageProgressPage() {
   const { language } = useParams<{ language: string }>();
@@ -284,12 +298,30 @@ function AddedChart({ interfaceLanguage, series, weekly }: {
 
   const busiest = Math.max(0, ...series.map(valueOf));
   const ceiling = niceCeiling(busiest);
-  const ticks = weekAxisTicks(ceiling);
   const active = hovered === null ? null : series[hovered];
 
+  /**
+   * Whether each bar states its own value.
+   *
+   * ⚠️ **When it does, the gridlines go.** An axis exists to let a level be read
+   * off a shape that cannot be labelled — which is the curve below, not this.
+   * Labelling every bar states the same quantity exactly, so keeping both is two
+   * encodings of one number and reads busier for no gain. Only the zero line
+   * stays, which also keeps the gutter and so keeps this chart aligned with the
+   * one under it.
+   */
+  const showValues = series.length <= LABELLED_BAR_MAX;
+  /** A weekday under each bar only makes sense when a bar *is* a day. */
+  const showWeekdays = showValues && !weekly;
+  const ticks = showValues ? [0] : weekAxisTicks(ceiling);
+
+  /** Bars give up the label's height so the tallest one still has room. */
+  const barArea = showValues ? PLOT_HEIGHT - VALUE_LABEL_HEIGHT : PLOT_HEIGHT;
+  // A day with nothing added keeps a 1px stub rather than vanishing: an absent
+  // bar and a zero bar look identical, and only one of them is the truth.
   const heightOf = (value: number) => (ceiling > 0 && value > 0
-    ? Math.max(1, Math.round((value / ceiling) * PLOT_HEIGHT))
-    : 0);
+    ? Math.max(2, Math.round((value / ceiling) * barArea))
+    : 1);
 
   /**
    * The filter. Pressing the selected one clears it, which is the only way back
@@ -354,6 +386,17 @@ function AddedChart({ interfaceLanguage, series, weekly }: {
                   onBlur={() => setHovered(null)}
                   style={{ opacity: hovered === null || hovered === index ? 1 : 0.55 }}
                 >
+                  {/* Only a bar with something in it gets a number. A row of
+                      zeroes above empty days is noise, and cards added is a
+                      sparse series — most days you add nothing. */}
+                  {showValues && (
+                    <span
+                      className="w-full text-center text-[10px] leading-none font-mono text-[var(--color-text)]"
+                      style={{ height: VALUE_LABEL_HEIGHT }}
+                    >
+                      {valueOf(bucket) > 0 ? valueOf(bucket) : ''}
+                    </span>
+                  )}
                   <div
                     className="w-full rounded-t-sm"
                     style={{ height: heightOf(valueOf(bucket)), background: 'var(--heat-4)' }}
@@ -372,7 +415,9 @@ function AddedChart({ interfaceLanguage, series, weekly }: {
             )}
           </div>
 
-          <AxisLabels interfaceLanguage={interfaceLanguage} series={series} />
+          {showWeekdays
+            ? <WeekdayLabels interfaceLanguage={interfaceLanguage} series={series} />
+            : <AxisLabels interfaceLanguage={interfaceLanguage} series={series} />}
 
           {weekly && (
             <div className="mt-2 text-xs text-[var(--color-muted)] text-right">
@@ -586,6 +631,48 @@ function Gridlines({ ticks, ceiling }: { ticks: number[]; ceiling: number }) {
  * nth bar lands on an arbitrary date. The tooltip carries the rest, and the
  * bars are in order, so the two ends are enough to place everything between.
  */
+/**
+ * Sunday-first weekday names in the reader's language.
+ *
+ * Built from a known Sunday through `Intl` rather than from translation keys:
+ * seven more keys per locale to say what the platform already knows.
+ */
+function weekdayLabels(interfaceLanguage: string | null | undefined): string[] {
+  const locale = interfaceLanguage === 'Korean' ? 'ko-KR' : 'en-GB';
+  // 1970-01-04 was a Sunday.
+  return [0, 1, 2, 3, 4, 5, 6].map(offset => new Date(Date.UTC(1970, 0, 4 + offset, 12))
+    .toLocaleDateString(locale, { weekday: 'short' }));
+}
+
+/**
+ * A weekday under every bar, for a window drawn one bar per day.
+ *
+ * The same treatment the dashboard's weekly chart already gives its seven days,
+ * so the two read as one family. Taken from each bucket's own date rather than
+ * from a fixed Sunday-to-Saturday run, because these days end on today.
+ *
+ * The gap matches the bars' own, which is always 2 here — a labelled chart is
+ * at most `LABELLED_BAR_MAX` bars and the 1px gap only applies past 26.
+ */
+function WeekdayLabels({ interfaceLanguage, series }: {
+  interfaceLanguage: string | null | undefined;
+  series: { start: string }[];
+}) {
+  const weekdays = weekdayLabels(interfaceLanguage);
+  return (
+    <div className="flex mt-1" style={{ marginLeft: AXIS_GUTTER, gap: 2 }}>
+      {series.map(bucket => (
+        <div
+          key={bucket.start}
+          className="flex-1 text-center text-[10px] text-[var(--color-muted)]"
+        >
+          {weekdays[weekdayIndex(bucket.start)]}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function AxisLabels({ interfaceLanguage, series }: {
   interfaceLanguage: string | null | undefined;
   series: { start: string; end: string }[];

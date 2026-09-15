@@ -455,6 +455,32 @@ scale, the marks, the tooltip and the labels. Session state, not a remembered
 preference: the mark is how you like charts drawn, this is a question you ask
 and come back from.
 
+**The cards-added bars carry their own numbers, and the axis gave way to them**
+(later the same day, on the user's ask — they were looking at the Korean chart
+and wanted it more satisfying to read). **An axis exists to let a level be read
+off a shape that cannot be labelled** — which is the learned curve, not this.
+Labelling every bar states the same quantity *exactly*, so keeping both is two
+encodings of one number. The gridlines therefore collapse to the zero line when
+the labels are on. ⚠️ **The gutter stays** even with only a "0" in it: dropping
+it would win ~30px of bar width and cost the left-edge alignment with the curve
+directly below, which is the more valuable of the two.
+
+⚠️ **Three constraints on those labels, and each exists for a reason that is not
+obvious from the code.** `LABELLED_BAR_MAX` is keyed on **bar count, never the
+window** — the grain changes underneath it, so 7 days is 7 bars and 90 days is
+13 weekly ones (both fit) while 30 daily bars and a year's 52 do not; rewriting
+this as a range check would silently label the 30-day view into a collision.
+**Only non-zero bars get a number**, because cards added is a *sparse* series —
+most days you add nothing, and a row of zeroes is noise. And a zero day keeps a
+**1px stub** rather than vanishing, since an absent bar and a zero bar look
+identical and only one of them is true.
+
+**Weekday labels replaced the two end dates when a bar is a day**, matching what
+the dashboard's weekly chart already does, so the two read as one family. Taken
+from each bucket's own date rather than a fixed Sunday-to-Saturday run, because
+these seven days end on today. Weekly buckets keep the end dates — a weekday
+means nothing on a bar covering seven of them.
+
 ⚠️ **Verified by suite and compiler, not by eye.** Web is 635/635 with 20 new
 assertions, both apps clean under `tsc --noEmit`, lint unchanged at 21 warnings
 / 0 errors, and `expo export` bundles — which is the check that matters most

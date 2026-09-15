@@ -27,7 +27,7 @@ import Svg, { Polyline } from 'react-native-svg';
 import {
   DETAILED_HISTORY_START, SUPPORTED_STUDY_LANGUAGES, buildCardsAddedSeries,
   buildLearnedSeries, chartBucketDays, localDateString, niceCeiling, summarizeProgress,
-  weekAxisTicks, t,
+  weekAxisTicks, weekdayIndex, t,
   type CardsAddedBucket, type DailyProgress, type LearnedPoint,
   type StudyLanguage, type TranslationKey,
 } from '@amgi/core';
@@ -70,6 +70,20 @@ const AXIS_GUTTER = 26;
 const TOOLTIP_LANE = 44;
 /** Fixed so the bubble can be placed without measuring its text. */
 const TOOLTIP_WIDTH = 190;
+
+/**
+ * The most bars that can each carry their own value on top.
+ *
+ * Keyed on bar *count* rather than on the window, because the grain changes
+ * underneath it: 7 days is 7 bars and 90 days is 13 weekly ones, so both fit,
+ * while 30 daily bars and a year's 52 do not. Past this the axis comes back and
+ * the bubble carries the exact figure instead.
+ */
+const LABELLED_BAR_MAX = 14;
+
+/** Room reserved above the bars for those labels, so a full-height bar's number
+ *  has somewhere to sit rather than overflowing into the bubble's lane. */
+const VALUE_LABEL_HEIGHT = 14;
 
 export default function LanguageProgressScreen() {
   const { C } = useTheme();
@@ -290,12 +304,30 @@ function AddedChart({ C, s, interfaceLanguage, series, weekly }: {
 
   const busiest = Math.max(0, ...series.map(valueOf));
   const ceiling = niceCeiling(busiest);
-  const ticks = weekAxisTicks(ceiling);
   const active = selected === null ? null : series[selected];
 
+  /**
+   * Whether each bar states its own value.
+   *
+   * ⚠️ **When it does, the gridlines go.** An axis exists to let a level be read
+   * off a shape that cannot be labelled — which is the curve below, not this.
+   * Labelling every bar states the same quantity exactly, so keeping both is two
+   * encodings of one number and reads busier for no gain. Only the zero line
+   * stays, which also keeps the gutter and so keeps this chart aligned with the
+   * one under it.
+   */
+  const showValues = series.length <= LABELLED_BAR_MAX;
+  /** A weekday under each bar only makes sense when a bar *is* a day. */
+  const showWeekdays = showValues && !weekly;
+  const ticks = showValues ? [0] : weekAxisTicks(ceiling);
+
+  /** Bars give up the label's height so the tallest one still has room. */
+  const barArea = showValues ? PLOT_HEIGHT - VALUE_LABEL_HEIGHT : PLOT_HEIGHT;
+  // A day with nothing added keeps a 1px stub rather than vanishing: an absent
+  // bar and a zero bar look identical, and only one of them is the truth.
   const heightOf = (value: number) => (ceiling > 0 && value > 0
-    ? Math.max(1, Math.round((value / ceiling) * PLOT_HEIGHT))
-    : 0);
+    ? Math.max(2, Math.round((value / ceiling) * barArea))
+    : 1);
 
   /**
    * The filter. Tapping the selected chip clears it, which is the only way back
@@ -359,6 +391,14 @@ function AddedChart({ C, s, interfaceLanguage, series, weekly }: {
               accessibilityRole="button"
               accessibilityLabel={describeAdded(interfaceLanguage, bucket, source)}
             >
+              {/* Only a bar with something in it gets a number. A row of zeroes
+                  above empty days is noise, and cards added is a sparse series —
+                  most days you add nothing. */}
+              {showValues && (
+                <Text style={s.barValue} numberOfLines={1}>
+                  {valueOf(bucket) > 0 ? valueOf(bucket) : ''}
+                </Text>
+              )}
               <View style={[s.barSegment, {
                 height: heightOf(valueOf(bucket)),
                 backgroundColor: C.heat[4],
@@ -380,7 +420,9 @@ function AddedChart({ C, s, interfaceLanguage, series, weekly }: {
         )}
       </View>
 
-      <AxisLabels s={s} interfaceLanguage={interfaceLanguage} series={series} />
+      {showWeekdays
+        ? <WeekdayLabels s={s} interfaceLanguage={interfaceLanguage} series={series} />
+        : <AxisLabels s={s} interfaceLanguage={interfaceLanguage} series={series} />}
 
       {weekly && (
         <View style={s.legendRow}>
@@ -568,6 +610,43 @@ function Gridlines({ s, ticks, ceiling }: {
  * nth bar lands on an arbitrary date. The bubble carries the rest, and the bars
  * are in order, so the two ends place everything between them.
  */
+/**
+ * Sunday-first weekday names in the reader's language.
+ *
+ * Built from a known Sunday through `Intl` rather than from translation keys:
+ * seven more keys per locale to say what the platform already knows.
+ */
+function weekdayLabels(interfaceLanguage: string | null | undefined): string[] {
+  const locale = interfaceLanguage === 'Korean' ? 'ko-KR' : 'en-GB';
+  // 1970-01-04 was a Sunday.
+  return [0, 1, 2, 3, 4, 5, 6].map(offset => new Date(Date.UTC(1970, 0, 4 + offset, 12))
+    .toLocaleDateString(locale, { weekday: 'short' }));
+}
+
+/**
+ * A weekday under every bar, for a window drawn one bar per day.
+ *
+ * The same treatment the Progress tab's weekly chart already gives its seven
+ * days, so the two read as one family. Taken from each bucket's own date rather
+ * than from a fixed Sunday-to-Saturday run, because these days end on today.
+ */
+function WeekdayLabels({ s, interfaceLanguage, series }: {
+  s: ReturnType<typeof makeStyles>;
+  interfaceLanguage: string | null | undefined;
+  series: { start: string }[];
+}) {
+  const weekdays = weekdayLabels(interfaceLanguage);
+  return (
+    <View style={s.weekdayRow}>
+      {series.map(bucket => (
+        <Text key={bucket.start} style={s.weekdayLabel} numberOfLines={1}>
+          {weekdays[weekdayIndex(bucket.start)]}
+        </Text>
+      ))}
+    </View>
+  );
+}
+
 function AxisLabels({ s, interfaceLanguage, series }: {
   s: ReturnType<typeof makeStyles>;
   interfaceLanguage: string | null | undefined;
@@ -733,6 +812,17 @@ function makeStyles(C: Palette) {
     },
     barColumn: { flex: 1, height: '100%', justifyContent: 'flex-end' },
     barSegment: { width: '100%' },
+    // Sits directly on top of its bar: the column is bottom-justified, so this
+    // is pushed up by whatever height the bar takes.
+    barValue: {
+      height: VALUE_LABEL_HEIGHT, lineHeight: VALUE_LABEL_HEIGHT,
+      textAlign: 'center', color: C.text, fontSize: 10, fontVariant: ['tabular-nums'],
+    },
+    // The gap matches the bars' own, which is always 2 on a labelled chart —
+    // the 1px gap only applies past 26 bars, and a labelled chart is at most
+    // `LABELLED_BAR_MAX`.
+    weekdayRow: { flexDirection: 'row', gap: 2, marginLeft: AXIS_GUTTER, marginTop: 4 },
+    weekdayLabel: { flex: 1, textAlign: 'center', color: C.muted, fontSize: 10 },
     targets: {
       position: 'absolute', left: AXIS_GUTTER, right: 0, bottom: 0,
       height: PLOT_HEIGHT, flexDirection: 'row',
