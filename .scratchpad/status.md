@@ -8,17 +8,24 @@ show: the reasoning behind closed calls (Decisions), the console and binary stat
 that lives outside the repo (Builds, TestFlight), and what is currently
 unverified.
 
-_Reconciled against `release/1.7.0` @ `37c3dc8`, 2026-09-19. `npm test` 639/639
+_Reconciled against `release/1.7.0` @ `cb7c19c`, 2026-09-19. `npm test` 639/639
 and `npm run lint` 0 errors / 21 warnings, both measured._
 
 ## Now
 
-- **1.7.0 is being cut** (2026-09-19, branch `release/1.7.0`). Pre-flight steps
-  2–5 are done — version bumped, `expo config --type introspect` clean, the
-  TestFlight copy rewritten and its character set diffed against the copy Apple
-  accepted for 1.6.0. Step 1 is undone, as on every build before it. The build
-  itself, its number and the submission are **not** done: nothing below this
-  line records them until they have happened.
+- **1.7.0 is build 16**, cut 2026-09-19 from `cb7c19c` on `release/1.7.0`, with
+  the Android APK as `versionCode` 6 from the same commit. ⚠️ **Approval is not
+  recorded here because it has not been reported** — 1.6.0's external approval
+  covers 1.6.0 only, so testers get this build after a fresh Beta App Review, and
+  whether the Test Information paste and that submission have happened is console
+  state the repo cannot see. Confirm before assuming.
+  **Pre-flight was clean**: `expo config --type introspect` came back
+  `entitlements: {}` on the `react-native-svg` build, the TestFlight copy was
+  rewritten for both locales, and its character set diffed against the copy Apple
+  accepted for 1.6.0 — 42 new characters, 39 precomposed Hangul, nothing outside
+  the BMP. **Step 1 was half done for the first time on any build**: smoke-tested
+  in Expo Go before the builds were started. The binary half is still undone, as
+  the never-verified ⚠️ below says.
   It carries eight merges since build 15 — the progress-display rework
   (retention off, labelled calendar, cards learned, the weekly chart), the
   per-language progress detail with its two charts, the share screen that
@@ -213,6 +220,7 @@ No OTA, so every mobile change reaches users through one of these.
 
 | Version | Build | Date | Cut from |
 |---|---|---|---|
+| 1.7.0 | 16 | 2026-09-19 | `cb7c19c` on `release/1.7.0` (version bump + TestFlight copy) — external approval not reported as of this line |
 | 1.6.0 | 15 | 2026-09-10 | `c8c113a` on `release/1.6.0` (version bump + TestFlight copy) — external testing approved 09-10, same day |
 | 1.5.0 | 14 | 2026-09-02 | `84be8af` on `release/1.5.0` (PR #109, version bump + TestFlight copy) — external testing approved 09-02, same day |
 | 1.4.0 | 13 | 2026-08-22 | `dedcdd6` on `release/1.4.0` (version bump + TestFlight copy) — external testing approved 08-24 |
@@ -230,6 +238,14 @@ Decisions entry for how it is distributed. 1.5.0's Android APK is `versionCode`
 4, cut the same day from `d25b544`; 1.6.0's is `versionCode` 5, cut the same day
 as build 15. Its commit was not recorded here — resolve it from the EAS build
 record if it ever matters, for the reason the next paragraph gives.
+1.7.0's is `versionCode` 6, and both it and build 16 carry the tree at
+`cb7c19c` — they were started together, before the step-1 correction commit
+landed on the branch. That commit touches `backlog.md` only and nothing bundles
+it, so branch head and both binaries differ by nothing either one runs. ⚠️ **The
+hash EAS logged for each is not known** and may read as the previous commit with
+a dirty tree, depending on exactly when each job uploaded; the content is what
+this row is asserting. Check the console if a build ever has to be reproduced
+byte for byte — the 1.5.0 entry below is why that distinction is kept.
 
 ⚠️ **1.5.0's two builds carry different commit hashes and the same app.** EAS
 logged `84be8af` for iOS and `d25b544` for Android; the delta between them is
