@@ -341,14 +341,17 @@ derivable from its commit; what is queued, released or never verified on a
 binary is under Builds in [status.md](status.md).
 
 **Pre-flight**, in order. Steps 2–6 were all exercised cutting 1.6.0 and again
-cutting 1.7.0; step 1 never has been, on any build:
+cutting 1.7.0; step 1 was half done for the first time on 1.7.0:
 
 1. Smoke-test in Expo Go, then verify the native-adjacent paths on the build
    itself — Expo Go runs the SDK's own bundled native modules, so a clean pass
    there says nothing about audio, notifications, sharing, the file system or
-   the auth redirect. ⚠️ **This has never happened**, through fifteen builds; the
-   list of what it covers, and why working down it is not tracked as a task, is
-   in the never-verified ⚠️ under Builds in [status.md](status.md).
+   the auth redirect. **The Expo Go half happened for the first time on 1.7.0**
+   (2026-09-19, by the user, before the builds were started). ⚠️ **The half that
+   matters more has still never happened on any build**: nothing in that list has
+   been exercised on a binary. The list of what it covers, and why working down
+   it is not tracked as a task, is in the never-verified ⚠️ under Builds in
+   [status.md](status.md).
 2. Bump `version` in `app.json` **before** starting the build. EAS
    auto-increments the *build* number and never the version, so nothing catches
    this for you.
