@@ -8,11 +8,26 @@ show: the reasoning behind closed calls (Decisions), the console and binary stat
 that lives outside the repo (Builds, TestFlight), and what is currently
 unverified.
 
-_Reconciled against `release/1.6.0` @ `c8c113a`, 2026-09-10. `npm test` 553/553
+_Reconciled against `release/1.7.0` @ `37c3dc8`, 2026-09-19. `npm test` 639/639
 and `npm run lint` 0 errors / 21 warnings, both measured._
 
 ## Now
 
+- **1.7.0 is being cut** (2026-09-19, branch `release/1.7.0`). Pre-flight steps
+  2–5 are done — version bumped, `expo config --type introspect` clean, the
+  TestFlight copy rewritten and its character set diffed against the copy Apple
+  accepted for 1.6.0. Step 1 is undone, as on every build before it. The build
+  itself, its number and the submission are **not** done: nothing below this
+  line records them until they have happened.
+  It carries eight merges since build 15 — the progress-display rework
+  (retention off, labelled calendar, cards learned, the weekly chart), the
+  per-language progress detail with its two charts, the share screen that
+  actually reaches the OS sheet, an explanation language per study language,
+  tap-to-save in packs, and the streak-count fix.
+  ⚠️ **The per-deck language change migrates every existing account on first
+  load**, and build 15 is in testers' hands reading the old field — which is why
+  `nativeLanguage` is still written alongside `interfaceLanguage`. Nobody has
+  watched that migration run against a real multi-deck account.
 - **1.6.0 (build 15) is live in TestFlight and approved for external testing**
   (2026-09-10), approved the same day it was submitted. It carries eleven merges
   since build 14 — the mobile UI redesign, Expo SDK 57, Hanja as a study
@@ -243,14 +258,15 @@ introspect` passes came back clean — 1.4.0's `entitlements: {}` confirms
 `withoutPushEntitlement` still strips `aps-environment`. 1.4.0 is also the first
 iOS release carrying `expo-dev-client`, `expo-dev-launcher` and `expo-dev-menu`.
 
-⚠️ **The next build is a native-module build too: `react-native-svg` 15.15.4**,
-added 2026-09-12 for the weekly chart's line mark. It is in Expo Go's own
-bundled set, so the dev loop is untouched and `npx expo start` needs nothing —
-but the binary does, and **an `expo config --type introspect` pass is owed
-before cutting it**, per the pre-flight checklist in [backlog.md](backlog.md).
-Nothing about it is
-configuration-bearing (no plugin, no entitlement, no permission), which is the
-expected result rather than a reason to skip the check.
+**1.7.0 is a native-module build too: `react-native-svg` 15.15.4**, added
+2026-09-12 for the weekly chart's line mark. It is in Expo Go's own bundled set,
+so the dev loop was untouched and `npx expo start` needed nothing — but the
+binary does, and **the owed `expo config --type introspect` pass was run
+2026-09-19 and came back clean**: `entitlements: {}`, no new
+`NS*UsageDescription`, no manifest permission beyond the six `expo-audio`,
+`expo-file-system` and networking already contribute. Nothing about the library
+is configuration-bearing (no plugin, no entitlement, no permission), which is
+what the check confirmed rather than a reason it could have been skipped.
 
 ⚠️ **Never verified on a real binary**, on any build so far — the logic is
 tested, the native bindings are not: pronunciation audio, CSV/Anki export,

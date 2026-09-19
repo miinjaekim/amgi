@@ -2,7 +2,7 @@
 
 _한국어와 영어 문구가 모두 이 파일에 있습니다. Both languages live here._
 
-_마지막 갱신: 2026-09-09, 1.6.0용._
+_마지막 갱신: 2026-09-19, 1.7.0용._
 
 App Store Connect → TestFlight → **Test Information**에 붙여넣는 문구 모음입니다.
 Test Information은 로컬라이제이션을 지원하므로, 언어 목록에 **Korean (ko)** 과
@@ -25,11 +25,12 @@ Amgi는 언어 학습용 플래시카드 앱입니다.
 
 단어를 찾아보면 뜻과 뉘앙스, 격식, 예문이 나옵니다. 한자어는 한자 풀이도 함께요. 그대로 카드로 저장하면 간격 반복 일정에 맞춰 다시 나타납니다.
 
-단어팩으로 한 분야의 어휘나 한 언어의 기초를 한번에 담을 수 있고, 학습 기록에서 어느 날 복습했는지 돌아볼 수 있습니다.
+단어팩으로 한 분야의 어휘나 한 언어의 기초를 한번에 담을 수 있고, 학습 기록에서 어느 날 얼마나 복습했는지 언어별로 돌아볼 수 있습니다.
 
 AI가 만든 설명이라 틀릴 수 있습니다. 어색하거나 잘못된 부분을 알려 주시는 것이 이번 베타에서 가장 도움이 됩니다.
 
 학습 언어: 영어, 일본어, 중국어(번체), 스웨덴어, 프랑스어, 스페인어, 키쿠유어, 스와힐리어, 한국어, 한자
+설명 언어: 학습 언어마다 따로 고릅니다 (한국어 / 영어)
 화면 언어: 한국어 / 영어 (설정에서 변경)
 
 베타 기간 무료. 광고·트래킹 없음.
@@ -42,11 +43,12 @@ Amgi is a flashcard app for language learners.
 
 Look up a word and you get its meaning, nuance, register and example sentences — plus a character breakdown for anything written in Chinese characters. Save that as a card and it comes back on a spaced-repetition schedule.
 
-Vocabulary packs cover one domain — or one language's basics — a deck at a time, and the progress screen shows which days you actually reviewed.
+Vocabulary packs cover one domain — or one language's basics — a deck at a time, and the progress screen shows what you reviewed, by day and by language.
 
 The explanations are AI-generated, so they can be wrong. Telling me when they are is the most useful thing you can do in this beta.
 
 Study languages: English, Japanese, Traditional Chinese, Swedish, French, Spanish, Kikuyu, Swahili, Korean, Hanja (the Chinese characters used in Korean)
+Explanation language: chosen per study language (Korean or English)
 Display language: Korean or English (change in Settings)
 
 Free during the beta. No ads, no tracking.
@@ -79,12 +81,12 @@ kenyamjkim@gmail.com
 ```
 이번 빌드에 새로 들어간 것:
 
-· 새 화면 구성 — 앱을 열면 복습부터 나오고, 설정 탭이 학습 기록으로 바뀌었습니다. 설정은 학습 기록 오른쪽 위 톱니바퀴에 있어요.
-· 한자 — 새 학습 언어입니다. 한자·훈·음 중 무엇을 앞면으로 볼지 고르고, 8급부터 6급까지 300자 급수 팩이 함께 들어갑니다.
-· 단어팩 섹션 — 큰 팩이 섹션으로 나뉘어, 한 섹션만 따로 복습할 수 있습니다.
-· 학습 기록 공유 — 학습 기록을 이미지로 만들어 공유할 수 있습니다.
-· 복습 중 읽는 법 — 복습 화면에도 읽는 법이 나옵니다.
-· 병과와 주특기 — 부대·참모 팩에 24개 용어가 늘었습니다.
+· 학습 기록 개편 — 달력에 요일이 붙고, 새로 익힌 카드 수와 이번 주 그래프가 생겼습니다. 정답률은 뺐습니다.
+· 언어별 기록 — 학습 기록에서 언어를 누르면 그 언어만의 숫자와 그래프가 열립니다. 7일·30일·90일·1년 중에 고르세요.
+· 공유가 실제로 됩니다 — 지난 빌드에서는 공유 시트가 아예 열리지 않았습니다. 오늘 하루치 그림도 고를 수 있고, 고르기 전에 미리 보여 줍니다.
+· 언어마다 설명 언어 — 학습 언어마다 어떤 언어로 설명할지 따로 고릅니다. 앱 화면 언어는 별개 설정이에요.
+· 단어팩에서 한 번 탭하면 저장 — 저장 안 된 단어는 탭하면 바로 저장되고, 저장된 단어는 탭하면 열립니다.
+· 연속 일수 — 학습 기록의 숫자와 화면 위 숫자가 어긋나던 것을 고쳤습니다.
 
 피드백은 TestFlight의 '피드백 보내기' 또는 kenyamjkim@gmail.com으로.
 ```
@@ -94,12 +96,12 @@ kenyamjkim@gmail.com
 ```
 New in this build:
 
-· New layout — the app opens on Review, and the Settings tab became Progress. Settings is now the gear at its top right.
-· Hanja — a new study language: pick whether the character, the 훈 or the 음 leads, with a 300-character 급수 pack from 8급 to 6급.
-· Sections in packs — a big pack splits into sections you can review one at a time.
-· Share your progress — the progress screen makes an image you can share.
-· Readings in review — the reading aid shows on review cards now.
-· Branches and specialties — 24 new terms in the military units pack.
+· Progress, rebuilt — weekday labels on the calendar, a cards-learned tile, and a chart of the week. The accuracy percentage is gone.
+· Per-language progress — tap a language on Progress for its own numbers and charts, over 7, 30 or 90 days or a year.
+· Sharing works — the share sheet never opened in the last build. You can also pick a picture of just today, and you see it before you post it.
+· An explanation language per deck — each study language carries the language it is explained in. The app's own language is a separate setting.
+· Tap to save in packs — one tap saves an unsaved word, a second tap opens it.
+· Streak — the number on Progress and the one at the top of the screen no longer disagree.
 
 Send feedback via TestFlight's "Send Beta Feedback" or to kenyamjkim@gmail.com.
 ```
@@ -127,9 +129,9 @@ Amgi is a language-learning app that pairs AI-generated word explanations with s
 
 Sign-in: The app uses Google Sign-In (Firebase Authentication) only. Demo credentials are provided in the demo account fields above. Any Google account can sign in and immediately access all functionality.
 
-How to test: On first launch the app asks for a native language and a study language before anything else, and cannot be used until both are answered. This is required because explanations are written in the native language, and a learner cannot study the language they already speak. Both can be changed later in Settings.
+How to test: On first launch the app asks three questions before anything else, and cannot be used until all three are answered: what language the app itself should be in, what language to study, and what language that deck should be explained in. The third is asked because explanations are stored on the card and are not regenerated, and it is prefilled from the first, so answering it is one tap. A learner cannot pick the language they already speak as the language they are studying. A short tour of the three main screens follows. The app's own language is changed later in Settings; a deck's explanation language is chosen when that language is added.
 
-The app has five tabs, icon-only, left to right: Review, Cards, Learn, Packs, Progress. Review, where the app opens, runs the spaced-repetition session over saved cards. Cards lists, edits, and exports saved cards. Learn, in the middle, is where you type any word or phrase and tap Learn to get an explanation, then save it as a flashcard. Packs holds pre-made decks that can be saved as cards or drilled directly. Progress shows which days were reviewed.
+The app has five tabs, icon-only, left to right: Review, Cards, Learn, Packs, Progress. Review, where the app opens, runs the spaced-repetition session over saved cards. Cards lists, edits, and exports saved cards. Learn, in the middle, is where you type any word or phrase and tap Learn to get an explanation, then save it as a flashcard. Packs holds pre-made decks that can be saved as cards or drilled directly. Progress shows which days were reviewed, with a row per language that opens that language's own charts.
 
 Settings: the gear icon at the top right of the Progress tab. There is no Settings tab — that gear is the only route in, and it is present whether or not anyone is signed in.
 
