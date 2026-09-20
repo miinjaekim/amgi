@@ -364,7 +364,7 @@ third and gated on the ladder being used, because a finding needed a concept to
 point at. With no ladder there is nothing to gate on, and nothing to point at
 either — so it returns as **a diagnostic you read**, not a router into practice.
 Routing is deferred until there are tools to route into; the first candidate is a
-`grammar` finding about a verb form opening that verb's paradigm, and it is
+`grammar` finding about a verb form opening that verb's conjugation table, and it is
 explicitly not in v1.
 
 ⚠️ **The "emergent ordering" half of the 2026-09-14 entry dies here.** Storing
@@ -386,15 +386,28 @@ case a passage ever wants to start from Learn again; the work is not scheduled.
 
 **Conjugation is the first tool, and the first-principles calls on it:**
 
-- **One rep is one cell** — verb + tense + person in, the form typed. ~5 seconds,
-  and `vision.md` already argues that the cost of an exercise sets the bar for
-  what is worth practising.
-- ⚠️ **The scheduled item is the paradigm (verb × tense), not the cell.** Per-cell
-  is ~48 items a verb and schedules `vous` apart from `tu` when nobody knows one
-  without the other. **And it is what keeps the other rep shapes cheap** — the
-  user wants fill-the-table and in-a-sentence offered later to see which people
-  prefer, and if the item is the paradigm those are *views of one item* rather
-  than a second content model. **The item is the paradigm; the rep is a view.**
+- **One question is one box.** A **table** is one verb in one tense
+  (`prendre · présent`); its six **boxes** are the forms, one per person. The app
+  names verb, tense and person; the learner types the form. ~5 seconds, and
+  `vision.md` already argues that the cost of an exercise sets the bar for what is
+  worth practising.
+- ⚠️ **The schedule belongs to the table, not the box.** Miss `nous` and the whole
+  `prendre · présent` table comes back sooner, and may then ask any of its six
+  boxes — with a per-box miss counter inside the item so it prefers the one that
+  was missed. The alternative is a schedule per box, where missing `nous` leaves
+  `je` untouched.
+  **The argument is not volume** (120 tables against 720 boxes; both are ordinary
+  deck sizes) but **what counts as one fact**: a regular verb's six forms follow
+  one rule, so six schedules are six copies of one fact, while an irregular verb's
+  boxes genuinely differ (`prenons` and `prennent` have different stems). Per-table
+  with the counter buys most of the precision for one scheduler, and the cost is
+  that SM-2 learns "your `prendre` présent is shaky", not "your *nous* is shaky".
+  A **v2 worth naming rather than building**: key it to the verb — regular as a
+  table, irregular per box — which is the most correct answer, two code paths, and
+  the house pattern of deciding by content shape (`isGridDeck`).
+  **It is also what keeps the other question shapes cheap** — fill-the-table and
+  fill-the-blank-in-a-sentence are then *views of one item* rather than a second
+  content model.
 - **The content is computed, not authored**, which is what makes conjugation the
   right first tool: a verb list plus rules plus an irregulars table, finite and
   checkable, with no 급수-sized authoring job behind it. ⚠️ `docs/packs/README.md`
@@ -412,13 +425,15 @@ case a passage ever wants to start from Learn again; the work is not scheduled.
 Korean native and an English native learning French need different things, and
 then declined to apply it here: _"for something as simple as verb conjugation, I
 don't think we need to take this as a hard rule at least to start out."_ That is
-the right cut and the reason generalises — **the pair matters exactly where the L1
-gap *is* the difficulty.** A closed paradigm is a form rule and `prenons` is hard
-for the same reason whoever you are. Articles for a Korean native, or English
-prepositions against Korean postpositions, are the opposite case: the pair decides
-what the tool does at all. So the principle governs *which tools* get built for
-whom, and it arrives with the tool that needs it rather than as an axis every tool
-must carry.
+the right cut, and the reason generalises: **the native language matters exactly
+where the distance between the two languages is itself the difficulty.** A
+conjugation table is a form committed to memory, and `prenons` is hard for the
+same reason whoever you are. Articles are the opposite case — Korean has none, so
+`a`/`the` for a Korean speaker means learning that a category exists, where a
+French speaker learning English already has the category and argues only about
+details. Same feature, genuinely different tool. So the principle governs *which
+tools get built for whom*, and it arrives with the tool that needs it rather than
+as an axis every tool must carry.
 
 **What this cancels outright:** the French A1 level ladder and its référentiel
 sourcing gate (the whole 2026-09-14 content plan below), the Practice · Concepts ·
@@ -749,7 +764,7 @@ them later. The French A1 ladder and its sourcing gate are cancelled outright.
 What still governs is everything else here: authored or computed rather than
 generated, graded locally, zero model calls in the daily loop, never pooled with
 vocabulary review, and why the four 2026-08 removal reasons do not transfer to a
-closed paradigm. That last argument is the one this entry is still worth reading
+closed conjugation table. That last argument is the one this entry is still worth reading
 for.
 
 **The question was whether grammar belongs in Amgi at all**, reopened after the

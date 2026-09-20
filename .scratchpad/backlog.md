@@ -172,7 +172,7 @@ extract shared machinery only when a third one wants it. Two is a coincidence.
          to be a syllabus. **The passage itself stays unstored** either way.
       4. **Routing, deferred and named so it is not invented early.** Once
          conjugation exists, a `grammar` finding about a verb form could open
-         that verb's paradigm. That is the first real instance of tools being
+         that verb's conjugation table. That is the first real instance of tools being
          grouped by something observed — but it needs both tools to exist and the
          classification to be reliable, so **not in v1**.
 
@@ -193,31 +193,47 @@ extract shared machinery only when a third one wants it. Two is a coincidence.
       Scoped 2026-09-21. Standalone by design: **no levels, no concepts, no
       shared grammar abstraction.** It is one tool for one thing.
 
-      **One rep is one cell.** The prompt names the verb, the tense/mood and the
-      person; the learner types the form. ~5 seconds, which is the point —
+      **Vocabulary first, so these notes are readable in six months.** A
+      **table** is one verb in one tense — `prendre · présent` — and its six
+      **boxes** are the forms, one per person (`je prends` … `ils prennent`).
+      **One question** is one box: the app names the verb, the tense and the
+      person, and the learner types the form. ~5 seconds, which is the point —
       `vision.md` already argues that the cost of an exercise sets the bar for
-      what is worth practising, and a contraction that was absurd at a
-      forty-second production turn is simply fine at five.
+      what is worth practising.
 
-      ⚠️ **But the *scheduled item* is the paradigm — verb × tense — not the
-      cell**, and this is the call the rest of the design hangs off.
-      Cell-level scheduling is ~48 items per verb (8 tenses × 6 persons), so
-      twenty verbs is ~960 items in a queue, and it schedules `vous` separately
-      from `tu` when nobody knows one without the other. Paradigm-level is twenty
-      verbs × six tenses = 120, which is a deck.
-      **And it is what makes the other rep shapes free later** — the user wants
-      fill-the-table and in-a-sentence offered as alternatives, to see which
-      people prefer. If the item is the paradigm, those are *views of the same
-      item*, not a second content model: **the item is the paradigm; the rep is a
-      view of it.** Build one view, leave the seam.
-      **The cost, stated:** SM-2 then learns "your `prendre` présent is weak",
-      not "your *nous* is weak". Recover most of it by tracking per-cell misses
-      *inside* the item and sampling the weakest cell at presentation — a counter,
-      not a second scheduler.
+      ⚠️ **But the thing that carries a schedule is the *table*, not the box**,
+      and this is the call the rest of the design hangs off. **Miss `nous` and the
+      whole `prendre · présent` table comes back sooner**, and when it does it may
+      ask any of its six boxes — with a per-box miss counter inside the item so it
+      *prefers* to ask the one that was missed. The alternative is a schedule per
+      box, where missing `nous` resets `nous` and leaves `je` untouched.
+
+      **The argument is not volume** — 120 tables (20 verbs × 6 tenses) against
+      720 boxes, and both are ordinary deck sizes. It is **what counts as one
+      fact.** For a regular verb all six forms follow one rule, so six schedules
+      are six copies of one fact, and `parlez` gets asked on its own timer though
+      knowing `parlons` already settled it. For an irregular verb the boxes are
+      genuinely separate facts — `prenons` and `prennent` have different stems.
+      So **per-table is right for regular verbs and per-box is right for irregular
+      ones**, and the recommendation is per-table with the miss counter because it
+      buys most of the precision for one scheduler.
+      **The cost, stated plainly:** SM-2 then learns "your `prendre` présent is
+      shaky", not "your *nous* is shaky".
+      **A v2 worth naming rather than building:** key it to the verb — regular
+      verbs scheduled as a table, irregular verbs per box. It is the most correct
+      answer and it is two code paths, and deciding by content shape rather than
+      by a flag is the house pattern (`isGridDeck` picks a pack's layout exactly
+      that way).
+
+      **Table-as-item is also what makes the other question shapes cheap later** —
+      the user wants fill-the-whole-table and fill-the-blank-in-a-sentence offered
+      as alternatives, to see which people prefer. If the item is the table, those
+      are *views of the same item* rather than a second content model. Build one
+      view, leave the seam.
 
       **The content is computed, not authored — and that is what makes
       conjugation unlike every content job this repo has done.** A conjugation
-      set is a verb list plus paradigm rules plus an irregulars table: finite,
+      set is a verb list plus conjugation rules plus an irregulars table: finite,
       closed, and checkable against a reference. There is no 급수-sized authoring
       job here, which is exactly why this is the right first tool.
       ⚠️ **`docs/packs/README.md` still governs: the model is not a source.**
@@ -251,12 +267,16 @@ extract shared machinery only when a third one wants it. Two is a coincidence.
       redesign. Korean conjugates heavily too, so the core Korean↔English pair is
       reachable from the same tool; English is the thin one.
 
-      **The native language does *not* enter this tool** — the user's call, and
-      worth recording as scoping rather than as an exception. A closed paradigm is
-      a form rule: what makes `prenons` hard is the same thing whoever you are.
-      Where the L1 *is* the difficulty — articles for a Korean native, English
-      prepositions against Korean postpositions — the pair decides what the tool
-      even does, and that is an argument for **those** tools, when they are built.
+      **The learner's native language does *not* enter this tool** — the user's
+      call, and worth recording as scoping rather than as an exception. A
+      conjugation table is a form you commit to memory, and `prenons` is hard for
+      the same reason whoever you are. The native language matters where the
+      **distance between the two languages is itself the difficulty**: Korean has
+      no articles, so `a`/`the` for a Korean speaker means learning that a
+      category exists, where a French speaker learning English already has the
+      category and only the details differ. Same feature, genuinely different
+      tool. That is an argument for **those** tools — articles, prepositions
+      against postpositions — when they are built, not an axis this one carries.
 
 ## Medium
 

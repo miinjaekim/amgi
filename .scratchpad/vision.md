@@ -239,11 +239,14 @@ first did not exist; extract shared machinery when a third one wants it.
 
 **The native language decides some tools and not others.** A Korean native and an
 English native learning French need different things — but that bites exactly
-where the L1 gap *is* the difficulty. A closed paradigm is a form rule, and
-`prenons` is hard for the same reason whoever you are; articles for a Korean
-native, or English prepositions against Korean postpositions, are the opposite
-case, where the pair decides what the tool does at all. So the pair arrives **with
-the tool that needs it**, not as an axis every tool has to carry.
+where **the distance between the two languages is itself the difficulty**. A
+conjugation table is a form you commit to memory, and `prenons` is hard for the
+same reason whoever you are. Articles are the opposite case: Korean has none, so
+`a`/`the` for a Korean speaker means learning that a category exists at all, while
+a French speaker learning English already has the category and only argues about
+details — same feature, genuinely different tool. The same goes for English
+prepositions against Korean postpositions. So the pair arrives **with the tool
+that needs it**, not as an axis every tool has to carry.
 
 ### A grammar point is not one kind of thing (2026-08-08, after the first trial)
 
