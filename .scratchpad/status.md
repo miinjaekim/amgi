@@ -399,12 +399,16 @@ case a passage ever wants to start from Learn again; the work is not scheduled.
   **The argument is not volume** (120 tables against 720 boxes; both are ordinary
   deck sizes) but **what counts as one fact**: a regular verb's six forms follow
   one rule, so six schedules are six copies of one fact, while an irregular verb's
-  boxes genuinely differ (`prenons` and `prennent` have different stems). Per-table
-  with the counter buys most of the precision for one scheduler, and the cost is
-  that SM-2 learns "your `prendre` présent is shaky", not "your *nous* is shaky".
-  A **v2 worth naming rather than building**: key it to the verb — regular as a
-  table, irregular per box — which is the most correct answer, two code paths, and
-  the house pattern of deciding by content shape (`isGridDeck`).
+  boxes genuinely differ (`prenons` and `prennent` have different stems).
+  **Per-table decided, on the user's call** — _"per table seems quite alright for
+  now"_ — with per-box closed as the option that splits a regular verb's single
+  fact six ways. The accepted cost is that SM-2 learns "your `prendre` présent is
+  shaky", not "your *nous* is shaky".
+  **Per-verb stays open as a later move, named by the user as one**: regular as a
+  table, irregular per box. Most correct, two code paths, and the house pattern of
+  deciding by content shape (`isGridDeck`). ⚠️ Build per-table so it stays a branch
+  rather than a migration — nothing holding a table's schedule should assume its
+  six boxes share one.
   **It is also what keeps the other question shapes cheap** — fill-the-table and
   fill-the-blank-in-a-sentence are then *views of one item* rather than a second
   content model.

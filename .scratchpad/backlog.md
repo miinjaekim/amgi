@@ -215,15 +215,19 @@ extract shared machinery only when a third one wants it. Two is a coincidence.
       knowing `parlons` already settled it. For an irregular verb the boxes are
       genuinely separate facts — `prenons` and `prennent` have different stems.
       So **per-table is right for regular verbs and per-box is right for irregular
-      ones**, and the recommendation is per-table with the miss counter because it
-      buys most of the precision for one scheduler.
-      **The cost, stated plainly:** SM-2 then learns "your `prendre` présent is
-      shaky", not "your *nous* is shaky".
-      **A v2 worth naming rather than building:** key it to the verb — regular
-      verbs scheduled as a table, irregular verbs per box. It is the most correct
-      answer and it is two code paths, and deciding by content shape rather than
-      by a flag is the house pattern (`isGridDeck` picks a pack's layout exactly
-      that way).
+      ones**, and per-table buys most of the precision for one scheduler.
+      **Decided 2026-09-21, on the user's call: per-table, with the miss
+      counter.** Per-box is closed — it is the one that splits a regular verb's
+      single fact six ways.
+      **The accepted cost:** SM-2 learns "your `prendre` présent is shaky", not
+      "your *nous* is shaky".
+      **Per-verb stays open as a later move, and the user named it as one** —
+      regular verbs scheduled as a table, irregular verbs per box. It is the most
+      correct answer and it is two code paths, and deciding by content shape
+      rather than by a flag is the house pattern (`isGridDeck` picks a pack's
+      layout exactly that way). ⚠️ **Build per-table so this stays reachable**:
+      whatever holds a table's schedule should not assume six boxes share it, or
+      the later split becomes a migration rather than a branch.
 
       **Table-as-item is also what makes the other question shapes cheap later** —
       the user wants fill-the-whole-table and fill-the-blank-in-a-sentence offered
