@@ -58,18 +58,18 @@ and `npm run lint` 0 errors / 21 warnings, both measured._
   speed**, a pitch-corrected 0.7× stretch rather than a slow synthesis: if it
   reads as an artifact the fallback is server-side rates behind the same three
   chips, and that is written down in its Decisions entry, not waiting on a list.
-- **Mobile merges are unblocked.** The freeze held only until submission; the
-  next mobile change waits for build 16.
-- ⚠️ **Languages became per-deck on 2026-09-12, on a branch
-  (`feat/per-language-native`) and not yet merged or released.** Each study
-  language now carries the language it is explained in, and the app's own
-  language is a separate setting — see the Decisions entry below. Two things to
-  know before it ships. It **migrates every existing account on first load**,
-  seeding the language list from the collections that hold cards, and nobody has
-  watched that run against a real multi-deck account yet. And it reaches the two
-  platforms differently, as usual: web on merge, mobile only on build 16, which
-  is why `nativeLanguage` is still written alongside `interfaceLanguage` —
-  build 15 is in testers' hands and reads the old field.
+- **Mobile merges are unblocked.** The freeze holds only until submission; the
+  next mobile change waits for build 17.
+- **Languages are per-deck** (2026-09-12, merged as PR #127, on mobile in build
+  16). Each study language carries the language it is explained in, and the app's
+  own language is a separate setting — see the Decisions entry below.
+  ⚠️ **It migrates every existing account on first load**, seeding the language
+  list from the collections that hold cards, and **nobody has watched that run
+  against a real multi-deck account** — not on web, where it has been live since
+  the merge, and not on a binary. `nativeLanguage` is still written alongside
+  `interfaceLanguage` because build 15 is in testers' hands and reads the old
+  field; that stays until build 15 is out of circulation, which external approval
+  of 1.7.0 does not by itself accomplish.
 - **The progress dashboard is on both platforms** (2026-08-20) but only in users'
   hands on web, since mobile ships by build. Daily rollups are written on every
   rating and every card save. The Firestore security rule for
@@ -86,7 +86,8 @@ and `npm run lint` 0 errors / 21 warnings, both measured._
   no OTA, nothing to ship. **Web** has all five changes as soon as it deploys.
   **Mobile's own screen** — the labelled calendar, the corrected ramp, the cards
   learned tile, retention off the language row, the share preview screen —
-  waits for build 16 like everything else. The reasoning is in the Decisions entry of the
+  is in build 16, so it reaches a tester when that build does and not before.
+  The reasoning is in the Decisions entry of the
   same date; the one thing that is *not* recorded anywhere else is that none of
   it has been looked at: the colours were computed and validated, the layouts
   were not.
@@ -296,7 +297,8 @@ production `EXPO_PUBLIC_API_BASE_URL`. (The 1.3.0 copy button left this list
 with the writing rewrite it belonged to.) ⚠️ **The share preview needs that same
 host**: the card is the deployed route's own render, so on a build pointed at
 nothing the preview draws a blank placeholder — and *sharing* needs it too, since
-the download is what feeds the OS sheet. Worth one look on build 16.
+the download is what feeds the OS sheet. Build 16 is the one to look at it on:
+sharing is the path it rewrote, and it has never once run end to end.
 1.4.0's What to Test asks for these by
 name and puts **offline review first**; **neither 1.5.0's nor 1.6.0's does** —
 both were cut to what's new, so no release now asks for this list. **This paragraph is where the
