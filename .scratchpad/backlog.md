@@ -18,11 +18,187 @@ queued, released or unverified is under Builds in [status.md](status.md).
 
 ## High
 
-_One of the three Progress items scoped 2026-09-15 is left. The other two — the
-per-language detail view and both charts — are built on
+_All of High is **Munli**, the grammar mode, as of 2026-09-21. It reverses the
+"no mode" half of the 2026-09-14 decision — read that Decisions entry in
+[status.md](status.md) **and** the 2026-09-21 entry that reverses it before
+starting, because everything the older one argues about grammar *content* still
+stands and only its placement changed._
+
+**The three items are ordered, and the order is the risk control.** The shell
+learns about modes → Munli's own shape is decided → one concept is authored end
+to end. Writing-as-diagnostic stays fourth and stays in Medium; it is still
+gated on the first three being used.
+
+- [ ] **Mode switching — the shell learns there is more than one mode.**
+      Scoped 2026-09-21. This is the whole first build, and **no grammar content
+      is part of it**: Munli's tab set may land as empty screens. What this item
+      delivers is that a second mode exists, is reachable, and survives a cold
+      open.
+
+      **The design call that makes it cheap: a mode is a *location*, not a
+      setting.** Web has no other option — a mode not in the URL is not linkable
+      — and taking the same shape on native means "which mode am I in" is always
+      answered by the current route, never by state two surfaces could disagree
+      about. Native: a second Expo Router group (`app/(munli)/_layout.tsx` beside
+      `app/(tabs)/`), its own `Tabs`, its own
+      `unstable_settings.initialRouteName`. Web: a `/munli` route prefix with its
+      own nav item list, since `nav-items.tsx` already centralises that list for
+      both the sidebar and the mobile header.
+      ⚠️ **This is what spares web the flash.** The pre-paint inline script in
+      `apps/web/src/app/layout.tsx` exists because theme and sidebar-collapse are
+      stored client-side and would otherwise paint wrong for a frame. A *stored*
+      mode would join them and paint the **wrong navigation**, which is far more
+      visible than a wrong colour. A route prefix is known to the server, so
+      there is nothing to pre-paint.
+
+      **Storage then has exactly one job: which mode a cold open lands in.** One
+      key per platform (`amgi_mode` in AsyncStorage, `amgi-mode` in
+      localStorage), written on switch, read only at the root.
+      ⚠️ **On web that means `/` and only `/`** — every other path already says
+      which mode it is. Redirect `/` to the stored mode's home; never rewrite a
+      path the user typed or followed.
+
+      **The gesture.** `FloatingTabBar.tsx` maps `state.routes` to
+      `TouchableOpacity`, which takes `onLongPress` directly — so the mobile half
+      is one prop on the last tab plus the sheet it opens. Tap still goes to
+      Progress; only the hold switches.
+      ⚠️ **Haptics would be the natural confirmation, and `expo-haptics` is not a
+      dependency.** It is bundled in Expo Go, so it would work while developing
+      and then need the next production build to reach anyone — no OTA. Fine to
+      add, **but the affordance must not depend on it**: the sheet appearing is
+      the confirmation; the buzz is a bonus.
+
+      **A hold is invisible, so it cannot be the only door** — the user's own
+      note when choosing it. Two more, neither of them a coach mark:
+      1. **A row in the account menu, on both platforms.** The sidebar item in
+         Medium is already rebuilding that popover as a list of rows; a
+         *Switch mode ›* row costs almost nothing if the two land together, and
+         it is the door found by looking rather than by knowing.
+      2. **The destination announces itself.** Munli's tab set is visibly not
+         Amgi's, so nobody is ever unsure *which* mode they are in — the
+         discoverability problem is only ever entering, never being lost.
+      ⚠️ **Resist a first-run tour.** One feature does not earn a coach-mark
+      system, and first run is already spoken for by language setup.
+
+      **What is shared and what is not — settling this is the item's real
+      content.** Shared: the account, the study language, the interface language,
+      the theme, the streak. Not shared: the review queue, the collections, the
+      progress rollups.
+      ⚠️ **"Grammar review is never pooled with vocabulary review" governs the
+      queue, not the chrome.** Constraint #1 of 2026-09-14 is about
+      `collections.ts` refusing an everything-collection; it says nothing about
+      identity. Two streaks would be two habits to break, which is the opposite
+      of what a streak is for.
+      **Open, and worth deciding deliberately rather than by default: does Munli
+      practice feed the Amgi streak?** Recommended yes — one app, one habit — but
+      it means a day of clozes keeps a streak alive with nothing reviewed, and
+      whether that is a feature or a loophole is a judgement, not a derivation.
+
+      **Munli appears unconditionally**, even for a study language with no
+      grammar content — the rule the Packs tab already set ("a tab that appears
+      and disappears would reflow the bar on every study-language switch"). An
+      empty state is cheaper than a switcher whose contents move under you.
+
+      ⚠️ **Naming.** Munli is a **mode inside Amgi**, not a second product: the
+      store listing, the bundle id and the consent screen stay Amgi (see the
+      consent-screen item under Housekeeping, which is about exactly that name).
+      **The Korean rendering is open** — whether a Korean interface says Munli,
+      문리, or something else is a copy decision, and Korean copy is held to
+      sounding native rather than transliterated.
+
+      **Scope:** one route group per platform, one storage key per platform, one
+      `onLongPress`, one switcher sheet, one account-menu row, and the strings.
+      No grammar.
+
+- [ ] **What Munli actually is — decided before anything is authored.** Scoped
+      2026-09-21, from a clean sheet on the user's ask.
+      ⚠️ **Clean sheet means the *surface* is redrawn, not that the arguments are
+      discarded.** `vision.md`'s grammar sections and `docs/grammar-research.md`
+      are the inheritance and are not up for re-litigation: grammar is a function,
+      not a lookup row; practice runs controlled → meaningful → free; cloze is
+      cued recall and is **not** multiple choice; no multiple choice, ever; the
+      way out of an empty box is a hint that costs; name a form rule, hide a
+      choice pattern. What a mode changes is that none of this has to fit inside
+      a pack browser any more.
+
+      **The unit is a *concept*, and it owns three things** — which is the whole
+      difference from a pack entry. An **explanation** (the function, in prose:
+      what a grammar learner actually came for, and a pack entry has nowhere to
+      put it). A set of **authored items** (clozes, single direction, graded
+      locally by `typedAnswer.ts`, zero model calls). And a **rung** — cloze or
+      free production — which SM-2 already derives from consecutive successes and
+      demotes on a lapse for free, so it is computed, never stored.
+
+      **A starting sketch, not a decision — four tabs: Practice · Concepts · Ask
+      · Progress.**
+      - **Practice first**, for the reason Review is first in Amgi: the first tab
+        is the app's answer to "what is this for" on every cold open.
+      - **Concepts** is the ladder — level → concept, enrollable, the thing you
+        browse. The 급수 ladder is the shape that transfers.
+      - **Ask** is the genuinely open one. A grammar question is the most natural
+        thing to want in a grammar mode, and nothing answers it today.
+        ⚠️ **If it ships, it calls `/api/explain`** — a new surface reuses the
+        existing route rather than growing a parallel prompt. That route is
+        word-shaped, so the honest options are "extend it" or "not yet", never "a
+        second prompt doing the same job". **Not yet is a fine v1** and keeps the
+        mode to three tabs.
+      - **Progress** is per-concept mastery. Derived, not stored.
+
+      **Open, carried forward unresolved from the item it replaces:** whether a
+      Munli item is literally a `Flashcard` with only `frontToBack` populated in
+      its own collection, or a second source `buildReviewCollections` has to
+      learn about. Reuse is still the recommendation and still unproven — SM-2,
+      the offline queue and the rollups all come free. A separate mode weakens
+      the *presentational* reason to reuse and leaves the mechanical one
+      untouched.
+
+      ⚠️ **Do not oversell it, unchanged from 2026-09-14.** Authored cloze is
+      Paulston's controlled rung, and controlled practice alone does not build
+      form–meaning mapping; Bunpro is the shipped cautionary case. A mode does
+      not fix that — it is the same ceiling with better navigation.
+
+- [ ] **French A1 — one concept, end to end, inside Munli.** Scoped 2026-09-14,
+      **folded into Munli 2026-09-21** on the user's call; it was Medium, and its
+      structure survives the move intact. Read the 2026-09-14 Decisions entry in
+      [status.md](status.md) for the scope line and the three constraints.
+      **What changes:** a level is no longer a `VocabPack` and a concept is no
+      longer a subpack — they are Munli's own nouns, browsed on Concepts.
+      **What does not:** one level per rung, one concept per grammar point, each
+      item an authored cloze, graded locally, zero model calls, never pooled with
+      vocabulary review.
+      ⚠️ **The nesting argument was the old shape's cheapness, not a truth about
+      grammar.** "Packs are exactly one subpack deep and level → concept → item
+      is exactly two" was why it fit inside the pack browser. In a mode nothing
+      is constrained to two levels, so **don't grow a third just because it is
+      now possible**.
+      ⚠️ **Ship one concept before authoring a level.** ~30–60 concepts × ~6 items
+      is 200–350 sourced entries — the largest content job this repo has done.
+      One concept proves the shape for ~6.
+      ⚠️ **Sourcing is still the gate, and CEFR does not publish a grammar
+      syllabus** — it is a can-do scale. For French the candidate is the Council
+      of Europe / Didier *niveau A1 pour le français* référentiel. **Verify it is
+      citable before relying on it**; `docs/packs/README.md` governs this and its
+      rule is that the model is not a source. A référentiel that turns out not to
+      be citable changes the ladder, not just a footnote.
+      **The user is explicitly not its user**, which is why it earns its slot by
+      being cheap to be wrong about rather than by being wanted.
+
+_**Other modes are a sidenote, not a plan.** Speaking is the obvious third —
+Hwasul was the separate-app version of it — and the only thing that follows for
+the work above is: **don't hard-code two.** The switcher is a list of modes, the
+route group is one of several, and the storage key holds a mode id rather than a
+boolean. No speaking work is scoped, and adding modes is not a goal; the bar for
+a third is the bar that got Munli its second. See the modes note in
+[vision.md](vision.md)._
+
+## Medium
+
+_One of the three Progress items scoped 2026-09-15 is left. The other two —
+the per-language detail view and both charts — are built on
 `feat/progress-language-detail`, which is what unblocks this one. The three
 calls the user made on them, and the boundary finding that came out of building
-them, are in the Decisions entry of that date in [status.md](status.md)._
+them, are in the Decisions entry of that date in [status.md](status.md).
+Moved High → Medium 2026-09-21, on the user's call, when Munli took High._
 
 - [ ] **Share a chart as an asset.** The chart it depends on now exists:
       `buildCardsAddedSeries` and `buildLearnedSeries` are in core, per-language,
@@ -68,49 +244,22 @@ them, are in the Decisions entry of that date in [status.md](status.md)._
       be withheld over a window reaching past that date exactly as `cardsMatured`
       already is.
 
-## Medium
-
-- [ ] **French A1 grammar — one concept, end to end.** Scoped 2026-09-14. Read the
-      Decisions entry in [status.md](status.md) first: it carries the scope line,
-      the three constraints the user set, and everything this rules out.
-      **Not High, deliberately** — nobody is blocked and the user is explicitly not
-      its user, so it earns a slot by being cheap to be wrong about.
-      **The structure, which is the whole insight: a grammar point is a *subpack*,
-      and its practice items are the *entries*.** One pack per level
-      (`French Grammar A1`), one subpack per concept (`le présent des verbes en
-      -er`, `la négation ne…pas`), and each entry is one authored cloze. That maps
-      onto shipped machinery end to end — enrol, collection, review picker,
-      progress — with **no nesting change**, since packs are exactly one subpack
-      deep and level → concept → item is exactly two. Its own row in the review
-      picker; zero model calls, graded locally by `typedAnswer.ts`.
-      ⚠️ **Two distinctions the Decisions entry turns on — don't lose them by
-      paraphrase**: why this doesn't contradict "a grammar point is not a card",
-      and why `ReviewCollection.kind` does not come back (a grammar pack carries a
-      pack-shaped id, so `collectionKey = id ?? ''` still resolves).
-      ⚠️ **Ship one concept before authoring a level.** ~30–60 concepts × ~6 items
-      is 200–350 sourced entries — the size of the 급수 pack, i.e. the largest
-      content job this repo has done. One subpack proves the shape for ~20.
-      ⚠️ **Sourcing is the gate, and CEFR does not publish a grammar syllabus** —
-      it is a can-do scale. What exists is per-language: for French, the Council of
-      Europe / Didier *niveau A1 pour le français* référentiel. **Verify that
-      before relying on it** — `docs/packs/README.md` governs this and its rule is
-      that the model is not a source. A référentiel that turns out not to be
-      citable changes the level ladder, not just a footnote.
-      **Open, not decided:** whether a grammar item is literally a `Flashcard` in
-      its own collection with only `frontToBack` populated (cheapest — reuses SM-2,
-      the queue, offline review and the rollups untouched) or a second source
-      `buildReviewCollections` has to learn about. The first is recommended and
-      unproven.
-
-- [ ] **Writing returns as the diagnostic — third, after the ladder exists.**
+- [ ] **Writing returns as the diagnostic — last, after the ladder exists.**
       Scoped 2026-09-14; the reasoning, the revision it makes to an earlier call,
       and what stays dead are in the Decisions entry in [status.md](status.md).
-      ⚠️ **Do not start this before the item above.** A finding needs an authored
-      concept to point at; without the ladder it has to invent one, which is
-      exactly what failed. The ordering is also the **gate**: writing comes back
-      only if the ladder gets used.
+      ⚠️ **Do not start this before the three Munli items in High.** A finding
+      needs an authored concept to point at; without the ladder it has to invent
+      one, which is exactly what failed. The ordering is also the **gate**:
+      writing comes back only if the ladder gets used.
+      ⚠️ **Its home reopened on 2026-09-21 and is not decided here.** Everything
+      below places the input on Amgi's Learn tab, which was right when grammar was
+      a pack in the same mode. With Munli it could equally be Munli's own surface
+      — the argument for Learn is that writing happens where you already are and
+      a diagnostic nobody visits diagnoses nothing; the argument against is that
+      its *output* is entirely Munli's. **Decide it with Munli's shape**, not by
+      inheriting the paragraphs below.
       **The job is routing, not practice** — a finding classifies into the closed
-      set of authored concepts and enrols that subpack. Most of it is already built
+      set of authored concepts and enrols that concept. Most of it is already built
       and deployed (`/api/writing`, `parseWritingReview`, the four `FindingKind`s,
       `WritingCardCandidate.gap`, `buildWritingCardDraft`); what is new is the
       classifier and the counts.
@@ -247,6 +396,11 @@ them, are in the Decisions entry of that date in [status.md](status.md)._
       Convention to follow, from the user 2026-09-09: an image of Claude's
       account menu — rows with leading icons, thin separators grouping them,
       the destructive action last and alone.
+      **It gained a second reason on 2026-09-21.** The mode switcher in High
+      wants a *Switch mode ›* row as its discoverable door, and a row menu is
+      where that row goes — a hold on a tab is not something a user finds by
+      looking. Neither item blocks the other, but landing them together is one
+      menu built once instead of a menu and then a menu edit.
 
 ## Bigger bets
 

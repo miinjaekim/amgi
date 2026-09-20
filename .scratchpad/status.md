@@ -329,6 +329,75 @@ once, so a path that worked on build 14 is not evidence about build 15.
 Closed calls, kept with their reasoning — a decision whose reasoning is lost gets
 reopened by the next person to notice the symptom. Newest first.
 
+### Grammar becomes a mode after all — Munli, and the shell that hosts it (2026-09-21)
+
+**The user's call, and it reverses one half of the entry below from 2026-09-14
+rather than amending it.** That entry answered "a pack inside Amgi, or its own
+app like Hwasul" with **a pack, no mode, no second app**. Grammar now becomes
+**Munli, a separate mode inside the same binary**, reached by holding the last
+tab the way Instagram switches accounts. ⚠️ **Only the placement reverses.**
+Everything that entry argues about grammar *content* — authored not generated,
+graded locally, levels as the spine, never pooled with vocabulary review, one
+concept at a time — survives intact and still governs.
+
+**Why this is not simply the option that was rejected.** The 2026-09-14 entry
+weighed two options and a mode was not one of them; it is a third, and it is
+between them on every axis the entry used. A second app was refused for its
+*costs* — its own auth, habit, retention, store listing and Beta App Review
+cycle, all of which the no-OTA model makes expensive. A mode pays none of those:
+one binary, one account, one habit, one review cycle. The pack was chosen for
+its *cheapness*, and its cost was the thing it did to grammar — a grammar point
+became a subpack row in a vocabulary browser, and a concept's explanation had
+nowhere to live. So the argument that sent Hwasul away ("**does it need new
+nouns**") was the right test applied to a question with a missing answer: new
+nouns do not imply a new binary, they imply a navigation context.
+
+**Three calls the user made, taken as given:**
+
+1. **Own tab set, shared shell.** Munli has its own surfaces, queue, collections
+   and progress; the account, study language, interface language, theme and
+   streak stay the shell's. A mode that wanted its own account would be an app.
+2. **Hold the last tab.** No new slot in an icon-only bar, five tabs stay five,
+   tap still opens Progress. ⚠️ **With the user's own caveat: a hold is
+   invisible, so more doors are wanted later** — the account menu row is the
+   first, and the backlog item rebuilding that popover is where it goes.
+3. **French A1 folds into Munli** rather than shipping as a pack beside it. The
+   structure is unchanged; only its nouns move.
+
+**One design call made here, because it decides the build rather than the
+product: a mode is a *location*, not a setting.** Native takes a second Expo
+Router group, web a `/munli` route prefix. The alternative — a stored mode the
+shell reads — fails on web specifically: the pre-paint script in
+`apps/web/src/app/layout.tsx` exists because theme and sidebar-collapse are
+client-side state that would otherwise paint wrong for a frame, and a stored mode
+would put the **wrong navigation** in that same frame. Routes are known to the
+server, so there is nothing to pre-paint and the mode is linkable for free.
+Storage keeps exactly one job: which mode a cold open lands in.
+
+**"Never pooled" governs the queue, not the chrome.** Constraint #1 below is
+about `collections.ts` refusing an everything-collection. It is not an argument
+for two streaks, two accounts or two study languages — those are the shell, and
+splitting them would give the user two habits to break instead of one. Left
+open: whether Munli practice feeds the Amgi streak (recommended yes).
+
+**Other modes are noted, not planned.** Speaking is the obvious third and Hwasul
+was its separate-app form; nothing about it is scoped. The only consequence for
+this work is **don't hard-code two** — a list of modes, a mode id in storage, one
+route group among several. The bar for a third is the bar that got Munli the
+second, and modes are not a growth strategy: each is a tab set to maintain and a
+place to be lost in.
+
+⚠️ **What this does not change, and it is the load-bearing half.** The four
+reasons grammar was removed in 2026-08 (unfocused, poor practice, unused, heavy
+and slow) are answered by the *content* design, not by the mode — authored items,
+local grading, zero model calls in the daily loop. A mode makes grammar
+navigable; it does not make it good. Generated exercises and model-graded free
+production stay dead. And the honest caveat below stands word for word:
+authored cloze is Paulston's controlled rung, Bunpro is the shipped cautionary
+case, and **the user is still not this feature's user** — which is why the
+sequencing is still the risk control, now with the switcher first and writing
+last.
+
 ### The streak chip and the Progress tab kept two copies of one number (2026-09-15)
 
 **Found by the user, from a three-review gap**: the chip on Learn and Review
@@ -572,6 +641,11 @@ all unseen. No new native module — `react-native-svg` was already counted for
 the weekly chart — so the build story is unchanged.
 
 ### Grammar returns as content, not as a mode — and not as its own app (2026-09-14)
+
+⚠️ **Half-reversed 2026-09-21 — read the Munli entry above first.** Grammar *is*
+a mode now. Everything here about grammar **content** still governs; only "no
+mode" fell, and the entry above says why a mode was a third option this one never
+weighed rather than the second option it refused.
 
 **The question was whether grammar belongs in Amgi at all**, reopened after the
 2026-08-18 removal and with a separate grammar app on the table the way Hwasul

@@ -41,6 +41,13 @@ stored-preference reason.
   deliberate: it sits next to Cards, and calling both a "deck" invites an
   Anki-style comparison neither one is. See the reversed `/decks` decision in
   [status.md](status.md).
+- **The nav is about to become per-mode** (planned 2026-09-21, nothing built).
+  The five surfaces above are *Amgi's* nav; Munli, the grammar mode, gets its
+  own set, reached by holding the last tab — Progress on native, the sidebar's
+  bottom button on web. **A mode is a route, not a state**: `(munli)` beside
+  `(tabs)` on native, a `/munli` prefix on web, which is what keeps the
+  pre-paint script from having to learn about it. Scoped in
+  [backlog.md](backlog.md); the reasoning is in [vision.md](vision.md).
 - **Settings is not a tab** (2026-09-04). On native it is a pushed screen behind
   the gear on the Progress header; on web it is a popover. Nothing deep-links to
   it on either.

@@ -97,6 +97,37 @@ reading/listening gap legible: those need *long input with comprehension
 checking*, which shares almost nothing with what's built, so they are their own
 bet and shouldn't be scoped into the output work.
 
+## Modes
+
+_Added 2026-09-21, set by the user. The build is in [backlog.md](backlog.md); the
+reversal it makes to a decision seven days old is in Decisions in
+[status.md](status.md)._
+
+Amgi becomes a **shell that hosts modes**. Amgi is the vocabulary mode, **Munli**
+is the grammar mode, and speaking is a candidate third and nothing more than that
+today. Switching is Instagram's account switcher — hold the last tab, pick from a
+list.
+
+**A mode is the middle rung of a ladder that previously had two**, which is the
+whole reason it is worth naming. The 2026-09-14 question was "a pack inside Amgi,
+or a second app", and both answers are bad in opposite directions: a pack makes
+grammar a row in a vocabulary browser, and a second app buys its own auth, habit,
+retention, store listing and Beta App Review cycle — all expensive under the
+no-OTA model. A mode is one binary, one account, one habit, one review cycle, and
+a navigation context of its own. **The test that sent Hwasul to its own app —
+does it need new nouns — is still the right test.** What was wrong was the
+assumption that new nouns imply a new binary.
+
+**What a mode may and may not own.** It owns its surfaces, its queue, its
+collections and its progress. It does **not** own the account, the study
+language, the interface language, the theme or the streak — those are the shell.
+A mode that wanted its own account would be an app.
+
+⚠️ **Modes are not free, and they are not a growth strategy.** Each one is a tab
+set someone maintains and a place a user can be lost in. The bar for a third is
+the bar that got Munli the second: a skill with nouns of its own that the
+existing surfaces would distort.
+
 ## Grammar: a lookup table and a function are different things
 
 _Added 2026-08-03. The design calls that follow from this are in Decisions in
