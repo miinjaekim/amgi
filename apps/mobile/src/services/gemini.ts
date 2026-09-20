@@ -5,6 +5,7 @@ import {
   getTermExamples as _examples,
   getWordOfTheDay as _wotd,
   getPronunciationUrl as _pronounce,
+  getWritingReview as _writingReview,
 } from '@amgi/core';
 import type { StudyLanguage } from '@amgi/core';
 
@@ -52,6 +53,16 @@ export const getPronunciationUrl = (
 
 // Streaming variants — expo/fetch exposes a WHATWG ReadableStream body so the
 // Learn screen can reveal depth/examples as they arrive, like web does.
+/**
+ * Writing review. Restored with the feature 2026-09-21 — the core call and the
+ * deployed route never changed, only this binding was deleted.
+ */
+export const getWritingReview = (
+  text: string,
+  nativeLanguage?: string,
+  studyLanguage: StudyLanguage = 'Korean',
+) => _writingReview(text, nativeLanguage, studyLanguage, BASE_URL);
+
 const openStream = (path: string, body: Record<string, unknown>) =>
   expoFetch(`${BASE_URL}${path}`, {
     method: 'POST',

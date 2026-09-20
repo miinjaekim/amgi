@@ -302,6 +302,34 @@ export function parseWritingReview(raw: unknown): WritingReview | null {
  * the Learn-from-a-pack stamping question; this deliberately doesn't pre-empt
  * that decision by adding a second provenance field first.)
  */
+/**
+ * Whether a finding's card offer is worth showing.
+ *
+ * ⚠️ **Re-derived 2026-09-21, because the rule it replaces depended on
+ * patterns.** The 2026-08-08 decision had a card give way to a *pattern* offer
+ * unless it was a gap card, and the reason was measured rather than guessed: on
+ * a grammar finding the model often emits a card whose front is a
+ * *description* — `accord du participe passé avec être` is a heading, not
+ * something anyone wants in a deck. Pattern offers no longer exist, so there is
+ * nothing for such a card to give way to, and restoring the naive
+ * `!!finding.card` would put those headings straight into the deck.
+ *
+ * So the rule keeps what was measured and drops what depended on patterns: a
+ * **grammar** finding offers its card only when the card is a `gap` — a word
+ * the learner demonstrably reached for and did not have, which is the
+ * highest-confidence signal a passage produces. Every other kind of finding is
+ * about a word or a phrasing to begin with, and offers its card as it always
+ * did.
+ *
+ * In core rather than in each panel because both platforms need the identical
+ * answer, and a rule written twice is a rule that drifts — the same reason
+ * `reviewQueue`, `drill` and `reminders` live here.
+ */
+export function offersCard(finding: WritingFinding): boolean {
+  if (!finding.card) return false;
+  return finding.kind !== 'grammar' || finding.card.gap === true;
+}
+
 export function buildWritingCardDraft(
   candidate: WritingCardCandidate,
   uid: string,

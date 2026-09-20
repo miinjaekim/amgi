@@ -16,13 +16,32 @@ export interface NavItem {
  * render one mode's chrome around another mode's page. Every nav surface —
  * `SideNav`, `BottomNav` — goes through here.
  *
- * ⚠️ **Munli's list is empty and that is not a stub.** Its nav grows a row when
- * a tool earns one; the mode ships before its first tool by design, and a
- * navigation invented for surfaces that do not exist is furniture. Callers
- * render an empty list as an empty state, not as a missing one.
+ * ⚠️ **Munli's list grows a row per tool, and no faster.** The mode shipped
+ * before its first tool by design, and a navigation invented for surfaces that
+ * do not exist is furniture. Callers still render an empty list as an empty
+ * state rather than a missing one, because that is true again the moment a mode
+ * is added.
  */
 export function getNavItemsForMode(interfaceLanguage: string | null | undefined, pathname: string): NavItem[] {
-  return modeFromPath(pathname) === 'munli' ? [] : getNavItems(interfaceLanguage, pathname);
+  return modeFromPath(pathname) === 'munli'
+    ? getMunliNavItems(interfaceLanguage, pathname)
+    : getNavItems(interfaceLanguage, pathname);
+}
+
+/** Munli's tools. One row each, in the order they were built. */
+export function getMunliNavItems(interfaceLanguage: string | null | undefined, pathname: string): NavItem[] {
+  return [
+    {
+      label: t(interfaceLanguage, 'munliToolWriting'),
+      href: '/munli/writing',
+      active: pathname.startsWith('/munli/writing'),
+      icon: (active: boolean, className = 'w-6 h-6') => (
+        <svg className={className} fill="none" stroke="currentColor" strokeWidth={active ? 2.5 : 1.8} viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zM19.5 15v3.75A2.25 2.25 0 0117.25 21H5.25A2.25 2.25 0 013 18.75V6.75A2.25 2.25 0 015.25 4.5H9" />
+        </svg>
+      ),
+    },
+  ];
 }
 
 /** Nav labels are chrome, so they take the interface language, never a deck's. */
