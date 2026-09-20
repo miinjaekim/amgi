@@ -97,6 +97,37 @@ reading/listening gap legible: those need *long input with comprehension
 checking*, which shares almost nothing with what's built, so they are their own
 bet and shouldn't be scoped into the output work.
 
+## Modes
+
+_Added 2026-09-21, set by the user. The build is in [backlog.md](backlog.md); the
+reversal it makes to a decision seven days old is in Decisions in
+[status.md](status.md)._
+
+Amgi becomes a **shell that hosts modes**. Amgi is the vocabulary mode, **Munli**
+is the grammar mode, and speaking is a candidate third and nothing more than that
+today. Switching is Instagram's account switcher — hold the last tab, pick from a
+list.
+
+**A mode is the middle rung of a ladder that previously had two**, which is the
+whole reason it is worth naming. The 2026-09-14 question was "a pack inside Amgi,
+or a second app", and both answers are bad in opposite directions: a pack makes
+grammar a row in a vocabulary browser, and a second app buys its own auth, habit,
+retention, store listing and Beta App Review cycle — all expensive under the
+no-OTA model. A mode is one binary, one account, one habit, one review cycle, and
+a navigation context of its own. **The test that sent Hwasul to its own app —
+does it need new nouns — is still the right test.** What was wrong was the
+assumption that new nouns imply a new binary.
+
+**What a mode may and may not own.** It owns its surfaces, its queue, its
+collections and its progress. It does **not** own the account, the study
+language, the interface language, the theme or the streak — those are the shell.
+A mode that wanted its own account would be an app.
+
+⚠️ **Modes are not free, and they are not a growth strategy.** Each one is a tab
+set someone maintains and a place a user can be lost in. The bar for a third is
+the bar that got Munli the second: a skill with nouns of its own that the
+existing surfaces would distort.
+
 ## Grammar: a lookup table and a function are different things
 
 _Added 2026-08-03. The design calls that follow from this are in Decisions in
@@ -171,6 +202,7 @@ app still does not decide what you are ready for.** A levelled pack is content
 you pick from the outside, exactly as a 급수 pack is; there is still no placement
 test, no level setting, and no adaptivity reading your level off anything.
 
+
 ⚠️ **CEFR is a can-do scale and does not publish a grammar syllabus.** The ladder
 has to come from a per-language reference level description, which exists for
 some languages and not others — so "levels" is the right idea while "CEFR" is the
@@ -180,6 +212,41 @@ ladder is TOPIK, which is the precedent 급수 already set here.
 This fills the ladder's **sentence × production** cell properly — writing review
 diagnoses at sentence level, and this is the drilling that follows a diagnosis —
 and opens **sentence × comprehension**, which is still empty.
+
+**Reversed again 2026-09-21, and this one is the plan of record.** _Set by the
+user; the full call is in Decisions in [status.md](status.md)._ The levelled
+syllabus above lasted a week. There is **no ladder**: grammar is built as
+individual tools for individual things — verb conjugation, prepositions and
+postpositions, pronouns, articles — **one at a time**, each standing on its own,
+and how they group is **read off the collection once there is one** rather than
+designed before it exists.
+
+**This is the third answer to one question, and the axis is where structure comes
+from.** Errors-as-syllabus put it in the *learner* and lost its sensor. A CEFR
+ladder put it in an *external curriculum* and bought a 200–350-item sourcing job
+before anything was usable. This puts it in **what has been built** — the
+cheapest of the three to be wrong about, since being wrong costs one tool instead
+of a level. It is also the house pattern rather than a new idea: one study
+language at a time, a subpack before a pack, one concept before a level.
+
+⚠️ **Emergence moved from the learner to the builder**, and conflating the two
+would undo the rest of this file. The learner still chooses from the outside;
+the app still does not decide what they are ready for; there is still no
+placement test and no level setting. What is emergent is the *taxonomy*, and its
+failure mode is premature abstraction — fit the second tool into the first tool's
+shapes and the taxonomy has been built by accident. Build the second as if the
+first did not exist; extract shared machinery when a third one wants it.
+
+**The native language decides some tools and not others.** A Korean native and an
+English native learning French need different things — but that bites exactly
+where **the distance between the two languages is itself the difficulty**. A
+conjugation table is a form you commit to memory, and `prenons` is hard for the
+same reason whoever you are. Articles are the opposite case: Korean has none, so
+`a`/`the` for a Korean speaker means learning that a category exists at all, while
+a French speaker learning English already has the category and only argues about
+details — same feature, genuinely different tool. The same goes for English
+prepositions against Korean postpositions. So the pair arrives **with the tool
+that needs it**, not as an axis every tool has to carry.
 
 ### A grammar point is not one kind of thing (2026-08-08, after the first trial)
 

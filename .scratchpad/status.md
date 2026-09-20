@@ -329,6 +329,194 @@ once, so a path that worked on build 14 is not evidence about build 15.
 Closed calls, kept with their reasoning — a decision whose reasoning is lost gets
 reopened by the next person to notice the symptom. Newest first.
 
+### Grammar is one tool at a time, and the grouping comes later (2026-09-21)
+
+**The user's call, made the same day as the Munli entry below and reversing a
+second thing in the 2026-09-14 entry — its constraint #2, "levels are the spine."**
+There is no ladder. Grammar is built as **individual tools for individual things**
+— verb conjugation, prepositions and postpositions, pronouns, articles — one at a
+time, each standing alone, and **how they group is read off the collection once
+there is one**. _"As I start to build up a collection of these individual things I
+can think about how to group them from patterns that might emerge."_
+
+**Why this is not the third flip of one question.** Three shapes have now been
+tried on paper and the axis they differ on is where the structure comes from:
+errors-as-syllabus (2026-08) put it in the *learner*, and lost its sensor when
+writing was removed; the A1 ladder (2026-09-14) put it in an *external
+curriculum*, and bought a 200–350-item sourcing job before anything could be used;
+this puts it in **what has actually been built**. It is the cheapest of the three
+to be wrong about, because being wrong costs one tool rather than a level. And it
+is the house pattern rather than a new idea — one study language at a time, a
+subpack before a pack, one concept before a level. **Emergence moved from the
+learner to the builder**, which is worth stating precisely: the app still does not
+decide what a learner is ready for, and there is still no placement test and no
+level setting.
+
+⚠️ **The risk is premature abstraction, and it is the only real one.** The moment
+tool #2 is fitted into tool #1's shapes, the taxonomy has been built by accident
+and nothing was learned. The rule: build the second as if the first did not exist,
+extract shared machinery when a third wants it. Two is a coincidence.
+
+**What gets built, in order: the mode switcher, writing, conjugation.**
+
+**Writing comes back un-gated, as a Munli surface.** The 2026-09-14 plan had it
+third and gated on the ladder being used, because a finding needed a concept to
+point at. With no ladder there is nothing to gate on, and nothing to point at
+either — so it returns as **a diagnostic you read**, not a router into practice.
+Routing is deferred until there are tools to route into; the first candidate is a
+`grammar` finding about a verb form opening that verb's conjugation table, and it is
+explicitly not in v1.
+
+⚠️ **The "emergent ordering" half of the 2026-09-14 entry dies here.** Storing
+concept ids and counts was what turned a one-shot review into a syllabus — "missed
+`la négation` four times" — and it required the closed set of authored concepts
+that no longer exists. What can be stored is `FindingKind` counts, four buckets,
+honest as history and far too coarse to be a syllabus. **The passage stays
+unstored**, which was never in question.
+
+**One thing the Munli placement makes free, and it is a genuine simplification:
+the writing input's entire placement design is cancelled.** The auto-growing
+field, the one-line/two-line reveal, wrapping-not-character-count, the
+`keyboardReserve` growth direction, the Enter/Shift+Enter split and the three
+reworded Learn strings — roughly forty lines of scoping from 2026-09-14 — existed
+solely because writing had to share Learn's single box without reinstating the
+Word/Passage toggle. A mode with its own writing surface has no such problem:
+**Amgi's Learn tab is untouched.** The arguments were good and are kept here in
+case a passage ever wants to start from Learn again; the work is not scheduled.
+
+**Conjugation is the first tool, and the first-principles calls on it:**
+
+- **One question is one box.** A **table** is one verb in one tense
+  (`prendre · présent`); its six **boxes** are the forms, one per person. The app
+  names verb, tense and person; the learner types the form. ~5 seconds, and
+  `vision.md` already argues that the cost of an exercise sets the bar for what is
+  worth practising.
+- ⚠️ **The schedule belongs to the table, not the box.** Miss `nous` and the whole
+  `prendre · présent` table comes back sooner, and may then ask any of its six
+  boxes — with a per-box miss counter inside the item so it prefers the one that
+  was missed. The alternative is a schedule per box, where missing `nous` leaves
+  `je` untouched.
+  **The argument is not volume** (120 tables against 720 boxes; both are ordinary
+  deck sizes) but **what counts as one fact**: a regular verb's six forms follow
+  one rule, so six schedules are six copies of one fact, while an irregular verb's
+  boxes genuinely differ (`prenons` and `prennent` have different stems).
+  **Per-table decided, on the user's call** — _"per table seems quite alright for
+  now"_ — with per-box closed as the option that splits a regular verb's single
+  fact six ways. The accepted cost is that SM-2 learns "your `prendre` présent is
+  shaky", not "your *nous* is shaky".
+  **Per-verb stays open as a later move, named by the user as one**: regular as a
+  table, irregular per box. Most correct, two code paths, and the house pattern of
+  deciding by content shape (`isGridDeck`). ⚠️ Build per-table so it stays a branch
+  rather than a migration — nothing holding a table's schedule should assume its
+  six boxes share one.
+  **It is also what keeps the other question shapes cheap** — fill-the-table and
+  fill-the-blank-in-a-sentence are then *views of one item* rather than a second
+  content model.
+- **The content is computed, not authored**, which is what makes conjugation the
+  right first tool: a verb list plus rules plus an irregulars table, finite and
+  checkable, with no 급수-sized authoring job behind it. ⚠️ `docs/packs/README.md`
+  still governs — the model is not a source, and a dataset's licence is checked
+  before it is used.
+- **The grader already exists and is already right.** `typedAnswer.ts` folds
+  apostrophes (iOS keyboards substitute them) and deliberately does **not** fold
+  diacritics — its own comment cites `ou`/`où` and `sur`/`sûr`, and
+  `préfère`/`prefere` is that case one step further in. Folding accents would
+  teach that the accent is optional, which in a conjugation table is the content.
+- **French first** — an assumption recorded rather than a decision taken, since
+  the tool is language-generic and the dataset is per-language.
+
+**The native language is scoped, not adopted as a rule.** The user raised that a
+Korean native and an English native learning French need different things, and
+then declined to apply it here: _"for something as simple as verb conjugation, I
+don't think we need to take this as a hard rule at least to start out."_ That is
+the right cut, and the reason generalises: **the native language matters exactly
+where the distance between the two languages is itself the difficulty.** A
+conjugation table is a form committed to memory, and `prenons` is hard for the
+same reason whoever you are. Articles are the opposite case — Korean has none, so
+`a`/`the` for a Korean speaker means learning that a category exists, where a
+French speaker learning English already has the category and argues only about
+details. Same feature, genuinely different tool. So the principle governs *which
+tools get built for whom*, and it arrives with the tool that needs it rather than
+as an axis every tool must carry.
+
+**What this cancels outright:** the French A1 level ladder and its référentiel
+sourcing gate (the whole 2026-09-14 content plan below), the Practice · Concepts ·
+Ask tab sketch from earlier today, and the `concept` abstraction under it. **What
+survives from all of it:** authored-or-computed over generated, graded locally,
+zero model calls in the daily loop, never pooled with vocabulary review, hints
+that cost, and no multiple choice.
+
+### Grammar becomes a mode after all — Munli, and the shell that hosts it (2026-09-21)
+
+**The user's call, and it reverses one half of the entry below from 2026-09-14
+rather than amending it.** That entry answered "a pack inside Amgi, or its own
+app like Hwasul" with **a pack, no mode, no second app**. Grammar now becomes
+**Munli, a separate mode inside the same binary**, reached by holding the last
+tab the way Instagram switches accounts. ⚠️ **Only the placement reverses.**
+Everything that entry argues about grammar *content* — authored not generated,
+graded locally, levels as the spine, never pooled with vocabulary review, one
+concept at a time — survives intact and still governs.
+
+**Why this is not simply the option that was rejected.** The 2026-09-14 entry
+weighed two options and a mode was not one of them; it is a third, and it is
+between them on every axis the entry used. A second app was refused for its
+*costs* — its own auth, habit, retention, store listing and Beta App Review
+cycle, all of which the no-OTA model makes expensive. A mode pays none of those:
+one binary, one account, one habit, one review cycle. The pack was chosen for
+its *cheapness*, and its cost was the thing it did to grammar — a grammar point
+became a subpack row in a vocabulary browser, and a concept's explanation had
+nowhere to live. So the argument that sent Hwasul away ("**does it need new
+nouns**") was the right test applied to a question with a missing answer: new
+nouns do not imply a new binary, they imply a navigation context.
+
+**Three calls the user made, taken as given:**
+
+1. **Own tab set, shared shell.** Munli has its own surfaces, queue, collections
+   and progress; the account, study language, interface language, theme and
+   streak stay the shell's. A mode that wanted its own account would be an app.
+2. **Hold the last tab.** No new slot in an icon-only bar, five tabs stay five,
+   tap still opens Progress. ⚠️ **With the user's own caveat: a hold is
+   invisible, so more doors are wanted later** — the account menu row is the
+   first, and the backlog item rebuilding that popover is where it goes.
+3. **French A1 folds into Munli** rather than shipping as a pack beside it.
+   ⚠️ **Superseded within the day** — the entry above cancels the A1 ladder
+   entirely and starts from individual tools instead. Recorded because it is what
+   was decided at the time this entry was written, not because it stands.
+
+**One design call made here, because it decides the build rather than the
+product: a mode is a *location*, not a setting.** Native takes a second Expo
+Router group, web a `/munli` route prefix. The alternative — a stored mode the
+shell reads — fails on web specifically: the pre-paint script in
+`apps/web/src/app/layout.tsx` exists because theme and sidebar-collapse are
+client-side state that would otherwise paint wrong for a frame, and a stored mode
+would put the **wrong navigation** in that same frame. Routes are known to the
+server, so there is nothing to pre-paint and the mode is linkable for free.
+Storage keeps exactly one job: which mode a cold open lands in.
+
+**"Never pooled" governs the queue, not the chrome.** Constraint #1 below is
+about `collections.ts` refusing an everything-collection. It is not an argument
+for two streaks, two accounts or two study languages — those are the shell, and
+splitting them would give the user two habits to break instead of one. Left
+open: whether Munli practice feeds the Amgi streak (recommended yes).
+
+**Other modes are noted, not planned.** Speaking is the obvious third and Hwasul
+was its separate-app form; nothing about it is scoped. The only consequence for
+this work is **don't hard-code two** — a list of modes, a mode id in storage, one
+route group among several. The bar for a third is the bar that got Munli the
+second, and modes are not a growth strategy: each is a tab set to maintain and a
+place to be lost in.
+
+⚠️ **What this does not change, and it is the load-bearing half.** The four
+reasons grammar was removed in 2026-08 (unfocused, poor practice, unused, heavy
+and slow) are answered by the *content* design, not by the mode — authored items,
+local grading, zero model calls in the daily loop. A mode makes grammar
+navigable; it does not make it good. Generated exercises and model-graded free
+production stay dead. And the honest caveat below stands word for word:
+authored cloze is Paulston's controlled rung, Bunpro is the shipped cautionary
+case, and **the user is still not this feature's user** — which is why the
+sequencing is still the risk control, now with the switcher first and writing
+last.
+
 ### The streak chip and the Progress tab kept two copies of one number (2026-09-15)
 
 **Found by the user, from a three-review gap**: the chip on Learn and Review
@@ -572,6 +760,16 @@ all unseen. No new native module — `react-native-svg` was already counted for
 the weekly chart — so the build story is unchanged.
 
 ### Grammar returns as content, not as a mode — and not as its own app (2026-09-14)
+
+⚠️ **Largely superseded 2026-09-21 — read the two entries of that date above
+first.** Both of this entry's central calls fell: grammar *is* a mode now, and
+levels are *not* the spine — tools are, one at a time, with the grouping read off
+them later. The French A1 ladder and its sourcing gate are cancelled outright.
+What still governs is everything else here: authored or computed rather than
+generated, graded locally, zero model calls in the daily loop, never pooled with
+vocabulary review, and why the four 2026-08 removal reasons do not transfer to a
+closed conjugation table. That last argument is the one this entry is still worth reading
+for.
 
 **The question was whether grammar belongs in Amgi at all**, reopened after the
 2026-08-18 removal and with a separate grammar app on the table the way Hwasul
