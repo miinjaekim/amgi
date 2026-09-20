@@ -35,97 +35,9 @@ is fitted into tool #1's shapes, the taxonomy has been built by accident and the
 whole point is lost. **Build the second tool as if the first did not exist**, and
 extract shared machinery only when a third one wants it. Two is a coincidence.
 
-**The order: the switcher, then writing, then conjugation.**
-
-- [ ] **Mode switching — the shell learns there is more than one mode.**
-      Scoped 2026-09-21. This is the whole first build, and **no grammar content
-      is part of it**: Munli can land as a home screen with nothing on it yet.
-      What this item delivers is that a second mode exists, is reachable, and
-      survives a cold open.
-
-      ⚠️ **Don't design Munli's nav ahead of its tools.** The mode gets its own
-      navigation — that is what "own tab set, shared shell" bought — but with two
-      tools a five-tab bar is furniture for rooms nobody built. Day one is a
-      **home listing the tools**, and the nav grows a tab when a tool earns one.
-      The earlier Practice · Concepts · Ask sketch is dropped, and so is the
-      "concept" abstraction under it.
-
-      **The design call that makes it cheap: a mode is a *location*, not a
-      setting.** Web has no other option — a mode not in the URL is not linkable
-      — and taking the same shape on native means "which mode am I in" is always
-      answered by the current route, never by state two surfaces could disagree
-      about. Native: a second Expo Router group (`app/(munli)/_layout.tsx` beside
-      `app/(tabs)/`). Web: a `/munli` route prefix with its own nav item list,
-      since `nav-items.tsx` already centralises that list for both the sidebar
-      and the mobile header.
-      ⚠️ **This is what spares web the flash.** The pre-paint inline script in
-      `apps/web/src/app/layout.tsx` exists because theme and sidebar-collapse are
-      stored client-side and would otherwise paint wrong for a frame. A *stored*
-      mode would join them and paint the **wrong navigation**, which is far more
-      visible than a wrong colour. A route prefix is known to the server, so
-      there is nothing to pre-paint.
-
-      **Storage then has exactly one job: which mode a cold open lands in.** One
-      key per platform (`amgi_mode` in AsyncStorage, `amgi-mode` in
-      localStorage), written on switch, read only at the root.
-      ⚠️ **On web that means `/` and only `/`** — every other path already says
-      which mode it is. Redirect `/` to the stored mode's home; never rewrite a
-      path the user typed or followed.
-
-      **The gesture.** `FloatingTabBar.tsx` maps `state.routes` to
-      `TouchableOpacity`, which takes `onLongPress` directly — so the mobile half
-      is one prop on the last tab plus the sheet it opens. Tap still goes to
-      Progress; only the hold switches.
-      ⚠️ **Haptics would be the natural confirmation, and `expo-haptics` is not a
-      dependency.** It is bundled in Expo Go, so it would work while developing
-      and then need the next production build to reach anyone — no OTA. Fine to
-      add, **but the affordance must not depend on it**: the sheet appearing is
-      the confirmation; the buzz is a bonus.
-
-      **A hold is invisible, so it cannot be the only door** — the user's own
-      note when choosing it. Two more, neither of them a coach mark:
-      1. **A row in the account menu, on both platforms.** The sidebar item in
-         Medium is already rebuilding that popover as a list of rows; a
-         *Switch mode ›* row costs almost nothing if the two land together, and
-         it is the door found by looking rather than by knowing.
-      2. **The destination announces itself.** Munli looks nothing like Amgi, so
-         nobody is ever unsure *which* mode they are in — the discoverability
-         problem is only ever entering, never being lost.
-      ⚠️ **Resist a first-run tour.** One feature does not earn a coach-mark
-      system, and first run is already spoken for by language setup.
-
-      **What is shared and what is not — settling this is the item's real
-      content.** Shared: the account, the study language, the interface language,
-      the theme, the streak, **and the card collection** (a Munli surface that
-      offers a vocabulary card writes an ordinary Amgi card — cards belong to the
-      account, not to a mode). Not shared: the review queue, the practice
-      scheduling, the progress rollups.
-      ⚠️ **"Grammar review is never pooled with vocabulary review" governs the
-      queue, not the chrome.** Constraint #1 of 2026-09-14 is about
-      `collections.ts` refusing an everything-collection. It is not an argument
-      for two streaks or two accounts — splitting those gives the user two habits
-      to break instead of one.
-      **Open, worth deciding deliberately rather than by default: does Munli
-      practice feed the Amgi streak?** Recommended yes — one app, one habit — but
-      it means a day of conjugation keeps a streak alive with nothing reviewed,
-      and whether that is a feature or a loophole is a judgement, not a
-      derivation.
-
-      **Munli appears unconditionally**, even for a study language it has no
-      tools for — the rule the Packs tab already set ("a tab that appears and
-      disappears would reflow the bar on every study-language switch"). An empty
-      state is cheaper than a switcher whose contents move under you.
-
-      ⚠️ **Naming.** Munli is a **mode inside Amgi**, not a second product: the
-      store listing, the bundle id and the consent screen stay Amgi (see the
-      consent-screen item under Housekeeping, which is about exactly that name).
-      **The Korean rendering is open** — whether a Korean interface says Munli,
-      문리, or something else is a copy decision, and Korean copy is held to
-      sounding native rather than transliterated.
-
-      **Scope:** one route group per platform, one storage key per platform, one
-      `onLongPress`, one switcher sheet, one account-menu row, and the strings.
-      No grammar.
+**The order: the switcher, then writing, then conjugation.** The switcher
+shipped in PR #135 (see Shipped in [status.md](status.md)); it has not reached a
+device, so it is under Queued for the next build below.
 
 - [ ] **Writing comes back — as Munli's first tool.** Scoped 2026-09-21, on the
       user's call, and it **un-gates** the version that sat in Medium: writing no
@@ -281,6 +193,17 @@ extract shared machinery only when a third one wants it. Two is a coincidence.
       category and only the details differ. Same feature, genuinely different
       tool. That is an argument for **those** tools — articles, prepositions
       against postpositions — when they are built, not an axis this one carries.
+
+## Queued for the next build
+
+_Merged, not yet in anyone's hands — mobile ships by build, no OTA._
+
+- [ ] **The mode switcher** (PR #135). Web is live on merge; **native is not**.
+      Holding the last tab, the switcher sheet, Munli's home and the cold-open
+      landing all exist only in a build nobody has cut. ⚠️ **And nothing here has
+      been exercised on a device at all** — `expo export` bundles and `tsc` is
+      clean, which says the routes resolve, not that the gesture feels right or
+      that the sheet is reachable one-handed.
 
 ## Medium
 
