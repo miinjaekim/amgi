@@ -13,6 +13,13 @@ and `npm run lint` 0 errors / 21 warnings, both measured._
 
 ## Now
 
+- **Verb conjugation practice** (PR #137, 2026-09-21). Munli's first tool built
+  from scratch: one question is one box, the schedule belongs to the table, and
+  the content is a rule engine rather than authored forms — French regular verbs
+  across three tenses, with irregulars held behind the sourcing gate. ⚠️ **Web is
+  live; native is in no build, nobody has answered a question, and the Firestore
+  write path has never run.**
+
 - **Writing review is back, as Munli's first tool** (PR #136, 2026-09-21).
   Restored from the removal commit rather than rebuilt; the surface is unchanged
   and its address is not — it was the passage half of Learn and is now a Munli
@@ -345,6 +352,65 @@ once, so a path that worked on build 14 is not evidence about build 15.
 
 Closed calls, kept with their reasoning — a decision whose reasoning is lost gets
 reopened by the next person to notice the symptom. Newest first.
+
+### Conjugation: the table is the item, and the content is a rule engine (2026-09-21)
+
+The first Munli tool built from scratch, and the first time the "one tool at a
+time" plan had to survive contact with an implementation. Four calls the build
+settled.
+
+**The table is the scheduled item, and nothing assumes its six boxes share a
+schedule *by definition*.** That second half is what keeps per-verb scheduling a
+branch rather than a migration later: `conjugationItemId` is a function, progress
+is a map keyed by whatever it returns, and splitting regular verbs from irregular
+ones means more ids of the same shape. `ConjugationVerb.group` deliberately has
+**no `irregular` member** for the same reason — an irregular verb is stored
+forms, not a rule class, and admitting one to the enum would invite generating
+them.
+
+**The per-box miss tally is where the per-table schedule pays its debt.** One
+schedule cannot know your `nous` is weak; the tally can, so `pickPerson` asks the
+most-missed box first. ⚠️ It follows the **verdict**, not the string match — a
+form assembled from both hints is `again` and counts as a miss, or the box that
+needed both hints stops being offered. And a correct answer *clears* the tally
+rather than decrementing it: a box you have now produced is answered, not "less
+wrong than before".
+
+**The content is a rule engine, and its correctness is the test suite's job.** A
+rule that is wrong is wrong for its whole class at once, so 27 assertions pin
+every form the engine produces for three verb classes across three tenses. The
+rule most likely to be got wrong has its own case: `-cer`/`-ger` soften before
+`a` and `o` only, which is why the adjustment is applied **per ending** rather
+than baked into a stem — `nous mangeons` but `nous mangions`.
+⚠️ **Irregular verbs were left out, and that is the sourcing gate doing its job**
+rather than an omission. `docs/packs/README.md` governs and the model is not a
+source. The verb list that did ship is described as *common*, never
+frequency-ranked, for the same reason.
+
+**Progress is a field on `users/{uid}`, not a new collection — an operational
+call, not an aesthetic one.** This project's Firestore rules live in the console,
+so a new collection would deploy and then fail closed in production. The user
+document is already owner-writable, and a nested map merges key by key under
+`setDoc(..., { merge: true })`, so one table writes without clobbering the rest.
+It is small by construction (54 entries for French); the day a language's spec
+makes it a real fraction of the 1 MB document limit is the day it earns a rule.
+
+⚠️ **React Compiler's rules decided the shape of the screen, which is worth
+recording because it will look arbitrary otherwise.** Reading a ref during render
+is an error, and so is calling `Math.random()`; putting the draw in an effect
+means a synchronous `setState`, which the same ruleset flags and which the repo
+already carries 13 warnings of. So the question is a **pure function of a nonce
+and a progress snapshot**, with the shuffle seeded from the nonce. That was
+forced, and it fixed a real bug on the way: a draw depending on live progress
+redraws the question the instant it is answered, so the learner never sees the
+verdict for the box they just typed.
+
+**What this does not establish.** Nobody has answered a question, the Firestore
+write path has never run, and the plan's actual claim — that a taxonomy can be
+read off a collection of tools — needs a **second** tool to mean anything. ⚠️ The
+rule that goes with it is that the second is built *as if the first did not
+exist*: a table, a box and a miss tally are a verb paradigm's shapes, and
+prepositions have none of them.
 
 ### Writing came back unchanged, and three things around it had not (2026-09-21)
 

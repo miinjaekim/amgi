@@ -35,103 +35,17 @@ is fitted into tool #1's shapes, the taxonomy has been built by accident and the
 whole point is lost. **Build the second tool as if the first did not exist**, and
 extract shared machinery only when a third one wants it. Two is a coincidence.
 
-**The order: the switcher, then writing, then conjugation.** The switcher
-shipped in PR #135 and writing in PR #136 (see Now in [status.md](status.md));
-neither has reached a device, so both are under Queued for the next build below.
-Conjugation is what is left.
+**All three shipped on 2026-09-21** — the switcher in PR #135, writing in #136,
+conjugation in #137 (see Now in [status.md](status.md)). **None has reached a
+device**, and none has been used by a human on either platform; they are under
+Queued for the next build below. What is left in High is the work those three
+turned up.
 
-- [ ] **Verb conjugation practice — the first built-from-scratch Munli tool.**
-      Scoped 2026-09-21. Standalone by design: **no levels, no concepts, no
-      shared grammar abstraction.** It is one tool for one thing.
-
-      **Vocabulary first, so these notes are readable in six months.** A
-      **table** is one verb in one tense — `prendre · présent` — and its six
-      **boxes** are the forms, one per person (`je prends` … `ils prennent`).
-      **One question** is one box: the app names the verb, the tense and the
-      person, and the learner types the form. ~5 seconds, which is the point —
-      `vision.md` already argues that the cost of an exercise sets the bar for
-      what is worth practising.
-
-      ⚠️ **But the thing that carries a schedule is the *table*, not the box**,
-      and this is the call the rest of the design hangs off. **Miss `nous` and the
-      whole `prendre · présent` table comes back sooner**, and when it does it may
-      ask any of its six boxes — with a per-box miss counter inside the item so it
-      *prefers* to ask the one that was missed. The alternative is a schedule per
-      box, where missing `nous` resets `nous` and leaves `je` untouched.
-
-      **The argument is not volume** — 120 tables (20 verbs × 6 tenses) against
-      720 boxes, and both are ordinary deck sizes. It is **what counts as one
-      fact.** For a regular verb all six forms follow one rule, so six schedules
-      are six copies of one fact, and `parlez` gets asked on its own timer though
-      knowing `parlons` already settled it. For an irregular verb the boxes are
-      genuinely separate facts — `prenons` and `prennent` have different stems.
-      So **per-table is right for regular verbs and per-box is right for irregular
-      ones**, and per-table buys most of the precision for one scheduler.
-      **Decided 2026-09-21, on the user's call: per-table, with the miss
-      counter.** Per-box is closed — it is the one that splits a regular verb's
-      single fact six ways.
-      **The accepted cost:** SM-2 learns "your `prendre` présent is shaky", not
-      "your *nous* is shaky".
-      **Per-verb stays open as a later move, and the user named it as one** —
-      regular verbs scheduled as a table, irregular verbs per box. It is the most
-      correct answer and it is two code paths, and deciding by content shape
-      rather than by a flag is the house pattern (`isGridDeck` picks a pack's
-      layout exactly that way). ⚠️ **Build per-table so this stays reachable**:
-      whatever holds a table's schedule should not assume six boxes share it, or
-      the later split becomes a migration rather than a branch.
-
-      **Table-as-item is also what makes the other question shapes cheap later** —
-      the user wants fill-the-whole-table and fill-the-blank-in-a-sentence offered
-      as alternatives, to see which people prefer. If the item is the table, those
-      are *views of the same item* rather than a second content model. Build one
-      view, leave the seam.
-
-      **The content is computed, not authored — and that is what makes
-      conjugation unlike every content job this repo has done.** A conjugation
-      set is a verb list plus conjugation rules plus an irregulars table: finite,
-      closed, and checkable against a reference. There is no 급수-sized authoring
-      job here, which is exactly why this is the right first tool.
-      ⚠️ **`docs/packs/README.md` still governs: the model is not a source.**
-      Generate regular forms by rule, take irregulars from a citable reference,
-      and **check the licence before taking a dataset** — the sourcing gate moved,
-      it did not disappear.
-
-      **Grading is already built and already correct.** `typedAnswer.ts` is pure,
-      local and needs no model, and its two folding decisions happen to be exactly
-      what a conjugation drill needs: apostrophes *are* folded (so `j'ai` typed on
-      an iOS keyboard matches), and **diacritics are deliberately not** — the
-      module's own comment cites French `ou`/`où` and `sur`/`sûr`, and
-      `préfère`/`prefere` is the same case one step further in. A grader that
-      folded accents would teach that the accent is optional, which for a
-      conjugation table is the whole content. **No new grader.**
-
-      **Hints that cost, per `vision.md`:** stem → ending pattern → the form, with
-      the best available verdict falling as each is taken, and the schedule told.
-      ⚠️ **Take the design, not the module** — the hint tiers were `grammar.ts`'s,
-      and that file is queued for deletion under Housekeeping.
-
-      **The learner picks; the app does not level them.** Which tenses and which
-      verbs are chosen from the outside, frequency-ordered. No placement, no level
-      setting, nothing inferred.
-
-      **Zero model calls, works offline**, like the rest of review.
-
-      **Assumption, stated rather than asked: French first**, because it is the
-      ask that opened this. The tool is language-generic and the dataset is
-      per-language, so changing the answer is a dataset swap rather than a
-      redesign. Korean conjugates heavily too, so the core Korean↔English pair is
-      reachable from the same tool; English is the thin one.
-
-      **The learner's native language does *not* enter this tool** — the user's
-      call, and worth recording as scoping rather than as an exception. A
-      conjugation table is a form you commit to memory, and `prenons` is hard for
-      the same reason whoever you are. The native language matters where the
-      **distance between the two languages is itself the difficulty**: Korean has
-      no articles, so `a`/`the` for a Korean speaker means learning that a
-      category exists, where a French speaker learning English already has the
-      category and only the details differ. Same feature, genuinely different
-      tool. That is an argument for **those** tools — articles, prepositions
-      against postpositions — when they are built, not an axis this one carries.
+⚠️ **The next tool is where the plan gets tested, not this one.** "One tool at a
+time, group later" only means something once there are two to group, and the
+rule that goes with it is that the second is built **as if the first did not
+exist**. Conjugation's shapes — a table, a box, a miss tally — are a verb
+paradigm's shapes, and prepositions have none of them.
 
 - [ ] **Writing findings you can return to.** Split out of the writing item when
       it shipped (PR #136) — a review you cannot re-read is a review you half
@@ -159,9 +73,39 @@ Conjugation is what is left.
       by something observed rather than declared**, which is why it is worth
       doing properly rather than early.
 
+- [ ] **Irregular French verbs.** Conjugation shipped with regular `-er`/`-ir`/
+      `-re` only, and a French conjugation tool without `être`, `avoir` and
+      `aller` is missing the verbs a learner reaches for first. ⚠️ **This is the
+      sourcing job, and it is the whole reason they were left out**: an irregular
+      form is recalled content, not a rule, and `docs/packs/README.md` governs —
+      the model is not a source. So this is a citable reference, a licence check,
+      and a dataset; it is not a prompt.
+      **The engine is already shaped for it**: `ConjugationVerb.group` dispatches
+      rules and deliberately has no `irregular` member, because an irregular verb
+      is stored forms rather than a rule class. Adding them means a table of
+      forms beside the generator, not a fourth branch inside it.
+      **The verb list wants the same treatment.** What shipped is described as
+      *common*, not frequency-ranked, because ranking it is a sourcing claim with
+      nothing behind it. Same job.
+
+- [ ] **A second tense set, and whether tense choice belongs in settings.**
+      Conjugation ships with présent, imparfait and futur simple, chosen with
+      chips that default to présent alone. Passé composé is the obvious gap and
+      it is **not** a fourth entry in the ending tables — it is auxiliary +
+      participle, so it is the first tense that needs a different *shape*. Worth
+      doing only once someone has used the three that exist.
+
 ## Queued for the next build
 
 _Merged, not yet in anyone's hands — mobile ships by build, no OTA._
+
+- [ ] **Verb conjugation practice** (PR #137). Web is live on merge; **native is
+      not**. ⚠️ **Nobody has answered a question on either platform** — the engine
+      has 27 tests pinning every form it produces, and the screen has none. **The
+      Firestore write path has never run**, which is the line worth checking
+      first: progress is a field on `users/{uid}` rather than a new collection
+      precisely so that no console rule is needed, and that reasoning is only as
+      good as one successful write.
 
 - [ ] **Writing review, in Munli** (PR #136). Web is live on merge; **native is
       not**. ⚠️ **No model call has been made through the restored UI on either
