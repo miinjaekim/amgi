@@ -16,6 +16,7 @@ export * from './spanishBasics';
 export * from './topik';
 export * from './military';
 export * from './drill';
+export * from './conjugation';
 export * from './typedAnswer';
 export * from './diff';
 export * from './tts';

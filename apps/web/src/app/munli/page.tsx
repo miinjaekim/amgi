@@ -4,6 +4,13 @@ import { getMode } from '@amgi/core';
 import { useUser } from '@/components/UserContext';
 import { getMunliNavItems } from '@/components/nav-items';
 import { t } from '@/lib/i18n';
+import type { TranslationKey } from '@amgi/core';
+
+/** One line per tool, keyed by the route it leads to. */
+const BLURBS: Record<string, TranslationKey> = {
+  '/munli/writing': 'munliToolWritingBlurb',
+  '/munli/conjugation': 'munliToolConjugationBlurb',
+};
 
 /**
  * Munli's home — its tools, one row each.
@@ -49,7 +56,7 @@ export default function MunliHome() {
                   {tool.label}
                 </span>
                 <span className="block font-mono text-xs mt-0.5" style={{ color: 'var(--color-muted)' }}>
-                  {t(interfaceLanguage, 'munliToolWritingBlurb')}
+                  {BLURBS[tool.href] ? t(interfaceLanguage, BLURBS[tool.href]) : ''}
                 </span>
               </span>
             </Link>

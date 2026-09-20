@@ -29,6 +29,7 @@ interface Tool {
 
 const TOOLS: readonly Tool[] = [
   { key: 'writing', labelKey: 'munliToolWriting', blurbKey: 'munliToolWritingBlurb', icon: 'create-outline', href: '/munli/writing' },
+  { key: 'conjugation', labelKey: 'munliToolConjugation', blurbKey: 'munliToolConjugationBlurb', icon: 'grid-outline', href: '/munli/conjugation' },
 ];
 
 export default function MunliHome() {

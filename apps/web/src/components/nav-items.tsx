@@ -41,6 +41,16 @@ export function getMunliNavItems(interfaceLanguage: string | null | undefined, p
         </svg>
       ),
     },
+    {
+      label: t(interfaceLanguage, 'munliToolConjugation'),
+      href: '/munli/conjugation',
+      active: pathname.startsWith('/munli/conjugation'),
+      icon: (active: boolean, className = 'w-6 h-6') => (
+        <svg className={className} fill="none" stroke="currentColor" strokeWidth={active ? 2.5 : 1.8} viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M3 6h18M3 12h18M3 18h18M8 3v18" />
+        </svg>
+      ),
+    },
   ];
 }
 
