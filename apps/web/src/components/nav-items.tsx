@@ -1,4 +1,5 @@
 import React from 'react';
+import { modeFromPath } from '@amgi/core';
 import { t } from '@/lib/i18n';
 
 export interface NavItem {
@@ -6,6 +7,22 @@ export interface NavItem {
   href: string;
   active: boolean;
   icon: (active: boolean, className?: string) => React.ReactElement;
+}
+
+/**
+ * The nav for whichever mode this path belongs to.
+ *
+ * The mode is derived from the path rather than passed in, so a caller cannot
+ * render one mode's chrome around another mode's page. Every nav surface —
+ * `SideNav`, `BottomNav` — goes through here.
+ *
+ * ⚠️ **Munli's list is empty and that is not a stub.** Its nav grows a row when
+ * a tool earns one; the mode ships before its first tool by design, and a
+ * navigation invented for surfaces that do not exist is furniture. Callers
+ * render an empty list as an empty state, not as a missing one.
+ */
+export function getNavItemsForMode(interfaceLanguage: string | null | undefined, pathname: string): NavItem[] {
+  return modeFromPath(pathname) === 'munli' ? [] : getNavItems(interfaceLanguage, pathname);
 }
 
 /** Nav labels are chrome, so they take the interface language, never a deck's. */
