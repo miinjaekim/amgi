@@ -8,11 +8,33 @@ show: the reasoning behind closed calls (Decisions), the console and binary stat
 that lives outside the repo (Builds, TestFlight), and what is currently
 unverified.
 
-_Reconciled against `release/1.6.0` @ `c8c113a`, 2026-09-10. `npm test` 553/553
+_Reconciled against `release/1.7.0` @ `cb7c19c`, 2026-09-19. `npm test` 639/639
 and `npm run lint` 0 errors / 21 warnings, both measured._
 
 ## Now
 
+- **1.7.0 is build 16**, cut 2026-09-19 from `cb7c19c` on `release/1.7.0`, with
+  the Android APK as `versionCode` 6 from the same commit. ⚠️ **Approval is not
+  recorded here because it has not been reported** — 1.6.0's external approval
+  covers 1.6.0 only, so testers get this build after a fresh Beta App Review, and
+  whether the Test Information paste and that submission have happened is console
+  state the repo cannot see. Confirm before assuming.
+  **Pre-flight was clean**: `expo config --type introspect` came back
+  `entitlements: {}` on the `react-native-svg` build, the TestFlight copy was
+  rewritten for both locales, and its character set diffed against the copy Apple
+  accepted for 1.6.0 — 42 new characters, 39 precomposed Hangul, nothing outside
+  the BMP. **Step 1 was half done for the first time on any build**: smoke-tested
+  in Expo Go before the builds were started. The binary half is still undone, as
+  the never-verified ⚠️ below says.
+  It carries eight merges since build 15 — the progress-display rework
+  (retention off, labelled calendar, cards learned, the weekly chart), the
+  per-language progress detail with its two charts, the share screen that
+  actually reaches the OS sheet, an explanation language per study language,
+  tap-to-save in packs, and the streak-count fix.
+  ⚠️ **The per-deck language change migrates every existing account on first
+  load**, and build 15 is in testers' hands reading the old field — which is why
+  `nativeLanguage` is still written alongside `interfaceLanguage`. Nobody has
+  watched that migration run against a real multi-deck account.
 - **1.6.0 (build 15) is live in TestFlight and approved for external testing**
   (2026-09-10), approved the same day it was submitted. It carries eleven merges
   since build 14 — the mobile UI redesign, Expo SDK 57, Hanja as a study
@@ -36,18 +58,18 @@ and `npm run lint` 0 errors / 21 warnings, both measured._
   speed**, a pitch-corrected 0.7× stretch rather than a slow synthesis: if it
   reads as an artifact the fallback is server-side rates behind the same three
   chips, and that is written down in its Decisions entry, not waiting on a list.
-- **Mobile merges are unblocked.** The freeze held only until submission; the
-  next mobile change waits for build 16.
-- ⚠️ **Languages became per-deck on 2026-09-12, on a branch
-  (`feat/per-language-native`) and not yet merged or released.** Each study
-  language now carries the language it is explained in, and the app's own
-  language is a separate setting — see the Decisions entry below. Two things to
-  know before it ships. It **migrates every existing account on first load**,
-  seeding the language list from the collections that hold cards, and nobody has
-  watched that run against a real multi-deck account yet. And it reaches the two
-  platforms differently, as usual: web on merge, mobile only on build 16, which
-  is why `nativeLanguage` is still written alongside `interfaceLanguage` —
-  build 15 is in testers' hands and reads the old field.
+- **Mobile merges are unblocked.** The freeze holds only until submission; the
+  next mobile change waits for build 17.
+- **Languages are per-deck** (2026-09-12, merged as PR #127, on mobile in build
+  16). Each study language carries the language it is explained in, and the app's
+  own language is a separate setting — see the Decisions entry below.
+  ⚠️ **It migrates every existing account on first load**, seeding the language
+  list from the collections that hold cards, and **nobody has watched that run
+  against a real multi-deck account** — not on web, where it has been live since
+  the merge, and not on a binary. `nativeLanguage` is still written alongside
+  `interfaceLanguage` because build 15 is in testers' hands and reads the old
+  field; that stays until build 15 is out of circulation, which external approval
+  of 1.7.0 does not by itself accomplish.
 - **The progress dashboard is on both platforms** (2026-08-20) but only in users'
   hands on web, since mobile ships by build. Daily rollups are written on every
   rating and every card save. The Firestore security rule for
@@ -64,7 +86,8 @@ and `npm run lint` 0 errors / 21 warnings, both measured._
   no OTA, nothing to ship. **Web** has all five changes as soon as it deploys.
   **Mobile's own screen** — the labelled calendar, the corrected ramp, the cards
   learned tile, retention off the language row, the share preview screen —
-  waits for build 16 like everything else. The reasoning is in the Decisions entry of the
+  is in build 16, so it reaches a tester when that build does and not before.
+  The reasoning is in the Decisions entry of the
   same date; the one thing that is *not* recorded anywhere else is that none of
   it has been looked at: the colours were computed and validated, the layouts
   were not.
@@ -198,6 +221,7 @@ No OTA, so every mobile change reaches users through one of these.
 
 | Version | Build | Date | Cut from |
 |---|---|---|---|
+| 1.7.0 | 16 | 2026-09-19 | `cb7c19c` on `release/1.7.0` (version bump + TestFlight copy) — external approval not reported as of this line |
 | 1.6.0 | 15 | 2026-09-10 | `c8c113a` on `release/1.6.0` (version bump + TestFlight copy) — external testing approved 09-10, same day |
 | 1.5.0 | 14 | 2026-09-02 | `84be8af` on `release/1.5.0` (PR #109, version bump + TestFlight copy) — external testing approved 09-02, same day |
 | 1.4.0 | 13 | 2026-08-22 | `dedcdd6` on `release/1.4.0` (version bump + TestFlight copy) — external testing approved 08-24 |
@@ -215,6 +239,14 @@ Decisions entry for how it is distributed. 1.5.0's Android APK is `versionCode`
 4, cut the same day from `d25b544`; 1.6.0's is `versionCode` 5, cut the same day
 as build 15. Its commit was not recorded here — resolve it from the EAS build
 record if it ever matters, for the reason the next paragraph gives.
+1.7.0's is `versionCode` 6, and both it and build 16 carry the tree at
+`cb7c19c` — they were started together, before the step-1 correction commit
+landed on the branch. That commit touches `backlog.md` only and nothing bundles
+it, so branch head and both binaries differ by nothing either one runs. ⚠️ **The
+hash EAS logged for each is not known** and may read as the previous commit with
+a dirty tree, depending on exactly when each job uploaded; the content is what
+this row is asserting. Check the console if a build ever has to be reproduced
+byte for byte — the 1.5.0 entry below is why that distinction is kept.
 
 ⚠️ **1.5.0's two builds carry different commit hashes and the same app.** EAS
 logged `84be8af` for iOS and `d25b544` for Android; the delta between them is
@@ -243,14 +275,15 @@ introspect` passes came back clean — 1.4.0's `entitlements: {}` confirms
 `withoutPushEntitlement` still strips `aps-environment`. 1.4.0 is also the first
 iOS release carrying `expo-dev-client`, `expo-dev-launcher` and `expo-dev-menu`.
 
-⚠️ **The next build is a native-module build too: `react-native-svg` 15.15.4**,
-added 2026-09-12 for the weekly chart's line mark. It is in Expo Go's own
-bundled set, so the dev loop is untouched and `npx expo start` needs nothing —
-but the binary does, and **an `expo config --type introspect` pass is owed
-before cutting it**, per the pre-flight checklist in [backlog.md](backlog.md).
-Nothing about it is
-configuration-bearing (no plugin, no entitlement, no permission), which is the
-expected result rather than a reason to skip the check.
+**1.7.0 is a native-module build too: `react-native-svg` 15.15.4**, added
+2026-09-12 for the weekly chart's line mark. It is in Expo Go's own bundled set,
+so the dev loop was untouched and `npx expo start` needed nothing — but the
+binary does, and **the owed `expo config --type introspect` pass was run
+2026-09-19 and came back clean**: `entitlements: {}`, no new
+`NS*UsageDescription`, no manifest permission beyond the six `expo-audio`,
+`expo-file-system` and networking already contribute. Nothing about the library
+is configuration-bearing (no plugin, no entitlement, no permission), which is
+what the check confirmed rather than a reason it could have been skipped.
 
 ⚠️ **Never verified on a real binary**, on any build so far — the logic is
 tested, the native bindings are not: pronunciation audio, CSV/Anki export,
@@ -264,7 +297,8 @@ production `EXPO_PUBLIC_API_BASE_URL`. (The 1.3.0 copy button left this list
 with the writing rewrite it belonged to.) ⚠️ **The share preview needs that same
 host**: the card is the deployed route's own render, so on a build pointed at
 nothing the preview draws a blank placeholder — and *sharing* needs it too, since
-the download is what feeds the OS sheet. Worth one look on build 16.
+the download is what feeds the OS sheet. Build 16 is the one to look at it on:
+sharing is the path it rewrote, and it has never once run end to end.
 1.4.0's What to Test asks for these by
 name and puts **offline review first**; **neither 1.5.0's nor 1.6.0's does** —
 both were cut to what's new, so no release now asks for this list. **This paragraph is where the

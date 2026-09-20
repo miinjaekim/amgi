@@ -340,23 +340,26 @@ to Test rule, and the `--non-interactive` warning. What a build *carries* is
 derivable from its commit; what is queued, released or never verified on a
 binary is under Builds in [status.md](status.md).
 
-**Pre-flight**, in order. Steps 2–6 were all exercised cutting 1.6.0; step 1
-never has been, on any build:
+**Pre-flight**, in order. Steps 2–6 were all exercised cutting 1.6.0 and again
+cutting 1.7.0; step 1 was half done for the first time on 1.7.0:
 
 1. Smoke-test in Expo Go, then verify the native-adjacent paths on the build
    itself — Expo Go runs the SDK's own bundled native modules, so a clean pass
    there says nothing about audio, notifications, sharing, the file system or
-   the auth redirect. ⚠️ **This has never happened**, through fifteen builds; the
-   list of what it covers, and why working down it is not tracked as a task, is
-   in the never-verified ⚠️ under Builds in [status.md](status.md).
+   the auth redirect. **The Expo Go half happened for the first time on 1.7.0**
+   (2026-09-19, by the user, before the builds were started). ⚠️ **The half that
+   matters more has still never happened on any build**: nothing in that list has
+   been exercised on a binary. The list of what it covers, and why working down
+   it is not tracked as a task, is in the never-verified ⚠️ under Builds in
+   [status.md](status.md).
 2. Bump `version` in `app.json` **before** starting the build. EAS
    auto-increments the *build* number and never the version, so nothing catches
    this for you.
 3. `expo config --type introspect` if any native module or `app.json` native
    config changed — this is where an unasked-for entitlement shows up before a
    cloud build finds it. 1.6.0's came back `entitlements: {}`, which is what
-   `withoutPushEntitlement` is there to produce. ⚠️ **Not skippable on the next
-   build**: `react-native-svg` makes it a native-module build (Builds in
+   `withoutPushEntitlement` is there to produce, and 1.7.0's — the
+   `react-native-svg` build — came back the same (Builds in
    [status.md](status.md)).
 4. Rewrite What to Test in `docs/testflight-beta-info.md` and **re-check the
    rest of the file** — the description and the Apple review notes go stale too.
@@ -381,6 +384,6 @@ still earns its clause; a request to go and test something does not.
 turns one into an error — 1.4.0 died on an unanswerable Apple Team ID question
 and burned build 12. The flag is for CI.
 
-_A version bump queues another Beta App Review; 1.6.0's external approval covers
-1.6.0 only. Batch changes into a build rather than cutting one per feature.
+_A version bump queues another Beta App Review; an external approval covers the
+version it was granted for and nothing later. Batch changes into a build rather than cutting one per feature.
 Android is the exception — no review, so a fix there ships the same day._
