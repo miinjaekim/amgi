@@ -329,6 +329,104 @@ once, so a path that worked on build 14 is not evidence about build 15.
 Closed calls, kept with their reasoning — a decision whose reasoning is lost gets
 reopened by the next person to notice the symptom. Newest first.
 
+### Grammar is one tool at a time, and the grouping comes later (2026-09-21)
+
+**The user's call, made the same day as the Munli entry below and reversing a
+second thing in the 2026-09-14 entry — its constraint #2, "levels are the spine."**
+There is no ladder. Grammar is built as **individual tools for individual things**
+— verb conjugation, prepositions and postpositions, pronouns, articles — one at a
+time, each standing alone, and **how they group is read off the collection once
+there is one**. _"As I start to build up a collection of these individual things I
+can think about how to group them from patterns that might emerge."_
+
+**Why this is not the third flip of one question.** Three shapes have now been
+tried on paper and the axis they differ on is where the structure comes from:
+errors-as-syllabus (2026-08) put it in the *learner*, and lost its sensor when
+writing was removed; the A1 ladder (2026-09-14) put it in an *external
+curriculum*, and bought a 200–350-item sourcing job before anything could be used;
+this puts it in **what has actually been built**. It is the cheapest of the three
+to be wrong about, because being wrong costs one tool rather than a level. And it
+is the house pattern rather than a new idea — one study language at a time, a
+subpack before a pack, one concept before a level. **Emergence moved from the
+learner to the builder**, which is worth stating precisely: the app still does not
+decide what a learner is ready for, and there is still no placement test and no
+level setting.
+
+⚠️ **The risk is premature abstraction, and it is the only real one.** The moment
+tool #2 is fitted into tool #1's shapes, the taxonomy has been built by accident
+and nothing was learned. The rule: build the second as if the first did not exist,
+extract shared machinery when a third wants it. Two is a coincidence.
+
+**What gets built, in order: the mode switcher, writing, conjugation.**
+
+**Writing comes back un-gated, as a Munli surface.** The 2026-09-14 plan had it
+third and gated on the ladder being used, because a finding needed a concept to
+point at. With no ladder there is nothing to gate on, and nothing to point at
+either — so it returns as **a diagnostic you read**, not a router into practice.
+Routing is deferred until there are tools to route into; the first candidate is a
+`grammar` finding about a verb form opening that verb's paradigm, and it is
+explicitly not in v1.
+
+⚠️ **The "emergent ordering" half of the 2026-09-14 entry dies here.** Storing
+concept ids and counts was what turned a one-shot review into a syllabus — "missed
+`la négation` four times" — and it required the closed set of authored concepts
+that no longer exists. What can be stored is `FindingKind` counts, four buckets,
+honest as history and far too coarse to be a syllabus. **The passage stays
+unstored**, which was never in question.
+
+**One thing the Munli placement makes free, and it is a genuine simplification:
+the writing input's entire placement design is cancelled.** The auto-growing
+field, the one-line/two-line reveal, wrapping-not-character-count, the
+`keyboardReserve` growth direction, the Enter/Shift+Enter split and the three
+reworded Learn strings — roughly forty lines of scoping from 2026-09-14 — existed
+solely because writing had to share Learn's single box without reinstating the
+Word/Passage toggle. A mode with its own writing surface has no such problem:
+**Amgi's Learn tab is untouched.** The arguments were good and are kept here in
+case a passage ever wants to start from Learn again; the work is not scheduled.
+
+**Conjugation is the first tool, and the first-principles calls on it:**
+
+- **One rep is one cell** — verb + tense + person in, the form typed. ~5 seconds,
+  and `vision.md` already argues that the cost of an exercise sets the bar for
+  what is worth practising.
+- ⚠️ **The scheduled item is the paradigm (verb × tense), not the cell.** Per-cell
+  is ~48 items a verb and schedules `vous` apart from `tu` when nobody knows one
+  without the other. **And it is what keeps the other rep shapes cheap** — the
+  user wants fill-the-table and in-a-sentence offered later to see which people
+  prefer, and if the item is the paradigm those are *views of one item* rather
+  than a second content model. **The item is the paradigm; the rep is a view.**
+- **The content is computed, not authored**, which is what makes conjugation the
+  right first tool: a verb list plus rules plus an irregulars table, finite and
+  checkable, with no 급수-sized authoring job behind it. ⚠️ `docs/packs/README.md`
+  still governs — the model is not a source, and a dataset's licence is checked
+  before it is used.
+- **The grader already exists and is already right.** `typedAnswer.ts` folds
+  apostrophes (iOS keyboards substitute them) and deliberately does **not** fold
+  diacritics — its own comment cites `ou`/`où` and `sur`/`sûr`, and
+  `préfère`/`prefere` is that case one step further in. Folding accents would
+  teach that the accent is optional, which in a conjugation table is the content.
+- **French first** — an assumption recorded rather than a decision taken, since
+  the tool is language-generic and the dataset is per-language.
+
+**The native language is scoped, not adopted as a rule.** The user raised that a
+Korean native and an English native learning French need different things, and
+then declined to apply it here: _"for something as simple as verb conjugation, I
+don't think we need to take this as a hard rule at least to start out."_ That is
+the right cut and the reason generalises — **the pair matters exactly where the L1
+gap *is* the difficulty.** A closed paradigm is a form rule and `prenons` is hard
+for the same reason whoever you are. Articles for a Korean native, or English
+prepositions against Korean postpositions, are the opposite case: the pair decides
+what the tool does at all. So the principle governs *which tools* get built for
+whom, and it arrives with the tool that needs it rather than as an axis every tool
+must carry.
+
+**What this cancels outright:** the French A1 level ladder and its référentiel
+sourcing gate (the whole 2026-09-14 content plan below), the Practice · Concepts ·
+Ask tab sketch from earlier today, and the `concept` abstraction under it. **What
+survives from all of it:** authored-or-computed over generated, graded locally,
+zero model calls in the daily loop, never pooled with vocabulary review, hints
+that cost, and no multiple choice.
+
 ### Grammar becomes a mode after all — Munli, and the shell that hosts it (2026-09-21)
 
 **The user's call, and it reverses one half of the entry below from 2026-09-14
@@ -361,8 +459,10 @@ nouns do not imply a new binary, they imply a navigation context.
    tap still opens Progress. ⚠️ **With the user's own caveat: a hold is
    invisible, so more doors are wanted later** — the account menu row is the
    first, and the backlog item rebuilding that popover is where it goes.
-3. **French A1 folds into Munli** rather than shipping as a pack beside it. The
-   structure is unchanged; only its nouns move.
+3. **French A1 folds into Munli** rather than shipping as a pack beside it.
+   ⚠️ **Superseded within the day** — the entry above cancels the A1 ladder
+   entirely and starts from individual tools instead. Recorded because it is what
+   was decided at the time this entry was written, not because it stands.
 
 **One design call made here, because it decides the build rather than the
 product: a mode is a *location*, not a setting.** Native takes a second Expo
@@ -642,10 +742,15 @@ the weekly chart — so the build story is unchanged.
 
 ### Grammar returns as content, not as a mode — and not as its own app (2026-09-14)
 
-⚠️ **Half-reversed 2026-09-21 — read the Munli entry above first.** Grammar *is*
-a mode now. Everything here about grammar **content** still governs; only "no
-mode" fell, and the entry above says why a mode was a third option this one never
-weighed rather than the second option it refused.
+⚠️ **Largely superseded 2026-09-21 — read the two entries of that date above
+first.** Both of this entry's central calls fell: grammar *is* a mode now, and
+levels are *not* the spine — tools are, one at a time, with the grouping read off
+them later. The French A1 ladder and its sourcing gate are cancelled outright.
+What still governs is everything else here: authored or computed rather than
+generated, graded locally, zero model calls in the daily loop, never pooled with
+vocabulary review, and why the four 2026-08 removal reasons do not transfer to a
+closed paradigm. That last argument is the one this entry is still worth reading
+for.
 
 **The question was whether grammar belongs in Amgi at all**, reopened after the
 2026-08-18 removal and with a separate grammar app on the table the way Hwasul

@@ -18,32 +18,46 @@ queued, released or unverified is under Builds in [status.md](status.md).
 
 ## High
 
-_All of High is **Munli**, the grammar mode, as of 2026-09-21. It reverses the
-"no mode" half of the 2026-09-14 decision — read that Decisions entry in
-[status.md](status.md) **and** the 2026-09-21 entry that reverses it before
-starting, because everything the older one argues about grammar *content* still
-stands and only its placement changed._
+_All of High is **Munli**, the grammar mode, as of 2026-09-21. Two Decisions
+entries of that date in [status.md](status.md) govern it: one makes grammar a
+mode, the other sets what gets built inside it. Read both._
 
-**The three items are ordered, and the order is the risk control.** The shell
-learns about modes → Munli's own shape is decided → one concept is authored end
-to end. Writing-as-diagnostic stays fourth and stays in Medium; it is still
-gated on the first three being used.
+**The spine is one tool at a time, and the grouping is emergent.** Not a level
+ladder, not a taxonomy of grammar concepts designed before anything exists —
+individual tools for individual things (verb conjugation, prepositions and
+postpositions, pronouns, articles), built one at a time, each standing on its
+own. How they group is **read off the collection once there is one**, the way a
+pattern is found rather than declared. Same instinct as adding one study language
+at a time.
+
+⚠️ **The failure mode this invites is premature abstraction.** The moment tool #2
+is fitted into tool #1's shapes, the taxonomy has been built by accident and the
+whole point is lost. **Build the second tool as if the first did not exist**, and
+extract shared machinery only when a third one wants it. Two is a coincidence.
+
+**The order: the switcher, then writing, then conjugation.**
 
 - [ ] **Mode switching — the shell learns there is more than one mode.**
       Scoped 2026-09-21. This is the whole first build, and **no grammar content
-      is part of it**: Munli's tab set may land as empty screens. What this item
-      delivers is that a second mode exists, is reachable, and survives a cold
-      open.
+      is part of it**: Munli can land as a home screen with nothing on it yet.
+      What this item delivers is that a second mode exists, is reachable, and
+      survives a cold open.
+
+      ⚠️ **Don't design Munli's nav ahead of its tools.** The mode gets its own
+      navigation — that is what "own tab set, shared shell" bought — but with two
+      tools a five-tab bar is furniture for rooms nobody built. Day one is a
+      **home listing the tools**, and the nav grows a tab when a tool earns one.
+      The earlier Practice · Concepts · Ask sketch is dropped, and so is the
+      "concept" abstraction under it.
 
       **The design call that makes it cheap: a mode is a *location*, not a
       setting.** Web has no other option — a mode not in the URL is not linkable
       — and taking the same shape on native means "which mode am I in" is always
       answered by the current route, never by state two surfaces could disagree
       about. Native: a second Expo Router group (`app/(munli)/_layout.tsx` beside
-      `app/(tabs)/`), its own `Tabs`, its own
-      `unstable_settings.initialRouteName`. Web: a `/munli` route prefix with its
-      own nav item list, since `nav-items.tsx` already centralises that list for
-      both the sidebar and the mobile header.
+      `app/(tabs)/`). Web: a `/munli` route prefix with its own nav item list,
+      since `nav-items.tsx` already centralises that list for both the sidebar
+      and the mobile header.
       ⚠️ **This is what spares web the flash.** The pre-paint inline script in
       `apps/web/src/app/layout.tsx` exists because theme and sidebar-collapse are
       stored client-side and would otherwise paint wrong for a frame. A *stored*
@@ -74,30 +88,33 @@ gated on the first three being used.
          Medium is already rebuilding that popover as a list of rows; a
          *Switch mode ›* row costs almost nothing if the two land together, and
          it is the door found by looking rather than by knowing.
-      2. **The destination announces itself.** Munli's tab set is visibly not
-         Amgi's, so nobody is ever unsure *which* mode they are in — the
-         discoverability problem is only ever entering, never being lost.
+      2. **The destination announces itself.** Munli looks nothing like Amgi, so
+         nobody is ever unsure *which* mode they are in — the discoverability
+         problem is only ever entering, never being lost.
       ⚠️ **Resist a first-run tour.** One feature does not earn a coach-mark
       system, and first run is already spoken for by language setup.
 
       **What is shared and what is not — settling this is the item's real
       content.** Shared: the account, the study language, the interface language,
-      the theme, the streak. Not shared: the review queue, the collections, the
-      progress rollups.
+      the theme, the streak, **and the card collection** (a Munli surface that
+      offers a vocabulary card writes an ordinary Amgi card — cards belong to the
+      account, not to a mode). Not shared: the review queue, the practice
+      scheduling, the progress rollups.
       ⚠️ **"Grammar review is never pooled with vocabulary review" governs the
       queue, not the chrome.** Constraint #1 of 2026-09-14 is about
-      `collections.ts` refusing an everything-collection; it says nothing about
-      identity. Two streaks would be two habits to break, which is the opposite
-      of what a streak is for.
-      **Open, and worth deciding deliberately rather than by default: does Munli
+      `collections.ts` refusing an everything-collection. It is not an argument
+      for two streaks or two accounts — splitting those gives the user two habits
+      to break instead of one.
+      **Open, worth deciding deliberately rather than by default: does Munli
       practice feed the Amgi streak?** Recommended yes — one app, one habit — but
-      it means a day of clozes keeps a streak alive with nothing reviewed, and
-      whether that is a feature or a loophole is a judgement, not a derivation.
+      it means a day of conjugation keeps a streak alive with nothing reviewed,
+      and whether that is a feature or a loophole is a judgement, not a
+      derivation.
 
-      **Munli appears unconditionally**, even for a study language with no
-      grammar content — the rule the Packs tab already set ("a tab that appears
-      and disappears would reflow the bar on every study-language switch"). An
-      empty state is cheaper than a switcher whose contents move under you.
+      **Munli appears unconditionally**, even for a study language it has no
+      tools for — the rule the Packs tab already set ("a tab that appears and
+      disappears would reflow the bar on every study-language switch"). An empty
+      state is cheaper than a switcher whose contents move under you.
 
       ⚠️ **Naming.** Munli is a **mode inside Amgi**, not a second product: the
       store listing, the bundle id and the consent screen stay Amgi (see the
@@ -110,86 +127,136 @@ gated on the first three being used.
       `onLongPress`, one switcher sheet, one account-menu row, and the strings.
       No grammar.
 
-- [ ] **What Munli actually is — decided before anything is authored.** Scoped
-      2026-09-21, from a clean sheet on the user's ask.
-      ⚠️ **Clean sheet means the *surface* is redrawn, not that the arguments are
-      discarded.** `vision.md`'s grammar sections and `docs/grammar-research.md`
-      are the inheritance and are not up for re-litigation: grammar is a function,
-      not a lookup row; practice runs controlled → meaningful → free; cloze is
-      cued recall and is **not** multiple choice; no multiple choice, ever; the
-      way out of an empty box is a hint that costs; name a form rule, hide a
-      choice pattern. What a mode changes is that none of this has to fit inside
-      a pack browser any more.
+- [ ] **Writing comes back — as Munli's first tool.** Scoped 2026-09-21, on the
+      user's call, and it **un-gates** the version that sat in Medium: writing no
+      longer waits behind a ladder, because there is no ladder to wait for.
 
-      **The unit is a *concept*, and it owns three things** — which is the whole
-      difference from a pack entry. An **explanation** (the function, in prose:
-      what a grammar learner actually came for, and a pack entry has nowhere to
-      put it). A set of **authored items** (clozes, single direction, graded
-      locally by `typedAnswer.ts`, zero model calls). And a **rung** — cloze or
-      free production — which SM-2 already derives from consecutive successes and
-      demotes on a lapse for free, so it is computed, never stored.
+      **It is a restore, not a rebuild.** The removal is one commit — `1ebdc9b`,
+      2026-08-18 — so every deleted file is recoverable with
+      `git show 1ebdc9b^:<path>`: `WritingReviewPanel.tsx` on both platforms,
+      `TextDiff.tsx` on both, `packages/core/src/diff.ts`, and 88 i18n keys × 2
+      languages. **The backend needs nothing** — `/api/writing`,
+      `parseWritingReview` and `WRITING_MAX_CHARS` stayed deployed and unchanged
+      the whole time.
+      ⚠️ **`writing.ts`'s `DO NOT DELETE AS DEAD CODE` header becomes false the
+      moment it has callers again.** Rewrite it in the same commit; a header that
+      lies about why a module exists is worse than no header. Same for the
+      Housekeeping item that pairs it with `grammar.ts` — only `grammar.ts` is
+      still in that item.
 
-      **A starting sketch, not a decision — four tabs: Practice · Concepts · Ask
-      · Progress.**
-      - **Practice first**, for the reason Review is first in Amgi: the first tab
-        is the app's answer to "what is this for" on every cold open.
-      - **Concepts** is the ladder — level → concept, enrollable, the thing you
-        browse. The 급수 ladder is the shape that transfers.
-      - **Ask** is the genuinely open one. A grammar question is the most natural
-        thing to want in a grammar mode, and nothing answers it today.
-        ⚠️ **If it ships, it calls `/api/explain`** — a new surface reuses the
-        existing route rather than growing a parallel prompt. That route is
-        word-shaped, so the honest options are "extend it" or "not yet", never "a
-        second prompt doing the same job". **Not yet is a fine v1** and keeps the
-        mode to three tabs.
-      - **Progress** is per-concept mastery. Derived, not stored.
+      **What must not come back: the Learn Word/Passage toggle**, which is what
+      was actually disliked. ⚠️ **And with writing in Munli, the entire placement
+      sub-plan dies with it** — the auto-growing field, the wrapping threshold,
+      the `keyboardReserve` growth direction, the Enter/Shift+Enter split, the
+      three reworded strings. All of it existed only because writing had to share
+      Learn's one box. It doesn't any more: Munli's writing surface *is* a
+      writing surface, so there is nothing to disambiguate and **Amgi's Learn tab
+      is untouched by this item.** Cancelled with its reasoning in Decisions.
 
-      **Open, carried forward unresolved from the item it replaces:** whether a
-      Munli item is literally a `Flashcard` with only `frontToBack` populated in
-      its own collection, or a second source `buildReviewCollections` has to
-      learn about. Reuse is still the recommendation and still unproven — SM-2,
-      the offline queue and the rollups all come free. A separate mode weakens
-      the *presentational* reason to reuse and leaves the mechanical one
-      untouched.
+      **What "improving it" means, cheapest first:**
+      1. **`try`/`catch` on `/api/writing`** — it has exactly the exposure the
+         `/api/explain` item in Medium describes, and this is the commit that
+         should pay for it.
+      2. **The gap card.** `WritingCardCandidate.gap` is implemented, the prompt
+         already specifies it, and it never shipped — a word the learner reached
+         for and did not have is the highest-confidence signal a passage
+         produces. It is *vocabulary*, so it writes an ordinary Amgi card. First
+         cross-mode action, and the shell makes it legal.
+      3. **Findings you can return to.** They were ephemeral; a review you cannot
+         re-read is a review you half-remember.
+         ⚠️ **This is not the 2026-09-14 storage plan.** That one stored *concept
+         ids and counts* to order a grammar collection by the learner's own
+         errors — with no ladder there is nothing to order, so **the "emergent
+         ordering" half of that entry dies with it.** What is storable now is
+         `FindingKind` counts, four buckets, honest as history and far too coarse
+         to be a syllabus. **The passage itself stays unstored** either way.
+      4. **Routing, deferred and named so it is not invented early.** Once
+         conjugation exists, a `grammar` finding about a verb form could open
+         that verb's paradigm. That is the first real instance of tools being
+         grouped by something observed — but it needs both tools to exist and the
+         classification to be reliable, so **not in v1**.
 
-      ⚠️ **Do not oversell it, unchanged from 2026-09-14.** Authored cloze is
-      Paulston's controlled rung, and controlled practice alone does not build
-      form–meaning mapping; Bunpro is the shipped cautionary case. A mode does
-      not fix that — it is the same ceiling with better navigation.
+      ⚠️ **Say what is not being fixed.** Of the four reasons the feature was
+      removed, this addresses *unfocused* (its own mode, no toggle), *unused*
+      (untested — it is the same bet again) and *heavy* (one call at a moment the
+      user chose, nothing in a daily loop). It does **not** address **"the
+      practice itself was not good"** where that was about the *reviews* — the
+      model call, prompt and parser are byte-for-byte what was removed. If the
+      findings themselves were the disappointment, none of the four items above
+      touch it, and that is a prompt-and-model question to take deliberately
+      rather than to discover after the restore.
 
-- [ ] **French A1 — one concept, end to end, inside Munli.** Scoped 2026-09-14,
-      **folded into Munli 2026-09-21** on the user's call; it was Medium, and its
-      structure survives the move intact. Read the 2026-09-14 Decisions entry in
-      [status.md](status.md) for the scope line and the three constraints.
-      **What changes:** a level is no longer a `VocabPack` and a concept is no
-      longer a subpack — they are Munli's own nouns, browsed on Concepts.
-      **What does not:** one level per rung, one concept per grammar point, each
-      item an authored cloze, graded locally, zero model calls, never pooled with
-      vocabulary review.
-      ⚠️ **The nesting argument was the old shape's cheapness, not a truth about
-      grammar.** "Packs are exactly one subpack deep and level → concept → item
-      is exactly two" was why it fit inside the pack browser. In a mode nothing
-      is constrained to two levels, so **don't grow a third just because it is
-      now possible**.
-      ⚠️ **Ship one concept before authoring a level.** ~30–60 concepts × ~6 items
-      is 200–350 sourced entries — the largest content job this repo has done.
-      One concept proves the shape for ~6.
-      ⚠️ **Sourcing is still the gate, and CEFR does not publish a grammar
-      syllabus** — it is a can-do scale. For French the candidate is the Council
-      of Europe / Didier *niveau A1 pour le français* référentiel. **Verify it is
-      citable before relying on it**; `docs/packs/README.md` governs this and its
-      rule is that the model is not a source. A référentiel that turns out not to
-      be citable changes the ladder, not just a footnote.
-      **The user is explicitly not its user**, which is why it earns its slot by
-      being cheap to be wrong about rather than by being wanted.
+      **What stays dead, unchanged:** generated exercises, model-graded free
+      production, and writing as a *practice* surface. Writing diagnoses.
 
-_**Other modes are a sidenote, not a plan.** Speaking is the obvious third —
-Hwasul was the separate-app version of it — and the only thing that follows for
-the work above is: **don't hard-code two.** The switcher is a list of modes, the
-route group is one of several, and the storage key holds a mode id rather than a
-boolean. No speaking work is scoped, and adding modes is not a goal; the bar for
-a third is the bar that got Munli its second. See the modes note in
-[vision.md](vision.md)._
+- [ ] **Verb conjugation practice — the first built-from-scratch Munli tool.**
+      Scoped 2026-09-21. Standalone by design: **no levels, no concepts, no
+      shared grammar abstraction.** It is one tool for one thing.
+
+      **One rep is one cell.** The prompt names the verb, the tense/mood and the
+      person; the learner types the form. ~5 seconds, which is the point —
+      `vision.md` already argues that the cost of an exercise sets the bar for
+      what is worth practising, and a contraction that was absurd at a
+      forty-second production turn is simply fine at five.
+
+      ⚠️ **But the *scheduled item* is the paradigm — verb × tense — not the
+      cell**, and this is the call the rest of the design hangs off.
+      Cell-level scheduling is ~48 items per verb (8 tenses × 6 persons), so
+      twenty verbs is ~960 items in a queue, and it schedules `vous` separately
+      from `tu` when nobody knows one without the other. Paradigm-level is twenty
+      verbs × six tenses = 120, which is a deck.
+      **And it is what makes the other rep shapes free later** — the user wants
+      fill-the-table and in-a-sentence offered as alternatives, to see which
+      people prefer. If the item is the paradigm, those are *views of the same
+      item*, not a second content model: **the item is the paradigm; the rep is a
+      view of it.** Build one view, leave the seam.
+      **The cost, stated:** SM-2 then learns "your `prendre` présent is weak",
+      not "your *nous* is weak". Recover most of it by tracking per-cell misses
+      *inside* the item and sampling the weakest cell at presentation — a counter,
+      not a second scheduler.
+
+      **The content is computed, not authored — and that is what makes
+      conjugation unlike every content job this repo has done.** A conjugation
+      set is a verb list plus paradigm rules plus an irregulars table: finite,
+      closed, and checkable against a reference. There is no 급수-sized authoring
+      job here, which is exactly why this is the right first tool.
+      ⚠️ **`docs/packs/README.md` still governs: the model is not a source.**
+      Generate regular forms by rule, take irregulars from a citable reference,
+      and **check the licence before taking a dataset** — the sourcing gate moved,
+      it did not disappear.
+
+      **Grading is already built and already correct.** `typedAnswer.ts` is pure,
+      local and needs no model, and its two folding decisions happen to be exactly
+      what a conjugation drill needs: apostrophes *are* folded (so `j'ai` typed on
+      an iOS keyboard matches), and **diacritics are deliberately not** — the
+      module's own comment cites French `ou`/`où` and `sur`/`sûr`, and
+      `préfère`/`prefere` is the same case one step further in. A grader that
+      folded accents would teach that the accent is optional, which for a
+      conjugation table is the whole content. **No new grader.**
+
+      **Hints that cost, per `vision.md`:** stem → ending pattern → the form, with
+      the best available verdict falling as each is taken, and the schedule told.
+      ⚠️ **Take the design, not the module** — the hint tiers were `grammar.ts`'s,
+      and that file is queued for deletion under Housekeeping.
+
+      **The learner picks; the app does not level them.** Which tenses and which
+      verbs are chosen from the outside, frequency-ordered. No placement, no level
+      setting, nothing inferred.
+
+      **Zero model calls, works offline**, like the rest of review.
+
+      **Assumption, stated rather than asked: French first**, because it is the
+      ask that opened this. The tool is language-generic and the dataset is
+      per-language, so changing the answer is a dataset swap rather than a
+      redesign. Korean conjugates heavily too, so the core Korean↔English pair is
+      reachable from the same tool; English is the thin one.
+
+      **The native language does *not* enter this tool** — the user's call, and
+      worth recording as scoping rather than as an exception. A closed paradigm is
+      a form rule: what makes `prenons` hard is the same thing whoever you are.
+      Where the L1 *is* the difficulty — articles for a Korean native, English
+      prepositions against Korean postpositions — the pair decides what the tool
+      even does, and that is an argument for **those** tools, when they are built.
 
 ## Medium
 
@@ -243,90 +310,6 @@ Moved High → Medium 2026-09-21, on the user's call, when Munli took High._
       per-language history since 2026-08-20); a **learned** chart is not, and must
       be withheld over a window reaching past that date exactly as `cardsMatured`
       already is.
-
-- [ ] **Writing returns as the diagnostic — last, after the ladder exists.**
-      Scoped 2026-09-14; the reasoning, the revision it makes to an earlier call,
-      and what stays dead are in the Decisions entry in [status.md](status.md).
-      ⚠️ **Do not start this before the three Munli items in High.** A finding
-      needs an authored concept to point at; without the ladder it has to invent
-      one, which is exactly what failed. The ordering is also the **gate**:
-      writing comes back only if the ladder gets used.
-      ⚠️ **Its home reopened on 2026-09-21 and is not decided here.** Everything
-      below places the input on Amgi's Learn tab, which was right when grammar was
-      a pack in the same mode. With Munli it could equally be Munli's own surface
-      — the argument for Learn is that writing happens where you already are and
-      a diagnostic nobody visits diagnoses nothing; the argument against is that
-      its *output* is entirely Munli's. **Decide it with Munli's shape**, not by
-      inheriting the paragraphs below.
-      **The job is routing, not practice** — a finding classifies into the closed
-      set of authored concepts and enrols that concept. Most of it is already built
-      and deployed (`/api/writing`, `parseWritingReview`, the four `FindingKind`s,
-      `WritingCardCandidate.gap`, `buildWritingCardDraft`); what is new is the
-      classifier and the counts.
-      **The gap card is the cheapest win** and can ship with this or ahead of it.
-
-      **Placement — one input, no toggle.** The Word/Passage toggle is what was
-      disliked, not Learn itself: it forced a mode choice up front on a surface
-      whose job is one box. ⚠️ **An offer, not a route** — a phrase lookup is
-      legitimate (the idioms pack), so the input must never be silently
-      reinterpreted. Same shape as the spellcheck override, "a request, not a
-      filter".
-
-      **The input, designed 2026-09-14.** No value on its own — it ships with this
-      item, not before it, or it is a button with nothing behind it. The offer
-      appears **before** submission, not beside the explanation after it: a
-      paragraph sent to `/api/explain` spends a model call and renders a nonsense
-      result, and both are avoidable by asking first.
-
-      **An auto-growing field, and the growth is also the signal.** Starts at
-      exactly today's height, grows a line at a time as it wraps, caps ~8 lines
-      then scrolls internally. **One line → only `Learn`, nothing about today
-      changes. Two lines → the writing action appears.** The affordance arrives at
-      the moment the box visibly becomes a writing surface, so it needs no
-      explaining copy. The existing button never moves; the new action sits under
-      the field.
-      ⚠️ **Wrapping, never a character count.** Ten study languages with different
-      density — 15 Korean characters is a sentence, 15 French characters is most of
-      `anniversaire`. A threshold means a `writingThreshold` in
-      `STUDY_LANGUAGE_CONFIGS`, i.e. the per-language conditional that registry
-      exists to prevent. Wrapping is measured in rendered space and is
-      script-neutral for free. **Bias it generous** — a spurious button is ignored,
-      a missing one means nobody finds the feature.
-
-      ⚠️ **Mobile: it must grow *downward*, and this is load-bearing.**
-      `app/(tabs)/index.tsx:535` holds the keyboard's space open so the field never
-      lifts on focus — "a search bar that jumps as you tap it is the thing being
-      fixed here". Growth does not violate that (motion the user's own keystrokes
-      caused is legible where an unearned jump is not), **but only downward**, into
-      the `keyboardReserve` band, covering the word of the day the way the keyboard
-      already does. Upward growth pushes the tagline and reinstates exactly the
-      feeling that comment exists to prevent.
-      **`searchRow` needs `alignItems: 'flex-end'`** — it sets none today, so it
-      defaults to `stretch`, which is invisible at one line and a slab of highlight
-      colour at eight. Bottom-pinned keeps the button under the thumb.
-      **It lands twice**: the empty state (`:519`) and the results state (`:603`)
-      render the row separately. They already share `s.searchInput` — extract the
-      field rather than editing both.
-
-      **Enter.** Free today on both platforms (native form on web,
-      `returnKeyType="search"` + `onSubmitEditing` on mobile), and a multiline field
-      takes that away. Web: Enter still submits, Shift+Enter newlines. Mobile: once
-      multiline the return key newlines and submission moves to the button — same
-      line-count signal. ⚠️ **Losing a passage to a stray Return is unrecoverable**;
-      nobody retypes it.
-
-      ⚠️ **Copy decides whether anyone finds this.** All three strings say *term* —
-      `inputPlaceholder` ("Enter a term..." / "단어를 입력하세요..."), `tagline`
-      ("Look up any word or phrase."). That actively says *not* to paste a sentence,
-      so the feature stays invisible however good the box is. The placeholder must
-      still be honest for the one-word case, which stays almost all use. Korean
-      natural, not a literal render of the English.
-      **Counter only near the 1000-char ceiling**, never on a one-word lookup.
-
-      **Rejected: an "expand" icon opening a writing composer** — the Word/Passage
-      toggle again with a smaller target, mode choice back up front.
-      **Scope:** field type + a growth handler + one alignment prop + a conditional
-      button + three strings. No redesign.
 
 - [ ] **Per-context pronunciation speed** — the last of the mobile UI redesign
       queued 2026-09-01, moved here 2026-09-12 on the user's call. Nothing about
@@ -425,11 +408,11 @@ green. What's left is what those two now *show*.
       web as much as Android.
 
 - [ ] **Delete `packages/core/src/grammar.ts` and its API route.** ⚠️ **Split
-      2026-09-14 — `writing.ts` is no longer part of this.** The grammar plan above
-      brings writing back as the diagnostic, and it wants `parseWritingReview`, the
-      finding types, `WritingCardCandidate.gap` and `buildWritingCardDraft` — all
-      still correct, plus `/api/writing` itself, unchanged. **Keep `writing.ts` and
-      its route.** `grammar.ts` is the opposite case: `getPatternExercise` and
+      2026-09-14 — `writing.ts` is no longer part of this**, and as of 2026-09-21
+      it is not even the same *kind* of case: the writing item in High gives it
+      real callers again, at which point it is ordinary live code and its
+      `DO NOT DELETE AS DEAD CODE` header has to go with the same commit. **Keep
+      `writing.ts` and its route.** `grammar.ts` is the opposite case: `getPatternExercise` and
       `gradeFromReview` are the generation and model-grading the new design
       explicitly rejects, so nothing will want them back.
       **The gate is open**: it was "once no build predating the 2026-08-18 grammar

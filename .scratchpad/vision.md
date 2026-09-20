@@ -202,6 +202,7 @@ app still does not decide what you are ready for.** A levelled pack is content
 you pick from the outside, exactly as a 급수 pack is; there is still no placement
 test, no level setting, and no adaptivity reading your level off anything.
 
+
 ⚠️ **CEFR is a can-do scale and does not publish a grammar syllabus.** The ladder
 has to come from a per-language reference level description, which exists for
 some languages and not others — so "levels" is the right idea while "CEFR" is the
@@ -211,6 +212,38 @@ ladder is TOPIK, which is the precedent 급수 already set here.
 This fills the ladder's **sentence × production** cell properly — writing review
 diagnoses at sentence level, and this is the drilling that follows a diagnosis —
 and opens **sentence × comprehension**, which is still empty.
+
+**Reversed again 2026-09-21, and this one is the plan of record.** _Set by the
+user; the full call is in Decisions in [status.md](status.md)._ The levelled
+syllabus above lasted a week. There is **no ladder**: grammar is built as
+individual tools for individual things — verb conjugation, prepositions and
+postpositions, pronouns, articles — **one at a time**, each standing on its own,
+and how they group is **read off the collection once there is one** rather than
+designed before it exists.
+
+**This is the third answer to one question, and the axis is where structure comes
+from.** Errors-as-syllabus put it in the *learner* and lost its sensor. A CEFR
+ladder put it in an *external curriculum* and bought a 200–350-item sourcing job
+before anything was usable. This puts it in **what has been built** — the
+cheapest of the three to be wrong about, since being wrong costs one tool instead
+of a level. It is also the house pattern rather than a new idea: one study
+language at a time, a subpack before a pack, one concept before a level.
+
+⚠️ **Emergence moved from the learner to the builder**, and conflating the two
+would undo the rest of this file. The learner still chooses from the outside;
+the app still does not decide what they are ready for; there is still no
+placement test and no level setting. What is emergent is the *taxonomy*, and its
+failure mode is premature abstraction — fit the second tool into the first tool's
+shapes and the taxonomy has been built by accident. Build the second as if the
+first did not exist; extract shared machinery when a third one wants it.
+
+**The native language decides some tools and not others.** A Korean native and an
+English native learning French need different things — but that bites exactly
+where the L1 gap *is* the difficulty. A closed paradigm is a form rule, and
+`prenons` is hard for the same reason whoever you are; articles for a Korean
+native, or English prepositions against Korean postpositions, are the opposite
+case, where the pair decides what the tool does at all. So the pair arrives **with
+the tool that needs it**, not as an axis every tool has to carry.
 
 ### A grammar point is not one kind of thing (2026-08-08, after the first trial)
 

@@ -44,7 +44,9 @@ stored-preference reason.
 - **The nav is about to become per-mode** (planned 2026-09-21, nothing built).
   The five surfaces above are *Amgi's* nav; Munli, the grammar mode, gets its
   own set, reached by holding the last tab — Progress on native, the sidebar's
-  bottom button on web. **A mode is a route, not a state**: `(munli)` beside
+  bottom button on web. **Its nav grows with its tools** rather than being drawn
+  first: day one is a home listing them (writing, then verb conjugation), and a
+  tool earns a tab when it earns one. **A mode is a route, not a state**: `(munli)` beside
   `(tabs)` on native, a `/munli` prefix on web, which is what keeps the
   pre-paint script from having to learn about it. Scoped in
   [backlog.md](backlog.md); the reasoning is in [vision.md](vision.md).
