@@ -13,6 +13,16 @@ and `npm run lint` 0 errors / 21 warnings, both measured._
 
 ## Now
 
+- **Amgi hosts modes, and Munli is the second one** (PR #135, 2026-09-21). The
+  shell only — Munli's home says it has no tools yet, which it does not. The
+  mode is read off the route on both platforms (`/munli`); the only thing stored
+  is which mode a cold open lands in, in a cookie on web and one AsyncStorage
+  key on native. Holding the last tab opens the switcher on native; on web it is
+  a row at the top of the account menu. ⚠️ **Web is live; native is in no build**
+  — see Queued for the next build in [backlog.md](backlog.md). Verified by suite,
+  compiler, `next build` and `expo export`; **nobody has looked at either surface
+  on a device or in a browser.**
+
 - **1.7.0 is build 16**, cut 2026-09-19 from `cb7c19c` on `release/1.7.0`, with
   the Android APK as `versionCode` 6 from the same commit. ⚠️ **Approval is not
   recorded here because it has not been reported** — 1.6.0's external approval
@@ -328,6 +338,45 @@ once, so a path that worked on build 14 is not evidence about build 15.
 
 Closed calls, kept with their reasoning — a decision whose reasoning is lost gets
 reopened by the next person to notice the symptom. Newest first.
+
+### Munli ships as a route, and web remembers it in a cookie (2026-09-21)
+
+Building the mode switcher settled three things the plan left to the build, and
+one of them is a deviation from what the plan said to do.
+
+**The mode is a route on both platforms, and native uses a route *segment*
+rather than a group.** `app/munli/` gives native the path `/munli`, which is
+exactly web's, so `modeFromPath` is one function with one answer for both. A
+route group (`app/(munli)/`) would have been the more idiomatic Expo Router
+shape and would have produced no path at all — at which point native would have
+needed its own way to say which mode it is in, and the two platforms would drift.
+
+⚠️ **Web remembers the landing mode in a cookie, not localStorage — a deviation,
+made for the plan's own reason.** The plan named `localStorage`, and then argued
+at length that a stored mode must never reach the pre-paint script because it
+would paint the *wrong navigation* for a frame. localStorage cannot avoid that:
+it is readable only after hydration, so `/` would render Amgi and then replace
+itself. A cookie is readable in `middleware.ts` before the first byte. The
+middleware matches `/` and nothing else — a path the user typed, followed or
+bookmarked is never rewritten, or a shared link stops meaning one thing.
+
+**Munli is a `Stack`, not `Tabs`, and its nav grows one row per tool.** This is
+the plan's "don't design Munli's nav ahead of its tools" taken literally, and it
+has one consequence worth stating: **there is no tab bar in Munli to hold**, so
+the switching gesture cannot be its only exit. Munli's home carries an explicit
+switch button. On web the same gap is filled by the account-menu row, which is
+web's *primary* door rather than its fallback — there is no long-press
+convention on a desktop sidebar, and a mode nobody can find is a mode nobody
+uses.
+
+**`expo-haptics` was considered and not added.** It is bundled in Expo Go, so it
+would work while developing and then need the next production build to reach
+anyone. The sheet appearing is the confirmation; the buzz would have been a
+bonus, and the plan was explicit that the affordance must not depend on it.
+
+**What is not answered:** whether Munli practice feeds the Amgi streak. Nothing
+in Munli can be practised yet — writing diagnoses and does not schedule — so the
+question arrives with the first practice tool, not with the shell.
 
 ### Grammar is one tool at a time, and the grouping comes later (2026-09-21)
 
