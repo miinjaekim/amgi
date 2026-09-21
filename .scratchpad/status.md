@@ -552,17 +552,32 @@ page something to fill in before it became useful. Now: tense chips across the
 top, then a section per group with a **Save** button, chips for the verbs the
 pattern is shown through, and the table itself.
 
-**The narrowing is a filter, the Cards idiom rather than a new one** — two
-multi-selects, tense and verb group. ⚠️ **Inline chips are the better control
-right up until a list can grow**, which is why Cards still draws its filters that
-way and this does not: both of these lists will grow, and a row of them becomes
-the page's first screen. On native they sit behind one summary button in
-`FilterSheet`, which gained multi-select by letting the *shape* of `selected` be
-the mode — an array means several answers — rather than a flag that can fall out
-of step with it. On web they are two dropdowns.
+**The narrowing is a filter, the Cards idiom rather than a new one** — but
+⚠️ **one dropdown per filter, not several groups behind one button.** The Cards
+sheet holds three groups together because they narrow *one* list in three ways;
+tense and verb group are independent axes, and a single control meant opening
+something unlabelled to find out what it filtered. Inline chips were tried first
+and are the better control right up until a list can grow — which is why Cards
+still draws its filters that way and this does not.
+
+**Multi-select arrived by letting the *shape* of `selected` be the mode** — an
+array means several answers — rather than a flag that can fall out of step with
+the value beside it. `FilterSheet` and web's `MultiSelect` both work that way, so
+the per-section **verb picker is the same control** passed a plain string.
+
 **No counts on the options.** A count here would be the product of the two
 selections, which says nothing a learner could act on — and `FilterSheet`'s own
 rule is that a count belongs where it informs a choice.
+
+⚠️ **Saving is per tense, not per group, and the first version was wrong about
+this.** A single Save button per group could only ever say "all of these" or
+"not all of these", so two tenses saved out of three read as **nothing saved** —
+which is what the user hit. Enrolment is per subject-and-tense pair, so the
+control has to be too: a pill per shown tense, stating its own answer and
+toggling exactly its own pair. The lesson generalises — **a control that cannot
+express the state of the data behind it will misreport that state**, and the
+count in the subtitle did not rescue it, because a button is read before a
+caption.
 
 ⚠️ **The filter is a *view*; Save is what commits.** Selecting the imparfait
 shows it without enrolling it, which is how somebody decides whether to take it

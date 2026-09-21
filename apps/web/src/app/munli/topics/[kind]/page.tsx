@@ -65,63 +65,55 @@ export default function VerbTopicPage() {
     );
   }
 
-  const chip = (label: string, on: boolean, onClick: () => void, key: string) => (
-    <button
-      key={key}
-      aria-pressed={on}
-      onClick={onClick}
-      className="px-3 py-1.5 rounded-full text-sm font-mono border transition-colors"
-      style={on
-        ? { background: 'var(--color-highlight)', color: 'var(--color-bg)', borderColor: 'var(--color-highlight)' }
-        : { color: 'var(--color-muted)', borderColor: 'var(--color-muted)' }}
-    >
-      {label}
-    </button>
-  );
-
   const section = (subject: ConjugationSubject) => {
     const key = `${subject.kind}:${subject.id}`;
     const vehicleList = subject.kind === 'group' ? subject.vehicles : [subject.infinitive];
     const vehicle = vehicles[key] ?? vehicleList[0];
     const shown = tenseIds.filter(id => subject.kind === 'group' || subject.forms[id]);
-    const savedCount = shown.filter(id => isEnrolled(enrolment, subject, id)).length;
-    const allSaved = shown.length > 0 && savedCount === shown.length;
 
     return (
       <section key={key} className="pb-6 mb-6 border-b" style={{ borderColor: 'var(--color-muted)' }}>
         <div className="flex items-center gap-3 mb-3">
-          <div className="min-w-0 flex-1">
-            <h2 className="font-mono text-lg font-bold" style={{ color: 'var(--color-text)' }}>
-              {subject.kind === 'group' ? subject.label : subject.infinitive}
-            </h2>
-            <p className="font-mono text-xs mt-0.5" style={{ color: 'var(--color-muted)' }}>
-              {t(interfaceLanguage, 'verbsSavedCount', { saved: savedCount, total: shown.length })}
-            </p>
-          </div>
-          {/* Saves whatever tenses are being looked at — the decks pattern of
-              committing what is in front of you. */}
-          <button
-            onClick={() => setEnrolment(setEnrolled(enrolment, subject, shown, !allSaved))}
-            aria-pressed={allSaved}
-            className="px-4 py-1.5 rounded-full text-sm font-mono font-bold border transition-colors"
-            style={allSaved
-              ? { background: 'var(--color-highlight)', color: 'var(--color-bg)', borderColor: 'var(--color-highlight)' }
-              : { color: 'var(--color-highlight)', borderColor: 'var(--color-highlight)' }}
-          >
-            {t(interfaceLanguage, allSaved ? 'verbsSaved' : 'verbsSave')}
-          </button>
+          <h2 className="font-mono text-lg font-bold flex-1" style={{ color: 'var(--color-text)' }}>
+            {subject.kind === 'group' ? subject.label : subject.infinitive}
+          </h2>
+          {/* Which verb the pattern is shown through — one answer at a time. */}
+          {vehicleList.length > 1 && (
+            <MultiSelect
+              label={t(interfaceLanguage, 'verbsFilterVerb')}
+              options={vehicleList.map(v => ({ key: v, label: v }))}
+              selected={vehicle}
+              onToggle={v => setVehicles(prev => ({ ...prev, [key]: v }))}
+            />
+          )}
         </div>
 
-        {vehicleList.length > 1 && (
-          <div className="flex flex-wrap gap-1.5">
-            {vehicleList.map(candidate => chip(
-              candidate,
-              candidate === vehicle,
-              () => setVehicles(prev => ({ ...prev, [key]: candidate })),
-              candidate,
-            ))}
-          </div>
-        )}
+        {/* ⚠️ **One save control per tense, not one per group.** Enrolment is per
+            subject-and-tense pair, and a single button could only say "all of
+            these" or "not all of these" — so two saved out of three read as
+            nothing saved. A pill each states its own answer and toggles exactly
+            its own pair. */}
+        <div className="flex flex-wrap gap-1.5">
+          {shown.map(tenseId => {
+            const tense = spec.tenses.find(x => x.id === tenseId);
+            if (!tense) return null;
+            const on = isEnrolled(enrolment, subject, tenseId);
+            return (
+              <button
+                key={tenseId}
+                aria-pressed={on}
+                aria-label={t(interfaceLanguage, on ? 'verbsSaved' : 'verbsSave', { tense: tense.label })}
+                onClick={() => setEnrolment(setEnrolled(enrolment, subject, [tenseId], !on))}
+                className="px-3 py-1 rounded-full text-xs font-mono font-bold border transition-colors"
+                style={on
+                  ? { background: 'var(--color-highlight)', color: 'var(--color-bg)', borderColor: 'var(--color-highlight)' }
+                  : { color: 'var(--color-highlight)', borderColor: 'var(--color-highlight)' }}
+              >
+                {on ? '✓' : '+'} {tense.label}
+              </button>
+            );
+          })}
+        </div>
 
         <ParadigmTable spec={spec} subject={subject} vehicle={vehicle} tenseIds={shown} />
       </section>
@@ -169,7 +161,7 @@ export default function VerbTopicPage() {
         )}
       </div>
       <p className="font-mono text-xs mb-8" style={{ color: 'var(--color-muted)' }}>
-        {t(interfaceLanguage, 'verbsReference')}
+        {t(interfaceLanguage, 'verbsSaveHint')}
       </p>
 
       {/* An empty topic is the irregulars until they are sourced — it says so

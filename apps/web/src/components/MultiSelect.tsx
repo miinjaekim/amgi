@@ -24,7 +24,14 @@ export default function MultiSelect({
 }: {
   label: string;
   options: MultiSelectOption[];
-  selected: readonly string[];
+  /**
+   * A list for a multi-select, one key for a single-select.
+   *
+   * ⚠️ **The shape is the mode**, matching native's `FilterSheet` — a control
+   * that can hold several answers says so by holding them, rather than by a
+   * flag that can fall out of step with the value beside it.
+   */
+  selected: string | readonly string[];
   onToggle: (key: string) => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -39,8 +46,10 @@ export default function MultiSelect({
     return () => document.removeEventListener('mousedown', handler);
   }, [open]);
 
+  const multi = Array.isArray(selected);
+  const isOn = (key: string) => (multi ? selected.includes(key) : selected === key);
   // What is on, stated rather than left to be spotted among what is available.
-  const summary = options.filter(o => selected.includes(o.key)).map(o => o.label).join(', ');
+  const summary = options.filter(o => isOn(o.key)).map(o => o.label).join(', ');
 
   return (
     <div className="relative" ref={ref}>
@@ -66,9 +75,12 @@ export default function MultiSelect({
               className="flex items-center gap-3 px-4 py-2.5 cursor-pointer hover:bg-[var(--color-muted)]/20"
             >
               <input
-                type="checkbox"
-                checked={selected.includes(option.key)}
-                onChange={() => onToggle(option.key)}
+                type={multi ? 'checkbox' : 'radio'}
+                name={multi ? undefined : label}
+                checked={isOn(option.key)}
+                // A single-select closes on choosing: there is nothing more to
+                // pick, and leaving it open makes the choice look unregistered.
+                onChange={() => { onToggle(option.key); if (!multi) setOpen(false); }}
               />
               <span className="font-mono text-sm whitespace-nowrap" style={{ color: 'var(--color-text)' }}>
                 {option.label}

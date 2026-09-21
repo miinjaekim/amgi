@@ -60,7 +60,10 @@ export default function VerbTopicScreen() {
    * everything and is what the empty message speaks to.
    */
   const [chosenGroups, setChosenGroups] = useState<string[] | null>(null);
-  const [filtersOpen, setFiltersOpen] = useState(false);
+  /** Which filter dropdown is open — one per filter, never both at once. */
+  const [openFilter, setOpenFilter] = useState<'tenses' | 'groups' | null>(null);
+  /** Which section's verb picker is open, by subject key. */
+  const [verbPickerFor, setVerbPickerFor] = useState<string | null>(null);
 
   const tenseIds = useMemo(() => {
     if (chosenTenses) return chosenTenses;
@@ -95,52 +98,58 @@ export default function VerbTopicScreen() {
     const vehicleList = subject.kind === 'group' ? subject.vehicles : [subject.infinitive];
     const vehicle = vehicles[key] ?? vehicleList[0];
     const shown = tenseIds.filter(id => subject.kind === 'group' || subject.forms[id]);
-    const savedCount = shown.filter(id => isEnrolled(enrolment, subject, id)).length;
-    const allSaved = shown.length > 0 && savedCount === shown.length;
 
     return (
       <View key={key} style={s.section}>
         <View style={s.sectionHead}>
-          <View style={s.sectionText}>
-            <Text style={s.sectionLabel}>
-              {subject.kind === 'group' ? subject.label : subject.infinitive}
-            </Text>
-            <Text style={s.sectionSub}>
-              {t(interfaceLanguage, 'verbsSavedCount', { saved: savedCount, total: shown.length })}
-            </Text>
-          </View>
-          {/* Saves whatever tenses are being looked at — the decks pattern of
-              committing what is in front of you. */}
-          <TouchableOpacity
-            style={[s.save, allSaved && s.saveOn]}
-            accessibilityRole="button"
-            accessibilityState={{ selected: allSaved }}
-            onPress={() => setEnrolment(setEnrolled(enrolment, subject, shown, !allSaved))}
-          >
-            <Text style={[s.saveText, allSaved && s.saveTextOn]}>
-              {t(interfaceLanguage, allSaved ? 'verbsSaved' : 'verbsSave')}
-            </Text>
-          </TouchableOpacity>
+          <Text style={s.sectionLabel}>
+            {subject.kind === 'group' ? subject.label : subject.infinitive}
+          </Text>
+          {/* Which verb the pattern is shown through. A dropdown rather than a
+              chip row: one answer at a time, and the list grows with the group. */}
+          {vehicleList.length > 1 && (
+            <TouchableOpacity
+              style={s.verbBtn}
+              onPress={() => setVerbPickerFor(key)}
+              accessibilityRole="button"
+              accessibilityLabel={t(interfaceLanguage, 'verbsFilterVerb')}
+              accessibilityValue={{ text: vehicle }}
+            >
+              <Text style={s.verbBtnText} numberOfLines={1}>{vehicle}</Text>
+              <Text style={s.filterBtnCaret}>▾</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
-        {vehicleList.length > 1 && (
-          <View style={s.chips}>
-            {vehicleList.map(candidate => {
-              const on = candidate === vehicle;
-              return (
-                <TouchableOpacity
-                  key={candidate}
-                  style={[s.chip, on && s.chipOn]}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: on }}
-                  onPress={() => setVehicles(prev => ({ ...prev, [key]: candidate }))}
-                >
-                  <Text style={[s.chipText, on && s.chipTextOn]}>{candidate}</Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        )}
+        {/* ⚠️ **One save control per tense, not one per group.** Enrolment is
+            per subject-and-tense pair, and a single button could only ever say
+            "all of these" or "not all of these" — so two tenses saved out of
+            three read as nothing saved, which is the thing being fixed. A pill
+            each states its own answer and toggles exactly its own pair. */}
+        <View style={s.chips}>
+          {shown.map(tenseId => {
+            const tense = spec.tenses.find(x => x.id === tenseId);
+            if (!tense) return null;
+            const on = isEnrolled(enrolment, subject, tenseId);
+            return (
+              <TouchableOpacity
+                key={tenseId}
+                style={[s.savePill, on && s.savePillOn]}
+                accessibilityRole="button"
+                accessibilityState={{ selected: on }}
+                accessibilityLabel={t(interfaceLanguage, on ? 'verbsSaved' : 'verbsSave', { tense: tense.label })}
+                onPress={() => setEnrolment(setEnrolled(enrolment, subject, [tenseId], !on))}
+              >
+                <Ionicons
+                  name={on ? 'checkmark' : 'add'}
+                  size={13}
+                  color={on ? C.bg : C.muted}
+                />
+                <Text style={[s.savePillText, on && s.savePillTextOn]}>{tense.label}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
 
         <ParadigmTable spec={spec} subject={subject} vehicle={vehicle} tenseIds={shown} />
       </View>
@@ -153,50 +162,45 @@ export default function VerbTopicScreen() {
   );
 
   /**
-   * Two multi-selects behind one button — the Cards filter idiom, for the same
-   * reason it exists there: inline chips are the better control right up until
-   * there are two rows of them, and a page whose first screen is all chrome is
-   * a page you scroll past to reach anything.
+   * ⚠️ **One dropdown per filter, not two groups behind one button.** The Cards
+   * sheet holds three groups together because they narrow *one* list in three
+   * ways; these two are independent axes, and putting them behind a single
+   * control meant opening something unlabelled to find out what it filtered.
    *
    * No counts. A count here would be the product of the two selections, which
-   * says nothing a learner could act on.
+   * says nothing a learner could act on — and `FilterSheet`'s own rule is that a
+   * count belongs where it informs a choice.
    */
-  const filterGroups: FilterGroup[] = [
-    {
-      title: t(interfaceLanguage, 'verbsFilterTenses'),
-      options: spec.tenses.map(tense => ({ key: tense.id, label: tense.label })),
-      selected: tenseIds,
-      onSelect: key => setChosenTenses(
-        tenseIds.includes(key) ? tenseIds.filter(id => id !== key) : [...tenseIds, key],
-      ),
-    },
-    ...(allSubjects.length > 1 ? [{
-      title: t(interfaceLanguage, 'verbsFilterGroups'),
-      options: allSubjects.map(subject => ({
-        key: subjectKey(subject),
-        label: subject.kind === 'group' ? subject.label : subject.infinitive,
-      })),
-      selected: subjects.map(subjectKey),
-      onSelect: (key: string) => {
-        const shownKeys = subjects.map(subjectKey);
-        setChosenGroups(
-          shownKeys.includes(key) ? shownKeys.filter(k => k !== key) : [...shownKeys, key],
-        );
-      },
-    }] : []),
-  ];
+  const tenseFilter: FilterGroup = {
+    title: t(interfaceLanguage, 'verbsFilterTenses'),
+    options: spec.tenses.map(tense => ({ key: tense.id, label: tense.label })),
+    selected: tenseIds,
+    onSelect: key => setChosenTenses(
+      tenseIds.includes(key) ? tenseIds.filter(id => id !== key) : [...tenseIds, key],
+    ),
+  };
 
-  /** What is on, stated rather than left to be spotted among what is available. */
-  const filterSummary = [
-    tenseIds.length > 0
-      ? spec.tenses.filter(tense => tenseIds.includes(tense.id)).map(tense => tense.label).join(', ')
-      : t(interfaceLanguage, 'conjugationPickTense'),
-    allSubjects.length > 1
-      ? (subjects.length === allSubjects.length
-          ? t(interfaceLanguage, 'verbsFilterAllGroups')
-          : t(interfaceLanguage, 'verbsFilterGroupCount', { count: subjects.length }))
-      : null,
-  ].filter(Boolean).join(' · ');
+  const groupFilter: FilterGroup = {
+    title: t(interfaceLanguage, 'verbsFilterGroups'),
+    options: allSubjects.map(subject => ({
+      key: subjectKey(subject),
+      label: subject.kind === 'group' ? subject.label : subject.infinitive,
+    })),
+    selected: subjects.map(subjectKey),
+    onSelect: (key: string) => {
+      const shownKeys = subjects.map(subjectKey);
+      setChosenGroups(
+        shownKeys.includes(key) ? shownKeys.filter(k => k !== key) : [...shownKeys, key],
+      );
+    },
+  };
+
+  const tenseSummary = tenseIds.length > 0
+    ? spec.tenses.filter(tense => tenseIds.includes(tense.id)).map(tense => tense.label).join(', ')
+    : '—';
+  const groupSummary = subjects.length === allSubjects.length
+    ? t(interfaceLanguage, 'verbsFilterAllGroups')
+    : t(interfaceLanguage, 'verbsFilterGroupCount', { count: subjects.length });
 
   return (
     <SafeAreaView style={s.safe} edges={['top']}>
@@ -205,18 +209,32 @@ export default function VerbTopicScreen() {
         <View style={s.filterBar}>
           <TouchableOpacity
             style={s.filterBtn}
-            onPress={() => setFiltersOpen(true)}
+            onPress={() => setOpenFilter('tenses')}
             accessibilityRole="button"
-            accessibilityLabel={t(interfaceLanguage, 'cardsFilterButtonLabel')}
-            accessibilityValue={{ text: filterSummary }}
+            accessibilityLabel={t(interfaceLanguage, 'verbsFilterTenses')}
+            accessibilityValue={{ text: tenseSummary }}
           >
-            <Text style={s.filterBtnText} numberOfLines={1}>{filterSummary}</Text>
+            <Text style={s.filterBtnLabel}>{t(interfaceLanguage, 'verbsFilterTenses')}</Text>
+            <Text style={s.filterBtnText} numberOfLines={1}>{tenseSummary}</Text>
             <Text style={s.filterBtnCaret}>▾</Text>
           </TouchableOpacity>
+          {allSubjects.length > 1 && (
+            <TouchableOpacity
+              style={s.filterBtn}
+              onPress={() => setOpenFilter('groups')}
+              accessibilityRole="button"
+              accessibilityLabel={t(interfaceLanguage, 'verbsFilterGroups')}
+              accessibilityValue={{ text: groupSummary }}
+            >
+              <Text style={s.filterBtnLabel}>{t(interfaceLanguage, 'verbsFilterGroups')}</Text>
+              <Text style={s.filterBtnText} numberOfLines={1}>{groupSummary}</Text>
+              <Text style={s.filterBtnCaret}>▾</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         <Text style={s.intro}>
-          {t(interfaceLanguage, irregular ? 'irregularIntro' : 'verbsReference')}
+          {t(interfaceLanguage, irregular ? 'irregularIntro' : 'verbsSaveHint')}
         </Text>
 
         {/* Three different empties, and they say different things: a topic with
@@ -229,11 +247,32 @@ export default function VerbTopicScreen() {
             : subjects.map(section)}
       </ScrollView>
 
-      {filtersOpen && (
+      {verbPickerFor && (() => {
+        const subject = subjects.find(x => `${x.kind}:${x.id}` === verbPickerFor);
+        if (!subject || subject.kind !== 'group') return null;
+        return (
+          <FilterSheet
+            interfaceLanguage={interfaceLanguage}
+            onClose={() => setVerbPickerFor(null)}
+            groups={[{
+              title: t(interfaceLanguage, 'verbsFilterVerb'),
+              options: subject.vehicles.map(v => ({ key: v, label: v })),
+              // A plain string, so the sheet renders it single-select.
+              selected: vehicles[verbPickerFor] ?? subject.vehicles[0],
+              onSelect: v => {
+                setVehicles(prev => ({ ...prev, [verbPickerFor]: v }));
+                setVerbPickerFor(null);
+              },
+            }]}
+          />
+        );
+      })()}
+
+      {openFilter && (
         <FilterSheet
-          groups={filterGroups}
+          groups={[openFilter === 'tenses' ? tenseFilter : groupFilter]}
           interfaceLanguage={interfaceLanguage}
-          onClose={() => setFiltersOpen(false)}
+          onClose={() => setOpenFilter(null)}
         />
       )}
     </SafeAreaView>
@@ -246,24 +285,36 @@ function makeStyles(C: Palette) {
     header: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 12, paddingTop: 12, paddingBottom: 4 },
     title: { color: C.text, fontSize: 22, fontWeight: '700' },
     content: { paddingBottom: 48 },
-    filterBar: { backgroundColor: C.bg, paddingHorizontal: 16, paddingTop: 8, paddingBottom: 10 },
+    filterBar: {
+      flexDirection: 'row', gap: 8, backgroundColor: C.bg,
+      paddingHorizontal: 16, paddingTop: 8, paddingBottom: 10,
+    },
     filterBtn: {
-      flexDirection: 'row', alignItems: 'center', gap: 8,
+      flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6,
       borderWidth: 1, borderColor: C.border, borderRadius: 10,
       paddingHorizontal: 12, paddingVertical: 9,
     },
+    filterBtnLabel: { color: C.muted, fontSize: 12 },
     filterBtnText: { flex: 1, color: C.text, fontSize: 13 },
     filterBtnCaret: { color: C.muted, fontSize: 12 },
     intro: { color: C.muted, fontSize: 12, paddingHorizontal: 16, marginBottom: 18 },
     section: { paddingHorizontal: 16, paddingBottom: 20, marginBottom: 16, borderBottomWidth: 1, borderBottomColor: C.border },
     sectionHead: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 10 },
-    sectionText: { flex: 1 },
-    sectionLabel: { color: C.text, fontSize: 17, fontWeight: '700' },
-    sectionSub: { color: C.muted, fontSize: 11, marginTop: 2 },
-    save: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 16, borderWidth: 1, borderColor: C.highlight },
-    saveOn: { backgroundColor: C.highlight },
-    saveText: { color: C.highlight, fontSize: 13, fontWeight: '700' },
-    saveTextOn: { color: C.bg },
+    sectionLabel: { flex: 1, color: C.text, fontSize: 17, fontWeight: '700' },
+    verbBtn: {
+      flexDirection: 'row', alignItems: 'center', gap: 6,
+      borderWidth: 1, borderColor: C.border, borderRadius: 10,
+      paddingHorizontal: 10, paddingVertical: 6, maxWidth: 160,
+    },
+    verbBtnText: { color: C.text, fontSize: 13 },
+    savePill: {
+      flexDirection: 'row', alignItems: 'center', gap: 5,
+      paddingHorizontal: 11, paddingVertical: 6, borderRadius: 15,
+      borderWidth: 1, borderColor: C.highlight,
+    },
+    savePillOn: { backgroundColor: C.highlight },
+    savePillText: { color: C.highlight, fontSize: 12, fontWeight: '700' },
+    savePillTextOn: { color: C.bg },
     chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
     chip: { paddingHorizontal: 11, paddingVertical: 6, borderRadius: 15, borderWidth: 1, borderColor: C.border },
     chipOn: { backgroundColor: C.highlight, borderColor: C.highlight },
