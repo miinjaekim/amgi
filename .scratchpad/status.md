@@ -621,6 +621,60 @@ from "due now", or a brand-new practice set looks overdue.
 cannot disagree with the table practice is graded against; a test asserts the two
 match for every tense.
 
+### Munli gets its own themes, and a mode's palette is how you know where you are (2026-09-21)
+
+Munli shipped wearing Amgi's palette, and on a phone that made the two modes
+hard to tell apart at a glance — the tabs change, but the tabs are icon-only, so
+the first honest signal that you had switched was reading a heading. Munli now
+has three themes of its own: **Suisei, Shoko and Godspeed**, default Shoko, with
+System reaching for Suisei after dark. Amgi keeps Forest / Sonokai / Paper
+unchanged.
+
+**The sets share no ids, on purpose.** A palette offered by both modes would
+make the switch something you verify rather than see, and it would make one
+mode's stored preference silently valid in the other. `themes.test.ts` asserts
+the disjointness rather than trusting it.
+
+**Each mode remembers its own choice**, under its own storage key per platform.
+The alternative — one preference, with the picker showing whichever set matches
+where you are — was rejected: it would land you on the mode's default on every
+switch, throwing away the choice you made last time. The repaint on crossing is
+the feature; losing your pick is not.
+
+**The theme follows the route, because the mode does.** Nothing holds "the
+current theme": both `ThemeContext`s read the path, pick that mode's set, and
+read that mode's key. Two consequences worth keeping:
+- The pre-paint script in `app/layout.tsx` had to learn about modes. It reads
+  `location.pathname` — available to it for exactly the reason the mode is never
+  stored — and picks the key from that. Without it, a cold load of `/munli`
+  paints Paper and then snaps to Shoko, which is the flash that script exists to
+  prevent, arriving by a new door. Web also moved its apply into a *layout*
+  effect for the client-side crossing, same reason.
+- **Settings is the one screen outside every mode's tree**, and it holds the
+  picker. Native pushes `/settings` from every mode's `ProgressHeader`, so the
+  mode travels in the route as `?mode=` and `modeForTheme` consults it *only*
+  where the path itself names no mode. Giving Munli its own settings route was
+  the alternative; it would have meant a sixth screen inside a five-tab
+  navigator, with the floating bar sitting over a screen that is not a tab.
+
+**The palettes are adaptations, not copies.** All three come from Monkeytype,
+which is where Sonokai and Paper came from, and each keeps its source `bg`
+exactly — that is the colour you actually see. Everything else is rebuilt,
+because Monkeytype is a typing test and this is not: its `sub-alt` sits *darker*
+than its background while a card here sits above one, and its `main` is an
+accent for one line of typed text rather than a colour that has to carry buttons
+and links. Shoko's `#81c4dd` reaches 1.33:1 on its own background. So surface /
+border / muted are OKLCH steps off `bg` at the distances Forest, Sonokai and
+Paper already use, `highlight` keeps its hue at a snapped contrast, and Godspeed's
+body text moved from 4.52:1 to 6.06:1 to sit in line with the rest of the app.
+Suisei's orange `sub` is the one signature colour left out: as `muted` it would
+put orange on every caption and hairline in the mode.
+
+Heat ramps were generated and validated exactly as the Amgi three were — one
+hue, monotone lightness, adjacent ΔL ≥ 0.06, faintest studied step ≥ 2.35:1 on
+its own background, and `heat[0]` a categorical break at ΔE ≥ 18 from `heat[1]`
+under protanopia and deuteranopia.
+
 ### Writing came back unchanged, and three things around it had not (2026-09-21)
 
 Restored from `1ebdc9b^` — the removal was one commit, so the panels, `diff.ts`,

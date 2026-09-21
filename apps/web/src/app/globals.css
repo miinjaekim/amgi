@@ -59,6 +59,91 @@
     --heat-4: #2d6a4f;
   }
 
+  /* ---------------------------------------------------------------------
+     Munli's themes. A different set from Amgi's, not a different arrangement
+     of the same one — the palette is how you see which mode you are in before
+     you have read a single label. Mobile carries identical values in
+     apps/mobile/src/theme.ts; core's themes.ts owns which mode offers which.
+
+     All three come from Monkeytype, the project Amgi's look has always been
+     read against, and each keeps its source's --bg exactly. What is *not*
+     taken verbatim is the rest: Monkeytype's --sub-alt sits darker than its
+     background, while a card here sits above one, and its --main is an
+     accent for a single line of typed text rather than a colour that has to
+     carry buttons and links. So surface / border / muted are rebuilt as steps
+     off --color-bg at the same OKLCH distances Forest, Sonokai and Paper
+     already use, and --color-highlight keeps its source hue while its
+     lightness is snapped to a contrast the whole UI can wear. Sonokai was
+     adapted the same way.
+     --------------------------------------------------------------------- */
+
+  /* Suisei — the set's only dark palette, and what Munli's System resolves to
+     after dark. Pale cyan on navy, both straight from the source. Monkeytype's
+     orange --sub is the one signature colour with nowhere to go here: as
+     `muted` it would put orange on every caption and hairline in the mode, so
+     muted is a step off --color-bg as in Sonokai, and the orange is left out
+     rather than spent badly. */
+  html.theme-suisei {
+    --color-bg: #3B4A62;
+    --color-surface: #455773;
+    --color-muted: #7287A8;
+    --color-muted-dark: #52627B;
+    --color-text: #DBDEEB;
+    --color-highlight: #BEF0FF;
+    /* Same construction as Forest's, and checked the same way: one hue,
+       lightness climbing, adjacent ΔL >= 0.10, --heat-1 at 2.35:1 on this
+       background, hue spread 1.4°. --heat-0 is "no data" — a categorical break
+       rather than the ramp's first step, ΔE 19.0 from --heat-1 in normal vision
+       and 18.6 under deuteranopia. */
+    --heat-0: #464e51;
+    --heat-1: #678892;
+    --heat-2: #83a9b5;
+    --heat-3: #a0ccd9;
+    --heat-4: #bef0ff;
+  }
+
+  /* Shoko — Munli's default, and its System light. Its source --main (#81c4dd)
+     reaches only 1.33:1 on this background, which is fine for one line of typed
+     text and unusable for a button, so the highlight holds that hue and drops
+     to 5.64:1 — the same move Paper's green makes. */
+  html.theme-shoko {
+    --color-bg: #CED7E0;
+    --color-surface: #DFE6EE;
+    --color-muted: #698CA4;
+    --color-muted-dark: #B3BCC5;
+    --color-text: #3B4C58;
+    --color-highlight: #07566C;
+    /* A light theme, so the ramp darkens as the day gets busier and --heat-0 is
+       the lightest step. Adjacent ΔL 0.070, --heat-1 at 2.36:1, hue spread
+       2.2°, --heat-0 at ΔE 20.2 from --heat-1 under protanopia. */
+    --heat-0: #c0cfd5;
+    --heat-1: #6491a1;
+    --heat-2: #497d8f;
+    --heat-3: #2e697e;
+    --heat-4: #07566c;
+  }
+
+  /* Godspeed — warm cream, cool slate accent. The source's --text (#646669) is
+     4.52:1 here, the lowest body text anywhere in the app; it keeps its hue and
+     moves to 6.06:1, in line with Shoko's 6.11. The rest of the theme's
+     softness is intact. */
+  html.theme-godspeed {
+    --color-bg: #EAE4CF;
+    --color-surface: #F9F4E1;
+    --color-muted: #969282;
+    --color-muted-dark: #CEC8B3;
+    --color-text: #515356;
+    --color-highlight: #3D5B6B;
+    /* Adjacent ΔL 0.070, --heat-1 at 2.37:1, hue spread 2.1°, --heat-0 at ΔE
+       21.6 from --heat-1 under protanopia. The ramp is the highlight's blue
+       rather than the background's cream, as Paper's is its green. */
+    --heat-0: #d0dce3;
+    --heat-1: #8198a4;
+    --heat-2: #6a8391;
+    --heat-3: #536f7e;
+    --heat-4: #3d5b6b;
+  }
+
   body {
     background: var(--color-bg);
     color: var(--color-text);

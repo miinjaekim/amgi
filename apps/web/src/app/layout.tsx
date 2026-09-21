@@ -29,10 +29,19 @@ export default function RootLayout({
       <body className={`${sourceCodePro.className} min-h-screen font-mono`}>
         {/* Apply the theme palette and sidebar-collapsed state before first
             paint to avoid a flash of the default (Paper, expanded) UI.
-            Mirrors ThemeContext and LayoutWithUser. */}
+            Mirrors ThemeContext and LayoutWithUser.
+
+            ⚠️ It reads the *mode* off `location.pathname` and the theme off
+            that mode's own key, because the two sets share no ids — a cold
+            load of /munli that used Amgi's key would paint Paper and then
+            snap to Shoko. The path is available here for the same reason the
+            mode is never stored: it is the route. Keep the prefix test in
+            step with `modeFromPath`, and the ids in step with
+            `THEME_SETS` — the duplication is the price of running before
+            any module does. */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var t=localStorage.getItem('amgi-theme');if(t!=='forest'&&t!=='slate'&&t!=='paper'&&t!=='system')t='paper';var r=t==='system'?(window.matchMedia('(prefers-color-scheme: dark)').matches?'slate':'paper'):t;document.documentElement.classList.add('theme-'+r);if(localStorage.getItem('sidenav-collapsed')==='1')document.documentElement.classList.add('sidenav-collapsed');}catch(e){document.documentElement.classList.add('theme-paper');}})();`,
+            __html: `(function(){try{var p=location.pathname;var m=(p==='/munli'||p.indexOf('/munli/')===0)?1:0;var S=m?['suisei','shoko','godspeed']:['forest','slate','paper'];var k=m?'munli-theme':'amgi-theme';var d=m?'shoko':'paper';var dk=m?'suisei':'slate';var t=localStorage.getItem(k);if(S.indexOf(t)<0&&t!=='system')t=d;var r=t==='system'?(window.matchMedia('(prefers-color-scheme: dark)').matches?dk:d):t;document.documentElement.classList.add('theme-'+r);if(localStorage.getItem('sidenav-collapsed')==='1')document.documentElement.classList.add('sidenav-collapsed');}catch(e){document.documentElement.classList.add('theme-paper');}})();`,
           }}
         />
         <ThemeProvider>

@@ -1,17 +1,25 @@
-import type { TranslationKey } from '@amgi/core';
+import {
+  ALL_THEME_IDS, THEME_SETS, THEME_STORAGE_KEYS, parseThemePreference,
+  resolveTheme, themeSet,
+} from '@amgi/core';
+import type { ThemeId, ThemePreference, ThemeSet } from '@amgi/core';
 
-/** What the user picked. 'system' follows the OS light/dark setting. */
-export type ThemePreference = 'forest' | 'slate' | 'paper' | 'system';
-/** A concrete palette. */
-export type ResolvedTheme = 'forest' | 'slate' | 'paper';
+/**
+ * The native palettes, one per id in `THEME_SETS`.
+ *
+ * ⚠️ **Which mode offers which theme is not decided here** — that lives in
+ * core's `themes.ts`, so web and native cannot drift on it. This file holds
+ * only the colours, and they are the same colours the web app's `globals.css`
+ * carries as CSS variables. Change one, change both.
+ */
+export {
+  ALL_THEME_IDS, THEME_SETS, THEME_STORAGE_KEYS, parseThemePreference,
+  resolveTheme, themeSet,
+};
+export type { ThemeId, ThemePreference, ThemeSet };
 
-export const VALID_THEMES: ThemePreference[] = ['forest', 'slate', 'paper', 'system'];
-
-/** Resolve a preference to a concrete palette. 'system' → slate (dark) or paper (light). */
-export function resolveTheme(pref: ThemePreference, prefersDark: boolean): ResolvedTheme {
-  if (pref === 'system') return prefersDark ? 'slate' : 'paper';
-  return pref;
-}
+/** @deprecated The old name for a concrete palette. Use `ThemeId`. */
+export type ResolvedTheme = ThemeId;
 
 export type Palette = {
   bg: string;
@@ -41,16 +49,7 @@ export type Palette = {
   heat: [string, string, string, string, string];
 };
 
-// Mirrors the web theme list. The 'slate' value keeps its id for stored prefs
-// and the system dark mapping, but its palette is Sonokai — hence the label.
-export const THEMES: { value: ThemePreference; labelKey: TranslationKey }[] = [
-  { value: 'forest', labelKey: 'themeForest' },
-  { value: 'slate', labelKey: 'themeSonokai' },
-  { value: 'paper', labelKey: 'themePaper' },
-  { value: 'system', labelKey: 'themeSystem' },
-];
-
-export const PALETTES: Record<ResolvedTheme, Palette> = {
+export const PALETTES: Record<ThemeId, Palette> = {
   forest: {
     bg: '#173F35',
     surface: '#1E5246',
@@ -81,6 +80,47 @@ export const PALETTES: Record<ResolvedTheme, Palette> = {
     border: '#D0D9D0',
     error: '#C0392B',
     heat: ['#d6e1db', '#7faa94', '#64947c', '#497f65', '#2d6a4f'],
+  },
+  /* ---------------------------------------------------------------------
+     Munli's three. Identical to html.theme-suisei / -shoko / -godspeed in the
+     web app's globals.css, which carries the full derivation: all three are
+     Monkeytype palettes keeping their source `bg`, with surface / border /
+     muted rebuilt as OKLCH steps off it and `highlight` snapped to a usable
+     contrast — the same adaptation Sonokai got.
+     --------------------------------------------------------------------- */
+
+  // Suisei — the set's only dark palette, and Munli's system-dark.
+  suisei: {
+    bg: '#3B4A62',
+    surface: '#455773',
+    text: '#DBDEEB',
+    highlight: '#BEF0FF',
+    muted: '#7287A8',
+    border: '#52627B',
+    error: '#FF9E99',
+    heat: ['#464e51', '#678892', '#83a9b5', '#a0ccd9', '#bef0ff'],
+  },
+  // Shoko — Munli's default and its system-light.
+  shoko: {
+    bg: '#CED7E0',
+    surface: '#DFE6EE',
+    text: '#3B4C58',
+    highlight: '#07566C',
+    muted: '#698CA4',
+    border: '#B3BCC5',
+    error: '#993F4A',
+    heat: ['#c0cfd5', '#6491a1', '#497d8f', '#2e697e', '#07566c'],
+  },
+  // Godspeed — warm cream, cool slate accent.
+  godspeed: {
+    bg: '#EAE4CF',
+    surface: '#F9F4E1',
+    text: '#515356',
+    highlight: '#3D5B6B',
+    muted: '#969282',
+    border: '#CEC8B3',
+    error: '#B83645',
+    heat: ['#d0dce3', '#8198a4', '#6a8391', '#536f7e', '#3d5b6b'],
   },
 };
 

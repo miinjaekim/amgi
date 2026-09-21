@@ -449,6 +449,9 @@ const translations = {
     themeForest: 'Forest',
     themeSonokai: 'Sonokai',
     themePaper: 'Paper',
+    themeSuisei: 'Suisei',
+    themeShoko: 'Shoko',
+    themeGodspeed: 'Godspeed',
     themeSystem: 'System',
     // Language setup modal
     welcomeTitle: 'Welcome to Amgi',
@@ -851,6 +854,9 @@ const translations = {
     themeForest: '숲',
     themeSonokai: '소노카이',
     themePaper: '종이',
+    themeSuisei: '스이세이',
+    themeShoko: '쇼코',
+    themeGodspeed: '갓스피드',
     themeSystem: '시스템',
     // Language setup modal
     welcomeTitle: 'Amgi에 오신 것을 환영합니다',

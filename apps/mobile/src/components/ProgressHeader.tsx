@@ -1,8 +1,8 @@
 import React, { useMemo, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
-import { SUPPORTED_STUDY_LANGUAGES, t } from '@amgi/core';
+import { router, usePathname } from 'expo-router';
+import { SUPPORTED_STUDY_LANGUAGES, modeFromPath, t } from '@amgi/core';
 import { useUser } from '../context/UserContext';
 import { useTheme } from '../context/ThemeContext';
 import BottomSheet from './BottomSheet';
@@ -29,6 +29,10 @@ import type { Palette } from '../theme';
  */
 export default function ProgressHeader() {
   const { C } = useTheme();
+  // Settings lives at /settings, outside every mode's tree, and has the theme
+  // picker in it — so the mode it was opened from has to travel with it. In the
+  // route, not in storage: see `modeForTheme` in core's themes.ts.
+  const mode = modeFromPath(usePathname());
   const s = useMemo(() => makeStyles(C), [C]);
   const { user, interfaceLanguage, studyLanguage } = useUser();
   const [langOpen, setLangOpen] = useState(false);
@@ -76,7 +80,7 @@ export default function ProgressHeader() {
           <Ionicons name="swap-horizontal" size={22} color={C.muted} />
         </TouchableOpacity>
         <TouchableOpacity
-          onPress={() => router.push('/settings')}
+          onPress={() => router.push({ pathname: '/settings', params: { mode } })}
           hitSlop={12}
           accessibilityRole="button"
           accessibilityLabel={t(interfaceLanguage, 'settingsTitle')}
