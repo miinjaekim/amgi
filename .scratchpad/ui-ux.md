@@ -39,6 +39,20 @@ per platform and are duplicated by hand.
 - Every heat ramp was generated and checked the same way the Amgi three were —
   see the note on `Palette.heat` in `apps/mobile/src/theme.ts`.
 
+**The native tab bar is thin glass** — `BLUR_INTENSITY` 40 in
+`FloatingTabBar.tsx`, with a hairline in `border` carrying the edge. The blur was
+72 and no border, which over a light palette read as a slab sitting *on* the page
+rather than floating above it. The hairline is what lets the fill go this faint
+without the bar losing its shape over a busy card. One number, all themes — a
+per-theme intensity would be chrome that changes shape as well as colour.
+
+⚠️ **Chrome that sits *on* the background asks `THEME_SCHEME`, never an id.**
+The native tab bar picked its blur tint with `resolvedTheme === 'paper'` — true
+while Paper was the only light theme, and wrong the moment Shoko and Godspeed
+arrived, since both are light and both got a dark frosted slab over a pale
+background. `themes.test.ts` now cross-checks `THEME_SCHEME` against every set's
+`systemDark`/`systemLight`, so a new theme cannot answer wrong unnoticed.
+
 **Each mode remembers its own choice**, under its own key on each platform
 (`THEME_STORAGE_KEYS`). Picking Godspeed in Munli must not move Amgi off Paper;
 the repaint on switching *is* the feature.

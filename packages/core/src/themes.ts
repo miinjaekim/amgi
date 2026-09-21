@@ -92,6 +92,28 @@ export const ALL_THEME_IDS: readonly ThemeId[] = Array.from(
 );
 
 /**
+ * Whether each palette is light or dark — the question chrome asks when it has
+ * to sit *on* the background rather than beside it.
+ *
+ * ⚠️ **Ask this, never an id.** The native tab bar is a blur, and it chose its
+ * tint with `resolvedTheme === 'paper'` back when Paper was the only light
+ * theme in the app. Shoko and Godspeed are light too, so that shorthand gave
+ * both of them a dark frosted slab over a pale background. Any `=== 'paper'`
+ * left anywhere is the same bug waiting for the next light theme.
+ *
+ * `themes.test.ts` checks this against every set's `systemDark` / `systemLight`,
+ * so a new theme cannot be added here with the wrong answer and go unnoticed.
+ */
+export const THEME_SCHEME: Record<ThemeId, 'light' | 'dark'> = {
+  forest: 'dark',
+  slate: 'dark',
+  paper: 'light',
+  suisei: 'dark',
+  shoko: 'light',
+  godspeed: 'light',
+};
+
+/**
  * Where each mode's choice is remembered.
  *
  * Two platforms, two separator conventions, and neither is worth migrating: the

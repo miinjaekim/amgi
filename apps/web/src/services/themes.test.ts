@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  ALL_THEME_IDS, MODES, THEME_SETS, THEME_STORAGE_KEYS,
+  ALL_THEME_IDS, MODES, THEME_SCHEME, THEME_SETS, THEME_STORAGE_KEYS,
   modeForTheme, parseThemePreference, resolveTheme, themeSet,
 } from '@amgi/core';
 import type { AppMode, ThemeId } from '@amgi/core';
@@ -65,6 +65,39 @@ describe('THEME_SETS', () => {
       for (const id of ids(mode.id)) expect(ALL_THEME_IDS).toContain(id);
     }
     expect(ALL_THEME_IDS).not.toContain('system');
+  });
+});
+
+describe('THEME_SCHEME', () => {
+  it('answers for every theme any mode offers', () => {
+    for (const id of ALL_THEME_IDS) expect(THEME_SCHEME[id]).toMatch(/^(light|dark)$/);
+  });
+
+  /**
+   * The bug this rules out, which shipped once: the native tab bar picked its
+   * blur tint with `resolvedTheme === 'paper'`, true while Paper was the only
+   * light theme and wrong the moment Shoko and Godspeed arrived — both light,
+   * both handed a dark frosted slab over a pale background. Chrome asks
+   * THEME_SCHEME now, so this is what keeps the answer honest as themes are
+   * added.
+   */
+  it('agrees with what each mode calls its dark and its light', () => {
+    for (const mode of MODES) {
+      const set = themeSet(mode.id);
+      expect(THEME_SCHEME[set.systemDark]).toBe('dark');
+      expect(THEME_SCHEME[set.systemLight]).toBe('light');
+    }
+  });
+
+  /** A mode whose themes were all one lightness would make System meaningless. */
+  it('gives every mode at least one of each', () => {
+    for (const mode of MODES) {
+      const schemes = THEME_SETS[mode.id].options
+        .filter(o => o.value !== 'system')
+        .map(o => THEME_SCHEME[o.value as Exclude<typeof o.value, 'system'>]);
+      expect(schemes).toContain('light');
+      expect(schemes).toContain('dark');
+    }
   });
 });
 
