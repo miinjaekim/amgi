@@ -13,6 +13,13 @@ and `npm run lint` 0 errors / 21 warnings, both measured._
 
 ## Now
 
+- **Practice is a session that ends** (PR #139, 2026-09-22). Munli's first tab
+  is Practice: a picker row per practice type, a setup screen (tenses, and an
+  explicit switch for practising tables that are not due), then a session fixed
+  at Start that finishes when its queue runs out. Conjugation progress is owned
+  once for the mode, which fixes a rating being invisible on the Progress tab
+  until the app restarted.
+
 - **Munli uses Amgi's shell** (PR #138, 2026-09-22): the same tab bar, the same
   Progress-tab header with its settings gear, plus a mode button beside it in
   both modes. Munli's tabs are Conjugation · Writing · Progress, and its Progress
@@ -359,6 +366,67 @@ once, so a path that worked on build 14 is not evidence about build 15.
 
 Closed calls, kept with their reasoning — a decision whose reasoning is lost gets
 reopened by the next person to notice the symptom. Newest first.
+
+### Practice is a session that ends, and one copy of its progress (2026-09-22)
+
+Two changes from the user trying conjugation on a device, and they are
+independent problems that happened to surface together.
+
+**1. Two screens held two copies of one map.** Practice loaded conjugation
+progress into its own state, rated into its own copy and wrote to Firestore;
+Munli's Progress tab had loaded a *different* copy when it mounted and never
+heard about the write, so nothing appeared there until the app was restarted.
+⚠️ **This is the 2026-09-15 entry again** — the streak chip and the Progress tab
+keeping two copies of one number — and the fix is the same one, a single source
+rather than a reload. A `useFocusEffect` refetch would have hidden this instance
+and left the next surface to rediscover it. `ConjugationProvider` now owns the
+map for the whole mode. Writes stay per-answer rather than batched at session
+end: batching is fewer round trips and loses the session if the app dies, which
+is the wrong trade at this size.
+
+**2. Practice never ended, and that was a design bug rather than a missing
+feature.** The first cut *silently fell back* to the whole set whenever nothing
+was due, so the due count meant nothing once it reached zero and there was no
+point at which the learner was finished. The user's call: **start from the state
+Review starts from.**
+
+**The shape, mirroring Review deliberately rather than approximately:**
+
+- **Picker → setup → session, on one screen.** Review's start screen is not a
+  separate route either; it is what `review.tsx` renders before `started` flips.
+- **Rows, not tiles** (the user's call) — one per practice type, due count on the
+  right, exactly as the collection picker reads.
+- **The queue is fixed at Start and owned from then on**, so a rating written
+  mid-session moves the picker's counts and leaves the questions alone. Same
+  rule as `buildReviewQueue`, and the same reason `review.tsx` keeps `cards` out
+  of its queue-building dependencies.
+- **One question per table per session.** The table is the scheduled item, so
+  asking it twice in one sitting would be two questions about one fact.
+- ⚠️ **A miss does not rejoin the session in progress.** `rateTable` already
+  makes a missed table due immediately, so it returns in the *next* session —
+  "a session ends when it said it would", which `sm2.ts` states for cards and
+  which composes here for free.
+- **`done` and `stopped` stay distinct**, because telling someone who quit at 8
+  of 30 that they are finished would be untrue.
+- **Over-practice became an explicit switch on the setup screen.** It is a
+  legitimate thing to want; it was never legitimate as something the draw did
+  without being asked.
+
+**The tile stays open at zero due, on the user's call** — a new account has
+nothing scheduled, and a dead row on first launch is a bad first impression. So
+the row always opens and the setup screen is where "nothing is due" is said,
+next to the switch that does something about it.
+
+**Writing stays its own tab, and the reason is the recorded design rather than
+layout taste**: writing diagnoses and does not practise, so Practice holds only
+things with a queue and a due count. The two never swap jobs.
+
+**A side benefit worth recording, because it removes a hack.** Choosing the box
+at queue-build time rather than at question time put every draw inside an event
+handler, which retired the seeded-shuffle workaround the screen needed when it
+drew during render — React Compiler forbids refs and impure calls there. The
+queue builder takes its randomness as an argument, so the session logic is
+deterministic under test.
 
 ### Munli takes Amgi's shell, not just its account (2026-09-22)
 

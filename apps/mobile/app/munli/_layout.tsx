@@ -1,4 +1,5 @@
 import { Tabs } from 'expo-router';
+import { ConjugationProvider } from '../../src/context/ConjugationContext';
 import FloatingTabBar, { type TabIcons } from '../../src/components/FloatingTabBar';
 import type { TranslationKey } from '@amgi/core';
 
@@ -12,7 +13,7 @@ import type { TranslationKey } from '@amgi/core';
  * argued from "a one-tab bar is furniture", which was right about one tab and
  * wrong about the shell.
  *
- * **Conjugation is first, and therefore the initial route** — the same argument
+ * **Practice is first, and therefore the initial route** — the same argument
  * that puts Review first in Amgi. The first tab is the mode's answer to "what
  * is this for" on every cold open, and for a grammar mode the answer is
  * *practise*, not *submit something to be corrected*. Writing is intentional
@@ -32,20 +33,25 @@ const ICONS: TabIcons = {
 };
 
 const LABELS: Record<string, TranslationKey> = {
-  index:    'munliToolConjugation',
+  index:    'munliTabPractice',
   writing:  'munliToolWriting',
   progress: 'navProgress',
 };
 
 export default function MunliLayout() {
   return (
+    // Conjugation progress is owned here so Practice and Progress read one
+    // copy — they held two, and a rating on one was invisible to the other
+    // until the app restarted.
+    <ConjugationProvider>
     <Tabs
       tabBar={props => <FloatingTabBar {...props} icons={ICONS} labels={LABELS} />}
       screenOptions={{ headerShown: false }}
     >
-      <Tabs.Screen name="index" options={{ title: 'Conjugation' }} />
+      <Tabs.Screen name="index" options={{ title: 'Practice' }} />
       <Tabs.Screen name="writing" options={{ title: 'Writing' }} />
       <Tabs.Screen name="progress" options={{ title: 'Progress' }} />
     </Tabs>
+    </ConjugationProvider>
   );
 }

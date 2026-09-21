@@ -9,7 +9,7 @@ import type { TranslationKey } from '@amgi/core';
 /** One line per tool, keyed by the route it leads to. */
 const BLURBS: Record<string, TranslationKey> = {
   '/munli/writing': 'munliToolWritingBlurb',
-  '/munli/conjugation': 'munliToolConjugationBlurb',
+  '/munli/practice': 'munliToolConjugationBlurb',
 };
 
 /**

@@ -99,6 +99,11 @@ paradigm's shapes, and prepositions have none of them.
 
 _Merged, not yet in anyone's hands — mobile ships by build, no OTA._
 
+- [ ] **The Practice tab: picker, setup, and a session that ends** (PR #139).
+      Also the shared conjugation progress that fixes the Progress tab needing
+      an app restart. ⚠️ **The picker and the done state have not been seen on a
+      device**; the session loop itself is a rework of what was tried.
+
 - [ ] **Munli's shell, tabs and Progress tab** (PR #138). Web is live on merge;
       **native is not**. The tab-bar half was tried in Expo Go — that is what
       prompted it — but **the Munli Progress tab, the mode button on the header

@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   acceptedForms,
+  buildConjugationQueue,
   buildTable,
   buildTables,
   conjugationHints,
@@ -264,5 +265,63 @@ describe('summarizeConjugation', () => {
       spec.verbs.map((v, i) => [id(v.id, 'present'), { ...freshProgress(NOW), misses: { s1: i + 1 } }]),
     );
     expect(summarizeConjugation(spec, progress, 3, NOW).weakest).toHaveLength(3);
+  });
+});
+
+describe('buildConjugationQueue', () => {
+  const NOW = new Date('2026-09-21T12:00:00Z');
+  const LATER = new Date('2026-10-01T12:00:00Z').toISOString();
+  const id = (v: string, t: string) => conjugationItemId('French', v, t);
+  const tables = buildTables(spec, ['present']);
+  /** Deterministic, so a shuffle does not make these flaky. */
+  const fixed = () => 0;
+
+  it('asks every due table exactly once', () => {
+    const queue = buildConjugationQueue(spec, tables, {}, {}, NOW, fixed);
+    expect(queue).toHaveLength(tables.length);
+    expect(new Set(queue.map(q => q.table.verbId)).size).toBe(tables.length);
+  });
+
+  /**
+   * The whole point of the session model: when nothing is due the queue is
+   * empty, so practice ends rather than silently drawing from everything.
+   */
+  it('is empty when nothing is due', () => {
+    const progress: ConjugationProgressMap = Object.fromEntries(
+      spec.verbs.map(v => [id(v.id, 'present'), { ...freshProgress(NOW), nextReview: LATER }]),
+    );
+    expect(buildConjugationQueue(spec, tables, progress, {}, NOW, fixed)).toEqual([]);
+  });
+
+  /** Over-practice is something the learner asks for, never a fallback. */
+  it('includes tables that are not due when asked to', () => {
+    const progress: ConjugationProgressMap = Object.fromEntries(
+      spec.verbs.map(v => [id(v.id, 'present'), { ...freshProgress(NOW), nextReview: LATER }]),
+    );
+    const queue = buildConjugationQueue(spec, tables, progress, { includeNotDue: true }, NOW, fixed);
+    expect(queue).toHaveLength(tables.length);
+  });
+
+  it('asks the box that has been missed most', () => {
+    const progress: ConjugationProgressMap = {
+      [id('parler', 'present')]: { ...freshProgress(NOW), misses: { p2: 4 } },
+    };
+    const queue = buildConjugationQueue(spec, tables, progress, {}, NOW, fixed);
+    expect(queue.find(q => q.table.verbId === 'parler')!.personId).toBe('p2');
+  });
+
+  it('covers more than one tense when more than one is chosen', () => {
+    const both = buildTables(spec, ['present', 'imparfait']);
+    const queue = buildConjugationQueue(spec, both, {}, {}, NOW, fixed);
+    expect(new Set(queue.map(q => q.table.tenseId))).toEqual(new Set(['present', 'imparfait']));
+  });
+
+  /**
+   * Due order is verb order, so an unshuffled queue would open on `parler`
+   * every session and drill the top of the list.
+   */
+  it('shuffles rather than running in verb order', () => {
+    const queue = buildConjugationQueue(spec, tables, {}, {}, NOW, () => 0.7);
+    expect(queue.map(q => q.table.verbId)).not.toEqual(tables.map(t => t.verbId));
   });
 });

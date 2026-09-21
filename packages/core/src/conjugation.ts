@@ -539,3 +539,68 @@ export function summarizeConjugation(
   weakest.sort((a, b) => b.misses - a.misses);
   return { practised, total, due, byTense, weakest: weakest.slice(0, limit) };
 }
+
+/* ── Sessions ────────────────────────────────────────────────────────────── */
+
+/** One question: a table, and which of its boxes to ask. */
+export interface ConjugationQuestion {
+  table: ConjugationTable;
+  personId: string;
+}
+
+export interface ConjugationQueueOptions {
+  /**
+   * Include tables that are not due yet.
+   *
+   * Off by default, which is what makes a session *end*. The first cut drew
+   * from the whole set whenever nothing was due, so practice never finished and
+   * the due count meant nothing once it hit zero. Over-practising is a
+   * legitimate thing to want — it is just something the learner should ask for
+   * on the start screen rather than something the draw does silently.
+   */
+  includeNotDue?: boolean;
+}
+
+/**
+ * The questions a session will ask, fixed at the moment it starts.
+ *
+ * ⚠️ **One question per table, and the box is chosen here rather than when the
+ * question is shown.** The table is the scheduled item, so asking it twice in
+ * one sitting would be two questions about one fact. Choosing the box up front
+ * also keeps every draw inside this function — the screen renders a queue it
+ * was handed, so nothing random or stateful happens during render.
+ *
+ * ⚠️ **The queue is owned by the session from here on.** Ratings written while
+ * it runs move the picker's counts and must not rebuild it under someone eight
+ * questions in — the same rule `buildReviewQueue` follows, and the reason
+ * `review.tsx` keeps `cards` out of its queue-building dependencies.
+ *
+ * A miss therefore does not put the table back into the session in progress. It
+ * is due again immediately (`rateTable` sets `nextReview` to now for `again`),
+ * so it returns in the *next* session — "a session ends when it said it would".
+ */
+export function buildConjugationQueue(
+  spec: ConjugationSpec,
+  tables: readonly ConjugationTable[],
+  progress: ConjugationProgressMap,
+  options: ConjugationQueueOptions = {},
+  now: Date = new Date(),
+  random: () => number = Math.random,
+): ConjugationQuestion[] {
+  const pool = options.includeNotDue ? [...tables] : dueTables(spec, tables, progress, now);
+  const questions = pool.map(table => ({
+    table,
+    personId: pickPerson(
+      spec,
+      progress[conjugationItemId(spec.language, table.verbId, table.tenseId)],
+      random,
+    ).id,
+  }));
+  // Fisher–Yates, matching `reviewQueue`'s. Due order is verb order, and a
+  // session that always opened on `parler` would drill the top of the list.
+  for (let i = questions.length - 1; i > 0; i--) {
+    const j = Math.floor(random() * (i + 1));
+    [questions[i], questions[j]] = [questions[j], questions[i]];
+  }
+  return questions;
+}

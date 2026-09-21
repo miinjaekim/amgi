@@ -1,13 +1,12 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { conjugationSpec, summarizeConjugation, t } from '@amgi/core';
-import type { ConjugationProgressMap } from '@amgi/core';
 import { useUser } from '../../src/context/UserContext';
 import { useTheme } from '../../src/context/ThemeContext';
+import { useConjugation } from '../../src/context/ConjugationContext';
 import ProgressHeader from '../../src/components/ProgressHeader';
 import { useFloatingTabBarHeight } from '../../src/components/FloatingTabBar';
-import { getUserPreferences } from '../../src/services/userPreferences';
 import type { Palette } from '../../src/theme';
 
 /**
@@ -28,18 +27,11 @@ export default function MunliProgressScreen() {
   const { C } = useTheme();
   const tabBarHeight = useFloatingTabBarHeight();
   const s = useMemo(() => makeStyles(C, tabBarHeight), [C, tabBarHeight]);
-  const { user, interfaceLanguage, studyLanguage } = useUser();
-  const [progress, setProgress] = useState<ConjugationProgressMap>({});
+  const { interfaceLanguage, studyLanguage } = useUser();
+  // ⚠️ The shared source, not a copy of its own. Holding one here is what made
+  // a rating invisible on this tab until the app was restarted.
+  const { progress } = useConjugation();
   const spec = conjugationSpec(studyLanguage);
-
-  useEffect(() => {
-    if (!user) return;
-    let cancelled = false;
-    void getUserPreferences(user.uid).then(prefs => {
-      if (!cancelled) setProgress(prefs?.conjugation ?? {});
-    });
-    return () => { cancelled = true; };
-  }, [user]);
 
   const summary = useMemo(
     () => (spec ? summarizeConjugation(spec, progress) : null),
