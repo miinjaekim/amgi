@@ -13,6 +13,13 @@ and `npm run lint` 0 errors / 21 warnings, both measured._
 
 ## Now
 
+- **Conjugation is scheduled by rule, not by verb** (PR #140, 2026-09-22). A
+  regular group is the item and the verb it is asked through varies; irregular
+  verbs stay per-verb and are still unsourced. A **Verbs** tab holds the practice
+  set — which tenses and groups exist to be practised — and is where progression
+  happens. Conjugation data now rides the live `users/{uid}` subscription on both
+  platforms, so practising on one device reaches the other without a relaunch.
+
 - **Practice is a session that ends** (PR #139, 2026-09-22). Munli's first tab
   is Practice: a picker row per practice type, a setup screen (tenses, and an
   explicit switch for practising tables that are not due), then a session fixed
@@ -366,6 +373,87 @@ once, so a path that worked on build 14 is not evidence about build 15.
 
 Closed calls, kept with their reasoning — a decision whose reasoning is lost gets
 reopened by the next person to notice the symptom. Newest first.
+
+### A regular group is the item; an irregular verb is the item (2026-09-22)
+
+**The user's call after practising conjugation, and it corrects a redundancy the
+first cut built in.** `parler`, `regarder`, `travailler`, `chercher` and `donner`
+in the présent were **five scheduled items testing one fact** — getting `parlons`
+right says nothing new once `donnons` is known. Regular verbs are a rule and
+irregular verbs are not, so they cannot be the same kind of item.
+
+**The model: what gets scheduled depends on whether the verb is a rule or a
+fact.**
+
+- **A regular group** (`-er`, `-ir`, …) is one item per tense. A verb from the
+  group is the **vehicle** the question is asked through, and it **varies between
+  questions** — asking `-er · nous · présent` through `donner` today and
+  `chercher` tomorrow tests the ending; asking it through `parler` every time
+  tests `parlons`.
+- **An irregular verb** keeps a table per verb, because `aller` teaches you
+  nothing about `être`.
+
+⚠️ **`-cer` and `-ger` had to become their own groups**, and this is the part
+that is easy to get wrong later. `nous mangeons` is not `mang` + `ons`, so
+`manger` is a **broken vehicle** for the plain `-er` rule: a learner asked to
+produce it from that rule would be marked wrong for applying it correctly. They
+are separate patterns, which is also how they are taught. A test asserts every
+vehicle is filed under a group whose rule actually fits it.
+
+**The tally says more than it did.** `-er · nous · imparfait` on the Progress tab
+is now a claim about an ending across every verb in the group, where before it
+was a claim about one word.
+
+**The practice set is a surface of its own — the Verbs tab.** ⚠️ **It is a
+different job from the session setup screen, and conflating them is the failure
+to avoid**: setup chooses what to cover *this session* and resets; Verbs chooses
+what exists to be covered, and persists. That is exactly the split Amgi already
+has between enrolling a pack and picking a collection to review, and the setup
+screen is bounded by it — a tense that is not enrolled cannot be selected.
+**Progression lives there**: the présent is enrolled by default and the learner
+adds the imparfait when ready. `vision.md` allows per-level content and refuses
+the app deciding what you are ready for; this is the allowed half.
+The last tense and the last group cannot be removed — an empty practice set reads
+as broken rather than as a choice, and `normalizeEnrolment` would silently refill
+it, which is worse than refusing the tap.
+
+**Irregular verbs are still empty, and the types now say so out loud.**
+`ConjugationIrregularVerb` stores forms because there is no rule to generate them
+from, and `FRENCH_IRREGULARS` is `[]` until the sourcing job lands. Everything
+around them is built and tested, so that job is a data file and nothing else.
+
+**No migration, because nothing shipped.** Item ids changed shape
+(`French:group:er:present` rather than `French:parler:present`). Normally that
+would need one; all six PRs are open and native is in no build, so there is no
+data in the world to migrate.
+
+### The stale data fix was the weaker half, and is now the real one (2026-09-22)
+
+⚠️ **This corrects the entry below, written the same day.** That one claimed the
+2026-09-15 precedent — the streak chip and the Progress tab keeping two copies of
+one number — and then implemented only half of it: a **one-shot read** held in a
+provider. It fixed two screens disagreeing on one device and did nothing about
+the real case, which the user asked about directly: **practise on the laptop and
+the phone would not know until it was relaunched.**
+
+The fix is smaller than the thing it replaces. `users/{uid}` is **already
+subscribed to** on both platforms, and conjugation progress lives on that
+document — the same subscription already carries the hanja partition and the
+language list, with a comment reading *"A language added on the laptop, reaching
+the phone without a restart."* So conjugation rides it, and the provider stops
+fetching anything.
+
+⚠️ **What the provider still owns is the pending write**, and it has to. A
+snapshot can land between rating a table and that rating reaching the server, at
+which point the snapshot is *older* than what is on screen. Every rating is held
+locally until a snapshot comes back carrying it, and local wins for a held item —
+the same shape as the pending-review replay in `review.tsx`, and the same reason.
+The buffer drops each item as the server confirms it, so it stays a write buffer
+rather than growing into a cache.
+
+**The lesson worth keeping:** a focus-refetch would have made the symptom go away
+and left the bug. The question to ask of a stale-data report is not "when should
+this reload" but "why is there a second copy".
 
 ### Practice is a session that ends, and one copy of its progress (2026-09-22)
 

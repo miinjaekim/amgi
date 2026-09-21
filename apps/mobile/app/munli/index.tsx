@@ -3,8 +3,8 @@ import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Switch
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import {
-  buildConjugationQueue, buildTables, conjugationHints, conjugationItemId, conjugationSpec,
-  dueTables, hintedVerdict, isCorrectForm, rateTable, t,
+  buildConjugationQueue, buildTables, conjugationHints, conjugationSpec, dueTables,
+  findSubject, hintedVerdict, isCorrectForm, rateTable, subjectKey, tableItemId, t,
 } from '@amgi/core';
 import type { ConjugationQuestion } from '@amgi/core';
 import { useUser } from '../../src/context/UserContext';
@@ -39,11 +39,14 @@ export default function PracticeScreen() {
   const tabBarHeight = useFloatingTabBarHeight();
   const s = useMemo(() => makeStyles(C, tabBarHeight), [C, tabBarHeight]);
   const { interfaceLanguage, studyLanguage } = useUser();
-  const { progress, rate } = useConjugation();
+  const { progress, enrolment, rate } = useConjugation();
   const spec = conjugationSpec(studyLanguage);
 
   const [stage, setStage] = useState<Stage>('picker');
+  // `null` is "has not narrowed", which means the whole practice set. An empty
+  // array is the different, real state of having deselected everything.
   const [chosenTenses, setChosenTenses] = useState<string[] | null>(null);
+  const [chosenSubjects, setChosenSubjects] = useState<string[] | null>(null);
   const [includeNotDue, setIncludeNotDue] = useState(false);
 
   // Session state. `queue` is fixed at Start; `index` walks it.
@@ -55,22 +58,28 @@ export default function PracticeScreen() {
   const [verdict, setVerdict] = useState<'correct' | 'wrong' | null>(null);
 
   /**
-   * Which tenses are being practised. Derived rather than set by an effect:
-   * `null` is "has not chosen", which defaults to the first tense, and an empty
-   * array is the different, real state of having deselected everything.
+   * What this session will cover — the practice set, optionally narrowed.
+   *
+   * ⚠️ **Enrolment is the outer bound.** A tense that is not in the practice set
+   * cannot be selected here; adding it is a decision made on the Verbs tab. The
+   * two surfaces answer different questions and this one is the narrower.
    */
   const tenseIds = useMemo(
-    () => chosenTenses ?? (spec ? [spec.tenses[0].id] : []),
-    [chosenTenses, spec],
+    () => (enrolment ? enrolment.tenses.filter(id => chosenTenses?.includes(id) ?? true) : []),
+    [enrolment, chosenTenses],
+  );
+  const subjectKeys = useMemo(
+    () => (enrolment ? enrolment.subjects.filter(key => chosenSubjects?.includes(key) ?? true) : []),
+    [enrolment, chosenSubjects],
   );
   const tables = useMemo(
-    () => (spec && tenseIds.length ? buildTables(spec, tenseIds) : []),
-    [spec, tenseIds],
+    () => (spec && enrolment ? buildTables(spec, enrolment, { tenses: tenseIds, subjects: subjectKeys }) : []),
+    [spec, enrolment, tenseIds, subjectKeys],
   );
-  /** For the counts on the picker and the setup screen. */
+  /** For the count on the picker — the whole practice set, unnarrowed. */
   const dueCount = useMemo(
-    () => (spec ? dueTables(spec, buildTables(spec, spec.tenses.map(x => x.id)), progress).length : 0),
-    [spec, progress],
+    () => (spec && enrolment ? dueTables(spec, buildTables(spec, enrolment), progress).length : 0),
+    [spec, enrolment, progress],
   );
   const dueInSelection = useMemo(
     () => (spec ? dueTables(spec, tables, progress).length : 0),
@@ -93,7 +102,7 @@ export default function PracticeScreen() {
     if (!spec || !current || !typed.trim() || verdict) return;
     const correct = isCorrectForm(spec, current.table, current.personId, typed);
     setVerdict(correct ? 'correct' : 'wrong');
-    const itemId = conjugationItemId(spec.language, current.table.verbId, current.table.tenseId);
+    const itemId = tableItemId(spec, current.table);
     rate(itemId, rateTable(progress[itemId], current.personId, hintedVerdict(hintsTaken, correct)));
   };
 
@@ -163,19 +172,45 @@ export default function PracticeScreen() {
             <>
               <Text style={s.section}>{t(interfaceLanguage, 'conjugationTenses')}</Text>
               <View style={s.chips}>
-                {spec.tenses.map(tense => {
-                  const on = tenseIds.includes(tense.id);
+                {(enrolment?.tenses ?? []).map(tenseId => {
+                  const tense = spec.tenses.find(x => x.id === tenseId);
+                  if (!tense) return null;
+                  const on = tenseIds.includes(tenseId);
                   return (
                     <TouchableOpacity
-                      key={tense.id}
+                      key={tenseId}
                       style={[s.chip, on && s.chipOn]}
                       accessibilityRole="button"
                       accessibilityState={{ selected: on }}
                       onPress={() => setChosenTenses(
-                        on ? tenseIds.filter(x => x !== tense.id) : [...tenseIds, tense.id]
+                        on ? tenseIds.filter(x => x !== tenseId) : [...tenseIds, tenseId]
                       )}
                     >
                       <Text style={[s.chipText, on && s.chipTextOn]}>{tense.label}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              <Text style={s.section}>{t(interfaceLanguage, 'practiceGroups')}</Text>
+              <View style={s.chips}>
+                {(enrolment?.subjects ?? []).map(key => {
+                  const subject = findSubject(spec, key);
+                  if (!subject) return null;
+                  const on = subjectKeys.includes(key);
+                  return (
+                    <TouchableOpacity
+                      key={key}
+                      style={[s.chip, on && s.chipOn]}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: on }}
+                      onPress={() => setChosenSubjects(
+                        on ? subjectKeys.filter(x => x !== key) : [...subjectKeys, key]
+                      )}
+                    >
+                      <Text style={[s.chipText, on && s.chipTextOn]}>
+                        {subject.kind === 'group' ? subject.label : subject.infinitive}
+                      </Text>
                     </TouchableOpacity>
                   );
                 })}
@@ -192,7 +227,7 @@ export default function PracticeScreen() {
                 />
               </View>
 
-              {tenseIds.length === 0 ? (
+              {tenseIds.length === 0 || subjectKeys.length === 0 ? (
                 <Text style={s.emptyBody}>{t(interfaceLanguage, 'conjugationPickTense')}</Text>
               ) : (
                 <>
@@ -266,8 +301,14 @@ export default function PracticeScreen() {
       </View>
       <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
         <View style={s.card}>
+          {/* The verb is the vehicle; the subject is what is being tested. For
+              a group they differ, and the learner needs both — which verb to
+              conjugate, and which pattern it belongs to. */}
           <Text style={s.infinitive}>{current.table.infinitive}</Text>
-          <Text style={s.prompt}>{person?.label} · {current.table.tenseLabel}</Text>
+          <Text style={s.prompt}>
+            {person?.label} · {current.table.tenseLabel}
+            {current.table.subjectKind === 'group' ? ` · ${current.table.subjectLabel}` : ''}
+          </Text>
 
           <TextInput
             style={s.input}

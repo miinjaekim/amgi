@@ -30,12 +30,12 @@ export default function MunliProgressScreen() {
   const { interfaceLanguage, studyLanguage } = useUser();
   // ⚠️ The shared source, not a copy of its own. Holding one here is what made
   // a rating invisible on this tab until the app was restarted.
-  const { progress } = useConjugation();
+  const { progress, enrolment } = useConjugation();
   const spec = conjugationSpec(studyLanguage);
 
   const summary = useMemo(
-    () => (spec ? summarizeConjugation(spec, progress) : null),
-    [spec, progress],
+    () => (spec && enrolment ? summarizeConjugation(spec, enrolment, progress) : null),
+    [spec, enrolment, progress],
   );
 
   return (
@@ -77,9 +77,9 @@ export default function MunliProgressScreen() {
               <>
                 <Text style={s.section}>{t(interfaceLanguage, 'munliProgressWeakest')}</Text>
                 {summary.weakest.map(box => (
-                  <View key={`${box.infinitive}-${box.tenseLabel}-${box.personLabel}`} style={s.row}>
+                  <View key={`${box.subjectLabel}-${box.tenseLabel}-${box.personLabel}`} style={s.row}>
                     <Text style={s.rowLabel} numberOfLines={1}>
-                      {box.infinitive} · {box.personLabel} · {box.tenseLabel}
+                      {box.subjectLabel} · {box.personLabel} · {box.tenseLabel}
                     </Text>
                     <Text style={s.rowValue}>{box.form}</Text>
                   </View>

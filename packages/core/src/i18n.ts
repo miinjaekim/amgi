@@ -191,6 +191,19 @@ const translations = {
     practiceSessionEmpty: 'Nothing is due right now. Turn on practice anyway to keep going.',
     practiceAgain: 'Practice again',
     practiceBack: 'Back',
+    practiceGroups: 'Verb groups',
+    // The Verbs surface: what is in the practice set at all, as opposed to what
+    // this session will cover. Adding a tense is how a learner progresses, and
+    // nothing adds one for them.
+    munliTabVerbs: 'Verbs',
+    verbsTitle: 'Practice set',
+    verbsIntro: 'What conjugation practice draws from. Add a tense when you are ready for it.',
+    verbsTenses: 'Tenses',
+    verbsGroups: 'Regular verbs',
+    verbsIrregular: 'Irregular verbs',
+    verbsIrregularEmpty: 'None yet — irregular verbs are being sourced.',
+    verbsGroupVerbs: '{count} verbs',
+    verbsKeepOne: 'At least one has to stay.',
     // Writing review. Restored 2026-09-21 with the feature — the strings are
     // the ones that shipped in 1.3.0, unchanged, because the surface they
     // describe is unchanged. Only its address moved.
@@ -935,6 +948,16 @@ const translations = {
     practiceSessionEmpty: '지금은 복습할 표가 없어요. 그래도 연습하려면 위 설정을 켜주세요.',
     practiceAgain: '다시 연습하기',
     practiceBack: '뒤로',
+    practiceGroups: '동사 유형',
+    munliTabVerbs: '동사',
+    verbsTitle: '연습 범위',
+    verbsIntro: '동사 변화 연습에 쓰이는 범위예요. 익숙해지면 시제를 추가해보세요.',
+    verbsTenses: '시제',
+    verbsGroups: '규칙 동사',
+    verbsIrregular: '불규칙 동사',
+    verbsIrregularEmpty: '아직 없어요. 불규칙 동사는 자료를 정리하는 중이에요.',
+    verbsGroupVerbs: '동사 {count}개',
+    verbsKeepOne: '하나는 남겨두어야 해요.',
     writingTagline: '직접 써보세요. 원어민이라면 이렇게 씁니다.',
     writingTaglineSubtitle: '문법이 필요하면 문법을, 아니면 더 자연스러운 표현을 — 쓴 글에 맞춰 짚어드려요. 떠올리지 못했던 표현은 카드로 저장하세요.',
     writingPlaceholder: '{language}로 몇 문장 써보세요. 원어민이라면 어떻게 쓸지 보여드릴게요...',

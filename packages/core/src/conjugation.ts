@@ -3,42 +3,51 @@ import { sameFoldedText } from './typedAnswer';
 import type { StudyLanguage } from './types';
 
 /**
- * Verb conjugation practice — Munli's first built-from-scratch tool.
+ * Verb conjugation practice.
  *
- * **Vocabulary, used consistently everywhere below.** A **table** is one verb in
- * one tense (`prendre · présent`). Its **boxes** are the forms, one per person.
- * **One question** is one box: the app names verb, tense and person, and the
- * learner types the form.
+ * **Vocabulary, used consistently everywhere below.** A **table** is one subject
+ * in one tense. Its **boxes** are the forms, one per person. **One question** is
+ * one box: the app names the subject, the tense and the person, and the learner
+ * types the form.
  *
- * ⚠️ **The schedule belongs to the table, not the box** — the user's call, and
- * the decision the rest of this module is shaped by. Missing `nous` brings the
- * whole `prendre · présent` table back sooner, and the next question from it may
- * be any of its six boxes. The argument is not item count (120 tables against
- * 720 boxes; both are ordinary deck sizes) but **what counts as one fact**: a
- * regular verb's six forms follow one rule, so six schedules would be six copies
- * of one fact.
+ * ⚠️ **A "subject" is a rule for regular verbs and a verb for irregular ones**,
+ * and this is the distinction the whole module turns on. Reworked 2026-09-22 on
+ * the user's call after the first cut scheduled every verb individually:
  *
- * The accepted cost is that SM-2 learns "your `prendre` présent is shaky", not
- * "your *nous* is shaky" — and `misses` below recovers most of it without a
- * second scheduler, by *asking* the weak box more often while the table keeps
- * one schedule.
+ * - A **group** (`-er`, `-ir`, …) is one fact. `parler`, `donner` and
+ *   `travailler` in the présent are the same ending applied three times, so
+ *   scheduling them separately drills one thing under three names and tells the
+ *   scheduler nothing it did not already know. The group is the item; a verb
+ *   from it is the **vehicle** the question is asked through, and the vehicle
+ *   varies so the learner produces the ending rather than recalling a word.
+ * - An **irregular verb** is its own fact — `aller` teaches you nothing about
+ *   `être` — so it keeps a table per verb, exactly as before.
  *
- * ⚠️ **Per-verb scheduling is a later move and must stay a branch rather than a
- * migration** — regular verbs as a table, irregular verbs per box. So nothing
- * here may assume a table's six boxes *share* a schedule as a matter of
- * definition: `ConjugationProgress` is keyed by item id, and an item id is built
- * by a function. Splitting it later means more ids, not a different shape.
+ * ⚠️ **`-cer` and `-ger` are their own groups, not exceptions inside `-er`.**
+ * `nous mangeons` is not `mang` + `ons`, so `manger` is a *broken vehicle* for
+ * the plain `-er` pattern: a learner asked to produce it from the `-er` rule
+ * would be marked wrong for applying the rule correctly. They are separate
+ * patterns, which is also how they are taught.
  *
- * **The content is computed, not authored**, which is what makes conjugation the
- * right first tool: a verb list plus rules, finite and checkable. ⚠️ **Irregular
- * verbs are deliberately absent** — they are recalled content, and
- * `docs/packs/README.md` governs: the model is not a source. They arrive from a
- * citable reference with its licence checked, which is its own job.
+ * ⚠️ **The schedule belongs to the table, not the box.** Missing `nous` brings
+ * the whole table back, and the next question from it may be any box — with a
+ * per-box miss tally so the weak one is preferred. That tally means more after
+ * the rework than before: "your `nous` is weak" is now a claim about the ending,
+ * across every verb in the group, rather than about one word.
  *
- * **Zero model calls.** Grading is `typedAnswer.ts`, which is already right for
- * this: it folds apostrophes (so `j'ai` typed on an iOS keyboard matches) and
- * deliberately does *not* fold diacritics, and for a conjugation table the
- * accent is the content.
+ * ⚠️ **Per-verb scheduling for a *group* must stay reachable**, the same
+ * constraint recorded when the table was chosen over the box: ids are built by
+ * `conjugationItemId` and progress is keyed by whatever it returns, so splitting
+ * something finer later means more ids, not a different shape.
+ *
+ * **Regular forms are computed; irregular forms are stored.** There is no rule
+ * to generate an irregular from, and `docs/packs/README.md` governs — the model
+ * is not a source — so `FRENCH_IRREGULARS` is empty until that sourcing job is
+ * done. The types hold both today; only one of them has content.
+ *
+ * **Zero model calls.** Grading is `typedAnswer.ts`, which folds apostrophes and
+ * deliberately does not fold diacritics — for a conjugation table the accent is
+ * the content.
  */
 
 /** A grammatical person, labelled as the language itself labels it. */
@@ -55,54 +64,83 @@ export interface ConjugationTense {
   label: string;
 }
 
+/** Which rule class a regular group conjugates by. */
+export type ConjugationGroupId = 'er' | 'cer' | 'ger' | 'ir' | 're';
+
 /**
- * A verb, and the rule class its forms are generated by.
+ * A regular group: one rule, practised through whichever verb turns up.
  *
- * `group` is what the engine dispatches on. There is no `irregular` member: an
- * irregular verb is not a rule class, it is stored forms, and admitting one here
- * would invite generating them.
+ * ⚠️ **Every verb in `vehicles` must be conjugated correctly by this group's
+ * rule and no other.** That is why `-cer` and `-ger` are separate groups rather
+ * than a spelling footnote inside `-er` — a vehicle the rule gets wrong would
+ * mark a learner wrong for knowing the pattern.
  */
-export interface ConjugationVerb {
+export interface ConjugationGroup {
+  kind: 'group';
+  id: ConjugationGroupId;
+  /** `-er`. Shown as the subject of a question, so it is the language's own. */
+  label: string;
+  vehicles: readonly string[];
+}
+
+/** An irregular verb: stored forms, because there is no rule to generate them. */
+export interface ConjugationIrregularVerb {
+  kind: 'verb';
   id: string;
   infinitive: string;
-  group: 'er' | 'ir' | 're';
+  /** Tense id → person id → form. Every tense this verb is practised in. */
+  forms: Record<string, Record<string, string>>;
 }
+
+/** What a table can be about. */
+export type ConjugationSubject = ConjugationGroup | ConjugationIrregularVerb;
 
 /** Everything one language's conjugation practice is built from. */
 export interface ConjugationSpec {
   language: StudyLanguage;
   persons: readonly ConjugationPerson[];
   tenses: readonly ConjugationTense[];
-  verbs: readonly ConjugationVerb[];
+  subjects: readonly ConjugationSubject[];
   /**
    * The subject pronoun as it is written in front of a given form — `je` but
-   * `j'aime`. Used only to *accept* an extra spelling of an answer, never to
-   * reject one, so an imperfect rule here can cost nothing.
+   * `j'aime`. Used only to *accept* an extra spelling, never to reject one, so
+   * an imperfect rule here can cost nothing.
    */
   subjectFor: (person: ConjugationPerson, form: string) => string;
+  /** Forms for a regular group's vehicle, by rule. */
+  conjugate: (infinitive: string, group: ConjugationGroupId, tenseId: string) => string[];
 }
 
-/** One verb in one tense: the unit that carries a schedule. */
+/** One subject in one tense: the unit that carries a schedule. */
 export interface ConjugationTable {
-  verbId: string;
+  subjectKind: ConjugationSubject['kind'];
+  subjectId: string;
+  /** What the question names: `-er` for a group, `être` for a verb. */
+  subjectLabel: string;
+  /**
+   * The verb this table's forms are actually of.
+   *
+   * For an irregular subject it is the subject. For a group it is the
+   * **vehicle** — one verb drawn from the group, which changes between
+   * questions so the learner produces the ending rather than recalling a word.
+   */
   infinitive: string;
   tenseId: string;
   tenseLabel: string;
-  /** Person id → the form. Ordered as `spec.persons` is. */
+  /** Person id → the form. */
   forms: Record<string, string>;
 }
 
 /**
  * What is remembered about a table.
  *
- * The SM-2 fields are the same four every other scheduled thing in the app
- * carries, so `getNextReviewData` applies unchanged. `misses` is the extra, and
- * it is a tally rather than a scheduler: it decides *which box to ask*, never
- * *when to ask*.
+ * The SM-2 fields are the same four every scheduled thing in the app carries.
+ * `misses` is the extra, and it is a tally rather than a scheduler: it decides
+ * *which box to ask*, never *when to ask*.
  *
- * `nextReview` is an ISO string rather than a Date or a Firestore Timestamp.
- * This lives in a plain map on the user document and is read by two platforms;
- * a string means neither has to know how the other serialises a date.
+ * `nextReview` is an ISO string rather than a Date or a Firestore Timestamp:
+ * this lives in a plain map on the user document and is read by two platforms,
+ * so neither has to know how the other serialises a date.
  */
 export interface ConjugationProgress {
   interval: number;
@@ -117,15 +155,32 @@ export interface ConjugationProgress {
 /** Progress for every table the learner has touched, keyed by item id. */
 export type ConjugationProgressMap = Record<string, ConjugationProgress>;
 
+/** What the learner has added to their practice set. */
+export interface ConjugationEnrolment {
+  /** Tense ids. Adding one is how a learner progresses; nothing adds them for you. */
+  tenses: string[];
+  /** Subject ids, as `subjectKey` returns them. */
+  subjects: string[];
+}
+
+/** A subject's stable id, which is also what enrolment stores. */
+export function subjectKey(subject: ConjugationSubject): string {
+  return `${subject.kind}:${subject.id}`;
+}
+
 /**
  * The id a table's schedule is filed under.
  *
- * A function rather than a template literal at each call site, because per-verb
- * scheduling later means *more* ids of a different shape, and every producer and
- * consumer of one has to change together.
+ * A function rather than a template literal at each call site: the shape has
+ * already changed once (it was verb-and-tense before groups existed) and every
+ * producer and consumer of one has to change together when it does.
  */
-export function conjugationItemId(language: StudyLanguage, verbId: string, tenseId: string): string {
-  return `${language}:${verbId}:${tenseId}`;
+export function conjugationItemId(
+  language: StudyLanguage,
+  subject: ConjugationSubject,
+  tenseId: string,
+): string {
+  return `${language}:${subjectKey(subject)}:${tenseId}`;
 }
 
 /* ── French ──────────────────────────────────────────────────────────────── */
@@ -145,56 +200,48 @@ const FRENCH_TENSES: readonly ConjugationTense[] = [
   { id: 'futur', label: 'futur simple' },
 ];
 
-const PRESENT_ENDINGS: Record<ConjugationVerb['group'], string[]> = {
-  er: ['e', 'es', 'e', 'ons', 'ez', 'ent'],
-  ir: ['is', 'is', 'it', 'issons', 'issez', 'issent'],
-  re: ['s', 's', '', 'ons', 'ez', 'ent'],
+/** `-cer` and `-ger` take the `-er` endings; only their spelling differs. */
+const PRESENT_ENDINGS: Record<ConjugationGroupId, string[]> = {
+  er:  ['e', 'es', 'e', 'ons', 'ez', 'ent'],
+  cer: ['e', 'es', 'e', 'ons', 'ez', 'ent'],
+  ger: ['e', 'es', 'e', 'ons', 'ez', 'ent'],
+  ir:  ['is', 'is', 'it', 'issons', 'issez', 'issent'],
+  re:  ['s', 's', '', 'ons', 'ez', 'ent'],
 };
 
 const IMPERFECT_ENDINGS = ['ais', 'ais', 'ait', 'ions', 'iez', 'aient'];
 const FUTURE_ENDINGS = ['ai', 'as', 'a', 'ons', 'ez', 'ont'];
 
 /**
- * The two spelling rules that keep a *regular* verb regular.
+ * The spelling rule that defines the `-cer` and `-ger` groups.
  *
- * `-cer` and `-ger` verbs are not irregular: they follow the ordinary endings
- * and adjust the spelling so the consonant keeps its sound before `a` and `o`.
- * `nous commençons` and `nous mangeons`, but `nous commencions` and `nous
- * mangions` — the adjustment is keyed on the *ending*, which is why it is
- * applied at concatenation rather than baked into a stem.
+ * The consonant keeps its sound before `a` and `o` and nowhere else, so the
+ * adjustment is keyed on the *ending* rather than baked into a stem: `nous
+ * commençons` and `nous mangeons`, but `nous commencions` and `nous mangions`.
  */
-function joinFrench(infinitive: string, stem: string, ending: string): string {
+function joinFrench(group: ConjugationGroupId, stem: string, ending: string): string {
   const softening = ending.startsWith('a') || ending.startsWith('o');
-  if (softening && infinitive.endsWith('cer')) return `${stem.slice(0, -1)}ç${ending}`;
-  if (softening && infinitive.endsWith('ger')) return `${stem}e${ending}`;
+  if (softening && group === 'cer') return `${stem.slice(0, -1)}ç${ending}`;
+  if (softening && group === 'ger') return `${stem}e${ending}`;
   return stem + ending;
 }
 
-/** The stem the imperfect is built on — the present `nous` form without `-ons`. */
-function frenchImperfectStem(verb: ConjugationVerb): string {
-  const base = verb.infinitive.slice(0, -2);
-  return verb.group === 'ir' ? `${base}iss` : base;
-}
-
-/** The base the future is built on: the infinitive, less a final `-e`. */
-function frenchFutureBase(verb: ConjugationVerb): string {
-  return verb.group === 're' ? verb.infinitive.slice(0, -1) : verb.infinitive;
-}
-
-function frenchForms(verb: ConjugationVerb, tenseId: string): string[] {
-  const stem = verb.infinitive.slice(0, -2);
+function frenchConjugate(infinitive: string, group: ConjugationGroupId, tenseId: string): string[] {
+  const stem = infinitive.slice(0, -2);
   switch (tenseId) {
     case 'present':
-      return PRESENT_ENDINGS[verb.group].map(e => joinFrench(verb.infinitive, stem, e));
+      return PRESENT_ENDINGS[group].map(e => joinFrench(group, stem, e));
     case 'imparfait': {
-      const imperfect = frenchImperfectStem(verb);
-      return IMPERFECT_ENDINGS.map(e => joinFrench(verb.infinitive, imperfect, e));
+      // The imperfect is built on the present `nous` stem, which for `-ir`
+      // verbs carries the `-iss-` and for the rest is the bare stem.
+      const base = group === 'ir' ? `${stem}iss` : stem;
+      return IMPERFECT_ENDINGS.map(e => joinFrench(group, base, e));
     }
     case 'futur': {
-      const base = frenchFutureBase(verb);
-      // The future is built on the infinitive, whose own `e` already softens the
-      // consonant — so `joinFrench` has nothing to do here, and calling it would
+      // Built on the infinitive, less a final `-e`. Its own `e` already softens
+      // the consonant, so `joinFrench` has nothing to do — calling it here would
       // be a coincidence rather than a rule.
+      const base = group === 're' ? infinitive.slice(0, -1) : infinitive;
       return FUTURE_ENDINGS.map(e => base + e);
     }
     default:
@@ -203,33 +250,28 @@ function frenchForms(verb: ConjugationVerb, tenseId: string): string[] {
 }
 
 /**
- * Regular French verbs, one rule class each.
+ * The five regular patterns, each with the verbs it is practised through.
  *
  * ⚠️ **Common, not frequency-ranked.** Calling this a frequency list would be a
- * sourcing claim with nothing behind it. It is a starting set of verbs that are
- * regular, and ordering it properly is part of the same job that brings in the
- * irregulars.
+ * sourcing claim with nothing behind it; ordering it properly is part of the
+ * same job that brings in the irregulars.
  */
-const FRENCH_VERBS: readonly ConjugationVerb[] = [
-  { id: 'parler', infinitive: 'parler', group: 'er' },
-  { id: 'regarder', infinitive: 'regarder', group: 'er' },
-  { id: 'travailler', infinitive: 'travailler', group: 'er' },
-  { id: 'chercher', infinitive: 'chercher', group: 'er' },
-  { id: 'donner', infinitive: 'donner', group: 'er' },
-  { id: 'aimer', infinitive: 'aimer', group: 'er' },
-  { id: 'ecouter', infinitive: 'écouter', group: 'er' },
-  { id: 'habiter', infinitive: 'habiter', group: 'er' },
-  { id: 'manger', infinitive: 'manger', group: 'er' },
-  { id: 'commencer', infinitive: 'commencer', group: 'er' },
-  { id: 'finir', infinitive: 'finir', group: 'ir' },
-  { id: 'choisir', infinitive: 'choisir', group: 'ir' },
-  { id: 'reussir', infinitive: 'réussir', group: 'ir' },
-  { id: 'grandir', infinitive: 'grandir', group: 'ir' },
-  { id: 'vendre', infinitive: 'vendre', group: 're' },
-  { id: 'attendre', infinitive: 'attendre', group: 're' },
-  { id: 'repondre', infinitive: 'répondre', group: 're' },
-  { id: 'entendre', infinitive: 'entendre', group: 're' },
+const FRENCH_GROUPS: readonly ConjugationGroup[] = [
+  { kind: 'group', id: 'er',  label: '-er',  vehicles: ['parler', 'regarder', 'travailler', 'chercher', 'donner', 'aimer', 'écouter', 'habiter'] },
+  { kind: 'group', id: 'cer', label: '-cer', vehicles: ['commencer', 'placer', 'avancer', 'lancer'] },
+  { kind: 'group', id: 'ger', label: '-ger', vehicles: ['manger', 'changer', 'voyager', 'partager'] },
+  { kind: 'group', id: 'ir',  label: '-ir',  vehicles: ['finir', 'choisir', 'réussir', 'grandir'] },
+  { kind: 'group', id: 're',  label: '-re',  vehicles: ['vendre', 'attendre', 'répondre', 'entendre'] },
 ];
+
+/**
+ * ⚠️ **Empty on purpose, and it is the sourcing gate rather than an oversight.**
+ * An irregular form is recalled content, not a rule, and `docs/packs/README.md`
+ * governs: the model is not a source. `être`, `avoir` and `aller` arrive from a
+ * citable reference with its licence checked. Everything around them is built
+ * and tested, so that job is a data file and nothing else.
+ */
+const FRENCH_IRREGULARS: readonly ConjugationIrregularVerb[] = [];
 
 const FRENCH_VOWELS = 'aeiouéèêëàâîïôöûùü';
 
@@ -237,17 +279,16 @@ const FRENCH_SPEC: ConjugationSpec = {
   language: 'French',
   persons: FRENCH_PERSONS,
   tenses: FRENCH_TENSES,
-  verbs: FRENCH_VERBS,
+  subjects: [...FRENCH_GROUPS, ...FRENCH_IRREGULARS],
   subjectFor: (person, form) => {
     if (person.id !== 's1') return person.label;
     const first = form.charAt(0).toLowerCase();
     return FRENCH_VOWELS.includes(first) || first === 'h' ? "j'" : 'je';
   },
+  conjugate: frenchConjugate,
 };
 
 /**
- * The languages conjugation practice exists for.
- *
  * ⚠️ **French only, and that is an assumption rather than a decision** — it is
  * the ask that opened this. The tool is language-generic and a language is a
  * spec, so changing the answer is a dataset swap, not a redesign.
@@ -262,28 +303,126 @@ export function hasConjugation(language: StudyLanguage): boolean {
   return conjugationSpec(language) !== undefined;
 }
 
+export function findSubject(spec: ConjugationSpec, key: string): ConjugationSubject | undefined {
+  return spec.subjects.find(subject => subjectKey(subject) === key);
+}
+
+/* ── Enrolment ───────────────────────────────────────────────────────────── */
+
+/**
+ * What a learner starts with: every regular pattern, in the présent alone.
+ *
+ * ⚠️ **The tense list is where progression lives, and it is chosen from the
+ * outside.** A beginner practises the présent; adding the imparfait is a
+ * decision the learner makes on the Verbs surface. Nothing here reads a level
+ * off anything, which is what `vision.md` refuses — per-level *content* is
+ * allowed, the app deciding what you are ready for is not.
+ *
+ * Every group is enrolled rather than just `-er`, because the groups are five
+ * facts and not five difficulties; a learner who only ever meets `-er` verbs
+ * simply never sees the others come up as due.
+ */
+export function defaultEnrolment(spec: ConjugationSpec): ConjugationEnrolment {
+  return {
+    tenses: [spec.tenses[0].id],
+    subjects: spec.subjects.filter(s => s.kind === 'group').map(subjectKey),
+  };
+}
+
+/**
+ * An enrolment with anything unrecognised dropped, and never empty.
+ *
+ * A stored enrolment outlives the build that wrote it — a group that was
+ * renamed, a tense that was removed — and the cost of being wrong is a practice
+ * set with nothing in it, which looks broken rather than empty.
+ */
+export function normalizeEnrolment(
+  spec: ConjugationSpec,
+  stored: Partial<ConjugationEnrolment> | undefined,
+): ConjugationEnrolment {
+  const fallback = defaultEnrolment(spec);
+  const tenses = (stored?.tenses ?? []).filter(id => spec.tenses.some(t => t.id === id));
+  const subjects = (stored?.subjects ?? []).filter(key => findSubject(spec, key) !== undefined);
+  return {
+    tenses: tenses.length > 0 ? tenses : fallback.tenses,
+    subjects: subjects.length > 0 ? subjects : fallback.subjects,
+  };
+}
+
 /* ── Tables ──────────────────────────────────────────────────────────────── */
 
-export function buildTable(spec: ConjugationSpec, verb: ConjugationVerb, tenseId: string): ConjugationTable {
+/**
+ * One table.
+ *
+ * `vehicle` picks which verb a *group* table is asked through, and is ignored
+ * for an irregular subject. Defaulting to the first keeps the function pure and
+ * testable; the session passes a real choice.
+ */
+export function buildTable(
+  spec: ConjugationSpec,
+  subject: ConjugationSubject,
+  tenseId: string,
+  vehicle?: string,
+): ConjugationTable {
   const tense = spec.tenses.find(t => t.id === tenseId);
   if (!tense) throw new Error(`Unknown tense: ${tenseId}`);
-  const forms = frenchForms(verb, tenseId);
-  return {
-    verbId: verb.id,
-    infinitive: verb.infinitive,
+
+  const common = {
+    subjectKind: subject.kind,
+    subjectId: subject.id,
     tenseId,
     tenseLabel: tense.label,
+  };
+
+  if (subject.kind === 'verb') {
+    const forms = subject.forms[tenseId];
+    if (!forms) throw new Error(`${subject.infinitive} has no ${tenseId}`);
+    return { ...common, subjectLabel: subject.infinitive, infinitive: subject.infinitive, forms };
+  }
+
+  const infinitive = vehicle && subject.vehicles.includes(vehicle) ? vehicle : subject.vehicles[0];
+  const forms = spec.conjugate(infinitive, subject.id, tenseId);
+  return {
+    ...common,
+    subjectLabel: subject.label,
+    infinitive,
     forms: Object.fromEntries(spec.persons.map((p, i) => [p.id, forms[i]])),
   };
 }
 
-/** Every table for the given tenses, in verb order. */
-export function buildTables(spec: ConjugationSpec, tenseIds: readonly string[]): ConjugationTable[] {
+/**
+ * Every table in the practice set, or in a narrower selection of it.
+ *
+ * ⚠️ **Enrolment is the outer bound and the session's choice narrows it** —
+ * a tense not enrolled cannot be practised by asking for it here. That keeps
+ * the two surfaces honest: the Verbs tab decides what exists, the setup screen
+ * decides what to do today.
+ */
+export function buildTables(
+  spec: ConjugationSpec,
+  enrolment: ConjugationEnrolment,
+  selection?: { tenses?: readonly string[]; subjects?: readonly string[] },
+): ConjugationTable[] {
+  const tenses = enrolment.tenses.filter(id => selection?.tenses ? selection.tenses.includes(id) : true);
+  const subjects = enrolment.subjects
+    .filter(key => selection?.subjects ? selection.subjects.includes(key) : true)
+    .map(key => findSubject(spec, key))
+    .filter((s): s is ConjugationSubject => s !== undefined);
+
   const tables: ConjugationTable[] = [];
-  for (const tenseId of tenseIds) {
-    for (const verb of spec.verbs) tables.push(buildTable(spec, verb, tenseId));
+  for (const tenseId of tenses) {
+    for (const subject of subjects) {
+      // An irregular verb may simply not have been given this tense yet.
+      if (subject.kind === 'verb' && !subject.forms[tenseId]) continue;
+      tables.push(buildTable(spec, subject, tenseId));
+    }
   }
   return tables;
+}
+
+/** The item id for a table, which needs its subject back. */
+export function tableItemId(spec: ConjugationSpec, table: ConjugationTable): string {
+  return `${spec.language}:${table.subjectKind}:${table.subjectId}:${table.tenseId}`;
 }
 
 /* ── Scheduling ──────────────────────────────────────────────────────────── */
@@ -301,12 +440,12 @@ export function dueTables(
   now: Date = new Date(),
 ): ConjugationTable[] {
   const due = tables.filter(table => {
-    const state = progress[conjugationItemId(spec.language, table.verbId, table.tenseId)];
+    const state = progress[tableItemId(spec, table)];
     return !state || new Date(state.nextReview) <= now;
   });
   return due.sort((a, b) => {
-    const sa = progress[conjugationItemId(spec.language, a.verbId, a.tenseId)];
-    const sb = progress[conjugationItemId(spec.language, b.verbId, b.tenseId)];
+    const sa = progress[tableItemId(spec, a)];
+    const sb = progress[tableItemId(spec, b)];
     if (!sa && !sb) return 0;
     if (!sa) return -1;
     if (!sb) return 1;
@@ -320,8 +459,8 @@ export function dueTables(
  * ⚠️ **This is where the per-table schedule pays its debt.** One schedule cannot
  * know that your `nous` specifically is weak, but the tally can, so the box with
  * the most misses is asked first. Ties fall to `tiebreak`, which the caller
- * supplies (`Math.random` in the app, a fixed value in tests) — a stable choice
- * would ask the same box forever and teach exactly one sixth of the table.
+ * supplies — a stable choice would ask the same box forever and teach exactly
+ * one sixth of the table.
  */
 export function pickPerson(
   spec: ConjugationSpec,
@@ -351,8 +490,7 @@ export function freshProgress(now: Date = new Date()): ConjugationProgress {
  * The SM-2 half is `getNextReviewData`, unchanged and shared with every card in
  * the app. The tally is the local part: a miss increments the box that was
  * asked, and a correct answer clears it rather than decrementing — a box you
- * have now produced is not "less wrong than before", it is answered, and
- * decrementing would keep asking it long after it was learned.
+ * have now produced is answered, not "less wrong than before".
  */
 export function rateTable(
   current: ConjugationProgress | undefined,
@@ -386,8 +524,7 @@ export function rateTable(
  *
  * The bare form is the answer. The form behind its subject pronoun is accepted
  * too, because a learner who has drilled `j'aime` as a unit is not wrong — and
- * accepting more spellings can only ever turn a false miss into a pass, never
- * the reverse.
+ * accepting more spellings can only ever turn a false miss into a pass.
  */
 export function acceptedForms(spec: ConjugationSpec, table: ConjugationTable, personId: string): string[] {
   const person = spec.persons.find(p => p.id === personId);
@@ -415,12 +552,7 @@ export function isCorrectForm(
  * `vision.md` refuses multiple choice because offering candidates does the
  * retrieval for the learner, and then admits that refusing it leaves whoever
  * cannot start with nothing to do but be wrong. The answer is a hint that
- * *costs*: the search space narrows and **the verdict falls with it**, which is
- * `hintedVerdict` below.
- *
- * Two tiers, both derived from the answer rather than authored: the stem, then
- * the ending. Taking both leaves the learner assembling the form, which is
- * still production.
+ * *costs*: the search space narrows and the verdict falls with it.
  */
 export function conjugationHints(table: ConjugationTable, personId: string): string[] {
   const form = table.forms[personId];
@@ -445,20 +577,19 @@ export function hintedVerdict(hintsTaken: number, correct: boolean): Conjugation
 
 /* ── Progress ────────────────────────────────────────────────────────────── */
 
-/** How one tense is going. */
 export interface ConjugationTenseSummary {
   tenseId: string;
   label: string;
   /** Tables with any history at all. */
   practised: number;
-  /** Tables that exist for this tense. */
+  /** Tables that exist for this tense, within the practice set. */
   total: number;
   due: number;
 }
 
 /** A box the learner keeps getting wrong, named in full. */
 export interface ConjugationWeakBox {
-  infinitive: string;
+  subjectLabel: string;
   tenseLabel: string;
   personLabel: string;
   form: string;
@@ -477,67 +608,68 @@ export interface ConjugationSummary {
 /**
  * What Munli's Progress tab shows for conjugation.
  *
- * ⚠️ **`weakest` is the one thing here that a card-shaped progress view could
- * not produce**, and it is the payoff for the per-box miss tally. The schedule
- * knows a table is shaky; only the tally knows it is your `nous` — so the
- * summary can say `prendre · nous · présent` rather than a percentage.
- *
- * Counting `practised` as "has any history" rather than "is learned" is
- * deliberate: a maturity threshold here would be a second, quieter answer to
- * the question `isCardMature` already answers for cards, and conjugation has no
- * equivalent agreed-upon interval yet.
+ * ⚠️ **`weakest` is the one thing here a card-shaped progress view could not
+ * produce**, and it is the payoff for the per-box tally. The schedule knows a
+ * table is shaky; only the tally knows it is your `nous`. After the group
+ * rework it says something stronger still — `-er · nous · imparfait` is a claim
+ * about an ending across every verb in the group, not about one word.
  */
 export function summarizeConjugation(
   spec: ConjugationSpec,
+  enrolment: ConjugationEnrolment,
   progress: ConjugationProgressMap,
   limit = 5,
   now: Date = new Date(),
 ): ConjugationSummary {
+  const tables = buildTables(spec, enrolment);
   const byTense: ConjugationTenseSummary[] = [];
   const weakest: ConjugationWeakBox[] = [];
   let practised = 0;
-  let total = 0;
   let due = 0;
 
-  for (const tense of spec.tenses) {
+  for (const tenseId of enrolment.tenses) {
+    const tense = spec.tenses.find(t => t.id === tenseId);
+    if (!tense) continue;
+    const forTense = tables.filter(table => table.tenseId === tenseId);
     let tensePractised = 0;
     let tenseDue = 0;
-    for (const verb of spec.verbs) {
-      const state = progress[conjugationItemId(spec.language, verb.id, tense.id)];
-      if (state) {
-        tensePractised += 1;
-        if (new Date(state.nextReview) <= now) tenseDue += 1;
-        for (const [personId, misses] of Object.entries(state.misses)) {
-          const person = spec.persons.find(p => p.id === personId);
-          if (!person || misses <= 0) continue;
-          weakest.push({
-            infinitive: verb.infinitive,
-            tenseLabel: tense.label,
-            personLabel: person.label,
-            form: buildTable(spec, verb, tense.id).forms[personId],
-            misses,
-          });
-        }
-      } else {
+
+    for (const table of forTense) {
+      const state = progress[tableItemId(spec, table)];
+      if (!state) {
         // Never practised is also never scheduled, which `dueTables` reads as
         // due — the same rule an untracked card direction gets.
         tenseDue += 1;
+        continue;
+      }
+      tensePractised += 1;
+      if (new Date(state.nextReview) <= now) tenseDue += 1;
+      for (const [personId, misses] of Object.entries(state.misses)) {
+        const person = spec.persons.find(p => p.id === personId);
+        if (!person || misses <= 0) continue;
+        weakest.push({
+          subjectLabel: table.subjectLabel,
+          tenseLabel: table.tenseLabel,
+          personLabel: person.label,
+          form: table.forms[personId],
+          misses,
+        });
       }
     }
+
     byTense.push({
-      tenseId: tense.id,
+      tenseId,
       label: tense.label,
       practised: tensePractised,
-      total: spec.verbs.length,
+      total: forTense.length,
       due: tenseDue,
     });
     practised += tensePractised;
-    total += spec.verbs.length;
     due += tenseDue;
   }
 
   weakest.sort((a, b) => b.misses - a.misses);
-  return { practised, total, due, byTense, weakest: weakest.slice(0, limit) };
+  return { practised, total: tables.length, due, byTense, weakest: weakest.slice(0, limit) };
 }
 
 /* ── Sessions ────────────────────────────────────────────────────────────── */
@@ -552,11 +684,9 @@ export interface ConjugationQueueOptions {
   /**
    * Include tables that are not due yet.
    *
-   * Off by default, which is what makes a session *end*. The first cut drew
-   * from the whole set whenever nothing was due, so practice never finished and
-   * the due count meant nothing once it hit zero. Over-practising is a
-   * legitimate thing to want — it is just something the learner should ask for
-   * on the start screen rather than something the draw does silently.
+   * Off by default, which is what makes a session *end*. Over-practising is a
+   * legitimate thing to want — it is just something the learner asks for on the
+   * start screen rather than something the draw does silently.
    */
   includeNotDue?: boolean;
 }
@@ -564,20 +694,21 @@ export interface ConjugationQueueOptions {
 /**
  * The questions a session will ask, fixed at the moment it starts.
  *
- * ⚠️ **One question per table, and the box is chosen here rather than when the
- * question is shown.** The table is the scheduled item, so asking it twice in
- * one sitting would be two questions about one fact. Choosing the box up front
- * also keeps every draw inside this function — the screen renders a queue it
- * was handed, so nothing random or stateful happens during render.
+ * ⚠️ **One question per table, and both the box and the vehicle are chosen
+ * here** rather than when the question is shown. The table is the scheduled
+ * item, so asking it twice in one sitting would be two questions about one
+ * fact. Choosing up front also keeps every draw inside this function — the
+ * screen renders a queue it was handed, so nothing random happens during render.
+ *
+ * ⚠️ **The vehicle varies, and that is the point of the group rework.** Asking
+ * `-er · présent · nous` through `donner` today and `chercher` tomorrow tests
+ * the ending; asking it through `parler` every time tests `parlons`.
  *
  * ⚠️ **The queue is owned by the session from here on.** Ratings written while
  * it runs move the picker's counts and must not rebuild it under someone eight
- * questions in — the same rule `buildReviewQueue` follows, and the reason
- * `review.tsx` keeps `cards` out of its queue-building dependencies.
- *
- * A miss therefore does not put the table back into the session in progress. It
- * is due again immediately (`rateTable` sets `nextReview` to now for `again`),
- * so it returns in the *next* session — "a session ends when it said it would".
+ * questions in — the same rule `buildReviewQueue` follows. A miss therefore does
+ * not put the table back into the session in progress: it is due again
+ * immediately, so it returns in the *next* session.
  */
 export function buildConjugationQueue(
   spec: ConjugationSpec,
@@ -588,16 +719,19 @@ export function buildConjugationQueue(
   random: () => number = Math.random,
 ): ConjugationQuestion[] {
   const pool = options.includeNotDue ? [...tables] : dueTables(spec, tables, progress, now);
-  const questions = pool.map(table => ({
-    table,
-    personId: pickPerson(
-      spec,
-      progress[conjugationItemId(spec.language, table.verbId, table.tenseId)],
-      random,
-    ).id,
-  }));
-  // Fisher–Yates, matching `reviewQueue`'s. Due order is verb order, and a
-  // session that always opened on `parler` would drill the top of the list.
+  const questions = pool.map(table => {
+    const state = progress[tableItemId(spec, table)];
+    const subject = findSubject(spec, `${table.subjectKind}:${table.subjectId}`);
+    const asked = subject && subject.kind === 'group'
+      ? buildTable(
+          spec, subject, table.tenseId,
+          subject.vehicles[Math.min(subject.vehicles.length - 1, Math.floor(random() * subject.vehicles.length))],
+        )
+      : table;
+    return { table: asked, personId: pickPerson(spec, state, random).id };
+  });
+  // Fisher–Yates, matching `reviewQueue`'s. Due order is subject order, and a
+  // session that always opened on `-er` would drill the top of the list.
   for (let i = questions.length - 1; i > 0; i--) {
     const j = Math.floor(random() * (i + 1));
     [questions[i], questions[j]] = [questions[j], questions[i]];

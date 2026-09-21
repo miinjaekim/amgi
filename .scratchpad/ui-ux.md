@@ -47,11 +47,13 @@ stored-preference reason.
   bottom button on web — or from the mode button beside the gear on any
   Progress tab. **Every mode uses the same shell**: same tab bar, same
   Progress-tab header (`ProgressHeader`, shared). Only the first tabs and what
-  Progress measures change. Munli's are Practice · Writing · Progress, with
+  Progress measures change. Munli's are Practice · Verbs · Writing · Progress, with
   Practice the initial route for the reason Review is Amgi's.
   **Practice mirrors Review's three states on one screen** — a picker of rows
   with due counts, a setup screen, then a session whose queue is fixed at Start
   and which *ends*. Writing is not in it: it diagnoses rather than practises.
+  **Verbs is the practice set** — what exists to be practised, as against what a
+  session covers. Same split as enrolling a pack versus picking a collection.
   ⚠️ **Progress is deliberately last in both**, because the switch gesture is on
   the last tab and should not move between modes.
   Web keeps its own asymmetry, as it already does for Amgi: `/munli` is a

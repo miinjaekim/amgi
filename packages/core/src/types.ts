@@ -1,6 +1,6 @@
 // Type-only, so it is erased at compile time and the cycle with `conjugation.ts`
 // (which imports `StudyLanguage` from here) never exists at runtime.
-import type { ConjugationProgressMap } from './conjugation';
+import type { ConjugationEnrolment, ConjugationProgressMap } from './conjugation';
 import { isAllKana, markPitchAccent } from './pitchAccent';
 import { kanaToHangul, kanaToRomaji, kikuyuToEnglish, kikuyuToHangul } from './transliterate';
 
@@ -1054,6 +1054,15 @@ export interface UserPreferences {
    * writing a rule, which is a deliberate job.
    */
   conjugation?: ConjugationProgressMap;
+  /**
+   * What the learner has added to their conjugation practice set.
+   *
+   * Separate from `conjugation` because the two answer different questions and
+   * change at different rates: this is *what exists to practise*, chosen on the
+   * Verbs surface and changed rarely; that is *how it is going*, written on
+   * every answer. Absent means the default — see `defaultEnrolment`.
+   */
+  conjugationEnrolment?: ConjugationEnrolment;
   /**
    * Which part of a hanja card sits on the front. Absent means
    * `DEFAULT_HANJA_PARTITION` — the question the exam asks.

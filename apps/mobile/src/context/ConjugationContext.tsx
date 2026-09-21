@@ -1,76 +1,91 @@
-import React, { createContext, useCallback, useContext, useEffect, useState, ReactNode } from 'react';
-import type { ConjugationProgress, ConjugationProgressMap } from '@amgi/core';
+import React, { createContext, useCallback, useContext, useMemo, useRef, useState, ReactNode } from 'react';
+import { conjugationSpec, normalizeEnrolment } from '@amgi/core';
+import type { ConjugationEnrolment, ConjugationProgress, ConjugationProgressMap } from '@amgi/core';
 import { useUser } from './UserContext';
-import { getUserPreferences, saveUserPreferences } from '../services/userPreferences';
+import { saveUserPreferences } from '../services/userPreferences';
 
 /**
- * Conjugation progress, owned once for the whole mode.
+ * Conjugation progress and enrolment, for every Munli surface.
  *
- * ⚠️ **This exists because two screens held two copies of it.** Practice loaded
- * its own, rated into its own, and wrote to Firestore; Progress had loaded a
- * different copy when it mounted and never heard about the write, so nothing
- * appeared there until the app was restarted. That is the same failure as the
- * 2026-09-15 entry in `status.md` — the streak chip and the Progress tab keeping
- * two copies of one number — and the fix is the same one: a single source, not
- * a reload on focus. A focus refetch would have hidden this instance and left
- * the next surface to rediscover it.
+ * ⚠️ **The data comes off `UserContext`'s live snapshot, not a read of its
+ * own.** This originally did its own one-shot `getUserPreferences`, which fixed
+ * only the symptom it was written for — Practice and Progress disagreeing on one
+ * device — and left the real one: a session on the laptop was invisible on the
+ * phone until it was relaunched. `users/{uid}` is already subscribed to, and
+ * this data lives on it, so riding that subscription is both less code and the
+ * actual fix.
  *
- * Writes stay per-answer rather than batched at the end of a session. Batching
- * is fewer round trips and loses the whole session if the app dies mid-way,
- * which is the wrong trade for something this small.
+ * ⚠️ **What this still owns is the pending write.** A snapshot can land between
+ * rating a table and that rating reaching the server, and the snapshot would be
+ * *older* than what is on screen. So every rating is held here until a snapshot
+ * comes back carrying it, and local always wins for a held item — the same shape
+ * as the pending-review replay in `review.tsx`, and the same reason.
  */
 interface ConjugationContextType {
   progress: ConjugationProgressMap;
-  /** True until the first load settles — the difference between "none" and "not yet". */
+  enrolment: ConjugationEnrolment | undefined;
+  /** True until the first snapshot lands. "Not yet" is not "none". */
   loading: boolean;
-  /** Record one table's new state, in memory and in Firestore. */
   rate: (itemId: string, state: ConjugationProgress) => void;
+  setEnrolment: (next: ConjugationEnrolment) => void;
 }
 
 const ConjugationContext = createContext<ConjugationContextType>({
   progress: {},
+  enrolment: undefined,
   loading: true,
   rate: () => {},
+  setEnrolment: () => {},
 });
 
 export function ConjugationProvider({ children }: { children: ReactNode }) {
-  const { user } = useUser();
-  const [progress, setProgress] = useState<ConjugationProgressMap>({});
-  const [loading, setLoading] = useState(true);
+  const { user, studyLanguage, conjugation, conjugationEnrolment } = useUser();
+  const spec = conjugationSpec(studyLanguage);
 
-  useEffect(() => {
-    if (!user) {
-      setProgress({});
-      setLoading(false);
-      return;
+  /** Ratings written but not yet seen coming back. */
+  const [pending, setPending] = useState<ConjugationProgressMap>({});
+  const pendingRef = useRef(pending);
+  pendingRef.current = pending;
+
+  /** Set locally and not yet echoed by a snapshot. */
+  const [pendingEnrolment, setPendingEnrolment] = useState<ConjugationEnrolment | null>(null);
+
+  const progress = useMemo(() => {
+    const server = conjugation ?? {};
+    // Drop anything the server has now confirmed, so `pending` cannot grow for
+    // the life of the app — it is a write buffer, not a cache.
+    const stillPending: ConjugationProgressMap = {};
+    for (const [id, state] of Object.entries(pending)) {
+      if (server[id]?.nextReview !== state.nextReview) stillPending[id] = state;
     }
-    let cancelled = false;
-    setLoading(true);
-    void getUserPreferences(user.uid)
-      .then(prefs => {
-        if (cancelled) return;
-        setProgress(prefs?.conjugation ?? {});
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => { cancelled = true; };
-  }, [user]);
+    return { ...server, ...stillPending };
+  }, [conjugation, pending]);
+
+  const enrolment = useMemo(() => {
+    if (!spec) return undefined;
+    return normalizeEnrolment(spec, pendingEnrolment ?? conjugationEnrolment);
+  }, [spec, pendingEnrolment, conjugationEnrolment]);
 
   const rate = useCallback((itemId: string, state: ConjugationProgress) => {
-    setProgress(prev => ({ ...prev, [itemId]: state }));
-    // Fire and forget, like every other rating in the app: a lost write costs
-    // one table's scheduling, and blocking the next question on a round trip is
-    // what makes a five-second exercise feel like a forty-second one. The
-    // nested map merges key by key, so this writes one table and not the set.
+    setPending(prev => ({ ...prev, [itemId]: state }));
+    // Fire and forget, like every other rating in the app: blocking the next
+    // question on a round trip is what makes a five-second exercise feel like a
+    // forty-second one. The nested map merges key by key, so this writes one
+    // table and not the set.
     if (user) void saveUserPreferences(user.uid, { conjugation: { [itemId]: state } }).catch(() => {});
   }, [user]);
 
-  return (
-    <ConjugationContext.Provider value={{ progress, loading, rate }}>
-      {children}
-    </ConjugationContext.Provider>
+  const setEnrolment = useCallback((next: ConjugationEnrolment) => {
+    setPendingEnrolment(next);
+    if (user) void saveUserPreferences(user.uid, { conjugationEnrolment: next }).catch(() => {});
+  }, [user]);
+
+  const value = useMemo(
+    () => ({ progress, enrolment, loading: conjugation === undefined, rate, setEnrolment }),
+    [progress, enrolment, conjugation, rate, setEnrolment],
   );
+
+  return <ConjugationContext.Provider value={value}>{children}</ConjugationContext.Provider>;
 }
 
 export function useConjugation() {

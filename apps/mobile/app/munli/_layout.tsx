@@ -28,12 +28,14 @@ export const unstable_settings = { initialRouteName: 'index' };
 
 const ICONS: TabIcons = {
   index:    { on: 'grid',        off: 'grid-outline'        },
+  verbs:    { on: 'list',        off: 'list-outline'        },
   writing:  { on: 'create',      off: 'create-outline'      },
   progress: { on: 'stats-chart', off: 'stats-chart-outline' },
 };
 
 const LABELS: Record<string, TranslationKey> = {
   index:    'munliTabPractice',
+  verbs:    'munliTabVerbs',
   writing:  'munliToolWriting',
   progress: 'navProgress',
 };
@@ -49,6 +51,10 @@ export default function MunliLayout() {
       screenOptions={{ headerShown: false }}
     >
       <Tabs.Screen name="index" options={{ title: 'Practice' }} />
+      {/* The practice set — what exists to practise, as against what this
+          session covers. Beside Practice because it is the thing you go and
+          change when practice stops fitting. */}
+      <Tabs.Screen name="verbs" options={{ title: 'Verbs' }} />
       <Tabs.Screen name="writing" options={{ title: 'Writing' }} />
       <Tabs.Screen name="progress" options={{ title: 'Progress' }} />
     </Tabs>

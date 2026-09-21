@@ -1,9 +1,8 @@
 'use client';
-import { useEffect, useMemo, useState } from 'react';
-import { conjugationSpec, summarizeConjugation } from '@amgi/core';
-import type { ConjugationProgressMap } from '@amgi/core';
+import { useMemo } from 'react';
+import { summarizeConjugation } from '@amgi/core';
 import { useUser } from '@/components/UserContext';
-import { getUserPreferences } from '@/services/userPreferences';
+import { useConjugation } from '@/hooks/useConjugation';
 import { t } from '@/lib/i18n';
 
 /**
@@ -14,20 +13,14 @@ import { t } from '@/lib/i18n';
  * nothing to count. Naming the gap beats a zero that reads as a bug.
  */
 export default function MunliProgressPage() {
-  const { user, interfaceLanguage, studyLanguage } = useUser();
-  const [progress, setProgress] = useState<ConjugationProgressMap>({});
-  const spec = conjugationSpec(studyLanguage);
+  const { interfaceLanguage } = useUser();
+  // The shared live source, not a fetch of its own.
+  const { spec, progress, enrolment } = useConjugation();
 
-  useEffect(() => {
-    if (!user) return;
-    let cancelled = false;
-    void getUserPreferences(user.uid).then(prefs => {
-      if (!cancelled) setProgress(prefs?.conjugation ?? {});
-    });
-    return () => { cancelled = true; };
-  }, [user]);
-
-  const summary = useMemo(() => (spec ? summarizeConjugation(spec, progress) : null), [spec, progress]);
+  const summary = useMemo(
+    () => (spec && enrolment ? summarizeConjugation(spec, enrolment, progress) : null),
+    [spec, enrolment, progress],
+  );
 
   const tile = (value: number, label: string) => (
     <div className="flex-1 rounded-xl border py-4 text-center" style={{ background: 'var(--color-surface)', borderColor: 'var(--color-muted)' }}>
@@ -72,8 +65,8 @@ export default function MunliProgressPage() {
                 {t(interfaceLanguage, 'munliProgressWeakest')}
               </p>
               {summary.weakest.map(box => row(
-                `${box.infinitive}-${box.tenseLabel}-${box.personLabel}`,
-                `${box.infinitive} · ${box.personLabel} · ${box.tenseLabel}`,
+                `${box.subjectLabel}-${box.tenseLabel}-${box.personLabel}`,
+                `${box.subjectLabel} · ${box.personLabel} · ${box.tenseLabel}`,
                 box.form,
               ))}
             </>

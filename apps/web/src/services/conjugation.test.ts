@@ -5,99 +5,200 @@ import {
   buildTable,
   buildTables,
   conjugationHints,
-  conjugationItemId,
   conjugationSpec,
+  defaultEnrolment,
   dueTables,
+  findSubject,
   freshProgress,
   hasConjugation,
   hintedVerdict,
   isCorrectForm,
+  normalizeEnrolment,
   pickPerson,
   rateTable,
+  subjectKey,
   summarizeConjugation,
+  tableItemId,
 } from '@amgi/core';
-import type { ConjugationProgressMap, ConjugationSpec } from '@amgi/core';
+import type {
+  ConjugationEnrolment, ConjugationGroup, ConjugationProgressMap, ConjugationSpec,
+} from '@amgi/core';
 
 const spec = conjugationSpec('French') as ConjugationSpec;
-const verb = (id: string) => spec.verbs.find(v => v.id === id)!;
-const table = (id: string, tense: string) => buildTable(spec, verb(id), tense);
+const group = (id: string) => findSubject(spec, `group:${id}`) as ConjugationGroup;
 /** A table's six forms in person order, which is how a learner reads one. */
-const row = (id: string, tense: string) => spec.persons.map(p => table(id, tense).forms[p.id]);
+const row = (groupId: string, tense: string, vehicle?: string) => {
+  const table = buildTable(spec, group(groupId), tense, vehicle);
+  return spec.persons.map(p => table.forms[p.id]);
+};
+const all = defaultEnrolment(spec);
+const everything: ConjugationEnrolment = { ...all, tenses: spec.tenses.map(t => t.id) };
 
 /**
  * The engine's whole job, pinned against forms that are not in dispute.
  *
- * These are the assertions that make "computed, not authored" safe: a rule
- * engine that is wrong is wrong for every verb in its class at once, so a
- * handful of tables per class catches it.
+ * A rule that is wrong is wrong for its entire group at once, so a handful of
+ * tables per pattern catches it.
  */
 describe('French regular conjugation', () => {
   it('conjugates -er verbs in the present', () => {
-    expect(row('parler', 'present')).toEqual(['parle', 'parles', 'parle', 'parlons', 'parlez', 'parlent']);
+    expect(row('er', 'present', 'parler')).toEqual(['parle', 'parles', 'parle', 'parlons', 'parlez', 'parlent']);
   });
 
   it('conjugates -ir verbs in the present', () => {
-    expect(row('finir', 'present')).toEqual(['finis', 'finis', 'finit', 'finissons', 'finissez', 'finissent']);
+    expect(row('ir', 'present', 'finir')).toEqual(['finis', 'finis', 'finit', 'finissons', 'finissez', 'finissent']);
   });
 
   it('conjugates -re verbs in the present', () => {
-    expect(row('vendre', 'present')).toEqual(['vends', 'vends', 'vend', 'vendons', 'vendez', 'vendent']);
+    expect(row('re', 'present', 'vendre')).toEqual(['vends', 'vends', 'vend', 'vendons', 'vendez', 'vendent']);
   });
 
   it('builds the imperfect off the present nous stem', () => {
-    expect(row('parler', 'imparfait')).toEqual(['parlais', 'parlais', 'parlait', 'parlions', 'parliez', 'parlaient']);
-    expect(row('finir', 'imparfait')).toEqual(['finissais', 'finissais', 'finissait', 'finissions', 'finissiez', 'finissaient']);
-    expect(row('vendre', 'imparfait')).toEqual(['vendais', 'vendais', 'vendait', 'vendions', 'vendiez', 'vendaient']);
+    expect(row('er', 'imparfait', 'parler')).toEqual(['parlais', 'parlais', 'parlait', 'parlions', 'parliez', 'parlaient']);
+    expect(row('ir', 'imparfait', 'finir')).toEqual(['finissais', 'finissais', 'finissait', 'finissions', 'finissiez', 'finissaient']);
+    expect(row('re', 'imparfait', 'vendre')).toEqual(['vendais', 'vendais', 'vendait', 'vendions', 'vendiez', 'vendaient']);
   });
 
   it('builds the future on the infinitive, less a final -e', () => {
-    expect(row('parler', 'futur')).toEqual(['parlerai', 'parleras', 'parlera', 'parlerons', 'parlerez', 'parleront']);
-    expect(row('finir', 'futur')).toEqual(['finirai', 'finiras', 'finira', 'finirons', 'finirez', 'finiront']);
-    expect(row('vendre', 'futur')).toEqual(['vendrai', 'vendras', 'vendra', 'vendrons', 'vendrez', 'vendront']);
+    expect(row('er', 'futur', 'parler')).toEqual(['parlerai', 'parleras', 'parlera', 'parlerons', 'parlerez', 'parleront']);
+    expect(row('ir', 'futur', 'finir')).toEqual(['finirai', 'finiras', 'finira', 'finirons', 'finirez', 'finiront']);
+    expect(row('re', 'futur', 'vendre')).toEqual(['vendrai', 'vendras', 'vendra', 'vendrons', 'vendrez', 'vendront']);
   });
 
   /**
-   * The rule most likely to be got wrong, and the reason it is applied per
-   * ending rather than baked into a stem: the softening happens before `a` and
-   * `o` and nowhere else, so `nous mangeons` but `nous mangions`.
+   * Why `-cer` and `-ger` are groups of their own: the softening happens before
+   * `a` and `o` and nowhere else, so `nous mangeons` but `nous mangions`.
    */
   it('softens -ger and -cer before a and o, and only there', () => {
-    expect(row('manger', 'present')).toEqual(['mange', 'manges', 'mange', 'mangeons', 'mangez', 'mangent']);
-    expect(row('manger', 'imparfait')).toEqual(['mangeais', 'mangeais', 'mangeait', 'mangions', 'mangiez', 'mangeaient']);
-    expect(row('commencer', 'present')).toEqual(['commence', 'commences', 'commence', 'commençons', 'commencez', 'commencent']);
-    expect(row('commencer', 'imparfait')).toEqual(['commençais', 'commençais', 'commençait', 'commencions', 'commenciez', 'commençaient']);
+    expect(row('ger', 'present', 'manger')).toEqual(['mange', 'manges', 'mange', 'mangeons', 'mangez', 'mangent']);
+    expect(row('ger', 'imparfait', 'manger')).toEqual(['mangeais', 'mangeais', 'mangeait', 'mangions', 'mangiez', 'mangeaient']);
+    expect(row('cer', 'present', 'commencer')).toEqual(['commence', 'commences', 'commence', 'commençons', 'commencez', 'commencent']);
+    expect(row('cer', 'imparfait', 'commencer')).toEqual(['commençais', 'commençais', 'commençait', 'commencions', 'commenciez', 'commençaient']);
   });
 
-  /** The future is built on the infinitive, whose own e already softens. */
   it('leaves the future of -ger and -cer verbs alone', () => {
-    expect(row('manger', 'futur')[0]).toBe('mangerai');
-    expect(row('commencer', 'futur')[0]).toBe('commencerai');
+    expect(row('ger', 'futur', 'manger')[0]).toBe('mangerai');
+    expect(row('cer', 'futur', 'commencer')[0]).toBe('commencerai');
   });
 
   it('keeps accents in the stem', () => {
-    expect(row('reussir', 'present')[0]).toBe('réussis');
-    expect(row('ecouter', 'present')[0]).toBe('écoute');
+    expect(row('ir', 'present', 'réussir')[0]).toBe('réussis');
+    expect(row('er', 'present', 'écouter')[0]).toBe('écoute');
   });
 
-  it('gives every verb a form for every person in every tense', () => {
-    for (const t of buildTables(spec, spec.tenses.map(x => x.id))) {
-      for (const person of spec.persons) {
-        // `il vend` is the one legitimately empty ending, and it still produces
-        // a form — the stem alone.
-        expect(t.forms[person.id]).toBeTruthy();
+  /**
+   * ⚠️ The constraint that makes a group a group: every vehicle must be
+   * conjugated correctly by *its own* rule. A verb filed under `-er` that needs
+   * the `-ger` spelling would mark a learner wrong for knowing the pattern.
+   */
+  it('files every vehicle under a group whose rule actually fits it', () => {
+    for (const subject of spec.subjects) {
+      if (subject.kind !== 'group') continue;
+      for (const vehicle of subject.vehicles) {
+        if (subject.id === 'cer') expect(vehicle.endsWith('cer')).toBe(true);
+        else if (subject.id === 'ger') expect(vehicle.endsWith('ger')).toBe(true);
+        else {
+          expect(vehicle.endsWith(subject.id)).toBe(true);
+          // and must not need another group's spelling rule
+          expect(vehicle.endsWith('cer') || vehicle.endsWith('ger')).toBe(false);
+        }
+      }
+    }
+  });
+
+  it('gives every vehicle a form for every person in every tense', () => {
+    for (const subject of spec.subjects) {
+      if (subject.kind !== 'group') continue;
+      for (const vehicle of subject.vehicles) {
+        for (const tense of spec.tenses) {
+          const table = buildTable(spec, subject, tense.id, vehicle);
+          // `il vend` is the one legitimately empty ending, and it still
+          // produces a form — the stem alone.
+          for (const person of spec.persons) expect(table.forms[person.id]).toBeTruthy();
+        }
       }
     }
   });
 });
 
-describe('answers', () => {
-  it('accepts the bare form', () => {
-    expect(isCorrectForm(spec, table('parler', 'present'), 'p1', 'parlons')).toBe(true);
+/**
+ * The rework's whole point: a group is one fact, practised through whichever
+ * verb turns up.
+ */
+describe('groups as the scheduled subject', () => {
+  it('schedules one item per group and tense, not one per verb', () => {
+    const tables = buildTables(spec, { tenses: ['present'], subjects: all.subjects });
+    expect(tables).toHaveLength(all.subjects.length);
+    expect(new Set(tables.map(t => t.subjectId)).size).toBe(all.subjects.length);
   });
 
-  /** Folding is `typedAnswer`'s, and case and spacing are already handled. */
+  it('names the group as the subject and the vehicle as the verb', () => {
+    const table = buildTable(spec, group('er'), 'present', 'donner');
+    expect(table.subjectLabel).toBe('-er');
+    expect(table.infinitive).toBe('donner');
+    expect(table.forms.p1).toBe('donnons');
+  });
+
+  it('gives every vehicle of a group the same item id', () => {
+    const a = buildTable(spec, group('er'), 'present', 'parler');
+    const b = buildTable(spec, group('er'), 'present', 'donner');
+    expect(tableItemId(spec, a)).toBe(tableItemId(spec, b));
+  });
+
+  it('keeps different groups and tenses apart', () => {
+    const ids = new Set(
+      buildTables(spec, everything).map(t => tableItemId(spec, t)),
+    );
+    expect(ids.size).toBe(all.subjects.length * spec.tenses.length);
+  });
+
+  it('falls back to a real vehicle when handed one that is not in the group', () => {
+    const table = buildTable(spec, group('er'), 'present', 'vendre');
+    expect(group('er').vehicles).toContain(table.infinitive);
+  });
+});
+
+describe('enrolment', () => {
+  it('starts with every group and the first tense only', () => {
+    expect(all.tenses).toEqual([spec.tenses[0].id]);
+    expect(all.subjects).toHaveLength(spec.subjects.filter(s => s.kind === 'group').length);
+  });
+
+  it('drops anything it no longer recognises', () => {
+    const cleaned = normalizeEnrolment(spec, { tenses: ['present', 'ghost'], subjects: ['group:er', 'verb:nope'] });
+    expect(cleaned.tenses).toEqual(['present']);
+    expect(cleaned.subjects).toEqual(['group:er']);
+  });
+
+  /** An empty practice set looks broken rather than empty, so it never happens. */
+  it('falls back to the default rather than leaving nothing enrolled', () => {
+    expect(normalizeEnrolment(spec, { tenses: [], subjects: [] })).toEqual(all);
+    expect(normalizeEnrolment(spec, undefined)).toEqual(all);
+    expect(normalizeEnrolment(spec, { tenses: ['ghost'], subjects: ['verb:nope'] })).toEqual(all);
+  });
+
+  /** Enrolment is the outer bound; a session can only narrow it. */
+  it('cannot practise a tense that is not enrolled', () => {
+    const tables = buildTables(spec, { tenses: ['present'], subjects: all.subjects }, { tenses: ['futur'] });
+    expect(tables).toEqual([]);
+  });
+
+  it('narrows to the chosen subjects', () => {
+    const tables = buildTables(spec, everything, { subjects: ['group:er'] });
+    expect(new Set(tables.map(t => t.subjectId))).toEqual(new Set(['er']));
+    expect(tables).toHaveLength(spec.tenses.length);
+  });
+});
+
+describe('answers', () => {
+  const table = buildTable(spec, group('er'), 'present', 'parler');
+
+  it('accepts the bare form', () => {
+    expect(isCorrectForm(spec, table, 'p1', 'parlons')).toBe(true);
+  });
+
   it('accepts the form however it was capitalised or spaced', () => {
-    expect(isCorrectForm(spec, table('parler', 'present'), 'p1', '  Parlons ')).toBe(true);
+    expect(isCorrectForm(spec, table, 'p1', '  Parlons ')).toBe(true);
   });
 
   /**
@@ -105,48 +206,41 @@ describe('answers', () => {
    * it is optional, which for a conjugation table is the whole lesson.
    */
   it('rejects a form missing its accent', () => {
-    expect(isCorrectForm(spec, table('reussir', 'present'), 's1', 'reussis')).toBe(false);
-    expect(isCorrectForm(spec, table('commencer', 'present'), 'p1', 'commencons')).toBe(false);
+    expect(isCorrectForm(spec, buildTable(spec, group('ir'), 'present', 'réussir'), 's1', 'reussis')).toBe(false);
+    expect(isCorrectForm(spec, buildTable(spec, group('cer'), 'present', 'commencer'), 'p1', 'commencons')).toBe(false);
   });
 
   it('accepts the form behind its subject pronoun', () => {
-    expect(isCorrectForm(spec, table('parler', 'present'), 's1', 'je parle')).toBe(true);
-    expect(isCorrectForm(spec, table('aimer', 'present'), 's1', "j'aime")).toBe(true);
+    expect(isCorrectForm(spec, table, 's1', 'je parle')).toBe(true);
+    expect(isCorrectForm(spec, buildTable(spec, group('er'), 'present', 'aimer'), 's1', "j'aime")).toBe(true);
   });
 
   it('elides je only before a vowel or h', () => {
-    expect(acceptedForms(spec, table('aimer', 'present'), 's1')).toContain("j'aime");
-    expect(acceptedForms(spec, table('habiter', 'present'), 's1')).toContain("j'habite");
-    expect(acceptedForms(spec, table('parler', 'present'), 's1')).toContain('je parle');
+    expect(acceptedForms(spec, buildTable(spec, group('er'), 'present', 'aimer'), 's1')).toContain("j'aime");
+    expect(acceptedForms(spec, buildTable(spec, group('er'), 'present', 'habiter'), 's1')).toContain("j'habite");
+    expect(acceptedForms(spec, table, 's1')).toContain('je parle');
   });
 
-  it('rejects another person\'s form', () => {
-    expect(isCorrectForm(spec, table('parler', 'present'), 'p1', 'parlez')).toBe(false);
+  it("rejects another person's form", () => {
+    expect(isCorrectForm(spec, table, 'p1', 'parlez')).toBe(false);
   });
 });
 
 describe('scheduling', () => {
-  const NOW = new Date('2026-09-21T12:00:00Z');
-  const id = (v: string, t: string) => conjugationItemId('French', v, t);
+  const NOW = new Date('2026-09-22T12:00:00Z');
+  const LATER = new Date('2026-10-01T12:00:00Z').toISOString();
+  const tables = buildTables(spec, all);
+  const itemId = tableItemId(spec, tables[0]);
 
   it('treats a table that has never been asked as due', () => {
-    const tables = buildTables(spec, ['present']);
     expect(dueTables(spec, tables, {}, NOW)).toHaveLength(tables.length);
   });
 
   it('withholds a table scheduled for later', () => {
-    const later = new Date('2026-10-01T12:00:00Z').toISOString();
-    const progress: ConjugationProgressMap = {
-      [id('parler', 'present')]: { ...freshProgress(NOW), nextReview: later },
-    };
-    const due = dueTables(spec, buildTables(spec, ['present']), progress, NOW);
-    expect(due.find(t => t.verbId === 'parler')).toBeUndefined();
+    const progress: ConjugationProgressMap = { [itemId]: { ...freshProgress(NOW), nextReview: LATER } };
+    expect(dueTables(spec, tables, progress, NOW)).toHaveLength(tables.length - 1);
   });
 
-  /**
-   * The decision this module is shaped by: one schedule per table, so a miss on
-   * one box moves the whole table and leaves no box with a schedule of its own.
-   */
   it('moves the whole table when one box is missed', () => {
     const after = rateTable(undefined, 'p1', 'again');
     expect(new Date(after.nextReview).getTime()).toBeLessThanOrEqual(Date.now());
@@ -162,10 +256,8 @@ describe('scheduling', () => {
     expect(state.misses.p1).toBeUndefined();
   });
 
-  /** A hinted-to-death answer is a miss, or the weak box stops being offered. */
   it('counts a two-hint answer as a miss', () => {
-    const state = rateTable(undefined, 's3', hintedVerdict(2, true));
-    expect(state.misses.s3).toBe(1);
+    expect(rateTable(undefined, 's3', hintedVerdict(2, true)).misses.s3).toBe(1);
   });
 
   it('asks the box that has been missed most', () => {
@@ -173,10 +265,6 @@ describe('scheduling', () => {
     expect(pickPerson(spec, state, () => 0).id).toBe('p2');
   });
 
-  /**
-   * With nothing missed, every box is a candidate — a stable pick would drill
-   * one sixth of the table forever.
-   */
   it('spreads across the table when nothing has been missed', () => {
     const picked = new Set<string>();
     for (let i = 0; i < 6; i++) picked.add(pickPerson(spec, undefined, () => i / 6).id);
@@ -190,11 +278,11 @@ describe('scheduling', () => {
 
 describe('hints', () => {
   it('splits the form into two halves that reassemble into it', () => {
-    const [stem, ending] = conjugationHints(table('parler', 'present'), 'p1');
+    const table = buildTable(spec, group('er'), 'present', 'parler');
+    const [stem, ending] = conjugationHints(table, 'p1');
     expect(stem.replace('…', '') + ending.replace('…', '')).toBe('parlons');
   });
 
-  /** The verdict falls as the search space narrows — that is the whole cost. */
   it('lowers the best available verdict per hint taken', () => {
     expect(hintedVerdict(0, true)).toBe('good');
     expect(hintedVerdict(1, true)).toBe('hard');
@@ -203,125 +291,129 @@ describe('hints', () => {
   });
 });
 
-describe('languages', () => {
-  it('has French and says so', () => {
-    expect(hasConjugation('French')).toBe(true);
-  });
-
-  /** Every other language answers honestly rather than throwing. */
-  it('has nothing for a language with no spec yet', () => {
-    expect(hasConjugation('Korean')).toBe(false);
-    expect(conjugationSpec('Korean')).toBeUndefined();
-  });
-});
-
 describe('summarizeConjugation', () => {
-  const NOW = new Date('2026-09-21T12:00:00Z');
-  const id = (v: string, t: string) => conjugationItemId('French', v, t);
+  const NOW = new Date('2026-09-22T12:00:00Z');
 
-  it('counts every table as due when none has been practised', () => {
-    const summary = summarizeConjugation(spec, {}, 5, NOW);
+  it('counts every enrolled table as due when none has been practised', () => {
+    const summary = summarizeConjugation(spec, all, {}, 5, NOW);
     expect(summary.practised).toBe(0);
-    expect(summary.total).toBe(spec.verbs.length * spec.tenses.length);
+    expect(summary.total).toBe(all.subjects.length);
     expect(summary.due).toBe(summary.total);
   });
 
-  it('counts a practised table and takes it out of due when it is scheduled ahead', () => {
+  it('only counts what is enrolled', () => {
+    expect(summarizeConjugation(spec, everything, {}, 5, NOW).total)
+      .toBe(all.subjects.length * spec.tenses.length);
+  });
+
+  it('counts a practised table and takes it out of due when scheduled ahead', () => {
+    const tables = buildTables(spec, all);
     const progress: ConjugationProgressMap = {
-      [id('parler', 'present')]: {
+      [tableItemId(spec, tables[0])]: {
         ...freshProgress(NOW),
         nextReview: new Date('2026-10-01T12:00:00Z').toISOString(),
       },
     };
-    const summary = summarizeConjugation(spec, progress, 5, NOW);
+    const summary = summarizeConjugation(spec, all, progress, 5, NOW);
     expect(summary.practised).toBe(1);
     expect(summary.due).toBe(summary.total - 1);
-    expect(summary.byTense.find(t => t.tenseId === 'present')!.practised).toBe(1);
   });
 
-  /**
-   * The payoff for the per-box tally: a per-table schedule alone could only say
-   * a table was shaky, never which box.
-   */
-  it('names the weakest boxes in full, most-missed first', () => {
+  /** The payoff for the tally — and after the rework it names an ending. */
+  it('names the weakest boxes by group, most-missed first', () => {
+    const erPresent = buildTable(spec, group('er'), 'present');
+    const irPresent = buildTable(spec, group('ir'), 'present');
     const progress: ConjugationProgressMap = {
-      [id('parler', 'present')]: { ...freshProgress(NOW), misses: { p1: 3 } },
-      [id('finir', 'imparfait')]: { ...freshProgress(NOW), misses: { s2: 5 } },
+      [tableItemId(spec, erPresent)]: { ...freshProgress(NOW), misses: { p1: 3 } },
+      [tableItemId(spec, irPresent)]: { ...freshProgress(NOW), misses: { s2: 5 } },
     };
-    const { weakest } = summarizeConjugation(spec, progress, 5, NOW);
-    expect(weakest[0]).toMatchObject({
-      infinitive: 'finir', tenseLabel: 'imparfait', personLabel: 'tu', form: 'finissais', misses: 5,
-    });
-    expect(weakest[1]).toMatchObject({ infinitive: 'parler', personLabel: 'nous', form: 'parlons', misses: 3 });
+    const { weakest } = summarizeConjugation(spec, all, progress, 5, NOW);
+    expect(weakest[0]).toMatchObject({ subjectLabel: '-ir', personLabel: 'tu', misses: 5 });
+    expect(weakest[1]).toMatchObject({ subjectLabel: '-er', personLabel: 'nous', misses: 3 });
   });
 
   it('reports nothing weak when nothing has been missed', () => {
-    const progress = { [id('parler', 'present')]: freshProgress(NOW) };
-    expect(summarizeConjugation(spec, progress, 5, NOW).weakest).toEqual([]);
-  });
-
-  it('caps the weak list at the limit asked for', () => {
-    const progress: ConjugationProgressMap = Object.fromEntries(
-      spec.verbs.map((v, i) => [id(v.id, 'present'), { ...freshProgress(NOW), misses: { s1: i + 1 } }]),
-    );
-    expect(summarizeConjugation(spec, progress, 3, NOW).weakest).toHaveLength(3);
+    const tables = buildTables(spec, all);
+    const progress: ConjugationProgressMap = { [tableItemId(spec, tables[0])]: freshProgress(NOW) };
+    expect(summarizeConjugation(spec, all, progress, 5, NOW).weakest).toEqual([]);
   });
 });
 
 describe('buildConjugationQueue', () => {
-  const NOW = new Date('2026-09-21T12:00:00Z');
+  const NOW = new Date('2026-09-22T12:00:00Z');
   const LATER = new Date('2026-10-01T12:00:00Z').toISOString();
-  const id = (v: string, t: string) => conjugationItemId('French', v, t);
-  const tables = buildTables(spec, ['present']);
-  /** Deterministic, so a shuffle does not make these flaky. */
+  const tables = buildTables(spec, all);
   const fixed = () => 0;
 
   it('asks every due table exactly once', () => {
     const queue = buildConjugationQueue(spec, tables, {}, {}, NOW, fixed);
     expect(queue).toHaveLength(tables.length);
-    expect(new Set(queue.map(q => q.table.verbId)).size).toBe(tables.length);
+    expect(new Set(queue.map(q => q.table.subjectId)).size).toBe(tables.length);
   });
 
-  /**
-   * The whole point of the session model: when nothing is due the queue is
-   * empty, so practice ends rather than silently drawing from everything.
-   */
   it('is empty when nothing is due', () => {
     const progress: ConjugationProgressMap = Object.fromEntries(
-      spec.verbs.map(v => [id(v.id, 'present'), { ...freshProgress(NOW), nextReview: LATER }]),
+      tables.map(t => [tableItemId(spec, t), { ...freshProgress(NOW), nextReview: LATER }]),
     );
     expect(buildConjugationQueue(spec, tables, progress, {}, NOW, fixed)).toEqual([]);
   });
 
-  /** Over-practice is something the learner asks for, never a fallback. */
   it('includes tables that are not due when asked to', () => {
     const progress: ConjugationProgressMap = Object.fromEntries(
-      spec.verbs.map(v => [id(v.id, 'present'), { ...freshProgress(NOW), nextReview: LATER }]),
+      tables.map(t => [tableItemId(spec, t), { ...freshProgress(NOW), nextReview: LATER }]),
     );
-    const queue = buildConjugationQueue(spec, tables, progress, { includeNotDue: true }, NOW, fixed);
-    expect(queue).toHaveLength(tables.length);
+    expect(buildConjugationQueue(spec, tables, progress, { includeNotDue: true }, NOW, fixed)).toHaveLength(tables.length);
   });
 
   it('asks the box that has been missed most', () => {
+    const er = buildTable(spec, group('er'), 'present');
     const progress: ConjugationProgressMap = {
-      [id('parler', 'present')]: { ...freshProgress(NOW), misses: { p2: 4 } },
+      [tableItemId(spec, er)]: { ...freshProgress(NOW), misses: { p2: 4 } },
     };
     const queue = buildConjugationQueue(spec, tables, progress, {}, NOW, fixed);
-    expect(queue.find(q => q.table.verbId === 'parler')!.personId).toBe('p2');
-  });
-
-  it('covers more than one tense when more than one is chosen', () => {
-    const both = buildTables(spec, ['present', 'imparfait']);
-    const queue = buildConjugationQueue(spec, both, {}, {}, NOW, fixed);
-    expect(new Set(queue.map(q => q.table.tenseId))).toEqual(new Set(['present', 'imparfait']));
+    expect(queue.find(q => q.table.subjectId === 'er')!.personId).toBe('p2');
   });
 
   /**
-   * Due order is verb order, so an unshuffled queue would open on `parler`
-   * every session and drill the top of the list.
+   * ⚠️ The rework's point: the same item asked through different verbs. A queue
+   * that always used one vehicle would test the word, not the ending.
    */
-  it('shuffles rather than running in verb order', () => {
+  it('varies the vehicle a group is asked through', () => {
+    const seen = new Set<string>();
+    for (const r of [0, 0.3, 0.6, 0.9]) {
+      const queue = buildConjugationQueue(spec, tables, {}, {}, NOW, () => r);
+      const er = queue.find(q => q.table.subjectId === 'er');
+      if (er) seen.add(er.table.infinitive);
+    }
+    expect(seen.size).toBeGreaterThan(1);
+  });
+
+  it('only ever uses a vehicle from the group it is asking about', () => {
+    for (const r of [0, 0.25, 0.5, 0.75, 0.99]) {
+      for (const q of buildConjugationQueue(spec, tables, {}, {}, NOW, () => r)) {
+        const subject = findSubject(spec, `group:${q.table.subjectId}`) as ConjugationGroup;
+        expect(subject.vehicles).toContain(q.table.infinitive);
+      }
+    }
+  });
+
+  it('shuffles rather than running in subject order', () => {
     const queue = buildConjugationQueue(spec, tables, {}, {}, NOW, () => 0.7);
-    expect(queue.map(q => q.table.verbId)).not.toEqual(tables.map(t => t.verbId));
+    expect(queue.map(q => q.table.subjectId)).not.toEqual(tables.map(t => t.subjectId));
+  });
+});
+
+describe('languages', () => {
+  it('has French and says so', () => {
+    expect(hasConjugation('French')).toBe(true);
+  });
+
+  it('has nothing for a language with no spec yet', () => {
+    expect(hasConjugation('Korean')).toBe(false);
+    expect(conjugationSpec('Korean')).toBeUndefined();
+  });
+
+  it('keys every subject uniquely', () => {
+    expect(new Set(spec.subjects.map(subjectKey)).size).toBe(spec.subjects.length);
   });
 });

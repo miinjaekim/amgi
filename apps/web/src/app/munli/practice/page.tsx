@@ -1,12 +1,12 @@
 'use client';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
-  buildConjugationQueue, buildTables, conjugationHints, conjugationItemId, conjugationSpec,
-  dueTables, hintedVerdict, isCorrectForm, rateTable,
+  buildConjugationQueue, buildTables, conjugationHints, dueTables, findSubject,
+  hintedVerdict, isCorrectForm, rateTable, tableItemId,
 } from '@amgi/core';
-import type { ConjugationProgress, ConjugationProgressMap, ConjugationQuestion } from '@amgi/core';
+import type { ConjugationQuestion } from '@amgi/core';
 import { useUser } from '@/components/UserContext';
-import { getUserPreferences, saveUserPreferences } from '@/services/userPreferences';
+import { useConjugation } from '@/hooks/useConjugation';
 import { t } from '@/lib/i18n';
 
 /**
@@ -25,12 +25,13 @@ import { t } from '@/lib/i18n';
 type Stage = 'picker' | 'setup' | 'session';
 
 export default function PracticePage() {
-  const { user, interfaceLanguage, studyLanguage } = useUser();
-  const spec = conjugationSpec(studyLanguage);
+  const { interfaceLanguage } = useUser();
+  const { spec, progress, enrolment, rate } = useConjugation();
 
-  const [progress, setProgress] = useState<ConjugationProgressMap>({});
   const [stage, setStage] = useState<Stage>('picker');
+  // `null` is "has not narrowed", meaning the whole practice set.
   const [chosenTenses, setChosenTenses] = useState<string[] | null>(null);
+  const [chosenSubjects, setChosenSubjects] = useState<string[] | null>(null);
   const [includeNotDue, setIncludeNotDue] = useState(false);
 
   const [queue, setQueue] = useState<ConjugationQuestion[]>([]);
@@ -40,37 +41,33 @@ export default function PracticePage() {
   const [hintsTaken, setHintsTaken] = useState(0);
   const [verdict, setVerdict] = useState<'correct' | 'wrong' | null>(null);
 
-  useEffect(() => {
-    if (!user) return;
-    let cancelled = false;
-    void getUserPreferences(user.uid).then(prefs => {
-      if (!cancelled) setProgress(prefs?.conjugation ?? {});
-    });
-    return () => { cancelled = true; };
-  }, [user]);
-
-  /** `null` is "has not chosen"; an empty array is "deselected everything". */
+  /**
+   * What this session will cover — the practice set, optionally narrowed.
+   *
+   * ⚠️ Enrolment is the outer bound: a tense that is not in the practice set
+   * cannot be selected here. Adding it is a decision made on the Verbs page.
+   */
   const tenseIds = useMemo(
-    () => chosenTenses ?? (spec ? [spec.tenses[0].id] : []),
-    [chosenTenses, spec],
+    () => (enrolment ? enrolment.tenses.filter(id => chosenTenses?.includes(id) ?? true) : []),
+    [enrolment, chosenTenses],
+  );
+  const subjectKeys = useMemo(
+    () => (enrolment ? enrolment.subjects.filter(key => chosenSubjects?.includes(key) ?? true) : []),
+    [enrolment, chosenSubjects],
   );
   const tables = useMemo(
-    () => (spec && tenseIds.length ? buildTables(spec, tenseIds) : []),
-    [spec, tenseIds],
+    () => (spec && enrolment ? buildTables(spec, enrolment, { tenses: tenseIds, subjects: subjectKeys }) : []),
+    [spec, enrolment, tenseIds, subjectKeys],
   );
+  /** For the count on the picker — the whole practice set, unnarrowed. */
   const dueCount = useMemo(
-    () => (spec ? dueTables(spec, buildTables(spec, spec.tenses.map(x => x.id)), progress).length : 0),
-    [spec, progress],
+    () => (spec && enrolment ? dueTables(spec, buildTables(spec, enrolment), progress).length : 0),
+    [spec, enrolment, progress],
   );
   const dueInSelection = useMemo(
     () => (spec ? dueTables(spec, tables, progress).length : 0),
     [spec, tables, progress],
   );
-
-  const rate = (itemId: string, state: ConjugationProgress) => {
-    setProgress(prev => ({ ...prev, [itemId]: state }));
-    if (user) void saveUserPreferences(user.uid, { conjugation: { [itemId]: state } }).catch(() => {});
-  };
 
   const start = () => {
     if (!spec) return;
@@ -88,7 +85,7 @@ export default function PracticePage() {
     if (!spec || !current || !typed.trim() || verdict) return;
     const correct = isCorrectForm(spec, current.table, current.personId, typed);
     setVerdict(correct ? 'correct' : 'wrong');
-    const itemId = conjugationItemId(spec.language, current.table.verbId, current.table.tenseId);
+    const itemId = tableItemId(spec, current.table);
     rate(itemId, rateTable(progress[itemId], current.personId, hintedVerdict(hintsTaken, correct)));
   };
 
@@ -142,13 +139,15 @@ export default function PracticePage() {
               {t(interfaceLanguage, 'conjugationTenses')}
             </p>
             <div className="flex flex-wrap gap-2 mb-6">
-              {spec.tenses.map(tense => {
-                const on = tenseIds.includes(tense.id);
+              {(enrolment?.tenses ?? []).map(tenseId => {
+                const tense = spec.tenses.find(x => x.id === tenseId);
+                if (!tense) return null;
+                const on = tenseIds.includes(tenseId);
                 return (
                   <button
-                    key={tense.id}
+                    key={tenseId}
                     aria-pressed={on}
-                    onClick={() => setChosenTenses(on ? tenseIds.filter(x => x !== tense.id) : [...tenseIds, tense.id])}
+                    onClick={() => setChosenTenses(on ? tenseIds.filter(x => x !== tenseId) : [...tenseIds, tenseId])}
                     className="px-3 py-1.5 rounded-full text-sm font-mono border transition-colors"
                     style={on
                       ? { background: 'var(--color-highlight)', color: 'var(--color-bg)', borderColor: 'var(--color-highlight)' }
@@ -160,12 +159,36 @@ export default function PracticePage() {
               })}
             </div>
 
+            <p className="text-xs font-mono uppercase tracking-widest mb-3" style={{ color: 'var(--color-muted)' }}>
+              {t(interfaceLanguage, 'practiceGroups')}
+            </p>
+            <div className="flex flex-wrap gap-2 mb-6">
+              {(enrolment?.subjects ?? []).map(key => {
+                const subject = findSubject(spec, key);
+                if (!subject) return null;
+                const on = subjectKeys.includes(key);
+                return (
+                  <button
+                    key={key}
+                    aria-pressed={on}
+                    onClick={() => setChosenSubjects(on ? subjectKeys.filter(x => x !== key) : [...subjectKeys, key])}
+                    className="px-3 py-1.5 rounded-full text-sm font-mono border transition-colors"
+                    style={on
+                      ? { background: 'var(--color-highlight)', color: 'var(--color-bg)', borderColor: 'var(--color-highlight)' }
+                      : { color: 'var(--color-text)', borderColor: 'var(--color-muted)' }}
+                  >
+                    {subject.kind === 'group' ? subject.label : subject.infinitive}
+                  </button>
+                );
+              })}
+            </div>
+
             <label className="flex items-center gap-3 mb-6 font-mono text-sm cursor-pointer" style={{ color: 'var(--color-text)' }}>
               <input type="checkbox" checked={includeNotDue} onChange={e => setIncludeNotDue(e.target.checked)} />
               {t(interfaceLanguage, 'practiceIncludeNotDue')}
             </label>
 
-            {tenseIds.length === 0 ? (
+            {tenseIds.length === 0 || subjectKeys.length === 0 ? (
               <p className="font-mono text-sm" style={{ color: 'var(--color-muted)' }}>
                 {t(interfaceLanguage, 'conjugationPickTense')}
               </p>
@@ -241,8 +264,11 @@ export default function PracticePage() {
         <p className="font-mono text-2xl font-bold mb-1" style={{ color: 'var(--color-text)' }}>
           {current.table.infinitive}
         </p>
+        {/* The verb is the vehicle; the subject is what is being tested. For a
+            group they differ, and the learner needs both. */}
         <p className="font-mono text-sm mb-6" style={{ color: 'var(--color-muted)' }}>
           {person?.label} · {current.table.tenseLabel}
+          {current.table.subjectKind === 'group' ? ` · ${current.table.subjectLabel}` : ''}
         </p>
 
         <input

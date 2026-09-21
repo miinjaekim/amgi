@@ -73,9 +73,12 @@ paradigm's shapes, and prepositions have none of them.
       by something observed rather than declared**, which is why it is worth
       doing properly rather than early.
 
-- [ ] **Irregular French verbs.** Conjugation shipped with regular `-er`/`-ir`/
-      `-re` only, and a French conjugation tool without `être`, `avoir` and
-      `aller` is missing the verbs a learner reaches for first. ⚠️ **This is the
+- [ ] **Irregular French verbs.** Conjugation ships with regular groups only, and
+      a French conjugation tool without `être`, `avoir` and `aller` is missing the
+      verbs a learner reaches for first. **The model already holds them**:
+      `ConjugationIrregularVerb` stores forms per tense, `FRENCH_IRREGULARS` is
+      `[]`, and the Verbs tab already has a section that says so. **This item is
+      now a data file and a licence check, nothing else.** ⚠️ **This is the
       sourcing job, and it is the whole reason they were left out**: an irregular
       form is recalled content, not a rule, and `docs/packs/README.md` governs —
       the model is not a source. So this is a citable reference, a licence check,
@@ -98,6 +101,11 @@ paradigm's shapes, and prepositions have none of them.
 ## Queued for the next build
 
 _Merged, not yet in anyone's hands — mobile ships by build, no OTA._
+
+- [ ] **Conjugation by verb group, the Verbs tab, and the real subscription fix**
+      (PR #140). ⚠️ **None of it has been seen on a device**, and the thing most
+      worth checking first is the cross-device claim: practise on web, and the
+      phone should update without a relaunch.
 
 - [ ] **The Practice tab: picker, setup, and a session that ends** (PR #139).
       Also the shared conjugation progress that fixes the Progress tab needing
