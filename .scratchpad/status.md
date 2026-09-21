@@ -13,6 +13,11 @@ and `npm run lint` 0 errors / 21 warnings, both measured._
 
 ## Now
 
+- **Munli's bar mirrors Amgi's** (PR #142, 2026-09-22): Practice · Tables ·
+  Writing · Topics · Progress, matching Review · Cards · Learn · Packs ·
+  Progress slot for slot. **Tables** is the new one — the inventory of what you
+  are learning, which Topics had been doing as a second job.
+
 - **The practice set is also the reference** (PR #141, 2026-09-22). Munli's
   **Topics** tab lists one row per grammar topic — Verbs today — and the verbs
   screen carries the conjugation tables themselves: a chip per verb, opening its
@@ -379,6 +384,52 @@ once, so a path that worked on build 14 is not evidence about build 15.
 
 Closed calls, kept with their reasoning — a decision whose reasoning is lost gets
 reopened by the next person to notice the symptom. Newest first.
+
+### Munli's bar mirrors Amgi's, slot for slot (2026-09-22)
+
+**The user's call, and the reasoning is worth keeping because it settles a
+question that had been answered ad hoc three times this week.** Munli's tabs
+were being chosen by what existed; they are now chosen by what Amgi's mean:
+
+| Amgi | Munli | The question it answers |
+|---|---|---|
+| Review | **Practice** | what should I do now |
+| Cards | **Tables** | what am I learning |
+| Learn | **Writing** | here is some input, tell me about it |
+| Packs | **Topics** | what is there, and what do I want |
+| Progress | **Progress** | how is it going overall |
+
+⚠️ **The parallel is not decoration.** A mode that reorders the shell makes
+switching feel like leaving the app rather than moving inside it, and the
+mapping means whatever a learner knows about one bar is true of the other.
+Writing takes the middle for the reason Learn does — the centre of a five-tab
+bar is where a thumb already is.
+
+**What this adds is the Cards slot, which Munli did not have.** Topics was doing
+two jobs: the catalogue you add from *and* the inventory of what you had added.
+Amgi keeps those apart and so does this now — **Tables** lists every table in the
+practice set, one row each, with its state and the boxes it keeps losing.
+
+⚠️ **Tables lists what is *not* due as well**, and that is the difference from
+`dueTables`. That function answers "what should I do now" and a session is built
+from it; an inventory that hid everything you had already learned would be a
+strange inventory. Due-first ordering puts what needs attention at the top
+without dropping the rest.
+
+**Three states, not two.** Never practised is shown apart from due, even though
+a session treats them alike — "not started" and "due now" are different things
+to a reader, and collapsing them makes a new practice set look overdue.
+
+**`ParadigmTable` is extracted** so the Topics detail and a Tables row render one
+implementation, narrowed by `tenseIds`: Topics shows every tense because reading
+a form is not bounded by having enrolled it, and a Tables row shows the one tense
+it is about.
+
+⚠️ **`Tables` will not generalise, and that is a known cost.** It is the right
+name for a conjugation item and the wrong one the moment a second topic's items
+are not tables. It is a label, so it is cheap to change — but the tab is *the
+Cards slot*, and whatever replaces the name has to keep meaning "the things you
+are learning" rather than "the conjugation tables".
 
 ### The practice set is also the reference (2026-09-22)
 

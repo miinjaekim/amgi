@@ -7,6 +7,7 @@ import {
   buildTables,
   conjugationHints,
   conjugationSpec,
+  daysUntil,
   defaultEnrolment,
   dueTables,
   findSubject,
@@ -14,6 +15,7 @@ import {
   hasConjugation,
   hintedVerdict,
   isCorrectForm,
+  listPracticeTables,
   normalizeEnrolment,
   pickPerson,
   rateTable,
@@ -441,5 +443,81 @@ describe('buildParadigm', () => {
       const entry = buildParadigm(spec, group('re'), 'attendre').find(p => p.tenseId === tense.id);
       expect(entry?.forms).toEqual(table.forms);
     }
+  });
+});
+
+describe('listPracticeTables', () => {
+  const NOW = new Date('2026-09-22T12:00:00Z');
+  const LATER = new Date('2026-09-25T12:00:00Z').toISOString();
+
+  it('lists everything enrolled, due or not', () => {
+    const items = listPracticeTables(spec, all, {}, NOW);
+    expect(items).toHaveLength(all.subjects.length);
+  });
+
+  /** ⚠️ Unlike `dueTables`, which is what a session is built from. */
+  it('keeps a table that is not due, rather than dropping it', () => {
+    const tables = buildTables(spec, all);
+    const progress: ConjugationProgressMap = {
+      [tableItemId(spec, tables[0])]: { ...freshProgress(NOW), nextReview: LATER },
+    };
+    const items = listPracticeTables(spec, all, progress, NOW);
+    expect(items).toHaveLength(tables.length);
+    expect(dueTables(spec, tables, progress, NOW)).toHaveLength(tables.length - 1);
+  });
+
+  it('puts what is due first, then what falls due soonest', () => {
+    const tables = buildTables(spec, all);
+    const progress: ConjugationProgressMap = {
+      [tableItemId(spec, tables[0])]: { ...freshProgress(NOW), nextReview: LATER },
+      [tableItemId(spec, tables[1])]: {
+        ...freshProgress(NOW),
+        nextReview: new Date('2026-09-23T12:00:00Z').toISOString(),
+      },
+    };
+    const items = listPracticeTables(spec, all, progress, NOW);
+    expect(items[0].due).toBe(true);
+    const notDue = items.filter(i => !i.due);
+    expect(notDue[0].table.subjectId).toBe(tables[1].subjectId);
+    expect(notDue[1].table.subjectId).toBe(tables[0].subjectId);
+  });
+
+  it('treats a table that has never been practised as due, with no date', () => {
+    const [item] = listPracticeTables(spec, all, {}, NOW);
+    expect(item.due).toBe(true);
+    expect(item.dueAt).toBeNull();
+    expect(item.state).toBeUndefined();
+  });
+
+  it('names the boxes that have been missed, most-missed first', () => {
+    const tables = buildTables(spec, all);
+    const progress: ConjugationProgressMap = {
+      [tableItemId(spec, tables[0])]: { ...freshProgress(NOW), misses: { s1: 1, p2: 4 } },
+    };
+    const item = listPracticeTables(spec, all, progress, NOW)
+      .find(i => i.itemId === tableItemId(spec, tables[0]))!;
+    expect(item.weakBoxes.map(b => b.personLabel)).toEqual(['vous', 'je']);
+  });
+
+  it('reports no weak boxes when nothing has been missed', () => {
+    const tables = buildTables(spec, all);
+    const progress: ConjugationProgressMap = { [tableItemId(spec, tables[0])]: freshProgress(NOW) };
+    expect(listPracticeTables(spec, all, progress, NOW)[0].weakBoxes).toEqual([]);
+  });
+});
+
+describe('daysUntil', () => {
+  const NOW = new Date('2026-09-22T12:00:00Z');
+
+  it('is zero for anything already due', () => {
+    expect(daysUntil(new Date('2026-09-21T12:00:00Z'), NOW)).toBe(0);
+    expect(daysUntil(NOW, NOW)).toBe(0);
+  });
+
+  /** Rounds up, so "in six hours" is not indistinguishable from "due now". */
+  it('rounds a part-day up', () => {
+    expect(daysUntil(new Date('2026-09-22T18:00:00Z'), NOW)).toBe(1);
+    expect(daysUntil(new Date('2026-09-23T12:00:00Z'), NOW)).toBe(1);
+    expect(daysUntil(new Date('2026-09-25T00:00:00Z'), NOW)).toBe(3);
   });
 });

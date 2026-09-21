@@ -13,6 +13,12 @@ import type { TranslationKey } from '@amgi/core';
  * argued from "a one-tab bar is furniture", which was right about one tab and
  * wrong about the shell.
  *
+ * **The bar mirrors Amgi's, slot for slot** — Practice sits where Review does,
+ * Tables where Cards does, Writing where Learn does, Topics where Packs does,
+ * Progress where Progress does. That is not decoration: a mode that reorders the
+ * shell makes switching feel like leaving the app, and the parallel means
+ * whatever a learner knows about one mode's bar is true of the other's.
+ *
  * **Practice is first, and therefore the initial route** — the same argument
  * that puts Review first in Amgi. The first tab is the mode's answer to "what
  * is this for" on every cold open, and for a grammar mode the answer is
@@ -28,15 +34,17 @@ export const unstable_settings = { initialRouteName: 'index' };
 
 const ICONS: TabIcons = {
   index:    { on: 'grid',        off: 'grid-outline'        },
-  topics:   { on: 'list',        off: 'list-outline'        },
+  tables:   { on: 'albums',      off: 'albums-outline'      },
   writing:  { on: 'create',      off: 'create-outline'      },
+  topics:   { on: 'library',     off: 'library-outline'     },
   progress: { on: 'stats-chart', off: 'stats-chart-outline' },
 };
 
 const LABELS: Record<string, TranslationKey> = {
   index:    'munliTabPractice',
-  topics:   'munliTabTopics',
+  tables:   'munliTabTables',
   writing:  'munliToolWriting',
+  topics:   'munliTabTopics',
   progress: 'navProgress',
 };
 
@@ -51,11 +59,15 @@ export default function MunliLayout() {
       screenOptions={{ headerShown: false }}
     >
       <Tabs.Screen name="index" options={{ title: 'Practice' }} />
-      {/* The practice set — what exists to practise, as against what this
-          session covers — and the place to look a form up. A stack behind one
-          tab: one row per grammar topic, each opening its own screen. */}
-      <Tabs.Screen name="topics" options={{ title: 'Topics' }} />
+      {/* What you are learning, item by item — Munli's answer to Cards, in the
+          slot Cards occupies. */}
+      <Tabs.Screen name="tables" options={{ title: 'Tables' }} />
+      {/* Writing takes the middle, where Learn sits in Amgi: the centre of a
+          five-tab bar is where a thumb already is. */}
       <Tabs.Screen name="writing" options={{ title: 'Writing' }} />
+      {/* The catalogue you add from, in the slot Packs occupies: one row per
+          grammar topic, each opening its own screen. A stack behind one tab. */}
+      <Tabs.Screen name="topics" options={{ title: 'Topics' }} />
       <Tabs.Screen name="progress" options={{ title: 'Progress' }} />
     </Tabs>
     </ConjugationProvider>

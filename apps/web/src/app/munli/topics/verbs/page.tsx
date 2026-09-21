@@ -1,9 +1,10 @@
 'use client';
 import { useState } from 'react';
-import { buildParadigm, subjectKey } from '@amgi/core';
+import { subjectKey } from '@amgi/core';
 import type { ConjugationSubject } from '@amgi/core';
 import { useUser } from '@/components/UserContext';
 import { useConjugation } from '@/hooks/useConjugation';
+import ParadigmTable from '@/components/ParadigmTable';
 import { t } from '@/lib/i18n';
 
 /**
@@ -42,39 +43,6 @@ export default function VerbsTopicPage() {
     onNext(on ? list.filter(x => x !== id) : [...list, id]);
   };
 
-  const paradigm = (subject: ConjugationSubject, vehicle: string) => {
-    const tenses = buildParadigm(spec, subject, vehicle);
-    return (
-      <div className="mt-3 overflow-x-auto">
-        <table className="font-mono text-sm border-collapse">
-          <thead>
-            <tr>
-              <th />
-              {tenses.map(tense => (
-                <th key={tense.tenseId} className="px-3 py-1.5 text-left text-xs uppercase tracking-widest font-normal"
-                    style={{ color: 'var(--color-muted)' }}>
-                  {tense.label}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {spec.persons.map(person => (
-              <tr key={person.id} className="border-t" style={{ borderColor: 'var(--color-muted)' }}>
-                <td className="px-3 py-1.5 whitespace-nowrap" style={{ color: 'var(--color-muted)' }}>{person.label}</td>
-                {tenses.map(tense => (
-                  <td key={tense.tenseId} className="px-3 py-1.5 whitespace-nowrap" style={{ color: 'var(--color-text)' }}>
-                    {tense.forms[person.id]}
-                  </td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    );
-  };
-
   const subjectBlock = (subject: ConjugationSubject) => {
     const key = subjectKey(subject);
     const on = enrolment.subjects.includes(key);
@@ -111,7 +79,9 @@ export default function VerbsTopicPage() {
           })}
         </div>
         {vehicles.map(vehicle => (openVerb === `${key}:${vehicle}` ? (
-          <div key={`${vehicle}-table`}>{paradigm(subject, vehicle)}</div>
+          <div key={`${vehicle}-table`}>
+            <ParadigmTable spec={spec} subject={subject} vehicle={vehicle} />
+          </div>
         ) : null))}
       </div>
     );

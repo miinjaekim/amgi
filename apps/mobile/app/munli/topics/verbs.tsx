@@ -3,11 +3,12 @@ import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { buildParadigm, conjugationSpec, subjectKey, t } from '@amgi/core';
+import { conjugationSpec, subjectKey, t } from '@amgi/core';
 import type { ConjugationSubject } from '@amgi/core';
 import { useUser } from '../../../src/context/UserContext';
 import { useTheme } from '../../../src/context/ThemeContext';
 import { useConjugation } from '../../../src/context/ConjugationContext';
+import ParadigmTable from '../../../src/components/ParadigmTable';
 import type { Palette } from '../../../src/theme';
 
 /**
@@ -63,31 +64,6 @@ export default function VerbsTopicScreen() {
     onNext(on ? list.filter(x => x !== id) : [...list, id]);
   };
 
-  /** Persons down, tenses across — the whole paradigm at a glance. */
-  const paradigm = (subject: ConjugationSubject, vehicle: string) => {
-    const tenses = buildParadigm(spec, subject, vehicle);
-    return (
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.tableScroll}>
-        <View>
-          <View style={s.tableRow}>
-            <Text style={[s.cell, s.personCell, s.headCell]} />
-            {tenses.map(tense => (
-              <Text key={tense.tenseId} style={[s.cell, s.headCell]} numberOfLines={1}>{tense.label}</Text>
-            ))}
-          </View>
-          {spec.persons.map(person => (
-            <View key={person.id} style={s.tableRow}>
-              <Text style={[s.cell, s.personCell]} numberOfLines={1}>{person.label}</Text>
-              {tenses.map(tense => (
-                <Text key={tense.tenseId} style={s.cell} numberOfLines={1}>{tense.forms[person.id]}</Text>
-              ))}
-            </View>
-          ))}
-        </View>
-      </ScrollView>
-    );
-  };
-
   const subjectBlock = (subject: ConjugationSubject) => {
     const key = subjectKey(subject);
     const on = enrolment.subjects.includes(key);
@@ -127,7 +103,9 @@ export default function VerbsTopicScreen() {
         </View>
         {vehicles.map(vehicle =>
           openVerb === `${key}:${vehicle}` ? (
-            <View key={`${vehicle}-table`}>{paradigm(subject, vehicle)}</View>
+            <View key={`${vehicle}-table`}>
+              <ParadigmTable spec={spec} subject={subject} vehicle={vehicle} />
+            </View>
           ) : null
         )}
       </View>
@@ -198,14 +176,6 @@ function makeStyles(C: Palette) {
     chipOn: { backgroundColor: C.highlight, borderColor: C.highlight },
     chipText: { color: C.muted, fontSize: 12 },
     chipTextOn: { color: C.bg, fontWeight: '700' },
-    tableScroll: { marginTop: 12 },
-    tableRow: { flexDirection: 'row' },
-    cell: {
-      color: C.text, fontSize: 13, paddingVertical: 6, paddingHorizontal: 10,
-      minWidth: 104, borderBottomWidth: 1, borderBottomColor: C.border,
-    },
-    personCell: { color: C.muted, minWidth: 72 },
-    headCell: { color: C.muted, fontSize: 11, textTransform: 'uppercase', letterSpacing: 1 },
     empty: { color: C.muted, fontSize: 12, paddingVertical: 10 },
   });
 }

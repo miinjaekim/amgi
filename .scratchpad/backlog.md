@@ -102,6 +102,11 @@ paradigm's shapes, and prepositions have none of them.
 
 _Merged, not yet in anyone's hands — mobile ships by build, no OTA._
 
+- [ ] **Munli's five tabs, and the Tables inventory** (PR #142). ⚠️ **Unseen on a
+      device.** Worth checking that five icons still read on a narrow bar, and
+      whether "Tables" is the right name for the Cards slot — it is right for
+      conjugation and wrong the moment a second topic's items are not tables.
+
 - [ ] **The Topics tab and the conjugation reference** (PR #141). The practice
       set became a list of topics, and the verbs screen now shows the tables. ⚠️
       **Unseen on a device**, including whether a six-row table reads at phone

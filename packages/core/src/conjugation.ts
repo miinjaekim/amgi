@@ -773,3 +773,73 @@ export function buildParadigm(
       return { tenseId: tense.id, label: tense.label, forms: table.forms };
     });
 }
+
+/* ── The practice list ───────────────────────────────────────────────────── */
+
+/** One table in the practice set, with how it is going. */
+export interface ConjugationPracticeItem {
+  table: ConjugationTable;
+  itemId: string;
+  /** Absent when it has never been practised. */
+  state?: ConjugationProgress;
+  /** When it is next due, or `null` if it has never been practised. */
+  dueAt: Date | null;
+  due: boolean;
+  /** Boxes missed at least once, most-missed first. Empty when none. */
+  weakBoxes: { personId: string; personLabel: string; misses: number }[];
+}
+
+/**
+ * Everything in the practice set, with its state — Munli's answer to Cards.
+ *
+ * ⚠️ **Not the same list as `dueTables`, and the difference is the point.** That
+ * one answers "what should I do now" and is what a session is built from. This
+ * answers "what am I learning", which includes everything that is *not* due —
+ * a list that hid what you had already learned would be a strange inventory.
+ *
+ * Ordered due-first, then by when each falls due, then never-practised last.
+ * That puts what needs attention at the top without dropping the rest.
+ */
+export function listPracticeTables(
+  spec: ConjugationSpec,
+  enrolment: ConjugationEnrolment,
+  progress: ConjugationProgressMap,
+  now: Date = new Date(),
+): ConjugationPracticeItem[] {
+  const items = buildTables(spec, enrolment).map(table => {
+    const itemId = tableItemId(spec, table);
+    const state = progress[itemId];
+    const dueAt = state ? new Date(state.nextReview) : null;
+    const weakBoxes = Object.entries(state?.misses ?? {})
+      .filter(([, misses]) => misses > 0)
+      .map(([personId, misses]) => ({
+        personId,
+        personLabel: spec.persons.find(p => p.id === personId)?.label ?? personId,
+        misses,
+      }))
+      .sort((a, b) => b.misses - a.misses);
+    // Never practised counts as due, the same rule `dueTables` and an untracked
+    // card direction both follow.
+    return { table, itemId, state, dueAt, due: !dueAt || dueAt <= now, weakBoxes };
+  });
+
+  return items.sort((a, b) => {
+    if (a.due !== b.due) return a.due ? -1 : 1;
+    if (!a.dueAt && !b.dueAt) return 0;
+    if (!a.dueAt) return 1;
+    if (!b.dueAt) return -1;
+    return a.dueAt.getTime() - b.dueAt.getTime();
+  });
+}
+
+/**
+ * Whole days from `now` until `dueAt`, never negative.
+ *
+ * Rounded up, so something due in six hours reads as "1 day" rather than "0" —
+ * zero would be indistinguishable from due now, which is a different state with
+ * a different colour.
+ */
+export function daysUntil(dueAt: Date, now: Date = new Date()): number {
+  const ms = dueAt.getTime() - now.getTime();
+  return ms <= 0 ? 0 : Math.ceil(ms / (24 * 60 * 60 * 1000));
+}

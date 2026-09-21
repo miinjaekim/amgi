@@ -196,6 +196,16 @@ const translations = {
     // this session will cover. Adding a tense is how a learner progresses, and
     // nothing adds one for them.
     munliTabTopics: 'Topics',
+    // Munli's answer to Cards: what you are learning, item by item, as opposed
+    // to Topics (the catalogue) and Progress (the totals).
+    munliTabTables: 'Tables',
+    tablesTitle: 'What you are learning',
+    tablesIntro: 'Every table in your practice set. Tap one to read it.',
+    tablesEmpty: 'Nothing added yet. Add a tense or a verb group from Topics.',
+    tablesDueNow: 'due now',
+    tablesNotStarted: 'not started',
+    tablesDueIn: 'in {days}d',
+    tablesMissed: 'missed {list}',
     topicsIntro: 'What Munli draws practice from — and where to look a form up.',
     topicVerbs: 'Verbs',
     topicVerbsSummary: '{tenses} tenses · {groups} groups',
@@ -952,6 +962,14 @@ const translations = {
     practiceBack: '뒤로',
     practiceGroups: '동사 유형',
     munliTabTopics: '주제',
+    munliTabTables: '변화표',
+    tablesTitle: '학습 중인 표',
+    tablesIntro: '연습 범위에 있는 표를 모두 보여줘요. 누르면 표를 볼 수 있어요.',
+    tablesEmpty: '아직 추가한 게 없어요. 주제에서 시제나 동사 유형을 추가해보세요.',
+    tablesDueNow: '지금 복습',
+    tablesNotStarted: '시작 전',
+    tablesDueIn: '{days}일 후',
+    tablesMissed: '{list} 자주 틀려요',
     topicsIntro: '연습에 쓰이는 범위예요. 형태를 찾아볼 때도 여기를 보세요.',
     topicVerbs: '동사',
     topicVerbsSummary: '시제 {tenses}개 · 유형 {groups}개',
