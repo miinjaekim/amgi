@@ -13,6 +13,12 @@ and `npm run lint` 0 errors / 21 warnings, both measured._
 
 ## Now
 
+- **The practice set is also the reference** (PR #141, 2026-09-22). Munli's
+  **Topics** tab lists one row per grammar topic — Verbs today — and the verbs
+  screen carries the conjugation tables themselves: a chip per verb, opening its
+  paradigm with persons down and tenses across, every tense whether or not it is
+  enrolled.
+
 - **Conjugation is scheduled by rule, not by verb** (PR #140, 2026-09-22). A
   regular group is the item and the verb it is asked through varies; irregular
   verbs stay per-verb and are still unsourced. A **Verbs** tab holds the practice
@@ -373,6 +379,45 @@ once, so a path that worked on build 14 is not evidence about build 15.
 
 Closed calls, kept with their reasoning — a decision whose reasoning is lost gets
 reopened by the next person to notice the symptom. Newest first.
+
+### The practice set is also the reference (2026-09-22)
+
+**The user's call: the Verbs surface should not only be a checklist.** It is
+where you go to say what you practise, and the same screen is the natural place
+to *look a form up* — so it now carries the tables themselves.
+
+**Two structural changes.**
+
+**The tab is a list of topics, one row each.** Verbs is the only row today, and
+that is the point rather than a limitation: the plan is one grammar tool at a
+time with the grouping read off the collection later, and this is where that
+collection becomes visible. Prepositions add a row; nothing about verbs moves to
+make space. ⚠️ It needs a nested `Stack` behind the tab — without a layout there
+expo-router flattens the routes into the Tabs navigator, and `FloatingTabBar`
+maps over every route in the navigator state, so each would surface as an extra
+icon drawing the generic fallback. `(tabs)/decks` carries the same comment for
+the same reason.
+
+**Each group carries a chip per verb, and opening one shows its whole
+paradigm** — persons down, tenses across, which is the shape a conjugation table
+is read in. One open at a time.
+
+⚠️ **The reference shows every tense, including ones that are not enrolled**, and
+this is the call worth recording. Enrolment bounds what is *practised*; it has
+no business bounding what can be *read*. Seeing what the imparfait actually looks
+like is how somebody decides to add it, so hiding it behind the decision to add
+it gets the order backwards.
+
+**`buildParadigm` is in core rather than on each screen**, so a table shown for
+reference cannot disagree with the table practice is graded against — a test
+asserts the two match for every tense. That is the same reason the rules
+themselves live there.
+
+**What this does not do:** the reference is per verb, so a group's chips show
+eight verbs conjugated identically. That is honest — they *are* identical, which
+is the whole argument for scheduling the group rather than the verbs — but it
+means the chips are a sampler rather than a catalogue, and a group with one
+vehicle would look the same as one with eight.
 
 ### A regular group is the item; an irregular verb is the item (2026-09-22)
 

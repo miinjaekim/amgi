@@ -102,6 +102,11 @@ paradigm's shapes, and prepositions have none of them.
 
 _Merged, not yet in anyone's hands — mobile ships by build, no OTA._
 
+- [ ] **The Topics tab and the conjugation reference** (PR #141). The practice
+      set became a list of topics, and the verbs screen now shows the tables. ⚠️
+      **Unseen on a device**, including whether a six-row table reads at phone
+      width — it scrolls horizontally, which is the part most likely to be wrong.
+
 - [ ] **Conjugation by verb group, the Verbs tab, and the real subscription fix**
       (PR #140). ⚠️ **None of it has been seen on a device**, and the thing most
       worth checking first is the cross-device claim: practise on web, and the

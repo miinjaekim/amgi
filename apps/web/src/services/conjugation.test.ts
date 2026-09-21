@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   acceptedForms,
   buildConjugationQueue,
+  buildParadigm,
   buildTable,
   buildTables,
   conjugationHints,
@@ -415,5 +416,30 @@ describe('languages', () => {
 
   it('keys every subject uniquely', () => {
     expect(new Set(spec.subjects.map(subjectKey)).size).toBe(spec.subjects.length);
+  });
+});
+
+describe('buildParadigm', () => {
+  it('gives every tense the language knows, not just the enrolled ones', () => {
+    const paradigm = buildParadigm(spec, group('er'), 'parler');
+    expect(paradigm.map(p => p.tenseId)).toEqual(spec.tenses.map(t => t.id));
+  });
+
+  it('conjugates the vehicle it was handed', () => {
+    const [present] = buildParadigm(spec, group('er'), 'donner');
+    expect(present.forms.p1).toBe('donnons');
+  });
+
+  it('falls back to a real vehicle when handed one from another group', () => {
+    const [present] = buildParadigm(spec, group('ir'), 'parler');
+    expect(present.forms.p1).toBe('finissons');
+  });
+
+  it('agrees with the tables practice is built from', () => {
+    for (const tense of spec.tenses) {
+      const table = buildTable(spec, group('re'), tense.id, 'attendre');
+      const entry = buildParadigm(spec, group('re'), 'attendre').find(p => p.tenseId === tense.id);
+      expect(entry?.forms).toEqual(table.forms);
+    }
   });
 });

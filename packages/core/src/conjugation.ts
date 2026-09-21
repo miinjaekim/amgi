@@ -738,3 +738,38 @@ export function buildConjugationQueue(
   }
   return questions;
 }
+
+/* ── Reference ───────────────────────────────────────────────────────────── */
+
+/** One verb's forms in one tense, for reading rather than answering. */
+export interface ConjugationParadigmTense {
+  tenseId: string;
+  label: string;
+  /** Person id → form. */
+  forms: Record<string, string>;
+}
+
+/**
+ * A verb's whole paradigm — every tense the language knows, for looking up.
+ *
+ * ⚠️ **Every tense, not the enrolled ones.** This is the reference half of the
+ * practice set: you look a form up whether or not you have added its tense, and
+ * seeing what the imparfait actually looks like is how someone decides to add
+ * it. Enrolment bounds what is *practised*; it has no business bounding what can
+ * be *read*.
+ *
+ * Shared by both platforms so one table cannot disagree with the other about a
+ * form — the same reason the rules themselves live here.
+ */
+export function buildParadigm(
+  spec: ConjugationSpec,
+  subject: ConjugationSubject,
+  vehicle?: string,
+): ConjugationParadigmTense[] {
+  return spec.tenses
+    .filter(tense => subject.kind === 'group' || subject.forms[tense.id] !== undefined)
+    .map(tense => {
+      const table = buildTable(spec, subject, tense.id, vehicle);
+      return { tenseId: tense.id, label: tense.label, forms: table.forms };
+    });
+}
