@@ -20,15 +20,21 @@ and `npm run lint` 0 errors / 21 warnings, both measured._
   **Practice** is a session that ends: a picker, a setup screen, then a queue
   fixed at Start. **What it schedules is a rule rather than a verb** — a regular
   group is the item and the verb it is asked through varies; irregular verbs
-  would be per-verb and are still unsourced. **Topics** holds the practice set
-  and doubles as the reference: the Verbs page opens on real tables, with tense
-  chips as a view and Save as what commits. **Tables** is the inventory of what
-  you are learning. Conjugation data rides the live `users/{uid}` subscription on
-  both platforms, so practising on one device reaches the other without a
-  relaunch.
-  ⚠️ **Web is live on merge; native is in no build.** The user has held the mode
-  switcher and one version of the conjugation loop; **nothing else here has been
-  used on a device**, and the Firestore write path for conjugation has never run.
+  would be per-verb and are still unsourced. **Topics** is the practice set and
+  the reference, split into **regular** and **irregular verbs** as two rows: the
+  verbs page opens on real tables, narrowed by a tense dropdown and a group
+  dropdown, with a **save pill per tense** because enrolment is per
+  subject-and-tense pair. **Tables** is the inventory of what you are learning.
+  Conjugation data rides the live `users/{uid}` subscription on both platforms.
+  **Exercised in Expo Go** (2026-09-22, by the user): questions answered through
+  the practice loop — so **the Firestore write path has run** — plus the verbs
+  page, Tables and Munli's Progress tab.
+  ⚠️ **What that does not cover**, and both are worth a look before the next
+  build: **the cross-device claim** (practise on web, phone updates without a
+  relaunch) has never been tried, and **the last round of changes post-dates the
+  testing** — the two-topic split, the split filter dropdowns, the per-verb
+  dropdown and the save pills were all built after the surfaces were last held.
+  Native is in no build either way.
 
 - **Writing review is back, as Munli's first tool** (PR #136, 2026-09-21).
   Restored from the removal commit rather than rebuilt; the surface is unchanged

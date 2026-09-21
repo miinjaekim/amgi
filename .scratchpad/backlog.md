@@ -103,13 +103,15 @@ paradigm's shapes, and prepositions have none of them.
 _Merged, not yet in anyone's hands — mobile ships by build, no OTA._
 
 - [ ] **Verb conjugation, and Munli's tabs** (PR #143). Web is live on merge;
-      **native is not**. ⚠️ **Almost none of it has been used on a device** — the
-      mode switcher and an early version of the practice loop are all the user
-      has held. Worth checking first, in order: that five icons read on a narrow
-      tab bar; that a six-row paradigm reads at phone width, since it scrolls
-      horizontally; and **the cross-device claim** — practise on web, and the
-      phone should update without a relaunch. **The Firestore write path for
-      conjugation has never run.**
+      **native is not**. The practice loop, the verbs page, Tables and Munli's
+      Progress have been exercised in Expo Go, and **the Firestore write path has
+      run**. ⚠️ **Two things it does not cover.** The **cross-device claim** has
+      never been tried — practise on web, and the phone should update without a
+      relaunch. And **the last round post-dates that testing**: the regular /
+      irregular split, the two filter dropdowns, the per-section verb dropdown
+      and the per-tense save pills are all unseen on a device. Also worth a look:
+      five icons on a narrow tab bar, and whether a six-row paradigm reads at
+      phone width, since it scrolls horizontally.
 
 - [ ] **Writing review, in Munli** (PR #136). Web is live on merge; **native is
       not**. ⚠️ **No model call has been made through the restored UI on either
