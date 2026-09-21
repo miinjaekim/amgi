@@ -44,9 +44,23 @@ stored-preference reason.
 - **The nav is about to become per-mode** (planned 2026-09-21, nothing built).
   The five surfaces above are *Amgi's* nav; Munli, the grammar mode, gets its
   own set, reached by holding the last tab — Progress on native, the sidebar's
-  bottom button on web. **Its nav grows with its tools** rather than being drawn
-  first: day one is a home listing them (writing, then verb conjugation), and a
-  tool earns a tab when it earns one. **A mode is a route, not a state**: `(munli)` beside
+  bottom button on web — or from the mode button beside the gear on any
+  Progress tab. **Every mode uses the same shell**: same tab bar, same
+  Progress-tab header (`ProgressHeader`, shared). Only the first tabs and what
+  Progress measures change. Munli's are Practice · Tables · Writing · Topics · Progress — mirroring
+  Amgi's Review · Cards · Learn · Packs · Progress slot for slot, with
+  Practice the initial route for the reason Review is Amgi's.
+  **Practice mirrors Review's three states on one screen** — a picker of rows
+  with due counts, a setup screen, then a session whose queue is fixed at Start
+  and which *ends*. Writing is not in it: it diagnoses rather than practises.
+  **Topics is the catalogue** (Munli's Packs) — one row per grammar topic, each
+  opening a screen that says what is practised *and* shows the tables, which is
+  the lookup the pack browser never had. **Tables is the inventory** (Munli's
+  Cards) — every table in the practice set with its state.
+  ⚠️ **Progress is deliberately last in both**, because the switch gesture is on
+  the last tab and should not move between modes.
+  Web keeps its own asymmetry, as it already does for Amgi: `/munli` is a
+  landing page listing the tools, because web navigates by sidebar. **A mode is a route, not a state**: `(munli)` beside
   `(tabs)` on native, a `/munli` prefix on web, which is what keeps the
   pre-paint script from having to learn about it. Scoped in
   [backlog.md](backlog.md); the reasoning is in [vision.md](vision.md).

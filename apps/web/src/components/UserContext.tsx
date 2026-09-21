@@ -5,7 +5,7 @@ import { signInWithPopup, signOut, onAuthStateChanged, User } from 'firebase/aut
 import { getUserPreferences, recordReviewStreak, saveUserPreferences, subscribeToUserPreferences } from '@/services/userPreferences';
 import { countUserFlashcards } from '@/services/firestore';
 import { recordProgress, subscribeToProgressDay } from '@/services/progress';
-import { CARD_COLLECTIONS, DEFAULT_HANJA_PARTITION, addLanguagePair, hourKey, isHanjaPartition, isNativeLanguage, isStudyLanguage, nativeForStudy, negateDelta, parseLanguagePairs, removeLanguagePair, reviewDelta, seedLanguagePairs, type HanjaPartition, type RatingContext, type RecordedReview, type ReviewVerdict, type StudyLanguage, type StudyLanguagePair } from '@amgi/core';
+import { CARD_COLLECTIONS, DEFAULT_HANJA_PARTITION, addLanguagePair, hourKey, isHanjaPartition, isNativeLanguage, isStudyLanguage, nativeForStudy, negateDelta, parseLanguagePairs, removeLanguagePair, reviewDelta, seedLanguagePairs, type ConjugationEnrolment, type ConjugationProgressMap, type HanjaPartition, type RatingContext, type RecordedReview, type ReviewVerdict, type StudyLanguage, type StudyLanguagePair } from '@amgi/core';
 
 /**
  * ⚠️ **`amgi_native_language` is deliberately still read and written.**
@@ -67,6 +67,16 @@ interface UserContextType {
   studyLanguage: StudyLanguage;
   /** Which part of a hanja card is on the front. Meaningless on other decks. */
   hanjaPartition: HanjaPartition;
+  /**
+   * Conjugation practice, off the live user document.
+   *
+   * ⚠️ **On the subscription rather than read once**, so a session on the phone
+   * reaches the laptop without a reload — the same reason the hanja partition
+   * is picked up here. `undefined` until the first snapshot: "not yet" and
+   * "none" are different.
+   */
+  conjugation: ConjugationProgressMap | undefined;
+  conjugationEnrolment: ConjugationEnrolment | undefined;
   streak: number;
   reviewedToday: number;
   setInterfaceLanguage: (lang: string) => Promise<void>;
@@ -92,6 +102,8 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   const [languages, setLanguagesState] = useState<StudyLanguagePair[]>([]);
   const [studyLanguage, setStudyLanguageState] = useState<StudyLanguage>('Korean');
   const [hanjaPartition, setHanjaPartitionState] = useState<HanjaPartition>(DEFAULT_HANJA_PARTITION);
+  const [conjugation, setConjugation] = useState<ConjugationProgressMap | undefined>(undefined);
+  const [conjugationEnrolment, setConjugationEnrolment] = useState<ConjugationEnrolment | undefined>(undefined);
   const [streak, setStreak] = useState(0);
   const [reviewedToday, setReviewedToday] = useState(0);
 
@@ -229,6 +241,8 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
         // a durable choice a learner makes once, so the copy in the document is
         // the only copy. A document with no field means unset, which is the
         // default rather than whatever this tab last cached.
+        setConjugation(prefs?.conjugation ?? {});
+        setConjugationEnrolment(prefs?.conjugationEnrolment);
         const partition = prefs?.hanjaPartition;
         setHanjaPartitionState(isHanjaPartition(partition) ? partition : DEFAULT_HANJA_PARTITION);
 
@@ -403,7 +417,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   const deckNativeLanguage = nativeForStudy(languages, studyLanguage);
 
   return (
-    <UserContext.Provider value={{ user, authLoading, interfaceLanguage, deckNativeLanguage, languages, studyLanguage, hanjaPartition, streak, reviewedToday, setInterfaceLanguage, setStudyLanguage, addLanguage, removeLanguage, setHanjaPartition, recordReview, undoReview, handleSignIn, handleSignOut }}>
+    <UserContext.Provider value={{ user, authLoading, interfaceLanguage, conjugation, conjugationEnrolment, deckNativeLanguage, languages, studyLanguage, hanjaPartition, streak, reviewedToday, setInterfaceLanguage, setStudyLanguage, addLanguage, removeLanguage, setHanjaPartition, recordReview, undoReview, handleSignIn, handleSignOut }}>
       {children}
     </UserContext.Provider>
   );

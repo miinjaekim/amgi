@@ -13,6 +13,23 @@ and `npm run lint` 0 errors / 21 warnings, both measured._
 
 ## Now
 
+- **Verb conjugation practice, in Munli** (PR #143, 2026-09-22). Munli's own
+  five tabs — Practice · Tables · Writing · Topics · Progress — mirroring Amgi's
+  slot for slot, with a mode button beside the settings gear on both modes'
+  Progress tab.
+  **Practice** is a session that ends: a picker, a setup screen, then a queue
+  fixed at Start. **What it schedules is a rule rather than a verb** — a regular
+  group is the item and the verb it is asked through varies; irregular verbs
+  would be per-verb and are still unsourced. **Topics** holds the practice set
+  and doubles as the reference: the Verbs page opens on real tables, with tense
+  chips as a view and Save as what commits. **Tables** is the inventory of what
+  you are learning. Conjugation data rides the live `users/{uid}` subscription on
+  both platforms, so practising on one device reaches the other without a
+  relaunch.
+  ⚠️ **Web is live on merge; native is in no build.** The user has held the mode
+  switcher and one version of the conjugation loop; **nothing else here has been
+  used on a device**, and the Firestore write path for conjugation has never run.
+
 - **Writing review is back, as Munli's first tool** (PR #136, 2026-09-21).
   Restored from the removal commit rather than rebuilt; the surface is unchanged
   and its address is not — it was the passage half of Learn and is now a Munli
@@ -345,6 +362,221 @@ once, so a path that worked on build 14 is not evidence about build 15.
 
 Closed calls, kept with their reasoning — a decision whose reasoning is lost gets
 reopened by the next person to notice the symptom. Newest first.
+
+### Munli's bar mirrors Amgi's, slot for slot (2026-09-22)
+
+⚠️ **This reverses the "Munli is a `Stack`, not `Tabs`" call in the 2026-09-21
+entry below**, after the user used it. Switching modes should change **what the
+tabs are**, not **whether there are tabs**: a mode that navigates differently
+from the rest of the app reads as *leaving* the app rather than moving inside it.
+The original call was argued from "a one-tab bar is furniture", which is true
+about one tab and silent about the shell — it let a temporary shortage of tools
+decide the navigation model.
+
+The tabs are then chosen by what Amgi's slots *mean* rather than by what happens
+to exist:
+
+| Amgi | Munli | The question it answers |
+|---|---|---|
+| Review | **Practice** | what should I do now |
+| Cards | **Tables** | what am I learning |
+| Learn | **Writing** | here is some input, tell me about it |
+| Packs | **Topics** | what is there, and what do I want |
+| Progress | **Progress** | how is it going overall |
+
+Practice is first and therefore the initial route, by the argument that puts
+Review first in Amgi — the first tab is the mode's answer to "what is this for",
+and for a grammar mode that is *practise*, not *submit something to be
+corrected*. Writing takes the middle for the reason Learn does: the centre of a
+five-tab bar is where a thumb already is. ⚠️ **Progress is last in both modes and
+that is load-bearing** — holding the last tab is how modes are switched, so the
+gesture lands on the same tab wherever you are.
+
+**A visible mode button joins the settings gear on every Progress tab**, because
+a hold is undiscoverable by feel. `ProgressHeader` is extracted so both modes
+render one header rather than two that drift — the `StudyLanguageList`
+precedent. The study language stays in it in every mode, because it belongs to
+the shell: Munli conjugates whatever deck you are on.
+
+⚠️ **`Tables` will not generalise, and that is a known cost.** It is right for a
+conjugation item and wrong the moment a second topic's items are not tables. It
+is a label, so it is cheap to change — but the slot is *Cards*, and whatever
+replaces the name has to keep meaning "the things you are learning".
+
+### What conjugation schedules is a rule, not a verb (2026-09-22)
+
+**The heart of the design, and the thing the first cut got wrong.** `parler`,
+`regarder`, `travailler`, `chercher` and `donner` in the présent were **five
+scheduled items testing one fact** — getting `parlons` right says nothing new
+once `donnons` is known. Regular verbs are a rule and irregular verbs are not,
+so they cannot be the same kind of item.
+
+- **A regular group** (`-er`, `-ir`, …) is one item per tense. A verb from the
+  group is the **vehicle** the question is asked through, and it **varies between
+  questions**: asking `-er · nous · présent` through `donner` today and
+  `chercher` tomorrow tests the ending, where asking it through `parler` every
+  time tests `parlons`.
+- **An irregular verb** keeps a table per verb, because `aller` teaches you
+  nothing about `être`.
+
+⚠️ **`-cer` and `-ger` are their own groups, not a footnote inside `-er`.**
+`nous mangeons` is not `mang` + `ons`, so `manger` is a **broken vehicle** for
+the plain `-er` rule: a learner producing it from that rule would be marked wrong
+for applying it correctly. A test asserts every vehicle is filed under a group
+whose rule actually fits it.
+
+**Vocabulary, used throughout.** A **table** is one subject in one tense; its
+**boxes** are the forms, one per person; **one question** is one box.
+
+⚠️ **The schedule belongs to the table, not the box** — the user's call. Missing
+`nous` brings the whole table back, and the next question from it may be any box,
+with a **per-box miss tally** so the weak one is preferred. The argument is not
+item count but what counts as one fact. The accepted cost is that SM-2 learns
+"your `-er` présent is shaky" rather than "your *nous* is shaky", and the tally
+recovers most of that without a second scheduler. **Per-verb scheduling stays
+reachable**: ids are built by `conjugationItemId` and progress is keyed by
+whatever it returns, so splitting finer later means more ids, not a new shape.
+
+**Regular forms are computed; irregular forms are stored.** There is no rule to
+generate an irregular from, and `docs/packs/README.md` governs — the model is not
+a source — so `FRENCH_IRREGULARS` is empty until that sourcing job is done. The
+types hold both; only one has content. The verb list that did ship is described
+as *common*, never frequency-ranked, for the same reason.
+
+**Grading is `typedAnswer.ts` unchanged**, which folds apostrophes (so `j'ai`
+typed on an iOS keyboard matches) and deliberately does *not* fold diacritics —
+for a conjugation table the accent is the content. **Hints cost**: two tiers
+derived from the form, with the verdict falling to `hard` then `again`, and a
+two-hint answer counts as a miss in the tally or the weak box stops being
+offered.
+
+### Practice is a session that ends (2026-09-22)
+
+**The first cut never ended**, and that was a design bug rather than a missing
+feature: the draw *silently fell back* to the whole set whenever nothing was due,
+so the due count meant nothing once it reached zero and there was no point at
+which the learner was finished.
+
+Practice now mirrors Review's three states on one screen — which is also how
+`review.tsx` does it, since its start screen is not a separate route but what it
+renders before `started` flips:
+
+- **Picker** — rows, one per practice type, due count on the right. Writing is
+  not in it: it diagnoses rather than practises, so Practice holds only things
+  with a queue and a due count.
+- **Setup** — which tenses and groups, plus an explicit switch for including
+  tables that are not due yet.
+- **Session** — the queue is fixed at Start and owned from then on, so a rating
+  written mid-session moves the picker's counts and leaves the questions alone.
+  Same rule as `buildReviewQueue`.
+
+⚠️ **One question per table per session**; the table is the scheduled item, so
+asking it twice in one sitting would be two questions about one fact.
+⚠️ **A miss does not rejoin the session in progress.** `rateTable` makes a missed
+table due immediately, so it returns in the *next* session — "a session ends when
+it said it would", which `sm2.ts` states for cards and which composes here for
+free. **`done` and `stopped` stay distinct**, because telling someone who quit at
+8 of 30 that they are finished would be untrue. **Over-practice is a switch the
+learner flips**, never something the draw does unasked, and the picker row stays
+open at zero due because a new account has nothing scheduled.
+
+**The draw is a pure function of a nonce and a progress snapshot.** React
+Compiler forbids reading a ref and calling `Math.random()` during render, and an
+effect would `setState` synchronously — which the same ruleset flags and the repo
+already carries 13 warnings of. Choosing the box and the vehicle at queue-build
+time put every draw inside an event handler, which is also what makes the session
+deterministic under test.
+
+### Conjugation rides the user-document subscription (2026-09-22)
+
+**Practice writes and three other surfaces read**, so the question is where the
+one copy lives. ⚠️ **It is the existing `users/{uid}` `onSnapshot`, not a read of
+its own** — the same subscription already carries the hanja partition and the
+language list, with a comment on it reading *"A language added on the laptop,
+reaching the phone without a restart."* Conjugation lives on that document, so it
+rides it and a session on the laptop reaches the phone without a relaunch.
+
+⚠️ **This was got wrong once on the way, and the lesson is worth more than the
+fix.** The first version was a one-shot read shared by two screens: it made
+Practice and the Progress tab agree on one device and left the cross-device case
+untouched. A focus-refetch would have hidden it just as well. **The question to
+ask of a stale-data report is not "when should this reload" but "why is there a
+second copy"** — which is what the 2026-09-15 entry below already concluded about
+the streak.
+
+**What the provider still owns is the pending write**, and it has to: a snapshot
+can land between rating a table and that rating reaching the server, at which
+point the snapshot is *older* than what is on screen. Ratings are held until a
+snapshot carries them back, and local wins for a held item — the pending-review
+replay shape. The buffer drops each item as the server confirms it, so it stays a
+write buffer rather than growing into a cache.
+
+**Progress is a field on `users/{uid}` rather than a new collection, and that is
+operational rather than aesthetic.** This project's Firestore rules live in the
+console, so a new collection would deploy and then fail closed in production. The
+user document is already owner-writable and a nested map merges key by key under
+`setDoc(..., { merge: true })`, so one table writes without clobbering the rest.
+The day a language's spec makes this a real fraction of the 1 MB limit is the day
+it earns a rule.
+
+### Enrolment is pairs, and Verbs is content first (2026-09-22)
+
+**The practice set is a surface of its own, and a different job from the session
+setup screen** — setup chooses what to cover *this session* and resets; the
+practice set chooses what exists to be covered, and persists. That is Amgi's
+split between enrolling a pack and picking a collection to review, and setup is
+**bounded** by it: a tense that is not enrolled cannot be selected. **Progression
+lives there**, chosen by the learner — `vision.md` allows per-level content and
+refuses the app deciding what you are ready for, and this is the allowed half.
+
+**Topics is a list, one row per grammar topic.** Verbs is the only row today, and
+that is the point rather than a limitation: the plan is one tool at a time with
+the grouping read off the collection later, and this is where the collection
+becomes visible. ⚠️ It needs a nested `Stack` behind the tab, or expo-router
+flattens the routes into the Tabs navigator and `FloatingTabBar` draws an icon
+per route — `(tabs)/decks` carries the same comment.
+
+**The Verbs page opens on tables, not checkboxes.** ⚠️ **Content first with
+saving second — the decks page's shape, not a form.** A checkbox list made the
+page something to fill in before it became useful. Now: tense chips across the
+top, then a section per group with a **Save** button, chips for the verbs the
+pattern is shown through, and the table itself.
+
+⚠️ **The tense chips are a *view*; Save is what commits.** Selecting the
+imparfait shows it without enrolling it, which is how somebody decides whether to
+take it on. Conflating the two would mean deselecting a tense to stop *looking*
+at it silently stopped you *practising* it.
+
+⚠️ **The reference shows every tense, enrolled or not.** Enrolment bounds what is
+practised and has no business bounding what can be read — seeing what the
+imparfait looks like is how someone decides to add it, so gating it behind having
+added it is backwards.
+
+**One verb across tenses, never several verbs in one tense** — the user's call,
+after a pivot control had been designed. Verbs inside a group conjugate
+*identically*, so a column per verb prints one pattern three times; the chips
+swap which verb the pattern lands on, which is the part worth seeing.
+
+⚠️ **A per-group Save forced enrolment to stop being a cross product.** A list of
+tenses × a list of groups can only say "every saved group in every saved tense",
+so saving `-er` while looking at the présent and `-re` while looking at the
+imparfait produced **four** tables when two were asked for. Enrolment is now
+`${subjectKey}:${tenseId}` entries — the item id without its language, so
+**enrolment and scheduling are one shape** rather than two kept in step, and a
+learner can practise `-er` in three tenses and `-re` in only the présent.
+`setEnrolled` refuses to empty the set, because `normalizeEnrolment` would
+silently refill it and an invisible refill is worse than a refused tap.
+
+**`Tables` is the inventory** — every table in the practice set with its state
+and the boxes it keeps losing. ⚠️ **It lists what is *not* due as well**, which is
+the difference from `dueTables`: that answers "what should I do now" and a
+session is built from it, while an inventory that hid what you had learned would
+be a strange inventory. **Three states, not two** — "not started" is shown apart
+from "due now", or a brand-new practice set looks overdue.
+
+**`buildParadigm` and `ParadigmTable` are shared** so a table shown for reference
+cannot disagree with the table practice is graded against; a test asserts the two
+match for every tense.
 
 ### Writing came back unchanged, and three things around it had not (2026-09-21)
 
