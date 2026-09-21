@@ -13,6 +13,13 @@ and `npm run lint` 0 errors / 21 warnings, both measured._
 
 ## Now
 
+- **Writing review is back, as Munli's first tool** (PR #136, 2026-09-21).
+  Restored from the removal commit rather than rebuilt; the surface is unchanged
+  and its address is not — it was the passage half of Learn and is now a Munli
+  tool of its own, so the Word/Passage toggle does not return. ⚠️ **Web is live;
+  native is in no build, and no passage has been submitted through it on either
+  platform.**
+
 - **Amgi hosts modes, and Munli is the second one** (PR #135, 2026-09-21). The
   shell only — Munli's home says it has no tools yet, which it does not. The
   mode is read off the route on both platforms (`/munli`); the only thing stored
@@ -338,6 +345,61 @@ once, so a path that worked on build 14 is not evidence about build 15.
 
 Closed calls, kept with their reasoning — a decision whose reasoning is lost gets
 reopened by the next person to notice the symptom. Newest first.
+
+### Writing came back unchanged, and three things around it had not (2026-09-21)
+
+Restored from `1ebdc9b^` — the removal was one commit, so the panels, `diff.ts`,
+both test files and the i18n keys came back as they were, with the original
+Korean copy. `/api/writing` and its parser never left. **The behaviour is
+unchanged and only the address moved**, which is the whole claim this entry
+exists to make precise, because three things around it *had* changed and a
+literal restore would have been wrong in each.
+
+**1. The card-offer rule had to be re-derived, not restored.** The 2026-08-08
+decision had a card give way to a *pattern* offer unless it was a gap card, and
+its reasoning was measured: on a grammar finding the model often emits a card
+whose front is a description — `accord du participe passé avec être` is a
+heading, not a deck entry. Patterns no longer exist, so nothing is there to give
+way to, and the naive `!!finding.card` would put those headings in the deck. So
+`offersCard` keeps the measurement and drops the dependency: **a grammar finding
+offers only its gap card; every other kind offers as before.** In core rather
+than in both panels — a rule written twice is a rule that drifts.
+
+**2. `nativeLanguage` split while writing was away** (2026-09-12), and both
+halves are `string`, so a miscategorised one is silent. Chrome takes
+`interfaceLanguage`; the model's notes and the card's back slot take
+`deckNativeLanguage`. This is exactly the class of bug the split was made to
+surface, and a restored file is the one place the compiler cannot help, because
+it was written before the split existed.
+
+**3. The mobile panel reserved height for the floating tab bar.** Munli is a
+`Stack` and has none, so the reserve is a band of dead space under the last
+finding rather than a fix for anything.
+
+**What the placement bought, stated plainly:** the Word/Passage toggle does not
+come back, and neither does the entire design that was going to replace it — the
+auto-growing Learn field, the one-line/two-line reveal, wrapping-not-characters,
+the `keyboardReserve` growth direction, the Enter/Shift+Enter split. A mode with
+its own writing surface has nothing to disambiguate. **Amgi's Learn tab was not
+touched.**
+
+⚠️ **A backlog item was stale and is corrected rather than closed.**
+`/api/writing` was listed as having no `try`/`catch`. It has had one since it was
+written, returning 502 for both an unparseable response and a thrown call. The
+item was about `/api/explain`, which genuinely still has none, and the pairing
+was wrong when it was written.
+
+**What did not ship with it, and why that is not an oversight.** "Findings you
+can return to" needs a Firestore collection and a security rule — console state
+the repo cannot verify — so it is its own item rather than a finishing touch.
+Routing a finding into a practice tool needs a practice tool. Both are in
+[backlog.md](backlog.md) with what the restore established about them.
+
+⚠️ **Nobody has submitted a passage.** The route is unchanged and its parser is
+under test, but no model call has been made through the restored UI on either
+platform, and the four removal reasons included *"the practice itself was not
+good"* — which, where it was about the reviews rather than the surface, this
+does not touch at all.
 
 ### Munli ships as a route, and web remembers it in a cookie (2026-09-21)
 

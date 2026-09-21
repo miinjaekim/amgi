@@ -36,70 +36,9 @@ whole point is lost. **Build the second tool as if the first did not exist**, an
 extract shared machinery only when a third one wants it. Two is a coincidence.
 
 **The order: the switcher, then writing, then conjugation.** The switcher
-shipped in PR #135 (see Shipped in [status.md](status.md)); it has not reached a
-device, so it is under Queued for the next build below.
-
-- [ ] **Writing comes back — as Munli's first tool.** Scoped 2026-09-21, on the
-      user's call, and it **un-gates** the version that sat in Medium: writing no
-      longer waits behind a ladder, because there is no ladder to wait for.
-
-      **It is a restore, not a rebuild.** The removal is one commit — `1ebdc9b`,
-      2026-08-18 — so every deleted file is recoverable with
-      `git show 1ebdc9b^:<path>`: `WritingReviewPanel.tsx` on both platforms,
-      `TextDiff.tsx` on both, `packages/core/src/diff.ts`, and 88 i18n keys × 2
-      languages. **The backend needs nothing** — `/api/writing`,
-      `parseWritingReview` and `WRITING_MAX_CHARS` stayed deployed and unchanged
-      the whole time.
-      ⚠️ **`writing.ts`'s `DO NOT DELETE AS DEAD CODE` header becomes false the
-      moment it has callers again.** Rewrite it in the same commit; a header that
-      lies about why a module exists is worse than no header. Same for the
-      Housekeeping item that pairs it with `grammar.ts` — only `grammar.ts` is
-      still in that item.
-
-      **What must not come back: the Learn Word/Passage toggle**, which is what
-      was actually disliked. ⚠️ **And with writing in Munli, the entire placement
-      sub-plan dies with it** — the auto-growing field, the wrapping threshold,
-      the `keyboardReserve` growth direction, the Enter/Shift+Enter split, the
-      three reworded strings. All of it existed only because writing had to share
-      Learn's one box. It doesn't any more: Munli's writing surface *is* a
-      writing surface, so there is nothing to disambiguate and **Amgi's Learn tab
-      is untouched by this item.** Cancelled with its reasoning in Decisions.
-
-      **What "improving it" means, cheapest first:**
-      1. **`try`/`catch` on `/api/writing`** — it has exactly the exposure the
-         `/api/explain` item in Medium describes, and this is the commit that
-         should pay for it.
-      2. **The gap card.** `WritingCardCandidate.gap` is implemented, the prompt
-         already specifies it, and it never shipped — a word the learner reached
-         for and did not have is the highest-confidence signal a passage
-         produces. It is *vocabulary*, so it writes an ordinary Amgi card. First
-         cross-mode action, and the shell makes it legal.
-      3. **Findings you can return to.** They were ephemeral; a review you cannot
-         re-read is a review you half-remember.
-         ⚠️ **This is not the 2026-09-14 storage plan.** That one stored *concept
-         ids and counts* to order a grammar collection by the learner's own
-         errors — with no ladder there is nothing to order, so **the "emergent
-         ordering" half of that entry dies with it.** What is storable now is
-         `FindingKind` counts, four buckets, honest as history and far too coarse
-         to be a syllabus. **The passage itself stays unstored** either way.
-      4. **Routing, deferred and named so it is not invented early.** Once
-         conjugation exists, a `grammar` finding about a verb form could open
-         that verb's conjugation table. That is the first real instance of tools being
-         grouped by something observed — but it needs both tools to exist and the
-         classification to be reliable, so **not in v1**.
-
-      ⚠️ **Say what is not being fixed.** Of the four reasons the feature was
-      removed, this addresses *unfocused* (its own mode, no toggle), *unused*
-      (untested — it is the same bet again) and *heavy* (one call at a moment the
-      user chose, nothing in a daily loop). It does **not** address **"the
-      practice itself was not good"** where that was about the *reviews* — the
-      model call, prompt and parser are byte-for-byte what was removed. If the
-      findings themselves were the disappointment, none of the four items above
-      touch it, and that is a prompt-and-model question to take deliberately
-      rather than to discover after the restore.
-
-      **What stays dead, unchanged:** generated exercises, model-graded free
-      production, and writing as a *practice* surface. Writing diagnoses.
+shipped in PR #135 and writing in PR #136 (see Now in [status.md](status.md));
+neither has reached a device, so both are under Queued for the next build below.
+Conjugation is what is left.
 
 - [ ] **Verb conjugation practice — the first built-from-scratch Munli tool.**
       Scoped 2026-09-21. Standalone by design: **no levels, no concepts, no
@@ -194,9 +133,40 @@ device, so it is under Queued for the next build below.
       tool. That is an argument for **those** tools — articles, prepositions
       against postpositions — when they are built, not an axis this one carries.
 
+- [ ] **Writing findings you can return to.** Split out of the writing item when
+      it shipped (PR #136) — a review you cannot re-read is a review you half
+      remember, and today the findings vanish when the screen does.
+      ⚠️ **Not the 2026-09-14 storage plan**, which stored *concept ids* to order
+      a grammar collection by the learner's own errors. There is no concept
+      ladder, so there is nothing to order. What is storable is `FindingKind`
+      counts — four buckets — which is honest as history and far too coarse to
+      be a syllabus. **The passage itself stays unstored** either way; that was
+      never in question.
+      ⚠️ **The reason it was not done with the restore: it needs a Firestore
+      collection and a security rule**, and rules are console state the repo
+      cannot verify. That makes it a deliberate piece of work rather than a
+      finishing touch on someone else's PR.
+      **Open, and it decides the shape:** whether this is per-review history (a
+      list you scroll) or per-kind counts (a number that accumulates). The first
+      is what "return to" literally asks for; the second is the only one that
+      could ever feed routing.
+
+- [ ] **Route a writing finding into a practice tool.** Named in the plan,
+      deliberately not built: a `grammar` finding about a verb form could open
+      that verb's conjugation table. It needs conjugation to exist, and it needs
+      the classification to be reliable enough that a wrong route is rare —
+      neither is established. **The first real instance of tools being grouped
+      by something observed rather than declared**, which is why it is worth
+      doing properly rather than early.
+
 ## Queued for the next build
 
 _Merged, not yet in anyone's hands — mobile ships by build, no OTA._
+
+- [ ] **Writing review, in Munli** (PR #136). Web is live on merge; **native is
+      not**. ⚠️ **No model call has been made through the restored UI on either
+      platform** — the route never changed and its parser is under test, but
+      nobody has submitted a passage and read what came back.
 
 - [ ] **The mode switcher** (PR #135). Web is live on merge; **native is not**.
       Holding the last tab, the switcher sheet, Munli's home and the cold-open
@@ -293,6 +263,9 @@ Moved High → Medium 2026-09-21, on the user's call, when Munli took High._
 
 - [ ] **`/api/explain` has no `try`/`catch`**, so an outage or a malformed
       response is a 500 rather than a handled error.
+      _(`/api/writing` was listed here too and should not have been — checked
+      2026-09-21 while restoring writing: it has had one since it was written,
+      returning 502 on both an unparseable response and a thrown call.)_
 
 - [ ] **Offline term capture** — jot terms to look up later, queued locally and
       resolved on reconnect. No model needed, just a queue and a flush.
