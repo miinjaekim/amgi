@@ -1,3 +1,6 @@
+// Type-only, so it is erased at compile time and the cycle with `conjugation.ts`
+// (which imports `StudyLanguage` from here) never exists at runtime.
+import type { ConjugationEnrolment, ConjugationProgressMap } from './conjugation';
 import { isAllKana, markPitchAccent } from './pitchAccent';
 import { kanaToHangul, kanaToRomaji, kikuyuToEnglish, kikuyuToHangul } from './transliterate';
 
@@ -1034,6 +1037,32 @@ export interface UserPreferences {
    */
   interfaceLanguage?: string;
   studyLanguage?: StudyLanguage;
+  /**
+   * Verb conjugation practice, keyed by `conjugationItemId`.
+   *
+   * ⚠️ **A field on this document rather than a subcollection, and the reason is
+   * operational rather than aesthetic.** Firestore security rules for this
+   * project live in the console, not the repo, so a new collection cannot be
+   * given a rule from here — it would deploy and then fail closed in
+   * production. `users/{uid}` is already writable by its owner, and a nested map
+   * merges key by key under `setDoc(..., { merge: true })`, so one table's
+   * progress can be written without reading or clobbering the rest.
+   *
+   * It is small by construction: 18 verbs × 3 tenses is 54 entries of five
+   * fields. If a language's spec ever grows to where this is a real fraction of
+   * the 1 MB document limit, that is the signal to move it — and moving it means
+   * writing a rule, which is a deliberate job.
+   */
+  conjugation?: ConjugationProgressMap;
+  /**
+   * What the learner has added to their conjugation practice set.
+   *
+   * Separate from `conjugation` because the two answer different questions and
+   * change at different rates: this is *what exists to practise*, chosen on the
+   * Verbs surface and changed rarely; that is *how it is going*, written on
+   * every answer. Absent means the default — see `defaultEnrolment`.
+   */
+  conjugationEnrolment?: ConjugationEnrolment;
   /**
    * Which part of a hanja card sits on the front. Absent means
    * `DEFAULT_HANJA_PARTITION` — the question the exam asks.

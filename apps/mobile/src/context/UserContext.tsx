@@ -26,6 +26,7 @@ import {
   type HanjaPartition, type StudyLanguage, type StudyLanguagePair,
   type UserPreferences,
 } from '@amgi/core';
+import type { ConjugationEnrolment, ConjugationProgressMap } from '@amgi/core';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -131,6 +132,21 @@ const nativeRedirectUri =
       : undefined;
 
 interface UserContextType {
+  /**
+   * Conjugation practice, straight off the live user document.
+   *
+   * ⚠️ **On the subscription rather than read once**, which is the whole point:
+   * `users/{uid}` is already watched here for the hanja partition and the
+   * language list — "a language added on the laptop, reaching the phone without
+   * a restart" — and conjugation progress lives on the same document, so
+   * practising on the web reaches the phone the same way. A one-shot read (what
+   * this had first) only ever fixed two screens disagreeing on one device.
+   *
+   * `undefined` until the first snapshot lands: "not yet" and "none" are
+   * different, and a practice set is not empty just because it has not loaded.
+   */
+  conjugation: ConjugationProgressMap | undefined;
+  conjugationEnrolment: ConjugationEnrolment | undefined;
   user: User | null;
   authLoading: boolean;
   /**
@@ -176,6 +192,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const [languages, setLanguagesState] = useState<StudyLanguagePair[]>([]);
   const [studyLanguage, setStudyLanguageState] = useState<StudyLanguage>('Korean');
   const [hanjaPartition, setHanjaPartitionState] = useState<HanjaPartition>(DEFAULT_HANJA_PARTITION);
+  const [conjugation, setConjugation] = useState<ConjugationProgressMap | undefined>(undefined);
+  const [conjugationEnrolment, setConjugationEnrolment] = useState<ConjugationEnrolment | undefined>(undefined);
   /**
    * The streak as one value, because every rule that touches it — merging a
    * server copy in, advancing it by a review — is a decision over all four
@@ -448,6 +466,14 @@ export function UserProvider({ children }: { children: ReactNode }) {
         // merge, and assigning zeros here would wipe a first session that has
         // not been written yet.
         if (!prefs) return;
+        // Conjugation rides this snapshot for exactly the reason the partition
+        // and the language list do: practising on the laptop should reach the
+        // phone without a restart. Assigned even when absent — an account that
+        // has never practised genuinely has none, and `undefined` here means
+        // "not loaded", which the practice surfaces distinguish.
+        setConjugation(prefs.conjugation ?? {});
+        setConjugationEnrolment(prefs.conjugationEnrolment);
+
         // Picked up here as well as at launch, so choosing the partition on one
         // device reaches the other without a restart.
         setHanjaPartitionState(
@@ -721,7 +747,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const deckNativeLanguage = nativeForStudy(languages, studyLanguage);
 
   return (
-    <UserContext.Provider value={{ user, authLoading, interfaceLanguage, deckNativeLanguage, languages, studyLanguage, hanjaPartition, streak: streakState.streak, reviewedToday, setInterfaceLanguage, setStudyLanguage, addLanguage, removeLanguage, setHanjaPartition, recordReview, undoReview, deleteAccount, handleSignIn, handleSignOut }}>
+    <UserContext.Provider value={{ user, authLoading, interfaceLanguage, conjugation, conjugationEnrolment, deckNativeLanguage, languages, studyLanguage, hanjaPartition, streak: streakState.streak, reviewedToday, setInterfaceLanguage, setStudyLanguage, addLanguage, removeLanguage, setHanjaPartition, recordReview, undoReview, deleteAccount, handleSignIn, handleSignOut }}>
       {children}
     </UserContext.Provider>
   );

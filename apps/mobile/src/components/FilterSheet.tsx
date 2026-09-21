@@ -14,7 +14,15 @@ export interface FilterOption {
 export interface FilterGroup {
   title: string;
   options: FilterOption[];
-  selected: string;
+  /**
+   * One key for a single-select group, or a list for a multi-select one.
+   *
+   * ⚠️ **The shape is the mode** — there is no separate `multi` flag to get out
+   * of step with it. A group that can hold several answers says so by holding
+   * them, and `onSelect` is then a toggle rather than a replace, which is the
+   * caller's business either way.
+   */
+  selected: string | readonly string[];
   onSelect: (key: string) => void;
 }
 
@@ -65,7 +73,9 @@ export default function FilterSheet({ groups, onClose, interfaceLanguage }: Prop
                 <Text style={s.groupTitle}>{group.title}</Text>
                 <View style={s.chipRow}>
                   {group.options.map(option => {
-                    const on = option.key === group.selected;
+                    const on = Array.isArray(group.selected)
+                      ? group.selected.includes(option.key)
+                      : option.key === group.selected;
                     return (
                       <TouchableOpacity
                         key={option.key}

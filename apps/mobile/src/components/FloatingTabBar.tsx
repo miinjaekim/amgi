@@ -14,7 +14,15 @@ import ModeSwitcherSheet from './ModeSwitcherSheet';
 
 type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
 
-const ICONS: Record<string, { on: IoniconsName; off: IoniconsName }> = {
+export type TabIcons = Record<string, { on: IoniconsName; off: IoniconsName }>;
+
+/**
+ * ⚠️ **Keyed by route name, and route names repeat across modes** — both Amgi
+ * and Munli have an `index` and a `progress`. So each mode's navigator passes
+ * its own maps rather than this module holding one table for all of them; a
+ * shared table would give Munli's conjugation tab Learn's magnifying glass.
+ */
+const ICONS: TabIcons = {
   index:    { on: 'search',      off: 'search-outline'      },
   review:   { on: 'layers',      off: 'layers-outline'      },
   cards:    { on: 'albums',      off: 'albums-outline'      },
@@ -36,7 +44,14 @@ export function useFloatingTabBarHeight() {
   return insets.bottom + 84; // safe area + 12 margin + 52 bar + 20 breathing room
 }
 
-export default function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
+interface Props extends BottomTabBarProps {
+  /** This navigator's icons, by route name. Defaults to Amgi's. */
+  icons?: TabIcons;
+  /** This navigator's screen-reader labels, by route name. Defaults to Amgi's. */
+  labels?: Record<string, TranslationKey>;
+}
+
+export default function FloatingTabBar({ state, navigation, icons: iconMap = ICONS, labels = LABEL_KEYS }: Props) {
   const insets = useSafeAreaInsets();
   const { C, resolvedTheme } = useTheme();
   const { interfaceLanguage } = useUser();
@@ -49,7 +64,7 @@ export default function FloatingTabBar({ state, navigation }: BottomTabBarProps)
       <BlurView intensity={72} tint={tint} style={s.blur}>
         {state.routes.map((route, i) => {
           const focused = state.index === i;
-          const icons = ICONS[route.name] ?? { on: 'apps', off: 'apps-outline' };
+          const icons = iconMap[route.name] ?? { on: 'apps', off: 'apps-outline' };
           // Holding the *last* tab opens the mode switcher — Instagram's
           // account-switcher gesture, on the tab that sits where the thumb
           // already is. The last tab, not a named one: the bar is reordered by
@@ -78,7 +93,7 @@ export default function FloatingTabBar({ state, navigation }: BottomTabBarProps)
               accessibilityRole="tab"
               accessibilityState={{ selected: focused }}
               accessibilityLabel={
-                LABEL_KEYS[route.name] ? t(interfaceLanguage, LABEL_KEYS[route.name]) : route.name
+                labels[route.name] ? t(interfaceLanguage, labels[route.name]) : route.name
               }
               // A hold is undiscoverable by feel, so the one tab that has one
               // says so. Every other tab keeps no hint at all.

@@ -4,6 +4,13 @@ import { getMode } from '@amgi/core';
 import { useUser } from '@/components/UserContext';
 import { getMunliNavItems } from '@/components/nav-items';
 import { t } from '@/lib/i18n';
+import type { TranslationKey } from '@amgi/core';
+
+/** One line per tool, keyed by the route it leads to. */
+const BLURBS: Record<string, TranslationKey> = {
+  '/munli/writing': 'munliToolWritingBlurb',
+  '/munli/practice': 'munliToolConjugationBlurb',
+};
 
 /**
  * Munli's home — its tools, one row each.
@@ -14,7 +21,9 @@ import { t } from '@/lib/i18n';
 export default function MunliHome() {
   const { interfaceLanguage } = useUser();
   const munli = getMode('munli');
-  const tools = getMunliNavItems(interfaceLanguage, '/munli');
+  // Only the rows with a blurb: Progress is in the nav beside them but it is
+  // not a tool, and listing it here would read as a third thing to practise.
+  const tools = getMunliNavItems(interfaceLanguage, '/munli').filter(item => BLURBS[item.href]);
 
   return (
     <div className="max-w-2xl">
@@ -49,7 +58,7 @@ export default function MunliHome() {
                   {tool.label}
                 </span>
                 <span className="block font-mono text-xs mt-0.5" style={{ color: 'var(--color-muted)' }}>
-                  {t(interfaceLanguage, 'munliToolWritingBlurb')}
+                  {BLURBS[tool.href] ? t(interfaceLanguage, BLURBS[tool.href]) : ''}
                 </span>
               </span>
             </Link>

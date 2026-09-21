@@ -32,12 +32,52 @@ export function getNavItemsForMode(interfaceLanguage: string | null | undefined,
 export function getMunliNavItems(interfaceLanguage: string | null | undefined, pathname: string): NavItem[] {
   return [
     {
+      label: t(interfaceLanguage, 'munliTabPractice'),
+      href: '/munli/practice',
+      active: pathname.startsWith('/munli/practice'),
+      icon: (active: boolean, className = 'w-6 h-6') => (
+        <svg className={className} fill="none" stroke="currentColor" strokeWidth={active ? 2.5 : 1.8} viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M3 6h18M3 12h18M3 18h18M8 3v18" />
+        </svg>
+      ),
+    },
+    {
+      label: t(interfaceLanguage, 'munliTabTables'),
+      href: '/munli/tables',
+      active: pathname.startsWith('/munli/tables'),
+      icon: (active: boolean, className = 'w-6 h-6') => (
+        <svg className={className} fill="none" stroke="currentColor" strokeWidth={active ? 2.5 : 1.8} viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M19 11H5m14 0a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-6a2 2 0 0 1 2-2m14 0V9a2 2 0 0 0-2-2M5 11V9a2 2 0 0 1 2-2m0 0V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v2M7 7h10" />
+        </svg>
+      ),
+    },
+    {
       label: t(interfaceLanguage, 'munliToolWriting'),
       href: '/munli/writing',
       active: pathname.startsWith('/munli/writing'),
       icon: (active: boolean, className = 'w-6 h-6') => (
         <svg className={className} fill="none" stroke="currentColor" strokeWidth={active ? 2.5 : 1.8} viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zM19.5 15v3.75A2.25 2.25 0 0117.25 21H5.25A2.25 2.25 0 013 18.75V6.75A2.25 2.25 0 015.25 4.5H9" />
+        </svg>
+      ),
+    },
+    {
+      label: t(interfaceLanguage, 'munliTabTopics'),
+      href: '/munli/topics',
+      active: pathname.startsWith('/munli/topics'),
+      icon: (active: boolean, className = 'w-6 h-6') => (
+        <svg className={className} fill="none" stroke="currentColor" strokeWidth={active ? 2.5 : 1.8} viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01" />
+        </svg>
+      ),
+    },
+    {
+      label: t(interfaceLanguage, 'navProgress'),
+      href: '/munli/progress',
+      active: pathname.startsWith('/munli/progress'),
+      icon: (active: boolean, className = 'w-6 h-6') => (
+        <svg className={className} fill="none" stroke="currentColor" strokeWidth={active ? 2.5 : 1.8} viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M4 19V5m0 14h16M8 19v-6m4 6V9m4 10v-4" />
         </svg>
       ),
     },

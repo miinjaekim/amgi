@@ -14,6 +14,7 @@ import { saveFlashcardToFirestore } from '../services/firestore';
 import type { Flashcard } from '../services/firestore';
 import { useUser } from '../context/UserContext';
 import { useTheme } from '../context/ThemeContext';
+import { useFloatingTabBarHeight } from './FloatingTabBar';
 import PronounceButton from './PronounceButton';
 import CopyButton from './CopyButton';
 import TextDiff from './TextDiff';
@@ -41,7 +42,8 @@ const KIND_LABEL_KEY: Record<FindingKind, TranslationKey> = {
  */
 export default function WritingReviewPanel() {
   const { C } = useTheme();
-  const s = useMemo(() => makeStyles(C), [C]);
+  const tabBarHeight = useFloatingTabBarHeight();
+  const s = useMemo(() => makeStyles(C, tabBarHeight), [C, tabBarHeight]);
   // Two languages, not one — see the 2026-09-12 decision. Chrome takes the
   // interface language; the model's notes and the card's back slot take the
   // deck's.
@@ -253,13 +255,10 @@ export default function WritingReviewPanel() {
   );
 }
 
-function makeStyles(C: Palette) {
+function makeStyles(C: Palette, tabBarHeight: number) {
   return StyleSheet.create({
     flex: { flex: 1 },
-    // ⚠️ No tab-bar reserve. This used to sit in Learn, under the floating bar;
-    // Munli is a Stack with no bar, so reserving for one would leave a band of
-    // dead space under the last finding.
-    scroll: { padding: 16, paddingBottom: 40 },
+    scroll: { padding: 16, paddingBottom: tabBarHeight + 16 },
 
 
     input: {
