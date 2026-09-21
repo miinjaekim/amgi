@@ -6,8 +6,8 @@ import AmgiLogo from './AmgiLogo';
 import SettingsMenu, { StudyLanguageList } from './SettingsMenu';
 import StreakInfo from './StreakInfo';
 import { useUser } from '@/components/UserContext';
-import { getStudyLanguageConfig } from '@amgi/core';
-import { getNavItems } from './nav-items';
+import { getStudyLanguageConfig, getMode, modeFromPath } from '@amgi/core';
+import { getNavItemsForMode } from './nav-items';
 import { t } from '@/lib/i18n';
 
 interface Props {
@@ -36,7 +36,8 @@ export default function SideNav({ collapsed, onToggle }: Props) {
     return () => document.removeEventListener('mousedown', handler);
   }, [settingsOpen, langOpen]);
 
-  const navItems = getNavItems(interfaceLanguage, pathname);
+  const navItems = getNavItemsForMode(interfaceLanguage, pathname);
+  const mode = getMode(modeFromPath(pathname));
   // The deck's name, written in the language Amgi is speaking — a label, not
   // card content.
   const studyLangLabel = t(interfaceLanguage, getStudyLanguageConfig(studyLanguage).studyLabelKey);
@@ -52,12 +53,16 @@ export default function SideNav({ collapsed, onToggle }: Props) {
           its icon centered, so the whole stack sits centered under the shell
           in both states without anything moving. */}
       <div className="px-2 pt-5 pb-2 space-y-1">
-        <Link href="/" className="flex items-center gap-3 pl-2">
+        {/* Names the mode you are in, and goes to that mode's home. This is
+            the only always-visible thing that says which mode is current, so it
+            is not decoration — and it is why the switcher needs no indicator of
+            its own on this width. */}
+        <Link href={mode.home} className="flex items-center gap-3 pl-2">
           <span className="flex-shrink-0">
             <AmgiLogo color="var(--color-highlight)" stroke="var(--color-text)" size={30} />
           </span>
           <span className="sidenav-label font-mono font-bold text-lg whitespace-nowrap" style={{ color: 'var(--color-text)' }}>
-            Amgi
+            {mode.name}
           </span>
         </Link>
         <button
@@ -76,6 +81,11 @@ export default function SideNav({ collapsed, onToggle }: Props) {
 
       {/* Nav items */}
       <nav className="flex-1 space-y-1 px-2">
+        {navItems.length === 0 && (
+          <p className="sidenav-label px-2 py-2.5 font-mono text-xs leading-relaxed" style={{ color: 'var(--color-muted)' }}>
+            {t(interfaceLanguage, 'munliNoTools')}
+          </p>
+        )}
         {navItems.map((item) => (
           <a
             key={item.href}

@@ -1,13 +1,18 @@
 'use client';
 import { usePathname } from 'next/navigation';
 import { useUser } from '@/components/UserContext';
-import { getNavItems } from './nav-items';
+import { getNavItemsForMode } from './nav-items';
 
 export default function BottomNav() {
   const pathname = usePathname();
   const { interfaceLanguage } = useUser();
 
-  const items = getNavItems(interfaceLanguage, pathname);
+  const items = getNavItemsForMode(interfaceLanguage, pathname);
+
+  // A mode with no nav rows yet renders no bar at all, rather than an empty
+  // one. The switcher lives in the header dropdown on this width, so nothing
+  // is unreachable.
+  if (items.length === 0) return null;
 
   return (
     <nav

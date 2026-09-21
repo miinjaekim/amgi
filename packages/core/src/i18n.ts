@@ -135,6 +135,20 @@ const translations = {
     navCards: 'Cards',
     navDecks: 'Packs',
     navProgress: 'Progress',
+    // Modes. The names themselves are not translated — see `MODES` in
+    // `modes.ts` for why, and for the open question about a Korean rendering.
+    // One word each: the switcher is read at a glance, and the mode's own
+    // surfaces say the rest.
+    modeAmgiTagline: 'Words',
+    modeMunliTagline: 'Grammar',
+    modeSwitchTitle: 'Switch mode',
+    modeCurrent: 'Current mode',
+    modeSwitchHint: 'Hold the last tab to switch',
+    // Munli's home. It has no tools yet, and says so rather than looking
+    // broken — the mode ships before its first tool by design.
+    munliTagline: 'Grammar practice, one thing at a time.',
+    munliNoTools: 'Nothing to practise yet.',
+    munliNoToolsBody: 'Writing and verb conjugation are what land here first.',
     // Progress dashboard
     progressTitle: 'Progress',
     progressDescription: 'Which days you studied, how much, and what you added.',
@@ -816,6 +830,14 @@ const translations = {
     navCards: '카드',
     navDecks: '단어팩',
     navProgress: '기록',
+    modeAmgiTagline: '단어',
+    modeMunliTagline: '문법',
+    modeSwitchTitle: '모드 전환',
+    modeCurrent: '현재 모드',
+    modeSwitchHint: '마지막 탭을 길게 누르면 전환돼요',
+    munliTagline: '문법을 하나씩 연습해요.',
+    munliNoTools: '아직 준비된 연습이 없어요.',
+    munliNoToolsBody: '글쓰기와 동사 변화가 먼저 들어올 예정이에요.',
     // Progress dashboard
     progressTitle: '학습 기록',
     progressDescription: '어떤 날에 얼마나 공부했는지, 무엇을 새로 담았는지 한눈에 보세요.',

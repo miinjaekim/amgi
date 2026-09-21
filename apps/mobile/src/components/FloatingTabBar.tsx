@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, TouchableOpacity, StyleSheet } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
@@ -10,6 +10,7 @@ import { t } from '@amgi/core';
 import type { TranslationKey } from '@amgi/core';
 import { useTheme } from '../context/ThemeContext';
 import { useUser } from '../context/UserContext';
+import ModeSwitcherSheet from './ModeSwitcherSheet';
 
 type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -39,14 +40,22 @@ export default function FloatingTabBar({ state, navigation }: BottomTabBarProps)
   const insets = useSafeAreaInsets();
   const { C, resolvedTheme } = useTheme();
   const { interfaceLanguage } = useUser();
+  const [switcherOpen, setSwitcherOpen] = useState(false);
   const tint = resolvedTheme === 'paper' ? 'light' : 'dark';
 
   return (
+    <>
     <View style={[s.wrapper, { bottom: insets.bottom + 12 }]}>
       <BlurView intensity={72} tint={tint} style={s.blur}>
         {state.routes.map((route, i) => {
           const focused = state.index === i;
           const icons = ICONS[route.name] ?? { on: 'apps', off: 'apps-outline' };
+          // Holding the *last* tab opens the mode switcher — Instagram's
+          // account-switcher gesture, on the tab that sits where the thumb
+          // already is. The last tab, not a named one: the bar is reordered by
+          // editing the layout, and a gesture pinned to `progress` would follow
+          // that screen somewhere useless. Tap is untouched.
+          const isLast = i === state.routes.length - 1;
 
           const onPress = () => {
             const event = navigation.emit({
@@ -64,12 +73,16 @@ export default function FloatingTabBar({ state, navigation }: BottomTabBarProps)
               key={route.key}
               style={s.tab}
               onPress={onPress}
+              onLongPress={isLast ? () => setSwitcherOpen(true) : undefined}
               activeOpacity={0.7}
               accessibilityRole="tab"
               accessibilityState={{ selected: focused }}
               accessibilityLabel={
                 LABEL_KEYS[route.name] ? t(interfaceLanguage, LABEL_KEYS[route.name]) : route.name
               }
+              // A hold is undiscoverable by feel, so the one tab that has one
+              // says so. Every other tab keeps no hint at all.
+              accessibilityHint={isLast ? t(interfaceLanguage, 'modeSwitchHint') : undefined}
             >
               {focused && <View style={[s.activePill, { backgroundColor: C.highlight + '22' }]} />}
               <Ionicons
@@ -82,6 +95,11 @@ export default function FloatingTabBar({ state, navigation }: BottomTabBarProps)
         })}
       </BlurView>
     </View>
+    {/* Outside the bar: the wrapper is absolutely positioned with
+        `overflow: 'hidden'` for the blur's rounded corners, and nothing that
+        has to cover the screen belongs inside it. */}
+    <ModeSwitcherSheet visible={switcherOpen} onClose={() => setSwitcherOpen(false)} />
+    </>
   );
 }
 

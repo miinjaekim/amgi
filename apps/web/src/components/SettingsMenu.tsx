@@ -7,6 +7,7 @@ import { SUPPORTED_NATIVE_LANGUAGES } from '@/services/userPreferences';
 import { HANJA_PARTITIONS, getStudyLanguageConfig, type HanjaPartition, type StudyLanguage } from '@amgi/core';
 import { t } from '@/lib/i18n';
 import DeleteAccountModal from '@/components/DeleteAccountModal';
+import ModeSwitcher from '@/components/ModeSwitcher';
 import AddLanguageModal from '@/components/AddLanguageModal';
 
 /**
@@ -115,6 +116,11 @@ export default function SettingsMenu({ onClose }: { onClose: () => void }) {
 
   return (
     <>
+      {/* Modes first. It is the widest-scope thing in this panel — everything
+          below is a setting *within* a mode — and it is the row that has to be
+          findable, since web has no switching gesture. */}
+      <ModeSwitcher onSwitch={onClose} />
+
       {/* Study language — the decks you have added */}
       <div className="px-4 py-3 border-b border-[var(--color-muted)]/50">
         <p className="text-xs font-mono uppercase tracking-widest mb-2" style={{ color: 'var(--color-muted)' }}>
