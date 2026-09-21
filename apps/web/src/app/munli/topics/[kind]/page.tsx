@@ -1,11 +1,12 @@
 'use client';
 import { useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { enrolledTenses, isEnrolled, setEnrolled, subjectsOfKind } from '@amgi/core';
+import { enrolledTenses, isEnrolled, setEnrolled, subjectKey, subjectsOfKind } from '@amgi/core';
 import type { ConjugationSubject } from '@amgi/core';
 import { useUser } from '@/components/UserContext';
 import { useConjugation } from '@/hooks/useConjugation';
 import ParadigmTable from '@/components/ParadigmTable';
+import MultiSelect from '@/components/MultiSelect';
 import { t } from '@/lib/i18n';
 
 /**
@@ -33,8 +34,17 @@ export default function VerbTopicPage() {
   const irregular = useParams<{ kind: string }>().kind === 'irregular';
   const [chosenTenses, setChosenTenses] = useState<string[] | null>(null);
   const [vehicles, setVehicles] = useState<Record<string, string>>({});
+  /**
+   * Which groups are shown. `null` means "has not narrowed", i.e. all of them —
+   * distinct from the empty array, which is the real state of having deselected
+   * everything.
+   */
+  const [chosenGroups, setChosenGroups] = useState<string[] | null>(null);
 
-  /** `null` reads as the tenses already saved, so the page opens on what is being practised. */
+  /**
+   * `null` reads as the tenses already saved, so the page opens on what is being
+   * practised — adding one is: pick it in the filter, look at it, Save.
+   */
   const tenseIds = useMemo(() => {
     if (chosenTenses) return chosenTenses;
     if (!spec || !enrolment) return [];
@@ -118,7 +128,10 @@ export default function VerbTopicPage() {
     );
   };
 
-  const subjects = subjectsOfKind(spec, irregular ? 'verb' : 'group');
+  const allSubjects = subjectsOfKind(spec, irregular ? 'verb' : 'group');
+  const subjects = allSubjects.filter(
+    subject => chosenGroups?.includes(subjectKey(subject)) ?? true,
+  );
 
   return (
     <div className="max-w-2xl">
@@ -130,14 +143,30 @@ export default function VerbTopicPage() {
       </p>
 
       <div className="flex flex-wrap gap-2 mb-2">
-        {spec.tenses.map(tense => chip(
-          tense.label,
-          tenseIds.includes(tense.id),
-          () => setChosenTenses(tenseIds.includes(tense.id)
-            ? tenseIds.filter(id => id !== tense.id)
-            : [...tenseIds, tense.id]),
-          tense.id,
-        ))}
+        <MultiSelect
+          label={t(interfaceLanguage, 'verbsFilterTenses')}
+          options={spec.tenses.map(tense => ({ key: tense.id, label: tense.label }))}
+          selected={tenseIds}
+          onToggle={key => setChosenTenses(
+            tenseIds.includes(key) ? tenseIds.filter(id => id !== key) : [...tenseIds, key],
+          )}
+        />
+        {allSubjects.length > 1 && (
+          <MultiSelect
+            label={t(interfaceLanguage, 'verbsFilterGroups')}
+            options={allSubjects.map(subject => ({
+              key: subjectKey(subject),
+              label: subject.kind === 'group' ? subject.label : subject.infinitive,
+            }))}
+            selected={subjects.map(subjectKey)}
+            onToggle={key => {
+              const shownKeys = subjects.map(subjectKey);
+              setChosenGroups(
+                shownKeys.includes(key) ? shownKeys.filter(k => k !== key) : [...shownKeys, key],
+              );
+            }}
+          />
+        )}
       </div>
       <p className="font-mono text-xs mb-8" style={{ color: 'var(--color-muted)' }}>
         {t(interfaceLanguage, 'verbsReference')}
@@ -145,13 +174,13 @@ export default function VerbTopicPage() {
 
       {/* An empty topic is the irregulars until they are sourced — it says so
           rather than rendering a page with nothing on it. */}
-      {subjects.length === 0
+      {allSubjects.length === 0
         ? <p className="font-mono text-sm" style={{ color: 'var(--color-muted)' }}>
             {t(interfaceLanguage, 'verbsIrregularEmpty')}
           </p>
-        : tenseIds.length === 0
+        : tenseIds.length === 0 || subjects.length === 0
           ? <p className="font-mono text-sm" style={{ color: 'var(--color-muted)' }}>
-              {t(interfaceLanguage, 'conjugationPickTense')}
+              {t(interfaceLanguage, 'verbsFilterNone')}
             </p>
           : subjects.map(section)}
     </div>

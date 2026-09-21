@@ -552,10 +552,22 @@ page something to fill in before it became useful. Now: tense chips across the
 top, then a section per group with a **Save** button, chips for the verbs the
 pattern is shown through, and the table itself.
 
-⚠️ **The tense chips are a *view*; Save is what commits.** Selecting the
-imparfait shows it without enrolling it, which is how somebody decides whether to
-take it on. Conflating the two would mean deselecting a tense to stop *looking*
-at it silently stopped you *practising* it.
+**The narrowing is a filter, the Cards idiom rather than a new one** — two
+multi-selects, tense and verb group. ⚠️ **Inline chips are the better control
+right up until a list can grow**, which is why Cards still draws its filters that
+way and this does not: both of these lists will grow, and a row of them becomes
+the page's first screen. On native they sit behind one summary button in
+`FilterSheet`, which gained multi-select by letting the *shape* of `selected` be
+the mode — an array means several answers — rather than a flag that can fall out
+of step with it. On web they are two dropdowns.
+**No counts on the options.** A count here would be the product of the two
+selections, which says nothing a learner could act on — and `FilterSheet`'s own
+rule is that a count belongs where it informs a choice.
+
+⚠️ **The filter is a *view*; Save is what commits.** Selecting the imparfait
+shows it without enrolling it, which is how somebody decides whether to take it
+on. Conflating the two would mean narrowing the filter to stop *looking* at
+something silently stopped you *practising* it.
 
 ⚠️ **The reference shows every tense, enrolled or not.** Enrolment bounds what is
 practised and has no business bounding what can be read — seeing what the
