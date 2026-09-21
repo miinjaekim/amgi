@@ -529,10 +529,20 @@ split between enrolling a pack and picking a collection to review, and setup is
 lives there**, chosen by the learner — `vision.md` allows per-level content and
 refuses the app deciding what you are ready for, and this is the allowed half.
 
-**Topics is a list, one row per grammar topic.** Verbs is the only row today, and
-that is the point rather than a limitation: the plan is one tool at a time with
-the grouping read off the collection later, and this is where the collection
-becomes visible. ⚠️ It needs a nested `Stack` behind the tab, or expo-router
+**Topics is a list, one row per grammar topic** — and verbs are **two** rows, not
+one. ⚠️ **Regular and irregular verbs are different kinds of thing to learn**: a
+group is a rule that one example demonstrates, and an irregular verb is a fact
+that no other verb tells you anything about. Browsing them together meant one
+page whose halves wanted different shapes — a handful of patterns against what
+will be a long list of verbs — and it buried the irregulars, which are the ones a
+learner reaches for first, at the bottom of somebody else's page. Both rows go
+through one screen keyed on `kind`, because they differ in what they list and not
+in how they work; two files would have been two copies of the same Save
+semantics.
+
+That the collection is a list at all is the point rather than a limitation: the
+plan is one tool at a time with the grouping read off the collection later, and
+this is where the collection becomes visible. ⚠️ It needs a nested `Stack` behind the tab, or expo-router
 flattens the routes into the Tabs navigator and `FloatingTabBar` draws an icon
 per route — `(tabs)/decks` carries the same comment.
 

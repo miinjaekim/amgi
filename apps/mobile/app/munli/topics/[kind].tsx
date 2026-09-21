@@ -2,8 +2,8 @@ import React, { useMemo, useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import { conjugationSpec, enrolledTenses, isEnrolled, setEnrolled, t } from '@amgi/core';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { conjugationSpec, enrolledTenses, isEnrolled, setEnrolled, subjectsOfKind, t } from '@amgi/core';
 import type { ConjugationSubject } from '@amgi/core';
 import { useUser } from '../../../src/context/UserContext';
 import { useTheme } from '../../../src/context/ThemeContext';
@@ -12,7 +12,12 @@ import ParadigmTable from '../../../src/components/ParadigmTable';
 import type { Palette } from '../../../src/theme';
 
 /**
- * Verbs: read any table, save the ones you want to practise.
+ * One verb topic — regular or irregular. Read any table, save what you want to
+ * practise.
+ *
+ * ⚠️ **Two topics through one screen, keyed on `kind`.** They differ in what
+ * they list, not in how they work: both are subjects with tables, saved the same
+ * way. Two files would have been two copies of the same Save semantics.
  *
  * ⚠️ **Content first, saving second — the decks page's shape, not a form.** It
  * was a list of checkboxes you had to fill in before the page became useful;
@@ -28,13 +33,17 @@ import type { Palette } from '../../../src/theme';
  * same pattern printed three times. The verb chips swap which verb the pattern
  * lands on, which is the thing worth seeing.
  */
-export default function VerbsTopicScreen() {
+export default function VerbTopicScreen() {
   const { C } = useTheme();
   const s = useMemo(() => makeStyles(C), [C]);
   const { interfaceLanguage, studyLanguage } = useUser();
   const { enrolment, setEnrolment } = useConjugation();
   const router = useRouter();
   const spec = conjugationSpec(studyLanguage);
+  // Anything unrecognised reads as regular rather than erroring: the cost of
+  // being wrong is landing on the topic that has content in it.
+  const { kind: param } = useLocalSearchParams<{ kind: string }>();
+  const irregular = param === 'irregular';
 
   /**
    * Which tenses the tables show. `null` means "has not chosen", which reads as
@@ -58,7 +67,9 @@ export default function VerbsTopicScreen() {
                         accessibilityLabel={t(interfaceLanguage, 'practiceBack')}>
         <Ionicons name="chevron-back" size={22} color={C.text} />
       </TouchableOpacity>
-      <Text style={s.title}>{t(interfaceLanguage, 'topicVerbs')}</Text>
+      <Text style={s.title}>
+        {t(interfaceLanguage, irregular ? 'verbsIrregular' : 'topicRegularVerbs')}
+      </Text>
     </View>
   );
 
@@ -128,8 +139,7 @@ export default function VerbsTopicScreen() {
     );
   };
 
-  const groups = spec.subjects.filter(subject => subject.kind === 'group');
-  const irregulars = spec.subjects.filter(subject => subject.kind === 'verb');
+  const subjects = subjectsOfKind(spec, irregular ? 'verb' : 'group');
 
   return (
     <SafeAreaView style={s.safe} edges={['top']}>
@@ -158,16 +168,17 @@ export default function VerbsTopicScreen() {
           </ScrollView>
         </View>
 
-        <Text style={s.intro}>{t(interfaceLanguage, 'verbsReference')}</Text>
+        <Text style={s.intro}>
+          {t(interfaceLanguage, irregular ? 'irregularIntro' : 'verbsReference')}
+        </Text>
 
-        {tenseIds.length === 0
-          ? <Text style={s.empty}>{t(interfaceLanguage, 'conjugationPickTense')}</Text>
-          : groups.map(section)}
-
-        <Text style={s.groupHeading}>{t(interfaceLanguage, 'verbsIrregular')}</Text>
-        {irregulars.length === 0
+        {/* An empty topic is the irregulars until they are sourced — it says so
+            rather than rendering a page with nothing on it. */}
+        {subjects.length === 0
           ? <Text style={s.empty}>{t(interfaceLanguage, 'verbsIrregularEmpty')}</Text>
-          : irregulars.map(section)}
+          : tenseIds.length === 0
+            ? <Text style={s.empty}>{t(interfaceLanguage, 'conjugationPickTense')}</Text>
+            : subjects.map(section)}
       </ScrollView>
     </SafeAreaView>
   );
@@ -195,10 +206,6 @@ function makeStyles(C: Palette) {
     chipOn: { backgroundColor: C.highlight, borderColor: C.highlight },
     chipText: { color: C.muted, fontSize: 12 },
     chipTextOn: { color: C.bg, fontWeight: '700' },
-    groupHeading: {
-      color: C.muted, fontSize: 11, textTransform: 'uppercase', letterSpacing: 1.5,
-      paddingHorizontal: 16, marginTop: 8, marginBottom: 10,
-    },
     empty: { color: C.muted, fontSize: 12, paddingHorizontal: 16, paddingVertical: 8 },
   });
 }

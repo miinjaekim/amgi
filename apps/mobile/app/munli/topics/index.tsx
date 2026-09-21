@@ -3,7 +3,8 @@ import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { t } from '@amgi/core';
+import { conjugationSpec, enrolledCountOfKind, t } from '@amgi/core';
+import type { ConjugationSubject, TranslationKey } from '@amgi/core';
 import { useUser } from '../../../src/context/UserContext';
 import { useTheme } from '../../../src/context/ThemeContext';
 import { useConjugation } from '../../../src/context/ConjugationContext';
@@ -25,9 +26,22 @@ export default function TopicsScreen() {
   const { C } = useTheme();
   const tabBarHeight = useFloatingTabBarHeight();
   const s = useMemo(() => makeStyles(C, tabBarHeight), [C, tabBarHeight]);
-  const { interfaceLanguage } = useUser();
+  const { interfaceLanguage, studyLanguage } = useUser();
   const { enrolment } = useConjugation();
   const router = useRouter();
+  const spec = conjugationSpec(studyLanguage);
+
+  /**
+   * ⚠️ **Two topics, not one with two halves.** A regular group is a rule that
+   * one example demonstrates; an irregular verb is a fact no other verb tells
+   * you anything about. Browsing them together meant one page whose halves
+   * wanted different shapes — a handful of patterns against what will be a long
+   * list of verbs.
+   */
+  const TOPICS: { kind: ConjugationSubject['kind']; route: string; labelKey: TranslationKey; icon: 'repeat-outline' | 'shuffle-outline' }[] = [
+    { kind: 'group', route: '/munli/topics/regular', labelKey: 'topicRegularVerbs', icon: 'repeat-outline' },
+    { kind: 'verb', route: '/munli/topics/irregular', labelKey: 'verbsIrregular', icon: 'shuffle-outline' },
+  ];
 
   return (
     <SafeAreaView style={s.safe} edges={['top']}>
@@ -37,23 +51,31 @@ export default function TopicsScreen() {
       <ScrollView contentContainerStyle={s.content}>
         <Text style={s.intro}>{t(interfaceLanguage, 'topicsIntro')}</Text>
 
-        <TouchableOpacity
-          style={s.row}
-          activeOpacity={0.7}
-          accessibilityRole="button"
-          onPress={() => router.push('/munli/topics/verbs')}
-        >
-          <Ionicons name="repeat-outline" size={22} color={C.muted} />
-          <View style={s.rowText}>
-            <Text style={s.rowLabel}>{t(interfaceLanguage, 'topicVerbs')}</Text>
-            <Text style={s.rowSub}>
-              {enrolment
-                ? t(interfaceLanguage, 'topicVerbsSummary', { count: enrolment.items.length })
-                : t(interfaceLanguage, 'conjugationUnavailable')}
-            </Text>
-          </View>
-          <Ionicons name="chevron-forward" size={18} color={C.muted} />
-        </TouchableOpacity>
+        {TOPICS.map(topic => {
+          const saved = spec && enrolment ? enrolledCountOfKind(spec, enrolment, topic.kind) : 0;
+          return (
+            <TouchableOpacity
+              key={topic.route}
+              style={s.row}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              onPress={() => router.push(topic.route as never)}
+            >
+              <Ionicons name={topic.icon} size={22} color={C.muted} />
+              <View style={s.rowText}>
+                <Text style={s.rowLabel}>{t(interfaceLanguage, topic.labelKey)}</Text>
+                <Text style={s.rowSub}>
+                  {!spec
+                    ? t(interfaceLanguage, 'conjugationUnavailable')
+                    : saved > 0
+                      ? t(interfaceLanguage, 'topicVerbsSummary', { count: saved })
+                      : t(interfaceLanguage, 'topicNothingSaved')}
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={C.muted} />
+            </TouchableOpacity>
+          );
+        })}
       </ScrollView>
     </SafeAreaView>
   );
@@ -69,7 +91,7 @@ function makeStyles(C: Palette, tabBarHeight: number) {
     row: {
       flexDirection: 'row', alignItems: 'center', gap: 12,
       backgroundColor: C.surface, borderWidth: 1, borderColor: C.border,
-      borderRadius: 14, padding: 16,
+      borderRadius: 14, padding: 16, marginBottom: 10,
     },
     rowText: { flex: 1 },
     rowLabel: { color: C.text, fontSize: 16, fontWeight: '600' },

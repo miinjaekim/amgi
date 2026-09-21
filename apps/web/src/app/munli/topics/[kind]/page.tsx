@@ -1,6 +1,7 @@
 'use client';
 import { useMemo, useState } from 'react';
-import { enrolledTenses, isEnrolled, setEnrolled } from '@amgi/core';
+import { useParams } from 'next/navigation';
+import { enrolledTenses, isEnrolled, setEnrolled, subjectsOfKind } from '@amgi/core';
 import type { ConjugationSubject } from '@amgi/core';
 import { useUser } from '@/components/UserContext';
 import { useConjugation } from '@/hooks/useConjugation';
@@ -8,7 +9,12 @@ import ParadigmTable from '@/components/ParadigmTable';
 import { t } from '@/lib/i18n';
 
 /**
- * Verbs: read any table, save the ones you want to practise.
+ * One verb topic — regular or irregular. Read any table, save what you want to
+ * practise.
+ *
+ * ⚠️ **Two topics through one page, keyed on `kind`.** They differ in what they
+ * list, not in how they work — two files would be two copies of the same Save
+ * semantics.
  *
  * ⚠️ **Content first, saving second — the decks page's shape, not a form.**
  * ⚠️ **The tense chips are a *view*; Save is what commits.** Selecting the
@@ -19,9 +25,12 @@ import { t } from '@/lib/i18n';
  * identically, so a column per verb would print one pattern three times; the
  * chips swap which verb the pattern lands on instead.
  */
-export default function VerbsTopicPage() {
+export default function VerbTopicPage() {
   const { interfaceLanguage } = useUser();
   const { spec, enrolment, setEnrolment } = useConjugation();
+  // Anything unrecognised reads as regular rather than erroring: the cost of
+  // being wrong is landing on the topic that has content in it.
+  const irregular = useParams<{ kind: string }>().kind === 'irregular';
   const [chosenTenses, setChosenTenses] = useState<string[] | null>(null);
   const [vehicles, setVehicles] = useState<Record<string, string>>({});
 
@@ -37,7 +46,7 @@ export default function VerbsTopicPage() {
     return (
       <div className="max-w-2xl">
         <h1 className="text-2xl font-mono font-bold mb-6" style={{ color: 'var(--color-text)' }}>
-          {t(interfaceLanguage, 'topicVerbs')}
+          {t(interfaceLanguage, irregular ? 'verbsIrregular' : 'topicRegularVerbs')}
         </h1>
         <p className="font-mono text-sm" style={{ color: 'var(--color-muted)' }}>
           {t(interfaceLanguage, 'conjugationUnavailable')}
@@ -109,16 +118,15 @@ export default function VerbsTopicPage() {
     );
   };
 
-  const groups = spec.subjects.filter(s => s.kind === 'group');
-  const irregulars = spec.subjects.filter(s => s.kind === 'verb');
+  const subjects = subjectsOfKind(spec, irregular ? 'verb' : 'group');
 
   return (
     <div className="max-w-2xl">
       <h1 className="text-2xl font-mono font-bold mb-1" style={{ color: 'var(--color-text)' }}>
-        {t(interfaceLanguage, 'topicVerbs')}
+        {t(interfaceLanguage, irregular ? 'verbsIrregular' : 'topicRegularVerbs')}
       </h1>
       <p className="font-mono text-sm mb-6" style={{ color: 'var(--color-muted)' }}>
-        {t(interfaceLanguage, 'verbsIntro')}
+        {t(interfaceLanguage, irregular ? 'irregularIntro' : 'verbsIntro')}
       </p>
 
       <div className="flex flex-wrap gap-2 mb-2">
@@ -135,20 +143,17 @@ export default function VerbsTopicPage() {
         {t(interfaceLanguage, 'verbsReference')}
       </p>
 
-      {tenseIds.length === 0
+      {/* An empty topic is the irregulars until they are sourced — it says so
+          rather than rendering a page with nothing on it. */}
+      {subjects.length === 0
         ? <p className="font-mono text-sm" style={{ color: 'var(--color-muted)' }}>
-            {t(interfaceLanguage, 'conjugationPickTense')}
-          </p>
-        : groups.map(section)}
-
-      <p className="text-xs font-mono uppercase tracking-widest mb-3" style={{ color: 'var(--color-muted)' }}>
-        {t(interfaceLanguage, 'verbsIrregular')}
-      </p>
-      {irregulars.length === 0
-        ? <p className="font-mono text-xs" style={{ color: 'var(--color-muted)' }}>
             {t(interfaceLanguage, 'verbsIrregularEmpty')}
           </p>
-        : irregulars.map(section)}
+        : tenseIds.length === 0
+          ? <p className="font-mono text-sm" style={{ color: 'var(--color-muted)' }}>
+              {t(interfaceLanguage, 'conjugationPickTense')}
+            </p>
+          : subjects.map(section)}
     </div>
   );
 }

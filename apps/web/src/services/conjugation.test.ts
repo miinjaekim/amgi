@@ -8,6 +8,7 @@ import {
   conjugationHints,
   conjugationSpec,
   daysUntil,
+  enrolledCountOfKind,
   enrolledTenses,
   enrolmentKey,
   defaultEnrolment,
@@ -23,6 +24,7 @@ import {
   rateTable,
   setEnrolled,
   subjectKey,
+  subjectsOfKind,
   summarizeConjugation,
   tableItemId,
 } from '@amgi/core';
@@ -568,5 +570,25 @@ describe('daysUntil', () => {
     expect(daysUntil(new Date('2026-09-22T18:00:00Z'), NOW)).toBe(1);
     expect(daysUntil(new Date('2026-09-23T12:00:00Z'), NOW)).toBe(1);
     expect(daysUntil(new Date('2026-09-25T00:00:00Z'), NOW)).toBe(3);
+  });
+});
+
+describe('subjectsOfKind', () => {
+  it('separates the rules from the facts', () => {
+    expect(subjectsOfKind(spec, 'group')).toHaveLength(groupCount);
+    // Empty until the sourcing job lands, and the split has to survive that.
+    expect(subjectsOfKind(spec, 'verb')).toEqual([]);
+    expect(subjectsOfKind(spec, 'group').length + subjectsOfKind(spec, 'verb').length)
+      .toBe(spec.subjects.length);
+  });
+
+  it('counts only the entries belonging to that kind', () => {
+    expect(enrolledCountOfKind(spec, all, 'group')).toBe(all.items.length);
+    expect(enrolledCountOfKind(spec, all, 'verb')).toBe(0);
+  });
+
+  it('counts a partial practice set correctly', () => {
+    const one = setEnrolled({ items: [] }, group('er'), ['present', 'futur'], true);
+    expect(enrolledCountOfKind(spec, one, 'group')).toBe(2);
   });
 });

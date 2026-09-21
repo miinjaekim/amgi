@@ -313,6 +313,35 @@ export function hasConjugation(language: StudyLanguage): boolean {
   return conjugationSpec(language) !== undefined;
 }
 
+/**
+ * The subjects of one kind — the two topics Munli browses verbs through.
+ *
+ * ⚠️ **Regular and irregular verbs are separate topics, not two sections of
+ * one.** They are different kinds of thing to learn: a group is a rule that one
+ * example demonstrates, and an irregular verb is a fact that no other verb
+ * tells you anything about. Browsing them together meant one page whose halves
+ * wanted different shapes — a handful of patterns against what will be a long
+ * list of verbs.
+ */
+export function subjectsOfKind<K extends ConjugationSubject['kind']>(
+  spec: ConjugationSpec,
+  kind: K,
+): Extract<ConjugationSubject, { kind: K }>[] {
+  return spec.subjects.filter(
+    (subject): subject is Extract<ConjugationSubject, { kind: K }> => subject.kind === kind,
+  );
+}
+
+/** How many of the practice set's entries belong to subjects of this kind. */
+export function enrolledCountOfKind(
+  spec: ConjugationSpec,
+  enrolment: ConjugationEnrolment,
+  kind: ConjugationSubject['kind'],
+): number {
+  const keys = new Set(subjectsOfKind(spec, kind).map(subjectKey));
+  return enrolment.items.filter(item => keys.has(item.slice(0, item.lastIndexOf(':')))).length;
+}
+
 export function findSubject(spec: ConjugationSpec, key: string): ConjugationSubject | undefined {
   return spec.subjects.find(subject => subjectKey(subject) === key);
 }
