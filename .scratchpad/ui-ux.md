@@ -11,19 +11,67 @@ The visual and interaction layer. For *why* the product is shaped this way, see
 
 ## Themes
 
-**Web** — Forest / Sonokai / Paper / System.
-- System follows the OS light/dark preference, live via `matchMedia`.
-- Sonokai is the dark palette (replaced the old indigo Slate; it keeps the
-  `slate` id so stored prefs and the system mapping still resolve).
-- A pre-paint inline script in `apps/web/src/app/layout.tsx` applies the theme
-  and sidebar-collapse state before first paint — this is what kills both the
-  Forest flash and the sidebar expand-flash on load/hard navigation. Don't move
-  this logic into a component.
+**Each mode has its own set, and they share no ids** (2026-09-21). Amgi offers
+Forest / Sonokai / Paper; Munli offers Suisei / Shoko / Godspeed. Both end with
+System. The palette is the fastest answer to "which mode am I in" — faster than
+reading a tab label, and it lands in the same frame the navigation does — so a
+theme offered by both modes would make the switch something you verify rather
+than see. `packages/core/src/themes.ts` owns which mode offers what, both
+platforms' storage keys, and the `system` mapping; the colours themselves live
+per platform and are duplicated by hand.
 
-**Mobile** — Forest / Sonokai / Paper / System, same four as web
-(`apps/mobile/src/context/ThemeContext.tsx`, list in `src/theme.ts`, rendered by
-`app/settings.tsx`). The `slate` id is Sonokai here too, for the same
-stored-preference reason.
+- **Amgi** — Forest / Sonokai / Paper / System, default Paper, system → Sonokai
+  (dark) / Paper (light). Sonokai keeps the `slate` id it inherited from the
+  indigo palette it replaced, so stored prefs and the system mapping still
+  resolve; only the label moved.
+- **Munli** — Suisei / Shoko / Godspeed / System, default Shoko, system → Suisei
+  (dark) / Shoko (light). All three are Monkeytype palettes, as Sonokai and
+  Paper were, and each keeps its source `bg` exactly. What is rebuilt is
+  everything else: Monkeytype's `sub-alt` sits *darker* than its background
+  while a card here sits above one, and its `main` is an accent for one line of
+  typed text rather than a colour that carries buttons and links. So surface /
+  border / muted are OKLCH steps off `bg` at the distances Forest, Sonokai and
+  Paper already use, and `highlight` keeps its source hue at a snapped
+  contrast — Shoko's `#81c4dd` reaches 1.33:1 on its own background and had to
+  come down to 5.64:1. Suisei's orange `sub` is the one signature colour with
+  nowhere to go: as `muted` it would put orange on every caption and hairline in
+  the mode, so it is left out rather than spent badly.
+- Every heat ramp was generated and checked the same way the Amgi three were —
+  see the note on `Palette.heat` in `apps/mobile/src/theme.ts`.
+
+**The native tab bar is thin glass** — `BLUR_INTENSITY` 40 in
+`FloatingTabBar.tsx`, with a hairline in `border` carrying the edge. The blur was
+72 and no border, which over a light palette read as a slab sitting *on* the page
+rather than floating above it. The hairline is what lets the fill go this faint
+without the bar losing its shape over a busy card. One number, all themes — a
+per-theme intensity would be chrome that changes shape as well as colour.
+
+⚠️ **Chrome that sits *on* the background asks `THEME_SCHEME`, never an id.**
+The native tab bar picked its blur tint with `resolvedTheme === 'paper'` — true
+while Paper was the only light theme, and wrong the moment Shoko and Godspeed
+arrived, since both are light and both got a dark frosted slab over a pale
+background. `themes.test.ts` now cross-checks `THEME_SCHEME` against every set's
+`systemDark`/`systemLight`, so a new theme cannot answer wrong unnoticed.
+
+**Each mode remembers its own choice**, under its own key on each platform
+(`THEME_STORAGE_KEYS`). Picking Godspeed in Munli must not move Amgi off Paper;
+the repaint on switching *is* the feature.
+
+**The theme follows the route, because the mode does** — see `modes.ts`. Nothing
+holds "the current theme" for the app: both `ThemeContext`s read the path, pick
+that mode's set, and read that mode's key.
+- Web applies in a **layout** effect, not a passive one: a client-side crossing
+  of `/munli` would otherwise paint one frame of the mode you just left.
+- The pre-paint inline script in `apps/web/src/app/layout.tsx` now reads the
+  mode off `location.pathname` before choosing a key. It still also carries
+  sidebar-collapse. Don't move this logic into a component — and keep its
+  inlined ids and prefix test in step with `THEME_SETS` and `modeFromPath`.
+- ⚠️ **Settings is the one screen outside every mode's tree**, and it holds the
+  picker. On native it is pushed to `/settings` from every mode's
+  `ProgressHeader`, which puts the mode in the route as `?mode=`; `modeForTheme`
+  consults that param *only* where the path itself names no mode, so a stale
+  param can never drag the palette off a Munli screen. On web there is no
+  settings route — it is a popover, so the path never leaves the mode.
 
 ## Navigation
 

@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 // SDK 57 vendored react-navigation into expo-router and dropped the
 // `@react-navigation/*` packages; `expo-router/tabs` is the public re-export.
 import type { BottomTabBarProps } from 'expo-router/tabs';
-import { t } from '@amgi/core';
+import { THEME_SCHEME, t } from '@amgi/core';
 import type { TranslationKey } from '@amgi/core';
 import { useTheme } from '../context/ThemeContext';
 import { useUser } from '../context/UserContext';
@@ -56,12 +56,20 @@ export default function FloatingTabBar({ state, navigation, icons: iconMap = ICO
   const { C, resolvedTheme } = useTheme();
   const { interfaceLanguage } = useUser();
   const [switcherOpen, setSwitcherOpen] = useState(false);
-  const tint = resolvedTheme === 'paper' ? 'light' : 'dark';
+  // ⚠️ The palette's own lightness, never its id. This read `=== 'paper'` while
+  // Paper was the only light theme, which handed Shoko and Godspeed a dark
+  // frosted slab over a pale background — the bar looked painted on rather than
+  // floating above.
+  const tint = THEME_SCHEME[resolvedTheme];
 
   return (
     <>
-    <View style={[s.wrapper, { bottom: insets.bottom + 12 }]}>
-      <BlurView intensity={72} tint={tint} style={s.blur}>
+    <View style={[s.wrapper, { bottom: insets.bottom + 12, borderColor: C.border }]}>
+      {/* Thin glass. The intensity is low enough that the page reads through
+          the bar rather than stopping at it, so the hairline below is what
+          keeps the bar's own edge legible — over a busy card, or over a light
+          palette where the blur alone has little to say. */}
+      <BlurView intensity={BLUR_INTENSITY} tint={tint} style={s.blur}>
         {state.routes.map((route, i) => {
           const focused = state.index === i;
           const icons = iconMap[route.name] ?? { on: 'apps', off: 'apps-outline' };
@@ -118,13 +126,22 @@ export default function FloatingTabBar({ state, navigation, icons: iconMap = ICO
   );
 }
 
-// Bottom position and height are layout-only — no theme colors needed here
+/**
+ * How much glass. Deliberately light — the bar floats over the page and should
+ * let it through, not sit on it as a slab. `border` carries the edge instead,
+ * which is why this can go this low without the bar losing its shape.
+ */
+const BLUR_INTENSITY = 40;
+
+// Position, height and radius are layout-only; the border colour is the one
+// thing here that comes from the palette, and it is passed in per render.
 const s = StyleSheet.create({
   wrapper: {
     position: 'absolute',
     left: 20,
     right: 20,
     borderRadius: 30,
+    borderWidth: StyleSheet.hairlineWidth,
     overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 6 },

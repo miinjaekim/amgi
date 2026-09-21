@@ -22,7 +22,6 @@ import {
   getStudyLanguageConfig, reminderTimeOptions, t,
   type HanjaPartition, type ReminderPreferences, type StudyLanguage,
 } from '@amgi/core';
-import { THEMES } from '../src/theme';
 import type { Palette } from '../src/theme';
 
 // The policy is hosted on the web app; Korean speakers get the Korean version.
@@ -36,7 +35,9 @@ const PARTITION_KEYS: Record<HanjaPartition, { label: 'hanjaPartitionCharacter' 
 };
 
 export default function SettingsScreen() {
-  const { C, theme, setTheme } = useTheme();
+  // `themes` rather than a fixed list: the picker offers the themes of the mode
+  // this screen was opened from, which is what the `?mode=` in the route says.
+  const { C, theme, setTheme, themes } = useTheme();
   const { speed, setSpeed, speeds } = usePronunciation();
   const s = useMemo(() => makeStyles(C), [C]);
   const {
@@ -344,7 +345,7 @@ export default function SettingsScreen() {
         <Text style={s.sectionLabel}>{t(interfaceLanguage, 'settingsTheme')}</Text>
         <View style={s.card}>
           <View style={s.langRow}>
-            {THEMES.map(({ value, labelKey }) => {
+            {themes.map(({ value, labelKey }) => {
               const active = theme === value;
               return (
                 <TouchableOpacity
