@@ -13,6 +13,13 @@ and `npm run lint` 0 errors / 21 warnings, both measured._
 
 ## Now
 
+- **Munli uses Amgi's shell** (PR #138, 2026-09-22): the same tab bar, the same
+  Progress-tab header with its settings gear, plus a mode button beside it in
+  both modes. Munli's tabs are Conjugation · Writing · Progress, and its Progress
+  measures conjugation. Reverses the Stack-not-Tabs call of the day before, on
+  the user's call after using it. ⚠️ **First change in this series the user has
+  actually held**; the rest of it is still unseen on a device.
+
 - **Verb conjugation practice** (PR #137, 2026-09-21). Munli's first tool built
   from scratch: one question is one box, the schedule belongs to the table, and
   the content is a rule engine rather than authored forms — French regular verbs
@@ -352,6 +359,57 @@ once, so a path that worked on build 14 is not evidence about build 15.
 
 Closed calls, kept with their reasoning — a decision whose reasoning is lost gets
 reopened by the next person to notice the symptom. Newest first.
+
+### Munli takes Amgi's shell, not just its account (2026-09-22)
+
+**The user's call after using the switcher in Expo Go**, and it reverses the
+`Stack`-not-`Tabs` decision from the day before. Switching modes should change
+**what the tabs are**, not **whether there are tabs**: the bar, the Progress tab
+and the settings gear in its top right stay put, and only the first tabs and
+what Progress measures change.
+
+**Why the original call was wrong, precisely.** It was argued from "a one-tab bar
+is furniture", which is true about one tab and says nothing about the shell. The
+mistake was treating Munli's *emptiness* as a fact about modes rather than a fact
+about that afternoon — so a temporary shortage of tools was allowed to decide the
+navigation model. A mode that navigates differently from the rest of the app
+reads as **leaving** the app rather than moving inside it, which is the opposite
+of what a switcher is for.
+
+**Munli's tabs: Conjugation · Writing · Progress.** Conjugation is first and is
+therefore the initial route, by the same argument that puts Review first in
+Amgi — the first tab is the mode's answer to "what is this for" on every cold
+open, and for a grammar mode the answer is *practise*, not *submit something to
+be corrected*. Writing is intentional and occasional; conjugation is the one with
+a due count.
+
+⚠️ **Progress is last in both modes, and that is load-bearing rather than tidy.**
+Holding the last tab is how modes are switched, so the gesture lands on the same
+tab wherever you are — and Munli now has a bar to hold, which it did not when it
+was a Stack.
+
+**A visible mode button joins the gear on every Progress tab.** The user asked
+for it on Amgi's, and it belongs on both for the same reason the plan gave when
+the gesture was chosen: **a hold is undiscoverable by feel.** This is the door
+found by looking. `ProgressHeader` is extracted so both modes render the same
+one — the `StudyLanguageList` precedent, and the same failure avoided, since a
+header rendered twice is a header that drifts.
+
+**Munli's Progress measures conjugation, and says plainly that writing is not
+counted.** Findings are not stored and the passage never is, so there is nothing
+to count — naming that beats a zero that reads as a bug. ⚠️ The one thing on it
+that a card-shaped progress view could not produce is **which box you keep
+missing** (`prendre · nous · présent`), and that is the per-box miss tally paying
+for the per-table schedule. The schedule knows a table is shaky; only the tally
+knows which sixth of it.
+
+**The study language stays in the shared header in every mode**, because it is
+the shell's and not a mode's: Munli conjugates whatever deck you are on.
+
+⚠️ **One asymmetry kept on purpose:** web's `/munli` is still a landing page
+listing the tools, because web navigates by sidebar rather than by tabs. That is
+the same asymmetry Amgi already has — `/` is Learn on web and Review on native —
+and it is recorded in [ui-ux.md](ui-ux.md).
 
 ### Conjugation: the table is the item, and the content is a rule engine (2026-09-21)
 

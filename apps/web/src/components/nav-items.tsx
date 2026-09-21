@@ -51,6 +51,18 @@ export function getMunliNavItems(interfaceLanguage: string | null | undefined, p
         </svg>
       ),
     },
+    // Last, as Progress is last in Amgi's nav — the shell is the same in every
+    // mode, and only what it measures changes.
+    {
+      label: t(interfaceLanguage, 'navProgress'),
+      href: '/munli/progress',
+      active: pathname.startsWith('/munli/progress'),
+      icon: (active: boolean, className = 'w-6 h-6') => (
+        <svg className={className} fill="none" stroke="currentColor" strokeWidth={active ? 2.5 : 1.8} viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M4 19V5m0 14h16M8 19v-6m4 6V9m4 10v-4" />
+        </svg>
+      ),
+    },
   ];
 }
 

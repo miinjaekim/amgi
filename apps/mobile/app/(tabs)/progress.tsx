@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  View, Text, TouchableOpacity, ScrollView, StyleSheet, Image,
+  View, Text, TouchableOpacity, ScrollView, StyleSheet,
   type LayoutChangeEvent,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -9,7 +9,7 @@ import { router, useFocusEffect } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Svg, { Polyline } from 'react-native-svg';
 import {
-  PROGRESS_HISTORY_START, SUPPORTED_STUDY_LANGUAGES, buildCardsAddedSeries, buildHeatmap,
+  PROGRESS_HISTORY_START, buildCardsAddedSeries, buildHeatmap,
   CARD_COLLECTIONS, buildWeekGrid,
   historyStartsMidWindow, localDateString, mergeLanguageRows, niceCeiling, weekdayIndex,
   shiftDate, weekAxisTicks,
@@ -19,8 +19,7 @@ import {
 } from '@amgi/core';
 import { useUser } from '../../src/context/UserContext';
 import { useTheme } from '../../src/context/ThemeContext';
-import BottomSheet from '../../src/components/BottomSheet';
-import StudyLanguageList from '../../src/components/StudyLanguageList';
+import ProgressHeader from '../../src/components/ProgressHeader';
 import { useFloatingTabBarHeight } from '../../src/components/FloatingTabBar';
 import { fetchRecentProgress } from '../../src/services/progress';
 import { backfillMatureFlags, countMatureFlashcards } from '../../src/services/firestore';
@@ -73,7 +72,6 @@ export default function ProgressScreen() {
   const { user, interfaceLanguage, studyLanguage, streak, handleSignIn } = useUser();
   const [days, setDays] = useState<DailyProgress[] | null>(null);
   const [rangeDays, setRangeDays] = useState<number>(90);
-  const [switcherOpen, setSwitcherOpen] = useState(false);
   /**
    * Which measure the weekly chart draws.
    *
@@ -195,61 +193,7 @@ export default function ProgressScreen() {
   // changes underneath it.
   const selectRange = (next: number) => { setRangeDays(next); setSelected(null); };
 
-  const currentStudy = SUPPORTED_STUDY_LANGUAGES.find(lang => lang.code === studyLanguage);
-
-  /**
-   * Who you are, what you are studying, and the way out to settings — the
-   * three things that used to live on a Settings tab, at the weight they
-   * actually earn. The language chip is the quick switcher: study language
-   * changes often and native language rarely, so they no longer sit at the
-   * same depth.
-   */
-  const header = (
-    <View style={s.header}>
-      {user?.photoURL
-        ? <Image source={{ uri: user.photoURL }} style={s.avatar} />
-        : <View style={[s.avatar, s.avatarFallback]}>
-            <Text style={s.avatarInitial}>
-              {(user?.displayName ?? user?.email ?? '?')[0].toUpperCase()}
-            </Text>
-          </View>
-      }
-      <View style={s.headerText}>
-        <Text style={s.headerName} numberOfLines={1}>
-          {user?.displayName ?? user?.email ?? t(interfaceLanguage, 'settingsNotSignedIn')}
-        </Text>
-        <TouchableOpacity
-          onPress={() => setSwitcherOpen(true)}
-          hitSlop={6}
-          accessibilityRole="button"
-          accessibilityLabel={t(interfaceLanguage, 'settingsStudyLanguage')}
-        >
-          <Text style={s.headerLang} numberOfLines={1}>
-            {currentStudy?.label ?? studyLanguage}
-            <Text style={s.headerLangChevron}>{'  ▾'}</Text>
-          </Text>
-        </TouchableOpacity>
-      </View>
-      <TouchableOpacity
-        onPress={() => router.push('/settings')}
-        hitSlop={12}
-        accessibilityRole="button"
-        accessibilityLabel={t(interfaceLanguage, 'settingsTitle')}
-      >
-        <Ionicons name="settings-outline" size={22} color={C.muted} />
-      </TouchableOpacity>
-    </View>
-  );
-
-  const switcher = (
-    <BottomSheet
-      visible={switcherOpen}
-      title={t(interfaceLanguage, 'settingsStudyLanguage')}
-      onClose={() => setSwitcherOpen(false)}
-    >
-      <StudyLanguageList onSelect={() => setSwitcherOpen(false)} />
-    </BottomSheet>
-  );
+  const header = <ProgressHeader />;
 
   // Signed out still gets the header, because the gear on it is now the only
   // route to settings — theme, privacy policy and the rest of it stopped being
@@ -263,8 +207,7 @@ export default function ProgressScreen() {
         <TouchableOpacity style={s.signInBtn} onPress={handleSignIn}>
           <Text style={s.signInBtnText}>{t(interfaceLanguage, 'settingsSignInWithGoogle')}</Text>
         </TouchableOpacity>
-        {switcher}
-      </SafeAreaView>
+            </SafeAreaView>
     );
   }
 
@@ -515,7 +458,6 @@ export default function ProgressScreen() {
           </>
         )}
       </ScrollView>
-      {switcher}
     </SafeAreaView>
   );
 }

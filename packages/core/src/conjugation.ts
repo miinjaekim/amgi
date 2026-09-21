@@ -442,3 +442,100 @@ export function hintedVerdict(hintsTaken: number, correct: boolean): Conjugation
   if (hintsTaken === 1) return 'hard';
   return 'again';
 }
+
+/* ── Progress ────────────────────────────────────────────────────────────── */
+
+/** How one tense is going. */
+export interface ConjugationTenseSummary {
+  tenseId: string;
+  label: string;
+  /** Tables with any history at all. */
+  practised: number;
+  /** Tables that exist for this tense. */
+  total: number;
+  due: number;
+}
+
+/** A box the learner keeps getting wrong, named in full. */
+export interface ConjugationWeakBox {
+  infinitive: string;
+  tenseLabel: string;
+  personLabel: string;
+  form: string;
+  misses: number;
+}
+
+export interface ConjugationSummary {
+  practised: number;
+  total: number;
+  due: number;
+  byTense: ConjugationTenseSummary[];
+  /** Most-missed first. Empty when nothing has been missed. */
+  weakest: ConjugationWeakBox[];
+}
+
+/**
+ * What Munli's Progress tab shows for conjugation.
+ *
+ * ⚠️ **`weakest` is the one thing here that a card-shaped progress view could
+ * not produce**, and it is the payoff for the per-box miss tally. The schedule
+ * knows a table is shaky; only the tally knows it is your `nous` — so the
+ * summary can say `prendre · nous · présent` rather than a percentage.
+ *
+ * Counting `practised` as "has any history" rather than "is learned" is
+ * deliberate: a maturity threshold here would be a second, quieter answer to
+ * the question `isCardMature` already answers for cards, and conjugation has no
+ * equivalent agreed-upon interval yet.
+ */
+export function summarizeConjugation(
+  spec: ConjugationSpec,
+  progress: ConjugationProgressMap,
+  limit = 5,
+  now: Date = new Date(),
+): ConjugationSummary {
+  const byTense: ConjugationTenseSummary[] = [];
+  const weakest: ConjugationWeakBox[] = [];
+  let practised = 0;
+  let total = 0;
+  let due = 0;
+
+  for (const tense of spec.tenses) {
+    let tensePractised = 0;
+    let tenseDue = 0;
+    for (const verb of spec.verbs) {
+      const state = progress[conjugationItemId(spec.language, verb.id, tense.id)];
+      if (state) {
+        tensePractised += 1;
+        if (new Date(state.nextReview) <= now) tenseDue += 1;
+        for (const [personId, misses] of Object.entries(state.misses)) {
+          const person = spec.persons.find(p => p.id === personId);
+          if (!person || misses <= 0) continue;
+          weakest.push({
+            infinitive: verb.infinitive,
+            tenseLabel: tense.label,
+            personLabel: person.label,
+            form: buildTable(spec, verb, tense.id).forms[personId],
+            misses,
+          });
+        }
+      } else {
+        // Never practised is also never scheduled, which `dueTables` reads as
+        // due — the same rule an untracked card direction gets.
+        tenseDue += 1;
+      }
+    }
+    byTense.push({
+      tenseId: tense.id,
+      label: tense.label,
+      practised: tensePractised,
+      total: spec.verbs.length,
+      due: tenseDue,
+    });
+    practised += tensePractised;
+    total += spec.verbs.length;
+    due += tenseDue;
+  }
+
+  weakest.sort((a, b) => b.misses - a.misses);
+  return { practised, total, due, byTense, weakest: weakest.slice(0, limit) };
+}

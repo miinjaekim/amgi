@@ -99,6 +99,11 @@ paradigm's shapes, and prepositions have none of them.
 
 _Merged, not yet in anyone's hands — mobile ships by build, no OTA._
 
+- [ ] **Munli's shell, tabs and Progress tab** (PR #138). Web is live on merge;
+      **native is not**. The tab-bar half was tried in Expo Go — that is what
+      prompted it — but **the Munli Progress tab, the mode button on the header
+      and the conjugation screen behind a tab have not been**.
+
 - [ ] **Verb conjugation practice** (PR #137). Web is live on merge; **native is
       not**. ⚠️ **Nobody has answered a question on either platform** — the engine
       has 27 tests pinning every form it produces, and the screen has none. **The

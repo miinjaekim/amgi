@@ -169,6 +169,15 @@ const translations = {
     conjugationCorrect: 'Correct',
     conjugationWrong: 'The form is',
     conjugationPickTense: 'Pick at least one tense.',
+    // Munli's Progress tab. It measures conjugation, and says plainly that
+    // writing contributes nothing rather than showing a zero that reads as a
+    // bug — findings are not stored, which is a backlog item, not an accident.
+    munliProgressTitle: 'Grammar practice',
+    munliProgressPractised: 'tables started',
+    munliProgressDue: 'due now',
+    munliProgressTables: 'tables in all',
+    munliProgressWeakest: 'Forms you keep missing',
+    munliProgressWritingNote: 'Writing reviews are not counted here — findings are read and not kept, and the passage is never stored.',
     // Writing review. Restored 2026-09-21 with the feature — the strings are
     // the ones that shipped in 1.3.0, unchanged, because the surface they
     // describe is unchanged. Only its address moved.
@@ -896,6 +905,12 @@ const translations = {
     conjugationCorrect: '정답',
     conjugationWrong: '정답은',
     conjugationPickTense: '시제를 하나 이상 골라주세요.',
+    munliProgressTitle: '문법 연습',
+    munliProgressPractised: '시작한 표',
+    munliProgressDue: '복습할 표',
+    munliProgressTables: '전체 표',
+    munliProgressWeakest: '자꾸 틀리는 형태',
+    munliProgressWritingNote: '글쓰기 첨삭은 여기에 집계되지 않아요. 첨삭 내용은 읽고 나면 남기지 않고, 쓴 글도 저장하지 않아요.',
     writingTagline: '직접 써보세요. 원어민이라면 이렇게 씁니다.',
     writingTaglineSubtitle: '문법이 필요하면 문법을, 아니면 더 자연스러운 표현을 — 쓴 글에 맞춰 짚어드려요. 떠올리지 못했던 표현은 카드로 저장하세요.',
     writingPlaceholder: '{language}로 몇 문장 써보세요. 원어민이라면 어떻게 쓸지 보여드릴게요...',

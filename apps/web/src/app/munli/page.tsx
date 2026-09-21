@@ -21,7 +21,9 @@ const BLURBS: Record<string, TranslationKey> = {
 export default function MunliHome() {
   const { interfaceLanguage } = useUser();
   const munli = getMode('munli');
-  const tools = getMunliNavItems(interfaceLanguage, '/munli');
+  // Only the rows with a blurb: Progress is in the nav beside them but it is
+  // not a tool, and listing it here would read as a third thing to practise.
+  const tools = getMunliNavItems(interfaceLanguage, '/munli').filter(item => BLURBS[item.href]);
 
   return (
     <div className="max-w-2xl">

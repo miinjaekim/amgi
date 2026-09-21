@@ -13,6 +13,7 @@ import {
   isCorrectForm,
   pickPerson,
   rateTable,
+  summarizeConjugation,
 } from '@amgi/core';
 import type { ConjugationProgressMap, ConjugationSpec } from '@amgi/core';
 
@@ -210,5 +211,58 @@ describe('languages', () => {
   it('has nothing for a language with no spec yet', () => {
     expect(hasConjugation('Korean')).toBe(false);
     expect(conjugationSpec('Korean')).toBeUndefined();
+  });
+});
+
+describe('summarizeConjugation', () => {
+  const NOW = new Date('2026-09-21T12:00:00Z');
+  const id = (v: string, t: string) => conjugationItemId('French', v, t);
+
+  it('counts every table as due when none has been practised', () => {
+    const summary = summarizeConjugation(spec, {}, 5, NOW);
+    expect(summary.practised).toBe(0);
+    expect(summary.total).toBe(spec.verbs.length * spec.tenses.length);
+    expect(summary.due).toBe(summary.total);
+  });
+
+  it('counts a practised table and takes it out of due when it is scheduled ahead', () => {
+    const progress: ConjugationProgressMap = {
+      [id('parler', 'present')]: {
+        ...freshProgress(NOW),
+        nextReview: new Date('2026-10-01T12:00:00Z').toISOString(),
+      },
+    };
+    const summary = summarizeConjugation(spec, progress, 5, NOW);
+    expect(summary.practised).toBe(1);
+    expect(summary.due).toBe(summary.total - 1);
+    expect(summary.byTense.find(t => t.tenseId === 'present')!.practised).toBe(1);
+  });
+
+  /**
+   * The payoff for the per-box tally: a per-table schedule alone could only say
+   * a table was shaky, never which box.
+   */
+  it('names the weakest boxes in full, most-missed first', () => {
+    const progress: ConjugationProgressMap = {
+      [id('parler', 'present')]: { ...freshProgress(NOW), misses: { p1: 3 } },
+      [id('finir', 'imparfait')]: { ...freshProgress(NOW), misses: { s2: 5 } },
+    };
+    const { weakest } = summarizeConjugation(spec, progress, 5, NOW);
+    expect(weakest[0]).toMatchObject({
+      infinitive: 'finir', tenseLabel: 'imparfait', personLabel: 'tu', form: 'finissais', misses: 5,
+    });
+    expect(weakest[1]).toMatchObject({ infinitive: 'parler', personLabel: 'nous', form: 'parlons', misses: 3 });
+  });
+
+  it('reports nothing weak when nothing has been missed', () => {
+    const progress = { [id('parler', 'present')]: freshProgress(NOW) };
+    expect(summarizeConjugation(spec, progress, 5, NOW).weakest).toEqual([]);
+  });
+
+  it('caps the weak list at the limit asked for', () => {
+    const progress: ConjugationProgressMap = Object.fromEntries(
+      spec.verbs.map((v, i) => [id(v.id, 'present'), { ...freshProgress(NOW), misses: { s1: i + 1 } }]),
+    );
+    expect(summarizeConjugation(spec, progress, 3, NOW).weakest).toHaveLength(3);
   });
 });
