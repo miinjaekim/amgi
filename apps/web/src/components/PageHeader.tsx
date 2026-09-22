@@ -1,5 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { usePathname } from 'next/navigation';
+import { modeFromPath } from '@amgi/core';
 import type { TranslationKey } from '@amgi/core';
 import { useUser } from '@/components/UserContext';
 import { t } from '@/lib/i18n';
@@ -23,6 +25,14 @@ import { t } from '@/lib/i18n';
  *
  * ⚠️ **The help keys are optional.** A page with nothing non-obvious to say
  * renders the title alone rather than a "?" opening a restatement of its name.
+ *
+ * ⚠️ **The face comes off the path, not from a prop.** Munli's surfaces are
+ * monospaced throughout and Amgi's are not, so a title has to know which mode
+ * it is in — and `getNavItemsForMode` already derives exactly that from the
+ * pathname, for the stated reason that a caller then cannot render one mode's
+ * chrome around another mode's page. A prop would be one more thing to get
+ * wrong on a new page; the colour is shared either way, which is the whole
+ * point of this change.
  */
 export default function PageHeader({
   titleKey, helpTitleKey, helpLeadKey, helpPointsKey, className = 'mb-6',
@@ -37,6 +47,7 @@ export default function PageHeader({
   const { interfaceLanguage } = useUser();
   const [open, setOpen] = useState(false);
   const hasHelp = !!helpTitleKey && !!helpLeadKey && !!helpPointsKey;
+  const face = modeFromPath(usePathname()) === 'munli' ? 'font-mono' : '';
 
   useEffect(() => {
     if (!open) return;
@@ -48,7 +59,7 @@ export default function PageHeader({
   return (
     <>
       <div className={`flex items-center gap-2 ${className}`}>
-        <h1 className="text-2xl font-mono font-bold" style={{ color: 'var(--color-highlight)' }}>
+        <h1 className={`text-2xl font-bold ${face}`} style={{ color: 'var(--color-highlight)' }}>
           {t(interfaceLanguage, titleKey)}
         </h1>
         {hasHelp && (
@@ -78,7 +89,7 @@ export default function PageHeader({
             style={{ background: 'var(--color-surface)', borderColor: 'var(--color-muted)' }}
             onClick={e => e.stopPropagation()}
           >
-            <h2 className="text-lg font-mono font-bold mb-4" style={{ color: 'var(--color-highlight)' }}>
+            <h2 className={`text-lg font-bold mb-4 ${face}`} style={{ color: 'var(--color-highlight)' }}>
               {t(interfaceLanguage, helpTitleKey)}
             </h2>
             {/* Shaped rather than merely shortened: one sentence that answers
