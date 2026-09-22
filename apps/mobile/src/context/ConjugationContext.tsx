@@ -65,10 +65,24 @@ export function ConjugationProvider({ children }: { children: ReactNode }) {
     return normalizeProgress(spec, { ...server, ...stillPending });
   }, [spec, conjugation, pending]);
 
+  /**
+   * ⚠️ **No enrolment until the snapshot lands, rather than a plausible one.**
+   *
+   * `normalizeEnrolment` falls back to the *default* practice set for an
+   * absent one, which is the right answer for a new account and the wrong one
+   * for an account whose data is still in flight — five patterns nobody saved,
+   * every box of them due. Returning `undefined` through the window makes a
+   * screen that forgets to check `loading` render nothing instead of something
+   * false, and stops `setEnrolled` ever being handed the default to write over
+   * a real set with.
+   *
+   * The window is one round trip. It was invisible until the 2026-09-22 launch
+   * work started painting before the server answered; it was always here.
+   */
   const enrolment = useMemo(() => {
-    if (!spec) return undefined;
+    if (!spec || conjugation === undefined) return undefined;
     return normalizeEnrolment(spec, pendingEnrolment ?? conjugationEnrolment);
-  }, [spec, pendingEnrolment, conjugationEnrolment]);
+  }, [spec, conjugation, pendingEnrolment, conjugationEnrolment]);
 
   const rate = useCallback((updates: ConjugationProgressMap) => {
     setPending(prev => ({ ...prev, ...updates }));
