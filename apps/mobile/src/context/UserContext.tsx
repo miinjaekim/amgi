@@ -12,6 +12,7 @@ import {
   getUserPreferencesFromServer, saveUserPreferences, subscribeToUserPreferences,
 } from '../services/userPreferences';
 import { countUserFlashcards } from '../services/firestore';
+import { withTimeout } from '../services/withTimeout';
 import { refreshReminders } from '../services/reminders';
 import {
   markStreakSynced, readCachedStreak, writeCachedStreak,
@@ -80,6 +81,32 @@ async function readCachedLanguages(): Promise<StudyLanguagePair[]> {
     // which every caller already handles.
     return [];
   }
+}
+
+interface CachedPreferences {
+  /** `null` when this device has never been through first run. */
+  interfaceLanguage: string | null;
+  studyLanguage: string | null;
+  hanjaPartition: string | null;
+  languages: StudyLanguagePair[];
+}
+
+/**
+ * Everything launch needs that the device already holds, in one storage read.
+ *
+ * Preferring the interface key and falling back to the one every older launch
+ * wrote — that fallback is the whole migration on this device.
+ */
+async function readCachedPreferences(): Promise<CachedPreferences> {
+  const values = new Map(await AsyncStorage.multiGet([
+    INTERFACE_LANG_CACHE_KEY, LANG_CACHE_KEY, STUDY_LANG_CACHE_KEY, HANJA_PARTITION_CACHE_KEY,
+  ]));
+  return {
+    interfaceLanguage: values.get(INTERFACE_LANG_CACHE_KEY) ?? values.get(LANG_CACHE_KEY) ?? null,
+    studyLanguage: values.get(STUDY_LANG_CACHE_KEY) ?? null,
+    hanjaPartition: values.get(HANJA_PARTITION_CACHE_KEY) ?? null,
+    languages: await readCachedLanguages(),
+  };
 }
 
 async function writeCachedLanguages(pairs: StudyLanguagePair[]): Promise<void> {
@@ -270,32 +297,77 @@ export function UserProvider({ children }: { children: ReactNode }) {
     }
   }, [response]);
 
+  /**
+   * Bumped on every auth change, so a reconcile still waiting on the server
+   * can tell that the account it was reconciling is no longer the one signed
+   * in, and drop its answer rather than paint someone else's preferences.
+   */
+  const authGeneration = useRef(0);
+
   // Keep user + languages in sync with Firebase auth state
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      const generation = ++authGeneration.current;
+      const stale = () => generation !== authGeneration.current;
       setUser(firebaseUser);
       if (firebaseUser) {
         const uid = firebaseUser.uid;
+        const cached = await readCachedPreferences();
+        const cachedStreak = await readCachedStreak(uid);
+        if (stale()) return;
+
+        /**
+         * **Cache first, server second** — changed 2026-09-22.
+         *
+         * Launch used to wait on the server before reading anything the device
+         * already held, so every open sat on skeletons (and on English labels)
+         * for a full round trip, and on a weak signal for as long as Firestore
+         * kept retrying. A device that has been through first run already knows
+         * everything launch needs, so it paints from that and clears
+         * `authLoading` now; the reconcile below still runs, in the background,
+         * and every rule in it is unchanged — only the order moved.
+         *
+         * "Warm" is keyed on the interface language because that is the answer
+         * first run exists to get: without it the modal decides, and the modal
+         * must not open on a cached guess. A device without one waits for the
+         * server exactly as before, so first run on a new phone is unchanged.
+         *
+         * Worth knowing: a deck switched in the moment before the reconcile
+         * lands is overwritten by the server's answer. That window is one round
+         * trip, capped by the timeout below, and the switch is written to the
+         * server too, so the next snapshot or launch agrees with it.
+         */
+        const warm = !!cached.interfaceLanguage;
+        if (warm) {
+          setInterfaceLanguageState(cached.interfaceLanguage);
+          if (isStudyLanguage(cached.studyLanguage)) setStudyLanguageState(cached.studyLanguage);
+          if (isHanjaPartition(cached.hanjaPartition)) setHanjaPartitionState(cached.hanjaPartition);
+          setLanguagesState(cached.languages);
+          commitStreak(cachedStreak ?? EMPTY_STREAK);
+          setAuthLoading(false);
+        }
 
         // A failed read here means offline, not "no preferences". Treating the
         // two alike is what used to wipe the cached language and zero a streak
         // on any launch without a signal.
+        //
+        // Raced against the same deadline as every other Firestore call: a bare
+        // `getDocFromServer` on a weak signal waits as long as the SDK keeps
+        // retrying, which used to be how long launch took.
         let prefs = null;
         let reachedServer = false;
         try {
-          prefs = await getUserPreferencesFromServer(uid);
+          prefs = await withTimeout(getUserPreferencesFromServer(uid));
           reachedServer = true;
         } catch {
           // Fall through to whatever this device already knows.
         }
+        if (stale()) return;
 
-        // Preferring the interface key and falling back to the one every older
-        // launch wrote — that fallback is the whole migration on this device.
-        const cachedInterface = (await AsyncStorage.getItem(INTERFACE_LANG_CACHE_KEY))
-          ?? (await AsyncStorage.getItem(LANG_CACHE_KEY));
-        const cachedStudy = await AsyncStorage.getItem(STUDY_LANG_CACHE_KEY);
-        const cachedPartition = await AsyncStorage.getItem(HANJA_PARTITION_CACHE_KEY);
-        const cachedLanguages = await readCachedLanguages();
+        const cachedInterface = cached.interfaceLanguage;
+        const cachedStudy = cached.studyLanguage;
+        const cachedPartition = cached.hanjaPartition;
+        const cachedLanguages = cached.languages;
 
         // A brand-new account inherits what this device already answered.
         // Without this, anyone who completes first run signed out is asked the
@@ -367,6 +439,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
             { nativeLanguage: prefs?.nativeLanguage ?? 'English', studyLanguage: nextStudy },
             withCards,
           );
+          // The count is a round trip of its own; the account may have changed.
+          if (stale()) return;
         }
         setLanguagesState(nextLanguages);
         await writeCachedLanguages(nextLanguages);
@@ -381,8 +455,12 @@ export function UserProvider({ children }: { children: ReactNode }) {
           }).catch(() => { /* Retried on the next launch; harmless. */ });
         }
 
+        // A warm launch merges into what is on screen rather than into the
+        // cached copy read above: the user may already have rated cards while
+        // the server was answering, and those live only in the ref until
+        // their own cache write lands.
         const merged = mergeStreakState(
-          await readCachedStreak(uid),
+          warm ? streakRef.current : cachedStreak,
           reachedServer ? streakFromPreferences(prefs) : null,
         );
 
@@ -405,14 +483,12 @@ export function UserProvider({ children }: { children: ReactNode }) {
       } else {
         // `null`, not a default: an unanswered interface language is what the
         // first-run modal watches for.
-        const cached = (await AsyncStorage.getItem(INTERFACE_LANG_CACHE_KEY))
-          ?? (await AsyncStorage.getItem(LANG_CACHE_KEY));
-        setInterfaceLanguageState(cached ?? null);
-        setLanguagesState(await readCachedLanguages());
-        const cachedStudy = await AsyncStorage.getItem(STUDY_LANG_CACHE_KEY);
-        if (isStudyLanguage(cachedStudy)) setStudyLanguageState(cachedStudy);
-        const cachedPartition = await AsyncStorage.getItem(HANJA_PARTITION_CACHE_KEY);
-        if (isHanjaPartition(cachedPartition)) setHanjaPartitionState(cachedPartition);
+        const cached = await readCachedPreferences();
+        if (stale()) return;
+        setInterfaceLanguageState(cached.interfaceLanguage);
+        setLanguagesState(cached.languages);
+        if (isStudyLanguage(cached.studyLanguage)) setStudyLanguageState(cached.studyLanguage);
+        if (isHanjaPartition(cached.hanjaPartition)) setHanjaPartitionState(cached.hanjaPartition);
         commitStreak(EMPTY_STREAK);
       }
       setAuthLoading(false);
@@ -446,8 +522,11 @@ export function UserProvider({ children }: { children: ReactNode }) {
    *   pop it over someone mid-answer. Languages *are* taken, but only when the
    *   document actually carries some — see below.
    *
-   * Gated on `authLoading` so the launch reconcile settles first, otherwise the
-   * server's copy would show for a frame before the device's own is even read.
+   * Gated on `authLoading` so the device's own copy is on screen first,
+   * otherwise the server's would show for a frame before it is even read. On a
+   * warm launch that means this starts while the reconcile is still waiting on
+   * the server — which is safe because both merge into `streakRef` rather than
+   * assigning, so whichever lands second agrees with the first.
    *
    * Worth knowing: once this device records a review, the in-memory copy stays
    * `dirty` for the rest of the session — only the cached copy is cleared, by

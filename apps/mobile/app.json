@@ -26,7 +26,16 @@
         }
       ],
       "expo-sharing",
-      "expo-status-bar"
+      "expo-status-bar",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#173F35"
+        }
+      ]
     ],
     "ios": {
       "supportsTablet": true,
@@ -45,7 +54,7 @@
     "updates": {
       "url": "https://u.expo.dev/bc217cdf-916f-409f-868a-5994ff9813bf",
       "enabled": true,
-      "checkAutomatically": "ON_LOAD",
+      "checkAutomatically": "NEVER",
       "fallbackToCacheTimeout": 0
     },
     "runtimeVersion": {

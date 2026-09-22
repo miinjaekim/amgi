@@ -6,6 +6,7 @@ import { ModeProvider, useMode } from '../src/context/ModeContext';
 import { ThemeProvider } from '../src/context/ThemeContext';
 import { PronunciationProvider } from '../src/context/PronunciationContext';
 import LanguageSetupModal from '../src/components/LanguageSetupModal';
+import LaunchSplash from '../src/components/LaunchSplash';
 
 /**
  * First run, mounted above the whole navigator so it covers the tabs too.
@@ -61,6 +62,18 @@ function ModeGate({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+/**
+ * The splash lets go once the first real screen can paint true: the landing
+ * mode is known (so `ModeGate` has rendered) and auth has restored (so Review
+ * is not a blank placeholder and labels are in the right language). On a
+ * device that has been through first run, both come from local storage.
+ */
+function Launch() {
+  const { landingMode } = useMode();
+  const { authLoading } = useUser();
+  return <LaunchSplash ready={landingMode !== undefined && !authLoading} />;
+}
+
 export default function RootLayout() {
   return (
     <ThemeProvider>
@@ -106,6 +119,7 @@ export default function RootLayout() {
           <ModeLanding />
           <FirstRun />
           </ModeGate>
+          <Launch />
           </ModeProvider>
         </PronunciationProvider>
       </UserProvider>
