@@ -369,6 +369,43 @@ once, so a path that worked on build 14 is not evidence about build 15.
 Closed calls, kept with their reasoning — a decision whose reasoning is lost gets
 reopened by the next person to notice the symptom. Newest first.
 
+### The irregular verbs are sourced, and three is the whole list (2026-09-22)
+
+**The job `FRENCH_IRREGULARS = []` was waiting for**, and it was never a code
+problem: `ConjugationVerb.group` dispatches rules and deliberately has no
+`irregular` member, so a stored paradigm sits *beside* the generator rather than
+as a fourth branch inside it. The engine did not change to take the data.
+
+**Two independent published references, tier A on all 54 forms** — Larousse and
+Bescherelle, agreeing character for character with accents included, which is
+[docs/packs/README.md](../docs/packs/README.md)'s top rank. Wiktionnaire was a
+third spelling check.
+
+⚠️ **The licence finding is that there is nothing to license.** 54 verb forms
+are facts about French and carry no authorship; what a conjugation publisher
+holds rights in is prose, layout, and the selection and arrangement of a
+9,000-verb compilation, and none of that is taken. **Wiktionnaire is CC BY-SA,
+which is why it is a check and not the source** — taking a table from it would
+attach a share-alike obligation to this repo for facts that carry none. That
+distinction is the reusable part of this entry.
+
+⚠️ **Three verbs, and the fourth is deliberately absent.** `faire` is the
+obvious candidate and "the next most useful irregular" is a *frequency claim*,
+which nothing in this repo is behind — the same discipline that keeps
+`FRENCH_GROUPS` described as **common** rather than ranked. The ranked-list job
+is still open and is a different one.
+
+⚠️ **They are not in the default practice set.** `defaultEnrolment` still enrols
+the five patterns in the présent, so these arrive through Topics → Irregular
+verbs like anything else a learner takes on. Putting `être` and `avoir` in the
+default is defensible and is a call nobody has made.
+
+**The tests pin the forms, not just the behaviour**, because the two fail
+differently: a wrong rule is wrong for its whole group at once and the existing
+tables catch it, while a wrong form is wrong alone and nothing else in the suite
+would notice. `subjectsOfKind(spec, 'verb')` was asserted empty with the note
+*"the split has to survive that"* — it did. PR #150.
+
 ### Munli's titles come from one place, and so does its gutter (2026-09-22)
 
 **Noticed by the user**: Writing's title is smaller than the rest. It was —

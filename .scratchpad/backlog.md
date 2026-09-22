@@ -26,6 +26,16 @@ _Kept at the top of the file, ahead of priority order, from 2026-09-22 on the
 user's call — this list changes every time something merges, and it is the one
 section worth seeing without scrolling._
 
+- [ ] **Irregular French verbs** (PR #150, on top of #149). Web is live on
+      merge; **native is not**. `être`, `avoir` and `aller`, tier A against two
+      published references, with the draft at
+      `docs/packs/french-irregular-verbs-draft.md`.
+      ⚠️ **Two calls are the user's, and both are one-line changes**: whether
+      `faire` joins them (a frequency claim nobody has sourced), and whether
+      `être` and `avoir` belong in the default practice set.
+      ⚠️ **Unseen on a device.** Worth checking the irregular topic now that it
+      has content: it was an empty page until this.
+
 - [ ] **Munli's titles come from one place** (PR #149, on top of #148). Web is
       live on merge; **native is not**. `PAGE_TITLE_SIZE` and `C.highlight` on
       native, `--color-highlight` on web, and Munli's screens move to a shared
@@ -102,33 +112,20 @@ _**Play led this section for part of that day and is now in Parked**, blocked on
 a Korean phone number it cannot reach from abroad — same-day Decisions entry.
 Munli has the focus back._
 
-_**The Munli items below were asked for by the user on 2026-09-22**, after
-using the tabs — unlike the three that left this section the same day. They are
-in build order rather than the order they were raised._
+_**The five Munli items that sat here were asked for by the user on
+2026-09-22**, after using the tabs — unlike the three that left this section the
+same day._
 
-_**The grain question is answered and has left this section** — it is PR #145,
-under Queued for the next build, and the Decisions entry of 2026-09-22 in
-[status.md](status.md) holds the four options and why (d) won. The two items it
-gated are unblocked: **a due count counts boxes**, so a row reads
-`-er · présent — 3 due` rather than "due now"._
+_**All five are built, as a stack of six PRs (#145 → #150), and High is empty.** Each is under Queued for the next build with what it does and what has
+not been exercised; each has a Decisions entry of 2026-09-22 in
+[status.md](status.md) with the calls made while building it. **Nothing here has
+been opened on a device or in a browser**, which is the whole of what is left to
+do on them._
 
-- [ ] **Irregular French verbs.** Conjugation ships with regular groups only, and
-      a French conjugation tool without `être`, `avoir` and `aller` is missing the
-      verbs a learner reaches for first. **The model already holds them**:
-      `ConjugationIrregularVerb` stores forms per tense, `FRENCH_IRREGULARS` is
-      `[]`, and the Verbs tab already has a section that says so. **This item is
-      now a data file and a licence check, nothing else.** ⚠️ **This is the
-      sourcing job, and it is the whole reason they were left out**: an irregular
-      form is recalled content, not a rule, and `docs/packs/README.md` governs —
-      the model is not a source. So this is a citable reference, a licence check,
-      and a dataset; it is not a prompt.
-      **The engine is already shaped for it**: `ConjugationVerb.group` dispatches
-      rules and deliberately has no `irregular` member, because an irregular verb
-      is stored forms rather than a rule class. Adding them means a table of
-      forms beside the generator, not a fourth branch inside it.
-      **The verb list wants the same treatment.** What shipped is described as
-      *common*, not frequency-ranked, because ranking it is a sourcing claim with
-      nothing behind it. Same job.
+_⚠️ **Two of those PRs left a call for the user** and neither blocks a merge:
+whether `faire` joins the three irregular verbs (#150), and whether a practice
+session should be able to cover several tenses at once again, which the section
+picker narrowed (#146). Both are in the entries._
 
 ## Medium
 
