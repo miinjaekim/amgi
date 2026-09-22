@@ -1,6 +1,6 @@
 import React, { createContext, useCallback, useContext, useMemo, useRef, useState, ReactNode } from 'react';
-import { conjugationSpec, normalizeEnrolment } from '@amgi/core';
-import type { ConjugationEnrolment, ConjugationProgress, ConjugationProgressMap } from '@amgi/core';
+import { conjugationSpec, normalizeEnrolment, normalizeProgress } from '@amgi/core';
+import type { ConjugationEnrolment, ConjugationProgressMap } from '@amgi/core';
 import { useUser } from './UserContext';
 import { saveUserPreferences } from '../services/userPreferences';
 
@@ -26,7 +26,8 @@ interface ConjugationContextType {
   enrolment: ConjugationEnrolment | undefined;
   /** True until the first snapshot lands. "Not yet" is not "none". */
   loading: boolean;
-  rate: (itemId: string, state: ConjugationProgress) => void;
+  /** Write a round's ratings — up to one per box, in a single merge write. */
+  rate: (updates: ConjugationProgressMap) => void;
   setEnrolment: (next: ConjugationEnrolment) => void;
 }
 
@@ -51,6 +52,7 @@ export function ConjugationProvider({ children }: { children: ReactNode }) {
   const [pendingEnrolment, setPendingEnrolment] = useState<ConjugationEnrolment | null>(null);
 
   const progress = useMemo(() => {
+    if (!spec) return {};
     const server = conjugation ?? {};
     // Drop anything the server has now confirmed, so `pending` cannot grow for
     // the life of the app — it is a write buffer, not a cache.
@@ -58,21 +60,23 @@ export function ConjugationProvider({ children }: { children: ReactNode }) {
     for (const [id, state] of Object.entries(pending)) {
       if (server[id]?.nextReview !== state.nextReview) stillPending[id] = state;
     }
-    return { ...server, ...stillPending };
-  }, [conjugation, pending]);
+    // ⚠️ `normalizeProgress` is what performs the 2026-09-22 reset: a user
+    // document's table-grained entries are dropped on read, not migrated.
+    return normalizeProgress(spec, { ...server, ...stillPending });
+  }, [spec, conjugation, pending]);
 
   const enrolment = useMemo(() => {
     if (!spec) return undefined;
     return normalizeEnrolment(spec, pendingEnrolment ?? conjugationEnrolment);
   }, [spec, pendingEnrolment, conjugationEnrolment]);
 
-  const rate = useCallback((itemId: string, state: ConjugationProgress) => {
-    setPending(prev => ({ ...prev, [itemId]: state }));
+  const rate = useCallback((updates: ConjugationProgressMap) => {
+    setPending(prev => ({ ...prev, ...updates }));
     // Fire and forget, like every other rating in the app: blocking the next
     // question on a round trip is what makes a five-second exercise feel like a
-    // forty-second one. The nested map merges key by key, so this writes one
-    // table and not the set.
-    if (user) void saveUserPreferences(user.uid, { conjugation: { [itemId]: state } }).catch(() => {});
+    // forty-second one. The nested map merges key by key, so a round writes the
+    // boxes it asked and not the set — one write rather than six.
+    if (user) void saveUserPreferences(user.uid, { conjugation: updates }).catch(() => {});
   }, [user]);
 
   const setEnrolment = useCallback((next: ConjugationEnrolment) => {

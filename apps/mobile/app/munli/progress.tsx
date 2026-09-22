@@ -59,7 +59,7 @@ export default function MunliProgressScreen() {
               </View>
               <View style={s.tile}>
                 <Text style={s.tileNumber}>{summary.total}</Text>
-                <Text style={s.tileLabel}>{t(interfaceLanguage, 'munliProgressTables')}</Text>
+                <Text style={s.tileLabel}>{t(interfaceLanguage, 'munliProgressForms')}</Text>
               </View>
             </View>
 
@@ -71,8 +71,9 @@ export default function MunliProgressScreen() {
               </View>
             ))}
 
-            {/* The per-box tally's payoff: a schedule alone could only say the
-                table was shaky, never which box. */}
+            {/* The tally no longer decides anything — a due box is asked
+                because it is due — but it still says how badly, and how badly
+                is what ranks this list. */}
             {summary.weakest.length > 0 && (
               <>
                 <Text style={s.section}>{t(interfaceLanguage, 'munliProgressWeakest')}</Text>

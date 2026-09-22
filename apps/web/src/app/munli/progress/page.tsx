@@ -51,7 +51,7 @@ export default function MunliProgressPage() {
           <div className="flex gap-3 mb-8">
             {tile(summary.practised, t(interfaceLanguage, 'munliProgressPractised'))}
             {tile(summary.due, t(interfaceLanguage, 'munliProgressDue'))}
-            {tile(summary.total, t(interfaceLanguage, 'munliProgressTables'))}
+            {tile(summary.total, t(interfaceLanguage, 'munliProgressForms'))}
           </div>
 
           <p className="text-xs font-mono uppercase tracking-widest mb-2" style={{ color: 'var(--color-muted)' }}>
