@@ -369,6 +369,63 @@ once, so a path that worked on build 14 is not evidence about build 15.
 Closed calls, kept with their reasoning — a decision whose reasoning is lost gets
 reopened by the next person to notice the symptom. Newest first.
 
+### A table is six facts, so the box carries the schedule (2026-09-22)
+
+⚠️ **This reverses "the schedule belongs to the table, not the box" in the
+same-day entry below**, on the user's call, after using it. What the reversal
+turns on is not item count but what one verdict is allowed to speak for.
+
+**The complaint, in the user's words:** *"having one tense of one verb group due
+means I'd practice just one verb conjugation … I might be struggling with `ils`
+but I randomly got `tu` or `je` and the practice ends."* **It was sharper than it
+was put.** `rateTable` applied one box's verdict to the whole table's SM-2
+interval, so **answering `tu` correctly scheduled `ils` away with it** — five
+boxes pushed out on evidence from one. `pickPerson` biased the next draw toward
+a missed box, but only *after* the miss had been paid for, and got exactly one
+draw per session. The code half-admitted the grain was wrong: `misses` existed
+as a per-box tally precisely because *"one schedule cannot know that your `nous`
+specifically is weak"*.
+
+**The call was option (d) of four**: schedule per box, present per table. (a) ask
+every box of a due table and (b) ask *n* boxes weighted by the tally both leave
+one interval speaking for six facts; (c) is (d) without the paradigm, and reads
+as 72 loose items where (d) reads as *"-er · présent — 3 due"*.
+
+⚠️ **The rule it had to be weighed against is `vision.md`'s** — *"Three-sided
+hanja cards cost a setting, not a scheduling axis"*, *"Per-level content is
+allowed; per-level adaptivity is not"*. **The precedent that wins is Amgi's
+own**: a card is scheduled per *direction*, and `helpReviewPoints` says so to
+the user. Splitting a table into its boxes is that same move — one item per
+fact, not a second scheduler laid over the first, and nothing here adapts to the
+learner.
+
+**A round is the unit of a session, and a round is a table.** The due boxes are
+asked together as the paradigm, each rating on its own answer, and the vehicle
+is drawn once per round rather than once per box — a paradigm of six different
+verbs is not a paradigm.
+
+⚠️ **The boxes that are not due are masked until the round is checked**, which
+the sketch the user approved did not say. Showing them hands over the answer:
+`je parle`, `nous parlons` and `vous parlez` make `tu parles` free. They fill in
+on Check, where the paradigm is reference rather than a leak.
+
+⚠️ **Check is held until every due box has something in it.** The escape hatch
+for a box you cannot produce is the hint, which already costs — two hints spell
+the form and count as a miss — rather than an empty box submitted by accident.
+
+**The reset is a read-side drop, not a migration.** The user's call was a clean
+slate over splitting one table's interval into six copies of itself, and
+`normalizeProgress` does it on read: a four-segment key with a `misses` map
+cannot be a box id, so it is dropped the first time the document is read.
+Nothing has to be deleted by hand. `misses` survives as a number on the box, and
+is now only ever *reported* — it picks nothing, because a due box is asked
+because it is due.
+
+**What it cost.** A migration avoided, but `ConjugationProgressMap` changed
+shape, `pickPerson` is gone, and every due count in Munli is now in boxes: the
+picker, the setup line, a row on Tables, and the Progress tiles ("forms
+started", "forms in all"). PR #145.
+
 ### Play holds on a +82 phone number, and Munli takes the focus back (2026-09-22)
 
 **On hold the same day it was taken up**, on the user's call. Identity
@@ -528,6 +585,10 @@ replaces the name has to keep meaning "the things you are learning".
 
 ### What conjugation schedules is a rule, not a verb (2026-09-22)
 
+⚠️ **Half-superseded the same day — the entry above reverses the table-grain
+paragraph below.** What a *subject* is (a rule for regular verbs, a verb for
+irregular ones) stands unchanged; what carries a *schedule* is now the box.
+
 **The heart of the design, and the thing the first cut got wrong.** `parler`,
 `regarder`, `travailler`, `chercher` and `donner` in the présent were **five
 scheduled items testing one fact** — getting `parlons` right says nothing new
@@ -551,14 +612,14 @@ whose rule actually fits it.
 **Vocabulary, used throughout.** A **table** is one subject in one tense; its
 **boxes** are the forms, one per person; **one question** is one box.
 
-⚠️ **The schedule belongs to the table, not the box** — the user's call. Missing
-`nous` brings the whole table back, and the next question from it may be any box,
-with a **per-box miss tally** so the weak one is preferred. The argument is not
-item count but what counts as one fact. The accepted cost is that SM-2 learns
-"your `-er` présent is shaky" rather than "your *nous* is shaky", and the tally
-recovers most of that without a second scheduler. **Per-verb scheduling stays
-reachable**: ids are built by `conjugationItemId` and progress is keyed by
-whatever it returns, so splitting finer later means more ids, not a new shape.
+⚠️ **Reversed the same day — see the entry above.** What stood here: the
+schedule belongs to the table, not the box, with a per-box miss tally so the
+weak box is preferred; the accepted cost was that SM-2 learns "your `-er`
+présent is shaky" rather than "your *nous* is shaky". **The cost turned out to
+be larger than stated** — one verdict also *moved* the other five boxes — and
+the escape hatch written into this paragraph is the one that was taken: ids are
+built by `conjugationItemId`, so splitting finer was more ids rather than a new
+shape.
 
 **Regular forms are computed; irregular forms are stored.** There is no rule to
 generate an irregular from, and `docs/packs/README.md` governs — the model is not
@@ -593,10 +654,10 @@ renders before `started` flips:
   written mid-session moves the picker's counts and leaves the questions alone.
   Same rule as `buildReviewQueue`.
 
-⚠️ **One question per table per session**; the table is the scheduled item, so
-asking it twice in one sitting would be two questions about one fact.
-⚠️ **A miss does not rejoin the session in progress.** `rateTable` makes a missed
-table due immediately, so it returns in the *next* session — "a session ends when
+⚠️ **One round per table per session** — and since 2026-09-22 a round is every
+due box of that table rather than one drawn from it, which is the entry above.
+⚠️ **A miss does not rejoin the session in progress.** `rateBox` makes a missed
+box due immediately, so it returns in the *next* session — "a session ends when
 it said it would", which `sm2.ts` states for cards and which composes here for
 free. **`done` and `stopped` stay distinct**, because telling someone who quit at
 8 of 30 that they are finished would be untrue. **Over-practice is a switch the

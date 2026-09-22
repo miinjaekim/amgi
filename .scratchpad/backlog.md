@@ -26,6 +26,17 @@ _Kept at the top of the file, ahead of priority order, from 2026-09-22 on the
 user's call — this list changes every time something merges, and it is the one
 section worth seeing without scrolling._
 
+- [ ] **A conjugation box carries the schedule** (PR #145). Web is live on
+      merge; **native is not**. The reversal of the table grain: a round is a
+      table and every due box of it is asked, each rating on its own answer.
+      ⚠️ **Nothing in it has been exercised on a device or in a browser** — the
+      suite, `tsc` and lint are green, which says the shapes line up, not that
+      six inputs and a per-box hint button are usable at phone width. Worth a
+      look first: whether Check-when-every-box-is-filled feels right, and
+      whether the masked cells read as "not due" rather than as broken.
+      **No migration to watch**: table-grained progress is dropped on read, so
+      conjugation history from before the merge is gone by design.
+
 - [ ] **Verb conjugation, and Munli's tabs** (PR #143). Web is live on merge;
       **native is not**. The practice loop, the verbs page, Tables and Munli's
       Progress have been exercised in Expo Go, and **the Firestore write path has
@@ -61,66 +72,15 @@ _**Play led this section for part of that day and is now in Parked**, blocked on
 a Korean phone number it cannot reach from abroad — same-day Decisions entry.
 Munli has the focus back._
 
-_**The five Munli items below were asked for by the user on 2026-09-22**, after
+_**The four Munli items below were asked for by the user on 2026-09-22**, after
 using the tabs — unlike the three that left this section the same day. They are
-in build order rather than the order they were raised: the grain question gates
-the picker and the Saved tab, because both display due counts and what a due
-count *counts* is that decision. **Nothing here is started**; the user's call was
-to plan first._
+in build order rather than the order they were raised._
 
-- [ ] **Conjugation schedules a table; a table is six facts.** **Raised
-      2026-09-22 by the user**, from using it: *"having one tense of one verb
-      group due means I'd practice just one verb conjugation … I might be
-      struggling with `ils` but I randomly got `tu` or `je` and the practice
-      ends."*
-      **What happens today.** The scheduled unit is a table, `(subject, tense)`
-      (`ConjugationProgress`, `packages/core/src/conjugation.ts:145`), and
-      `buildConjugationQueue` is `pool.map(table => one question)` — literally
-      one question per due table, with `pickPerson` drawing the box. Its own
-      comment gives the reasoning: *"The table is the scheduled item, so asking
-      it twice in one sitting would be two questions about one fact."*
-      ⚠️ **That sentence is the defect.** A table is six facts, not one, and the
-      code already knows it: `misses` exists as a per-person tally precisely
-      because *"one schedule cannot know that your `nous` specifically is
-      weak"*. The model half-admits the grain is wrong and patches it with a
-      draw bias instead of fixing it.
-      **The complaint is sharper than it was put.** `rateTable` applies one
-      box's verdict to the whole table's SM-2 interval, so **answering `tu`
-      correctly schedules `ils` away too** — five boxes pushed out on evidence
-      from one. `pickPerson` only helps *after* a miss is recorded, and gets
-      exactly one draw per session.
-
-      **Four ways out, cheapest first.**
-      **(a) Ask every box of a due table.** Six questions per due table, one
-      rating for the table, worst answer winning. No migration, no new item ids.
-      Cost: a table you are five-sixths solid on still costs six questions, and
-      the schedule still speaks for the boxes as a block.
-      **(b) Ask *n* boxes weighted by `misses`, and hold the interval back
-      unless the weak ones cleared.** The cheapest fix to the stated symptom.
-      ⚠️ Hacky: the interval still speaks for boxes that were never asked.
-      **(c) Schedule per box** — the item becomes `(subject, tense, person)`.
-      ⚠️ **There is direct precedent in Amgi**: a card is scheduled per
-      *direction*, and `helpReviewPoints` says so to the user — *"Each card is
-      asked both ways — recognising a word and saying it are tracked
-      separately."* Splitting a table into six boxes is that same move. Cost: a
-      migration of `ConjugationProgressMap` on the user document, item ids
-      change, `misses` becomes redundant, and **due counts multiply by six** —
-      "12 due" becomes "72 due", which changes both what a session feels like
-      and what the two items below display.
-      **(d) Schedule per box, present per table** — a due table opens as its
-      paradigm with the due cells to fill, each cell rating independently.
-
-      **Recommendation: (d), which is (c) underneath.** It answers the complaint
-      directly — a weak `ils` is asked because it is due, not because a die
-      landed on it — and it matches how conjugation is actually practised, as a
-      paradigm rather than a flashcard. Presenting per table also keeps the
-      count legible: *"-er · présent — 3 boxes due"* rather than 72 loose items.
-      ⚠️ **Weigh it against the standing rule first.** *"Three-sided hanja cards
-      cost a setting, not a scheduling axis"* and *"Per-level content is allowed;
-      per-level adaptivity is not"* (both in Decisions) are the app resisting
-      exactly this kind of multiplication; the direction precedent above is the
-      counter-argument. **This is the call to make before anything below is
-      built.**
+_**The grain question is answered and has left this section** — it is PR #145,
+under Queued for the next build, and the Decisions entry of 2026-09-22 in
+[status.md](status.md) holds the four options and why (d) won. The two items it
+gated are unblocked: **a due count counts boxes**, so a row reads
+`-er · présent — 3 due` rather than "due now"._
 
 - [ ] **The practice picker should be sections with due counts, not chips.**
       **Asked for 2026-09-22**: after opening Conjugation, the setup screen is
@@ -129,9 +89,10 @@ to plan first._
       much is due for each section"*.
       **Most of this is already in core.** `summarizeConjugation` returns
       `byTense: { tenseId, label, practised, total, due }`
-      (`packages/core/src/conjugation.ts:676`), which is a section list already;
+      (`packages/core/src/conjugation.ts:819`, counted in boxes since PR #145),
+      which is a section list already;
       Review's row is `renderCollectionRow` at
-      `apps/web/src/app/review/page.tsx:676` — name, due count in highlight,
+      `apps/web/src/app/review/page.tsx:679` — name, due count in highlight,
       "caught up" in muted, a sub-line with the total.
       ⚠️ **Review has one axis and conjugation has two.** Enrolment is
       `subjectKey:tenseId` pairs, so a section is a tense *or* a subject, not
@@ -139,10 +100,11 @@ to plan first._
       pack → subpack with a whole-tense row first: you sit down to practise the
       imparfait, and Progress already groups by tense.
       `practiceIncludeNotDue` survives as over-practice on the second screen.
-      ⚠️ **Blocked on the grain call above** — not for the layout, which is the
-      same either way, but for what the counts say.
+      ✅ **Unblocked**: the grain call is made (PR #145), so a section's count is
+      its **due boxes** — `countDueBoxes` is the function, and it is what the
+      picker and setup line already show.
       Both platforms: `apps/web/src/app/munli/practice/page.tsx` and
-      `apps/mobile/app/munli/index.tsx` (the chips are at lines 188–230).
+      `apps/mobile/app/munli/index.tsx` (the chips are at lines 206–250).
 
 - [ ] **Tables becomes Saved, and starts managing something.** **Asked for and
       shaped 2026-09-22, on the user's call.** Today it is a flat list of
@@ -165,7 +127,9 @@ to plan first._
       `packages/core/src/i18n.ts`, the route `/munli/tables` → `/munli/saved`,
       `getMunliNavItems` in `apps/web/src/components/nav-items.tsx`, and
       `ICONS` / `LABELS` in `apps/mobile/app/munli/_layout.tsx`.
-      ⚠️ **Blocked on the grain call above** for what a pill's due dot means.
+      ✅ **Unblocked**: the grain call is made (PR #145), so a pill's due state is
+      **how many of that pair's six boxes are due** — `listPracticeTables`
+      returns `dueCount` and `boxes` per table, which is the shape a pill needs.
 
 - [ ] **Writing needs to say how to use it.** **Asked for 2026-09-22**: the tab
       drops you straight into a panel with no guidance, and the specific thing
