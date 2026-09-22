@@ -36,73 +36,19 @@ section worth seeing without scrolling._
       unnoticed.
 
 - [ ] **The Munli stack** (PRs #145–#151, merged 2026-09-22). Web is live;
-      **native is not**. The user's review of #145–#150, landed
-      on top rather than folded back in: a question is one form again with
-      whole tables as a switch, the keyboard stops covering the inputs, a tab
-      press returns to that tab's home, Saved is an inventory of tiles with a
-      sourced note on each tense, and Writing's empty space carries a worked
-      example.
-      **Practice, the keyboard, the tab press, Saved and Writing were all
-      confirmed by the user on 2026-09-22**, and so was the round feedback that
-      followed: a checked table now marks every box ✓ or ✗ and closes with a
-      score, and a right answer in one-box mode advances instantly.
-      ⚠️ **The instant advance is the last thing unseen on a build** — it was
-      tried at 800ms and cut to nothing on the user's call, and the version in
-      the branch is the one nobody has practised with yet.
-      ⚠️ **The worked example is French-only** by design; adding a language is
-      a draft row in `docs/packs/writing-worked-example-draft.md` and one
-      entry in `writing.ts`.
-
-- [ ] **Irregular French verbs** (PR #150, on top of #149). Web is live on
-      merge; **native is not**. `être`, `avoir` and `aller`, tier A against two
-      published references, with the draft at
-      `docs/packs/french-irregular-verbs-draft.md`.
-      ⚠️ **Two calls are the user's, and both are one-line changes**: whether
-      `faire` joins them (a frequency claim nobody has sourced), and whether
-      `être` and `avoir` belong in the default practice set.
-      ⚠️ **Unseen on a device.** Worth checking the irregular topic now that it
-      has content: it was an empty page until this.
-
-- [ ] **Munli's titles come from one place** (PR #149, on top of #148). Web is
-      live on merge; **native is not**. `PAGE_TITLE_SIZE` and `C.highlight` on
-      native, `--color-highlight` on web, and Munli's screens move to a shared
-      `SCREEN_GUTTER`.
-      ⚠️ **Unseen on a device or in a browser.** A highlight title is a bigger
-      change in Munli's palette than in Amgi's, which is the thing to judge.
-
-- [ ] **Writing says how to use it** (PR #148, on top of #147). Web is live on
-      merge; **native is not**. A "?" beside the title opening a sheet, and web
-      gets the help component it had none of.
-      ⚠️ **Unopened on a device or in a browser.** Check the sheet reads at
-      phone width and that the "?" is findable beside the title.
-
-- [ ] **Saved, and the management half** (PR #147, on top of #146). Web is live
-      on merge; **native is not**. One row per pattern, its saved tenses as
-      pills that show a due count and take the pair out of practice when
-      tapped; the route is `/munli/saved` and the tab is Saved.
-      ⚠️ **Unseen on a device or in a browser.** Topics' pill adds on tap and
-      this one removes, in the same shape — worth checking it is not too easy
-      to hit before deciding it needs no confirm.
-
-- [ ] **The practice setup is a section list** (PR #146, on top of #145). Web is
-      live on merge; **native is not**. One row per tense with its due count,
-      opening into its patterns, with an everything row first.
-      ⚠️ **Unseen on a device or in a browser.** The thing to judge there is the
-      narrowing this cost: a session now covers one selection, where the chips
-      could express "these two tenses, those two patterns". Restoring
-      multi-select is a picker change, not a core one — `buildTables` still
-      takes arrays.
-
-- [ ] **A conjugation box carries the schedule** (PR #145). Web is live on
-      merge; **native is not**. The reversal of the table grain: a round is a
-      table and every due box of it is asked, each rating on its own answer.
-      ⚠️ **Nothing in it has been exercised on a device or in a browser** — the
-      suite, `tsc` and lint are green, which says the shapes line up, not that
-      six inputs and a per-box hint button are usable at phone width. Worth a
-      look first: whether Check-when-every-box-is-filled feels right, and
-      whether the masked cells read as "not due" rather than as broken.
-      **No migration to watch**: table-grained progress is dropped on read, so
-      conjugation history from before the merge is gone by design.
+      **native is not**. Six PRs, each with a Decisions entry of that date:
+      the box carries the schedule (#145), the practice setup is a section
+      list (#146), Tables becomes Saved and then an inventory of tiles (#147,
+      #151), Writing gets a help sheet and a worked example (#148, #151),
+      Munli's titles come from one place (#149), and `être`, `avoir` and
+      `aller` are sourced (#150).
+      **Exercised in Expo Go by the user on 2026-09-22**: one-form practice,
+      the keyboard fix, the tab press, Saved's inventory, Writing, and the
+      round feedback (✓ / ✗ per box and a score line).
+      ⚠️ **Two things in it nobody has seen.** The **instant advance** on a
+      right answer — it was tried at 800ms, and the version that merged is the
+      one with no pause at all. And **web**, which has had no pass on any of
+      the six.
 
 - [ ] **Verb conjugation, and Munli's tabs** (PR #143). Web is live on merge;
       **native is not**. The practice loop, the verbs page, Tables and Munli's
