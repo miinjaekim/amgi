@@ -26,6 +26,13 @@ _Kept at the top of the file, ahead of priority order, from 2026-09-22 on the
 user's call — this list changes every time something merges, and it is the one
 section worth seeing without scrolling._
 
+- [ ] **Munli's titles come from one place** (PR #149, on top of #148). Web is
+      live on merge; **native is not**. `PAGE_TITLE_SIZE` and `C.highlight` on
+      native, `--color-highlight` on web, and Munli's screens move to a shared
+      `SCREEN_GUTTER`.
+      ⚠️ **Unseen on a device or in a browser.** A highlight title is a bigger
+      change in Munli's palette than in Amgi's, which is the thing to judge.
+
 - [ ] **Writing says how to use it** (PR #148, on top of #147). Web is live on
       merge; **native is not**. A "?" beside the title opening a sheet, and web
       gets the help component it had none of.
@@ -104,29 +111,6 @@ under Queued for the next build, and the Decisions entry of 2026-09-22 in
 [status.md](status.md) holds the four options and why (d) won. The two items it
 gated are unblocked: **a due count counts boxes**, so a row reads
 `-er · présent — 3 due` rather than "due now"._
-
-- [ ] **Munli's page titles do not match each other or Amgi's.** **Asked for
-      2026-09-22**, from noticing Writing's title is smaller.
-      **Mobile.** Amgi has the answer and Munli ignores it: `PageHeader` exports
-      `PAGE_TITLE_SIZE = 21` with `color: C.highlight`, and its comment records
-      that these drifted before — *"it sat at 24 against this file's 21 until
-      2026-09-04. A shared constant is the only thing that keeps two headers the
-      same size without either one knowing about the other."* `cards.tsx` cannot
-      use the component and imports the constant instead. **Munli's tabs use
-      neither**: each rolls its own at `fontSize: 22, color: C.text`.
-      ✅ **Writing is done** — it took `PageHeader` in PR #148 along with the
-      help sheet, and that is what retired its `fontSize: 18` monospace title,
-      which is the thing actually noticed. **Four tabs are left**, and
-      ⚠️ **`PageHeader`'s help props have to become optional on native** the way
-      web's already are: Practice, Saved and Topics have no help copy, and
-      inventing some to satisfy a component would be writing copy nobody asked
-      for.
-      **Web is not a size problem.** Every Munli `h1` is already `text-2xl`; the
-      difference from Amgi is **colour** — Amgi's are
-      `text-[var(--color-highlight)]`, Munli's are `--color-text`. Munli has its
-      own palette, so highlight stays mode-distinct.
-      **Adopting `PageHeader` on mobile was what closed the item above too**,
-      which is the reason they were adjacent.
 
 - [ ] **Irregular French verbs.** Conjugation ships with regular groups only, and
       a French conjugation tool without `être`, `avoir` and `aller` is missing the
@@ -441,7 +425,12 @@ green. What's left is what those two now *show*.
       web-only, so nothing pins them. Left in place while the subscribe change was
       landing to keep that diff to one subject.
 
-- [ ] **The mobile screen gutter is 20, hardcoded in four stylesheets.** Cards
+- [ ] **The mobile screen gutter is 20, hardcoded in four stylesheets.**
+      _Munli's screens stopped being part of this on 2026-09-22 (PR #149): they
+      share `SCREEN_GUTTER`, exported from `PageHeader` beside
+      `PAGE_TITLE_SIZE`. So the constant exists and this item is now only
+      Amgi's four — which still needs the decision below before they can take
+      it._ Cards
       sat at 16 until 2026-09-04, so tabbing to it shifted every left edge by
       four pixels; that is fixed, but by editing six numbers rather than by
       sharing one. ⚠️ **A shared constant needs a decision first**, which is why
