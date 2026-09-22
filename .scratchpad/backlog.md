@@ -1,6 +1,8 @@
 # Backlog
 
-Open work only, ordered by priority. Anything that closes leaves this file:
+Open work only, ordered by priority — **except Queued for the next build, which
+sits first** because it turns over on every merge and is the list worth seeing
+without scrolling. Anything that closes leaves this file:
 shipped work is tracked by git and GitHub, and a decision or cancellation moves
 to Decisions in [status.md](status.md) **with its reasoning**, so a closed call
 doesn't get reopened from here. Priority mirrors the user's Google Tasks list;
@@ -16,91 +18,13 @@ queued, released or unverified is under Builds in [status.md](status.md).
 
 ---
 
-## High
-
-_All of High is **Munli**, the grammar mode, as of 2026-09-21. Two Decisions
-entries of that date in [status.md](status.md) govern it: one makes grammar a
-mode, the other sets what gets built inside it. Read both._
-
-**The spine is one tool at a time, and the grouping is emergent.** Not a level
-ladder, not a taxonomy of grammar concepts designed before anything exists —
-individual tools for individual things (verb conjugation, prepositions and
-postpositions, pronouns, articles), built one at a time, each standing on its
-own. How they group is **read off the collection once there is one**, the way a
-pattern is found rather than declared. Same instinct as adding one study language
-at a time.
-
-⚠️ **The failure mode this invites is premature abstraction.** The moment tool #2
-is fitted into tool #1's shapes, the taxonomy has been built by accident and the
-whole point is lost. **Build the second tool as if the first did not exist**, and
-extract shared machinery only when a third one wants it. Two is a coincidence.
-
-**All three shipped** — the switcher in PR #135 and writing in #136 (both on
-`main` 2026-09-22), conjugation in #143, which collapses a week of iteration into
-one change and is still open. See Now in [status.md](status.md). **None has
-reached a device**; they are under Queued for the next build below. What is left
-in High is the work those three turned up.
-
-⚠️ **The next tool is where the plan gets tested, not this one.** "One tool at a
-time, group later" only means something once there are two to group, and the
-rule that goes with it is that the second is built **as if the first did not
-exist**. Conjugation's shapes — a table, a box, a miss tally — are a verb
-paradigm's shapes, and prepositions have none of them.
-
-- [ ] **Writing findings you can return to.** Split out of the writing item when
-      it shipped (PR #136) — a review you cannot re-read is a review you half
-      remember, and today the findings vanish when the screen does.
-      ⚠️ **Not the 2026-09-14 storage plan**, which stored *concept ids* to order
-      a grammar collection by the learner's own errors. There is no concept
-      ladder, so there is nothing to order. What is storable is `FindingKind`
-      counts — four buckets — which is honest as history and far too coarse to
-      be a syllabus. **The passage itself stays unstored** either way; that was
-      never in question.
-      ⚠️ **The reason it was not done with the restore: it needs a Firestore
-      collection and a security rule**, and rules are console state the repo
-      cannot verify. That makes it a deliberate piece of work rather than a
-      finishing touch on someone else's PR.
-      **Open, and it decides the shape:** whether this is per-review history (a
-      list you scroll) or per-kind counts (a number that accumulates). The first
-      is what "return to" literally asks for; the second is the only one that
-      could ever feed routing.
-
-- [ ] **Route a writing finding into a practice tool.** Named in the plan,
-      deliberately not built: a `grammar` finding about a verb form could open
-      that verb's conjugation table. It needs conjugation to exist, and it needs
-      the classification to be reliable enough that a wrong route is rare —
-      neither is established. **The first real instance of tools being grouped
-      by something observed rather than declared**, which is why it is worth
-      doing properly rather than early.
-
-- [ ] **Irregular French verbs.** Conjugation ships with regular groups only, and
-      a French conjugation tool without `être`, `avoir` and `aller` is missing the
-      verbs a learner reaches for first. **The model already holds them**:
-      `ConjugationIrregularVerb` stores forms per tense, `FRENCH_IRREGULARS` is
-      `[]`, and the Verbs tab already has a section that says so. **This item is
-      now a data file and a licence check, nothing else.** ⚠️ **This is the
-      sourcing job, and it is the whole reason they were left out**: an irregular
-      form is recalled content, not a rule, and `docs/packs/README.md` governs —
-      the model is not a source. So this is a citable reference, a licence check,
-      and a dataset; it is not a prompt.
-      **The engine is already shaped for it**: `ConjugationVerb.group` dispatches
-      rules and deliberately has no `irregular` member, because an irregular verb
-      is stored forms rather than a rule class. Adding them means a table of
-      forms beside the generator, not a fourth branch inside it.
-      **The verb list wants the same treatment.** What shipped is described as
-      *common*, not frequency-ranked, because ranking it is a sourcing claim with
-      nothing behind it. Same job.
-
-- [ ] **A second tense set, and whether tense choice belongs in settings.**
-      Conjugation ships with présent, imparfait and futur simple, chosen with
-      chips that default to présent alone. Passé composé is the obvious gap and
-      it is **not** a fourth entry in the ending tables — it is auxiliary +
-      participle, so it is the first tense that needs a different *shape*. Worth
-      doing only once someone has used the three that exist.
-
 ## Queued for the next build
 
 _Merged, not yet in anyone's hands — mobile ships by build, no OTA._
+
+_Kept at the top of the file, ahead of priority order, from 2026-09-22 on the
+user's call — this list changes every time something merges, and it is the one
+section worth seeing without scrolling._
 
 - [ ] **Verb conjugation, and Munli's tabs** (PR #143). Web is live on merge;
       **native is not**. The practice loop, the verbs page, Tables and Munli's
@@ -124,6 +48,126 @@ _Merged, not yet in anyone's hands — mobile ships by build, no OTA._
       been exercised on a device at all** — `expo export` bundles and `tsc` is
       clean, which says the routes resolve, not that the gesture feels right or
       that the sheet is reachable one-handed.
+
+## High
+
+_Reordered 2026-09-22 on the user's call. Play leads, and the three Munli items
+that sat here were removed: they were written up without being asked for. The
+Decisions entry of that date in [status.md](status.md) records what they were and
+why they left, so none of them gets reopened from here. Munli's own plan is in
+the two entries of 2026-09-21._
+
+- [ ] **Amgi on Google Play — internal testing track.** **Decided 2026-09-22**
+      (Decisions in [status.md](status.md) holds the four calls and their
+      reasoning): a **personal** developer account on the Google account that
+      already owns Firebase and the Android OAuth client, the sideloaded APK
+      channel **retired** once Play is live, and listing copy in **en + ko**, as
+      TestFlight's already is. Production is not in scope; this buys the one
+      thing the APK lacks — an update path.
+      ⚠️ **The acceptance gate is Google sign-in on a Play-delivered install**,
+      not a green build. Play App Signing re-signs the AAB with Google's key, so
+      the fingerprint an end user's install carries is **not** the EAS upload
+      keystore's, and the OAuth client is keyed to package name + SHA-1. Until
+      the App signing SHA-1 is registered, sign-in fails on Play installs **and
+      passes everywhere else** — the shape that cost four release builds in
+      August ([lessons.md](lessons.md)).
+
+      **1 · Account** (has a wait; start it first).
+      Register at `play.google.com/console` on the Firebase-owning account, $25
+      one-off, then identity verification — government ID plus a real address,
+      typically a day or two, occasionally longer. Then create the app entry:
+      *Amgi*, app, free, default language en-US. The package is claimed by the
+      first upload, not typed in — `com.miinjaekim.amgi`, permanent, already
+      keyed into the OAuth client.
+
+      **2 · Repo work** (an afternoon, parallel with the wait).
+      `apps/mobile/eas.json` only: an `android` block on the `production` profile
+      (AAB is its default; `distribution: internal` on `preview` is what makes
+      today's APK), and `submit.production.android` beside the existing
+      `ios.ascAppId`. The submit key is a **Google Play service account** — made
+      in Google Cloud, granted a release role in Play Console under Users and
+      permissions, JSON downloaded and kept **out of the repo** (EAS secret or a
+      gitignored path). `appVersionSource: remote` already covers Android; the
+      counter is at `versionCode` 6 and Play only requires it to increase.
+      ⚠️ **Plan on the first upload being manual.** The Publishing API has not
+      historically been able to create an app's *first* release, so
+      `--auto-submit` is a step-3-onwards convenience, not a step-2 one. Verify
+      rather than fight it.
+
+      **3 · Build, sign, and prove auth.** Build
+      (`npx eas-cli build --platform android --profile production`), upload the
+      AAB to the **internal testing** track, which enrols it in Play App Signing
+      automatically. Then, before inviting anybody: copy the **app signing**
+      certificate SHA-1 from Play Console → Test and release → App integrity, and
+      add it to the Firebase Android app **and** the Android OAuth client in
+      Google Cloud, **keeping the upload key's SHA-1 registered as well**.
+      Install from the internal link on a real device and sign in. That test is
+      the gate; nothing below matters if it fails.
+
+      **4 · The console forms**, which gate any release going live even on the
+      internal track. App content: privacy policy URL (exists, both locales), app
+      access (there is no email/password path — the note has to say a Google
+      account is required), ads (none), content rating questionnaire, target
+      audience (13+, and the privacy page already says not directed at under-13s),
+      data safety, plus the nil declarations for financial/health/government
+      features.
+      **Data safety is the one with real content**: Google account identifiers,
+      user content (cards, and writing passages), app activity; text processed by
+      **Gemini** through the API routes; TTS audio in Storage; in transit
+      encryption; deletion available in-app. ⚠️ **It must match `/privacy`
+      exactly**, including the deliberate exception — cached pronunciation audio
+      is keyed by a hash of the word, not by user, and survives account deletion.
+      Play also wants a **public deletion-request URL**: the privacy page's
+      "Data retention and deletion" section is the content, but the section
+      needs an `id` to link to.
+
+      **5 · Listing copy and assets**, en + ko, into a new
+      `docs/play-store-listing.md` beside `docs/testflight-beta-info.md` — the
+      Beta App Description there is most of the full description already, and the
+      same one-line-per-paragraph rule applies. Needs: app name, short description
+      (80 chars), full description (4000), 512px icon (downscale
+      `assets/icon.png`, which is 1024), **a 1024×500 feature graphic, which does
+      not exist in any form**, and at least two phone screenshots.
+      ⚠️ **Check the generative-AI policy while writing these.** Play has
+      required an in-app way to report offensive AI output; Amgi generates card
+      content through Gemini. If it applies it is a small feature, not a form.
+
+      **6 · Testers and cutover.** Internal track takes up to 100 tester emails,
+      each a Google account. ⚠️ **Testers must uninstall the sideloaded APK
+      first** — different signing key, so it cannot install over the top — and
+      that loses the AsyncStorage layer: streak, offline snapshot, rating queue.
+      **Cards are in Firestore and survive.** Say so in the invitation rather
+      than letting someone find out.
+      Then the notes follow the cutover: the APK channel comes out of
+      [tech-stack.md](tech-stack.md), Android gets build rows under Builds in
+      [status.md](status.md) the way iOS has, and **the line at the foot of this
+      file stops being true** — a Play release is reviewed, so Android is no
+      longer the exception that ships the same day.
+
+      **Worth doing before anyone but you is invited**, though it blocks nothing:
+      reminders have no `setNotificationChannel` call and no runtime
+      `POST_NOTIFICATIONS` request, so on Android 13+ they land in the default
+      "Miscellaneous" channel if they arrive at all — and **nothing but sign-in
+      has ever been exercised on Android** (the never-verified ⚠️ under Builds in
+      [status.md](status.md)).
+
+- [ ] **Irregular French verbs.** Conjugation ships with regular groups only, and
+      a French conjugation tool without `être`, `avoir` and `aller` is missing the
+      verbs a learner reaches for first. **The model already holds them**:
+      `ConjugationIrregularVerb` stores forms per tense, `FRENCH_IRREGULARS` is
+      `[]`, and the Verbs tab already has a section that says so. **This item is
+      now a data file and a licence check, nothing else.** ⚠️ **This is the
+      sourcing job, and it is the whole reason they were left out**: an irregular
+      form is recalled content, not a rule, and `docs/packs/README.md` governs —
+      the model is not a source. So this is a citable reference, a licence check,
+      and a dataset; it is not a prompt.
+      **The engine is already shaped for it**: `ConjugationVerb.group` dispatches
+      rules and deliberately has no `irregular` member, because an irregular verb
+      is stored forms rather than a rule class. Adding them means a table of
+      forms beside the generator, not a fourth branch inside it.
+      **The verb list wants the same treatment.** What shipped is described as
+      *common*, not frequency-ranked, because ranking it is a sourcing claim with
+      nothing behind it. Same job.
 
 ## Medium
 
@@ -249,8 +293,8 @@ Moved High → Medium 2026-09-21, on the user's call, when Munli took High._
       Convention to follow, from the user 2026-09-09: an image of Claude's
       account menu — rows with leading icons, thin separators grouping them,
       the destructive action last and alone.
-      **It gained a second reason on 2026-09-21.** The mode switcher in High
-      wants a *Switch mode ›* row as its discoverable door, and a row menu is
+      **It gained a second reason on 2026-09-21.** The mode switcher (shipped in
+      PR #135, under Queued for the next build) wants a *Switch mode ›* row as its discoverable door, and a row menu is
       where that row goes — a hold on a tab is not something a user finds by
       looking. Neither item blocks the other, but landing them together is one
       menu built once instead of a menu and then a menu edit.
@@ -279,10 +323,12 @@ green. What's left is what those two now *show*.
 
 - [ ] **Delete `packages/core/src/grammar.ts` and its API route.** ⚠️ **Split
       2026-09-14 — `writing.ts` is no longer part of this**, and as of 2026-09-21
-      it is not even the same *kind* of case: the writing item in High gives it
-      real callers again, at which point it is ordinary live code and its
-      `DO NOT DELETE AS DEAD CODE` header has to go with the same commit. **Keep
-      `writing.ts` and its route.** `grammar.ts` is the opposite case: `getPatternExercise` and
+      it is not even the same *kind* of case: writing shipped in PR #136, so
+      `writing.ts` has real callers on both platforms again
+      (`WritingReviewPanel`). It is ordinary live code now, which means **its
+      `DO NOT DELETE AS DEAD CODE` header is already false** and should go —
+      it argues from "no callers in this tree", which stopped being true on
+      merge. **Keep `writing.ts` and its route.** `grammar.ts` is the opposite case: `getPatternExercise` and
       `gradeFromReview` are the generation and model-grading the new design
       explicitly rejects, so nothing will want them back.
       **The gate is open**: it was "once no build predating the 2026-08-18 grammar
