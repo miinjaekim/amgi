@@ -33,8 +33,12 @@ section worth seeing without scrolling._
       press returns to that tab's home, Saved is an inventory of tiles with a
       sourced note on each tense, and Writing's empty space carries a worked
       example.
-      ⚠️ **The keyboard fix is the one that needs a device** — it is the only
-      thing in the stack that cannot be confirmed any other way.
+      **Practice, the keyboard, the tab press, Saved and Writing were all
+      confirmed by the user on 2026-09-22**, which leaves the two refinements
+      that followed: a round now says it went well rather than only correcting,
+      and a right answer in one-box mode advances itself after 800ms.
+      ⚠️ **Those two are what still needs a device** — an 800ms pause is a feel
+      question, and nothing else in the stack can be confirmed any other way.
       ⚠️ **The worked example is French-only** by design; adding a language is
       a draft row in `docs/packs/writing-worked-example-draft.md` and one
       entry in `writing.ts`.

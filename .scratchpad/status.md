@@ -369,6 +369,39 @@ once, so a path that worked on build 14 is not evidence about build 15.
 Closed calls, kept with their reasoning — a decision whose reasoning is lost gets
 reopened by the next person to notice the symptom. Newest first.
 
+### A right answer says so, and then gets out of the way (2026-09-22)
+
+**Two refinements after the user practised with the revisions**, into the same
+branch.
+
+⚠️ **Getting everything right looked exactly like getting no feedback.** A
+checked round only ever *corrected*, so a perfect table came back with nothing
+said — and the honest reading of silence is "none of it landed". The lesson
+generalises past this screen: **an interface that only speaks up when something
+is wrong has not said nothing, it has said something wrong.** A box now carries
+`✓` or `✗`, and a round closes with "All correct." or "5 of 6 right" either way.
+
+⚠️ **The glyph carries as much as the colour**, deliberately. Amgi ships eight
+palettes and a palette can put `highlight` and `error` close together — Forest
+has them *identical* — so a right/wrong distinction drawn in colour alone is one
+theme away from being no distinction. The pairing itself is `review.tsx`'s
+(`typedVerdictOk` highlight, `typedVerdictMiss` red), so the two surfaces agree
+about which colour means which; Munli uses `C.error` rather than that screen's
+literal red because the mode's palette carries one.
+
+⚠️ **A right answer in one-box mode advances itself after 800ms.** *"I can't
+imagine any reason a user might want to stay on that question longer if they
+already have answered correctly."* The flash is what keeps the auto-advance from
+reading as the answer being ignored — the two changes are one change. A wrong
+answer waits, because there is a form to look at, and a whole table waits,
+because there is a score to read.
+
+**The flash is its own state rather than `checked`**, which is the load-bearing
+detail: disabling the input between two questions meant to run together drops
+focus on web and dismisses the keyboard on native. `check` guards the
+double-submit instead, and the pending advance is cleared by Stop, by a tab
+press and on unmount.
+
 ### What the first Munli pass got wrong, from using it (2026-09-22)
 
 **Four corrections from the user's review of PRs #145–#150**, landed as #151 on
