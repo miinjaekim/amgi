@@ -3,6 +3,7 @@ import { useMemo } from 'react';
 import { summarizeConjugation } from '@amgi/core';
 import { useUser } from '@/components/UserContext';
 import { useConjugation } from '@/hooks/useConjugation';
+import PageHeader from '@/components/PageHeader';
 import { t } from '@/lib/i18n';
 
 /**
@@ -38,9 +39,7 @@ export default function MunliProgressPage() {
 
   return (
     <div className="max-w-2xl">
-      <h1 className="text-2xl font-mono font-bold mb-6" style={{ color: 'var(--color-text)' }}>
-        {t(interfaceLanguage, 'munliProgressTitle')}
-      </h1>
+      <PageHeader titleKey="munliProgressTitle" />
 
       {!summary ? (
         <p className="font-mono text-sm" style={{ color: 'var(--color-muted)' }}>

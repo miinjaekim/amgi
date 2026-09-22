@@ -369,6 +369,42 @@ once, so a path that worked on build 14 is not evidence about build 15.
 Closed calls, kept with their reasoning — a decision whose reasoning is lost gets
 reopened by the next person to notice the symptom. Newest first.
 
+### Munli's titles come from one place, and so does its gutter (2026-09-22)
+
+**Noticed by the user**: Writing's title is smaller than the rest. It was —
+`fontSize: 18` in a monospace face nothing else in the mode set — but the real
+finding is that **none of Munli's five tabs used the answer Amgi already had**.
+`PageHeader` exports `PAGE_TITLE_SIZE = 21` with `color: C.highlight`, and its
+comment records that these drifted once before; Munli's tabs each rolled their
+own `fontSize: 22, color: C.text`.
+
+**Two arrangements, and the split is `cards.tsx`'s.** A tab whose title is plain
+takes the component (Saved, Topics). A tab whose header carries something else
+— a back chevron on Practice and on the Topics detail, `ProgressHeader` above
+Munli's Progress — keeps its own header and imports the constants. `cards.tsx`
+has done exactly this since 2026-09-04.
+
+⚠️ **The help props became optional**, which they were not. Practice, Saved and
+Topics have nothing non-obvious to say, and inventing help copy to satisfy a
+required prop would produce the one thing the component's own comment rejects: a
+"?" that restates the page's name.
+
+⚠️ **`SCREEN_GUTTER` is new, and it is what stopped this being titles only.**
+The header sits at 20 and Munli's screens sat at 16, so a title taken from the
+component would have hung four pixels outside the list under it — the very drift
+the size constant exists to stop. Munli's screens now share the constant.
+**Amgi's four still hardcode theirs**, because that backlog item is blocked on a
+real question — `review.tsx` is not uniformly 20 — and answering it was not part
+of this.
+
+**On web it was a colour, not a size.** Every Munli `h1` was already `text-2xl`;
+Amgi's are `--color-highlight` and Munli's were `--color-text`. ⚠️ **The face
+comes off the path rather than a prop**: Munli is monospaced throughout and Amgi
+is not, and `getNavItemsForMode` already derives the mode from the pathname for
+the stated reason that a caller then cannot render one mode's chrome around
+another mode's page. Munli's home keeps its `text-3xl` — it is a landing hero,
+not a page title. PR #149.
+
 ### Web gets a help sheet, and Writing is what needed one (2026-09-22)
 
 **Asked for by the user**: the Writing tab drops you into a panel with no

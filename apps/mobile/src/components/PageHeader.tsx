@@ -20,13 +20,36 @@ import type { Palette } from '../theme';
  */
 export const PAGE_TITLE_SIZE = 21;
 
+/**
+ * The gutter a screen's content lines up on.
+ *
+ * Exported for the same reason as the size above, and prompted by the same kind
+ * of drift: Munli's tabs sat at 16 while this header sat at 20, so a title
+ * adopted from here would have hung four pixels outside the list under it. A
+ * screen that renders its own header — one with a back button, or one that
+ * already has `ProgressHeader` above it — uses this rather than its own 20.
+ *
+ * ⚠️ **Amgi's four screens still hardcode theirs**, and that is a separate
+ * backlog item: `review.tsx` is not uniformly 20, so a constant cannot cover it
+ * until somebody decides whether its 16 is deliberate.
+ */
+export const SCREEN_GUTTER = 20;
+
 interface Props {
   titleKey: TranslationKey;
-  helpTitleKey: TranslationKey;
+  /**
+   * The help sheet, all three keys or none.
+   *
+   * ⚠️ **Optional since 2026-09-22**, when Munli's tabs took this component for
+   * its title. Practice, Saved and Topics have nothing non-obvious to say, and
+   * writing copy to satisfy a required prop would be a "?" that restates the
+   * page's name — the thing this component's own comment rejects.
+   */
+  helpTitleKey?: TranslationKey;
   /** One sentence answering "what is this page". */
-  helpLeadKey: TranslationKey;
+  helpLeadKey?: TranslationKey;
   /** The non-obvious mechanics, one per line, split on `\n`. */
-  helpPointsKey: TranslationKey;
+  helpPointsKey?: TranslationKey;
   /**
    * Show the streak at the right end of the title row.
    *
@@ -58,21 +81,28 @@ export default function PageHeader({ titleKey, helpTitleKey, helpLeadKey, helpPo
   const { C } = useTheme();
   const s = useMemo(() => makeStyles(C), [C]);
   const [helpOpen, setHelpOpen] = useState(false);
+  // An object rather than a boolean, so the three keys narrow together: they
+  // are all present or all absent, and nothing downstream has to assert it.
+  const help = helpTitleKey && helpLeadKey && helpPointsKey
+    ? { title: helpTitleKey, lead: helpLeadKey, points: helpPointsKey }
+    : null;
 
   return (
     <>
       <View style={s.header}>
         <Text style={s.title}>{t(interfaceLanguage, titleKey)}</Text>
-        <TouchableOpacity
-          style={s.helpBtn}
-          onPress={() => setHelpOpen(true)}
-          accessibilityRole="button"
-          accessibilityLabel={t(interfaceLanguage, 'helpButtonLabel')}
-          // The icon is small by design; this keeps the tap target honest.
-          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-        >
-          <Ionicons name="help-circle-outline" size={20} color={C.muted} />
-        </TouchableOpacity>
+        {help && (
+          <TouchableOpacity
+            style={s.helpBtn}
+            onPress={() => setHelpOpen(true)}
+            accessibilityRole="button"
+            accessibilityLabel={t(interfaceLanguage, 'helpButtonLabel')}
+            // The icon is small by design; this keeps the tap target honest.
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          >
+            <Ionicons name="help-circle-outline" size={20} color={C.muted} />
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* Under the title, not beside it. Sharing the row cost the title the
@@ -87,12 +117,13 @@ export default function PageHeader({ titleKey, helpTitleKey, helpLeadKey, helpPo
           gap on every account that has not started one. */}
       {streak && <StreakBadge style={s.streakRow} />}
 
-      <Modal
-        visible={helpOpen}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setHelpOpen(false)}
-      >
+      {help && (
+        <Modal
+          visible={helpOpen}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setHelpOpen(false)}
+        >
         <View style={s.backdrop}>
           {/* Tap-to-dismiss sits on its own layer *behind* the sheet rather
               than wrapping it. Wrapping is the usual shape (see
@@ -109,7 +140,7 @@ export default function PageHeader({ titleKey, helpTitleKey, helpLeadKey, helpPo
             accessibilityLabel={t(interfaceLanguage, 'helpClose')}
           />
           <View style={s.sheet}>
-            <Text style={s.helpTitle}>{t(interfaceLanguage, helpTitleKey)}</Text>
+            <Text style={s.helpTitle}>{t(interfaceLanguage, help.title)}</Text>
             {/* Shaped rather than merely shortened: one sentence that answers
                 the question, then the mechanics a user cannot infer from the
                 screen. Someone who taps "?" wants to stop reading quickly, and
@@ -119,8 +150,8 @@ export default function PageHeader({ titleKey, helpTitleKey, helpLeadKey, helpPo
                 than the normal case — the copy fits without it on a typical
                 phone, which is the point. */}
             <ScrollView style={s.bodyScroll} contentContainerStyle={s.bodyContent}>
-              <Text style={s.helpLead}>{t(interfaceLanguage, helpLeadKey)}</Text>
-              {t(interfaceLanguage, helpPointsKey).split('\n').map(point => (
+              <Text style={s.helpLead}>{t(interfaceLanguage, help.lead)}</Text>
+              {t(interfaceLanguage, help.points).split('\n').map(point => (
                 <View key={point} style={s.pointRow}>
                   <Text style={s.bullet}>·</Text>
                   {/* `flex: 1` so a wrapped second line stays aligned with the
@@ -135,6 +166,7 @@ export default function PageHeader({ titleKey, helpTitleKey, helpLeadKey, helpPo
           </View>
         </View>
       </Modal>
+      )}
     </>
   );
 }
@@ -143,12 +175,12 @@ function makeStyles(C: Palette) {
   return StyleSheet.create({
     header: {
       flexDirection: 'row', alignItems: 'center', gap: 8,
-      paddingHorizontal: 20, paddingVertical: 12,
+      paddingHorizontal: SCREEN_GUTTER, paddingVertical: 12,
     },
     title: { fontSize: PAGE_TITLE_SIZE, fontWeight: '700', color: C.highlight },
     // `flex-start` keeps the tap target on the badge itself; stretched, the
     // whole width of the row would navigate to Progress.
-    streakRow: { alignSelf: 'flex-start', paddingHorizontal: 20, paddingBottom: 10 },
+    streakRow: { alignSelf: 'flex-start', paddingHorizontal: SCREEN_GUTTER, paddingBottom: 10 },
     helpBtn: { padding: 2 },
     backdrop: {
       flex: 1, backgroundColor: 'rgba(0,0,0,0.6)',

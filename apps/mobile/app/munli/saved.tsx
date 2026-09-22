@@ -7,6 +7,7 @@ import { useTheme } from '../../src/context/ThemeContext';
 import { useConjugation } from '../../src/context/ConjugationContext';
 import { useFloatingTabBarHeight } from '../../src/components/FloatingTabBar';
 import ParadigmTable from '../../src/components/ParadigmTable';
+import PageHeader, { SCREEN_GUTTER } from '../../src/components/PageHeader';
 import type { Palette } from '../../src/theme';
 
 /**
@@ -43,9 +44,7 @@ export default function SavedScreen() {
 
   return (
     <SafeAreaView style={s.safe} edges={['top']}>
-      <View style={s.header}>
-        <Text style={s.title}>{t(interfaceLanguage, 'savedTitle')}</Text>
-      </View>
+      <PageHeader titleKey="savedTitle" />
       <ScrollView contentContainerStyle={s.content}>
         {!spec || !enrolment ? (
           <Text style={s.empty}>{t(interfaceLanguage, 'conjugationUnavailable')}</Text>
@@ -126,9 +125,7 @@ export default function SavedScreen() {
 function makeStyles(C: Palette, tabBarHeight: number) {
   return StyleSheet.create({
     safe: { flex: 1, backgroundColor: C.bg },
-    header: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 4 },
-    title: { color: C.text, fontSize: 22, fontWeight: '700' },
-    content: { padding: 16, paddingTop: 8, paddingBottom: tabBarHeight },
+    content: { padding: SCREEN_GUTTER, paddingTop: 4, paddingBottom: tabBarHeight },
     intro: { color: C.muted, fontSize: 13, lineHeight: 18, marginBottom: 16 },
     row: { borderBottomWidth: 1, borderBottomColor: C.border, paddingBottom: 12 },
     rowHead: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },

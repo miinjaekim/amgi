@@ -4,9 +4,10 @@ import {
   boxItemId, buildConjugationQueue, buildTables, conjugationHints, countDueBoxes,
   countQuestions, hintedVerdict, isCorrectForm, listPracticeSections, rateBox,
 } from '@amgi/core';
-import type { ConjugationProgressMap, ConjugationRound } from '@amgi/core';
+import type { ConjugationProgressMap, ConjugationRound, TranslationKey } from '@amgi/core';
 import { useUser } from '@/components/UserContext';
 import { useConjugation } from '@/hooks/useConjugation';
+import PageHeader from '@/components/PageHeader';
 import { t } from '@/lib/i18n';
 
 /**
@@ -118,15 +119,15 @@ export default function PracticePage() {
     setChecked(false);
   };
 
-  const heading = (text: string) => (
-    <h1 className="text-2xl font-mono font-bold mb-6" style={{ color: 'var(--color-text)' }}>{text}</h1>
-  );
+  // One component for every title in the mode, which is what stops five of
+  // them drifting apart — the argument `PAGE_TITLE_SIZE` makes on native.
+  const heading = (key: TranslationKey) => <PageHeader titleKey={key} />;
   const primary = 'px-5 py-2.5 rounded-lg font-mono font-bold transition-colors disabled:opacity-40';
 
   if (stage === 'picker') {
     return (
       <div className="max-w-2xl">
-        {heading(t(interfaceLanguage, 'practiceTitle'))}
+        {heading('practiceTitle')}
         {/* One row per practice type. Writing is not here — it diagnoses
             rather than practises, so it keeps its own surface. */}
         <button
@@ -198,7 +199,7 @@ export default function PracticePage() {
     if (!spec) {
       return (
         <div className="max-w-2xl">
-          {heading(t(interfaceLanguage, 'munliToolConjugation'))}
+          {heading('munliToolConjugation')}
           <p className="font-mono text-sm" style={{ color: 'var(--color-muted)' }}>
             {t(interfaceLanguage, 'conjugationUnavailable')}
           </p>
@@ -215,7 +216,7 @@ export default function PracticePage() {
           : t(interfaceLanguage, 'practiceEverything');
       return (
         <div className="max-w-2xl">
-          {heading(t(interfaceLanguage, 'munliToolConjugation'))}
+          {heading('munliToolConjugation')}
           {backLink(t(interfaceLanguage, 'practiceBackToSections'), () => setChosen(null))}
           <p className="mt-4 font-mono font-bold" style={{ color: 'var(--color-text)' }}>{label}</p>
           <p className="font-mono text-sm mb-6" style={{ color: 'var(--color-muted)' }}>
@@ -253,7 +254,7 @@ export default function PracticePage() {
     if (openSection) {
       return (
         <div className="max-w-2xl">
-          {heading(t(interfaceLanguage, 'munliToolConjugation'))}
+          {heading('munliToolConjugation')}
           {backLink(t(interfaceLanguage, 'practiceBackToSections'), () => setOpenTense(null))}
           <p className="mt-4 font-mono font-bold" style={{ color: 'var(--color-text)' }}>{openSection.label}</p>
           <p className="font-mono text-sm mb-4" style={{ color: 'var(--color-muted)' }}>
@@ -279,7 +280,7 @@ export default function PracticePage() {
     /* ── The sections ─────────────────────────────────────────────────── */
     return (
       <div className="max-w-2xl">
-        {heading(t(interfaceLanguage, 'munliToolConjugation'))}
+        {heading('munliToolConjugation')}
         <p className="font-mono text-sm mb-4" style={{ color: 'var(--color-muted)' }}>
           {t(interfaceLanguage, 'practicePickSection')}
         </p>
@@ -311,7 +312,7 @@ export default function PracticePage() {
   if (!round) {
     return (
       <div className="max-w-2xl">
-        {heading(t(interfaceLanguage, stopped ? 'practiceStoppedTitle' : 'practiceDoneTitle'))}
+        {heading(stopped ? 'practiceStoppedTitle' : 'practiceDoneTitle')}
         <p className="font-mono text-sm mb-6" style={{ color: 'var(--color-muted)' }}>
           {stopped
             ? t(interfaceLanguage, 'practiceCount', { done: answered, total })

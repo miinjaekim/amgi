@@ -6,6 +6,7 @@ import type { ConjugationSubject } from '@amgi/core';
 import { useUser } from '@/components/UserContext';
 import { useConjugation } from '@/hooks/useConjugation';
 import ParadigmTable from '@/components/ParadigmTable';
+import PageHeader from '@/components/PageHeader';
 import MultiSelect from '@/components/MultiSelect';
 import { t } from '@/lib/i18n';
 
@@ -55,9 +56,7 @@ export default function VerbTopicPage() {
   if (!spec || !enrolment) {
     return (
       <div className="max-w-2xl">
-        <h1 className="text-2xl font-mono font-bold mb-6" style={{ color: 'var(--color-text)' }}>
-          {t(interfaceLanguage, irregular ? 'verbsIrregular' : 'topicRegularVerbs')}
-        </h1>
+        <PageHeader titleKey={irregular ? 'verbsIrregular' : 'topicRegularVerbs'} />
         <p className="font-mono text-sm" style={{ color: 'var(--color-muted)' }}>
           {t(interfaceLanguage, 'conjugationUnavailable')}
         </p>
@@ -127,9 +126,7 @@ export default function VerbTopicPage() {
 
   return (
     <div className="max-w-2xl">
-      <h1 className="text-2xl font-mono font-bold mb-1" style={{ color: 'var(--color-text)' }}>
-        {t(interfaceLanguage, irregular ? 'verbsIrregular' : 'topicRegularVerbs')}
-      </h1>
+      <PageHeader titleKey={irregular ? 'verbsIrregular' : 'topicRegularVerbs'} className="mb-1" />
       <p className="font-mono text-sm mb-6" style={{ color: 'var(--color-muted)' }}>
         {t(interfaceLanguage, irregular ? 'irregularIntro' : 'verbsIntro')}
       </p>

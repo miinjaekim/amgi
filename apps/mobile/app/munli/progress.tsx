@@ -7,6 +7,7 @@ import { useTheme } from '../../src/context/ThemeContext';
 import { useConjugation } from '../../src/context/ConjugationContext';
 import ProgressHeader from '../../src/components/ProgressHeader';
 import { useFloatingTabBarHeight } from '../../src/components/FloatingTabBar';
+import { PAGE_TITLE_SIZE, SCREEN_GUTTER } from '../../src/components/PageHeader';
 import type { Palette } from '../../src/theme';
 
 /**
@@ -99,8 +100,11 @@ export default function MunliProgressScreen() {
 function makeStyles(C: Palette, tabBarHeight: number) {
   return StyleSheet.create({
     safe: { flex: 1, backgroundColor: C.bg },
-    content: { padding: 16, paddingTop: 0, paddingBottom: tabBarHeight },
-    title: { color: C.text, fontSize: 22, fontWeight: '700', marginBottom: 16 },
+    content: { padding: SCREEN_GUTTER, paddingTop: 0, paddingBottom: tabBarHeight },
+    // ⚠️ Not `PageHeader`: `ProgressHeader` is already above this, and two
+    // headers on one screen is one too many. The constants keep the title in
+    // step anyway — the arrangement `cards.tsx` has.
+    title: { color: C.highlight, fontSize: PAGE_TITLE_SIZE, fontWeight: '700', marginBottom: 16 },
     note: { color: C.muted, fontSize: 13, marginBottom: 16 },
     tiles: { flexDirection: 'row', gap: 10, marginBottom: 24 },
     tile: {

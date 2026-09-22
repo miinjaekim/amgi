@@ -10,6 +10,7 @@ import { useTheme } from '../../../src/context/ThemeContext';
 import { useConjugation } from '../../../src/context/ConjugationContext';
 import ParadigmTable from '../../../src/components/ParadigmTable';
 import FilterSheet, { type FilterGroup } from '../../../src/components/FilterSheet';
+import { PAGE_TITLE_SIZE, SCREEN_GUTTER } from '../../../src/components/PageHeader';
 import type { Palette } from '../../../src/theme';
 
 /**
@@ -282,12 +283,18 @@ export default function VerbTopicScreen() {
 function makeStyles(C: Palette) {
   return StyleSheet.create({
     safe: { flex: 1, backgroundColor: C.bg },
-    header: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 12, paddingTop: 12, paddingBottom: 4 },
-    title: { color: C.text, fontSize: 22, fontWeight: '700' },
+    // ⚠️ `SCREEN_GUTTER` rather than a literal: this screen renders its own
+    // header, and a title four pixels off the list under it is exactly the
+    // drift the constant exists to stop.
+    header: {
+      flexDirection: 'row', alignItems: 'center', gap: 8,
+      paddingHorizontal: SCREEN_GUTTER, paddingTop: 12, paddingBottom: 4,
+    },
+    title: { color: C.highlight, fontSize: PAGE_TITLE_SIZE, fontWeight: '700' },
     content: { paddingBottom: 48 },
     filterBar: {
       flexDirection: 'row', gap: 8, backgroundColor: C.bg,
-      paddingHorizontal: 16, paddingTop: 8, paddingBottom: 10,
+      paddingHorizontal: SCREEN_GUTTER, paddingTop: 8, paddingBottom: 10,
     },
     filterBtn: {
       flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6,
@@ -297,8 +304,8 @@ function makeStyles(C: Palette) {
     filterBtnLabel: { color: C.muted, fontSize: 12 },
     filterBtnText: { flex: 1, color: C.text, fontSize: 13 },
     filterBtnCaret: { color: C.muted, fontSize: 12 },
-    intro: { color: C.muted, fontSize: 12, paddingHorizontal: 16, marginBottom: 18 },
-    section: { paddingHorizontal: 16, paddingBottom: 20, marginBottom: 16, borderBottomWidth: 1, borderBottomColor: C.border },
+    intro: { color: C.muted, fontSize: 12, paddingHorizontal: SCREEN_GUTTER, marginBottom: 18 },
+    section: { paddingHorizontal: SCREEN_GUTTER, paddingBottom: 20, marginBottom: 16, borderBottomWidth: 1, borderBottomColor: C.border },
     sectionHead: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 10 },
     sectionLabel: { flex: 1, color: C.text, fontSize: 17, fontWeight: '700' },
     verbBtn: {
@@ -320,6 +327,6 @@ function makeStyles(C: Palette) {
     chipOn: { backgroundColor: C.highlight, borderColor: C.highlight },
     chipText: { color: C.muted, fontSize: 12 },
     chipTextOn: { color: C.bg, fontWeight: '700' },
-    empty: { color: C.muted, fontSize: 12, paddingHorizontal: 16, paddingVertical: 8 },
+    empty: { color: C.muted, fontSize: 12, paddingHorizontal: SCREEN_GUTTER, paddingVertical: 8 },
   });
 }
