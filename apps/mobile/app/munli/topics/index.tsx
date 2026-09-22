@@ -9,6 +9,7 @@ import { useUser } from '../../../src/context/UserContext';
 import { useTheme } from '../../../src/context/ThemeContext';
 import { useConjugation } from '../../../src/context/ConjugationContext';
 import { useFloatingTabBarHeight } from '../../../src/components/FloatingTabBar';
+import PageHeader, { SCREEN_GUTTER } from '../../../src/components/PageHeader';
 import type { Palette } from '../../../src/theme';
 
 /**
@@ -45,9 +46,7 @@ export default function TopicsScreen() {
 
   return (
     <SafeAreaView style={s.safe} edges={['top']}>
-      <View style={s.header}>
-        <Text style={s.title}>{t(interfaceLanguage, 'verbsTitle')}</Text>
-      </View>
+      <PageHeader titleKey="verbsTitle" />
       <ScrollView contentContainerStyle={s.content}>
         <Text style={s.intro}>{t(interfaceLanguage, 'topicsIntro')}</Text>
 
@@ -84,9 +83,7 @@ export default function TopicsScreen() {
 function makeStyles(C: Palette, tabBarHeight: number) {
   return StyleSheet.create({
     safe: { flex: 1, backgroundColor: C.bg },
-    header: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 4 },
-    title: { color: C.text, fontSize: 22, fontWeight: '700' },
-    content: { padding: 16, paddingTop: 8, paddingBottom: tabBarHeight },
+    content: { padding: SCREEN_GUTTER, paddingTop: 4, paddingBottom: tabBarHeight },
     intro: { color: C.muted, fontSize: 13, lineHeight: 18, marginBottom: 20 },
     row: {
       flexDirection: 'row', alignItems: 'center', gap: 12,
