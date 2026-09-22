@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
+  t,
   acceptedForms,
   boxItemId,
   buildConjugationQueue,
@@ -24,6 +25,7 @@ import {
   isCorrectForm,
   listPracticeSections,
   listPracticeTables,
+  listSavedKinds,
   listSavedSubjects,
   normalizeEnrolment,
   normalizeProgress,
@@ -626,9 +628,18 @@ describe('buildConjugationQueue', () => {
   /**
    * ⚠️ **The complaint, answered.** One due table used to be one question: a
    * learner weak on `ils` could finish a session without being asked for it.
+   * Every due box is asked — as its own question, since 2026-09-22.
    */
-  it('asks every due box of every due table', () => {
+  it('asks every due box, one to a question', () => {
     const queue = buildConjugationQueue(spec, tables, {}, {}, NOW, fixed);
+    expect(queue).toHaveLength(tables.length * boxes);
+    expect(countQuestions(queue)).toBe(tables.length * boxes);
+    for (const round of queue) expect(round.personIds).toHaveLength(1);
+  });
+
+  /** ⚠️ The same boxes either way; only the packaging differs. */
+  it('asks the same boxes a table at a time when told to', () => {
+    const queue = buildConjugationQueue(spec, tables, {}, { wholeTable: true }, NOW, fixed);
     expect(queue).toHaveLength(tables.length);
     expect(countQuestions(queue)).toBe(tables.length * boxes);
     for (const round of queue) expect(round.personIds).toEqual(spec.persons.map(p => p.id));
@@ -649,9 +660,8 @@ describe('buildConjugationQueue', () => {
     expect(buildConjugationQueue(spec, tables, scheduled(LATER), {}, NOW, fixed)).toEqual([]);
   });
 
-  it('asks the whole table when told to include what is not due', () => {
+  it('asks every box when told to include what is not due', () => {
     const queue = buildConjugationQueue(spec, tables, scheduled(LATER), { includeNotDue: true }, NOW, fixed);
-    expect(queue).toHaveLength(tables.length);
     expect(countQuestions(queue)).toBe(tables.length * boxes);
   });
 
@@ -670,9 +680,10 @@ describe('buildConjugationQueue', () => {
   });
 
   /** ⚠️ One vehicle per round: a paradigm of six different verbs is not one. */
-  it('conjugates the whole round through a single vehicle', () => {
+  it('conjugates a whole-table round through a single vehicle', () => {
     for (const r of [0, 0.25, 0.5, 0.75, 0.99]) {
-      for (const round of buildConjugationQueue(spec, tables, {}, {}, NOW, () => r)) {
+      const queue = buildConjugationQueue(spec, tables, {}, { wholeTable: true }, NOW, () => r);
+      for (const round of queue) {
         const subject = findSubject(spec, `group:${round.table.subjectId}`) as ConjugationGroup;
         expect(subject.vehicles).toContain(round.table.infinitive);
         for (const personId of round.personIds) {
@@ -682,11 +693,95 @@ describe('buildConjugationQueue', () => {
     }
   });
 
+  /**
+   * ⚠️ **A vehicle per question, not per session.** Six boxes of `-er · présent`
+   * asked through six different verbs is the group being the item; asked through
+   * one verb it is that word being the item.
+   */
+  it('varies the vehicle between the boxes of one table', () => {
+    let draws = 0;
+    // A walking value rather than a fixed one, so each draw differs — the real
+    // `Math.random` does this and a fixed stub would hide the per-box draw.
+    const queue = buildConjugationQueue(spec, tables, {}, {}, NOW, () => ((draws++) % 7) / 7);
+    const er = queue.filter(round => round.table.subjectId === 'er');
+    expect(new Set(er.map(round => round.table.infinitive)).size).toBeGreaterThan(1);
+  });
+
   it('shuffles rather than running in subject order', () => {
-    const queue = buildConjugationQueue(spec, tables, {}, {}, NOW, () => 0.7);
+    const queue = buildConjugationQueue(spec, tables, {}, { wholeTable: true }, NOW, () => 0.7);
     expect(queue.map(q => q.table.subjectId)).not.toEqual(tables.map(t => t.subjectId));
   });
+
+  /** A session that asked all six `-er` boxes in a row would drill one table. */
+  it('does not run a table\'s boxes back to back', () => {
+    let draws = 0;
+    const queue = buildConjugationQueue(spec, tables, {}, {}, NOW, () => ((draws++) % 11) / 11);
+    const ids = queue.map(round => round.table.subjectId);
+    expect(ids.slice(0, boxes).every(id => id === ids[0])).toBe(false);
+  });
 });
+/**
+ * ⚠️ **A tense note is sourced content**, tiered and cited in
+ * `docs/packs/french-tense-notes-draft.md`. These assertions are about the
+ * wiring, not the prose: that every French tense has one, that both keys travel
+ * together, and that the points are the help-sheet shape rather than a
+ * paragraph.
+ */
+describe('tense notes', () => {
+  it('gives every French tense a note', () => {
+    for (const tense of spec.tenses) {
+      expect(tense.aboutLeadKey).toBeTruthy();
+      expect(tense.aboutPointsKey).toBeTruthy();
+    }
+  });
+
+  it('carries both keys or neither, since one alone renders a heading with no body', () => {
+    for (const tense of spec.tenses) {
+      expect(!!tense.aboutLeadKey).toBe(!!tense.aboutPointsKey);
+    }
+  });
+
+  it('writes the points one use to a line, in both locales', () => {
+    for (const language of ['English', 'Korean'] as const) {
+      for (const tense of spec.tenses) {
+        const points = t(language, tense.aboutPointsKey!).split('\n');
+        expect(points.length).toBeGreaterThanOrEqual(2);
+        for (const point of points) expect(point.trim()).toBe(point);
+      }
+    }
+  });
+
+  /** A note the reader cannot see the end of is a paragraph by another name. */
+  it('keeps a lead to one sentence', () => {
+    for (const language of ['English', 'Korean'] as const) {
+      for (const tense of spec.tenses) {
+        expect(t(language, tense.aboutLeadKey!).length).toBeLessThan(90);
+      }
+    }
+  });
+});
+
+/**
+ * ⚠️ **A round says how it went even when nothing needs fixing.** Getting
+ * everything right used to look exactly like getting no feedback, so these two
+ * strings are what a perfect round shows — and a locale that dropped a
+ * placeholder would show a number-less sentence rather than fail.
+ */
+describe('round feedback copy', () => {
+  for (const language of ['English', 'Korean'] as const) {
+    it(`substitutes both counts in ${language}`, () => {
+      const line = t(language, 'conjugationRoundScore', { correct: 5, total: 6 });
+      expect(line).toContain('5');
+      expect(line).toContain('6');
+      expect(line).not.toContain('{');
+    });
+
+    it(`says something when everything was right in ${language}`, () => {
+      expect(t(language, 'conjugationAllRight').trim().length).toBeGreaterThan(0);
+    });
+  }
+});
+
 describe('languages', () => {
   it('has French and says so', () => {
     expect(hasConjugation('French')).toBe(true);
@@ -932,6 +1027,41 @@ describe('listSavedSubjects', () => {
     const sections = listPracticeSections(spec, everything, {}, NOW);
     expect(rows.reduce((n, r) => n + r.total, 0)).toBe(sections.reduce((n, s) => n + s.total, 0));
     expect(rows.reduce((n, r) => n + r.due, 0)).toBe(sections.reduce((n, s) => n + s.due, 0));
+  });
+});
+
+describe('listSavedKinds', () => {
+  const NOW = new Date('2026-09-22T12:00:00Z');
+
+  it('shelves the saved set by kind, groups first', () => {
+    const shelves = listSavedKinds(spec, everything, {}, NOW);
+    expect(shelves.map(s => s.kind)).toEqual(['group', 'verb']);
+    expect(shelves[0].subjects).toHaveLength(groupCount);
+    expect(shelves[1].subjects.map(s => s.label)).toEqual(['être', 'avoir', 'aller']);
+  });
+
+  /** ⚠️ An empty shelf belongs on Topics, which is the catalogue. */
+  it('leaves out a kind with nothing saved', () => {
+    const one = setEnrolled({ items: [] }, group('er'), ['present'], true);
+    const shelves = listSavedKinds(spec, one, {}, NOW);
+    expect(shelves).toHaveLength(1);
+    expect(shelves[0].kind).toBe('group');
+  });
+
+  it('adds its subjects up', () => {
+    const shelves = listSavedKinds(spec, everything, {}, NOW);
+    for (const shelf of shelves) {
+      expect(shelf.due).toBe(shelf.subjects.reduce((n, s) => n + s.due, 0));
+      expect(shelf.total).toBe(shelf.subjects.reduce((n, s) => n + s.total, 0));
+    }
+  });
+
+  /** Three surfaces off one enrolment, and they must agree on the totals. */
+  it('adds up to the same boxes the section list does', () => {
+    const shelves = listSavedKinds(spec, everything, {}, NOW);
+    const sections = listPracticeSections(spec, everything, {}, NOW);
+    expect(shelves.reduce((n, s) => n + s.total, 0))
+      .toBe(sections.reduce((n, s) => n + s.total, 0));
   });
 });
 

@@ -30,6 +30,7 @@ import { t } from '@/lib/i18n';
  */
 type Stage = 'picker' | 'setup' | 'session';
 
+
 export default function PracticePage() {
   const { interfaceLanguage } = useUser();
   const { spec, progress, enrolment, rate } = useConjugation();
@@ -43,6 +44,8 @@ export default function PracticePage() {
    */
   const [chosen, setChosen] = useState<{ tenseId: string | null; subjectKey: string | null } | null>(null);
   const [includeNotDue, setIncludeNotDue] = useState(false);
+  /** Ask a whole table at once. Off by default — a question is one form. */
+  const [wholeTable, setWholeTable] = useState(false);
 
   const [queue, setQueue] = useState<ConjugationRound[]>([]);
   const [index, setIndex] = useState(0);
@@ -81,9 +84,17 @@ export default function PracticePage() {
     [spec, tables, progress],
   );
 
+  /**
+   * ⚠️ **Nothing here returns this page to the picker on a nav click, because
+   * web already does.** `SideNav` and `BottomNav` render plain `<a href>`
+   * rather than `Link`, so clicking Practice while on Practice is a document
+   * navigation and every piece of this state is new. Native needs a
+   * `tabPress` listener for the same behaviour; that difference is in the
+   * navigator, not in the intent.
+   */
   const start = () => {
     if (!spec) return;
-    setQueue(buildConjugationQueue(spec, tables, progress, { includeNotDue }));
+    setQueue(buildConjugationQueue(spec, tables, progress, { includeNotDue, wholeTable }));
     setIndex(0);
     setStopped(false);
     setTyped({});
@@ -103,13 +114,26 @@ export default function PracticePage() {
     const round = queue[index];
     if (!spec || !round || checked) return;
     const updates: ConjugationProgressMap = {};
+    let right = 0;
     for (const personId of round.personIds) {
       const correct = isCorrectForm(spec, round.table, personId, typed[personId] ?? '');
+      if (correct) right += 1;
       const id = boxItemId(spec, round.table, personId);
       updates[id] = rateBox(progress[id], hintedVerdict(hints[personId] ?? 0, correct));
     }
     rate(updates);
-    setChecked(true);
+    // ⚠️ **A right answer to one question moves on with no pause at all.**
+    // This held the correct form on screen for 800ms first, and the user's
+    // call after trying it was that the pause is the thing worth removing:
+    // *"the fact that the screen changed without any blockers lets me know
+    // that I was correct"*. The screen changing **is** the feedback, and it is
+    // the one confirmation that costs nothing to read.
+    //
+    // ⚠️ **Only a wrong answer blocks**, because only a wrong answer has
+    // something to show: the form you did not produce. A whole table blocks
+    // too — there is a score to read.
+    if (round.personIds.length === 1 && right === 1) advance();
+    else setChecked(true);
   };
 
   const advance = () => {
@@ -228,10 +252,21 @@ export default function PracticePage() {
           {/* The switch that used to be a silent fallback in the draw. It
               belongs here rather than on the list: it is about this session,
               not about which part of the set you are looking at. */}
-          <label className="flex items-center gap-3 mb-6 font-mono text-sm cursor-pointer" style={{ color: 'var(--color-text)' }}>
+          <label className="flex items-center gap-3 mb-3 font-mono text-sm cursor-pointer" style={{ color: 'var(--color-text)' }}>
             <input type="checkbox" checked={includeNotDue} onChange={e => setIncludeNotDue(e.target.checked)} />
             {t(interfaceLanguage, 'practiceIncludeNotDue')}
           </label>
+          {/* ⚠️ A different exercise, not a different packaging: it asks how
+              much of a table you can produce in one go. Off by default, on the
+              user's call — imposing it turned a five-second question into a
+              form to fill in. */}
+          <label className="flex items-center gap-3 mb-1 font-mono text-sm cursor-pointer" style={{ color: 'var(--color-text)' }}>
+            <input type="checkbox" checked={wholeTable} onChange={e => setWholeTable(e.target.checked)} />
+            {t(interfaceLanguage, 'practiceWholeTable')}
+          </label>
+          <p className="font-mono text-xs mb-6 ml-7" style={{ color: 'var(--color-muted)' }}>
+            {t(interfaceLanguage, 'practiceWholeTableHint')}
+          </p>
 
           <button
             onClick={start}
@@ -330,6 +365,16 @@ export default function PracticePage() {
   }
 
   const ready = round.personIds.every(id => (typed[id] ?? '').trim().length > 0);
+  /**
+   * One box or a paradigm.
+   *
+   * ⚠️ **Read off the round rather than from the switch that built it**, so a
+   * whole-table round whose table has one box due renders as the single
+   * question it actually is — which is the honest answer, not a degraded one.
+   */
+  const single = round.personIds.length === 1;
+  const only = round.personIds[0];
+  const onlyPerson = spec?.persons.find(p => p.id === only);
 
   return (
     <div className="max-w-2xl">
@@ -356,91 +401,167 @@ export default function PracticePage() {
         {/* The verb is the vehicle; the subject is what is being tested. For a
             group they differ, and the learner needs both. */}
         <p className="font-mono text-sm" style={{ color: 'var(--color-muted)' }}>
-          {round.table.tenseLabel}
+          {single ? `${onlyPerson?.label} · ` : ''}{round.table.tenseLabel}
           {round.table.subjectKind === 'group' ? ` · ${round.table.subjectLabel}` : ''}
         </p>
-        {!checked && (
+        {!single && !checked && (
           <p className="font-mono text-xs mt-3" style={{ color: 'var(--color-muted)' }}>
             {t(interfaceLanguage, 'conjugationFillDue')}
           </p>
         )}
 
-        <div className="mt-6 flex flex-col gap-2">
-          {spec?.persons.map(person => {
-            const due = round.personIds.includes(person.id);
-            const form = round.table.forms[person.id];
-            const answer = (typed[person.id] ?? '').trim();
-            const correct = !!spec && isCorrectForm(spec, round.table, person.id, answer);
-            const taken = hints[person.id] ?? 0;
-            const hintHalves = conjugationHints(round.table, person.id);
-
-            return (
-              <div key={person.id} className="flex items-start gap-3">
-                <span className="w-20 shrink-0 pt-2 font-mono text-sm" style={{ color: 'var(--color-muted)' }}>
-                  {person.label}
-                </span>
-                <div className="min-w-0 flex-1">
-                  {/* ⚠️ A box that is not due stays masked until the round is
-                      checked: `nous parlons` on screen makes `tu parles` free,
-                      and the paradigm is only reference once it has been
-                      answered. */}
-                  {!due ? (
-                    <p className="py-2 font-mono text-lg" style={{ color: 'var(--color-muted)' }}
-                       aria-label={checked ? undefined : t(interfaceLanguage, 'conjugationNotDue')}>
-                      {checked ? form : '—'}
-                    </p>
-                  ) : checked ? (
-                    <>
-                      <p className="py-2 font-mono text-lg"
-                         style={{ color: correct ? 'var(--color-text)' : 'var(--color-highlight)' }}>
-                        {form}
-                      </p>
-                      {!correct && answer && (
-                        <p className="font-mono text-xs line-through" style={{ color: 'var(--color-muted)' }}>
-                          {answer}
-                        </p>
-                      )}
-                    </>
-                  ) : (
-                    <>
-                      <input
-                        value={typed[person.id] ?? ''}
-                        onChange={e => setTyped(prev => ({ ...prev, [person.id]: e.target.value }))}
-                        onKeyDown={e => {
-                          if (e.key !== 'Enter') return;
-                          // Enter checks once the table is filled, then Enter
-                          // moves on — the same key all the way through.
-                          if (ready) check();
-                        }}
-                        placeholder={t(interfaceLanguage, 'conjugationAnswerPlaceholder')}
-                        aria-label={`${person.label} · ${round.table.tenseLabel}`}
-                        spellCheck={false}
-                        autoComplete="off"
-                        className="w-full p-2 rounded-lg font-mono text-lg bg-[var(--color-bg)] border border-[var(--color-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--color-highlight)] text-[var(--color-text)] placeholder-[var(--color-muted)]"
-                      />
-                      {taken > 0 && (
-                        <p className="mt-1 font-mono text-sm tracking-widest" style={{ color: 'var(--color-muted)' }}>
-                          {hintHalves.slice(0, taken).join('  ')}
-                        </p>
-                      )}
-                    </>
-                  )}
-                </div>
-                {/* A hint costs the box it is taken on, which is only possible
-                    now that the box carries its own schedule. */}
-                {due && !checked && taken < hintHalves.length && (
-                  <button
-                    onClick={() => setHints(prev => ({ ...prev, [person.id]: taken + 1 }))}
-                    className="mt-1.5 shrink-0 text-xs px-3 py-1 rounded-full border transition-colors"
-                    style={{ color: 'var(--color-muted)', borderColor: 'var(--color-muted)' }}
-                  >
-                    {t(interfaceLanguage, 'conjugationHint')}
-                  </button>
+        {single ? (
+          /* ── One box ──────────────────────────────────────────────────── */
+          <div className="mt-6">
+            <input
+              value={typed[only] ?? ''}
+              onChange={e => setTyped({ [only]: e.target.value })}
+              onKeyDown={e => {
+                if (e.key !== 'Enter') return;
+                // Enter checks, then Enter moves on — the same key all the way
+                // through, so a five-second question needs no mouse.
+                if (checked) advance();
+                else if (ready) check();
+              }}
+              placeholder={t(interfaceLanguage, 'conjugationAnswerPlaceholder')}
+              aria-label={`${onlyPerson?.label} · ${round.table.tenseLabel}`}
+              autoFocus
+              spellCheck={false}
+              autoComplete="off"
+              // ⚠️ Never disabled. Disabling drops focus — and the keyboard
+              // with it on a phone — between two questions meant to run
+              // together; `check` guards the double-submit instead.
+              readOnly={checked}
+              className="w-full p-3 rounded-lg font-mono text-lg bg-[var(--color-bg)] border border-[var(--color-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--color-highlight)] text-[var(--color-text)] placeholder-[var(--color-muted)]"
+            />
+            {!checked && (hints[only] ?? 0) < conjugationHints(round.table, only).length && (
+              <button
+                onClick={() => setHints({ [only]: (hints[only] ?? 0) + 1 })}
+                className="mt-3 text-xs px-3 py-1 rounded-full border transition-colors"
+                style={{ color: 'var(--color-muted)', borderColor: 'var(--color-muted)' }}
+              >
+                {t(interfaceLanguage, 'conjugationHint')}
+              </button>
+            )}
+            {(hints[only] ?? 0) > 0 && (
+              <p className="mt-3 font-mono text-lg tracking-widest" style={{ color: 'var(--color-muted)' }}>
+                {conjugationHints(round.table, only).slice(0, hints[only] ?? 0).join('  ')}
+              </p>
+            )}
+            {/* ⚠️ Nothing renders for a right answer, because a right answer
+                is already gone — `check` advances it. The glyph below is for
+                the wrong one, where there is a form to read; the colour is not
+                carrying the verdict on its own, since a palette can put
+                highlight and error close together. */}
+            {checked && (
+              <div className="mt-4">
+                <p className="font-mono text-base font-bold text-red-400">
+                  ✗ {t(interfaceLanguage, 'conjugationWrong')} {round.table.forms[only]}
+                </p>
+                {!!(typed[only] ?? '').trim() && (
+                  <p className="mt-1 font-mono text-xs" style={{ color: 'var(--color-muted)' }}>
+                    {t(interfaceLanguage, 'typedAnswerYours')}: <span className="line-through">{(typed[only] ?? '').trim()}</span>
+                  </p>
                 )}
               </div>
-            );
-          })}
-        </div>
+            )}
+          </div>
+        ) : (
+          /* ── A paradigm ───────────────────────────────────────────────── */
+          <div className="mt-6 flex flex-col gap-2">
+            {spec?.persons.map(person => {
+              const due = round.personIds.includes(person.id);
+              const form = round.table.forms[person.id];
+              const answer = (typed[person.id] ?? '').trim();
+              const correct = !!spec && isCorrectForm(spec, round.table, person.id, answer);
+              const taken = hints[person.id] ?? 0;
+              const hintHalves = conjugationHints(round.table, person.id);
+
+              return (
+                <div key={person.id} className="flex items-start gap-3">
+                  <span className="w-20 shrink-0 pt-2 font-mono text-sm" style={{ color: 'var(--color-muted)' }}>
+                    {person.label}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    {/* ⚠️ A box that is not due stays masked until the round is
+                        checked: `nous parlons` on screen makes `tu parles`
+                        free, and the paradigm is only reference once it has
+                        been answered. */}
+                    {!due ? (
+                      <p className="py-2 font-mono text-lg" style={{ color: 'var(--color-muted)' }}
+                         aria-label={checked ? undefined : t(interfaceLanguage, 'conjugationNotDue')}>
+                        {checked ? form : '—'}
+                      </p>
+                    ) : checked ? (
+                      <>
+                        {/* A mark, not merely a colour: "nothing was corrected"
+                            is what read as no feedback, and a palette can put
+                            highlight and error close together. */}
+                        <p className={`py-2 font-mono text-lg font-bold ${correct ? '' : 'text-red-400'}`}
+                           style={correct ? { color: 'var(--color-highlight)' } : undefined}>
+                          {correct ? '✓' : '✗'} {form}
+                        </p>
+                        {!correct && answer && (
+                          <p className="font-mono text-xs line-through" style={{ color: 'var(--color-muted)' }}>
+                            {answer}
+                          </p>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        <input
+                          value={typed[person.id] ?? ''}
+                          onChange={e => setTyped(prev => ({ ...prev, [person.id]: e.target.value }))}
+                          onKeyDown={e => {
+                            if (e.key !== 'Enter') return;
+                            if (ready) check();
+                          }}
+                          placeholder={t(interfaceLanguage, 'conjugationAnswerPlaceholder')}
+                          aria-label={`${person.label} · ${round.table.tenseLabel}`}
+                          spellCheck={false}
+                          autoComplete="off"
+                          className="w-full p-2 rounded-lg font-mono text-lg bg-[var(--color-bg)] border border-[var(--color-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--color-highlight)] text-[var(--color-text)] placeholder-[var(--color-muted)]"
+                        />
+                        {taken > 0 && (
+                          <p className="mt-1 font-mono text-sm tracking-widest" style={{ color: 'var(--color-muted)' }}>
+                            {hintHalves.slice(0, taken).join('  ')}
+                          </p>
+                        )}
+                      </>
+                    )}
+                  </div>
+                  {/* A hint costs the box it is taken on, which is only possible
+                      now that the box carries its own schedule. */}
+                  {due && !checked && taken < hintHalves.length && (
+                    <button
+                      onClick={() => setHints(prev => ({ ...prev, [person.id]: taken + 1 }))}
+                      className="mt-1.5 shrink-0 text-xs px-3 py-1 rounded-full border transition-colors"
+                      style={{ color: 'var(--color-muted)', borderColor: 'var(--color-muted)' }}
+                    >
+                      {t(interfaceLanguage, 'conjugationHint')}
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* How the round went, said whether or not anything needs fixing. */}
+        {checked && !single && (() => {
+          const right = round.personIds.filter(
+            id => !!spec && isCorrectForm(spec, round.table, id, (typed[id] ?? '').trim()),
+          ).length;
+          const all = right === round.personIds.length;
+          return (
+            <p className="mt-6 font-mono text-base font-bold"
+               style={{ color: all ? 'var(--color-highlight)' : 'var(--color-muted)' }}>
+              {all
+                ? `✓ ${t(interfaceLanguage, 'conjugationAllRight')}`
+                : t(interfaceLanguage, 'conjugationRoundScore', { correct: right, total: round.personIds.length })}
+            </p>
+          );
+        })()}
 
         <div className="mt-6 flex justify-end">
           <button

@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
-  parseWritingReview, buildWritingCardDraft, offersCard, FINDING_KINDS, WRITING_MAX_CHARS,
+  parseWritingReview, buildWritingCardDraft, offersCard, writingExample,
+  FINDING_KINDS, WRITING_MAX_CHARS,
 } from '@amgi/core';
 import type { FindingKind, WritingFinding } from '@amgi/core';
 
@@ -161,5 +162,36 @@ describe('offersCard', () => {
       expect(offersCard(finding(kind, {}))).toBe(true);
       expect(offersCard(finding(kind, { gap: true }))).toBe(true);
     }
+  });
+});
+
+/**
+ * ⚠️ **The example's sentences are sourced content**, cited in
+ * `docs/packs/writing-worked-example-draft.md`. These assertions are about the
+ * shape the panel renders, not about the French.
+ */
+describe('writingExample', () => {
+  it('has one for French and none for a language without a sourced sentence', () => {
+    expect(writingExample('French')).toBeDefined();
+    expect(writingExample('Japanese')).toBeUndefined();
+    expect(writingExample('Kikuyu')).toBeUndefined();
+  });
+
+  it('marks where the missing word goes, once', () => {
+    const example = writingExample('French')!;
+    expect(example.written.split('{gap}')).toHaveLength(2);
+  });
+
+  /** The point of the example: the learner's half is missing the word. */
+  it('leaves the study word out of what the learner wrote and in what comes back', () => {
+    const example = writingExample('French')!;
+    expect(example.written).not.toContain('marché');
+    expect(example.rewrite).toContain('marché');
+  });
+
+  it('gives the gap word in both native languages', () => {
+    const example = writingExample('French')!;
+    expect(example.gap.English).toBeTruthy();
+    expect(example.gap.Korean).toBeTruthy();
   });
 });

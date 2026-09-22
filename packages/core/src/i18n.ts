@@ -164,8 +164,12 @@ const translations = {
     conjugationCheck: 'Check',
     conjugationHint: 'Hint',
     conjugationNext: 'Next',
-    conjugationCorrect: 'Correct',
     conjugationWrong: 'The form is',
+    // ⚠️ Getting everything right used to look exactly like getting no
+    // feedback: nothing was corrected, so nothing was said. A round says how it
+    // went whether or not there is anything to fix.
+    conjugationAllRight: 'All correct.',
+    conjugationRoundScore: '{correct} of {total} right',
     // A round is a table with its due boxes to fill. The rest of the paradigm
     // is masked until the round is checked — showing it would hand over the
     // answer, since `nous parlons` makes `tu parles` free.
@@ -186,6 +190,11 @@ const translations = {
     practiceTitle: 'Practice',
     practiceNothingDue: 'Nothing due',
     practiceIncludeNotDue: 'Include forms that are not due yet',
+    // ⚠️ A different exercise rather than a different packaging of the same
+    // one, which is why it is offered and not imposed: it asks how much of a
+    // table you can produce in one go.
+    practiceWholeTable: 'Test whole tables',
+    practiceWholeTableHint: 'Fill in every form of a table at once, instead of one at a time.',
     practiceStart: 'Start',
     practiceStop: 'Stop',
     practiceDoneTitle: 'Done for now.',
@@ -215,13 +224,39 @@ const translations = {
     // to Topics (the catalogue) and Progress (the totals).
     munliTabSaved: 'Saved',
     savedTitle: 'What you have saved',
-    savedIntro: 'Every pattern you practise, with the tenses under it. Tap a tense to take it out, or a row to read its table.',
+    savedIntro: 'Everything you have saved to practise. Open one to see what is in it.',
     savedEmpty: 'Nothing saved yet. Add a tense or a verb group from Topics.',
     savedNotStarted: 'not started',
     savedDueIn: 'in {days}d',
     savedMissed: 'missed {list}',
-    /** The pill is the same control Topics uses, so it says what it will do. */
-    savedRemove: 'Remove {tense} from practice',
+    savedKindSaved: '{count} saved',
+    savedTenseCount: '{count} tenses',
+    /** Above the sourced note on a tense — see the draft in `docs/packs`. */
+    savedAbout: 'When to use it',
+    savedRemove: 'Remove from practice',
+    savedRemoveLabel: 'Remove {tense} from practice',
+    // ⚠️ **Sourced content, not written here.** Every line is tiered and cited
+    // in `docs/packs/french-tense-notes-draft.md` against the Office québécois
+    // de la langue française and Larousse, and the French examples are those
+    // sources' own — an invented example sentence would be the model sourcing
+    // itself in the place a reader is most likely to trust it.
+    // Three points each, deliberately: this sits under a table on an inventory
+    // screen, where somebody has gone to look one thing up.
+    tenseFrenchPresentLead: 'What is happening now, and what is generally true.',
+    tenseFrenchPresentPoints:
+      'Something happening as you speak — Paul se lève.\n' +
+      'Habits, and things that are simply true — Il se lève tôt. Deux et deux font quatre.\n' +
+      'Something about to happen — je reviens dans un instant.',
+    tenseFrenchImparfaitLead: 'The past as a setting: what was going on, rather than what happened.',
+    tenseFrenchImparfaitPoints:
+      'What was in progress when something else happened — Il pleuvait quand je sortis.\n' +
+      'How things were — a description with no beginning and no end in view.\n' +
+      'What used to happen, again and again — Il s\'asseyait à cet endroit.',
+    tenseFrenchFuturLead: 'What will happen, seen from where you are standing now.',
+    tenseFrenchFuturPoints:
+      'An action or state still to come — Pierre prendra sa retraite dans deux ans.\n' +
+      'After si with the présent, the other half is the futur — Si tu acceptes, tu ne le regretteras pas.\n' +
+      'Instructions, put politely — Vous prendrez un comprimé tous les matins.',
     topicsIntro: 'What Munli draws practice from — and where to look a form up.',
     topicRegularVerbs: 'Regular verbs',
     topicVerbsSummary: '{count} tables saved',
@@ -260,6 +295,12 @@ const translations = {
     writingKindNaturalness: 'naturalness',
     writingKindRegister: 'register',
     writingKindVocabulary: 'vocabulary',
+    // The worked example, shown while the box is empty. It labels the two
+    // halves and nothing else — the sentences are sourced content and live in
+    // `writing.ts`, not here.
+    writingExampleHeading: 'For example',
+    writingExampleWrote: 'You write',
+    writingExampleGot: 'You get back',
     writingWordYouNeeded: 'word you needed',
     writingAddCard: '+ card',
     writingCardSaved: 'Saved',
@@ -991,8 +1032,9 @@ const translations = {
     conjugationCheck: '확인',
     conjugationHint: '힌트',
     conjugationNext: '다음',
-    conjugationCorrect: '정답',
     conjugationWrong: '정답은',
+    conjugationAllRight: '전부 맞았어요.',
+    conjugationRoundScore: '{total}개 중 {correct}개 정답',
     conjugationFillDue: '복습할 차례인 형태를 채워보세요.',
     conjugationNotDue: '아직 차례가 아니에요',
     munliProgressTitle: '문법 연습',
@@ -1005,6 +1047,8 @@ const translations = {
     practiceTitle: '연습',
     practiceNothingDue: '복습할 게 없어요',
     practiceIncludeNotDue: '아직 복습 차례가 아닌 형태도 포함하기',
+    practiceWholeTable: '표 전체로 연습하기',
+    practiceWholeTableHint: '하나씩 묻는 대신, 표의 모든 형태를 한 번에 채워요.',
     practiceStart: '시작',
     practiceStop: '그만하기',
     practiceDoneTitle: '오늘은 여기까지!',
@@ -1023,12 +1067,31 @@ const translations = {
     munliTabTopics: '주제',
     munliTabSaved: '저장함',
     savedTitle: '저장한 목록',
-    savedIntro: '연습하려고 저장한 패턴과 시제예요. 시제를 누르면 연습에서 빼고, 줄을 누르면 표를 볼 수 있어요.',
+    savedIntro: '연습하려고 저장한 것들이에요. 눌러서 안에 뭐가 있는지 볼 수 있어요.',
     savedEmpty: '아직 저장한 게 없어요. 주제에서 시제나 동사 유형을 추가해보세요.',
     savedNotStarted: '시작 전',
     savedDueIn: '{days}일 후',
     savedMissed: '{list} 자주 틀려요',
-    savedRemove: '{tense} 연습에서 빼기',
+    savedKindSaved: '{count}개 저장함',
+    savedTenseCount: '시제 {count}개',
+    savedAbout: '언제 쓰나요',
+    savedRemove: '연습에서 빼기',
+    savedRemoveLabel: '{tense} 연습에서 빼기',
+    tenseFrenchPresentLead: '지금 일어나는 일, 그리고 원래 그런 일을 말해요.',
+    tenseFrenchPresentPoints:
+      '말하는 지금 일어나고 있는 일 — Paul se lève.\n' +
+      '습관처럼 반복되는 일과 늘 맞는 사실 — Il se lève tôt. Deux et deux font quatre.\n' +
+      '곧 일어날 일 — je reviens dans un instant.',
+    tenseFrenchImparfaitLead: '무슨 일이 있었는지보다, 그때 어떤 상황이었는지를 말해요.',
+    tenseFrenchImparfaitPoints:
+      '다른 일이 일어났을 때 하고 있던 일 — Il pleuvait quand je sortis.\n' +
+      '그때의 상황 묘사 — 시작도 끝도 정하지 않고 어땠는지만 말해요.\n' +
+      '예전에 반복해서 하던 일 — Il s\'asseyait à cet endroit.',
+    tenseFrenchFuturLead: '지금 시점에서 봤을 때 앞으로 일어날 일을 말해요.',
+    tenseFrenchFuturPoints:
+      '아직 오지 않은 일이나 상태 — Pierre prendra sa retraite dans deux ans.\n' +
+      'si 뒤에 현재를 쓰면, 나머지 절은 미래로 써요 — Si tu acceptes, tu ne le regretteras pas.\n' +
+      '공손하게 말하는 지시 — Vous prendrez un comprimé tous les matins.',
     topicsIntro: '연습에 쓰이는 범위예요. 형태를 찾아볼 때도 여기를 보세요.',
     topicRegularVerbs: '규칙 동사',
     topicVerbsSummary: '표 {count}개 저장됨',
@@ -1061,6 +1124,9 @@ const translations = {
     writingKindNaturalness: '자연스러움',
     writingKindRegister: '말투',
     writingKindVocabulary: '어휘',
+    writingExampleHeading: '이런 식이에요',
+    writingExampleWrote: '이렇게 쓰면',
+    writingExampleGot: '이렇게 돌려드려요',
     writingWordYouNeeded: '필요했던 단어',
     writingAddCard: '+ 카드',
     writingCardSaved: '저장됨',

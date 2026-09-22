@@ -369,6 +369,111 @@ once, so a path that worked on build 14 is not evidence about build 15.
 Closed calls, kept with their reasoning — a decision whose reasoning is lost gets
 reopened by the next person to notice the symptom. Newest first.
 
+### A right answer says so, and then gets out of the way (2026-09-22)
+
+**Two refinements after the user practised with the revisions**, into the same
+branch.
+
+⚠️ **Getting everything right looked exactly like getting no feedback.** A
+checked round only ever *corrected*, so a perfect table came back with nothing
+said — and the honest reading of silence is "none of it landed". The lesson
+generalises past this screen: **an interface that only speaks up when something
+is wrong has not said nothing, it has said something wrong.** A box now carries
+`✓` or `✗`, and a round closes with "All correct." or "5 of 6 right" either way.
+
+⚠️ **The glyph carries as much as the colour**, deliberately. Amgi ships eight
+palettes and a palette can put `highlight` and `error` close together — Forest
+has them *identical* — so a right/wrong distinction drawn in colour alone is one
+theme away from being no distinction. The pairing itself is `review.tsx`'s
+(`typedVerdictOk` highlight, `typedVerdictMiss` red), so the two surfaces agree
+about which colour means which; Munli uses `C.error` rather than that screen's
+literal red because the mode's palette carries one.
+
+⚠️ **A right answer in one-box mode advances with no pause at all**, and the
+800ms flash that shipped first is the more interesting half of this entry. It
+was there to keep the auto-advance from reading as the answer being ignored —
+*"I can't imagine any reason a user might want to stay on that question longer
+if they already have answered correctly"* — and trying it produced the opposite
+finding: *"the fact that the screen changed without any blockers lets me know
+that I was correct in a way that I personally think is satisfying."*
+
+**The screen changing is the feedback.** A confirmation held in front of
+somebody who already knows they were right is a blocker wearing feedback's
+clothes, and the instinct to soften an instant transition with a beat of
+reassurance is worth distrusting. ⚠️ **It is not the opposite of the finding
+above it** — the table's silence said nothing where something was owed; the
+flash said something where the transition had already said it. What decides is
+whether the learner is waiting on the screen to tell them something they do not
+already know.
+
+Only a wrong answer blocks, because only a wrong answer has something to show:
+the form you did not produce. A whole table blocks too — there is a score to
+read.
+
+**What removing it deleted is the reason it was complicated**: no timer, no
+ref, no cleanup on Stop or on a tab press, and no second piece of state that had
+to be kept out of step with `checked` to stop the input being disabled between
+two questions meant to run together.
+
+### What the first Munli pass got wrong, from using it (2026-09-22)
+
+**Four corrections from the user's review of PRs #145–#150**, landed as #151 on
+top of the stack rather than folded back into it, on the user's call: the six
+PRs stay as they were reviewed.
+
+⚠️ **A question is one form again, and the whole table is a switch.** *"I don't
+like being forced to always fill the whole table for every verb."* The mistake
+was treating the paradigm as a better *packaging* of the same exercise when it
+is a **different** one — it asks how much of a table you can produce in one go.
+That is worth offering and wrong to impose, so it is a switch on the start
+screen. **The box grain is untouched**, which is what keeps the original
+complaint answered; only the packaging changed, and `countQuestions` returns the
+same number either way. The vehicle is now drawn per question, so six boxes of
+`-er · présent` arrive on six different verbs.
+
+⚠️ **The keyboard covered the lower inputs**, which is the kind of thing only a
+device shows. The fix is `automaticallyAdjustKeyboardInsets` on the session
+ScrollView: a `KeyboardAvoidingView` only shrinks its container without
+scrolling the caret into view, and the 2026-09 note in `review.tsx` records that
+inside a screen padded for the floating tab bar it also gets the overlap wrong
+by ~90pt. `WritingReviewPanel` had already solved it this way.
+
+⚠️ **Pressing a tab returns to that tab's home.** Being three screens deep with
+only a back chevron out is a stack pretending to be a tab. `tabPress` fires
+whether or not the screen is focused, which is what a router hook cannot see —
+the route never changes. **Web needed nothing**: its nav renders plain
+`<a href>`, so the same click is a document navigation. Worth remembering as a
+difference in the navigator rather than in the intent.
+
+**Saved became an inventory** — *"verbs as tiles like items in an inventory …
+grammar tools used for challenges in communication"*. Kind → item → detail,
+which is the split Topics already makes, so the catalogue and the inventory
+describe one set the same way. ⚠️ **Removing moved from the pill to a button**:
+on Topics a pill both shows and toggles enrolment, and here a chip chooses what
+you are *reading*, so one tap cannot mean two things on two screens.
+
+### ⚠️ Two of those four turned out to be content (2026-09-22)
+
+**The reusable finding from this round.** "Explain what the tense is for" and
+"show a worked example" both read as UI work and are neither: each is a claim
+about French, and `docs/packs/README.md` governs — the model is not a source.
+Both were drafted and cited before a line of copy was written.
+
+- **Tense notes**: `docs/packs/french-tense-notes-draft.md`, against the
+  **Office québécois de la langue française** and **Larousse** — a government
+  language authority and a dictionary house, independent of each other. The
+  examples are those sources' own, quoted. The futur is the weak one and the
+  draft says so: its core use is tier A, its other two rest on one source.
+- **Worked example**: `docs/packs/writing-worked-example-draft.md`. The sentence
+  is Larousse's own example under `marché`; the Korean gloss is tier B.
+
+⚠️ **The worked example is per study language, and nine of ten have none.**
+Writing works in every language, so an example needs a sourced sentence in each.
+The panel renders nothing without one — a French example in front of a learner
+of Japanese is worse than the space it fills, and an invented Japanese one is
+worse still. **This is the shape to copy for any future "just add a nice
+example" request.**
+
 ### The irregular verbs are sourced, and three is the whole list (2026-09-22)
 
 **The job `FRENCH_IRREGULARS = []` was waiting for**, and it was never a code

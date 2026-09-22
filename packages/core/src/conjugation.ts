@@ -1,3 +1,4 @@
+import type { TranslationKey } from './i18n';
 import { getNextReviewData } from './sm2';
 import { sameFoldedText } from './typedAnswer';
 import type { StudyLanguage } from './types';
@@ -79,6 +80,20 @@ export interface ConjugationTense {
   id: string;
   /** `présent`, `imparfait` — not translated, for the same reason. */
   label: string;
+  /**
+   * What the tense does and when to reach for it, as copy keys.
+   *
+   * ⚠️ **Sourced content, and optional for that reason.** A tense with no note
+   * shows its table and nothing else, which is honest; writing one from the
+   * model would not be — `docs/packs/README.md` governs, and the French notes
+   * are tiered and cited in `docs/packs/french-tense-notes-draft.md`.
+   *
+   * Keys rather than strings because this is a language's data and the copy is
+   * per interface language: the tense is the same fact in en and in ko.
+   */
+  aboutLeadKey?: TranslationKey;
+  /** The uses, one per line, split on `\n` — the help-sheet shape. */
+  aboutPointsKey?: TranslationKey;
 }
 
 /** Which rule class a regular group conjugates by. */
@@ -231,9 +246,9 @@ const FRENCH_PERSONS: readonly ConjugationPerson[] = [
 ];
 
 const FRENCH_TENSES: readonly ConjugationTense[] = [
-  { id: 'present', label: 'présent' },
-  { id: 'imparfait', label: 'imparfait' },
-  { id: 'futur', label: 'futur simple' },
+  { id: 'present', label: 'présent', aboutLeadKey: 'tenseFrenchPresentLead', aboutPointsKey: 'tenseFrenchPresentPoints' },
+  { id: 'imparfait', label: 'imparfait', aboutLeadKey: 'tenseFrenchImparfaitLead', aboutPointsKey: 'tenseFrenchImparfaitPoints' },
+  { id: 'futur', label: 'futur simple', aboutLeadKey: 'tenseFrenchFuturLead', aboutPointsKey: 'tenseFrenchFuturPoints' },
 ];
 
 /** `-cer` and `-ger` take the `-er` endings; only their spelling differs. */
@@ -927,22 +942,36 @@ export interface ConjugationQueueOptions {
    * start screen rather than something the draw does silently.
    */
   includeNotDue?: boolean;
+  /**
+   * Ask a whole table at once instead of one box per question.
+   *
+   * ⚠️ **Off by default, on the user's call after using it.** Asking every due
+   * box of a table together was the first shape of the box grain, and it made a
+   * session that is meant to be quick into a form to fill in — *"I don't like
+   * being forced to always fill the whole table for every verb"*. The paradigm
+   * is a different exercise, not a better packaging of this one: it asks how
+   * much of a table you can produce in one go, which is worth offering and
+   * wrong to impose.
+   *
+   * Either way the session covers the same boxes and `countQuestions` returns
+   * the same number; only the packaging differs.
+   */
+  wholeTable?: boolean;
 }
 
 /**
  * The rounds a session will ask, fixed at the moment it starts.
  *
- * ⚠️ **One round per table, and every due box of it is asked.** This is the
- * 2026-09-22 reversal: the shape it replaces asked exactly one box per due table
- * and rated the other five from it, so a learner who was weak on `ils` could sit
- * through a whole session without being asked for it. A box is asked because it
- * is due; nothing is drawn.
+ * ⚠️ **A round is one box by default, and a whole table only when asked for.**
+ * Scheduling is per box either way — that is what makes a weak `ils` come back
+ * because it is due rather than because a die landed on it — but the *question*
+ * is one form, which is what a five-second exercise looks like.
  *
- * ⚠️ **The vehicle varies, and is chosen once per round.** Asking `-er ·
- * présent` through `donner` today and `chercher` tomorrow tests the ending;
- * asking it through `parler` every time tests `parlons`. One vehicle per round
- * rather than per box, because a paradigm of six different verbs is not a
- * paradigm.
+ * ⚠️ **The vehicle varies, and is drawn per round.** Asking `-er · présent ·
+ * nous` through `donner` today and `chercher` tomorrow tests the ending; asking
+ * it through `parler` every time tests `parlons`. In whole-table mode the draw
+ * is once per table rather than once per box, because a paradigm of six
+ * different verbs is not a paradigm.
  *
  * ⚠️ **The queue is owned by the session from here on.** Ratings written while
  * it runs move the picker's counts and must not rebuild it under someone eight
@@ -962,16 +991,21 @@ export function buildConjugationQueue(
     ? tables.map(table => ({ table, personIds: spec.persons.map(person => person.id) }))
     : dueRounds(spec, tables, progress, now);
 
-  const rounds = pool.map(({ table, personIds }) => {
+  /** The table as it will be asked — a group gets a vehicle drawn for it. */
+  const vehicled = (table: ConjugationTable): ConjugationTable => {
     const subject = findSubject(spec, `${table.subjectKind}:${table.subjectId}`);
-    const asked = subject && subject.kind === 'group'
-      ? buildTable(
-          spec, subject, table.tenseId,
-          subject.vehicles[Math.min(subject.vehicles.length - 1, Math.floor(random() * subject.vehicles.length))],
-        )
-      : table;
-    return { table: asked, personIds };
-  });
+    if (!subject || subject.kind !== 'group') return table;
+    const pick = Math.min(subject.vehicles.length - 1, Math.floor(random() * subject.vehicles.length));
+    return buildTable(spec, subject, table.tenseId, subject.vehicles[pick]);
+  };
+
+  const rounds: ConjugationRound[] = options.wholeTable
+    ? pool.map(({ table, personIds }) => ({ table: vehicled(table), personIds }))
+    // One round per due box, each drawing its own vehicle: within a session the
+    // same ending then turns up on different verbs, which is the point of a
+    // group being the item.
+    : pool.flatMap(({ table, personIds }) =>
+        personIds.map(personId => ({ table: vehicled(table), personIds: [personId] })));
 
   // Fisher–Yates, matching `reviewQueue`'s. Due order is subject order, and a
   // session that always opened on `-er` would drill the top of the list.
@@ -1290,6 +1324,51 @@ export function listSavedSubjects(
   }
 
   return [...byKey.values()];
+}
+
+/** A kind of thing you have saved — the top shelf of the inventory. */
+export interface ConjugationSavedKind {
+  kind: ConjugationSubject['kind'];
+  subjects: ConjugationSavedSubject[];
+  due: number;
+  /** Boxes, the same unit as `due`. */
+  total: number;
+}
+
+/**
+ * The saved set by kind, then by subject — what the Saved tab opens on.
+ *
+ * ⚠️ **A shelf, not a filter.** Regular and irregular verbs are different kinds
+ * of thing to learn — a group is a rule one example demonstrates, an irregular
+ * verb is a fact no other verb tells you about — and the 2026-09-22 Topics
+ * decision already split them for that reason. Saved mirrors it so the two
+ * surfaces describe the same set the same way.
+ *
+ * ⚠️ **A kind with nothing saved is not a shelf.** This lists what you have,
+ * and an empty shelf belongs on Topics, which is the catalogue.
+ *
+ * Kind order is `spec.subjects` order — groups then verbs for French — so the
+ * shelf does not reorder itself as a learner saves.
+ */
+export function listSavedKinds(
+  spec: ConjugationSpec,
+  enrolment: ConjugationEnrolment,
+  progress: ConjugationProgressMap,
+  now: Date = new Date(),
+): ConjugationSavedKind[] {
+  const shelves: ConjugationSavedKind[] = [];
+  for (const subject of listSavedSubjects(spec, enrolment, progress, now)) {
+    const kind = subject.subject.kind;
+    const shelf = shelves.find(s => s.kind === kind);
+    if (shelf) {
+      shelf.subjects.push(subject);
+      shelf.due += subject.due;
+      shelf.total += subject.total;
+    } else {
+      shelves.push({ kind, subjects: [subject], due: subject.due, total: subject.total });
+    }
+  }
+  return shelves;
 }
 
 /**
