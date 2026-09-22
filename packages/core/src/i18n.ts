@@ -164,7 +164,6 @@ const translations = {
     conjugationCheck: 'Check',
     conjugationHint: 'Hint',
     conjugationNext: 'Next',
-    conjugationCorrect: 'Correct',
     conjugationWrong: 'The form is',
     // ⚠️ Getting everything right used to look exactly like getting no
     // feedback: nothing was corrected, so nothing was said. A round says how it
@@ -1033,7 +1032,6 @@ const translations = {
     conjugationCheck: '확인',
     conjugationHint: '힌트',
     conjugationNext: '다음',
-    conjugationCorrect: '정답',
     conjugationWrong: '정답은',
     conjugationAllRight: '전부 맞았어요.',
     conjugationRoundScore: '{total}개 중 {correct}개 정답',
