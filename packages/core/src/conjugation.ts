@@ -58,8 +58,9 @@ import type { StudyLanguage } from './types';
  *
  * **Regular forms are computed; irregular forms are stored.** There is no rule
  * to generate an irregular from, and `docs/packs/README.md` governs — the model
- * is not a source — so `FRENCH_IRREGULARS` is empty until that sourcing job is
- * done. The types hold both today; only one of them has content.
+ * is not a source — so `FRENCH_IRREGULARS` is a **sourced dataset**, tier A
+ * against two independent published references, written up in
+ * `docs/packs/french-irregular-verbs-draft.md` before it was typed in here.
  *
  * **Zero model calls.** Grading is `typedAnswer.ts`, which folds apostrophes and
  * deliberately does not fold diacritics — for a conjugation table the accent is
@@ -300,13 +301,49 @@ const FRENCH_GROUPS: readonly ConjugationGroup[] = [
 ];
 
 /**
- * ⚠️ **Empty on purpose, and it is the sourcing gate rather than an oversight.**
- * An irregular form is recalled content, not a rule, and `docs/packs/README.md`
- * governs: the model is not a source. `être`, `avoir` and `aller` arrive from a
- * citable reference with its licence checked. Everything around them is built
- * and tested, so that job is a data file and nothing else.
+ * The three verbs a French learner reaches for first, as stored forms.
+ *
+ * ⚠️ **Sourced, not generated**, which is the whole reason this sat empty from
+ * 2026-09-22 until it was done: an irregular form is recalled content, not a
+ * rule, and `docs/packs/README.md` governs — the model is not a source. Every
+ * form here is **tier A**: Larousse and Bescherelle, two independent published
+ * references, agree character for character, accents included. The draft with
+ * the per-form citations, the licence finding and the rendering check is
+ * `docs/packs/french-irregular-verbs-draft.md`.
+ *
+ * ⚠️ **Three verbs, and the fourth is a different job.** "The next most useful
+ * irregular" is a frequency claim, and nothing in this repo is behind one — the
+ * same reason `FRENCH_GROUPS` is described as *common* rather than ranked.
+ *
+ * ⚠️ **The bare form, never the pronoun.** `subjectFor` supplies `je` or `j'`
+ * at grading time, so storing `j'ai` here would double it.
  */
-const FRENCH_IRREGULARS: readonly ConjugationIrregularVerb[] = [];
+const FRENCH_IRREGULARS: readonly ConjugationIrregularVerb[] = [
+  {
+    kind: 'verb', id: 'etre', infinitive: 'être',
+    forms: {
+      present:   { s1: 'suis',   s2: 'es',     s3: 'est',   p1: 'sommes',  p2: 'êtes',   p3: 'sont' },
+      imparfait: { s1: 'étais',  s2: 'étais',  s3: 'était', p1: 'étions',  p2: 'étiez',  p3: 'étaient' },
+      futur:     { s1: 'serai',  s2: 'seras',  s3: 'sera',  p1: 'serons',  p2: 'serez',  p3: 'seront' },
+    },
+  },
+  {
+    kind: 'verb', id: 'avoir', infinitive: 'avoir',
+    forms: {
+      present:   { s1: 'ai',     s2: 'as',     s3: 'a',     p1: 'avons',   p2: 'avez',   p3: 'ont' },
+      imparfait: { s1: 'avais',  s2: 'avais',  s3: 'avait', p1: 'avions',  p2: 'aviez',  p3: 'avaient' },
+      futur:     { s1: 'aurai',  s2: 'auras',  s3: 'aura',  p1: 'aurons',  p2: 'aurez',  p3: 'auront' },
+    },
+  },
+  {
+    kind: 'verb', id: 'aller', infinitive: 'aller',
+    forms: {
+      present:   { s1: 'vais',   s2: 'vas',    s3: 'va',    p1: 'allons',  p2: 'allez',  p3: 'vont' },
+      imparfait: { s1: 'allais', s2: 'allais', s3: 'allait', p1: 'allions', p2: 'alliez', p3: 'allaient' },
+      futur:     { s1: 'irai',   s2: 'iras',   s3: 'ira',   p1: 'irons',   p2: 'irez',   p3: 'iront' },
+    },
+  },
+];
 
 const FRENCH_VOWELS = 'aeiouéèêëàâîïôöûùü';
 
