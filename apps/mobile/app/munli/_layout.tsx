@@ -14,7 +14,7 @@ import type { TranslationKey } from '@amgi/core';
  * wrong about the shell.
  *
  * **The bar mirrors Amgi's, slot for slot** — Practice sits where Review does,
- * Tables where Cards does, Writing where Learn does, Topics where Packs does,
+ * Saved where Cards does, Writing where Learn does, Topics where Packs does,
  * Progress where Progress does. That is not decoration: a mode that reorders the
  * shell makes switching feel like leaving the app, and the parallel means
  * whatever a learner knows about one mode's bar is true of the other's.
@@ -34,7 +34,7 @@ export const unstable_settings = { initialRouteName: 'index' };
 
 const ICONS: TabIcons = {
   index:    { on: 'grid',        off: 'grid-outline'        },
-  tables:   { on: 'albums',      off: 'albums-outline'      },
+  saved:    { on: 'albums',      off: 'albums-outline'      },
   writing:  { on: 'create',      off: 'create-outline'      },
   topics:   { on: 'library',     off: 'library-outline'     },
   progress: { on: 'stats-chart', off: 'stats-chart-outline' },
@@ -42,7 +42,7 @@ const ICONS: TabIcons = {
 
 const LABELS: Record<string, TranslationKey> = {
   index:    'munliTabPractice',
-  tables:   'munliTabTables',
+  saved:    'munliTabSaved',
   writing:  'munliToolWriting',
   topics:   'munliTabTopics',
   progress: 'navProgress',
@@ -59,9 +59,9 @@ export default function MunliLayout() {
       screenOptions={{ headerShown: false }}
     >
       <Tabs.Screen name="index" options={{ title: 'Practice' }} />
-      {/* What you are learning, item by item — Munli's answer to Cards, in the
-          slot Cards occupies. */}
-      <Tabs.Screen name="tables" options={{ title: 'Tables' }} />
+      {/* What you have saved to practise, and where you take it back out —
+          Munli's answer to Cards, in the slot Cards occupies. */}
+      <Tabs.Screen name="saved" options={{ title: 'Saved' }} />
       {/* Writing takes the middle, where Learn sits in Amgi: the centre of a
           five-tab bar is where a thumb already is. */}
       <Tabs.Screen name="writing" options={{ title: 'Writing' }} />

@@ -42,9 +42,9 @@ export function getMunliNavItems(interfaceLanguage: string | null | undefined, p
       ),
     },
     {
-      label: t(interfaceLanguage, 'munliTabTables'),
-      href: '/munli/tables',
-      active: pathname.startsWith('/munli/tables'),
+      label: t(interfaceLanguage, 'munliTabSaved'),
+      href: '/munli/saved',
+      active: pathname.startsWith('/munli/saved'),
       icon: (active: boolean, className = 'w-6 h-6') => (
         <svg className={className} fill="none" stroke="currentColor" strokeWidth={active ? 2.5 : 1.8} viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" d="M19 11H5m14 0a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-6a2 2 0 0 1 2-2m14 0V9a2 2 0 0 0-2-2M5 11V9a2 2 0 0 1 2-2m0 0V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v2M7 7h10" />

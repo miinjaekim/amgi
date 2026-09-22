@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { conjugationSpec, daysUntil, findSubject, listPracticeTables, t } from '@amgi/core';
+import { conjugationSpec, daysUntil, listSavedSubjects, setEnrolled, t } from '@amgi/core';
 import { useUser } from '../../src/context/UserContext';
 import { useTheme } from '../../src/context/ThemeContext';
 import { useConjugation } from '../../src/context/ConjugationContext';
@@ -10,93 +10,107 @@ import ParadigmTable from '../../src/components/ParadigmTable';
 import type { Palette } from '../../src/theme';
 
 /**
- * What you are learning — Munli's answer to Amgi's Cards tab.
+ * Saved — what you have taken on, and where you take it back out.
  *
  * ⚠️ **Three surfaces, three questions, and keeping them apart is the point.**
  * Topics is the catalogue you add from (Packs). Progress is the totals. This is
- * the inventory: every table in the practice set, one row each, with how it is
- * going. Amgi has exactly this split and it is why none of its three surfaces
- * has to be a dashboard.
+ * the set you curate: one row per pattern, carrying the tenses saved under it.
+ * Amgi has exactly this split and it is why none of its three has to be a
+ * dashboard.
  *
- * ⚠️ **It lists what is *not* due as well.** `dueRounds` answers "what should I
- * do now" and a session is built from it; an inventory that hid everything you
- * had already learned would be a strange inventory. Due-first ordering puts what
- * needs attention at the top without dropping the rest.
+ * ⚠️ **It manages something, which is the half it did not have.** It was a flat
+ * list of `-er · présent` rows that only read; saving and unsaving lived on
+ * Topics. A pill here is the **same control and the same semantics** as Topics'
+ * save pill — `setEnrolled` on one subject-and-tense pair — rather than a
+ * second way to say the same thing.
  *
- * ⚠️ **A row's count is in boxes**, because a box is what carries a schedule:
- * `-er · présent` is six facts, and "3 due" is the honest thing to say about
- * it.
- *
- * Tapping a row opens the table — the same `ParadigmTable` the Topics detail
- * uses, narrowed to that row's tense, so a row about `-er · imparfait` shows the
- * imparfait rather than everything.
+ * ⚠️ **Grained by pattern, where Practice is grained by tense.** One enrolment,
+ * two questions: "what have I taken on" against "what should I sit down to".
  */
-export default function TablesScreen() {
+export default function SavedScreen() {
   const { C } = useTheme();
   const tabBarHeight = useFloatingTabBarHeight();
   const s = useMemo(() => makeStyles(C, tabBarHeight), [C, tabBarHeight]);
   const { interfaceLanguage, studyLanguage } = useUser();
-  const { progress, enrolment } = useConjugation();
+  const { progress, enrolment, setEnrolment } = useConjugation();
   const spec = conjugationSpec(studyLanguage);
   const [open, setOpen] = useState<string | null>(null);
 
-  const items = useMemo(
-    () => (spec && enrolment ? listPracticeTables(spec, enrolment, progress) : []),
+  const rows = useMemo(
+    () => (spec && enrolment ? listSavedSubjects(spec, enrolment, progress) : []),
     [spec, enrolment, progress],
   );
 
   return (
     <SafeAreaView style={s.safe} edges={['top']}>
       <View style={s.header}>
-        <Text style={s.title}>{t(interfaceLanguage, 'tablesTitle')}</Text>
+        <Text style={s.title}>{t(interfaceLanguage, 'savedTitle')}</Text>
       </View>
       <ScrollView contentContainerStyle={s.content}>
-        {!spec ? (
+        {!spec || !enrolment ? (
           <Text style={s.empty}>{t(interfaceLanguage, 'conjugationUnavailable')}</Text>
-        ) : items.length === 0 ? (
-          <Text style={s.empty}>{t(interfaceLanguage, 'tablesEmpty')}</Text>
+        ) : rows.length === 0 ? (
+          <Text style={s.empty}>{t(interfaceLanguage, 'savedEmpty')}</Text>
         ) : (
           <>
-            <Text style={s.intro}>{t(interfaceLanguage, 'tablesIntro')}</Text>
-            {items.map(item => {
-              const subject = findSubject(spec, `${item.table.subjectKind}:${item.table.subjectId}`);
-              const isOpen = open === item.itemId;
+            <Text style={s.intro}>{t(interfaceLanguage, 'savedIntro')}</Text>
+            {rows.map(row => {
+              const isOpen = open === row.key;
               return (
-                <View key={item.itemId} style={s.row}>
+                <View key={row.key} style={s.row}>
                   <TouchableOpacity
                     style={s.rowHead}
                     activeOpacity={0.7}
                     accessibilityRole="button"
                     accessibilityState={{ expanded: isOpen }}
-                    onPress={() => setOpen(isOpen ? null : item.itemId)}
+                    onPress={() => setOpen(isOpen ? null : row.key)}
                   >
                     <View style={s.rowText}>
-                      <Text style={s.rowLabel}>
-                        {item.table.subjectLabel} · {item.table.tenseLabel}
-                      </Text>
-                      {item.weakBoxes.length > 0 && (
+                      <Text style={s.rowLabel}>{row.label}</Text>
+                      {row.weakBoxes.length > 0 && (
                         <Text style={s.rowSub} numberOfLines={1}>
-                          {t(interfaceLanguage, 'tablesMissed', {
-                            list: item.weakBoxes.slice(0, 3).map(b => b.personLabel).join(', '),
+                          {t(interfaceLanguage, 'savedMissed', {
+                            list: row.weakBoxes.slice(0, 3).map(b => b.personLabel).join(', '),
                           })}
                         </Text>
                       )}
                     </View>
                     {/* Three states, not two: never practised is not the same
                         as due, even though a session treats them alike. */}
-                    <Text style={[s.state, item.due && s.stateDue]}>
-                      {item.started === 0
-                        ? t(interfaceLanguage, 'tablesNotStarted')
-                        : item.due
-                          ? t(interfaceLanguage, 'conjugationDue', { count: item.dueCount })
-                          : t(interfaceLanguage, 'tablesDueIn', { days: daysUntil(item.dueAt!) })}
+                    <Text style={[s.state, row.due > 0 && s.stateDue]}>
+                      {row.started === 0
+                        ? t(interfaceLanguage, 'savedNotStarted')
+                        : row.due > 0
+                          ? t(interfaceLanguage, 'conjugationDue', { count: row.due })
+                          : t(interfaceLanguage, 'savedDueIn', { days: daysUntil(row.dueAt!) })}
                     </Text>
                   </TouchableOpacity>
-                  {isOpen && subject && (
+
+                  {/* ⚠️ A pill per saved tense, carrying its own due count and
+                      toggling exactly its own pair — Topics' rule, for the same
+                      reason: a control that cannot state its own answer makes
+                      two saved out of three read as nothing saved. */}
+                  <View style={s.pills}>
+                    {row.tenses.map(tense => (
+                      <TouchableOpacity
+                        key={tense.tenseId}
+                        style={s.pill}
+                        accessibilityRole="button"
+                        accessibilityLabel={t(interfaceLanguage, 'savedRemove', { tense: tense.label })}
+                        onPress={() => setEnrolment(setEnrolled(enrolment, row.subject, [tense.tenseId], false))}
+                      >
+                        <Text style={s.pillText}>
+                          ✓ {tense.label}{tense.due > 0 ? ` · ${tense.due}` : ''}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+
+                  {isOpen && (
                     <ParadigmTable
                       spec={spec}
-                      subject={subject}
-                      tenseIds={[item.table.tenseId]}
+                      subject={row.subject}
+                      tenseIds={row.tenses.map(tense => tense.tenseId)}
                     />
                   )}
                 </View>
@@ -116,13 +130,19 @@ function makeStyles(C: Palette, tabBarHeight: number) {
     title: { color: C.text, fontSize: 22, fontWeight: '700' },
     content: { padding: 16, paddingTop: 8, paddingBottom: tabBarHeight },
     intro: { color: C.muted, fontSize: 13, lineHeight: 18, marginBottom: 16 },
-    row: { borderBottomWidth: 1, borderBottomColor: C.border, paddingBottom: 8 },
+    row: { borderBottomWidth: 1, borderBottomColor: C.border, paddingBottom: 12 },
     rowHead: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
     rowText: { flex: 1 },
-    rowLabel: { color: C.text, fontSize: 15 },
+    rowLabel: { color: C.text, fontSize: 15, fontWeight: '600' },
     rowSub: { color: C.muted, fontSize: 11, marginTop: 3 },
     state: { color: C.muted, fontSize: 12 },
     stateDue: { color: C.highlight, fontWeight: '700' },
+    pills: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+    pill: {
+      paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16,
+      backgroundColor: C.highlight, borderWidth: 1, borderColor: C.highlight,
+    },
+    pillText: { color: C.bg, fontSize: 12, fontWeight: '700' },
     empty: { color: C.muted, fontSize: 13, lineHeight: 19 },
   });
 }
