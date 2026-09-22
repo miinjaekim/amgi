@@ -4,7 +4,8 @@ import {
   ScrollView, StyleSheet, Keyboard,
 } from 'react-native';
 import {
-  buildWritingCardDraft, getStudyLanguageConfig, offersCard, t, WRITING_MAX_CHARS,
+  buildWritingCardDraft, getStudyLanguageConfig, offersCard, t, writingExample,
+  WRITING_MAX_CHARS,
 } from '@amgi/core';
 import type {
   FindingKind, TranslationKey, WritingCardCandidate, WritingReview,
@@ -65,6 +66,16 @@ export default function WritingReviewPanel() {
 
   const languageLabel = t(interfaceLanguage, getStudyLanguageConfig(studyLanguage).studyLabelKey);
   const overLimit = text.length > WRITING_MAX_CHARS;
+  /**
+   * The worked example, if this study language has a sourced one.
+   *
+   * ⚠️ **Most languages have none, and that is the right default.** A learner
+   * of Japanese seeing a French example would be worse than the empty space it
+   * fills, and one invented for Japanese would be worse still — the sentences
+   * are sourced content (`docs/packs/writing-worked-example-draft.md`).
+   */
+  const example = writingExample(studyLanguage);
+  const gapWord = example?.gap[deckNativeLanguage === 'Korean' ? 'Korean' : 'English'];
 
   const handleSubmit = async () => {
     if (!text.trim() || overLimit || loading) return;
@@ -147,6 +158,37 @@ export default function WritingReviewPanel() {
             : <Text style={s.submitBtnText}>{t(interfaceLanguage, 'writingButton')}</Text>}
         </TouchableOpacity>
       </View>
+
+      {/* ⚠️ **It demonstrates the gap, deliberately.** The "?" sheet says in
+          words that a word you cannot reach can go in in your own language;
+          this is the route catching exactly that, which is the one thing about
+          Writing a learner will not guess from an empty box. Asked for
+          2026-09-22, to use the space rather than leave it blank. */}
+      {!review && !error && !!example && !!gapWord && (
+        <View style={s.example}>
+          <Text style={s.sectionLabel}>{t(interfaceLanguage, 'writingExampleHeading')}</Text>
+
+          <Text style={s.exampleLabel}>{t(interfaceLanguage, 'writingExampleWrote')}</Text>
+          <Text style={s.exampleLine}>
+            {example.written.split('{gap}')[0]}
+            <Text style={s.exampleGap}>{gapWord}</Text>
+            {example.written.split('{gap}')[1]}
+          </Text>
+
+          <Text style={s.exampleLabel}>{t(interfaceLanguage, 'writingExampleGot')}</Text>
+          <Text style={s.exampleLine}>{example.rewrite}</Text>
+
+          {/* The card the finding would offer — the same shape as a real one,
+              so what the tab is *for* is legible before anything is submitted. */}
+          <View style={s.exampleCard}>
+            <View style={s.exampleTag}>
+              <Text style={s.exampleTagText}>{t(interfaceLanguage, 'writingWordYouNeeded')}</Text>
+            </View>
+            <Text style={s.exampleStudy}>{example.study}</Text>
+            <Text style={s.exampleBack}>— {gapWord}</Text>
+          </View>
+        </View>
+      )}
 
       {error && (
         <View style={s.errorBanner}>
@@ -295,6 +337,22 @@ function makeStyles(C: Palette, tabBarHeight: number) {
     },
     viewToggleText: { fontSize: 11, color: C.muted },
     sectionLabel: { fontSize: 11, fontWeight: '700', color: C.muted, textTransform: 'uppercase', letterSpacing: 0.8 },
+    // The worked example, in the space an empty passage box leaves.
+    example: {
+      marginTop: 28, padding: 16, borderRadius: 14,
+      borderWidth: 1, borderColor: C.border,
+    },
+    exampleLabel: { color: C.muted, fontSize: 11, marginTop: 14, marginBottom: 4 },
+    exampleLine: { color: C.text, fontSize: 15, lineHeight: 22 },
+    exampleGap: { color: C.highlight, fontWeight: '700' },
+    exampleCard: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginTop: 16 },
+    exampleTag: {
+      paddingHorizontal: 8, paddingVertical: 2,
+      borderRadius: 10, borderWidth: 1, borderColor: C.highlight,
+    },
+    exampleTagText: { color: C.highlight, fontSize: 10, fontWeight: '700' },
+    exampleStudy: { color: C.text, fontSize: 14, fontWeight: '600' },
+    exampleBack: { color: C.muted, fontSize: 14 },
     sectionLabelShrink: { flexShrink: 1 },
     rewriteText: { fontSize: 17, color: C.text, lineHeight: 26 },
     nativeBlock: { marginTop: 14, paddingTop: 14, borderTopWidth: 1, borderTopColor: C.border, gap: 4 },

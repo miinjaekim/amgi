@@ -6,6 +6,7 @@ import {
   getStudyLanguageConfig,
   getWritingReview,
   offersCard,
+  writingExample,
   WRITING_MAX_CHARS,
 } from '@amgi/core';
 import type {
@@ -80,6 +81,16 @@ export default function WritingReviewPanel() {
   const langConfig = getStudyLanguageConfig(studyLanguage);
   const languageLabel = t(interfaceLanguage, langConfig.studyLabelKey);
   const overLimit = text.length > WRITING_MAX_CHARS;
+  /**
+   * The worked example, if this study language has a sourced one.
+   *
+   * ⚠️ **Most languages have none, and that is the right default.** A learner
+   * of Japanese seeing a French example would be worse than the empty space it
+   * fills, and one invented for Japanese would be worse still — the sentences
+   * are sourced content (`docs/packs/writing-worked-example-draft.md`).
+   */
+  const example = writingExample(studyLanguage);
+  const gapWord = example?.gap[deckNativeLanguage === 'Korean' ? 'Korean' : 'English'];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -158,6 +169,44 @@ export default function WritingReviewPanel() {
           </button>
         </div>
       </form>
+
+      {/* ⚠️ **It demonstrates the gap, deliberately.** The "?" sheet says in
+          words that a word you cannot reach can go in in your own language;
+          this is the route catching exactly that, which is the one thing about
+          Writing a learner will not guess from an empty box. Asked for
+          2026-09-22, to use the space rather than leave it blank. */}
+      {!review && !error && example && gapWord && (
+        <section className="mt-10 p-5 rounded-xl border" style={{ borderColor: 'var(--color-muted)' }}>
+          <p className="text-xs font-semibold uppercase tracking-widest mb-4" style={{ color: 'var(--color-muted)' }}>
+            {t(interfaceLanguage, 'writingExampleHeading')}
+          </p>
+
+          <p className="text-xs mb-1" style={{ color: 'var(--color-muted)' }}>
+            {t(interfaceLanguage, 'writingExampleWrote')}
+          </p>
+          <p className="text-base mb-4" style={{ color: 'var(--color-text)' }}>
+            {example.written.split('{gap}')[0]}
+            <span style={{ color: 'var(--color-highlight)', fontWeight: 700 }}>{gapWord}</span>
+            {example.written.split('{gap}')[1]}
+          </p>
+
+          <p className="text-xs mb-1" style={{ color: 'var(--color-muted)' }}>
+            {t(interfaceLanguage, 'writingExampleGot')}
+          </p>
+          <p className="text-base" style={{ color: 'var(--color-text)' }}>{example.rewrite}</p>
+
+          {/* The card the finding would offer — the same shape as a real one,
+              so what the tab is *for* is legible before anything is submitted. */}
+          <div className="mt-4 flex items-center gap-2 flex-wrap text-sm">
+            <span className="text-xs px-2 py-0.5 rounded-full border"
+                  style={{ color: 'var(--color-highlight)', borderColor: 'var(--color-highlight)' }}>
+              {t(interfaceLanguage, 'writingWordYouNeeded')}
+            </span>
+            <span style={{ color: 'var(--color-text)', fontWeight: 600 }}>{example.study}</span>
+            <span style={{ color: 'var(--color-muted)' }}>— {gapWord}</span>
+          </div>
+        </section>
+      )}
 
       {error && (
         <div className="mt-4 p-4 rounded-lg bg-[var(--color-highlight)] text-[var(--color-bg)] font-semibold">

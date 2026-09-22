@@ -291,6 +291,12 @@ const translations = {
     writingKindNaturalness: 'naturalness',
     writingKindRegister: 'register',
     writingKindVocabulary: 'vocabulary',
+    // The worked example, shown while the box is empty. It labels the two
+    // halves and nothing else — the sentences are sourced content and live in
+    // `writing.ts`, not here.
+    writingExampleHeading: 'For example',
+    writingExampleWrote: 'You write',
+    writingExampleGot: 'You get back',
     writingWordYouNeeded: 'word you needed',
     writingAddCard: '+ card',
     writingCardSaved: 'Saved',
@@ -1113,6 +1119,9 @@ const translations = {
     writingKindNaturalness: '자연스러움',
     writingKindRegister: '말투',
     writingKindVocabulary: '어휘',
+    writingExampleHeading: '이런 식이에요',
+    writingExampleWrote: '이렇게 쓰면',
+    writingExampleGot: '이렇게 돌려드려요',
     writingWordYouNeeded: '필요했던 단어',
     writingAddCard: '+ 카드',
     writingCardSaved: '저장됨',

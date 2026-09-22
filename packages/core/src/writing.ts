@@ -347,3 +347,51 @@ export function buildWritingCardDraft(
     [config.studyField]: candidate.study,
   };
 }
+
+/* ── The worked example ─────────────────────────────────────────────────── */
+
+/**
+ * One demonstration of what the tab does, shown while the passage box is empty.
+ *
+ * ⚠️ **Sourced, because it is a sentence in the study language.** A worked
+ * example asserts "this is what a native would write", which is exactly the
+ * claim `docs/packs/README.md` forbids the model from being the source of. The
+ * French one is **Larousse's own example sentence** under `marché`, quoted
+ * rather than composed; the citations are in
+ * `docs/packs/writing-worked-example-draft.md`.
+ *
+ * ⚠️ **It demonstrates the gap, deliberately.** The help sheet says in words
+ * that a word you cannot reach can go in in your own language; this shows the
+ * route catching exactly that, which is the one thing about Writing a learner
+ * will not guess.
+ */
+export interface WritingExample {
+  /** The passage as the learner wrote it, with `{gap}` where the word was missing. */
+  written: string;
+  /** The passage as a native would write it. */
+  rewrite: string;
+  /** The study-language word that was missing — the card's front. */
+  study: string;
+  /** The missing word in the learner's own language, and the card's back. */
+  gap: { English: string; Korean: string };
+}
+
+/**
+ * ⚠️ **Per language, and most languages have none.** Writing works in every
+ * study language and an example needs a *sourced* sentence in each, so this is
+ * deliberately sparse: a learner of Japanese sees no example rather than a
+ * French one, and certainly rather than an invented Japanese one. Adding a
+ * language is a draft row with its citation, then an entry here.
+ */
+const WRITING_EXAMPLES: Partial<Record<StudyLanguage, WritingExample>> = {
+  French: {
+    written: "Je l'ai acheté au {gap}.",
+    rewrite: "Je l'ai acheté au marché.",
+    study: 'le marché',
+    gap: { English: 'market', Korean: '시장' },
+  },
+};
+
+export function writingExample(language: StudyLanguage): WritingExample | undefined {
+  return WRITING_EXAMPLES[language];
+}
