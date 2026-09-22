@@ -14,9 +14,12 @@ import { t } from '@/lib/i18n';
  * set with how it is going. Amgi has exactly this split, and it is why none of
  * its three has to be a dashboard.
  *
- * ⚠️ **It lists what is not due as well** — `dueTables` answers "what now" and a
+ * ⚠️ **It lists what is not due as well** — `dueRounds` answers "what now" and a
  * session is built from it; an inventory that hid what you had learned would be
  * a strange inventory.
+ *
+ * ⚠️ **A row's count is in boxes**, because a box is what carries a schedule:
+ * `-er · présent` is six facts, and "3 due" is the honest thing to say about it.
  */
 export default function TablesPage() {
   const { interfaceLanguage } = useUser();
@@ -75,10 +78,10 @@ export default function TablesPage() {
                     className="font-mono text-xs whitespace-nowrap"
                     style={{ color: item.due ? 'var(--color-highlight)' : 'var(--color-muted)', fontWeight: item.due ? 700 : 400 }}
                   >
-                    {!item.state
+                    {item.started === 0
                       ? t(interfaceLanguage, 'tablesNotStarted')
                       : item.due
-                        ? t(interfaceLanguage, 'tablesDueNow')
+                        ? t(interfaceLanguage, 'conjugationDue', { count: item.dueCount })
                         : t(interfaceLanguage, 'tablesDueIn', { days: daysUntil(item.dueAt!) })}
                   </span>
                 </button>

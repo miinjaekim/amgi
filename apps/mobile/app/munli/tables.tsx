@@ -18,10 +18,14 @@ import type { Palette } from '../../src/theme';
  * going. Amgi has exactly this split and it is why none of its three surfaces
  * has to be a dashboard.
  *
- * ⚠️ **It lists what is *not* due as well.** `dueTables` answers "what should I
+ * ⚠️ **It lists what is *not* due as well.** `dueRounds` answers "what should I
  * do now" and a session is built from it; an inventory that hid everything you
  * had already learned would be a strange inventory. Due-first ordering puts what
  * needs attention at the top without dropping the rest.
+ *
+ * ⚠️ **A row's count is in boxes**, because a box is what carries a schedule:
+ * `-er · présent` is six facts, and "3 due" is the honest thing to say about
+ * it.
  *
  * Tapping a row opens the table — the same `ParadigmTable` the Topics detail
  * uses, narrowed to that row's tense, so a row about `-er · imparfait` shows the
@@ -81,10 +85,10 @@ export default function TablesScreen() {
                     {/* Three states, not two: never practised is not the same
                         as due, even though a session treats them alike. */}
                     <Text style={[s.state, item.due && s.stateDue]}>
-                      {!item.state
+                      {item.started === 0
                         ? t(interfaceLanguage, 'tablesNotStarted')
                         : item.due
-                          ? t(interfaceLanguage, 'tablesDueNow')
+                          ? t(interfaceLanguage, 'conjugationDue', { count: item.dueCount })
                           : t(interfaceLanguage, 'tablesDueIn', { days: daysUntil(item.dueAt!) })}
                     </Text>
                   </TouchableOpacity>
