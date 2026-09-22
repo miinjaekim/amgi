@@ -22,6 +22,7 @@ import {
   hasConjugation,
   hintedVerdict,
   isCorrectForm,
+  listPracticeSections,
   listPracticeTables,
   normalizeEnrolment,
   normalizeProgress,
@@ -608,6 +609,61 @@ describe('buildParadigm', () => {
       const table = buildTable(spec, group('re'), tense.id, 'attendre');
       const entry = buildParadigm(spec, group('re'), 'attendre').find(p => p.tenseId === tense.id);
       expect(entry?.forms).toEqual(table.forms);
+    }
+  });
+});
+
+describe('listPracticeSections', () => {
+  const NOW = new Date('2026-09-22T12:00:00Z');
+  const boxes = spec.persons.length;
+
+  it('is one section per enrolled tense, in language order', () => {
+    const sections = listPracticeSections(spec, everything, {}, NOW);
+    expect(sections.map(s => s.tenseId)).toEqual(spec.tenses.map(t => t.id));
+  });
+
+  it('only offers what is enrolled', () => {
+    const sections = listPracticeSections(spec, all, {}, NOW);
+    expect(sections).toHaveLength(1);
+    expect(sections[0].tenseId).toBe(spec.tenses[0].id);
+    expect(sections[0].subjects).toHaveLength(groupCount);
+  });
+
+  /** ⚠️ Boxes, not tables — the same unit the session counts in. */
+  it('counts a section in boxes', () => {
+    const [section] = listPracticeSections(spec, all, {}, NOW);
+    expect(section.total).toBe(groupCount * boxes);
+    expect(section.due).toBe(section.total);
+    expect(section.subjects[0].total).toBe(boxes);
+  });
+
+  it('drops a box from its section and its subject when it is scheduled ahead', () => {
+    const table = buildTables(spec, all)[0];
+    const progress: ConjugationProgressMap = {
+      [boxItemId(spec, table, 'p1')]: {
+        ...freshProgress(NOW), nextReview: new Date('2026-10-01T12:00:00Z').toISOString(),
+      },
+    };
+    const [section] = listPracticeSections(spec, all, progress, NOW);
+    expect(section.due).toBe(section.total - 1);
+    const subject = section.subjects.find(s => s.key.endsWith(`:${table.subjectId}`))!;
+    expect(subject.due).toBe(boxes - 1);
+  });
+
+  /** The everything row is the sum of the sections, which is exact. */
+  it('adds up to the whole practice set', () => {
+    const sections = listPracticeSections(spec, everything, {}, NOW);
+    const tables = buildTables(spec, everything);
+    expect(sections.reduce((n, s) => n + s.total, 0)).toBe(tables.length * boxes);
+    expect(sections.reduce((n, s) => n + s.due, 0)).toBe(countDueBoxes(spec, tables, {}, NOW));
+  });
+
+  it('narrows to exactly the subject key it names', () => {
+    const [section] = listPracticeSections(spec, all, {}, NOW);
+    for (const subject of section.subjects) {
+      const tables = buildTables(spec, all, { tenses: [section.tenseId], subjects: [subject.key] });
+      expect(tables).toHaveLength(1);
+      expect(tables[0].subjectLabel).toBe(subject.label);
     }
   });
 });
