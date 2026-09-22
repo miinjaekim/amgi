@@ -28,7 +28,7 @@ export default function TopicsScreen() {
   const tabBarHeight = useFloatingTabBarHeight();
   const s = useMemo(() => makeStyles(C, tabBarHeight), [C, tabBarHeight]);
   const { interfaceLanguage, studyLanguage } = useUser();
-  const { enrolment } = useConjugation();
+  const { enrolment, loading } = useConjugation();
   const router = useRouter();
   const spec = conjugationSpec(studyLanguage);
 
@@ -63,8 +63,12 @@ export default function TopicsScreen() {
               <Ionicons name={topic.icon} size={22} color={C.muted} />
               <View style={s.rowText}>
                 <Text style={s.rowLabel}>{t(interfaceLanguage, topic.labelKey)}</Text>
+                {/* ⚠️ A count off an enrolment that has not arrived is the
+                    default set's count, not this account's. */}
                 <Text style={s.rowSub}>
-                  {!spec
+                  {loading
+                    ? t(interfaceLanguage, 'munliLoading')
+                    : !spec
                     ? t(interfaceLanguage, 'conjugationUnavailable')
                     : saved > 0
                       ? t(interfaceLanguage, 'topicVerbsSummary', { count: saved })

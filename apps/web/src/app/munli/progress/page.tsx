@@ -16,7 +16,7 @@ import { t } from '@/lib/i18n';
 export default function MunliProgressPage() {
   const { interfaceLanguage } = useUser();
   // The shared live source, not a fetch of its own.
-  const { spec, progress, enrolment } = useConjugation();
+  const { spec, progress, enrolment, loading } = useConjugation();
 
   const summary = useMemo(
     () => (spec && enrolment ? summarizeConjugation(spec, enrolment, progress) : null),
@@ -41,9 +41,12 @@ export default function MunliProgressPage() {
     <div className="max-w-2xl">
       <PageHeader titleKey="munliProgressTitle" />
 
-      {!summary ? (
+      {/* ⚠️ Waiting is not the same as having none: an absent snapshot falls
+          back to the default practice set with everything due, which is a
+          plausible enough picture to be believed. */}
+      {loading || !summary ? (
         <p className="font-mono text-sm" style={{ color: 'var(--color-muted)' }}>
-          {t(interfaceLanguage, 'conjugationUnavailable')}
+          {t(interfaceLanguage, loading ? 'munliLoading' : 'conjugationUnavailable')}
         </p>
       ) : (
         <>

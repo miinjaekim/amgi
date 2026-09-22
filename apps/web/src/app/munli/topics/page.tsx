@@ -17,7 +17,7 @@ import { t } from '@/lib/i18n';
  */
 export default function TopicsPage() {
   const { interfaceLanguage, studyLanguage } = useUser();
-  const { enrolment } = useConjugation();
+  const { enrolment, loading } = useConjugation();
   const spec = conjugationSpec(studyLanguage);
 
   /**
@@ -52,7 +52,11 @@ export default function TopicsPage() {
                 {t(interfaceLanguage, topic.labelKey)}
               </span>
               <span className="block font-mono text-xs mt-0.5" style={{ color: 'var(--color-muted)' }}>
-                {!spec
+                {/* ⚠️ A count off an enrolment that has not arrived is the
+                    default set's count, not this account's. */}
+                {loading
+                  ? t(interfaceLanguage, 'munliLoading')
+                  : !spec
                   ? t(interfaceLanguage, 'conjugationUnavailable')
                   : saved > 0
                     ? t(interfaceLanguage, 'topicVerbsSummary', { count: saved })
