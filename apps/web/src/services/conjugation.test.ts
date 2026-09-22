@@ -35,7 +35,8 @@ import {
   tableKey,
 } from '@amgi/core';
 import type {
-  ConjugationEnrolment, ConjugationGroup, ConjugationProgressMap, ConjugationSpec,
+  ConjugationEnrolment, ConjugationGroup, ConjugationIrregularVerb,
+  ConjugationProgressMap, ConjugationSpec,
 } from '@amgi/core';
 
 const spec = conjugationSpec('French') as ConjugationSpec;
@@ -51,6 +52,7 @@ const everything: ConjugationEnrolment = {
   items: spec.subjects.flatMap(subject => spec.tenses.map(tense => enrolmentKey(subject, tense.id))),
 };
 const groupCount = spec.subjects.filter(s => s.kind === 'group').length;
+const subjectCount = spec.subjects.length;
 
 /**
  * The engine's whole job, pinned against forms that are not in dispute.
@@ -166,7 +168,7 @@ describe('groups as the scheduled subject', () => {
 
   it('keeps different groups and tenses apart', () => {
     const ids = new Set(buildTables(spec, everything).map(t => tableKey(spec, t)));
-    expect(ids.size).toBe(groupCount * spec.tenses.length);
+    expect(ids.size).toBe(subjectCount * spec.tenses.length);
   });
 
   /** ⚠️ The grain: six schedules per table, not one. */
@@ -182,6 +184,117 @@ describe('groups as the scheduled subject', () => {
   it('falls back to a real vehicle when handed one that is not in the group', () => {
     const table = buildTable(spec, group('er'), 'present', 'vendre');
     expect(group('er').vehicles).toContain(table.infinitive);
+  });
+});
+
+/**
+ * The sourced dataset, pinned against the draft it was typed from.
+ *
+ * ⚠️ **These forms are content, not behaviour.** A rule that is wrong is wrong
+ * for its whole group at once and a handful of tables catches it; an irregular
+ * form is wrong all by itself and nothing else in the suite would notice. The
+ * citations are in `docs/packs/french-irregular-verbs-draft.md` — tier A,
+ * Larousse and Bescherelle agreeing character for character.
+ */
+describe('French irregular verbs', () => {
+  const verb = (id: string) => findSubject(spec, `verb:${id}`) as ConjugationIrregularVerb;
+  const forms = (id: string, tense: string) =>
+    spec.persons.map(p => buildTable(spec, verb(id), tense).forms[p.id]);
+
+  it('has être, avoir and aller', () => {
+    expect(subjectsOfKind(spec, 'verb').map(v => v.id)).toEqual(['etre', 'avoir', 'aller']);
+  });
+
+  it('conjugates être', () => {
+    expect(forms('etre', 'present')).toEqual(['suis', 'es', 'est', 'sommes', 'êtes', 'sont']);
+    expect(forms('etre', 'imparfait')).toEqual(['étais', 'étais', 'était', 'étions', 'étiez', 'étaient']);
+    expect(forms('etre', 'futur')).toEqual(['serai', 'seras', 'sera', 'serons', 'serez', 'seront']);
+  });
+
+  it('conjugates avoir', () => {
+    expect(forms('avoir', 'present')).toEqual(['ai', 'as', 'a', 'avons', 'avez', 'ont']);
+    expect(forms('avoir', 'imparfait')).toEqual(['avais', 'avais', 'avait', 'avions', 'aviez', 'avaient']);
+    expect(forms('avoir', 'futur')).toEqual(['aurai', 'auras', 'aura', 'aurons', 'aurez', 'auront']);
+  });
+
+  it('conjugates aller', () => {
+    expect(forms('aller', 'present')).toEqual(['vais', 'vas', 'va', 'allons', 'allez', 'vont']);
+    expect(forms('aller', 'imparfait')).toEqual(['allais', 'allais', 'allait', 'allions', 'alliez', 'allaient']);
+    expect(forms('aller', 'futur')).toEqual(['irai', 'iras', 'ira', 'irons', 'irez', 'iront']);
+  });
+
+  /** A tense a verb is missing is a table `buildTables` silently drops. */
+  it('gives every verb every tense the spec has, with no empty box', () => {
+    for (const subject of subjectsOfKind(spec, 'verb')) {
+      for (const tense of spec.tenses) {
+        expect(subject.forms[tense.id]).toBeTruthy();
+        const table = buildTable(spec, subject, tense.id);
+        for (const person of spec.persons) expect(table.forms[person.id]).toBeTruthy();
+      }
+    }
+  });
+
+  /** The pronoun is `subjectFor`'s job; storing it here would double it. */
+  it('stores the bare form, never the pronoun', () => {
+    for (const subject of subjectsOfKind(spec, 'verb')) {
+      for (const tense of Object.values(subject.forms)) {
+        for (const form of Object.values(tense)) {
+          expect(form).not.toMatch(/^(je |j'|tu |il |nous |vous |ils )/);
+        }
+      }
+    }
+  });
+
+  /**
+   * ⚠️ **The one rule in the engine these verbs could have broken.** `j'` elides
+   * before a vowel or `h`, and three of these nine depend on the vowel list
+   * carrying `é`.
+   */
+  it('puts the right je in front of every first-person form', () => {
+    const withPronoun = (id: string, tense: string) =>
+      acceptedForms(spec, buildTable(spec, verb(id), tense), 's1')[1];
+    expect(withPronoun('etre', 'present')).toBe('je suis');
+    expect(withPronoun('etre', 'imparfait')).toBe("j'étais");
+    expect(withPronoun('etre', 'futur')).toBe('je serai');
+    expect(withPronoun('avoir', 'present')).toBe("j'ai");
+    expect(withPronoun('avoir', 'imparfait')).toBe("j'avais");
+    expect(withPronoun('avoir', 'futur')).toBe("j'aurai");
+    expect(withPronoun('aller', 'present')).toBe('je vais');
+    expect(withPronoun('aller', 'imparfait')).toBe("j'allais");
+    expect(withPronoun('aller', 'futur')).toBe("j'irai");
+  });
+
+  /** The accent is the content — `typedAnswer` folds apostrophes, never these. */
+  it('rejects a form with its accent dropped', () => {
+    const present = buildTable(spec, verb('etre'), 'present');
+    expect(isCorrectForm(spec, present, 'p2', 'êtes')).toBe(true);
+    expect(isCorrectForm(spec, present, 'p2', 'etes')).toBe(false);
+    const imparfait = buildTable(spec, verb('etre'), 'imparfait');
+    expect(isCorrectForm(spec, imparfait, 's1', 'étais')).toBe(true);
+    expect(isCorrectForm(spec, imparfait, 's1', 'etais')).toBe(false);
+  });
+
+  /** An apostrophe typed as ’ is still `j'ai` — the one fold that is wanted. */
+  it('accepts the pronoun form however the apostrophe was typed', () => {
+    const table = buildTable(spec, verb('avoir'), 'present');
+    expect(isCorrectForm(spec, table, 's1', "j'ai")).toBe(true);
+    expect(isCorrectForm(spec, table, 's1', 'j’ai')).toBe(true);
+  });
+
+  /** A verb is scheduled per verb: `aller` teaches you nothing about `être`. */
+  it('keeps each verb on its own schedule', () => {
+    const enrolment = setEnrolled(
+      setEnrolled({ items: [] }, verb('etre'), ['present'], true),
+      verb('aller'), ['present'], true,
+    );
+    const [etre, aller] = buildTables(spec, enrolment);
+    expect(tableKey(spec, etre)).not.toBe(tableKey(spec, aller));
+    expect(boxItemId(spec, etre, 'p1')).not.toBe(boxItemId(spec, aller, 'p1'));
+  });
+
+  /** ⚠️ Unchanged by the dataset: a new account still starts on the patterns. */
+  it('is not in the default practice set', () => {
+    expect(defaultEnrolment(spec).items.every(item => item.startsWith('group:'))).toBe(true);
   });
 });
 
@@ -454,7 +567,7 @@ describe('summarizeConjugation', () => {
 
   it('only counts what is enrolled', () => {
     expect(summarizeConjugation(spec, everything, {}, 5, NOW).total)
-      .toBe(groupCount * spec.tenses.length * boxes);
+      .toBe(subjectCount * spec.tenses.length * boxes);
   });
 
   it('counts a practised box and takes it out of due when scheduled ahead', () => {
@@ -841,10 +954,11 @@ describe('daysUntil', () => {
 describe('subjectsOfKind', () => {
   it('separates the rules from the facts', () => {
     expect(subjectsOfKind(spec, 'group')).toHaveLength(groupCount);
-    // Empty until the sourcing job lands, and the split has to survive that.
-    expect(subjectsOfKind(spec, 'verb')).toEqual([]);
+    // The sourcing job landed 2026-09-22; the split survived it, which is what
+    // this assertion was written to watch.
+    expect(subjectsOfKind(spec, 'verb').map(v => v.infinitive)).toEqual(['être', 'avoir', 'aller']);
     expect(subjectsOfKind(spec, 'group').length + subjectsOfKind(spec, 'verb').length)
-      .toBe(spec.subjects.length);
+      .toBe(subjectCount);
   });
 
   it('counts only the entries belonging to that kind', () => {

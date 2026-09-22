@@ -239,7 +239,10 @@ const translations = {
     verbsFilterGroupCount: '{count} groups',
     verbsFilterNone: 'Nothing selected. Pick a tense and a verb group.',
     verbsIrregular: 'Irregular verbs',
-    verbsIrregularEmpty: 'None yet — irregular verbs are being sourced.',
+    // No longer a promise about the backlog: French has its three as of
+    // 2026-09-22, so this is the ordinary empty state of a language whose
+    // spec carries no irregulars.
+    verbsIrregularEmpty: 'None for this language yet.',
     // Writing review. Restored 2026-09-21 with the feature — the strings are
     // the ones that shipped in 1.3.0, unchanged, because the surface they
     // describe is unchanged. Only its address moved.
@@ -1043,7 +1046,7 @@ const translations = {
     verbsFilterGroupCount: '유형 {count}개',
     verbsFilterNone: '선택된 게 없어요. 시제와 동사 유형을 골라주세요.',
     verbsIrregular: '불규칙 동사',
-    verbsIrregularEmpty: '아직 없어요. 불규칙 동사는 자료를 정리하는 중이에요.',
+    verbsIrregularEmpty: '이 언어는 아직 없어요.',
     writingTagline: '직접 써보세요. 원어민이라면 이렇게 씁니다.',
     writingTaglineSubtitle: '문법이 필요하면 문법을, 아니면 더 자연스러운 표현을 — 쓴 글에 맞춰 짚어드려요. 떠올리지 못했던 표현은 카드로 저장하세요.',
     writingPlaceholder: '{language}로 몇 문장 써보세요. 원어민이라면 어떻게 쓸지 보여드릴게요...',
