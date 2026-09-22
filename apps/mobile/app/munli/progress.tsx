@@ -31,7 +31,7 @@ export default function MunliProgressScreen() {
   const { interfaceLanguage, studyLanguage } = useUser();
   // ⚠️ The shared source, not a copy of its own. Holding one here is what made
   // a rating invisible on this tab until the app was restarted.
-  const { progress, enrolment } = useConjugation();
+  const { progress, enrolment, loading } = useConjugation();
   const spec = conjugationSpec(studyLanguage);
 
   const summary = useMemo(
@@ -45,8 +45,13 @@ export default function MunliProgressScreen() {
       <ScrollView contentContainerStyle={s.content}>
         <Text style={s.title}>{t(interfaceLanguage, 'munliProgressTitle')}</Text>
 
-        {!summary ? (
-          <Text style={s.note}>{t(interfaceLanguage, 'conjugationUnavailable')}</Text>
+        {/* ⚠️ Waiting is not the same as having none: an absent snapshot
+            falls back to the default practice set with everything due, which
+            is a plausible enough picture to be believed. */}
+        {loading || !summary ? (
+          <Text style={s.note}>
+            {t(interfaceLanguage, loading ? 'munliLoading' : 'conjugationUnavailable')}
+          </Text>
         ) : (
           <>
             <View style={s.tiles}>

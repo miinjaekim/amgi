@@ -36,7 +36,7 @@ import { t } from '@/lib/i18n';
  */
 export default function SavedPage() {
   const { interfaceLanguage } = useUser();
-  const { spec, progress, enrolment, setEnrolment } = useConjugation();
+  const { spec, progress, enrolment, setEnrolment, loading } = useConjugation();
   const [openKind, setOpenKind] = useState<string | null>(null);
   const [openSubject, setOpenSubject] = useState<string | null>(null);
   /** `null` reads as "the first tense worth opening" — see `shownTense`. */
@@ -89,12 +89,29 @@ export default function SavedPage() {
 
   const grid = 'grid grid-cols-2 sm:grid-cols-3 gap-3';
 
-  if (!spec || !enrolment) {
+/**
+   * ⚠️ **Nothing here may paint before the snapshot lands.**
+   *
+   * `users/{uid}` is subscribed to, not fetched, so `conjugation` is `undefined`
+   * until the first snapshot — and both fallbacks for that are *plausible*:
+   * `normalizeEnrolment` returns the default practice set, and an empty progress
+   * map reads as everything due. A surface that rendered through the window
+   * would show five patterns nobody saved, all of them owed.
+   *
+   * ⚠️ **On a surface that writes, it is worse than a wrong picture.**
+   * `setEnrolled` takes the enrolment it is handed, so a tap during the window
+   * would write *default plus that change* over the real saved set. That is data
+   * loss, from a control that looked ready.
+   *
+   * The window is one round trip, and it was invisible until the 2026-09-22
+   * launch work started painting before the server answered. It was always here.
+   */
+  if (loading || !spec || !enrolment) {
     return (
       <div className="max-w-2xl">
         <PageHeader titleKey="savedTitle" className="mb-1" />
         <p className="font-mono text-sm mt-6" style={{ color: 'var(--color-muted)' }}>
-          {t(interfaceLanguage, 'conjugationUnavailable')}
+          {t(interfaceLanguage, loading ? 'munliLoading' : 'conjugationUnavailable')}
         </p>
       </div>
     );

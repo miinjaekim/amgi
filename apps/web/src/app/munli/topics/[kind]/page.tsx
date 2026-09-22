@@ -29,7 +29,7 @@ import { t } from '@/lib/i18n';
  */
 export default function VerbTopicPage() {
   const { interfaceLanguage } = useUser();
-  const { spec, enrolment, setEnrolment } = useConjugation();
+  const { spec, enrolment, setEnrolment, loading } = useConjugation();
   // Anything unrecognised reads as regular rather than erroring: the cost of
   // being wrong is landing on the topic that has content in it.
   const irregular = useParams<{ kind: string }>().kind === 'irregular';
@@ -53,12 +53,28 @@ export default function VerbTopicPage() {
     return saved.length > 0 ? saved : [spec.tenses[0].id];
   }, [chosenTenses, spec, enrolment]);
 
-  if (!spec || !enrolment) {
+  /**
+   * ⚠️ **Nothing here may paint before the snapshot lands.**
+   *
+   * `users/{uid}` is subscribed to, not fetched, so `conjugation` is
+   * `undefined` until the first snapshot — and both fallbacks for that are
+   * *plausible*: `normalizeEnrolment` returns the default practice set, and an
+   * empty progress map reads as everything due.
+   *
+   * ⚠️ **On a surface that writes, it is worse than a wrong picture.**
+   * `setEnrolled` takes the enrolment it is handed, so a tap during the window
+   * would write *default plus that change* over the real saved set. That is
+   * data loss, from a control that looked ready.
+   *
+   * The window is one round trip, and it was invisible until the 2026-09-22
+   * launch work began painting before the server answered. It was always here.
+   */
+  if (loading || !spec || !enrolment) {
     return (
       <div className="max-w-2xl">
         <PageHeader titleKey={irregular ? 'verbsIrregular' : 'topicRegularVerbs'} />
         <p className="font-mono text-sm" style={{ color: 'var(--color-muted)' }}>
-          {t(interfaceLanguage, 'conjugationUnavailable')}
+          {t(interfaceLanguage, loading ? 'munliLoading' : 'conjugationUnavailable')}
         </p>
       </div>
     );

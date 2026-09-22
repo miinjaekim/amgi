@@ -39,7 +39,7 @@ export default function VerbTopicScreen() {
   const { C } = useTheme();
   const s = useMemo(() => makeStyles(C), [C]);
   const { interfaceLanguage, studyLanguage } = useUser();
-  const { enrolment, setEnrolment } = useConjugation();
+  const { enrolment, setEnrolment, loading } = useConjugation();
   const router = useRouter();
   const spec = conjugationSpec(studyLanguage);
   // Anything unrecognised reads as regular rather than erroring: the cost of
@@ -85,11 +85,28 @@ export default function VerbTopicScreen() {
     </View>
   );
 
-  if (!spec || !enrolment) {
+  /**
+   * ⚠️ **Nothing here may paint before the snapshot lands.**
+   *
+   * `users/{uid}` is subscribed to, not fetched, so `conjugation` is
+   * `undefined` until the first snapshot, and `normalizeEnrolment` falls back
+   * to the *default* practice set rather than to nothing.
+   *
+   * ⚠️ **This page writes, which makes it the worst place to render early.**
+   * `setEnrolled` takes the enrolment it is handed, so a save pill tapped
+   * during the window would write *default plus that change* over the real
+   * saved set. That is data loss, from a control that looked ready.
+   *
+   * The window is one round trip, and it was invisible until the 2026-09-22
+   * launch work began painting before the server answered. It was always here.
+   */
+  if (loading || !spec || !enrolment) {
     return (
       <SafeAreaView style={s.safe} edges={['top']}>
         {header}
-        <Text style={s.empty}>{t(interfaceLanguage, 'conjugationUnavailable')}</Text>
+        <Text style={s.empty}>
+          {t(interfaceLanguage, loading ? 'munliLoading' : 'conjugationUnavailable')}
+        </Text>
       </SafeAreaView>
     );
   }

@@ -369,6 +369,43 @@ once, so a path that worked on build 14 is not evidence about build 15.
 Closed calls, kept with their reasoning — a decision whose reasoning is lost gets
 reopened by the next person to notice the symptom. Newest first.
 
+### A plausible fallback is worse than no fallback (2026-09-22)
+
+**Found merging the Munli stack against the launch work**, and the general
+lesson is worth more than the fix.
+
+`normalizeEnrolment` returns the **default practice set** when it is handed no
+enrolment. That is right for a new account and wrong for an account whose
+snapshot is still in flight — and the two are indistinguishable from inside the
+function. An empty progress map behaves the same way: it reads as *everything
+due*. So Munli could paint five patterns nobody saved, every box of them owed,
+and the picture was **plausible enough that a learner had no way to disbelieve
+it**.
+
+⚠️ **On the two surfaces that write, it stopped being cosmetic.**
+`setEnrolled` takes the enrolment it is handed, so a save pill on Topics or
+Remove on Saved, tapped inside that window, would write *default plus that
+change* over the real saved set. Data loss, from a control that looked ready.
+
+⚠️ **The window was always there; the launch work only made it visible.**
+`authLoading` used to cover it. The 2026-09-22 cache-first launch clears
+`authLoading` before the Firestore snapshot lands — correctly, that is the whole
+point of it — so the app now paints straight through. **Neither change was
+wrong. The bug was in what the two of them together made observable**, which is
+the kind of defect no single PR's review can catch.
+
+**Fixed in two layers, and the order matters.** The providers now return
+`enrolment: undefined` while the snapshot is in flight, so a screen that forgets
+to check `loading` renders *nothing* rather than something false — that is the
+difference between a rule and a discipline. The five Munli surfaces then say
+they are waiting. `loading` had been on both providers since PR #143 and was
+consumed by nothing.
+
+**The rule to carry forward: a fallback that cannot be told apart from a real
+answer is a bug waiting for a slow connection.** `undefined` is a better
+default than a reasonable guess wherever a caller might write through it. PR
+#153.
+
 ### A right answer says so, and then gets out of the way (2026-09-22)
 
 **Two refinements after the user practised with the revisions**, into the same

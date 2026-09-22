@@ -156,6 +156,11 @@ const translations = {
     // Conjugation practice. The verb, the tense and the person are written in
     // the language being studied — `présent`, `nous` — and are not translated:
     // a learner of French learns the French names. Only the chrome is here.
+    // ⚠️ Not the same state as `conjugationUnavailable`. That one means this
+    // language has no conjugation; this one means the practice set has not
+    // arrived yet, and the difference matters because the fallback for an
+    // absent enrolment is a *plausible* one — the default set, everything due.
+    munliLoading: 'Loading your practice set…',
     conjugationUnavailable: 'No conjugation practice for this language yet.',
     conjugationUnavailableBody: 'French is the only one so far. Switch decks to try it.',
     conjugationTenses: 'Tenses',
@@ -1024,6 +1029,7 @@ const translations = {
     munliToolWritingBlurb: '글을 쓰면 원어민이라면 어떻게 쓸지 보여드려요.',
     munliToolConjugation: '동사 변화',
     munliToolConjugationBlurb: '동사 하나, 시제 하나, 인칭 하나. 형태를 직접 써보세요.',
+    munliLoading: '연습 목록을 불러오는 중...',
     conjugationUnavailable: '이 언어는 아직 동사 변화 연습이 없어요.',
     conjugationUnavailableBody: '지금은 프랑스어만 있어요. 다른 단어장으로 바꿔보세요.',
     conjugationTenses: '시제',

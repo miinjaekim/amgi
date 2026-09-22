@@ -52,7 +52,7 @@ export default function PracticeScreen() {
   const tabBarHeight = useFloatingTabBarHeight();
   const s = useMemo(() => makeStyles(C, tabBarHeight), [C, tabBarHeight]);
   const { interfaceLanguage, studyLanguage } = useUser();
-  const { progress, enrolment, rate } = useConjugation();
+  const { progress, enrolment, rate, loading } = useConjugation();
   const spec = conjugationSpec(studyLanguage);
   const navigation = useNavigation<BottomTabNavigationProp<Record<string, undefined>>>();
 
@@ -186,6 +186,35 @@ export default function PracticeScreen() {
       <Text style={s.title}>{title}</Text>
     </View>
   );
+
+  /**
+   * ⚠️ **Nothing here may paint before the snapshot lands.**
+   *
+   * `users/{uid}` is subscribed to, not fetched, so `conjugation` is
+   * `undefined` until the first snapshot — and both fallbacks for that are
+   * *plausible*: `normalizeEnrolment` returns the default practice set, and an
+   * empty progress map reads as everything due. A surface that rendered
+   * through the window would show five patterns nobody saved, all of them
+   * owed.
+   *
+   * ⚠️ **On a surface that writes, it is worse than a wrong picture.**
+   * `setEnrolled` takes the enrolment it is handed, so a tap during the window
+   * would write *default plus that change* over the real saved set. That is
+   * data loss, from a control that looked ready.
+   *
+   * The window is one round trip, and it was invisible until the 2026-09-22
+   * launch work began painting before the server answered. It was always here.
+   */
+  if (loading) {
+    return (
+      <SafeAreaView style={s.safe} edges={['top']}>
+        {header(t(interfaceLanguage, 'practiceTitle'))}
+        <ScrollView contentContainerStyle={s.content}>
+          <Text style={s.emptyBody}>{t(interfaceLanguage, 'munliLoading')}</Text>
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
 
   /* ── Picker ───────────────────────────────────────────────────────────── */
   if (stage === 'picker') {

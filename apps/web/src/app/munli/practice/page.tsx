@@ -33,7 +33,7 @@ type Stage = 'picker' | 'setup' | 'session';
 
 export default function PracticePage() {
   const { interfaceLanguage } = useUser();
-  const { spec, progress, enrolment, rate } = useConjugation();
+  const { spec, progress, enrolment, rate, loading } = useConjugation();
 
   const [stage, setStage] = useState<Stage>('picker');
   /** Which section's patterns are open, one level down. */
@@ -147,6 +147,34 @@ export default function PracticePage() {
   // them drifting apart — the argument `PAGE_TITLE_SIZE` makes on native.
   const heading = (key: TranslationKey) => <PageHeader titleKey={key} />;
   const primary = 'px-5 py-2.5 rounded-lg font-mono font-bold transition-colors disabled:opacity-40';
+
+/**
+   * ⚠️ **Nothing here may paint before the snapshot lands.**
+   *
+   * `users/{uid}` is subscribed to, not fetched, so `conjugation` is `undefined`
+   * until the first snapshot — and both fallbacks for that are *plausible*:
+   * `normalizeEnrolment` returns the default practice set, and an empty progress
+   * map reads as everything due. A surface that rendered through the window
+   * would show five patterns nobody saved, all of them owed.
+   *
+   * ⚠️ **On a surface that writes, it is worse than a wrong picture.**
+   * `setEnrolled` takes the enrolment it is handed, so a tap during the window
+   * would write *default plus that change* over the real saved set. That is data
+   * loss, from a control that looked ready.
+   *
+   * The window is one round trip, and it was invisible until the 2026-09-22
+   * launch work started painting before the server answered. It was always here.
+   */
+  if (loading) {
+    return (
+      <div className="max-w-2xl">
+        {heading('practiceTitle')}
+        <p className="font-mono text-sm" style={{ color: 'var(--color-muted)' }}>
+          {t(interfaceLanguage, 'munliLoading')}
+        </p>
+      </div>
+    );
+  }
 
   if (stage === 'picker') {
     return (
