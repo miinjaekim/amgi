@@ -626,9 +626,18 @@ describe('buildConjugationQueue', () => {
   /**
    * ⚠️ **The complaint, answered.** One due table used to be one question: a
    * learner weak on `ils` could finish a session without being asked for it.
+   * Every due box is asked — as its own question, since 2026-09-22.
    */
-  it('asks every due box of every due table', () => {
+  it('asks every due box, one to a question', () => {
     const queue = buildConjugationQueue(spec, tables, {}, {}, NOW, fixed);
+    expect(queue).toHaveLength(tables.length * boxes);
+    expect(countQuestions(queue)).toBe(tables.length * boxes);
+    for (const round of queue) expect(round.personIds).toHaveLength(1);
+  });
+
+  /** ⚠️ The same boxes either way; only the packaging differs. */
+  it('asks the same boxes a table at a time when told to', () => {
+    const queue = buildConjugationQueue(spec, tables, {}, { wholeTable: true }, NOW, fixed);
     expect(queue).toHaveLength(tables.length);
     expect(countQuestions(queue)).toBe(tables.length * boxes);
     for (const round of queue) expect(round.personIds).toEqual(spec.persons.map(p => p.id));
@@ -649,9 +658,8 @@ describe('buildConjugationQueue', () => {
     expect(buildConjugationQueue(spec, tables, scheduled(LATER), {}, NOW, fixed)).toEqual([]);
   });
 
-  it('asks the whole table when told to include what is not due', () => {
+  it('asks every box when told to include what is not due', () => {
     const queue = buildConjugationQueue(spec, tables, scheduled(LATER), { includeNotDue: true }, NOW, fixed);
-    expect(queue).toHaveLength(tables.length);
     expect(countQuestions(queue)).toBe(tables.length * boxes);
   });
 
@@ -670,9 +678,10 @@ describe('buildConjugationQueue', () => {
   });
 
   /** ⚠️ One vehicle per round: a paradigm of six different verbs is not one. */
-  it('conjugates the whole round through a single vehicle', () => {
+  it('conjugates a whole-table round through a single vehicle', () => {
     for (const r of [0, 0.25, 0.5, 0.75, 0.99]) {
-      for (const round of buildConjugationQueue(spec, tables, {}, {}, NOW, () => r)) {
+      const queue = buildConjugationQueue(spec, tables, {}, { wholeTable: true }, NOW, () => r);
+      for (const round of queue) {
         const subject = findSubject(spec, `group:${round.table.subjectId}`) as ConjugationGroup;
         expect(subject.vehicles).toContain(round.table.infinitive);
         for (const personId of round.personIds) {
@@ -682,9 +691,31 @@ describe('buildConjugationQueue', () => {
     }
   });
 
+  /**
+   * ⚠️ **A vehicle per question, not per session.** Six boxes of `-er · présent`
+   * asked through six different verbs is the group being the item; asked through
+   * one verb it is that word being the item.
+   */
+  it('varies the vehicle between the boxes of one table', () => {
+    let draws = 0;
+    // A walking value rather than a fixed one, so each draw differs — the real
+    // `Math.random` does this and a fixed stub would hide the per-box draw.
+    const queue = buildConjugationQueue(spec, tables, {}, {}, NOW, () => ((draws++) % 7) / 7);
+    const er = queue.filter(round => round.table.subjectId === 'er');
+    expect(new Set(er.map(round => round.table.infinitive)).size).toBeGreaterThan(1);
+  });
+
   it('shuffles rather than running in subject order', () => {
-    const queue = buildConjugationQueue(spec, tables, {}, {}, NOW, () => 0.7);
+    const queue = buildConjugationQueue(spec, tables, {}, { wholeTable: true }, NOW, () => 0.7);
     expect(queue.map(q => q.table.subjectId)).not.toEqual(tables.map(t => t.subjectId));
+  });
+
+  /** A session that asked all six `-er` boxes in a row would drill one table. */
+  it('does not run a table\'s boxes back to back', () => {
+    let draws = 0;
+    const queue = buildConjugationQueue(spec, tables, {}, {}, NOW, () => ((draws++) % 11) / 11);
+    const ids = queue.map(round => round.table.subjectId);
+    expect(ids.slice(0, boxes).every(id => id === ids[0])).toBe(false);
   });
 });
 describe('languages', () => {

@@ -186,6 +186,11 @@ const translations = {
     practiceTitle: 'Practice',
     practiceNothingDue: 'Nothing due',
     practiceIncludeNotDue: 'Include forms that are not due yet',
+    // ⚠️ A different exercise rather than a different packaging of the same
+    // one, which is why it is offered and not imposed: it asks how much of a
+    // table you can produce in one go.
+    practiceWholeTable: 'Test whole tables',
+    practiceWholeTableHint: 'Fill in every form of a table at once, instead of one at a time.',
     practiceStart: 'Start',
     practiceStop: 'Stop',
     practiceDoneTitle: 'Done for now.',
@@ -1005,6 +1010,8 @@ const translations = {
     practiceTitle: '연습',
     practiceNothingDue: '복습할 게 없어요',
     practiceIncludeNotDue: '아직 복습 차례가 아닌 형태도 포함하기',
+    practiceWholeTable: '표 전체로 연습하기',
+    practiceWholeTableHint: '하나씩 묻는 대신, 표의 모든 형태를 한 번에 채워요.',
     practiceStart: '시작',
     practiceStop: '그만하기',
     practiceDoneTitle: '오늘은 여기까지!',

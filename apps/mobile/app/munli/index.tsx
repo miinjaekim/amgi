@@ -1,7 +1,11 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Switch } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from 'expo-router';
+// The public re-export of `@react-navigation/*`, which `FloatingTabBar` takes
+// its own types from for the same reason.
+import type { BottomTabNavigationProp } from 'expo-router/tabs';
 import {
   boxItemId, buildConjugationQueue, buildTables, conjugationHints, conjugationSpec,
   countDueBoxes, countQuestions, hintedVerdict, isCorrectForm, listPracticeSections,
@@ -49,6 +53,7 @@ export default function PracticeScreen() {
   const { interfaceLanguage, studyLanguage } = useUser();
   const { progress, enrolment, rate } = useConjugation();
   const spec = conjugationSpec(studyLanguage);
+  const navigation = useNavigation<BottomTabNavigationProp<Record<string, undefined>>>();
 
   const [stage, setStage] = useState<Stage>('picker');
   /** Which section's patterns are open, one level down. */
@@ -59,6 +64,8 @@ export default function PracticeScreen() {
    */
   const [chosen, setChosen] = useState<{ tenseId: string | null; subjectKey: string | null } | null>(null);
   const [includeNotDue, setIncludeNotDue] = useState(false);
+  /** Ask a whole table at once. Off by default — a question is one form. */
+  const [wholeTable, setWholeTable] = useState(false);
 
   // Session state. `queue` is fixed at Start; `index` walks it a round at a time.
   const [queue, setQueue] = useState<ConjugationRound[]>([]);
@@ -99,9 +106,26 @@ export default function PracticeScreen() {
     [spec, tables, progress],
   );
 
+  /**
+   * Pressing the Practice tab comes back to the picker.
+   *
+   * ⚠️ **Asked for 2026-09-22, and it is what a tab means**: being three
+   * screens deep with only a back chevron out is a stack pretending to be a
+   * tab. `tabPress` fires whether or not this screen is already focused, so it
+   * covers the case a router hook cannot see — the route never changed.
+   *
+   * Web needs nothing for this: `SideNav` and `BottomNav` render plain
+   * `<a href>`, so clicking Practice there is a document navigation.
+   */
+  useEffect(() => navigation.addListener('tabPress', () => {
+    setStage('picker');
+    setOpenTense(null);
+    setChosen(null);
+  }), [navigation]);
+
   const start = () => {
     if (!spec) return;
-    setQueue(buildConjugationQueue(spec, tables, progress, { includeNotDue }));
+    setQueue(buildConjugationQueue(spec, tables, progress, { includeNotDue, wholeTable }));
     setIndex(0);
     setStopped(false);
     setTyped({});
@@ -265,6 +289,23 @@ export default function PracticeScreen() {
               />
             </View>
 
+            {/* ⚠️ A different exercise, not a different packaging: it asks how
+                much of a table you can produce in one go. Off by default, on
+                the user's call — imposing it turned a five-second question
+                into a form to fill in. */}
+            <View style={s.switchRow}>
+              <View style={s.switchText}>
+                <Text style={s.switchLabel}>{t(interfaceLanguage, 'practiceWholeTable')}</Text>
+                <Text style={s.switchHint}>{t(interfaceLanguage, 'practiceWholeTableHint')}</Text>
+              </View>
+              <Switch
+                value={wholeTable}
+                onValueChange={setWholeTable}
+                trackColor={{ false: C.border, true: C.highlight }}
+                thumbColor={C.bg}
+              />
+            </View>
+
             <TouchableOpacity
               style={[s.primary, dueInSelection === 0 && !includeNotDue && s.primaryOff]}
               disabled={dueInSelection === 0 && !includeNotDue}
@@ -358,6 +399,18 @@ export default function PracticeScreen() {
   }
 
   const ready = round.personIds.every(id => (typed[id] ?? '').trim().length > 0);
+  /**
+   * One box or a paradigm.
+   *
+   * ⚠️ **Read off the round rather than from the switch that built it**, so a
+   * whole-table round whose table has one box due renders as the single
+   * question it actually is — the honest answer, not a degraded one.
+   */
+  const single = round.personIds.length === 1;
+  const only = round.personIds[0];
+  const onlyPerson = spec?.persons.find(p => p.id === only);
+  const onlyHints = conjugationHints(round.table, only);
+  const onlyRight = !!spec && isCorrectForm(spec, round.table, only, (typed[only] ?? '').trim());
 
   return (
     <SafeAreaView style={s.safe} edges={['top']}>
@@ -376,82 +429,134 @@ export default function PracticeScreen() {
           })}
         </Text>
       </View>
-      <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
+      {/**
+        * ⚠️ **`automaticallyAdjustKeyboardInsets`, not a `KeyboardAvoidingView`.**
+        * Reported 2026-09-22: the lower inputs of a table sat under the
+        * keyboard, so you could not see what you were typing. KAV only shrinks
+        * its container and does not scroll the caret back into view — and
+        * `review.tsx` records that inside a screen already padded for the
+        * floating tab bar it gets the overlap wrong by ~90pt as well. Letting
+        * the ScrollView own the inset is what `WritingReviewPanel` does, for
+        * the same reason.
+        */}
+      <ScrollView
+        contentContainerStyle={s.content}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="interactive"
+        automaticallyAdjustKeyboardInsets
+      >
         <View style={s.card}>
           {/* The verb is the vehicle; the subject is what is being tested. For
               a group they differ, and the learner needs both — which verb to
               conjugate, and which pattern it belongs to. */}
           <Text style={s.infinitive}>{round.table.infinitive}</Text>
           <Text style={s.prompt}>
-            {round.table.tenseLabel}
+            {single ? `${onlyPerson?.label} · ` : ''}{round.table.tenseLabel}
             {round.table.subjectKind === 'group' ? ` · ${round.table.subjectLabel}` : ''}
           </Text>
-          {!checked && <Text style={s.lead}>{t(interfaceLanguage, 'conjugationFillDue')}</Text>}
+          {!single && !checked && <Text style={s.lead}>{t(interfaceLanguage, 'conjugationFillDue')}</Text>}
 
-          {spec?.persons.map(person => {
-            const due = round.personIds.includes(person.id);
-            const form = round.table.forms[person.id];
-            const answer = (typed[person.id] ?? '').trim();
-            const correct = !!spec && isCorrectForm(spec, round.table, person.id, answer);
-            const taken = hints[person.id] ?? 0;
-            const hintHalves = conjugationHints(round.table, person.id);
+          {single ? (
+            /* ── One box ────────────────────────────────────────────────── */
+            <View style={s.singleBody}>
+              <TextInput
+                style={s.input}
+                value={typed[only] ?? ''}
+                onChangeText={next => setTyped({ [only]: next })}
+                placeholder={t(interfaceLanguage, 'conjugationAnswerPlaceholder')}
+                placeholderTextColor={C.muted}
+                accessibilityLabel={`${onlyPerson?.label} · ${round.table.tenseLabel}`}
+                autoCapitalize="none"
+                autoCorrect={false}
+                // ⚠️ Off deliberately. The keyboard's suggestion strip would
+                // hand the learner the form being asked for.
+                autoComplete="off"
+                spellCheck={false}
+                editable={!checked}
+                onSubmitEditing={() => (checked ? advance() : ready && check())}
+                returnKeyType="done"
+              />
+              {!checked && (hints[only] ?? 0) < onlyHints.length && (
+                <TouchableOpacity style={s.hintBtn} onPress={() => setHints({ [only]: (hints[only] ?? 0) + 1 })}>
+                  <Text style={s.hintBtnText}>{t(interfaceLanguage, 'conjugationHint')}</Text>
+                </TouchableOpacity>
+              )}
+              {(hints[only] ?? 0) > 0 && (
+                <Text style={s.hint}>{onlyHints.slice(0, hints[only] ?? 0).join('  ')}</Text>
+              )}
+              {checked && (
+                <Text style={[s.verdict, !onlyRight && s.verdictWrong]}>
+                  {onlyRight
+                    ? t(interfaceLanguage, 'conjugationCorrect')
+                    : `${t(interfaceLanguage, 'conjugationWrong')} ${round.table.forms[only]}`}
+                </Text>
+              )}
+            </View>
+          ) : (
+            /* ── A paradigm ─────────────────────────────────────────────── */
+            spec?.persons.map(person => {
+              const due = round.personIds.includes(person.id);
+              const form = round.table.forms[person.id];
+              const answer = (typed[person.id] ?? '').trim();
+              const correct = !!spec && isCorrectForm(spec, round.table, person.id, answer);
+              const taken = hints[person.id] ?? 0;
+              const hintHalves = conjugationHints(round.table, person.id);
 
-            return (
-              <View key={person.id} style={s.boxRow}>
-                <Text style={s.person}>{person.label}</Text>
-                <View style={s.boxBody}>
-                  {/* ⚠️ A box that is not due stays masked until the round is
-                      checked: `nous parlons` on screen makes `tu parles` free,
-                      and the paradigm is only reference once it has been
-                      answered. */}
-                  {!due ? (
-                    <Text
-                      style={s.masked}
-                      accessibilityLabel={checked ? form : t(interfaceLanguage, 'conjugationNotDue')}
+              return (
+                <View key={person.id} style={s.boxRow}>
+                  <Text style={s.person}>{person.label}</Text>
+                  <View style={s.boxBody}>
+                    {/* ⚠️ A box that is not due stays masked until the round is
+                        checked: `nous parlons` on screen makes `tu parles`
+                        free, and the paradigm is only reference once it has
+                        been answered. */}
+                    {!due ? (
+                      <Text
+                        style={s.masked}
+                        accessibilityLabel={checked ? form : t(interfaceLanguage, 'conjugationNotDue')}
+                      >
+                        {checked ? form : '—'}
+                      </Text>
+                    ) : checked ? (
+                      <>
+                        <Text style={[s.answer, !correct && s.answerWrong]}>{form}</Text>
+                        {!correct && !!answer && <Text style={s.typedWrong}>{answer}</Text>}
+                      </>
+                    ) : (
+                      <>
+                        <TextInput
+                          style={s.input}
+                          value={typed[person.id] ?? ''}
+                          onChangeText={next => setTyped(prev => ({ ...prev, [person.id]: next }))}
+                          placeholder={t(interfaceLanguage, 'conjugationAnswerPlaceholder')}
+                          placeholderTextColor={C.muted}
+                          accessibilityLabel={`${person.label} · ${round.table.tenseLabel}`}
+                          autoCapitalize="none"
+                          autoCorrect={false}
+                          autoComplete="off"
+                          spellCheck={false}
+                          returnKeyType="done"
+                        />
+                        {taken > 0 && <Text style={s.hint}>{hintHalves.slice(0, taken).join('  ')}</Text>}
+                      </>
+                    )}
+                  </View>
+                  {/* A hint costs the box it is taken on, which is only possible
+                      now that the box carries its own schedule. */}
+                  {due && !checked && taken < hintHalves.length && (
+                    <TouchableOpacity
+                      style={s.hintBtn}
+                      accessibilityRole="button"
+                      accessibilityLabel={`${t(interfaceLanguage, 'conjugationHint')} · ${person.label}`}
+                      onPress={() => setHints(prev => ({ ...prev, [person.id]: taken + 1 }))}
                     >
-                      {checked ? form : '—'}
-                    </Text>
-                  ) : checked ? (
-                    <>
-                      <Text style={[s.answer, !correct && s.answerWrong]}>{form}</Text>
-                      {!correct && !!answer && <Text style={s.typedWrong}>{answer}</Text>}
-                    </>
-                  ) : (
-                    <>
-                      <TextInput
-                        style={s.input}
-                        value={typed[person.id] ?? ''}
-                        onChangeText={next => setTyped(prev => ({ ...prev, [person.id]: next }))}
-                        placeholder={t(interfaceLanguage, 'conjugationAnswerPlaceholder')}
-                        placeholderTextColor={C.muted}
-                        accessibilityLabel={`${person.label} · ${round.table.tenseLabel}`}
-                        autoCapitalize="none"
-                        autoCorrect={false}
-                        // ⚠️ Off deliberately. The keyboard's suggestion strip
-                        // would hand the learner the form being asked for.
-                        autoComplete="off"
-                        spellCheck={false}
-                        returnKeyType="done"
-                      />
-                      {taken > 0 && <Text style={s.hint}>{hintHalves.slice(0, taken).join('  ')}</Text>}
-                    </>
+                      <Text style={s.hintBtnText}>{t(interfaceLanguage, 'conjugationHint')}</Text>
+                    </TouchableOpacity>
                   )}
                 </View>
-                {/* A hint costs the box it is taken on, which is only possible
-                    now that the box carries its own schedule. */}
-                {due && !checked && taken < hintHalves.length && (
-                  <TouchableOpacity
-                    style={s.hintBtn}
-                    accessibilityRole="button"
-                    accessibilityLabel={`${t(interfaceLanguage, 'conjugationHint')} · ${person.label}`}
-                    onPress={() => setHints(prev => ({ ...prev, [person.id]: taken + 1 }))}
-                  >
-                    <Text style={s.hintBtnText}>{t(interfaceLanguage, 'conjugationHint')}</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-            );
-          })}
+              );
+            })
+          )}
 
           <TouchableOpacity
             style={[s.primary, !checked && !ready && s.primaryOff]}
@@ -498,8 +603,10 @@ function makeStyles(C: Palette, tabBarHeight: number) {
     sectionText: { flex: 1 },
     sectionLabel: { color: C.text, fontSize: 16, fontWeight: '600' },
     sectionSub: { color: C.muted, fontSize: 12, marginTop: 3 },
-    switchRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 24 },
+    switchRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 20 },
+    switchText: { flex: 1 },
     switchLabel: { flex: 1, color: C.text, fontSize: 14 },
+    switchHint: { color: C.muted, fontSize: 12, marginTop: 3 },
     dueLine: { color: C.muted, fontSize: 13, marginBottom: 12 },
     primary: { backgroundColor: C.highlight, borderRadius: 12, paddingVertical: 14, alignItems: 'center', marginTop: 16 },
     primaryOff: { opacity: 0.4 },
@@ -511,6 +618,7 @@ function makeStyles(C: Palette, tabBarHeight: number) {
     pickerLead: { color: C.muted, fontSize: 13, marginBottom: 14 },
     // The paradigm, a row per person. ⚠️ No horizontal scroll: a round is one
     // tense, so the six rows fit a phone without the table shape Topics needs.
+    singleBody: { marginTop: 20 },
     boxRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginTop: 12 },
     person: { color: C.muted, fontSize: 14, width: 68, paddingTop: 12 },
     boxBody: { flex: 1 },
@@ -519,6 +627,10 @@ function makeStyles(C: Palette, tabBarHeight: number) {
       paddingHorizontal: 12, paddingVertical: 10, color: C.text, fontSize: 17,
     },
     masked: { color: C.muted, fontSize: 17, paddingVertical: 11 },
+    // The single-box verdict line: muted when right, highlight when the
+    // form is being shown back.
+    verdict: { color: C.muted, fontSize: 14, marginTop: 16 },
+    verdictWrong: { color: C.highlight },
     answer: { color: C.text, fontSize: 17, paddingVertical: 11 },
     answerWrong: { color: C.highlight, fontWeight: '700' },
     typedWrong: { color: C.muted, fontSize: 12, textDecorationLine: 'line-through', marginTop: -6, marginBottom: 4 },
