@@ -26,6 +26,12 @@ _Kept at the top of the file, ahead of priority order, from 2026-09-22 on the
 user's call — this list changes every time something merges, and it is the one
 section worth seeing without scrolling._
 
+- [ ] **Writing says how to use it** (PR #148, on top of #147). Web is live on
+      merge; **native is not**. A "?" beside the title opening a sheet, and web
+      gets the help component it had none of.
+      ⚠️ **Unopened on a device or in a browser.** Check the sheet reads at
+      phone width and that the "?" is findable beside the title.
+
 - [ ] **Saved, and the management half** (PR #147, on top of #146). Web is live
       on merge; **native is not**. One row per pattern, its saved tenses as
       pills that show a due count and take the pair out of practice when
@@ -99,23 +105,6 @@ under Queued for the next build, and the Decisions entry of 2026-09-22 in
 gated are unblocked: **a due count counts boxes**, so a row reads
 `-er · présent — 3 due` rather than "due now"._
 
-- [ ] **Writing needs to say how to use it.** **Asked for 2026-09-22**: the tab
-      drops you straight into a panel with no guidance, and the specific thing
-      worth telling someone is that **they can write the L2 as broken as they
-      like and fill what they don't know with their L1**.
-      **The pattern already exists and Munli is not using it.**
-      `apps/mobile/src/components/PageHeader.tsx` carries a **"?" button**
-      opening a sheet with a lead sentence and bullets, and its own comment makes
-      the argument for it: *"Pull, not push — the answer is there when you wonder
-      and invisible when you don't … Explaining rather than demonstrating is fine
-      here, and only here: the user asked."* Amgi ships `helpLearnLead/Points`
-      and `helpReviewLead/Points` in that shape
-      (`packages/core/src/i18n.ts:485`); this is `helpWritingLead` +
-      `helpWritingPoints`, en + ko.
-      ⚠️ **Web has no help sheet at all** — nothing in `apps/web/src` matches
-      it. Either build the component there or put the copy inline; the component
-      is the better buy, because Munli's other tabs want it too.
-
 - [ ] **Munli's page titles do not match each other or Amgi's.** **Asked for
       2026-09-22**, from noticing Writing's title is smaller.
       **Mobile.** Amgi has the answer and Munli ignores it: `PageHeader` exports
@@ -123,17 +112,21 @@ gated are unblocked: **a due count counts boxes**, so a row reads
       that these drifted before — *"it sat at 24 against this file's 21 until
       2026-09-04. A shared constant is the only thing that keeps two headers the
       same size without either one knowing about the other."* `cards.tsx` cannot
-      use the component and imports the constant instead. **Munli's five tabs
-      use neither**: each rolls its own at `fontSize: 22, color: C.text`, and
-      `apps/mobile/app/munli/writing.tsx:36` is `fontSize: 18` plus a
-      `fontFamily: 'monospace'` nothing else in the mode sets. That last one is
-      what was noticed.
+      use the component and imports the constant instead. **Munli's tabs use
+      neither**: each rolls its own at `fontSize: 22, color: C.text`.
+      ✅ **Writing is done** — it took `PageHeader` in PR #148 along with the
+      help sheet, and that is what retired its `fontSize: 18` monospace title,
+      which is the thing actually noticed. **Four tabs are left**, and
+      ⚠️ **`PageHeader`'s help props have to become optional on native** the way
+      web's already are: Practice, Saved and Topics have no help copy, and
+      inventing some to satisfy a component would be writing copy nobody asked
+      for.
       **Web is not a size problem.** Every Munli `h1` is already `text-2xl`; the
       difference from Amgi is **colour** — Amgi's are
       `text-[var(--color-highlight)]`, Munli's are `--color-text`. Munli has its
       own palette, so highlight stays mode-distinct.
-      **Adopting `PageHeader` on mobile closes this item and the one above it in
-      one move**, which is the reason they are adjacent.
+      **Adopting `PageHeader` on mobile was what closed the item above too**,
+      which is the reason they were adjacent.
 
 - [ ] **Irregular French verbs.** Conjugation ships with regular groups only, and
       a French conjugation tool without `être`, `avoir` and `aller` is missing the

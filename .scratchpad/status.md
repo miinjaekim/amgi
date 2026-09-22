@@ -369,6 +369,35 @@ once, so a path that worked on build 14 is not evidence about build 15.
 Closed calls, kept with their reasoning — a decision whose reasoning is lost gets
 reopened by the next person to notice the symptom. Newest first.
 
+### Web gets a help sheet, and Writing is what needed one (2026-09-22)
+
+**Asked for by the user**: the Writing tab drops you into a panel with no
+guidance, and the thing worth saying is that **the passage can be as broken as
+it comes out, and a word you cannot reach can go in in your own language**.
+
+⚠️ **The claim is about the route, not encouragement.** `/api/writing` carries a
+"WORDS THEY DID NOT HAVE" section telling the model to find exactly two marks —
+a native-language word mid-sentence, and talking around a word — and to return
+each as a `gap` card, ranked high. The help says what the tool already does;
+that is the difference between guidance and a slogan.
+
+**Behind a "?", not on the page.** `PageHeader`'s own comment is the argument
+and it is unchanged: *"Pull, not push — the answer is there when you wonder and
+invisible when you don't … Explaining rather than demonstrating is fine here,
+and only here: the user asked."*
+
+⚠️ **Web had no help sheet at all**, so the choice was the component or inline
+copy, and it is the component — Munli's other tabs want one, and a second
+platform explaining the same screen in its own words is how the two drift. Web's
+`PageHeader` is native's, down to the copy keys. **Its help props are optional**,
+which native's are not yet: a page with nothing non-obvious to say should render
+its title alone rather than a "?" that restates its name.
+
+**It closes half of the titles item as a side effect.** Adopting `PageHeader` on
+native takes Writing's title with it — `fontSize: 18` in a monospace face
+nothing else in the mode sets, which is the thing the user actually noticed. The
+other four tabs follow in their own change. PR #148.
+
 ### Tables becomes Saved, and takes the management half (2026-09-22)
 
 **Asked for and shaped by the user**: *"a management surface to see what
