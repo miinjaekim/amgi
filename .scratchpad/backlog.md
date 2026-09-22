@@ -26,8 +26,17 @@ _Kept at the top of the file, ahead of priority order, from 2026-09-22 on the
 user's call — this list changes every time something merges, and it is the one
 section worth seeing without scrolling._
 
-- [ ] **What the first Munli pass got wrong** (PR #151, on top of #150). Web is
-      live on merge; **native is not**. The user's review of #145–#150, landed
+- [ ] **Munli waits for the snapshot** (PR #153). Web is live on merge;
+      **native is not**. Found merging the stack against the launch work: an
+      absent enrolment fell back to the *default* practice set, so a cold
+      launch could paint five patterns nobody saved with everything due — and
+      a save pill tapped in that window would have written the default over
+      the real set. The Decisions entry of 2026-09-22 holds the general lesson.
+      ⚠️ **Only a device on a slow connection shows it**, which is why it went
+      unnoticed.
+
+- [ ] **The Munli stack** (PRs #145–#151, merged 2026-09-22). Web is live;
+      **native is not**. The user's review of #145–#150, landed
       on top rather than folded back in: a question is one form again with
       whole tables as a switch, the keyboard stops covering the inputs, a tab
       press returns to that tab's home, Saved is an inventory of tiles with a
