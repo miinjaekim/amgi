@@ -24,6 +24,7 @@ import {
   isCorrectForm,
   listPracticeSections,
   listPracticeTables,
+  listSavedSubjects,
   normalizeEnrolment,
   normalizeProgress,
   rateBox,
@@ -756,6 +757,71 @@ describe('listPracticeTables', () => {
     expect(listPracticeTables(spec, all, progress, NOW)[0].weakBoxes).toEqual([]);
   });
 });
+describe('listSavedSubjects', () => {
+  const NOW = new Date('2026-09-22T12:00:00Z');
+  const boxes = spec.persons.length;
+
+  it('is one row per subject with something saved, in spec order', () => {
+    const rows = listSavedSubjects(spec, everything, {}, NOW);
+    expect(rows.map(r => r.key)).toEqual(spec.subjects.map(subjectKey));
+  });
+
+  /** ⚠️ This lists what is saved; an empty subject belongs on Topics. */
+  it('leaves out a subject with nothing saved', () => {
+    const one = setEnrolled({ items: [] }, group('er'), ['present'], true);
+    const rows = listSavedSubjects(spec, one, {}, NOW);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].key).toBe(subjectKey(group('er')));
+  });
+
+  it('carries the saved tenses in language order, not due order', () => {
+    const enrolment = setEnrolled({ items: [] }, group('er'), ['futur', 'present'], true);
+    const [row] = listSavedSubjects(spec, enrolment, {}, NOW);
+    expect(row.tenses.map(x => x.tenseId)).toEqual(['present', 'futur']);
+    expect(row.total).toBe(2 * boxes);
+    expect(row.due).toBe(row.total);
+    expect(row.started).toBe(0);
+  });
+
+  it('counts a tense pill in boxes', () => {
+    const enrolment = setEnrolled({ items: [] }, group('er'), ['present'], true);
+    const table = buildTables(spec, enrolment)[0];
+    const progress: ConjugationProgressMap = {
+      [boxItemId(spec, table, 'p1')]: {
+        ...freshProgress(NOW), nextReview: new Date('2026-10-01T12:00:00Z').toISOString(),
+      },
+    };
+    const [row] = listSavedSubjects(spec, enrolment, progress, NOW);
+    expect(row.tenses[0].due).toBe(boxes - 1);
+    expect(row.tenses[0].total).toBe(boxes);
+    expect(row.started).toBe(1);
+  });
+
+  /** Naming `nous` twice says nothing more than naming it once. */
+  it('names a person missed under two tenses once, at its worst count', () => {
+    const enrolment = setEnrolled({ items: [] }, group('er'), ['present', 'futur'], true);
+    const [present, futur] = buildTables(spec, enrolment);
+    const progress: ConjugationProgressMap = {
+      [boxItemId(spec, present, 'p1')]: { ...freshProgress(NOW), misses: 1 },
+      [boxItemId(spec, futur, 'p1')]: { ...freshProgress(NOW), misses: 4 },
+      [boxItemId(spec, futur, 's2')]: { ...freshProgress(NOW), misses: 2 },
+    };
+    const [row] = listSavedSubjects(spec, enrolment, progress, NOW);
+    expect(row.weakBoxes).toEqual([
+      { personId: 'p1', personLabel: 'nous', misses: 4 },
+      { personId: 's2', personLabel: 'tu', misses: 2 },
+    ]);
+  });
+
+  /** The two surfaces grain the same pairs differently and must agree. */
+  it('adds up to the same boxes the section list does', () => {
+    const rows = listSavedSubjects(spec, everything, {}, NOW);
+    const sections = listPracticeSections(spec, everything, {}, NOW);
+    expect(rows.reduce((n, r) => n + r.total, 0)).toBe(sections.reduce((n, s) => n + s.total, 0));
+    expect(rows.reduce((n, r) => n + r.due, 0)).toBe(sections.reduce((n, s) => n + s.due, 0));
+  });
+});
+
 describe('daysUntil', () => {
   const NOW = new Date('2026-09-22T12:00:00Z');
 

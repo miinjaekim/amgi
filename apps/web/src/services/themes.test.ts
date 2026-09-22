@@ -158,7 +158,7 @@ describe('modeForTheme', () => {
    * the palette out from under a screen that plainly belongs to a mode.
    */
   it('never lets the param override a path that has a mode', () => {
-    expect(modeForTheme('/munli/tables', 'amgi')).toBe('munli');
+    expect(modeForTheme('/munli/saved', 'amgi')).toBe('munli');
   });
 
   it('reads an unrecognised param as the default', () => {

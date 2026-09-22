@@ -1148,6 +1148,113 @@ export function listPracticeTables(
   });
 }
 
+/* ── The saved set ──────────────────────────────────────────────────────── */
+
+/** One saved tense of one subject — the pair enrolment stores, with its state. */
+export interface ConjugationSavedTense {
+  tenseId: string;
+  label: string;
+  /** The table's key, for a list key and for opening its paradigm. */
+  itemId: string;
+  due: number;
+  /** Boxes, the same unit as `due`. */
+  total: number;
+}
+
+/** A pattern or an irregular verb, with every tense saved under it. */
+export interface ConjugationSavedSubject {
+  key: string;
+  label: string;
+  /** The subject itself — `setEnrolled` and the paradigm both need it back. */
+  subject: ConjugationSubject;
+  tenses: ConjugationSavedTense[];
+  due: number;
+  /** Boxes with any history, across the subject's saved tenses. */
+  started: number;
+  total: number;
+  /** The soonest a box falls due, or `null` when something is due now. */
+  dueAt: Date | null;
+  /** Boxes missed at least once anywhere under this subject, most-missed first. */
+  weakBoxes: { personId: string; personLabel: string; misses: number }[];
+}
+
+/**
+ * The practice set grained by subject — what the Saved tab manages.
+ *
+ * ⚠️ **The same pairs as `listPracticeSections`, transposed.** That one grains
+ * by tense because it answers "what should I sit down to"; this one grains by
+ * pattern because it answers "what have I taken on". Two surfaces, two
+ * questions, one enrolment underneath — which is Amgi's own Packs/Cards split.
+ *
+ * Built on `listPracticeTables` rather than beside it, so the inventory has one
+ * definition and a due count cannot come out different on two tabs.
+ *
+ * ⚠️ **A subject with nothing saved is not a row.** This lists what is saved,
+ * so an empty one belongs on Topics, which is the catalogue.
+ */
+export function listSavedSubjects(
+  spec: ConjugationSpec,
+  enrolment: ConjugationEnrolment,
+  progress: ConjugationProgressMap,
+  now: Date = new Date(),
+): ConjugationSavedSubject[] {
+  const items = listPracticeTables(spec, enrolment, progress, now);
+  const byKey = new Map<string, ConjugationSavedSubject>();
+
+  // Spec order, so a list does not reshuffle itself as the learner saves.
+  for (const subject of spec.subjects) {
+    const key = subjectKey(subject);
+    const mine = items.filter(item => `${item.table.subjectKind}:${item.table.subjectId}` === key);
+    if (mine.length === 0) continue;
+
+    const misses = new Map<string, { personLabel: string; misses: number }>();
+    for (const item of mine) {
+      for (const box of item.weakBoxes) {
+        const seen = misses.get(box.personId);
+        // A person missed under two tenses is one weak box to name, carrying
+        // the worse of the two counts — naming `nous` twice says nothing more.
+        if (!seen || seen.misses < box.misses) {
+          misses.set(box.personId, { personLabel: box.personLabel, misses: box.misses });
+        }
+      }
+    }
+
+    byKey.set(key, {
+      key,
+      label: subject.kind === 'group' ? subject.label : subject.infinitive,
+      subject,
+      // Language order for the tenses too, rather than due-first: this is an
+      // inventory of what was taken on, and a row that reorders itself as you
+      // practise is hard to point at.
+      tenses: spec.tenses
+        .map(tense => mine.find(item => item.table.tenseId === tense.id))
+        .filter((item): item is (typeof mine)[number] => item !== undefined)
+        .map(item => ({
+          tenseId: item.table.tenseId,
+          label: item.table.tenseLabel,
+          itemId: item.itemId,
+          due: item.dueCount,
+          total: item.boxes.length,
+        })),
+      due: mine.reduce((n, item) => n + item.dueCount, 0),
+      started: mine.reduce((n, item) => n + item.started, 0),
+      total: mine.reduce((n, item) => n + item.boxes.length, 0),
+      // Only meaningful with nothing due, exactly as it is on a table: a row
+      // with work waiting says how much, not when.
+      dueAt: mine.some(item => item.due)
+        ? null
+        : mine.map(item => item.dueAt)
+            .filter((at): at is Date => at !== null)
+            .sort((a, b) => a.getTime() - b.getTime())[0] ?? null,
+      weakBoxes: [...misses.entries()]
+        .map(([personId, box]) => ({ personId, ...box }))
+        .sort((a, b) => b.misses - a.misses),
+    });
+  }
+
+  return [...byKey.values()];
+}
+
 /**
  * Whole days from `now` until `dueAt`, never negative.
  *
