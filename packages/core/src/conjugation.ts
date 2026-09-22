@@ -1326,6 +1326,51 @@ export function listSavedSubjects(
   return [...byKey.values()];
 }
 
+/** A kind of thing you have saved — the top shelf of the inventory. */
+export interface ConjugationSavedKind {
+  kind: ConjugationSubject['kind'];
+  subjects: ConjugationSavedSubject[];
+  due: number;
+  /** Boxes, the same unit as `due`. */
+  total: number;
+}
+
+/**
+ * The saved set by kind, then by subject — what the Saved tab opens on.
+ *
+ * ⚠️ **A shelf, not a filter.** Regular and irregular verbs are different kinds
+ * of thing to learn — a group is a rule one example demonstrates, an irregular
+ * verb is a fact no other verb tells you about — and the 2026-09-22 Topics
+ * decision already split them for that reason. Saved mirrors it so the two
+ * surfaces describe the same set the same way.
+ *
+ * ⚠️ **A kind with nothing saved is not a shelf.** This lists what you have,
+ * and an empty shelf belongs on Topics, which is the catalogue.
+ *
+ * Kind order is `spec.subjects` order — groups then verbs for French — so the
+ * shelf does not reorder itself as a learner saves.
+ */
+export function listSavedKinds(
+  spec: ConjugationSpec,
+  enrolment: ConjugationEnrolment,
+  progress: ConjugationProgressMap,
+  now: Date = new Date(),
+): ConjugationSavedKind[] {
+  const shelves: ConjugationSavedKind[] = [];
+  for (const subject of listSavedSubjects(spec, enrolment, progress, now)) {
+    const kind = subject.subject.kind;
+    const shelf = shelves.find(s => s.kind === kind);
+    if (shelf) {
+      shelf.subjects.push(subject);
+      shelf.due += subject.due;
+      shelf.total += subject.total;
+    } else {
+      shelves.push({ kind, subjects: [subject], due: subject.due, total: subject.total });
+    }
+  }
+  return shelves;
+}
+
 /**
  * Whole days from `now` until `dueAt`, never negative.
  *

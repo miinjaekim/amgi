@@ -220,13 +220,17 @@ const translations = {
     // to Topics (the catalogue) and Progress (the totals).
     munliTabSaved: 'Saved',
     savedTitle: 'What you have saved',
-    savedIntro: 'Every pattern you practise, with the tenses under it. Tap a tense to take it out, or a row to read its table.',
+    savedIntro: 'Everything you have saved to practise. Open one to see what is in it.',
     savedEmpty: 'Nothing saved yet. Add a tense or a verb group from Topics.',
     savedNotStarted: 'not started',
     savedDueIn: 'in {days}d',
     savedMissed: 'missed {list}',
-    /** The pill is the same control Topics uses, so it says what it will do. */
-    savedRemove: 'Remove {tense} from practice',
+    savedKindSaved: '{count} saved',
+    savedTenseCount: '{count} tenses',
+    /** Above the sourced note on a tense — see the draft in `docs/packs`. */
+    savedAbout: 'When to use it',
+    savedRemove: 'Remove from practice',
+    savedRemoveLabel: 'Remove {tense} from practice',
     // ⚠️ **Sourced content, not written here.** Every line is tiered and cited
     // in `docs/packs/french-tense-notes-draft.md` against the Office québécois
     // de la langue française and Larousse, and the French examples are those
@@ -1052,12 +1056,16 @@ const translations = {
     munliTabTopics: '주제',
     munliTabSaved: '저장함',
     savedTitle: '저장한 목록',
-    savedIntro: '연습하려고 저장한 패턴과 시제예요. 시제를 누르면 연습에서 빼고, 줄을 누르면 표를 볼 수 있어요.',
+    savedIntro: '연습하려고 저장한 것들이에요. 눌러서 안에 뭐가 있는지 볼 수 있어요.',
     savedEmpty: '아직 저장한 게 없어요. 주제에서 시제나 동사 유형을 추가해보세요.',
     savedNotStarted: '시작 전',
     savedDueIn: '{days}일 후',
     savedMissed: '{list} 자주 틀려요',
-    savedRemove: '{tense} 연습에서 빼기',
+    savedKindSaved: '{count}개 저장함',
+    savedTenseCount: '시제 {count}개',
+    savedAbout: '언제 쓰나요',
+    savedRemove: '연습에서 빼기',
+    savedRemoveLabel: '{tense} 연습에서 빼기',
     tenseFrenchPresentLead: '지금 일어나는 일, 그리고 원래 그런 일을 말해요.',
     tenseFrenchPresentPoints:
       '말하는 지금 일어나고 있는 일 — Paul se lève.\n' +

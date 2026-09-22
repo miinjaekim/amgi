@@ -25,6 +25,7 @@ import {
   isCorrectForm,
   listPracticeSections,
   listPracticeTables,
+  listSavedKinds,
   listSavedSubjects,
   normalizeEnrolment,
   normalizeProgress,
@@ -1005,6 +1006,41 @@ describe('listSavedSubjects', () => {
     const sections = listPracticeSections(spec, everything, {}, NOW);
     expect(rows.reduce((n, r) => n + r.total, 0)).toBe(sections.reduce((n, s) => n + s.total, 0));
     expect(rows.reduce((n, r) => n + r.due, 0)).toBe(sections.reduce((n, s) => n + s.due, 0));
+  });
+});
+
+describe('listSavedKinds', () => {
+  const NOW = new Date('2026-09-22T12:00:00Z');
+
+  it('shelves the saved set by kind, groups first', () => {
+    const shelves = listSavedKinds(spec, everything, {}, NOW);
+    expect(shelves.map(s => s.kind)).toEqual(['group', 'verb']);
+    expect(shelves[0].subjects).toHaveLength(groupCount);
+    expect(shelves[1].subjects.map(s => s.label)).toEqual(['être', 'avoir', 'aller']);
+  });
+
+  /** ⚠️ An empty shelf belongs on Topics, which is the catalogue. */
+  it('leaves out a kind with nothing saved', () => {
+    const one = setEnrolled({ items: [] }, group('er'), ['present'], true);
+    const shelves = listSavedKinds(spec, one, {}, NOW);
+    expect(shelves).toHaveLength(1);
+    expect(shelves[0].kind).toBe('group');
+  });
+
+  it('adds its subjects up', () => {
+    const shelves = listSavedKinds(spec, everything, {}, NOW);
+    for (const shelf of shelves) {
+      expect(shelf.due).toBe(shelf.subjects.reduce((n, s) => n + s.due, 0));
+      expect(shelf.total).toBe(shelf.subjects.reduce((n, s) => n + s.total, 0));
+    }
+  });
+
+  /** Three surfaces off one enrolment, and they must agree on the totals. */
+  it('adds up to the same boxes the section list does', () => {
+    const shelves = listSavedKinds(spec, everything, {}, NOW);
+    const sections = listPracticeSections(spec, everything, {}, NOW);
+    expect(shelves.reduce((n, s) => n + s.total, 0))
+      .toBe(sections.reduce((n, s) => n + s.total, 0));
   });
 });
 
