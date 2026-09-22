@@ -166,7 +166,6 @@ const translations = {
     conjugationNext: 'Next',
     conjugationCorrect: 'Correct',
     conjugationWrong: 'The form is',
-    conjugationPickTense: 'Pick at least one tense.',
     // A round is a table with its due boxes to fill. The rest of the paradigm
     // is masked until the round is checked — showing it would hand over the
     // answer, since `nous parlons` makes `tu parles` free.
@@ -196,7 +195,16 @@ const translations = {
     practiceSessionEmpty: 'Nothing is due right now. Turn on practice anyway to keep going.',
     practiceAgain: 'Practice again',
     practiceBack: 'Back',
-    practiceGroups: 'Verb groups',
+    // The setup screen is Review's collection picker: sections with due counts,
+    // a tense to a row, opening into its patterns. These mirror the
+    // `review*` strings above deliberately — the two surfaces are the same
+    // shape and should not read as two different ideas.
+    practicePickSection: 'What are you practising?',
+    practicePickSubject: 'The whole tense, or one pattern?',
+    practiceEverything: 'Everything saved',
+    practiceWholeTense: 'The whole tense',
+    practiceBackToSections: 'All sections',
+    practiceSectionForms: '{count} forms',
     // The Verbs surface: what is in the practice set at all, as opposed to what
     // this session will cover. Adding a tense is how a learner progresses, and
     // nothing adds one for them.
@@ -958,7 +966,6 @@ const translations = {
     conjugationNext: '다음',
     conjugationCorrect: '정답',
     conjugationWrong: '정답은',
-    conjugationPickTense: '시제를 하나 이상 골라주세요.',
     conjugationFillDue: '복습할 차례인 형태를 채워보세요.',
     conjugationNotDue: '아직 차례가 아니에요',
     munliProgressTitle: '문법 연습',
@@ -980,7 +987,12 @@ const translations = {
     practiceSessionEmpty: '지금은 복습할 형태가 없어요. 그래도 연습하려면 위 설정을 켜주세요.',
     practiceAgain: '다시 연습하기',
     practiceBack: '뒤로',
-    practiceGroups: '동사 유형',
+    practicePickSection: '무엇을 연습할까요?',
+    practicePickSubject: '시제 전체, 아니면 패턴 하나만?',
+    practiceEverything: '저장한 것 전체',
+    practiceWholeTense: '시제 전체',
+    practiceBackToSections: '전체 목록',
+    practiceSectionForms: '{count}개 형태',
     munliTabTopics: '주제',
     munliTabTables: '변화표',
     tablesTitle: '학습 중인 표',

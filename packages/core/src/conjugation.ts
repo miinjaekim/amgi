@@ -985,6 +985,66 @@ export function buildParadigm(
     });
 }
 
+/* ── The picker ─────────────────────────────────────────────────────────── */
+
+/** One subject inside a section: a pattern (`-er`) or an irregular verb. */
+export interface ConjugationSectionSubject {
+  /** What `buildTables` narrows on — `group:er`. */
+  key: string;
+  label: string;
+  due: number;
+  /** Boxes, the same unit as `due`. */
+  total: number;
+}
+
+/** A tense and what is saved under it: one row of the practice picker. */
+export interface ConjugationSection {
+  tenseId: string;
+  label: string;
+  due: number;
+  total: number;
+  subjects: ConjugationSectionSubject[];
+}
+
+/**
+ * The practice set as sections with due counts — Review's picker, for verbs.
+ *
+ * ⚠️ **The tense is the section and the subject is the level under it**, which
+ * is a choice rather than the only arrangement. Enrolment is
+ * `subject:tense` pairs, so either could have been the outer axis; the tense
+ * wins because it is what a learner sits down to practise ("today, the
+ * imparfait"), because Progress already groups this way, and because it
+ * mirrors pack → subpack, which is the shape this is copied from.
+ *
+ * ⚠️ **Counts are boxes.** A section saying "3 due" means three forms, not
+ * three tables — see the grain note at the head of this file.
+ *
+ * The everything row a picker shows above these is the sum of them, which is
+ * exact: a table belongs to one tense.
+ */
+export function listPracticeSections(
+  spec: ConjugationSpec,
+  enrolment: ConjugationEnrolment,
+  progress: ConjugationProgressMap,
+  now: Date = new Date(),
+): ConjugationSection[] {
+  return enrolledTenses(spec, enrolment).map(tense => {
+    const tables = buildTables(spec, enrolment, { tenses: [tense.id] });
+    return {
+      tenseId: tense.id,
+      label: tense.label,
+      due: countDueBoxes(spec, tables, progress, now),
+      total: tables.length * spec.persons.length,
+      subjects: tables.map(table => ({
+        key: `${table.subjectKind}:${table.subjectId}`,
+        label: table.subjectLabel,
+        due: dueBoxes(spec, table, progress, now).length,
+        total: spec.persons.length,
+      })),
+    };
+  });
+}
+
 /* ── The practice list ──────────────────────────────────────────────────── */
 
 /** One box of a table in the practice set, with how it is going. */

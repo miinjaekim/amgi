@@ -26,6 +26,15 @@ _Kept at the top of the file, ahead of priority order, from 2026-09-22 on the
 user's call — this list changes every time something merges, and it is the one
 section worth seeing without scrolling._
 
+- [ ] **The practice setup is a section list** (PR #146, on top of #145). Web is
+      live on merge; **native is not**. One row per tense with its due count,
+      opening into its patterns, with an everything row first.
+      ⚠️ **Unseen on a device or in a browser.** The thing to judge there is the
+      narrowing this cost: a session now covers one selection, where the chips
+      could express "these two tenses, those two patterns". Restoring
+      multi-select is a picker change, not a core one — `buildTables` still
+      takes arrays.
+
 - [ ] **A conjugation box carries the schedule** (PR #145). Web is live on
       merge; **native is not**. The reversal of the table grain: a round is a
       table and every due box of it is asked, each rating on its own answer.
@@ -72,7 +81,7 @@ _**Play led this section for part of that day and is now in Parked**, blocked on
 a Korean phone number it cannot reach from abroad — same-day Decisions entry.
 Munli has the focus back._
 
-_**The four Munli items below were asked for by the user on 2026-09-22**, after
+_**The Munli items below were asked for by the user on 2026-09-22**, after
 using the tabs — unlike the three that left this section the same day. They are
 in build order rather than the order they were raised._
 
@@ -81,30 +90,6 @@ under Queued for the next build, and the Decisions entry of 2026-09-22 in
 [status.md](status.md) holds the four options and why (d) won. The two items it
 gated are unblocked: **a due count counts boxes**, so a row reads
 `-er · présent — 3 due` rather than "due now"._
-
-- [ ] **The practice picker should be sections with due counts, not chips.**
-      **Asked for 2026-09-22**: after opening Conjugation, the setup screen is
-      two rows of chips — tenses, then verb groups — and the user wants Review's
-      shape instead, *"splits according to different sections, and we see how
-      much is due for each section"*.
-      **Most of this is already in core.** `summarizeConjugation` returns
-      `byTense: { tenseId, label, practised, total, due }`
-      (`packages/core/src/conjugation.ts:819`, counted in boxes since PR #145),
-      which is a section list already;
-      Review's row is `renderCollectionRow` at
-      `apps/web/src/app/review/page.tsx:679` — name, due count in highlight,
-      "caught up" in muted, a sub-line with the total.
-      ⚠️ **Review has one axis and conjugation has two.** Enrolment is
-      `subjectKey:tenseId` pairs, so a section is a tense *or* a subject, not
-      both. **Tense as the section, subject as the second level**, mirroring
-      pack → subpack with a whole-tense row first: you sit down to practise the
-      imparfait, and Progress already groups by tense.
-      `practiceIncludeNotDue` survives as over-practice on the second screen.
-      ✅ **Unblocked**: the grain call is made (PR #145), so a section's count is
-      its **due boxes** — `countDueBoxes` is the function, and it is what the
-      picker and setup line already show.
-      Both platforms: `apps/web/src/app/munli/practice/page.tsx` and
-      `apps/mobile/app/munli/index.tsx` (the chips are at lines 206–250).
 
 - [ ] **Tables becomes Saved, and starts managing something.** **Asked for and
       shaped 2026-09-22, on the user's call.** Today it is a flat list of
