@@ -369,6 +369,72 @@ once, so a path that worked on build 14 is not evidence about build 15.
 Closed calls, kept with their reasoning — a decision whose reasoning is lost gets
 reopened by the next person to notice the symptom. Newest first.
 
+### Launch paints from the device, behind a splash that lets go (2026-09-22)
+
+_⚠️ **Written up after the fact, from the shipped code and the backlog item it
+replaced** — not by the session that built it (PR #152). It is here because
+moving that item to Queued would otherwise have deleted the only prose record
+of why launch works this way; where this entry is thinner than the code, the
+comments in `UserContext.tsx` and `LaunchSplash.tsx` are the source._
+
+**The ask**: every open *"takes longer than I feel it should"*, and the user
+wanted it to feel professional — the logo up while it loads, the way Instagram
+does.
+
+**What was actually slow.** `onAuthStateChanged` awaited
+`getUserPreferencesFromServer` *before* reading the interface language, study
+language, language list and streak the device already held. So every open sat
+on skeletons — and on **English labels**, since the interface language was not
+known yet — for a full round trip. ⚠️ **And that read was a bare
+`getDocFromServer` with no timeout**, where everything else in the app gives up
+at `REQUEST_TIMEOUT_MS`, so a weak signal held launch for as long as Firestore
+kept retrying.
+
+**The call: cache first, server second.** Paint from AsyncStorage, clear
+`authLoading`, reconcile with the server in the background. Every existing rule
+— only the server may say "unset", adoption, migration, streak merge — is
+unchanged; **only the order moved**.
+
+⚠️ **"Warm" is keyed on the interface language**, and that is the load-bearing
+choice. It is the answer first run exists to get: without it the setup modal
+decides, and **the modal must not open on a cached guess**. A device without one
+waits for the server exactly as before, so first run on a new phone is
+untouched.
+
+⚠️ **A reconcile in flight can outlive the account it was for.** An auth
+generation counter is bumped on every auth change, so an answer that arrives
+after a sign-out is dropped rather than painted — otherwise a slow round trip
+could put someone else's preferences on screen.
+
+⚠️ **The accepted cost**: a deck switched in the moment before the reconcile
+lands is overwritten by the server's answer. One round trip, capped by the new
+timeout, and the switch is written to the server too, so the next snapshot
+agrees with it.
+
+**The splash is held from the first line of JS**, at module scope rather than
+in a component — by the time anything mounts, iOS may already have taken the
+native splash down onto a blank frame. Its colours are **brand, not theme**,
+because no theme is known that early, and its geometry is matched to the native
+image so the hand-off is invisible. ⚠️ **It is capped**, on the reasoning that
+*"a branded pause is only professional while it is short"*: it lets go long
+before `REQUEST_TIMEOUT_MS` and leaves the skeletons to cover the rest.
+
+**Two smaller calls rode along**: Review is gated on `authLoading` (it is the
+landing tab, and it used to flash "Sign in to review" in English on a cold
+open), and `expo-updates` no longer checks on launch, since nothing ships OTA.
+
+**Rejected**: moving to `@react-native-firebase` for a persistent Firestore
+cache — a large migration for most of what cache-first already gets.
+
+⚠️ **Not judged yet, and it is the one item here that a build is *required*
+for.** The complaint was about a felt delay on TestFlight, so the acceptance
+test is a stopwatch on a real build before and after; the splash cannot be seen
+in Expo Go at all.
+
+⚠️ **It is also what made PR #153 necessary.** Painting before the server
+answers is correct, and it exposed a plausible fallback in Munli that had been
+hidden behind `authLoading` — see the entry above.
+
 ### A plausible fallback is worse than no fallback (2026-09-22)
 
 **Found merging the Munli stack against the launch work**, and the general

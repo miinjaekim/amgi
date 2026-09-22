@@ -26,8 +26,26 @@ _Kept at the top of the file, ahead of priority order, from 2026-09-22 on the
 user's call — this list changes every time something merges, and it is the one
 section worth seeing without scrolling._
 
-- [ ] **Munli waits for the snapshot** (PR #153). Web is live on merge;
-      **native is not**. Found merging the stack against the launch work: an
+- [ ] **A launch that paints from the device, behind a splash** (PR #152).
+      **Native only**, and ⚠️ **the one item in this list a build is *required*
+      to judge**: the user found the slowness on TestFlight, and the splash
+      cannot be seen in Expo Go at all.
+      Cache first with a timeout on the server read, `expo-splash-screen` held
+      from the first line of JS with an animated hand-off, Review gated on
+      `authLoading`, and `expo-updates` no longer checking at launch. All three
+      steps of the original plan are in — verified against the code on
+      2026-09-22, not taken on trust.
+      ⚠️ **The acceptance test is a stopwatch, not a screenshot**: time a cold
+      launch on the build, before and after. The reasoning, the calls and the
+      accepted costs are in the Decisions entry of that date in
+      [status.md](status.md), which was written from the shipped code when this
+      item moved here.
+      ⚠️ **It is what made #153 necessary** — painting before the server
+      answers is right, and it exposed a plausible fallback in Munli that
+      `authLoading` had been hiding.
+
+- [ ] **Munli waits for the snapshot** (PR #153). Web is live; **native is
+      not**. Found merging the stack against the launch work: an
       absent enrolment fell back to the *default* practice set, so a cold
       launch could paint five patterns nobody saved with everything due — and
       a save pill tapped in that window would have written the default over
@@ -108,62 +126,15 @@ French._
 
 ## Medium
 
+_Launch speed led this section and left it on 2026-09-22, merged as PR #152 —
+it is under Queued for the next build._
+
 _One of the three Progress items scoped 2026-09-15 is left. The other two —
 the per-language detail view and both charts — are built on
 `feat/progress-language-detail`, which is what unblocks this one. The three
 calls the user made on them, and the boundary finding that came out of building
 them, are in the Decisions entry of that date in [status.md](status.md).
 Moved High → Medium 2026-09-21, on the user's call, when Munli took High._
-
-- [ ] **Mobile launch should feel instant, behind a branded splash.** **Asked
-      for 2026-09-22**: every open *"takes longer than I feel it should"*; the
-      user wants it to feel professional, with the logo up while it loads the
-      way Instagram does. **Built 2026-09-22 on `worktree-launch-speed`,
-      awaiting a TestFlight build to judge** — all three steps below are in,
-      with the animated hand-off (`LaunchSplash.tsx`) on the user's call. The
-      splash logo is `assets/splash-icon.png`, rendered from web's `AmgiLogo`
-      paths; the user had no separate file. No dark variant: the splash is the
-      brand green in both, as the icon is. Still to do: time a launch on the
-      build before and after (the user found the slowness on TestFlight).
-      **The device already holds what launch needs; launch waits for the
-      server anyway.** `onAuthStateChanged` in
-      `apps/mobile/src/context/UserContext.tsx` awaits
-      `getUserPreferencesFromServer` *before* reading the cached interface
-      language, study language, language list and streak. Until it answers,
-      `studyLanguage` is the `'Korean'` default, `interfaceLanguage` is
-      `undefined` (labels paint in English) and Learn and Settings sit on
-      skeletons. ⚠️ **That read has no timeout** — it is a bare
-      `getDocFromServer` — so a weak signal holds launch for as long as
-      Firestore keeps retrying, where everything else gives up at
-      `REQUEST_TIMEOUT_MS`.
-      **There is no splash screen.** `app.json` configures none, so iOS shows a
-      blank screen while JS boots. `ModeGate`'s comment in `app/_layout.tsx`
-      assumes one is up, and nothing holds it.
-      **Review paints before auth restores.** It is the landing tab and is not
-      gated on `authLoading`, so a cold open flashes "Sign in to review" — in
-      English, since the interface language is not known yet.
-      **Proposed, in order:**
-      (1) **Cache first, server second** — hydrate from AsyncStorage, clear
-      `authLoading`, reconcile with the server in the background. Every
-      existing rule (only the server may say "unset", adoption, migration,
-      streak merge) survives; only the order changes. A device with no cache
-      still waits, so first run is unchanged. Put a timeout on the read.
-      (2) **Splash via the `expo-splash-screen` plugin** — logo on `#173F35`,
-      with a dark variant; `preventAutoHideAsync` and hide once mode, auth and
-      cached prefs are known, **capped around 1.5s** so a slow network never
-      strands you on the logo. Optionally an animated hand-off with Reanimated
-      (already a dependency).
-      (3) Gate Review on `authLoading`; set `expo-updates` to stop checking on
-      launch, since nothing ships OTA.
-      **Not worth it**: moving to `@react-native-firebase` for a persistent
-      Firestore cache — a large migration for what (1) mostly gets.
-      **Ships by build.** (1) and (3) can be iterated in Expo Go; the splash
-      needs a native build to judge.
-      **Open questions for the user:**
-      — Felt in Expo Go or the TestFlight build? Expo Go is slow to start by
-      nature, so measure in a real build, before and after.
-      — Static logo, or logo plus an animated hand-off?
-      — Priority: placed at the top of Medium while Munli holds High.
 
 - [ ] **Share a chart as an asset.** The chart it depends on now exists:
       `buildCardsAddedSeries` and `buildLearnedSeries` are in core, per-language,
