@@ -26,6 +26,14 @@ _Kept at the top of the file, ahead of priority order, from 2026-09-22 on the
 user's call — this list changes every time something merges, and it is the one
 section worth seeing without scrolling._
 
+- [ ] **Saved, and the management half** (PR #147, on top of #146). Web is live
+      on merge; **native is not**. One row per pattern, its saved tenses as
+      pills that show a due count and take the pair out of practice when
+      tapped; the route is `/munli/saved` and the tab is Saved.
+      ⚠️ **Unseen on a device or in a browser.** Topics' pill adds on tap and
+      this one removes, in the same shape — worth checking it is not too easy
+      to hit before deciding it needs no confirm.
+
 - [ ] **The practice setup is a section list** (PR #146, on top of #145). Web is
       live on merge; **native is not**. One row per tense with its due count,
       opening into its patterns, with an everything row first.
@@ -90,31 +98,6 @@ under Queued for the next build, and the Decisions entry of 2026-09-22 in
 [status.md](status.md) holds the four options and why (d) won. The two items it
 gated are unblocked: **a due count counts boxes**, so a row reads
 `-er · présent — 3 due` rather than "due now"._
-
-- [ ] **Tables becomes Saved, and starts managing something.** **Asked for and
-      shaped 2026-09-22, on the user's call.** Today it is a flat list of
-      `-er · présent` rows sorted due-first, each expanding to a paradigm, and
-      **it manages nothing** — saving and unsaving live on Topics as per-tense
-      pills. The user wants *"a management surface to see what patterns or
-      concepts I have saved to practice"*.
-      **The precedent is Amgi's own split**: Packs is the catalogue, Cards is
-      where you curate what it added, and Cards genuinely edits and deletes.
-      `tables/page.tsx` already calls itself *"Munli's answer to Amgi's Cards"*
-      and never took the management half.
-      **Decided shape.** **One row per subject** — a pattern (`-er`) or an
-      irregular verb (`être`) — carrying its saved tenses as **pills that show
-      due state**; tapping a pill unsaves that pair through `setEnrolled`, the
-      same control and the same semantics Topics already uses; the row expands
-      to the paradigm. This grains the set by *pattern* while Practice grains by
-      *tense*, so the two surfaces answer different questions.
-      **Decided name: Saved** — it mirrors the Save action that put things
-      there. Renaming reaches `munliTabTables` / `tablesTitle` and friends in
-      `packages/core/src/i18n.ts`, the route `/munli/tables` → `/munli/saved`,
-      `getMunliNavItems` in `apps/web/src/components/nav-items.tsx`, and
-      `ICONS` / `LABELS` in `apps/mobile/app/munli/_layout.tsx`.
-      ✅ **Unblocked**: the grain call is made (PR #145), so a pill's due state is
-      **how many of that pair's six boxes are due** — `listPracticeTables`
-      returns `dueCount` and `boxes` per table, which is the shape a pill needs.
 
 - [ ] **Writing needs to say how to use it.** **Asked for 2026-09-22**: the tab
       drops you straight into a panel with no guidance, and the specific thing

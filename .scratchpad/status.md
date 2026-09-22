@@ -369,6 +369,37 @@ once, so a path that worked on build 14 is not evidence about build 15.
 Closed calls, kept with their reasoning — a decision whose reasoning is lost gets
 reopened by the next person to notice the symptom. Newest first.
 
+### Tables becomes Saved, and takes the management half (2026-09-22)
+
+**Asked for and shaped by the user**: *"a management surface to see what
+patterns or concepts I have saved to practice"*. The page already called itself
+*"Munli's answer to Amgi's Cards"* and was only ever half of one — **Cards
+genuinely edits and deletes**, and this read a flat list of `-er · présent` rows
+while saving and unsaving lived on Topics.
+
+**One row per subject, tenses as pills.** A pattern (`-er`) or an irregular verb
+(`être`) is the row; the tenses saved under it are pills carrying their own due
+count; tapping one takes that pair out of practice. ⚠️ **The pill is Topics'
+pill** — `setEnrolled` on one subject-and-tense pair — rather than a second
+control with the same job. The rule that produced it on Topics ("a control that
+cannot state its own answer") is the reason it is right here too.
+
+⚠️ **Grained by pattern, where Practice is grained by tense**, and the two are
+deliberately different. One enrolment answers two questions: *what have I taken
+on* and *what should I sit down to*. `listSavedSubjects` is
+`listPracticeSections` transposed, and both are built on `listPracticeTables`,
+so a due count cannot come out different on two tabs.
+
+**Named Saved, because it mirrors the Save action that put things there.** The
+route is `/munli/saved`; the icon and the slot are unchanged, since it is still
+where Cards sits in Amgi's bar. That also retires the known cost recorded on
+2026-09-22 under "Munli's bar mirrors Amgi's" — *"`Tables` will not generalise"*
+— since Saved says nothing about the shape of what is in it.
+
+⚠️ **The one thing to watch on a device**: Topics' pill *adds* on tap and this
+one *removes*, in the same shape and colour. If that turns out to be too easy to
+hit, the fix is a confirm or an undo, not a different control. PR #147.
+
 ### The practice setup is Review's picker, with the tense as the section (2026-09-22)
 
 **Asked for by the user after using it**: *"splits according to different
@@ -614,6 +645,8 @@ the shell: Munli conjugates whatever deck you are on.
 conjugation item and wrong the moment a second topic's items are not tables. It
 is a label, so it is cheap to change — but the slot is *Cards*, and whatever
 replaces the name has to keep meaning "the things you are learning".
+**Settled the same day** — it is **Saved**, which says nothing about the shape
+of what is in it. See the entry above.
 
 ### What conjugation schedules is a rule, not a verb (2026-09-22)
 
