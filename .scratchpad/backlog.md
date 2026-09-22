@@ -51,105 +51,157 @@ section worth seeing without scrolling._
 
 ## High
 
-_Reordered 2026-09-22 on the user's call. Play leads, and the three Munli items
-that sat here were removed: they were written up without being asked for. The
-Decisions entry of that date in [status.md](status.md) records what they were and
-why they left, so none of them gets reopened from here. Munli's own plan is in
-the two entries of 2026-09-21._
+_Reordered 2026-09-22 on the user's call: the three Munli items that sat here
+were removed, because they were written up without being asked for. The Decisions
+entry of that date in [status.md](status.md) records what they were and why they
+left, so none of them gets reopened from here. Munli's own plan is in the two
+entries of 2026-09-21._
 
-- [ ] **Amgi on Google Play — internal testing track.** **Decided 2026-09-22**
-      (Decisions in [status.md](status.md) holds the four calls and their
-      reasoning): a **personal** developer account on the Google account that
-      already owns Firebase and the Android OAuth client, the sideloaded APK
-      channel **retired** once Play is live, and listing copy in **en + ko**, as
-      TestFlight's already is. Production is not in scope; this buys the one
-      thing the APK lacks — an update path.
-      ⚠️ **The acceptance gate is Google sign-in on a Play-delivered install**,
-      not a green build. Play App Signing re-signs the AAB with Google's key, so
-      the fingerprint an end user's install carries is **not** the EAS upload
-      keystore's, and the OAuth client is keyed to package name + SHA-1. Until
-      the App signing SHA-1 is registered, sign-in fails on Play installs **and
-      passes everywhere else** — the shape that cost four release builds in
-      August ([lessons.md](lessons.md)).
+_**Play led this section for part of that day and is now in Parked**, blocked on
+a Korean phone number it cannot reach from abroad — same-day Decisions entry.
+Munli has the focus back._
 
-      **1 · Account** (has a wait; start it first).
-      Register at `play.google.com/console` on the Firebase-owning account, $25
-      one-off, then identity verification — government ID plus a real address,
-      typically a day or two, occasionally longer. Then create the app entry:
-      *Amgi*, app, free, default language en-US. The package is claimed by the
-      first upload, not typed in — `com.miinjaekim.amgi`, permanent, already
-      keyed into the OAuth client.
+_**The five Munli items below were asked for by the user on 2026-09-22**, after
+using the tabs — unlike the three that left this section the same day. They are
+in build order rather than the order they were raised: the grain question gates
+the picker and the Saved tab, because both display due counts and what a due
+count *counts* is that decision. **Nothing here is started**; the user's call was
+to plan first._
 
-      **2 · Repo work** (an afternoon, parallel with the wait).
-      `apps/mobile/eas.json` only: an `android` block on the `production` profile
-      (AAB is its default; `distribution: internal` on `preview` is what makes
-      today's APK), and `submit.production.android` beside the existing
-      `ios.ascAppId`. The submit key is a **Google Play service account** — made
-      in Google Cloud, granted a release role in Play Console under Users and
-      permissions, JSON downloaded and kept **out of the repo** (EAS secret or a
-      gitignored path). `appVersionSource: remote` already covers Android; the
-      counter is at `versionCode` 6 and Play only requires it to increase.
-      ⚠️ **Plan on the first upload being manual.** The Publishing API has not
-      historically been able to create an app's *first* release, so
-      `--auto-submit` is a step-3-onwards convenience, not a step-2 one. Verify
-      rather than fight it.
+- [ ] **Conjugation schedules a table; a table is six facts.** **Raised
+      2026-09-22 by the user**, from using it: *"having one tense of one verb
+      group due means I'd practice just one verb conjugation … I might be
+      struggling with `ils` but I randomly got `tu` or `je` and the practice
+      ends."*
+      **What happens today.** The scheduled unit is a table, `(subject, tense)`
+      (`ConjugationProgress`, `packages/core/src/conjugation.ts:145`), and
+      `buildConjugationQueue` is `pool.map(table => one question)` — literally
+      one question per due table, with `pickPerson` drawing the box. Its own
+      comment gives the reasoning: *"The table is the scheduled item, so asking
+      it twice in one sitting would be two questions about one fact."*
+      ⚠️ **That sentence is the defect.** A table is six facts, not one, and the
+      code already knows it: `misses` exists as a per-person tally precisely
+      because *"one schedule cannot know that your `nous` specifically is
+      weak"*. The model half-admits the grain is wrong and patches it with a
+      draw bias instead of fixing it.
+      **The complaint is sharper than it was put.** `rateTable` applies one
+      box's verdict to the whole table's SM-2 interval, so **answering `tu`
+      correctly schedules `ils` away too** — five boxes pushed out on evidence
+      from one. `pickPerson` only helps *after* a miss is recorded, and gets
+      exactly one draw per session.
 
-      **3 · Build, sign, and prove auth.** Build
-      (`npx eas-cli build --platform android --profile production`), upload the
-      AAB to the **internal testing** track, which enrols it in Play App Signing
-      automatically. Then, before inviting anybody: copy the **app signing**
-      certificate SHA-1 from Play Console → Test and release → App integrity, and
-      add it to the Firebase Android app **and** the Android OAuth client in
-      Google Cloud, **keeping the upload key's SHA-1 registered as well**.
-      Install from the internal link on a real device and sign in. That test is
-      the gate; nothing below matters if it fails.
+      **Four ways out, cheapest first.**
+      **(a) Ask every box of a due table.** Six questions per due table, one
+      rating for the table, worst answer winning. No migration, no new item ids.
+      Cost: a table you are five-sixths solid on still costs six questions, and
+      the schedule still speaks for the boxes as a block.
+      **(b) Ask *n* boxes weighted by `misses`, and hold the interval back
+      unless the weak ones cleared.** The cheapest fix to the stated symptom.
+      ⚠️ Hacky: the interval still speaks for boxes that were never asked.
+      **(c) Schedule per box** — the item becomes `(subject, tense, person)`.
+      ⚠️ **There is direct precedent in Amgi**: a card is scheduled per
+      *direction*, and `helpReviewPoints` says so to the user — *"Each card is
+      asked both ways — recognising a word and saying it are tracked
+      separately."* Splitting a table into six boxes is that same move. Cost: a
+      migration of `ConjugationProgressMap` on the user document, item ids
+      change, `misses` becomes redundant, and **due counts multiply by six** —
+      "12 due" becomes "72 due", which changes both what a session feels like
+      and what the two items below display.
+      **(d) Schedule per box, present per table** — a due table opens as its
+      paradigm with the due cells to fill, each cell rating independently.
 
-      **4 · The console forms**, which gate any release going live even on the
-      internal track. App content: privacy policy URL (exists, both locales), app
-      access (there is no email/password path — the note has to say a Google
-      account is required), ads (none), content rating questionnaire, target
-      audience (13+, and the privacy page already says not directed at under-13s),
-      data safety, plus the nil declarations for financial/health/government
-      features.
-      **Data safety is the one with real content**: Google account identifiers,
-      user content (cards, and writing passages), app activity; text processed by
-      **Gemini** through the API routes; TTS audio in Storage; in transit
-      encryption; deletion available in-app. ⚠️ **It must match `/privacy`
-      exactly**, including the deliberate exception — cached pronunciation audio
-      is keyed by a hash of the word, not by user, and survives account deletion.
-      Play also wants a **public deletion-request URL**: the privacy page's
-      "Data retention and deletion" section is the content, but the section
-      needs an `id` to link to.
+      **Recommendation: (d), which is (c) underneath.** It answers the complaint
+      directly — a weak `ils` is asked because it is due, not because a die
+      landed on it — and it matches how conjugation is actually practised, as a
+      paradigm rather than a flashcard. Presenting per table also keeps the
+      count legible: *"-er · présent — 3 boxes due"* rather than 72 loose items.
+      ⚠️ **Weigh it against the standing rule first.** *"Three-sided hanja cards
+      cost a setting, not a scheduling axis"* and *"Per-level content is allowed;
+      per-level adaptivity is not"* (both in Decisions) are the app resisting
+      exactly this kind of multiplication; the direction precedent above is the
+      counter-argument. **This is the call to make before anything below is
+      built.**
 
-      **5 · Listing copy and assets**, en + ko, into a new
-      `docs/play-store-listing.md` beside `docs/testflight-beta-info.md` — the
-      Beta App Description there is most of the full description already, and the
-      same one-line-per-paragraph rule applies. Needs: app name, short description
-      (80 chars), full description (4000), 512px icon (downscale
-      `assets/icon.png`, which is 1024), **a 1024×500 feature graphic, which does
-      not exist in any form**, and at least two phone screenshots.
-      ⚠️ **Check the generative-AI policy while writing these.** Play has
-      required an in-app way to report offensive AI output; Amgi generates card
-      content through Gemini. If it applies it is a small feature, not a form.
+- [ ] **The practice picker should be sections with due counts, not chips.**
+      **Asked for 2026-09-22**: after opening Conjugation, the setup screen is
+      two rows of chips — tenses, then verb groups — and the user wants Review's
+      shape instead, *"splits according to different sections, and we see how
+      much is due for each section"*.
+      **Most of this is already in core.** `summarizeConjugation` returns
+      `byTense: { tenseId, label, practised, total, due }`
+      (`packages/core/src/conjugation.ts:676`), which is a section list already;
+      Review's row is `renderCollectionRow` at
+      `apps/web/src/app/review/page.tsx:676` — name, due count in highlight,
+      "caught up" in muted, a sub-line with the total.
+      ⚠️ **Review has one axis and conjugation has two.** Enrolment is
+      `subjectKey:tenseId` pairs, so a section is a tense *or* a subject, not
+      both. **Tense as the section, subject as the second level**, mirroring
+      pack → subpack with a whole-tense row first: you sit down to practise the
+      imparfait, and Progress already groups by tense.
+      `practiceIncludeNotDue` survives as over-practice on the second screen.
+      ⚠️ **Blocked on the grain call above** — not for the layout, which is the
+      same either way, but for what the counts say.
+      Both platforms: `apps/web/src/app/munli/practice/page.tsx` and
+      `apps/mobile/app/munli/index.tsx` (the chips are at lines 188–230).
 
-      **6 · Testers and cutover.** Internal track takes up to 100 tester emails,
-      each a Google account. ⚠️ **Testers must uninstall the sideloaded APK
-      first** — different signing key, so it cannot install over the top — and
-      that loses the AsyncStorage layer: streak, offline snapshot, rating queue.
-      **Cards are in Firestore and survive.** Say so in the invitation rather
-      than letting someone find out.
-      Then the notes follow the cutover: the APK channel comes out of
-      [tech-stack.md](tech-stack.md), Android gets build rows under Builds in
-      [status.md](status.md) the way iOS has, and **the line at the foot of this
-      file stops being true** — a Play release is reviewed, so Android is no
-      longer the exception that ships the same day.
+- [ ] **Tables becomes Saved, and starts managing something.** **Asked for and
+      shaped 2026-09-22, on the user's call.** Today it is a flat list of
+      `-er · présent` rows sorted due-first, each expanding to a paradigm, and
+      **it manages nothing** — saving and unsaving live on Topics as per-tense
+      pills. The user wants *"a management surface to see what patterns or
+      concepts I have saved to practice"*.
+      **The precedent is Amgi's own split**: Packs is the catalogue, Cards is
+      where you curate what it added, and Cards genuinely edits and deletes.
+      `tables/page.tsx` already calls itself *"Munli's answer to Amgi's Cards"*
+      and never took the management half.
+      **Decided shape.** **One row per subject** — a pattern (`-er`) or an
+      irregular verb (`être`) — carrying its saved tenses as **pills that show
+      due state**; tapping a pill unsaves that pair through `setEnrolled`, the
+      same control and the same semantics Topics already uses; the row expands
+      to the paradigm. This grains the set by *pattern* while Practice grains by
+      *tense*, so the two surfaces answer different questions.
+      **Decided name: Saved** — it mirrors the Save action that put things
+      there. Renaming reaches `munliTabTables` / `tablesTitle` and friends in
+      `packages/core/src/i18n.ts`, the route `/munli/tables` → `/munli/saved`,
+      `getMunliNavItems` in `apps/web/src/components/nav-items.tsx`, and
+      `ICONS` / `LABELS` in `apps/mobile/app/munli/_layout.tsx`.
+      ⚠️ **Blocked on the grain call above** for what a pill's due dot means.
 
-      **Worth doing before anyone but you is invited**, though it blocks nothing:
-      reminders have no `setNotificationChannel` call and no runtime
-      `POST_NOTIFICATIONS` request, so on Android 13+ they land in the default
-      "Miscellaneous" channel if they arrive at all — and **nothing but sign-in
-      has ever been exercised on Android** (the never-verified ⚠️ under Builds in
-      [status.md](status.md)).
+- [ ] **Writing needs to say how to use it.** **Asked for 2026-09-22**: the tab
+      drops you straight into a panel with no guidance, and the specific thing
+      worth telling someone is that **they can write the L2 as broken as they
+      like and fill what they don't know with their L1**.
+      **The pattern already exists and Munli is not using it.**
+      `apps/mobile/src/components/PageHeader.tsx` carries a **"?" button**
+      opening a sheet with a lead sentence and bullets, and its own comment makes
+      the argument for it: *"Pull, not push — the answer is there when you wonder
+      and invisible when you don't … Explaining rather than demonstrating is fine
+      here, and only here: the user asked."* Amgi ships `helpLearnLead/Points`
+      and `helpReviewLead/Points` in that shape
+      (`packages/core/src/i18n.ts:485`); this is `helpWritingLead` +
+      `helpWritingPoints`, en + ko.
+      ⚠️ **Web has no help sheet at all** — nothing in `apps/web/src` matches
+      it. Either build the component there or put the copy inline; the component
+      is the better buy, because Munli's other tabs want it too.
+
+- [ ] **Munli's page titles do not match each other or Amgi's.** **Asked for
+      2026-09-22**, from noticing Writing's title is smaller.
+      **Mobile.** Amgi has the answer and Munli ignores it: `PageHeader` exports
+      `PAGE_TITLE_SIZE = 21` with `color: C.highlight`, and its comment records
+      that these drifted before — *"it sat at 24 against this file's 21 until
+      2026-09-04. A shared constant is the only thing that keeps two headers the
+      same size without either one knowing about the other."* `cards.tsx` cannot
+      use the component and imports the constant instead. **Munli's five tabs
+      use neither**: each rolls its own at `fontSize: 22, color: C.text`, and
+      `apps/mobile/app/munli/writing.tsx:36` is `fontSize: 18` plus a
+      `fontFamily: 'monospace'` nothing else in the mode sets. That last one is
+      what was noticed.
+      **Web is not a size problem.** Every Munli `h1` is already `text-2xl`; the
+      difference from Amgi is **colour** — Amgi's are
+      `text-[var(--color-highlight)]`, Munli's are `--color-text`. Munli has its
+      own palette, so highlight stays mode-distinct.
+      **Adopting `PageHeader` on mobile closes this item and the one above it in
+      one move**, which is the reason they are adjacent.
 
 - [ ] **Irregular French verbs.** Conjugation ships with regular groups only, and
       a French conjugation tool without `être`, `avoir` and `aller` is missing the
@@ -305,6 +357,122 @@ _Empty as of 2026-09-08 — the gloss ceiling was the only item here, and it
 closed (Decisions in [status.md](status.md))._
 
 ## Parked
+
+- [ ] **Amgi on Google Play — internal testing track.** ⏸ **On hold from
+      2026-09-22, the same day it was scoped and taken up**, on the user's call.
+      Step 1 is blocked: identity verification delivers its code to a **+82**
+      number and the user is abroad without one. **Unblocks on** help from
+      someone in Korea with the line, or the flight back. The two Play entries of
+      that date in [status.md](status.md) hold the reasoning — including why a
+      family member's number is not a way around it.
+      ⚠️ **The hold is the account, not the item.** Steps 2–5 need no Play
+      account: `eas.json`, the listing copy, the feature graphic, the data safety
+      answers and the privacy-page anchor can all be done from anywhere. Only the
+      service account, the upload and the SHA-1 registration wait.
+      **Decided 2026-09-22** (Decisions in [status.md](status.md) holds the four
+      calls and their reasoning): a **personal** developer account on the Google
+      account that already owns Firebase and the Android OAuth client, the
+      sideloaded APK channel **retired** once Play is live, and listing copy in
+      **en + ko**, as TestFlight's already is. Production is not in scope; this
+      buys the one thing the APK lacks — an update path.
+      ⚠️ **The acceptance gate is Google sign-in on a Play-delivered install**,
+      not a green build. Play App Signing re-signs the AAB with Google's key, so
+      the fingerprint an end user's install carries is **not** the EAS upload
+      keystore's, and the OAuth client is keyed to package name + SHA-1. Until
+      the App signing SHA-1 is registered, sign-in fails on Play installs **and
+      passes everywhere else** — the shape that cost four release builds in
+      August ([lessons.md](lessons.md)).
+
+      **1 · Account** ⛔ **blocked — this is the hold.**
+      Register at `play.google.com/console` on the Firebase-owning account, $25
+      one-off, then identity verification — government ID plus a real address.
+      ⚠️ **Two things here are already settled and must not be redone.** The
+      payments profile is **Korea, and a payments profile's country is
+      permanent** — it cannot be edited, only replaced by a new profile. And the
+      **주민등록등본 is in hand**; 정부24 issues it as a **password-protected
+      PDF**, which verification cannot open, so strip the password before
+      uploading, and make the **도로명주소 match the payments profile character
+      for character** — a 지번/도로명 mismatch is the usual rejection, not a bad
+      document.
+      ⛔ **What blocks:** the code goes to a **+82** number and the country cannot
+      be changed on that field. Korean 휴대폰 본인확인 matches the number against
+      the name and 생년월일 registered to it, so a borrowed line fails against
+      the user's own documents. Untried: **착신전환** to a foreign number plus the
+      **voice-call** option, which needs nobody else.
+      **Once unblocked**, create the app entry: *Amgi*, app, free, default
+      language en-US. The package is claimed by the first upload, not typed in —
+      `com.miinjaekim.amgi`, permanent, already keyed into the OAuth client.
+
+      **2 · Repo work** (an afternoon, parallel with the wait).
+      `apps/mobile/eas.json` only: an `android` block on the `production` profile
+      (AAB is its default; `distribution: internal` on `preview` is what makes
+      today's APK), and `submit.production.android` beside the existing
+      `ios.ascAppId`. The submit key is a **Google Play service account** — made
+      in Google Cloud, granted a release role in Play Console under Users and
+      permissions, JSON downloaded and kept **out of the repo** (EAS secret or a
+      gitignored path). `appVersionSource: remote` already covers Android; the
+      counter is at `versionCode` 6 and Play only requires it to increase.
+      ⚠️ **Plan on the first upload being manual.** The Publishing API has not
+      historically been able to create an app's *first* release, so
+      `--auto-submit` is a step-3-onwards convenience, not a step-2 one. Verify
+      rather than fight it.
+
+      **3 · Build, sign, and prove auth.** Build
+      (`npx eas-cli build --platform android --profile production`), upload the
+      AAB to the **internal testing** track, which enrols it in Play App Signing
+      automatically. Then, before inviting anybody: copy the **app signing**
+      certificate SHA-1 from Play Console → Test and release → App integrity, and
+      add it to the Firebase Android app **and** the Android OAuth client in
+      Google Cloud, **keeping the upload key's SHA-1 registered as well**.
+      Install from the internal link on a real device and sign in. That test is
+      the gate; nothing below matters if it fails.
+
+      **4 · The console forms**, which gate any release going live even on the
+      internal track. App content: privacy policy URL (exists, both locales), app
+      access (there is no email/password path — the note has to say a Google
+      account is required), ads (none), content rating questionnaire, target
+      audience (13+, and the privacy page already says not directed at under-13s),
+      data safety, plus the nil declarations for financial/health/government
+      features.
+      **Data safety is the one with real content**: Google account identifiers,
+      user content (cards, and writing passages), app activity; text processed by
+      **Gemini** through the API routes; TTS audio in Storage; in transit
+      encryption; deletion available in-app. ⚠️ **It must match `/privacy`
+      exactly**, including the deliberate exception — cached pronunciation audio
+      is keyed by a hash of the word, not by user, and survives account deletion.
+      Play also wants a **public deletion-request URL**: the privacy page's
+      "Data retention and deletion" section is the content, but the section
+      needs an `id` to link to.
+
+      **5 · Listing copy and assets**, en + ko, into a new
+      `docs/play-store-listing.md` beside `docs/testflight-beta-info.md` — the
+      Beta App Description there is most of the full description already, and the
+      same one-line-per-paragraph rule applies. Needs: app name, short description
+      (80 chars), full description (4000), 512px icon (downscale
+      `assets/icon.png`, which is 1024), **a 1024×500 feature graphic, which does
+      not exist in any form**, and at least two phone screenshots.
+      ⚠️ **Check the generative-AI policy while writing these.** Play has
+      required an in-app way to report offensive AI output; Amgi generates card
+      content through Gemini. If it applies it is a small feature, not a form.
+
+      **6 · Testers and cutover.** Internal track takes up to 100 tester emails,
+      each a Google account. ⚠️ **Testers must uninstall the sideloaded APK
+      first** — different signing key, so it cannot install over the top — and
+      that loses the AsyncStorage layer: streak, offline snapshot, rating queue.
+      **Cards are in Firestore and survive.** Say so in the invitation rather
+      than letting someone find out.
+      Then the notes follow the cutover: the APK channel comes out of
+      [tech-stack.md](tech-stack.md), Android gets build rows under Builds in
+      [status.md](status.md) the way iOS has, and **the line at the foot of this
+      file stops being true** — a Play release is reviewed, so Android is no
+      longer the exception that ships the same day.
+
+      **Worth doing before anyone but you is invited**, though it blocks nothing:
+      reminders have no `setNotificationChannel` call and no runtime
+      `POST_NOTIFICATIONS` request, so on Android 13+ they land in the default
+      "Miscellaneous" channel if they arrive at all — and **nothing but sign-in
+      has ever been exercised on Android** (the never-verified ⚠️ under Builds in
+      [status.md](status.md)).
 
 - [ ] **Goal-based generation** — vocab lists and card generation from a goal.
       Deprioritized 2026-07-24: it generates word lists for a user who hasn't

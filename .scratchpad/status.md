@@ -369,6 +369,51 @@ once, so a path that worked on build 14 is not evidence about build 15.
 Closed calls, kept with their reasoning — a decision whose reasoning is lost gets
 reopened by the next person to notice the symptom. Newest first.
 
+### Play holds on a +82 phone number, and Munli takes the focus back (2026-09-22)
+
+**On hold the same day it was taken up**, on the user's call. Identity
+verification for a Korea payments profile delivers its code to a **+82** number,
+the country on that field cannot be changed, and the user is abroad without
+access to one. Verification is **account-level, not track-level** — there is no
+lighter path for the internal track, and the thing internal testing *does* exempt
+a new personal account from is the separate **12 testers × 14 days** closed-test
+gate before production, which is not this.
+
+**Why a family member's number is not the way around it.** Korean 휴대폰 본인확인
+matches the number against the name and 생년월일 registered to it, so a sister's
+line fails against the user's own 등본 — and the blend, her number against his
+documents, is precisely the mismatch the check exists to catch. Google's stated
+consequence for documents that do not match the payments profile is removal of
+the account **and its apps**, and this is the Google account that owns Firebase
+and the Android OAuth client. Asymmetric downside against a few weeks of
+schedule. ⚠️ **The coherent alternative was an account genuinely in her name**
+— her 등본, her profile, her legal name public on the listing, her tax liability,
+and an ownership transfer later that forces a **new payments profile** anyway.
+Rejected as costing more than the wait.
+
+**Korea over Kenya for the payments profile, and it is permanent.** A payments
+profile's country cannot be edited — only replaced by a new profile — so this is
+settled, not pending. Chosen to sit with the bank account and tax residence
+rather than to dodge paperwork. ⚠️ **Korea's price is deferred, not avoided**:
+the moment Amgi sells anything or adds IAP, Korean law requires a
+**사업자등록번호 and a 통신판매업 신고번호** on the listing. Kenya has no
+equivalent step but pays out by USD wire with no US tax treaty. Free
+internal-testing distribution is unaffected either way.
+
+**What is already spent and must not be redone.** The 주민등록등본 is in hand.
+정부24 issues it as a **password-protected PDF**, which verification cannot open
+— strip the password first — and its **도로명주소 must match the payments profile
+character for character**, since a 지번/도로명 mismatch is the usual rejection
+rather than a bad document.
+
+**Unblocks on** someone in Korea who can receive the code on the user's own line,
+or the flight back. One thing untried, and worth one attempt before the flight:
+**착신전환** to a foreign number plus the **voice-call** option, which needs
+nobody else.
+
+**The item moved High → Parked.** ⚠️ **The hold is the account, not the item** —
+steps 2–5 need no Play account and are available any time.
+
 ### Amgi goes to Play, on the internal testing track (2026-09-22)
 
 **Taken up the same day it was scoped**, against the trigger set when Android
@@ -377,7 +422,9 @@ links costs more than $25 and a review cycle"*. It is worth it: an APK has no
 update path at all, so every Android release is a fresh link and a manual
 re-install by every tester, and the internal track replaces that with
 auto-updates for $25 and no review queue. **Production is explicitly not in
-scope.** The steps are the item at the top of High in [backlog.md](backlog.md).
+scope.** The steps are the item in **Parked** in [backlog.md](backlog.md) — it
+went on hold the same day, for a reason that has nothing to do with this
+decision; the entry above covers it.
 
 Four calls, all the user's:
 
@@ -436,7 +483,8 @@ it is the first tense needing a different *shape* than the ending tables.
 and any of them can be raised by the user if the app makes a case for it.
 
 Play took the vacated top of High the same day, which is the other half of the
-same call — see the item in [backlog.md](backlog.md).
+same call. It has since moved to Parked — see the item in
+[backlog.md](backlog.md), and the hold entry above.
 
 ### Munli's bar mirrors Amgi's, slot for slot (2026-09-22)
 
