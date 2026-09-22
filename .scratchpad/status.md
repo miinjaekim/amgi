@@ -389,18 +389,31 @@ theme away from being no distinction. The pairing itself is `review.tsx`'s
 about which colour means which; Munli uses `C.error` rather than that screen's
 literal red because the mode's palette carries one.
 
-⚠️ **A right answer in one-box mode advances itself after 800ms.** *"I can't
-imagine any reason a user might want to stay on that question longer if they
-already have answered correctly."* The flash is what keeps the auto-advance from
-reading as the answer being ignored — the two changes are one change. A wrong
-answer waits, because there is a form to look at, and a whole table waits,
-because there is a score to read.
+⚠️ **A right answer in one-box mode advances with no pause at all**, and the
+800ms flash that shipped first is the more interesting half of this entry. It
+was there to keep the auto-advance from reading as the answer being ignored —
+*"I can't imagine any reason a user might want to stay on that question longer
+if they already have answered correctly"* — and trying it produced the opposite
+finding: *"the fact that the screen changed without any blockers lets me know
+that I was correct in a way that I personally think is satisfying."*
 
-**The flash is its own state rather than `checked`**, which is the load-bearing
-detail: disabling the input between two questions meant to run together drops
-focus on web and dismisses the keyboard on native. `check` guards the
-double-submit instead, and the pending advance is cleared by Stop, by a tab
-press and on unmount.
+**The screen changing is the feedback.** A confirmation held in front of
+somebody who already knows they were right is a blocker wearing feedback's
+clothes, and the instinct to soften an instant transition with a beat of
+reassurance is worth distrusting. ⚠️ **It is not the opposite of the finding
+above it** — the table's silence said nothing where something was owed; the
+flash said something where the transition had already said it. What decides is
+whether the learner is waiting on the screen to tell them something they do not
+already know.
+
+Only a wrong answer blocks, because only a wrong answer has something to show:
+the form you did not produce. A whole table blocks too — there is a score to
+read.
+
+**What removing it deleted is the reason it was complicated**: no timer, no
+ref, no cleanup on Stop or on a tab press, and no second piece of state that had
+to be kept out of step with `checked` to stop the input being disabled between
+two questions meant to run together.
 
 ### What the first Munli pass got wrong, from using it (2026-09-22)
 

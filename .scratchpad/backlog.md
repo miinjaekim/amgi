@@ -34,11 +34,12 @@ section worth seeing without scrolling._
       sourced note on each tense, and Writing's empty space carries a worked
       example.
       **Practice, the keyboard, the tab press, Saved and Writing were all
-      confirmed by the user on 2026-09-22**, which leaves the two refinements
-      that followed: a round now says it went well rather than only correcting,
-      and a right answer in one-box mode advances itself after 800ms.
-      ⚠️ **Those two are what still needs a device** — an 800ms pause is a feel
-      question, and nothing else in the stack can be confirmed any other way.
+      confirmed by the user on 2026-09-22**, and so was the round feedback that
+      followed: a checked table now marks every box ✓ or ✗ and closes with a
+      score, and a right answer in one-box mode advances instantly.
+      ⚠️ **The instant advance is the last thing unseen on a build** — it was
+      tried at 800ms and cut to nothing on the user's call, and the version in
+      the branch is the one nobody has practised with yet.
       ⚠️ **The worked example is French-only** by design; adding a language is
       a draft row in `docs/packs/writing-worked-example-draft.md` and one
       entry in `writing.ts`.
