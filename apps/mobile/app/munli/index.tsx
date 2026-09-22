@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Switch } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -46,6 +46,17 @@ import type { Palette } from '../../src/theme';
  */
 type Stage = 'picker' | 'setup' | 'session';
 
+/**
+ * How long a right answer stays on screen before the next question.
+ *
+ * ⚠️ **Long enough to be seen, short enough not to be waited on.** The learner
+ * already knows they were right; this is confirmation, not reading. Asked for
+ * 2026-09-22 — *"I can't imagine any reason a user might want to stay on that
+ * question longer if they already have answered correctly"* — and the flash is
+ * what keeps the auto-advance from feeling like the answer was ignored.
+ */
+const CORRECT_PAUSE_MS = 800;
+
 export default function PracticeScreen() {
   const { C } = useTheme();
   const tabBarHeight = useFloatingTabBarHeight();
@@ -76,6 +87,22 @@ export default function PracticeScreen() {
   /** Person id → hints taken, so a hint costs the box it was taken on. */
   const [hints, setHints] = useState<Record<string, number>>({});
   const [checked, setChecked] = useState(false);
+  /**
+   * A right answer in one-box mode, on screen while it advances itself.
+   *
+   * ⚠️ **Separate from `checked` so the input is never made read-only**, which
+   * is what would dismiss the keyboard between two questions meant to run
+   * together.
+   */
+  const [flash, setFlash] = useState(false);
+  const advanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const clearAdvance = () => {
+    if (advanceTimer.current) clearTimeout(advanceTimer.current);
+    advanceTimer.current = null;
+  };
+  // Leaving mid-flash — Stop, a tab press, a backgrounded app — must not fire
+  // an advance into a session that is gone.
+  useEffect(() => clearAdvance, []);
 
   /**
    * The practice set as sections with due counts — one row per tense, each
@@ -118,6 +145,8 @@ export default function PracticeScreen() {
    * `<a href>`, so clicking Practice there is a document navigation.
    */
   useEffect(() => navigation.addListener('tabPress', () => {
+    clearAdvance();
+    setFlash(false);
     setStage('picker');
     setOpenTense(null);
     setChosen(null);
@@ -143,18 +172,29 @@ export default function PracticeScreen() {
    */
   const check = () => {
     const round = queue[index];
-    if (!spec || !round || checked) return;
+    if (!spec || !round || checked || flash) return;
     const updates: ConjugationProgressMap = {};
+    let right = 0;
     for (const personId of round.personIds) {
       const correct = isCorrectForm(spec, round.table, personId, typed[personId] ?? '');
+      if (correct) right += 1;
       const id = boxItemId(spec, round.table, personId);
       updates[id] = rateBox(progress[id], hintedVerdict(hints[personId] ?? 0, correct));
     }
     rate(updates);
-    setChecked(true);
+    // ⚠️ One right answer to one question moves on by itself. A whole table
+    // does not: there is a score to read and, usually, a form to look at.
+    if (round.personIds.length === 1 && right === 1) {
+      setFlash(true);
+      advanceTimer.current = setTimeout(() => { setFlash(false); advance(); }, CORRECT_PAUSE_MS);
+    } else {
+      setChecked(true);
+    }
   };
 
   const advance = () => {
+    clearAdvance();
+    setFlash(false);
     setIndex(i => i + 1);
     setTyped({});
     setHints({});
@@ -410,13 +450,12 @@ export default function PracticeScreen() {
   const only = round.personIds[0];
   const onlyPerson = spec?.persons.find(p => p.id === only);
   const onlyHints = conjugationHints(round.table, only);
-  const onlyRight = !!spec && isCorrectForm(spec, round.table, only, (typed[only] ?? '').trim());
 
   return (
     <SafeAreaView style={s.safe} edges={['top']}>
       <View style={s.header}>
         <TouchableOpacity
-          onPress={() => { setStopped(true); setIndex(queue.length); }}
+          onPress={() => { clearAdvance(); setFlash(false); setStopped(true); setIndex(queue.length); }}
           hitSlop={10}
           accessibilityRole="button"
         >
@@ -424,7 +463,7 @@ export default function PracticeScreen() {
         </TouchableOpacity>
         <Text style={s.count}>
           {t(interfaceLanguage, 'practiceCount', {
-            done: answered + (checked ? round.personIds.length : 0),
+            done: answered + (checked || flash ? round.personIds.length : 0),
             total,
           })}
         </Text>
@@ -472,7 +511,9 @@ export default function PracticeScreen() {
                 // hand the learner the form being asked for.
                 autoComplete="off"
                 spellCheck={false}
-                editable={!checked}
+                // ⚠️ Never made read-only. Doing so dismisses the keyboard
+                // between two questions meant to run together; `check` guards
+                // the double-submit instead.
                 onSubmitEditing={() => (checked ? advance() : ready && check())}
                 returnKeyType="done"
               />
@@ -484,12 +525,29 @@ export default function PracticeScreen() {
               {(hints[only] ?? 0) > 0 && (
                 <Text style={s.hint}>{onlyHints.slice(0, hints[only] ?? 0).join('  ')}</Text>
               )}
-              {checked && (
-                <Text style={[s.verdict, !onlyRight && s.verdictWrong]}>
-                  {onlyRight
-                    ? t(interfaceLanguage, 'conjugationCorrect')
-                    : `${t(interfaceLanguage, 'conjugationWrong')} ${round.table.forms[only]}`}
+              {/* ⚠️ Right gets said out loud. It used to be the absence of a
+                  correction, which reads as no feedback at all — and now that a
+                  right answer advances by itself, the flash is the only thing
+                  that says the answer landed. The glyph carries it as much as
+                  the colour, since a palette can put highlight and error close
+                  together. */}
+              {flash && (
+                <Text style={[s.verdict, s.verdictOk]}>
+                  ✓ {t(interfaceLanguage, 'conjugationCorrect')}
                 </Text>
+              )}
+              {checked && (
+                <>
+                  <Text style={[s.verdict, s.verdictWrong]}>
+                    ✗ {t(interfaceLanguage, 'conjugationWrong')} {round.table.forms[only]}
+                  </Text>
+                  {!!(typed[only] ?? '').trim() && (
+                    <Text style={s.yours}>
+                      {t(interfaceLanguage, 'typedAnswerYours')}:{' '}
+                      <Text style={s.yoursStruck}>{(typed[only] ?? '').trim()}</Text>
+                    </Text>
+                  )}
+                </>
               )}
             </View>
           ) : (
@@ -519,7 +577,11 @@ export default function PracticeScreen() {
                       </Text>
                     ) : checked ? (
                       <>
-                        <Text style={[s.answer, !correct && s.answerWrong]}>{form}</Text>
+                        {/* A mark, not merely a colour: "nothing was corrected"
+                            is what read as no feedback. */}
+                        <Text style={[s.answer, correct ? s.answerOk : s.answerWrong]}>
+                          {correct ? '✓' : '✗'} {form}
+                        </Text>
                         {!correct && !!answer && <Text style={s.typedWrong}>{answer}</Text>}
                       </>
                     ) : (
@@ -558,9 +620,24 @@ export default function PracticeScreen() {
             })
           )}
 
+          {/* How the round went, said whether or not anything needs fixing. */}
+          {checked && !single && (() => {
+            const right = round.personIds.filter(
+              id => !!spec && isCorrectForm(spec, round.table, id, (typed[id] ?? '').trim()),
+            ).length;
+            const all = right === round.personIds.length;
+            return (
+              <Text style={[s.score, all && s.scoreAll]}>
+                {all
+                  ? `✓ ${t(interfaceLanguage, 'conjugationAllRight')}`
+                  : t(interfaceLanguage, 'conjugationRoundScore', { correct: right, total: round.personIds.length })}
+              </Text>
+            );
+          })()}
+
           <TouchableOpacity
-            style={[s.primary, !checked && !ready && s.primaryOff]}
-            disabled={!checked && !ready}
+            style={[s.primary, (flash || (!checked && !ready)) && s.primaryOff]}
+            disabled={flash || (!checked && !ready)}
             onPress={() => (checked ? advance() : check())}
           >
             <Text style={s.primaryText}>
@@ -629,10 +706,20 @@ function makeStyles(C: Palette, tabBarHeight: number) {
     masked: { color: C.muted, fontSize: 17, paddingVertical: 11 },
     // The single-box verdict line: muted when right, highlight when the
     // form is being shown back.
-    verdict: { color: C.muted, fontSize: 14, marginTop: 16 },
-    verdictWrong: { color: C.highlight },
-    answer: { color: C.text, fontSize: 17, paddingVertical: 11 },
-    answerWrong: { color: C.highlight, fontWeight: '700' },
+    verdict: { color: C.muted, fontSize: 15, fontWeight: '700', marginTop: 16 },
+    // ⚠️ Highlight for right and `error` for wrong, which is `review.tsx`'s
+    // pairing (`typedVerdictOk` / `typedVerdictMiss`) — `C.error` rather than
+    // that screen's literal red, because it is the one the mode's own palette
+    // carries.
+    verdictOk: { color: C.highlight },
+    verdictWrong: { color: C.error },
+    yours: { color: C.muted, fontSize: 12, marginTop: 6 },
+    yoursStruck: { textDecorationLine: 'line-through' },
+    score: { color: C.muted, fontSize: 15, fontWeight: '700', marginTop: 18 },
+    scoreAll: { color: C.highlight },
+    answer: { color: C.text, fontSize: 17, fontWeight: '700', paddingVertical: 11 },
+    answerOk: { color: C.highlight },
+    answerWrong: { color: C.error },
     typedWrong: { color: C.muted, fontSize: 12, textDecorationLine: 'line-through', marginTop: -6, marginBottom: 4 },
     hintBtn: {
       marginTop: 10, paddingHorizontal: 10, paddingVertical: 6,

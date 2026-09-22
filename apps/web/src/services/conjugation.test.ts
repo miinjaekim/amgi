@@ -761,6 +761,27 @@ describe('tense notes', () => {
   });
 });
 
+/**
+ * ⚠️ **A round says how it went even when nothing needs fixing.** Getting
+ * everything right used to look exactly like getting no feedback, so these two
+ * strings are what a perfect round shows — and a locale that dropped a
+ * placeholder would show a number-less sentence rather than fail.
+ */
+describe('round feedback copy', () => {
+  for (const language of ['English', 'Korean'] as const) {
+    it(`substitutes both counts in ${language}`, () => {
+      const line = t(language, 'conjugationRoundScore', { correct: 5, total: 6 });
+      expect(line).toContain('5');
+      expect(line).toContain('6');
+      expect(line).not.toContain('{');
+    });
+
+    it(`says something when everything was right in ${language}`, () => {
+      expect(t(language, 'conjugationAllRight').trim().length).toBeGreaterThan(0);
+    });
+  }
+});
+
 describe('languages', () => {
   it('has French and says so', () => {
     expect(hasConjugation('French')).toBe(true);

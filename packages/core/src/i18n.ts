@@ -166,6 +166,11 @@ const translations = {
     conjugationNext: 'Next',
     conjugationCorrect: 'Correct',
     conjugationWrong: 'The form is',
+    // ⚠️ Getting everything right used to look exactly like getting no
+    // feedback: nothing was corrected, so nothing was said. A round says how it
+    // went whether or not there is anything to fix.
+    conjugationAllRight: 'All correct.',
+    conjugationRoundScore: '{correct} of {total} right',
     // A round is a table with its due boxes to fill. The rest of the paradigm
     // is masked until the round is checked — showing it would hand over the
     // answer, since `nous parlons` makes `tu parles` free.
@@ -1030,6 +1035,8 @@ const translations = {
     conjugationNext: '다음',
     conjugationCorrect: '정답',
     conjugationWrong: '정답은',
+    conjugationAllRight: '전부 맞았어요.',
+    conjugationRoundScore: '{total}개 중 {correct}개 정답',
     conjugationFillDue: '복습할 차례인 형태를 채워보세요.',
     conjugationNotDue: '아직 차례가 아니에요',
     munliProgressTitle: '문법 연습',

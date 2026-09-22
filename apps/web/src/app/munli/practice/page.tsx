@@ -1,5 +1,5 @@
 'use client';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   boxItemId, buildConjugationQueue, buildTables, conjugationHints, countDueBoxes,
   countQuestions, hintedVerdict, isCorrectForm, listPracticeSections, rateBox,
@@ -30,6 +30,17 @@ import { t } from '@/lib/i18n';
  */
 type Stage = 'picker' | 'setup' | 'session';
 
+/**
+ * How long a right answer stays on screen before the next question.
+ *
+ * ⚠️ **Long enough to be seen, short enough not to be waited on.** The learner
+ * already knows they were right; this is confirmation, not reading. Asked for
+ * 2026-09-22 — *"I can't imagine any reason a user might want to stay on that
+ * question longer if they already have answered correctly"* — and the flash is
+ * what keeps the auto-advance from feeling like the answer was ignored.
+ */
+const CORRECT_PAUSE_MS = 800;
+
 export default function PracticePage() {
   const { interfaceLanguage } = useUser();
   const { spec, progress, enrolment, rate } = useConjugation();
@@ -54,6 +65,22 @@ export default function PracticePage() {
   /** Person id → hints taken, so a hint costs the box it was taken on. */
   const [hints, setHints] = useState<Record<string, number>>({});
   const [checked, setChecked] = useState(false);
+  /**
+   * A right answer in one-box mode, on screen while it advances itself.
+   *
+   * ⚠️ **Separate from `checked` so the input is never disabled**, which is
+   * what would drop focus — and on native, the keyboard with it — between two
+   * questions that are meant to run together.
+   */
+  const [flash, setFlash] = useState(false);
+  const advanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const clearAdvance = () => {
+    if (advanceTimer.current) clearTimeout(advanceTimer.current);
+    advanceTimer.current = null;
+  };
+  // Leaving mid-flash — Stop, a nav click, a tab close — must not fire an
+  // advance into a session that is gone.
+  useEffect(() => clearAdvance, []);
 
   /**
    * The practice set as sections with due counts — one row per tense, each
@@ -111,18 +138,29 @@ export default function PracticePage() {
    */
   const check = () => {
     const round = queue[index];
-    if (!spec || !round || checked) return;
+    if (!spec || !round || checked || flash) return;
     const updates: ConjugationProgressMap = {};
+    let right = 0;
     for (const personId of round.personIds) {
       const correct = isCorrectForm(spec, round.table, personId, typed[personId] ?? '');
+      if (correct) right += 1;
       const id = boxItemId(spec, round.table, personId);
       updates[id] = rateBox(progress[id], hintedVerdict(hints[personId] ?? 0, correct));
     }
     rate(updates);
-    setChecked(true);
+    // ⚠️ One right answer to one question moves on by itself. A whole table
+    // does not: there is a score to read and, usually, a form to look at.
+    if (round.personIds.length === 1 && right === 1) {
+      setFlash(true);
+      advanceTimer.current = setTimeout(() => { setFlash(false); advance(); }, CORRECT_PAUSE_MS);
+    } else {
+      setChecked(true);
+    }
   };
 
   const advance = () => {
+    clearAdvance();
+    setFlash(false);
     setIndex(i => i + 1);
     setTyped({});
     setHints({});
@@ -366,7 +404,7 @@ export default function PracticePage() {
     <div className="max-w-2xl">
       <div className="flex items-center gap-3 mb-6">
         <button
-          onClick={() => { setStopped(true); setIndex(queue.length); }}
+          onClick={() => { clearAdvance(); setFlash(false); setStopped(true); setIndex(queue.length); }}
           className="font-mono text-sm"
           style={{ color: 'var(--color-muted)' }}
         >
@@ -374,7 +412,7 @@ export default function PracticePage() {
         </button>
         <span className="ml-auto font-mono text-sm" style={{ color: 'var(--color-muted)' }}>
           {t(interfaceLanguage, 'practiceCount', {
-            done: answered + (checked ? round.personIds.length : 0),
+            done: answered + (checked || flash ? round.personIds.length : 0),
             total,
           })}
         </span>
@@ -414,7 +452,10 @@ export default function PracticePage() {
               autoFocus
               spellCheck={false}
               autoComplete="off"
-              disabled={checked}
+              // ⚠️ Never disabled. Disabling drops focus — and the keyboard
+              // with it on a phone — between two questions meant to run
+              // together; `check` guards the double-submit instead.
+              readOnly={checked}
               className="w-full p-3 rounded-lg font-mono text-lg bg-[var(--color-bg)] border border-[var(--color-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--color-highlight)] text-[var(--color-text)] placeholder-[var(--color-muted)]"
             />
             {!checked && (hints[only] ?? 0) < conjugationHints(round.table, only).length && (
@@ -431,16 +472,29 @@ export default function PracticePage() {
                 {conjugationHints(round.table, only).slice(0, hints[only] ?? 0).join('  ')}
               </p>
             )}
-            {checked && (() => {
-              const right = !!spec && isCorrectForm(spec, round.table, only, (typed[only] ?? '').trim());
-              return (
-                <p className="mt-4 font-mono text-sm" style={{ color: right ? 'var(--color-muted)' : 'var(--color-highlight)' }}>
-                  {right
-                    ? t(interfaceLanguage, 'conjugationCorrect')
-                    : `${t(interfaceLanguage, 'conjugationWrong')} ${round.table.forms[only]}`}
+            {/* ⚠️ Right gets said out loud. It used to be the absence of a
+                correction, which reads as no feedback at all — and now that a
+                right answer advances by itself, the flash is the only thing
+                that says the answer landed. The glyph carries it as much as the
+                colour does, since a palette can put highlight and error close
+                together. */}
+            {flash && (
+              <p className="mt-4 font-mono text-base font-bold" style={{ color: 'var(--color-highlight)' }}>
+                ✓ {t(interfaceLanguage, 'conjugationCorrect')}
+              </p>
+            )}
+            {checked && (
+              <div className="mt-4">
+                <p className="font-mono text-base font-bold text-red-400">
+                  ✗ {t(interfaceLanguage, 'conjugationWrong')} {round.table.forms[only]}
                 </p>
-              );
-            })()}
+                {!!(typed[only] ?? '').trim() && (
+                  <p className="mt-1 font-mono text-xs" style={{ color: 'var(--color-muted)' }}>
+                    {t(interfaceLanguage, 'typedAnswerYours')}: <span className="line-through">{(typed[only] ?? '').trim()}</span>
+                  </p>
+                )}
+              </div>
+            )}
           </div>
         ) : (
           /* ── A paradigm ───────────────────────────────────────────────── */
@@ -470,9 +524,12 @@ export default function PracticePage() {
                       </p>
                     ) : checked ? (
                       <>
-                        <p className="py-2 font-mono text-lg"
-                           style={{ color: correct ? 'var(--color-text)' : 'var(--color-highlight)' }}>
-                          {form}
+                        {/* A mark, not merely a colour: "nothing was corrected"
+                            is what read as no feedback, and a palette can put
+                            highlight and error close together. */}
+                        <p className={`py-2 font-mono text-lg font-bold ${correct ? '' : 'text-red-400'}`}
+                           style={correct ? { color: 'var(--color-highlight)' } : undefined}>
+                          {correct ? '✓' : '✗'} {form}
                         </p>
                         {!correct && answer && (
                           <p className="font-mono text-xs line-through" style={{ color: 'var(--color-muted)' }}>
@@ -520,10 +577,26 @@ export default function PracticePage() {
           </div>
         )}
 
+        {/* How the round went, said whether or not anything needs fixing. */}
+        {checked && !single && (() => {
+          const right = round.personIds.filter(
+            id => !!spec && isCorrectForm(spec, round.table, id, (typed[id] ?? '').trim()),
+          ).length;
+          const all = right === round.personIds.length;
+          return (
+            <p className="mt-6 font-mono text-base font-bold"
+               style={{ color: all ? 'var(--color-highlight)' : 'var(--color-muted)' }}>
+              {all
+                ? `✓ ${t(interfaceLanguage, 'conjugationAllRight')}`
+                : t(interfaceLanguage, 'conjugationRoundScore', { correct: right, total: round.personIds.length })}
+            </p>
+          );
+        })()}
+
         <div className="mt-6 flex justify-end">
           <button
             onClick={() => (checked ? advance() : check())}
-            disabled={!checked && !ready}
+            disabled={flash || (!checked && !ready)}
             className={primary}
             style={{ background: 'var(--color-highlight)', color: 'var(--color-bg)' }}
           >
