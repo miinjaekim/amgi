@@ -369,6 +369,38 @@ once, so a path that worked on build 14 is not evidence about build 15.
 Closed calls, kept with their reasoning — a decision whose reasoning is lost gets
 reopened by the next person to notice the symptom. Newest first.
 
+### The practice setup is Review's picker, with the tense as the section (2026-09-22)
+
+**Asked for by the user after using it**: *"splits according to different
+sections, and we see how much is due for each section"*. What the setup screen
+showed was two rows of chips — tenses, then verb groups — which said what a
+session *could* cover and nothing about what was owed.
+
+⚠️ **The tense is the section and the subject is the level under it.** Enrolment
+is `subject:tense` pairs, so either could have been the outer axis. The tense
+wins on three counts: it is what a learner sits down to practise ("today, the
+imparfait"), Progress already groups this way, and it mirrors **pack → subpack**,
+which is the surface this is copied from rather than invented beside.
+
+**Two aggregate rows, each for a stated reason.** An **everything** row sits
+first at the top level, because the tool practised the whole set before it had
+sections and losing that would mean three sessions for three tenses. A
+**whole-tense** row sits first inside a section, which is Review's own
+reasoning: *"once you have worked through the sections, reviewing them one at a
+time is the same material several times over."*
+
+**Over-practice moved to the start screen.** `practiceIncludeNotDue` is about
+the session you are about to run, not about which part of the set you are
+looking at, and on the list it read as a filter.
+
+⚠️ **The cost, and it is real: a session covers one selection rather than any
+combination.** "The présent and the imparfait, but only `-er` and `-re`" was
+expressible with chips and is not expressible now. It is accepted because Review
+has always worked this way and because a due count per row is worth more than
+arbitrary intersections — but it is a narrowing, not a free win, and the device
+pass is where it gets confirmed. `buildTables` still takes arrays, so restoring
+multi-select is a picker change and not a core one. PR #146.
+
 ### A table is six facts, so the box carries the schedule (2026-09-22)
 
 ⚠️ **This reverses "the schedule belongs to the table, not the box" in the
