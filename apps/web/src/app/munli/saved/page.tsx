@@ -4,6 +4,7 @@ import { daysUntil, listSavedSubjects, setEnrolled } from '@amgi/core';
 import { useUser } from '@/components/UserContext';
 import { useConjugation } from '@/hooks/useConjugation';
 import ParadigmTable from '@/components/ParadigmTable';
+import PageHeader from '@/components/PageHeader';
 import { t } from '@/lib/i18n';
 
 /**
@@ -36,9 +37,7 @@ export default function SavedPage() {
 
   return (
     <div className="max-w-2xl">
-      <h1 className="text-2xl font-mono font-bold mb-1" style={{ color: 'var(--color-text)' }}>
-        {t(interfaceLanguage, 'savedTitle')}
-      </h1>
+      <PageHeader titleKey="savedTitle" className="mb-1" />
 
       {!spec || !enrolment ? (
         <p className="font-mono text-sm mt-6" style={{ color: 'var(--color-muted)' }}>
