@@ -26,6 +26,19 @@ _Kept at the top of the file, ahead of priority order, from 2026-09-22 on the
 user's call — this list changes every time something merges, and it is the one
 section worth seeing without scrolling._
 
+- [ ] **What the first Munli pass got wrong** (PR #151, on top of #150). Web is
+      live on merge; **native is not**. The user's review of #145–#150, landed
+      on top rather than folded back in: a question is one form again with
+      whole tables as a switch, the keyboard stops covering the inputs, a tab
+      press returns to that tab's home, Saved is an inventory of tiles with a
+      sourced note on each tense, and Writing's empty space carries a worked
+      example.
+      ⚠️ **The keyboard fix is the one that needs a device** — it is the only
+      thing in the stack that cannot be confirmed any other way.
+      ⚠️ **The worked example is French-only** by design; adding a language is
+      a draft row in `docs/packs/writing-worked-example-draft.md` and one
+      entry in `writing.ts`.
+
 - [ ] **Irregular French verbs** (PR #150, on top of #149). Web is live on
       merge; **native is not**. `être`, `avoir` and `aller`, tier A against two
       published references, with the draft at
@@ -126,6 +139,12 @@ _⚠️ **Two of those PRs left a call for the user** and neither blocks a merge
 whether `faire` joins the three irregular verbs (#150), and whether a practice
 session should be able to cover several tenses at once again, which the section
 picker narrowed (#146). Both are in the entries._
+
+_**The stack was reviewed on 2026-09-22 and #151 is what came back** — four
+corrections, two of which turned out to be sourced content. The Decisions
+entries of that date hold both, and the second is the one worth re-reading:
+"explain the tense" and "show an example" read as UI work and are claims about
+French._
 
 ## Medium
 
