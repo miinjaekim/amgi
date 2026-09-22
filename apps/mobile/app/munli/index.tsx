@@ -12,6 +12,7 @@ import { useUser } from '../../src/context/UserContext';
 import { useTheme } from '../../src/context/ThemeContext';
 import { useConjugation } from '../../src/context/ConjugationContext';
 import { useFloatingTabBarHeight } from '../../src/components/FloatingTabBar';
+import { PAGE_TITLE_SIZE, SCREEN_GUTTER } from '../../src/components/PageHeader';
 import type { Palette } from '../../src/theme';
 
 /**
@@ -470,11 +471,17 @@ export default function PracticeScreen() {
 function makeStyles(C: Palette, tabBarHeight: number) {
   return StyleSheet.create({
     safe: { flex: 1, backgroundColor: C.bg },
-    header: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8 },
-    title: { color: C.text, fontSize: 22, fontWeight: '700' },
+    // ⚠️ Not `PageHeader`: this header carries a back chevron and a title that
+    // changes with the stage. It takes the constants instead, which is the
+    // arrangement `cards.tsx` already has for the same reason.
+    header: {
+      flexDirection: 'row', alignItems: 'center', gap: 8,
+      paddingHorizontal: SCREEN_GUTTER, paddingTop: 12, paddingBottom: 8,
+    },
+    title: { color: C.highlight, fontSize: PAGE_TITLE_SIZE, fontWeight: '700' },
     stop: { color: C.muted, fontSize: 14 },
     count: { color: C.muted, fontSize: 13, marginLeft: 'auto' },
-    content: { padding: 16, paddingTop: 4, paddingBottom: tabBarHeight },
+    content: { padding: SCREEN_GUTTER, paddingTop: 4, paddingBottom: tabBarHeight },
     row: {
       flexDirection: 'row', alignItems: 'center', gap: 12,
       backgroundColor: C.surface, borderWidth: 1, borderColor: C.border,
