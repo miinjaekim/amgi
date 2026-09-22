@@ -79,7 +79,7 @@ export default function ReviewScreen() {
   const { C } = useTheme();
   const tabBarHeight = useFloatingTabBarHeight();
   const s = useMemo(() => makeStyles(C, tabBarHeight), [C, tabBarHeight]);
-  const { user, interfaceLanguage, deckNativeLanguage, studyLanguage, hanjaPartition, recordReview, undoReview } = useUser();
+  const { user, authLoading, interfaceLanguage, deckNativeLanguage, studyLanguage, hanjaPartition, recordReview, undoReview } = useUser();
   const config = getStudyLanguageConfig(studyLanguage);
   const backConfig = getBackSideConfig(studyLanguage, deckNativeLanguage);
   const { isOnline, pendingCount, sync } = usePendingReviewSync(user?.uid);
@@ -733,6 +733,13 @@ export default function ReviewScreen() {
       },
     ]);
   };
+
+  // Review is the landing tab, so it renders before auth has restored — and
+  // `user` is null then for a signed-in account too. Without this a cold open
+  // flashed "Sign in to review", in English, since the interface language is
+  // not known yet either. Blank rather than a skeleton: the splash screen is
+  // normally still up over it, and nothing here is known yet to shape one.
+  if (authLoading) return <SafeAreaView style={s.root} />;
 
   if (!user) {
     return (
