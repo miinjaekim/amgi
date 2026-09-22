@@ -1,9 +1,8 @@
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { t } from '@amgi/core';
-import { useUser } from '../../src/context/UserContext';
 import { useTheme } from '../../src/context/ThemeContext';
+import PageHeader from '../../src/components/PageHeader';
 import WritingReviewPanel from '../../src/components/WritingReviewPanel';
 import type { Palette } from '../../src/theme';
 
@@ -13,17 +12,24 @@ import type { Palette } from '../../src/theme';
  * ⚠️ **It reserves the tab bar's height again** — the panel dropped that reserve
  * when Munli was a Stack with no bar, and Munli has one now. Without it the last
  * finding sits under the bar.
+ *
+ * ⚠️ **The header is `PageHeader`**, which brings the "?" this tab needed and
+ * takes the title with it. The title it had was `fontSize: 18` in a monospace
+ * face nothing else in the mode sets — the drift `PAGE_TITLE_SIZE` exists to
+ * stop, which the component applies without this file knowing the number.
  */
 export default function MunliWritingScreen() {
   const { C } = useTheme();
   const s = useMemo(() => makeStyles(C), [C]);
-  const { interfaceLanguage } = useUser();
 
   return (
     <SafeAreaView style={s.screen} edges={['top', 'left', 'right']}>
-      <View style={s.header}>
-        <Text style={s.title}>{t(interfaceLanguage, 'munliToolWriting')}</Text>
-      </View>
+      <PageHeader
+        titleKey="munliToolWriting"
+        helpTitleKey="helpWritingTitle"
+        helpLeadKey="helpWritingLead"
+        helpPointsKey="helpWritingPoints"
+      />
       <WritingReviewPanel />
     </SafeAreaView>
   );
@@ -32,7 +38,5 @@ export default function MunliWritingScreen() {
 function makeStyles(C: Palette) {
   return StyleSheet.create({
     screen: { flex: 1, backgroundColor: C.bg },
-    header: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 4 },
-    title: { color: C.text, fontFamily: 'monospace', fontSize: 18, fontWeight: '700' },
   });
 }

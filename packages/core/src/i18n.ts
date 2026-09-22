@@ -510,6 +510,19 @@ const translations = {
       'Rate a card Again to see it soon, Easy to push it further out.\n' +
       'Each card is asked both ways — recognising a word and saying it are tracked separately.\n' +
       'Your cards and each pack are reviewed apart, so you pick one to start.',
+    // ⚠️ The one thing worth telling someone about Writing, on the user's call:
+    // that a broken passage is the right input and a word they do not have can
+    // go in in their own language. The route is built for exactly that — see
+    // the "WORDS THEY DID NOT HAVE" section of the prompt in
+    // `apps/web/src/app/api/writing/route.ts`, which is what makes this claim
+    // true rather than encouraging.
+    helpWritingTitle: 'What Writing is for',
+    helpWritingLead: 'Write something, and see how a native would have put it.',
+    helpWritingPoints:
+      'Write it as broken as it comes out. What you were trying to say is the input; getting it right is not.\n' +
+      'Stuck on a word? Put it in your own language, or talk around it — those are picked out and offered as cards, because they are the words you have shown you need.\n' +
+      'The feedback is pitched at what you wrote, so a strong passage gets phrasing rather than grammar.\n' +
+      'Nothing is kept. The passage is never stored and the notes go when you leave.',
     // Empty state / onboarding
     tagline: 'Look up any word or phrase.',
     taglineSubtitle: 'Get an instant AI-powered explanation, then save it as a flashcard to review with spaced repetition.',
@@ -911,6 +924,13 @@ const translations = {
       '\'다시\'를 누르면 금방, \'쉬움\'을 누르면 한참 뒤에 다시 나와요.\n' +
       '같은 카드를 양쪽 방향으로 물어봐요. 알아보기와 말하기는 따로 기록돼요.\n' +
       '내 카드와 단어팩은 따로 복습해요. 시작할 때 하나를 골라 주세요.',
+    helpWritingTitle: '글쓰기는 이럴 때 써요',
+    helpWritingLead: '뭐든 써보면 원어민이라면 어떻게 쓸지 보여드려요.',
+    helpWritingPoints:
+      '서툴게 써도 괜찮아요. 맞게 쓰는 것보다 하려던 말이 먼저예요.\n' +
+      '단어가 막히면 모국어로 쓰거나 풀어서 설명해도 돼요. 그런 자리를 찾아서 필요했던 단어를 카드로 만들어 드려요.\n' +
+      '쓴 글에 맞춰 짚어드려요. 잘 쓴 글에는 문법 대신 더 자연스러운 표현을 알려드려요.\n' +
+      '아무것도 저장하지 않아요. 쓴 글은 남기지 않고, 첨삭 내용도 화면을 나가면 사라져요.',
     // Empty state / onboarding
     tagline: '단어나 표현을 검색해보세요.',
     taglineSubtitle: 'AI로 즉각적인 설명을 받고, 플래시카드로 저장해 간격 반복 학습을 시작하세요.',
