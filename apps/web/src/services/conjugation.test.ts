@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
+  t,
   acceptedForms,
   boxItemId,
   buildConjugationQueue,
@@ -718,6 +719,47 @@ describe('buildConjugationQueue', () => {
     expect(ids.slice(0, boxes).every(id => id === ids[0])).toBe(false);
   });
 });
+/**
+ * ⚠️ **A tense note is sourced content**, tiered and cited in
+ * `docs/packs/french-tense-notes-draft.md`. These assertions are about the
+ * wiring, not the prose: that every French tense has one, that both keys travel
+ * together, and that the points are the help-sheet shape rather than a
+ * paragraph.
+ */
+describe('tense notes', () => {
+  it('gives every French tense a note', () => {
+    for (const tense of spec.tenses) {
+      expect(tense.aboutLeadKey).toBeTruthy();
+      expect(tense.aboutPointsKey).toBeTruthy();
+    }
+  });
+
+  it('carries both keys or neither, since one alone renders a heading with no body', () => {
+    for (const tense of spec.tenses) {
+      expect(!!tense.aboutLeadKey).toBe(!!tense.aboutPointsKey);
+    }
+  });
+
+  it('writes the points one use to a line, in both locales', () => {
+    for (const language of ['English', 'Korean'] as const) {
+      for (const tense of spec.tenses) {
+        const points = t(language, tense.aboutPointsKey!).split('\n');
+        expect(points.length).toBeGreaterThanOrEqual(2);
+        for (const point of points) expect(point.trim()).toBe(point);
+      }
+    }
+  });
+
+  /** A note the reader cannot see the end of is a paragraph by another name. */
+  it('keeps a lead to one sentence', () => {
+    for (const language of ['English', 'Korean'] as const) {
+      for (const tense of spec.tenses) {
+        expect(t(language, tense.aboutLeadKey!).length).toBeLessThan(90);
+      }
+    }
+  });
+});
+
 describe('languages', () => {
   it('has French and says so', () => {
     expect(hasConjugation('French')).toBe(true);

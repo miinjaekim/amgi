@@ -1,3 +1,4 @@
+import type { TranslationKey } from './i18n';
 import { getNextReviewData } from './sm2';
 import { sameFoldedText } from './typedAnswer';
 import type { StudyLanguage } from './types';
@@ -79,6 +80,20 @@ export interface ConjugationTense {
   id: string;
   /** `présent`, `imparfait` — not translated, for the same reason. */
   label: string;
+  /**
+   * What the tense does and when to reach for it, as copy keys.
+   *
+   * ⚠️ **Sourced content, and optional for that reason.** A tense with no note
+   * shows its table and nothing else, which is honest; writing one from the
+   * model would not be — `docs/packs/README.md` governs, and the French notes
+   * are tiered and cited in `docs/packs/french-tense-notes-draft.md`.
+   *
+   * Keys rather than strings because this is a language's data and the copy is
+   * per interface language: the tense is the same fact in en and in ko.
+   */
+  aboutLeadKey?: TranslationKey;
+  /** The uses, one per line, split on `\n` — the help-sheet shape. */
+  aboutPointsKey?: TranslationKey;
 }
 
 /** Which rule class a regular group conjugates by. */
@@ -231,9 +246,9 @@ const FRENCH_PERSONS: readonly ConjugationPerson[] = [
 ];
 
 const FRENCH_TENSES: readonly ConjugationTense[] = [
-  { id: 'present', label: 'présent' },
-  { id: 'imparfait', label: 'imparfait' },
-  { id: 'futur', label: 'futur simple' },
+  { id: 'present', label: 'présent', aboutLeadKey: 'tenseFrenchPresentLead', aboutPointsKey: 'tenseFrenchPresentPoints' },
+  { id: 'imparfait', label: 'imparfait', aboutLeadKey: 'tenseFrenchImparfaitLead', aboutPointsKey: 'tenseFrenchImparfaitPoints' },
+  { id: 'futur', label: 'futur simple', aboutLeadKey: 'tenseFrenchFuturLead', aboutPointsKey: 'tenseFrenchFuturPoints' },
 ];
 
 /** `-cer` and `-ger` take the `-er` endings; only their spelling differs. */

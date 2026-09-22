@@ -227,6 +227,28 @@ const translations = {
     savedMissed: 'missed {list}',
     /** The pill is the same control Topics uses, so it says what it will do. */
     savedRemove: 'Remove {tense} from practice',
+    // ⚠️ **Sourced content, not written here.** Every line is tiered and cited
+    // in `docs/packs/french-tense-notes-draft.md` against the Office québécois
+    // de la langue française and Larousse, and the French examples are those
+    // sources' own — an invented example sentence would be the model sourcing
+    // itself in the place a reader is most likely to trust it.
+    // Three points each, deliberately: this sits under a table on an inventory
+    // screen, where somebody has gone to look one thing up.
+    tenseFrenchPresentLead: 'What is happening now, and what is generally true.',
+    tenseFrenchPresentPoints:
+      'Something happening as you speak — Paul se lève.\n' +
+      'Habits, and things that are simply true — Il se lève tôt. Deux et deux font quatre.\n' +
+      'Something about to happen — je reviens dans un instant.',
+    tenseFrenchImparfaitLead: 'The past as a setting: what was going on, rather than what happened.',
+    tenseFrenchImparfaitPoints:
+      'What was in progress when something else happened — Il pleuvait quand je sortis.\n' +
+      'How things were — a description with no beginning and no end in view.\n' +
+      'What used to happen, again and again — Il s\'asseyait à cet endroit.',
+    tenseFrenchFuturLead: 'What will happen, seen from where you are standing now.',
+    tenseFrenchFuturPoints:
+      'An action or state still to come — Pierre prendra sa retraite dans deux ans.\n' +
+      'After si with the présent, the other half is the futur — Si tu acceptes, tu ne le regretteras pas.\n' +
+      'Instructions, put politely — Vous prendrez un comprimé tous les matins.',
     topicsIntro: 'What Munli draws practice from — and where to look a form up.',
     topicRegularVerbs: 'Regular verbs',
     topicVerbsSummary: '{count} tables saved',
@@ -1036,6 +1058,21 @@ const translations = {
     savedDueIn: '{days}일 후',
     savedMissed: '{list} 자주 틀려요',
     savedRemove: '{tense} 연습에서 빼기',
+    tenseFrenchPresentLead: '지금 일어나는 일, 그리고 원래 그런 일을 말해요.',
+    tenseFrenchPresentPoints:
+      '말하는 지금 일어나고 있는 일 — Paul se lève.\n' +
+      '습관처럼 반복되는 일과 늘 맞는 사실 — Il se lève tôt. Deux et deux font quatre.\n' +
+      '곧 일어날 일 — je reviens dans un instant.',
+    tenseFrenchImparfaitLead: '무슨 일이 있었는지보다, 그때 어떤 상황이었는지를 말해요.',
+    tenseFrenchImparfaitPoints:
+      '다른 일이 일어났을 때 하고 있던 일 — Il pleuvait quand je sortis.\n' +
+      '그때의 상황 묘사 — 시작도 끝도 정하지 않고 어땠는지만 말해요.\n' +
+      '예전에 반복해서 하던 일 — Il s\'asseyait à cet endroit.',
+    tenseFrenchFuturLead: '지금 시점에서 봤을 때 앞으로 일어날 일을 말해요.',
+    tenseFrenchFuturPoints:
+      '아직 오지 않은 일이나 상태 — Pierre prendra sa retraite dans deux ans.\n' +
+      'si 뒤에 현재를 쓰면, 나머지 절은 미래로 써요 — Si tu acceptes, tu ne le regretteras pas.\n' +
+      '공손하게 말하는 지시 — Vous prendrez un comprimé tous les matins.',
     topicsIntro: '연습에 쓰이는 범위예요. 형태를 찾아볼 때도 여기를 보세요.',
     topicRegularVerbs: '규칙 동사',
     topicVerbsSummary: '표 {count}개 저장됨',
