@@ -1,18 +1,22 @@
 import { describe, it, expect } from 'vitest';
 import {
   acceptedForms,
+  boxItemId,
   buildConjugationQueue,
   buildParadigm,
   buildTable,
   buildTables,
   conjugationHints,
   conjugationSpec,
+  countDueBoxes,
+  countQuestions,
   daysUntil,
   enrolledCountOfKind,
   enrolledTenses,
   enrolmentKey,
   defaultEnrolment,
-  dueTables,
+  dueBoxes,
+  dueRounds,
   findSubject,
   freshProgress,
   hasConjugation,
@@ -20,13 +24,13 @@ import {
   isCorrectForm,
   listPracticeTables,
   normalizeEnrolment,
-  pickPerson,
-  rateTable,
+  normalizeProgress,
+  rateBox,
   setEnrolled,
   subjectKey,
   subjectsOfKind,
   summarizeConjugation,
-  tableItemId,
+  tableKey,
 } from '@amgi/core';
 import type {
   ConjugationEnrolment, ConjugationGroup, ConjugationProgressMap, ConjugationSpec,
@@ -151,15 +155,26 @@ describe('groups as the scheduled subject', () => {
     expect(table.forms.p1).toBe('donnons');
   });
 
-  it('gives every vehicle of a group the same item id', () => {
+  it('gives every vehicle of a group the same key', () => {
     const a = buildTable(spec, group('er'), 'present', 'parler');
     const b = buildTable(spec, group('er'), 'present', 'donner');
-    expect(tableItemId(spec, a)).toBe(tableItemId(spec, b));
+    expect(tableKey(spec, a)).toBe(tableKey(spec, b));
+    expect(boxItemId(spec, a, 'p1')).toBe(boxItemId(spec, b, 'p1'));
   });
 
   it('keeps different groups and tenses apart', () => {
-    const ids = new Set(buildTables(spec, everything).map(t => tableItemId(spec, t)));
+    const ids = new Set(buildTables(spec, everything).map(t => tableKey(spec, t)));
     expect(ids.size).toBe(groupCount * spec.tenses.length);
+  });
+
+  /** ⚠️ The grain: six schedules per table, not one. */
+  it('gives every box of a table its own id', () => {
+    const table = buildTable(spec, group('er'), 'present');
+    const ids = new Set(spec.persons.map(person => boxItemId(spec, table, person.id)));
+    expect(ids.size).toBe(spec.persons.length);
+    // A table's key is a prefix of its boxes' ids, and is not one of them.
+    for (const id of ids) expect(id.startsWith(`${tableKey(spec, table)}:`)).toBe(true);
+    expect(ids.has(tableKey(spec, table))).toBe(false);
   });
 
   it('falls back to a real vehicle when handed one that is not in the group', () => {
@@ -284,52 +299,130 @@ describe('scheduling', () => {
   const NOW = new Date('2026-09-22T12:00:00Z');
   const LATER = new Date('2026-10-01T12:00:00Z').toISOString();
   const tables = buildTables(spec, all);
-  const itemId = tableItemId(spec, tables[0]);
+  const table = tables[0];
+  const boxes = spec.persons.length;
+  const allOf = (t: typeof table, nextReview: string): ConjugationProgressMap =>
+    Object.fromEntries(spec.persons.map(person => [
+      boxItemId(spec, t, person.id), { ...freshProgress(NOW), nextReview },
+    ]));
 
-  it('treats a table that has never been asked as due', () => {
-    expect(dueTables(spec, tables, {}, NOW)).toHaveLength(tables.length);
+  /** ⚠️ Six facts per table, which is what every due count now counts. */
+  it('treats every box of an unpractised table as due', () => {
+    expect(dueBoxes(spec, table, {}, NOW)).toEqual(spec.persons.map(p => p.id));
+    expect(countDueBoxes(spec, tables, {}, NOW)).toBe(tables.length * boxes);
   });
 
-  it('withholds a table scheduled for later', () => {
-    const progress: ConjugationProgressMap = { [itemId]: { ...freshProgress(NOW), nextReview: LATER } };
-    expect(dueTables(spec, tables, progress, NOW)).toHaveLength(tables.length - 1);
+  it('withholds only the box that is scheduled ahead', () => {
+    const progress: ConjugationProgressMap = {
+      [boxItemId(spec, table, 'p1')]: { ...freshProgress(NOW), nextReview: LATER },
+    };
+    expect(dueBoxes(spec, table, progress, NOW)).not.toContain('p1');
+    expect(dueBoxes(spec, table, progress, NOW)).toHaveLength(boxes - 1);
+    expect(countDueBoxes(spec, tables, progress, NOW)).toBe(tables.length * boxes - 1);
   });
 
-  it('moves the whole table when one box is missed', () => {
-    const after = rateTable(undefined, 'p1', 'again');
+  /**
+   * ⚠️ **The defect the 2026-09-22 reversal exists to fix.** One box's verdict
+   * used to set the whole table's interval, so answering `tu` scheduled `ils`
+   * away with it — five boxes rated on evidence from one.
+   */
+  it('leaves the other boxes alone when one is answered', () => {
+    const progress: ConjugationProgressMap = {
+      [boxItemId(spec, table, 's2')]: rateBox(undefined, 'good'),
+    };
+    expect(dueBoxes(spec, table, progress, NOW))
+      .toEqual(spec.persons.map(p => p.id).filter(id => id !== 's2'));
+  });
+
+  it('asks a round for every table with a due box, and every due box in it', () => {
+    const rounds = dueRounds(spec, tables, {}, NOW);
+    expect(rounds).toHaveLength(tables.length);
+    expect(countQuestions(rounds)).toBe(tables.length * boxes);
+  });
+
+  /** A round with nothing in it is not work, so it is not a round. */
+  it('drops a table with nothing due rather than returning it empty', () => {
+    const rounds = dueRounds(spec, tables, allOf(table, LATER), NOW);
+    expect(rounds).toHaveLength(tables.length - 1);
+    expect(rounds.map(r => r.table.subjectId)).not.toContain(table.subjectId);
+  });
+
+  it('puts the most overdue table first, and a never-practised one ahead of both', () => {
+    const progress: ConjugationProgressMap = {
+      ...allOf(tables[0], LATER),
+      ...allOf(tables[1], LATER),
+      [boxItemId(spec, tables[0], 'p1')]: {
+        ...freshProgress(NOW), nextReview: new Date('2026-09-21T12:00:00Z').toISOString(),
+      },
+      [boxItemId(spec, tables[1], 'p1')]: {
+        ...freshProgress(NOW), nextReview: new Date('2026-09-19T12:00:00Z').toISOString(),
+      },
+    };
+    const order = dueRounds(spec, tables, progress, NOW).map(r => r.table.subjectId);
+    expect(order.slice(-2)).toEqual([tables[1].subjectId, tables[0].subjectId]);
+    expect(order.slice(0, -2)).toEqual(tables.slice(2).map(t => t.subjectId));
+  });
+
+  it('makes a missed box due again immediately', () => {
+    const after = rateBox(undefined, 'again');
     expect(new Date(after.nextReview).getTime()).toBeLessThanOrEqual(Date.now());
     expect(after.repetitions).toBe(0);
-    expect(after.misses).toEqual({ p1: 1 });
+    expect(after.misses).toBe(1);
   });
 
-  it('counts misses per box and clears one that is answered', () => {
-    let state = rateTable(undefined, 'p1', 'again');
-    state = rateTable(state, 'p1', 'again');
-    expect(state.misses.p1).toBe(2);
-    state = rateTable(state, 'p1', 'good');
-    expect(state.misses.p1).toBeUndefined();
+  it('counts misses on the box and clears the count when it is produced', () => {
+    let state = rateBox(undefined, 'again');
+    state = rateBox(state, 'again');
+    expect(state.misses).toBe(2);
+    state = rateBox(state, 'good');
+    expect(state.misses).toBe(0);
   });
 
   it('counts a two-hint answer as a miss', () => {
-    expect(rateTable(undefined, 's3', hintedVerdict(2, true)).misses.s3).toBe(1);
-  });
-
-  it('asks the box that has been missed most', () => {
-    const state = { ...freshProgress(NOW), misses: { p2: 3, s1: 1 } };
-    expect(pickPerson(spec, state, () => 0).id).toBe('p2');
-  });
-
-  it('spreads across the table when nothing has been missed', () => {
-    const picked = new Set<string>();
-    for (let i = 0; i < 6; i++) picked.add(pickPerson(spec, undefined, () => i / 6).id);
-    expect(picked.size).toBe(6);
-  });
-
-  it('never runs off the end of the person list', () => {
-    expect(pickPerson(spec, undefined, () => 1).id).toBe('p3');
+    expect(rateBox(undefined, hintedVerdict(2, true)).misses).toBe(1);
   });
 });
 
+/**
+ * ⚠️ **The 2026-09-22 reset, performed on read rather than by a migration.**
+ * The user's call was a clean slate: table-grained progress is dropped rather
+ * than split into six copies of one interval.
+ */
+describe('normalizeProgress', () => {
+  const NOW = new Date('2026-09-22T12:00:00Z');
+  const table = buildTables(spec, all)[0];
+
+  it('keeps a box it recognises', () => {
+    const progress: ConjugationProgressMap = {
+      [boxItemId(spec, table, 'p1')]: freshProgress(NOW),
+    };
+    expect(normalizeProgress(spec, progress)).toEqual(progress);
+  });
+
+  it('drops the table-grained entries the box grain replaced', () => {
+    const old = {
+      [tableKey(spec, table)]: {
+        interval: 3, ease: 2.5, repetitions: 1,
+        nextReview: NOW.toISOString(), misses: { p1: 2 },
+      },
+    } as unknown as ConjugationProgressMap;
+    expect(normalizeProgress(spec, old)).toEqual({});
+  });
+
+  it('drops a box whose subject, tense or person the spec has never heard of', () => {
+    const progress = {
+      'French:group:ghost:present:p1': freshProgress(NOW),
+      'French:group:er:ghost:p1': freshProgress(NOW),
+      'French:group:er:present:p9': freshProgress(NOW),
+      'Korean:group:er:present:p1': freshProgress(NOW),
+    } as ConjugationProgressMap;
+    expect(normalizeProgress(spec, progress)).toEqual({});
+  });
+
+  it('is empty for a user who has never practised', () => {
+    expect(normalizeProgress(spec, undefined)).toEqual({});
+  });
+});
 describe('hints', () => {
   it('splits the form into two halves that reassemble into it', () => {
     const table = buildTable(spec, group('er'), 'present', 'parler');
@@ -347,23 +440,25 @@ describe('hints', () => {
 
 describe('summarizeConjugation', () => {
   const NOW = new Date('2026-09-22T12:00:00Z');
+  const boxes = spec.persons.length;
 
-  it('counts every enrolled table as due when none has been practised', () => {
+  /** ⚠️ Counted in boxes since 2026-09-22 — a box is what carries a schedule. */
+  it('counts every enrolled box as due when none has been practised', () => {
     const summary = summarizeConjugation(spec, all, {}, 5, NOW);
     expect(summary.practised).toBe(0);
-    expect(summary.total).toBe(groupCount);
+    expect(summary.total).toBe(groupCount * boxes);
     expect(summary.due).toBe(summary.total);
   });
 
   it('only counts what is enrolled', () => {
     expect(summarizeConjugation(spec, everything, {}, 5, NOW).total)
-      .toBe(groupCount * spec.tenses.length);
+      .toBe(groupCount * spec.tenses.length * boxes);
   });
 
-  it('counts a practised table and takes it out of due when scheduled ahead', () => {
-    const tables = buildTables(spec, all);
+  it('counts a practised box and takes it out of due when scheduled ahead', () => {
+    const table = buildTables(spec, all)[0];
     const progress: ConjugationProgressMap = {
-      [tableItemId(spec, tables[0])]: {
+      [boxItemId(spec, table, 'p1')]: {
         ...freshProgress(NOW),
         nextReview: new Date('2026-10-01T12:00:00Z').toISOString(),
       },
@@ -373,13 +468,20 @@ describe('summarizeConjugation', () => {
     expect(summary.due).toBe(summary.total - 1);
   });
 
-  /** The payoff for the tally — and after the rework it names an ending. */
+  it('adds up its tenses', () => {
+    const summary = summarizeConjugation(spec, everything, {}, 5, NOW);
+    expect(summary.byTense).toHaveLength(spec.tenses.length);
+    expect(summary.byTense.reduce((n, tense) => n + tense.total, 0)).toBe(summary.total);
+    expect(summary.byTense.reduce((n, tense) => n + tense.due, 0)).toBe(summary.due);
+  });
+
+  /** The tally's payoff — and it names an ending, not a word. */
   it('names the weakest boxes by group, most-missed first', () => {
     const erPresent = buildTable(spec, group('er'), 'present');
     const irPresent = buildTable(spec, group('ir'), 'present');
     const progress: ConjugationProgressMap = {
-      [tableItemId(spec, erPresent)]: { ...freshProgress(NOW), misses: { p1: 3 } },
-      [tableItemId(spec, irPresent)]: { ...freshProgress(NOW), misses: { s2: 5 } },
+      [boxItemId(spec, erPresent, 'p1')]: { ...freshProgress(NOW), misses: 3 },
+      [boxItemId(spec, irPresent, 's2')]: { ...freshProgress(NOW), misses: 5 },
     };
     const { weakest } = summarizeConjugation(spec, all, progress, 5, NOW);
     expect(weakest[0]).toMatchObject({ subjectLabel: '-ir', personLabel: 'tu', misses: 5 });
@@ -387,45 +489,55 @@ describe('summarizeConjugation', () => {
   });
 
   it('reports nothing weak when nothing has been missed', () => {
-    const tables = buildTables(spec, all);
-    const progress: ConjugationProgressMap = { [tableItemId(spec, tables[0])]: freshProgress(NOW) };
+    const table = buildTables(spec, all)[0];
+    const progress: ConjugationProgressMap = {
+      [boxItemId(spec, table, 'p1')]: freshProgress(NOW),
+    };
     expect(summarizeConjugation(spec, all, progress, 5, NOW).weakest).toEqual([]);
   });
 });
-
 describe('buildConjugationQueue', () => {
   const NOW = new Date('2026-09-22T12:00:00Z');
   const LATER = new Date('2026-10-01T12:00:00Z').toISOString();
   const tables = buildTables(spec, all);
+  const boxes = spec.persons.length;
   const fixed = () => 0;
+  const scheduled = (nextReview: string): ConjugationProgressMap => Object.fromEntries(
+    tables.flatMap(table => spec.persons.map(person => [
+      boxItemId(spec, table, person.id), { ...freshProgress(NOW), nextReview },
+    ])),
+  );
 
-  it('asks every due table exactly once', () => {
+  /**
+   * ⚠️ **The complaint, answered.** One due table used to be one question: a
+   * learner weak on `ils` could finish a session without being asked for it.
+   */
+  it('asks every due box of every due table', () => {
     const queue = buildConjugationQueue(spec, tables, {}, {}, NOW, fixed);
     expect(queue).toHaveLength(tables.length);
-    expect(new Set(queue.map(q => q.table.subjectId)).size).toBe(tables.length);
+    expect(countQuestions(queue)).toBe(tables.length * boxes);
+    for (const round of queue) expect(round.personIds).toEqual(spec.persons.map(p => p.id));
+  });
+
+  it('asks only the boxes that are due', () => {
+    const progress: ConjugationProgressMap = {
+      ...scheduled(LATER),
+      [boxItemId(spec, tables[0], 'p3')]: { ...freshProgress(NOW), misses: 2, nextReview: NOW.toISOString() },
+    };
+    const queue = buildConjugationQueue(spec, tables, progress, {}, NOW, fixed);
+    expect(queue).toHaveLength(1);
+    expect(queue[0].personIds).toEqual(['p3']);
+    expect(queue[0].table.subjectId).toBe(tables[0].subjectId);
   });
 
   it('is empty when nothing is due', () => {
-    const progress: ConjugationProgressMap = Object.fromEntries(
-      tables.map(t => [tableItemId(spec, t), { ...freshProgress(NOW), nextReview: LATER }]),
-    );
-    expect(buildConjugationQueue(spec, tables, progress, {}, NOW, fixed)).toEqual([]);
+    expect(buildConjugationQueue(spec, tables, scheduled(LATER), {}, NOW, fixed)).toEqual([]);
   });
 
-  it('includes tables that are not due when asked to', () => {
-    const progress: ConjugationProgressMap = Object.fromEntries(
-      tables.map(t => [tableItemId(spec, t), { ...freshProgress(NOW), nextReview: LATER }]),
-    );
-    expect(buildConjugationQueue(spec, tables, progress, { includeNotDue: true }, NOW, fixed)).toHaveLength(tables.length);
-  });
-
-  it('asks the box that has been missed most', () => {
-    const er = buildTable(spec, group('er'), 'present');
-    const progress: ConjugationProgressMap = {
-      [tableItemId(spec, er)]: { ...freshProgress(NOW), misses: { p2: 4 } },
-    };
-    const queue = buildConjugationQueue(spec, tables, progress, {}, NOW, fixed);
-    expect(queue.find(q => q.table.subjectId === 'er')!.personId).toBe('p2');
+  it('asks the whole table when told to include what is not due', () => {
+    const queue = buildConjugationQueue(spec, tables, scheduled(LATER), { includeNotDue: true }, NOW, fixed);
+    expect(queue).toHaveLength(tables.length);
+    expect(countQuestions(queue)).toBe(tables.length * boxes);
   });
 
   /**
@@ -442,11 +554,15 @@ describe('buildConjugationQueue', () => {
     expect(seen.size).toBeGreaterThan(1);
   });
 
-  it('only ever uses a vehicle from the group it is asking about', () => {
+  /** ⚠️ One vehicle per round: a paradigm of six different verbs is not one. */
+  it('conjugates the whole round through a single vehicle', () => {
     for (const r of [0, 0.25, 0.5, 0.75, 0.99]) {
-      for (const q of buildConjugationQueue(spec, tables, {}, {}, NOW, () => r)) {
-        const subject = findSubject(spec, `group:${q.table.subjectId}`) as ConjugationGroup;
-        expect(subject.vehicles).toContain(q.table.infinitive);
+      for (const round of buildConjugationQueue(spec, tables, {}, {}, NOW, () => r)) {
+        const subject = findSubject(spec, `group:${round.table.subjectId}`) as ConjugationGroup;
+        expect(subject.vehicles).toContain(round.table.infinitive);
+        for (const personId of round.personIds) {
+          expect(round.table.forms[personId]).toBeTruthy();
+        }
       }
     }
   });
@@ -456,7 +572,6 @@ describe('buildConjugationQueue', () => {
     expect(queue.map(q => q.table.subjectId)).not.toEqual(tables.map(t => t.subjectId));
   });
 });
-
 describe('languages', () => {
   it('has French and says so', () => {
     expect(hasConjugation('French')).toBe(true);
@@ -500,31 +615,57 @@ describe('buildParadigm', () => {
 describe('listPracticeTables', () => {
   const NOW = new Date('2026-09-22T12:00:00Z');
   const LATER = new Date('2026-09-25T12:00:00Z').toISOString();
+  const tables = buildTables(spec, all);
+  const boxes = spec.persons.length;
+  const allOf = (t: typeof tables[number], nextReview: string): ConjugationProgressMap =>
+    Object.fromEntries(spec.persons.map(person => [
+      boxItemId(spec, t, person.id), { ...freshProgress(NOW), nextReview },
+    ]));
 
   it('lists everything enrolled, due or not', () => {
     const items = listPracticeTables(spec, all, {}, NOW);
     expect(items).toHaveLength(groupCount);
+    expect(items[0].boxes).toHaveLength(boxes);
   });
 
-  /** ⚠️ Unlike `dueTables`, which is what a session is built from. */
+  /** ⚠️ Unlike `dueRounds`, which is what a session is built from. */
   it('keeps a table that is not due, rather than dropping it', () => {
-    const tables = buildTables(spec, all);
+    const progress = allOf(tables[0], LATER);
+    expect(listPracticeTables(spec, all, progress, NOW)).toHaveLength(tables.length);
+    expect(dueRounds(spec, tables, progress, NOW)).toHaveLength(tables.length - 1);
+  });
+
+  it('says how many boxes are due, not merely that some are', () => {
     const progress: ConjugationProgressMap = {
-      [tableItemId(spec, tables[0])]: { ...freshProgress(NOW), nextReview: LATER },
+      ...allOf(tables[0], LATER),
+      [boxItemId(spec, tables[0], 'p1')]: { ...freshProgress(NOW), nextReview: NOW.toISOString() },
+      [boxItemId(spec, tables[0], 'p2')]: { ...freshProgress(NOW), nextReview: NOW.toISOString() },
     };
-    const items = listPracticeTables(spec, all, progress, NOW);
-    expect(items).toHaveLength(tables.length);
-    expect(dueTables(spec, tables, progress, NOW)).toHaveLength(tables.length - 1);
+    const item = listPracticeTables(spec, all, progress, NOW)
+      .find(i => i.itemId === tableKey(spec, tables[0]))!;
+    expect(item.due).toBe(true);
+    expect(item.dueCount).toBe(2);
+    expect(item.started).toBe(boxes);
+    // Work waiting says how much, not when.
+    expect(item.dueAt).toBeNull();
+  });
+
+  it('dates a table with nothing due by its soonest box', () => {
+    const progress: ConjugationProgressMap = {
+      ...allOf(tables[0], new Date('2026-09-30T12:00:00Z').toISOString()),
+      [boxItemId(spec, tables[0], 'p2')]: { ...freshProgress(NOW), nextReview: LATER },
+    };
+    const item = listPracticeTables(spec, all, progress, NOW)
+      .find(i => i.itemId === tableKey(spec, tables[0]))!;
+    expect(item.due).toBe(false);
+    expect(item.dueCount).toBe(0);
+    expect(item.dueAt?.toISOString()).toBe(LATER);
   });
 
   it('puts what is due first, then what falls due soonest', () => {
-    const tables = buildTables(spec, all);
     const progress: ConjugationProgressMap = {
-      [tableItemId(spec, tables[0])]: { ...freshProgress(NOW), nextReview: LATER },
-      [tableItemId(spec, tables[1])]: {
-        ...freshProgress(NOW),
-        nextReview: new Date('2026-09-23T12:00:00Z').toISOString(),
-      },
+      ...allOf(tables[0], new Date('2026-09-30T12:00:00Z').toISOString()),
+      ...allOf(tables[1], LATER),
     };
     const items = listPracticeTables(spec, all, progress, NOW);
     expect(items[0].due).toBe(true);
@@ -533,30 +674,32 @@ describe('listPracticeTables', () => {
     expect(notDue[1].table.subjectId).toBe(tables[0].subjectId);
   });
 
-  it('treats a table that has never been practised as due, with no date', () => {
+  it('treats a table that has never been practised as wholly due, with no date', () => {
     const [item] = listPracticeTables(spec, all, {}, NOW);
     expect(item.due).toBe(true);
+    expect(item.dueCount).toBe(boxes);
+    expect(item.started).toBe(0);
     expect(item.dueAt).toBeNull();
-    expect(item.state).toBeUndefined();
+    expect(item.boxes.every(box => box.state === undefined)).toBe(true);
   });
 
   it('names the boxes that have been missed, most-missed first', () => {
-    const tables = buildTables(spec, all);
     const progress: ConjugationProgressMap = {
-      [tableItemId(spec, tables[0])]: { ...freshProgress(NOW), misses: { s1: 1, p2: 4 } },
+      [boxItemId(spec, tables[0], 's1')]: { ...freshProgress(NOW), misses: 1 },
+      [boxItemId(spec, tables[0], 'p2')]: { ...freshProgress(NOW), misses: 4 },
     };
     const item = listPracticeTables(spec, all, progress, NOW)
-      .find(i => i.itemId === tableItemId(spec, tables[0]))!;
+      .find(i => i.itemId === tableKey(spec, tables[0]))!;
     expect(item.weakBoxes.map(b => b.personLabel)).toEqual(['vous', 'je']);
   });
 
   it('reports no weak boxes when nothing has been missed', () => {
-    const tables = buildTables(spec, all);
-    const progress: ConjugationProgressMap = { [tableItemId(spec, tables[0])]: freshProgress(NOW) };
+    const progress: ConjugationProgressMap = {
+      [boxItemId(spec, tables[0], 'p1')]: freshProgress(NOW),
+    };
     expect(listPracticeTables(spec, all, progress, NOW)[0].weakBoxes).toEqual([]);
   });
 });
-
 describe('daysUntil', () => {
   const NOW = new Date('2026-09-22T12:00:00Z');
 

@@ -1,7 +1,7 @@
 'use client';
 import { useCallback, useMemo, useState } from 'react';
-import { conjugationSpec, normalizeEnrolment } from '@amgi/core';
-import type { ConjugationEnrolment, ConjugationProgress, ConjugationProgressMap } from '@amgi/core';
+import { conjugationSpec, normalizeEnrolment, normalizeProgress } from '@amgi/core';
+import type { ConjugationEnrolment, ConjugationProgressMap } from '@amgi/core';
 import { useUser } from '@/components/UserContext';
 import { saveUserPreferences } from '@/services/userPreferences';
 
@@ -28,6 +28,7 @@ export function useConjugation() {
   const [pendingEnrolment, setPendingEnrolment] = useState<ConjugationEnrolment | null>(null);
 
   const progress = useMemo(() => {
+    if (!spec) return {};
     const server = conjugation ?? {};
     // Drop anything the server has confirmed, so this stays a write buffer
     // rather than growing into a cache.
@@ -35,17 +36,27 @@ export function useConjugation() {
     for (const [id, state] of Object.entries(pending)) {
       if (server[id]?.nextReview !== state.nextReview) stillPending[id] = state;
     }
-    return { ...server, ...stillPending };
-  }, [conjugation, pending]);
+    // ⚠️ `normalizeProgress` is what performs the 2026-09-22 reset: the
+    // table-grained entries a user document may still carry are dropped on
+    // read rather than migrated. See its comment in core.
+    return normalizeProgress(spec, { ...server, ...stillPending });
+  }, [spec, conjugation, pending]);
 
   const enrolment = useMemo(
     () => (spec ? normalizeEnrolment(spec, pendingEnrolment ?? conjugationEnrolment) : undefined),
     [spec, pendingEnrolment, conjugationEnrolment],
   );
 
-  const rate = useCallback((itemId: string, state: ConjugationProgress) => {
-    setPending(prev => ({ ...prev, [itemId]: state }));
-    if (user) void saveUserPreferences(user.uid, { conjugation: { [itemId]: state } }).catch(() => {});
+  /**
+   * Write a round's ratings.
+   *
+   * ⚠️ **A map rather than one box**, since a round rates up to six of them at
+   * once. One merge write per round rather than six is the point: the nested
+   * map merges key by key, so this writes the boxes answered and not the set.
+   */
+  const rate = useCallback((updates: ConjugationProgressMap) => {
+    setPending(prev => ({ ...prev, ...updates }));
+    if (user) void saveUserPreferences(user.uid, { conjugation: updates }).catch(() => {});
   }, [user]);
 
   const setEnrolment = useCallback((next: ConjugationEnrolment) => {

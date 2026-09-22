@@ -29,16 +29,32 @@ import type { StudyLanguage } from './types';
  * would be marked wrong for applying the rule correctly. They are separate
  * patterns, which is also how they are taught.
  *
- * ⚠️ **The schedule belongs to the table, not the box.** Missing `nous` brings
- * the whole table back, and the next question from it may be any box — with a
- * per-box miss tally so the weak one is preferred. That tally means more after
- * the rework than before: "your `nous` is weak" is now a claim about the ending,
- * across every verb in the group, rather than about one word.
+ * ⚠️ **The schedule belongs to the box, and the table is how it is shown.**
+ * Reversed 2026-09-22 on the user's call, the same day the first shape shipped:
+ * *"having one tense of one verb group due means I'd practice just one verb
+ * conjugation … I might be struggling with `ils` but I randomly got `tu` or `je`
+ * and the practice ends."* A table is six facts, not one. The shape it replaces
+ * rated a whole table from one box's verdict, so answering `tu` correctly
+ * pushed `ils` out by the same interval — five boxes scheduled on evidence from
+ * one — and the per-box miss tally could only bias a draw that happened once a
+ * session, after the miss had already been paid for.
  *
- * ⚠️ **Per-verb scheduling for a *group* must stay reachable**, the same
- * constraint recorded when the table was chosen over the box: ids are built by
- * `conjugationItemId` and progress is keyed by whatever it returns, so splitting
- * something finer later means more ids, not a different shape.
+ * ⚠️ **The precedent is Amgi's own.** A card is scheduled per *direction*, and
+ * `helpReviewPoints` says so to the user: *"Each card is asked both ways."*
+ * Splitting a table into its boxes is that same move — one item per fact — which
+ * is what distinguishes it from the multiplication `vision.md` refuses. Nothing
+ * here adapts per learner; there are simply six facts where the code used to
+ * claim one.
+ *
+ * **A round is the unit of a session, and a round is a table.** The due boxes of
+ * one table are asked together, laid out as its paradigm, and each rates
+ * independently. That is how a paradigm is practised, and it keeps the counts
+ * legible — `-er · présent — 3 due` rather than 72 loose items.
+ *
+ * ⚠️ **The boxes that are not due are masked until the round is checked.**
+ * Showing them would hand over the answer — `je parle`, `nous parlons` and `vous
+ * parlez` make `tu parles` free — so the paradigm fills in only once the round
+ * has been answered, at which point it is reference rather than a leak.
  *
  * **Regular forms are computed; irregular forms are stored.** There is no rule
  * to generate an irregular from, and `docs/packs/README.md` governs — the model
@@ -111,7 +127,7 @@ export interface ConjugationSpec {
   conjugate: (infinitive: string, group: ConjugationGroupId, tenseId: string) => string[];
 }
 
-/** One subject in one tense: the unit that carries a schedule. */
+/** One subject in one tense: six boxes, each carrying its own schedule. */
 export interface ConjugationTable {
   subjectKind: ConjugationSubject['kind'];
   subjectId: string;
@@ -132,11 +148,13 @@ export interface ConjugationTable {
 }
 
 /**
- * What is remembered about a table.
+ * What is remembered about a **box** — one person of one table.
  *
  * The SM-2 fields are the same four every scheduled thing in the app carries.
- * `misses` is the extra, and it is a tally rather than a scheduler: it decides
- * *which box to ask*, never *when to ask*.
+ * `misses` is the extra, and it no longer decides anything: a due box is asked
+ * because it is due, so the tally is only ever *reported*, on Progress and on
+ * Saved. It was `Record<personId, number>` while a table carried one schedule
+ * for six boxes; now that each box carries its own, it is that box's count.
  *
  * `nextReview` is an ISO string rather than a Date or a Firestore Timestamp:
  * this lives in a plain map on the user document and is read by two platforms,
@@ -148,11 +166,11 @@ export interface ConjugationProgress {
   repetitions: number;
   /** ISO 8601. */
   nextReview: string;
-  /** Person id → how many times this box has been missed. */
-  misses: Record<string, number>;
+  /** How many times this box has been missed since it was last produced. */
+  misses: number;
 }
 
-/** Progress for every table the learner has touched, keyed by item id. */
+/** Progress for every box the learner has touched, keyed by box id. */
 export type ConjugationProgressMap = Record<string, ConjugationProgress>;
 
 /**
@@ -179,18 +197,25 @@ export function subjectKey(subject: ConjugationSubject): string {
 }
 
 /**
- * The id a table's schedule is filed under.
+ * The id a box's schedule is filed under, and the key of the table holding it.
  *
  * A function rather than a template literal at each call site: the shape has
- * already changed once (it was verb-and-tense before groups existed) and every
- * producer and consumer of one has to change together when it does.
+ * changed twice now — verb-and-tense before groups existed, and subject-and-tense
+ * before the box became the scheduled item — and every producer and consumer of
+ * one has to change together when it does.
+ *
+ * ⚠️ **Without `personId` this is a table's key, which is not a schedule.** It
+ * identifies a row in a list and prefixes the six ids underneath it; nothing is
+ * filed under it. `progress[tableKey]` is always `undefined`, by construction.
  */
 export function conjugationItemId(
   language: StudyLanguage,
   subject: ConjugationSubject,
   tenseId: string,
+  personId?: string,
 ): string {
-  return `${language}:${subjectKey(subject)}:${tenseId}`;
+  const table = `${language}:${subjectKey(subject)}:${tenseId}`;
+  return personId === undefined ? table : `${table}:${personId}`;
 }
 
 /* ── French ──────────────────────────────────────────────────────────────── */
@@ -516,81 +541,163 @@ export function buildTables(
        - subjectOrder.indexOf(`${b.subjectKind}:${b.subjectId}`));
 }
 
-/** The item id for a table, which needs its subject back. */
-export function tableItemId(spec: ConjugationSpec, table: ConjugationTable): string {
+/**
+ * A table's key — a row's identity, not a schedule.
+ *
+ * Used as a list key and as the prefix of its six box ids. Nothing is filed
+ * under it; see `conjugationItemId`.
+ */
+export function tableKey(spec: ConjugationSpec, table: ConjugationTable): string {
   return `${spec.language}:${table.subjectKind}:${table.subjectId}:${table.tenseId}`;
+}
+
+/** The id one box's schedule is filed under. */
+export function boxItemId(
+  spec: ConjugationSpec,
+  table: ConjugationTable,
+  personId: string,
+): string {
+  return `${tableKey(spec, table)}:${personId}`;
+}
+
+/**
+ * Progress with everything this spec cannot account for dropped.
+ *
+ * ⚠️ **This is what performs the 2026-09-22 reset**, and it is a read-side drop
+ * rather than a migration. Table-grained entries are keyed by four segments and
+ * carry `misses` as a map; a box id has five and carries a number. The two
+ * cannot collide, so the old entries were already inert — but leaving them to
+ * sit on the user document forever is worse than dropping them the moment they
+ * are read, and the user's call was a clean slate rather than a rewrite of old
+ * intervals into six copies of themselves.
+ *
+ * It also drops a box whose subject, tense or person the spec no longer has —
+ * `normalizeEnrolment`'s rule, for the same reason: the spec is the authority on
+ * what exists, and a stale key would otherwise be counted forever.
+ */
+export function normalizeProgress(
+  spec: ConjugationSpec,
+  raw: ConjugationProgressMap | undefined,
+): ConjugationProgressMap {
+  const kept: ConjugationProgressMap = {};
+  for (const [id, state] of Object.entries(raw ?? {})) {
+    const parts = id.split(':');
+    if (parts.length !== 5) continue;
+    const [language, kind, subjectId, tenseId, personId] = parts;
+    if (language !== spec.language) continue;
+    if (!findSubject(spec, `${kind}:${subjectId}`)) continue;
+    if (!spec.tenses.some(tense => tense.id === tenseId)) continue;
+    if (!spec.persons.some(person => person.id === personId)) continue;
+    if (typeof state?.misses !== 'number' || typeof state?.nextReview !== 'string') continue;
+    kept[id] = state;
+  }
+  return kept;
 }
 
 /* ── Scheduling ──────────────────────────────────────────────────────────── */
 
 /**
- * The tables due now, soonest first, with never-practised ones ahead of them.
+ * A table and the boxes of it to ask — the unit a session is built from.
  *
- * A table with no progress has never been asked, so it is due — the same rule
+ * ⚠️ **A round is a table even though the schedule is a box's**, which is the
+ * whole shape of the 2026-09-22 reversal. Scheduling per box answers the
+ * complaint (a weak `ils` is asked because it is due, not because a die landed
+ * on it); asking them a table at a time is how a paradigm is actually
+ * practised, and is what keeps `-er · présent — 3 due` readable where 72 loose
+ * items would not be.
+ */
+export interface ConjugationRound {
+  table: ConjugationTable;
+  /** Person ids in the spec's order, which is the order a paradigm is read in. */
+  personIds: string[];
+}
+
+/**
+ * The boxes of a table that are due now, in person order.
+ *
+ * A box with no progress has never been asked, so it is due — the same rule
  * `isDue` applies to an untracked card direction.
  */
-export function dueTables(
+export function dueBoxes(
+  spec: ConjugationSpec,
+  table: ConjugationTable,
+  progress: ConjugationProgressMap,
+  now: Date = new Date(),
+): string[] {
+  return spec.persons
+    .filter(person => {
+      const state = progress[boxItemId(spec, table, person.id)];
+      return !state || new Date(state.nextReview) <= now;
+    })
+    .map(person => person.id);
+}
+
+/**
+ * The rounds waiting, soonest first, with never-practised tables ahead of them.
+ *
+ * A table with no due box is not a round: it is dropped rather than returned
+ * empty, so a caller counting rounds is counting work.
+ */
+export function dueRounds(
   spec: ConjugationSpec,
   tables: readonly ConjugationTable[],
   progress: ConjugationProgressMap,
   now: Date = new Date(),
-): ConjugationTable[] {
-  const due = tables.filter(table => {
-    const state = progress[tableItemId(spec, table)];
-    return !state || new Date(state.nextReview) <= now;
-  });
-  return due.sort((a, b) => {
-    const sa = progress[tableItemId(spec, a)];
-    const sb = progress[tableItemId(spec, b)];
-    if (!sa && !sb) return 0;
-    if (!sa) return -1;
-    if (!sb) return 1;
-    return new Date(sa.nextReview).getTime() - new Date(sb.nextReview).getTime();
-  });
+): ConjugationRound[] {
+  const rounds: { round: ConjugationRound; at: number }[] = [];
+  for (const table of tables) {
+    const personIds = dueBoxes(spec, table, progress, now);
+    if (personIds.length === 0) continue;
+    // A table is placed by its most overdue box, and a box never practised
+    // sorts ahead of every dated one — the order `dueTables` used to give.
+    let at = Infinity;
+    for (const personId of personIds) {
+      const state = progress[boxItemId(spec, table, personId)];
+      at = Math.min(at, state ? new Date(state.nextReview).getTime() : -Infinity);
+    }
+    rounds.push({ round: { table, personIds }, at });
+  }
+  return rounds.sort((a, b) => a.at - b.at).map(entry => entry.round);
 }
 
 /**
- * Which box to ask from a table.
+ * How many boxes are due across a set of tables.
  *
- * ⚠️ **This is where the per-table schedule pays its debt.** One schedule cannot
- * know that your `nous` specifically is weak, but the tally can, so the box with
- * the most misses is asked first. Ties fall to `tiebreak`, which the caller
- * supplies — a stable choice would ask the same box forever and teach exactly
- * one sixth of the table.
+ * ⚠️ **This is what every due count in Munli counts**, from the practice picker
+ * to a pill on Saved. Counting tables would be counting rounds, which is a
+ * number about the session rather than about what is owed.
  */
-export function pickPerson(
+export function countDueBoxes(
   spec: ConjugationSpec,
-  progress: ConjugationProgress | undefined,
-  tiebreak: () => number = Math.random,
-): ConjugationPerson {
-  const misses = progress?.misses ?? {};
-  let worst = -1;
-  for (const person of spec.persons) worst = Math.max(worst, misses[person.id] ?? 0);
-  const candidates = worst > 0
-    ? spec.persons.filter(p => (misses[p.id] ?? 0) === worst)
-    : spec.persons;
-  return candidates[Math.min(candidates.length - 1, Math.floor(tiebreak() * candidates.length))];
+  tables: readonly ConjugationTable[],
+  progress: ConjugationProgressMap,
+  now: Date = new Date(),
+): number {
+  return tables.reduce((total, table) => total + dueBoxes(spec, table, progress, now).length, 0);
 }
 
 /** What a hinted answer is worth. A subset of the card ratings, by design. */
 export type ConjugationVerdict = 'again' | 'hard' | 'good';
 
-/** A table that has never been practised. */
+/** A box that has never been practised. */
 export function freshProgress(now: Date = new Date()): ConjugationProgress {
-  return { interval: 0, ease: 2.5, repetitions: 0, nextReview: now.toISOString(), misses: {} };
+  return { interval: 0, ease: 2.5, repetitions: 0, nextReview: now.toISOString(), misses: 0 };
 }
 
 /**
- * What a rating does to a table.
+ * What a rating does to one box.
  *
  * The SM-2 half is `getNextReviewData`, unchanged and shared with every card in
- * the app. The tally is the local part: a miss increments the box that was
- * asked, and a correct answer clears it rather than decrementing — a box you
- * have now produced is answered, not "less wrong than before".
+ * the app. ⚠️ **It now speaks only for the box that was answered** — the defect
+ * this replaces was one verdict setting six intervals, so `tu` answered
+ * correctly scheduled `ils` away with it.
+ *
+ * The tally is the local part, and it is now a report rather than an input: a
+ * miss increments it, and a correct answer clears it rather than decrementing —
+ * a box you have now produced is answered, not "less wrong than before".
  */
-export function rateTable(
+export function rateBox(
   current: ConjugationProgress | undefined,
-  personId: string,
   verdict: ConjugationVerdict,
 ): ConjugationProgress {
   const base = current ?? freshProgress();
@@ -598,18 +705,14 @@ export function rateTable(
     { interval: base.interval, ease: base.ease, repetitions: base.repetitions },
     verdict,
   );
-  // ⚠️ The tally follows the *verdict*, not whether the string matched. A form
-  // assembled from both hints is `again`, and it has to count as a miss here
-  // too, or the box that needed both hints would stop being offered.
-  const misses = { ...base.misses };
-  if (verdict === 'again') misses[personId] = (misses[personId] ?? 0) + 1;
-  else delete misses[personId];
   return {
     interval: next.interval,
     ease: next.ease,
     repetitions: next.repetitions,
     nextReview: next.nextReview.toISOString(),
-    misses,
+    // ⚠️ The tally follows the *verdict*, not whether the string matched. A form
+    // assembled from both hints is `again`, and it counts as a miss here too.
+    misses: verdict === 'again' ? base.misses + 1 : 0,
   };
 }
 
@@ -676,9 +779,9 @@ export function hintedVerdict(hintsTaken: number, correct: boolean): Conjugation
 export interface ConjugationTenseSummary {
   tenseId: string;
   label: string;
-  /** Tables with any history at all. */
+  /** Boxes with any history at all. */
   practised: number;
-  /** Tables that exist for this tense, within the practice set. */
+  /** Boxes that exist for this tense, within the practice set. */
   total: number;
   due: number;
 }
@@ -704,11 +807,14 @@ export interface ConjugationSummary {
 /**
  * What Munli's Progress tab shows for conjugation.
  *
+ * ⚠️ **Counted in boxes, not tables**, since 2026-09-22 — a box is what carries
+ * a schedule, so a table-shaped total would be a number about the furniture.
+ * The copy moved with it: "forms started", "forms in all".
+ *
  * ⚠️ **`weakest` is the one thing here a card-shaped progress view could not
- * produce**, and it is the payoff for the per-box tally. The schedule knows a
- * table is shaky; only the tally knows it is your `nous`. After the group
- * rework it says something stronger still — `-er · nous · imparfait` is a claim
- * about an ending across every verb in the group, not about one word.
+ * produce.** The schedule now knows a box is shaky all by itself, so the tally
+ * no longer *decides* anything — but it still says how badly, and how badly is
+ * what ranks this list.
  */
 export function summarizeConjugation(
   spec: ConjugationSpec,
@@ -730,25 +836,25 @@ export function summarizeConjugation(
     let tenseDue = 0;
 
     for (const table of forTense) {
-      const state = progress[tableItemId(spec, table)];
-      if (!state) {
-        // Never practised is also never scheduled, which `dueTables` reads as
-        // due — the same rule an untracked card direction gets.
-        tenseDue += 1;
-        continue;
-      }
-      tensePractised += 1;
-      if (new Date(state.nextReview) <= now) tenseDue += 1;
-      for (const [personId, misses] of Object.entries(state.misses)) {
-        const person = spec.persons.find(p => p.id === personId);
-        if (!person || misses <= 0) continue;
-        weakest.push({
-          subjectLabel: table.subjectLabel,
-          tenseLabel: table.tenseLabel,
-          personLabel: person.label,
-          form: table.forms[personId],
-          misses,
-        });
+      for (const person of spec.persons) {
+        const state = progress[boxItemId(spec, table, person.id)];
+        if (!state) {
+          // Never practised is also never scheduled, which `dueBoxes` reads as
+          // due — the same rule an untracked card direction gets.
+          tenseDue += 1;
+          continue;
+        }
+        tensePractised += 1;
+        if (new Date(state.nextReview) <= now) tenseDue += 1;
+        if (state.misses > 0) {
+          weakest.push({
+            subjectLabel: table.subjectLabel,
+            tenseLabel: table.tenseLabel,
+            personLabel: person.label,
+            form: table.forms[person.id],
+            misses: state.misses,
+          });
+        }
       }
     }
 
@@ -756,7 +862,7 @@ export function summarizeConjugation(
       tenseId,
       label: tense.label,
       practised: tensePractised,
-      total: forTense.length,
+      total: forTense.length * spec.persons.length,
       due: tenseDue,
     });
     practised += tensePractised;
@@ -764,20 +870,20 @@ export function summarizeConjugation(
   }
 
   weakest.sort((a, b) => b.misses - a.misses);
-  return { practised, total: tables.length, due, byTense, weakest: weakest.slice(0, limit) };
+  return {
+    practised,
+    total: tables.length * spec.persons.length,
+    due,
+    byTense,
+    weakest: weakest.slice(0, limit),
+  };
 }
 
 /* ── Sessions ────────────────────────────────────────────────────────────── */
 
-/** One question: a table, and which of its boxes to ask. */
-export interface ConjugationQuestion {
-  table: ConjugationTable;
-  personId: string;
-}
-
 export interface ConjugationQueueOptions {
   /**
-   * Include tables that are not due yet.
+   * Include boxes that are not due yet.
    *
    * Off by default, which is what makes a session *end*. Over-practising is a
    * legitimate thing to want — it is just something the learner asks for on the
@@ -787,23 +893,25 @@ export interface ConjugationQueueOptions {
 }
 
 /**
- * The questions a session will ask, fixed at the moment it starts.
+ * The rounds a session will ask, fixed at the moment it starts.
  *
- * ⚠️ **One question per table, and both the box and the vehicle are chosen
- * here** rather than when the question is shown. The table is the scheduled
- * item, so asking it twice in one sitting would be two questions about one
- * fact. Choosing up front also keeps every draw inside this function — the
- * screen renders a queue it was handed, so nothing random happens during render.
+ * ⚠️ **One round per table, and every due box of it is asked.** This is the
+ * 2026-09-22 reversal: the shape it replaces asked exactly one box per due table
+ * and rated the other five from it, so a learner who was weak on `ils` could sit
+ * through a whole session without being asked for it. A box is asked because it
+ * is due; nothing is drawn.
  *
- * ⚠️ **The vehicle varies, and that is the point of the group rework.** Asking
- * `-er · présent · nous` through `donner` today and `chercher` tomorrow tests
- * the ending; asking it through `parler` every time tests `parlons`.
+ * ⚠️ **The vehicle varies, and is chosen once per round.** Asking `-er ·
+ * présent` through `donner` today and `chercher` tomorrow tests the ending;
+ * asking it through `parler` every time tests `parlons`. One vehicle per round
+ * rather than per box, because a paradigm of six different verbs is not a
+ * paradigm.
  *
  * ⚠️ **The queue is owned by the session from here on.** Ratings written while
  * it runs move the picker's counts and must not rebuild it under someone eight
  * questions in — the same rule `buildReviewQueue` follows. A miss therefore does
- * not put the table back into the session in progress: it is due again
- * immediately, so it returns in the *next* session.
+ * not rejoin the session in progress: the box is due again immediately, so it
+ * returns in the *next* session.
  */
 export function buildConjugationQueue(
   spec: ConjugationSpec,
@@ -812,10 +920,12 @@ export function buildConjugationQueue(
   options: ConjugationQueueOptions = {},
   now: Date = new Date(),
   random: () => number = Math.random,
-): ConjugationQuestion[] {
-  const pool = options.includeNotDue ? [...tables] : dueTables(spec, tables, progress, now);
-  const questions = pool.map(table => {
-    const state = progress[tableItemId(spec, table)];
+): ConjugationRound[] {
+  const pool: ConjugationRound[] = options.includeNotDue
+    ? tables.map(table => ({ table, personIds: spec.persons.map(person => person.id) }))
+    : dueRounds(spec, tables, progress, now);
+
+  const rounds = pool.map(({ table, personIds }) => {
     const subject = findSubject(spec, `${table.subjectKind}:${table.subjectId}`);
     const asked = subject && subject.kind === 'group'
       ? buildTable(
@@ -823,15 +933,21 @@ export function buildConjugationQueue(
           subject.vehicles[Math.min(subject.vehicles.length - 1, Math.floor(random() * subject.vehicles.length))],
         )
       : table;
-    return { table: asked, personId: pickPerson(spec, state, random).id };
+    return { table: asked, personIds };
   });
+
   // Fisher–Yates, matching `reviewQueue`'s. Due order is subject order, and a
   // session that always opened on `-er` would drill the top of the list.
-  for (let i = questions.length - 1; i > 0; i--) {
+  for (let i = rounds.length - 1; i > 0; i--) {
     const j = Math.floor(random() * (i + 1));
-    [questions[i], questions[j]] = [questions[j], questions[i]];
+    [rounds[i], rounds[j]] = [rounds[j], rounds[i]];
   }
-  return questions;
+  return rounds;
+}
+
+/** How many boxes a session will ask — what its counter counts. */
+export function countQuestions(rounds: readonly ConjugationRound[]): number {
+  return rounds.reduce((total, round) => total + round.personIds.length, 0);
 }
 
 /* ── Reference ───────────────────────────────────────────────────────────── */
@@ -869,17 +985,40 @@ export function buildParadigm(
     });
 }
 
-/* ── The practice list ───────────────────────────────────────────────────── */
+/* ── The practice list ──────────────────────────────────────────────────── */
 
-/** One table in the practice set, with how it is going. */
-export interface ConjugationPracticeItem {
-  table: ConjugationTable;
-  itemId: string;
+/** One box of a table in the practice set, with how it is going. */
+export interface ConjugationBoxState {
+  personId: string;
+  personLabel: string;
+  form: string;
   /** Absent when it has never been practised. */
   state?: ConjugationProgress;
-  /** When it is next due, or `null` if it has never been practised. */
-  dueAt: Date | null;
   due: boolean;
+  /** When it falls due, or `null` when it has never been practised. */
+  dueAt: Date | null;
+}
+
+/** One table in the practice set, with how its six boxes are going. */
+export interface ConjugationPracticeItem {
+  table: ConjugationTable;
+  /** The table's key — a list key, never a schedule. */
+  itemId: string;
+  /** Every box, in person order, whether or not it is due. */
+  boxes: ConjugationBoxState[];
+  /** Boxes with any history. */
+  started: number;
+  /** Boxes due now. */
+  dueCount: number;
+  due: boolean;
+  /**
+   * The soonest a box falls due, or `null` when something is due now.
+   *
+   * ⚠️ Only meaningful when `dueCount` is zero: a table with work waiting says
+   * how much, not when. Every box has a schedule in that case, because a box
+   * without one is due by definition.
+   */
+  dueAt: Date | null;
   /** Boxes missed at least once, most-missed first. Empty when none. */
   weakBoxes: { personId: string; personLabel: string; misses: number }[];
 }
@@ -887,13 +1026,13 @@ export interface ConjugationPracticeItem {
 /**
  * Everything in the practice set, with its state — Munli's answer to Cards.
  *
- * ⚠️ **Not the same list as `dueTables`, and the difference is the point.** That
- * one answers "what should I do now" and is what a session is built from. This
+ * ⚠️ **Not the same list as `dueRounds`, and the difference is the point.** That
+ * one answers "what should I do now" and a session is built from it. This
  * answers "what am I learning", which includes everything that is *not* due —
  * a list that hid what you had already learned would be a strange inventory.
  *
- * Ordered due-first, then by when each falls due, then never-practised last.
- * That puts what needs attention at the top without dropping the rest.
+ * Ordered due-first, then by when each falls due. That puts what needs
+ * attention at the top without dropping the rest.
  */
 export function listPracticeTables(
   spec: ConjugationSpec,
@@ -902,20 +1041,42 @@ export function listPracticeTables(
   now: Date = new Date(),
 ): ConjugationPracticeItem[] {
   const items = buildTables(spec, enrolment).map(table => {
-    const itemId = tableItemId(spec, table);
-    const state = progress[itemId];
-    const dueAt = state ? new Date(state.nextReview) : null;
-    const weakBoxes = Object.entries(state?.misses ?? {})
-      .filter(([, misses]) => misses > 0)
-      .map(([personId, misses]) => ({
-        personId,
-        personLabel: spec.persons.find(p => p.id === personId)?.label ?? personId,
-        misses,
-      }))
-      .sort((a, b) => b.misses - a.misses);
-    // Never practised counts as due, the same rule `dueTables` and an untracked
-    // card direction both follow.
-    return { table, itemId, state, dueAt, due: !dueAt || dueAt <= now, weakBoxes };
+    const boxes: ConjugationBoxState[] = spec.persons.map(person => {
+      const state = progress[boxItemId(spec, table, person.id)];
+      const dueAt = state ? new Date(state.nextReview) : null;
+      // Never practised counts as due, the same rule `dueBoxes` and an
+      // untracked card direction both follow.
+      return {
+        personId: person.id,
+        personLabel: person.label,
+        form: table.forms[person.id],
+        state,
+        due: !dueAt || dueAt <= now,
+        dueAt,
+      };
+    });
+    const dueCount = boxes.filter(box => box.due).length;
+    const nextDue = boxes
+      .map(box => box.dueAt)
+      .filter((at): at is Date => at !== null)
+      .sort((a, b) => a.getTime() - b.getTime())[0] ?? null;
+    return {
+      table,
+      itemId: tableKey(spec, table),
+      boxes,
+      started: boxes.filter(box => box.state).length,
+      dueCount,
+      due: dueCount > 0,
+      dueAt: dueCount > 0 ? null : nextDue,
+      weakBoxes: boxes
+        .filter(box => (box.state?.misses ?? 0) > 0)
+        .map(box => ({
+          personId: box.personId,
+          personLabel: box.personLabel,
+          misses: box.state!.misses,
+        }))
+        .sort((a, b) => b.misses - a.misses),
+    };
   });
 
   return items.sort((a, b) => {
