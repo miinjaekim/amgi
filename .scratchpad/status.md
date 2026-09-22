@@ -369,6 +369,35 @@ once, so a path that worked on build 14 is not evidence about build 15.
 Closed calls, kept with their reasoning — a decision whose reasoning is lost gets
 reopened by the next person to notice the symptom. Newest first.
 
+### Three Munli follow-ups leave High; the backlog is the user's list (2026-09-22)
+
+**Removed from High on the user's call, with the reason that they were never
+asked for**: *Writing findings you can return to*, *Route a writing finding into
+a practice tool*, and *A second tense set, and whether tense choice belongs in
+settings*. All three were written into the backlog as follow-ups that building
+Munli turned up, not as work anybody requested. *Irregular French verbs* stays,
+because it is the one piece of that set the user did ask for.
+
+**The rule this sets is about where backlog items come from.** The header of
+[backlog.md](backlog.md) already says priority mirrors the user's Google Tasks
+list — so a thing the model notices while building is a **note**, not an open
+High item. Writing it up as one quietly reverses who sets the agenda, and High
+in particular reads as a commitment: "all of High is Munli" was true of the file
+and never true of anyone's intent.
+
+**What was in them, so the removal loses nothing.** Writing findings: store
+`FindingKind` counts or per-review history, needing a Firestore collection and a
+security rule — console state, which is why it was never a finishing touch on
+PR #136. Routing a finding into a tool: a `grammar` finding could open a verb's
+conjugation table, blocked on classification being reliable enough that a wrong
+route is rare. A second tense set: passé composé is auxiliary + participle, so
+it is the first tense needing a different *shape* than the ending tables.
+**None is a decision against doing them** — they are unasked-for, not rejected,
+and any of them can be raised by the user if the app makes a case for it.
+
+Play took the vacated top of High the same day, which is the other half of the
+same call — see the item in [backlog.md](backlog.md).
+
 ### Munli's bar mirrors Amgi's, slot for slot (2026-09-22)
 
 ⚠️ **This reverses the "Munli is a `Stack`, not `Tabs`" call in the 2026-09-21
