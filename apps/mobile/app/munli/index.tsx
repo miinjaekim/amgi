@@ -4,8 +4,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import {
   boxItemId, buildConjugationQueue, buildTables, conjugationHints, conjugationSpec,
-  countDueBoxes, countQuestions, enrolledTenses, findSubject, hintedVerdict,
-  isCorrectForm, rateBox, t,
+  countDueBoxes, countQuestions, hintedVerdict, isCorrectForm, listPracticeSections,
+  rateBox, t,
 } from '@amgi/core';
 import type { ConjugationProgressMap, ConjugationRound } from '@amgi/core';
 import { useUser } from '../../src/context/UserContext';
@@ -50,10 +50,13 @@ export default function PracticeScreen() {
   const spec = conjugationSpec(studyLanguage);
 
   const [stage, setStage] = useState<Stage>('picker');
-  // `null` is "has not narrowed", which means the whole practice set. An empty
-  // array is the different, real state of having deselected everything.
-  const [chosenTenses, setChosenTenses] = useState<string[] | null>(null);
-  const [chosenSubjects, setChosenSubjects] = useState<string[] | null>(null);
+  /** Which section's patterns are open, one level down. */
+  const [openTense, setOpenTense] = useState<string | null>(null);
+  /**
+   * What this session will cover. `null` on either field is "everything at this
+   * level" — the everything row, and the whole-tense row.
+   */
+  const [chosen, setChosen] = useState<{ tenseId: string | null; subjectKey: string | null } | null>(null);
   const [includeNotDue, setIncludeNotDue] = useState(false);
 
   // Session state. `queue` is fixed at Start; `index` walks it a round at a time.
@@ -67,42 +70,29 @@ export default function PracticeScreen() {
   const [checked, setChecked] = useState(false);
 
   /**
-   * What this session will cover — the practice set, optionally narrowed.
+   * The practice set as sections with due counts — one row per tense, each
+   * opening into its patterns.
    *
    * ⚠️ **Enrolment is the outer bound.** A tense that is not in the practice set
-   * cannot be selected here; adding it is a decision made on the Topics tab. The
-   * two surfaces answer different questions and this one is the narrower.
-   *
-   * The chips are derived from the enrolment rather than stored beside it, so a
-   * chip can never offer something that is not in the set.
+   * has no row here; adding it is a decision made on the Topics tab. The two
+   * surfaces answer different questions and this one is the narrower.
    */
-  const enrolledTenseIds = useMemo(
-    () => (spec && enrolment ? enrolledTenses(spec, enrolment).map(tense => tense.id) : []),
-    [spec, enrolment],
-  );
-  const enrolledSubjectKeys = useMemo(
-    () => (enrolment
-      ? [...new Set(enrolment.items.map(item => item.slice(0, item.lastIndexOf(':'))))]
-      : []),
-    [enrolment],
-  );
-  const tenseIds = useMemo(
-    () => enrolledTenseIds.filter(id => chosenTenses?.includes(id) ?? true),
-    [enrolledTenseIds, chosenTenses],
-  );
-  const subjectKeys = useMemo(
-    () => enrolledSubjectKeys.filter(key => chosenSubjects?.includes(key) ?? true),
-    [enrolledSubjectKeys, chosenSubjects],
-  );
-  const tables = useMemo(
-    () => (spec && enrolment ? buildTables(spec, enrolment, { tenses: tenseIds, subjects: subjectKeys }) : []),
-    [spec, enrolment, tenseIds, subjectKeys],
-  );
-  /** For the count on the picker — the whole practice set, unnarrowed. */
-  const dueCount = useMemo(
-    () => (spec && enrolment ? countDueBoxes(spec, buildTables(spec, enrolment), progress) : 0),
+  const sections = useMemo(
+    () => (spec && enrolment ? listPracticeSections(spec, enrolment, progress) : []),
     [spec, enrolment, progress],
   );
+  /** The everything row is the sum of the sections, which is exact. */
+  const dueCount = useMemo(() => sections.reduce((n, section) => n + section.due, 0), [sections]);
+  const totalCount = useMemo(() => sections.reduce((n, section) => n + section.total, 0), [sections]);
+  const openSection = sections.find(section => section.tenseId === openTense);
+
+  const tables = useMemo(() => {
+    if (!spec || !enrolment || !chosen) return [];
+    return buildTables(spec, enrolment, {
+      tenses: chosen.tenseId ? [chosen.tenseId] : undefined,
+      subjects: chosen.subjectKey ? [chosen.subjectKey] : undefined,
+    });
+  }, [spec, enrolment, chosen]);
   const dueInSelection = useMemo(
     () => (spec ? countDueBoxes(spec, tables, progress) : 0),
     [spec, tables, progress],
@@ -192,97 +182,146 @@ export default function PracticeScreen() {
 
   /* ── Setup ────────────────────────────────────────────────────────────── */
   if (stage === 'setup') {
-    return (
-      <SafeAreaView style={s.safe} edges={['top']}>
-        {header(t(interfaceLanguage, 'munliToolConjugation'), () => setStage('picker'))}
-        <ScrollView contentContainerStyle={s.content}>
-          {!spec ? (
+    /**
+     * One row of the picker — Review's collection row, for verbs.
+     *
+     * `opens` marks a row that shows a second choice rather than starting one.
+     * Without it, a tense holding several patterns and a tense holding one look
+     * identical and one of them does something you did not ask for.
+     */
+    const sectionRow = (
+      key: string,
+      label: string,
+      due: number,
+      total: number,
+      onPress: () => void,
+      opens?: boolean,
+    ) => (
+      <TouchableOpacity
+        key={key}
+        style={s.sectionRow}
+        activeOpacity={0.7}
+        accessibilityRole="button"
+        onPress={onPress}
+      >
+        <View style={s.sectionText}>
+          <Text style={s.sectionLabel}>
+            {label}{opens ? ' ›' : ''}
+          </Text>
+          <Text style={s.sectionSub}>
+            {t(interfaceLanguage, 'practiceSectionForms', { count: total })}
+          </Text>
+        </View>
+        <Text style={[s.rowDue, due > 0 && s.rowDueOn]}>
+          {due > 0
+            ? t(interfaceLanguage, 'conjugationDue', { count: due })
+            : t(interfaceLanguage, 'practiceNothingDue')}
+        </Text>
+      </TouchableOpacity>
+    );
+
+    if (!spec) {
+      return (
+        <SafeAreaView style={s.safe} edges={['top']}>
+          {header(t(interfaceLanguage, 'munliToolConjugation'), () => setStage('picker'))}
+          <ScrollView contentContainerStyle={s.content}>
             <View style={s.empty}>
               <Text style={s.emptyTitle}>{t(interfaceLanguage, 'conjugationUnavailable')}</Text>
               <Text style={s.emptyBody}>{t(interfaceLanguage, 'conjugationUnavailableBody')}</Text>
             </View>
-          ) : (
-            <>
-              <Text style={s.section}>{t(interfaceLanguage, 'conjugationTenses')}</Text>
-              <View style={s.chips}>
-                {enrolledTenseIds.map(tenseId => {
-                  const tense = spec.tenses.find(x => x.id === tenseId);
-                  if (!tense) return null;
-                  const on = tenseIds.includes(tenseId);
-                  return (
-                    <TouchableOpacity
-                      key={tenseId}
-                      style={[s.chip, on && s.chipOn]}
-                      accessibilityRole="button"
-                      accessibilityState={{ selected: on }}
-                      onPress={() => setChosenTenses(
-                        on ? tenseIds.filter(x => x !== tenseId) : [...tenseIds, tenseId]
-                      )}
-                    >
-                      <Text style={[s.chipText, on && s.chipTextOn]}>{tense.label}</Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
+          </ScrollView>
+        </SafeAreaView>
+      );
+    }
 
-              <Text style={s.section}>{t(interfaceLanguage, 'practiceGroups')}</Text>
-              <View style={s.chips}>
-                {enrolledSubjectKeys.map(key => {
-                  const subject = findSubject(spec, key);
-                  if (!subject) return null;
-                  const on = subjectKeys.includes(key);
-                  return (
-                    <TouchableOpacity
-                      key={key}
-                      style={[s.chip, on && s.chipOn]}
-                      accessibilityRole="button"
-                      accessibilityState={{ selected: on }}
-                      onPress={() => setChosenSubjects(
-                        on ? subjectKeys.filter(x => x !== key) : [...subjectKeys, key]
-                      )}
-                    >
-                      <Text style={[s.chipText, on && s.chipTextOn]}>
-                        {subject.kind === 'group' ? subject.label : subject.infinitive}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
+    /* ── The start screen for what was chosen ─────────────────────────── */
+    if (chosen) {
+      const label = chosen.subjectKey
+        ? `${openSection?.label ?? ''} · ${openSection?.subjects.find(x => x.key === chosen.subjectKey)?.label ?? ''}`
+        : chosen.tenseId
+          ? sections.find(section => section.tenseId === chosen.tenseId)?.label ?? ''
+          : t(interfaceLanguage, 'practiceEverything');
+      return (
+        <SafeAreaView style={s.safe} edges={['top']}>
+          {header(label, () => setChosen(null))}
+          <ScrollView contentContainerStyle={s.content}>
+            <Text style={s.dueLine}>
+              {dueInSelection > 0
+                ? t(interfaceLanguage, 'conjugationDue', { count: dueInSelection })
+                : t(interfaceLanguage, 'practiceNothingDue')}
+            </Text>
 
-              {/* The switch that used to be a silent fallback in the draw. */}
-              <View style={s.switchRow}>
-                <Text style={s.switchLabel}>{t(interfaceLanguage, 'practiceIncludeNotDue')}</Text>
-                <Switch
-                  value={includeNotDue}
-                  onValueChange={setIncludeNotDue}
-                  trackColor={{ false: C.border, true: C.highlight }}
-                  thumbColor={C.bg}
-                />
-              </View>
+            {/* The switch that used to be a silent fallback in the draw. It
+                belongs here rather than on the list: it is about this session,
+                not about which part of the set you are looking at. */}
+            <View style={s.switchRow}>
+              <Text style={s.switchLabel}>{t(interfaceLanguage, 'practiceIncludeNotDue')}</Text>
+              <Switch
+                value={includeNotDue}
+                onValueChange={setIncludeNotDue}
+                trackColor={{ false: C.border, true: C.highlight }}
+                thumbColor={C.bg}
+              />
+            </View>
 
-              {tenseIds.length === 0 || subjectKeys.length === 0 ? (
-                <Text style={s.emptyBody}>{t(interfaceLanguage, 'conjugationPickTense')}</Text>
-              ) : (
-                <>
-                  <Text style={s.dueLine}>
-                    {dueInSelection > 0
-                      ? t(interfaceLanguage, 'conjugationDue', { count: dueInSelection })
-                      : t(interfaceLanguage, 'practiceNothingDue')}
-                  </Text>
-                  <TouchableOpacity
-                    style={[s.primary, dueInSelection === 0 && !includeNotDue && s.primaryOff]}
-                    disabled={dueInSelection === 0 && !includeNotDue}
-                    onPress={start}
-                  >
-                    <Text style={s.primaryText}>{t(interfaceLanguage, 'practiceStart')}</Text>
-                  </TouchableOpacity>
-                  {dueInSelection === 0 && !includeNotDue && (
-                    <Text style={s.emptyBody}>{t(interfaceLanguage, 'practiceSessionEmpty')}</Text>
-                  )}
-                </>
-              )}
-            </>
+            <TouchableOpacity
+              style={[s.primary, dueInSelection === 0 && !includeNotDue && s.primaryOff]}
+              disabled={dueInSelection === 0 && !includeNotDue}
+              onPress={start}
+            >
+              <Text style={s.primaryText}>{t(interfaceLanguage, 'practiceStart')}</Text>
+            </TouchableOpacity>
+            {dueInSelection === 0 && !includeNotDue && (
+              <Text style={s.emptyBody}>{t(interfaceLanguage, 'practiceSessionEmpty')}</Text>
+            )}
+          </ScrollView>
+        </SafeAreaView>
+      );
+    }
+
+    /* ── One section's patterns ───────────────────────────────────────── */
+    if (openSection) {
+      return (
+        <SafeAreaView style={s.safe} edges={['top']}>
+          {header(openSection.label, () => setOpenTense(null))}
+          <ScrollView contentContainerStyle={s.content}>
+            <Text style={s.pickerLead}>{t(interfaceLanguage, 'practicePickSubject')}</Text>
+            {/* The whole-tense row is deliberately there and deliberately
+                first — Review's reasoning, and the same one: practising the
+                patterns one at a time is the same material several times. */}
+            {sectionRow(
+              'whole', t(interfaceLanguage, 'practiceWholeTense'), openSection.due, openSection.total,
+              () => setChosen({ tenseId: openSection.tenseId, subjectKey: null }),
+            )}
+            {openSection.subjects.map(subject => sectionRow(
+              subject.key, subject.label, subject.due, subject.total,
+              () => setChosen({ tenseId: openSection.tenseId, subjectKey: subject.key }),
+            ))}
+          </ScrollView>
+        </SafeAreaView>
+      );
+    }
+
+    /* ── The sections ─────────────────────────────────────────────────── */
+    return (
+      <SafeAreaView style={s.safe} edges={['top']}>
+        {header(t(interfaceLanguage, 'munliToolConjugation'), () => setStage('picker'))}
+        <ScrollView contentContainerStyle={s.content}>
+          <Text style={s.pickerLead}>{t(interfaceLanguage, 'practicePickSection')}</Text>
+          {/* Everything first, for the learner who did not sit down with one
+              tense in mind — and because it is what the tool did before it had
+              sections at all. */}
+          {sectionRow(
+            'everything', t(interfaceLanguage, 'practiceEverything'), dueCount, totalCount,
+            () => setChosen({ tenseId: null, subjectKey: null }),
           )}
+          {sections.map(section => sectionRow(
+            section.tenseId, section.label, section.due, section.total,
+            () => (section.subjects.length > 1
+              ? setOpenTense(section.tenseId)
+              : setChosen({ tenseId: section.tenseId, subjectKey: null })),
+            section.subjects.length > 1,
+          ))}
         </ScrollView>
       </SafeAreaView>
     );
@@ -444,12 +483,14 @@ function makeStyles(C: Palette, tabBarHeight: number) {
     rowLabel: { flex: 1, color: C.text, fontSize: 16, fontWeight: '600' },
     rowDue: { color: C.muted, fontSize: 13 },
     rowDueOn: { color: C.highlight, fontWeight: '700' },
-    section: { color: C.muted, fontSize: 11, textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 10 },
-    chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 24 },
-    chip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: C.border },
-    chipOn: { backgroundColor: C.highlight, borderColor: C.highlight },
-    chipText: { color: C.text, fontSize: 13 },
-    chipTextOn: { color: C.bg, fontWeight: '700' },
+    sectionRow: {
+      flexDirection: 'row', alignItems: 'center', gap: 12,
+      backgroundColor: C.surface, borderWidth: 1, borderColor: C.border,
+      borderRadius: 14, padding: 16, marginBottom: 10,
+    },
+    sectionText: { flex: 1 },
+    sectionLabel: { color: C.text, fontSize: 16, fontWeight: '600' },
+    sectionSub: { color: C.muted, fontSize: 12, marginTop: 3 },
     switchRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 24 },
     switchLabel: { flex: 1, color: C.text, fontSize: 14 },
     dueLine: { color: C.muted, fontSize: 13, marginBottom: 12 },
@@ -460,6 +501,7 @@ function makeStyles(C: Palette, tabBarHeight: number) {
     infinitive: { color: C.text, fontSize: 26, fontWeight: '700' },
     prompt: { color: C.muted, fontSize: 14, marginTop: 4 },
     lead: { color: C.muted, fontSize: 12, marginTop: 10 },
+    pickerLead: { color: C.muted, fontSize: 13, marginBottom: 14 },
     // The paradigm, a row per person. ⚠️ No horizontal scroll: a round is one
     // tense, so the six rows fit a phone without the table shape Topics needs.
     boxRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginTop: 12 },

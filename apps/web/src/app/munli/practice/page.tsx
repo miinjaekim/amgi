@@ -2,7 +2,7 @@
 import { useMemo, useState } from 'react';
 import {
   boxItemId, buildConjugationQueue, buildTables, conjugationHints, countDueBoxes,
-  countQuestions, enrolledTenses, findSubject, hintedVerdict, isCorrectForm, rateBox,
+  countQuestions, hintedVerdict, isCorrectForm, listPracticeSections, rateBox,
 } from '@amgi/core';
 import type { ConjugationProgressMap, ConjugationRound } from '@amgi/core';
 import { useUser } from '@/components/UserContext';
@@ -34,9 +34,13 @@ export default function PracticePage() {
   const { spec, progress, enrolment, rate } = useConjugation();
 
   const [stage, setStage] = useState<Stage>('picker');
-  // `null` is "has not narrowed", meaning the whole practice set.
-  const [chosenTenses, setChosenTenses] = useState<string[] | null>(null);
-  const [chosenSubjects, setChosenSubjects] = useState<string[] | null>(null);
+  /** Which section's patterns are open, one level down. */
+  const [openTense, setOpenTense] = useState<string | null>(null);
+  /**
+   * What this session will cover. `null` on either field is "everything at this
+   * level" — the everything row, and the whole-tense row.
+   */
+  const [chosen, setChosen] = useState<{ tenseId: string | null; subjectKey: string | null } | null>(null);
   const [includeNotDue, setIncludeNotDue] = useState(false);
 
   const [queue, setQueue] = useState<ConjugationRound[]>([]);
@@ -49,40 +53,28 @@ export default function PracticePage() {
   const [checked, setChecked] = useState(false);
 
   /**
-   * The tenses and groups the practice set touches, which is what the setup
-   * chips offer — derived from the enrolment rather than stored beside it, so a
-   * chip can never offer something that is not in the set.
+   * The practice set as sections with due counts — one row per tense, each
+   * opening into its patterns.
    *
-   * ⚠️ Enrolment is the outer bound: a tense that is not in the practice set
-   * cannot be selected here. Adding it is a decision made on the Topics page.
+   * ⚠️ **Enrolment is the outer bound.** A tense that is not in the practice set
+   * has no row here; adding it is a decision made on the Topics page.
    */
-  const enrolledTenseIds = useMemo(
-    () => (spec && enrolment ? enrolledTenses(spec, enrolment).map(tense => tense.id) : []),
-    [spec, enrolment],
-  );
-  const enrolledSubjectKeys = useMemo(
-    () => (enrolment
-      ? [...new Set(enrolment.items.map(item => item.slice(0, item.lastIndexOf(':'))))]
-      : []),
-    [enrolment],
-  );
-  const tenseIds = useMemo(
-    () => enrolledTenseIds.filter(id => chosenTenses?.includes(id) ?? true),
-    [enrolledTenseIds, chosenTenses],
-  );
-  const subjectKeys = useMemo(
-    () => enrolledSubjectKeys.filter(key => chosenSubjects?.includes(key) ?? true),
-    [enrolledSubjectKeys, chosenSubjects],
-  );
-  const tables = useMemo(
-    () => (spec && enrolment ? buildTables(spec, enrolment, { tenses: tenseIds, subjects: subjectKeys }) : []),
-    [spec, enrolment, tenseIds, subjectKeys],
-  );
-  /** For the count on the picker — the whole practice set, unnarrowed. */
-  const dueCount = useMemo(
-    () => (spec && enrolment ? countDueBoxes(spec, buildTables(spec, enrolment), progress) : 0),
+  const sections = useMemo(
+    () => (spec && enrolment ? listPracticeSections(spec, enrolment, progress) : []),
     [spec, enrolment, progress],
   );
+  /** The everything row is the sum of the sections, which is exact. */
+  const dueCount = useMemo(() => sections.reduce((n, section) => n + section.due, 0), [sections]);
+  const totalCount = useMemo(() => sections.reduce((n, section) => n + section.total, 0), [sections]);
+  const openSection = sections.find(section => section.tenseId === openTense);
+
+  const tables = useMemo(() => {
+    if (!spec || !enrolment || !chosen) return [];
+    return buildTables(spec, enrolment, {
+      tenses: chosen.tenseId ? [chosen.tenseId] : undefined,
+      subjects: chosen.subjectKey ? [chosen.subjectKey] : undefined,
+    });
+  }, [spec, enrolment, chosen]);
   const dueInSelection = useMemo(
     () => (spec ? countDueBoxes(spec, tables, progress) : 0),
     [spec, tables, progress],
@@ -156,96 +148,157 @@ export default function PracticePage() {
   }
 
   if (stage === 'setup') {
-    return (
-      <div className="max-w-2xl">
-        {heading(t(interfaceLanguage, 'munliToolConjugation'))}
-        {!spec ? (
+    /**
+     * One row of the picker — Review's, for verbs.
+     *
+     * `opens` marks a row that shows a second choice rather than starting one.
+     * Without the mark, a tense holding several patterns and a tense holding one
+     * look identical and one of them does something you did not ask for.
+     */
+    const row = (
+      key: string,
+      label: string,
+      due: number,
+      total: number,
+      onClick: () => void,
+      opens?: boolean,
+    ) => (
+      <li key={key}>
+        <button
+          onClick={onClick}
+          className="w-full text-left p-4 rounded-xl border transition-colors hover:bg-[var(--color-muted)]/20"
+          style={{ borderColor: 'var(--color-muted)' }}
+        >
+          <div className="flex items-baseline justify-between gap-3 flex-wrap">
+            <span className="font-mono font-bold" style={{ color: 'var(--color-text)' }}>
+              {label}
+              {opens && <span className="ml-2 font-normal" style={{ color: 'var(--color-muted)' }}>›</span>}
+            </span>
+            <span className="font-mono text-xs shrink-0"
+                  style={{ color: due > 0 ? 'var(--color-highlight)' : 'var(--color-muted)' }}>
+              {due > 0
+                ? t(interfaceLanguage, 'conjugationDue', { count: due })
+                : t(interfaceLanguage, 'practiceNothingDue')}
+            </span>
+          </div>
+          <p className="font-mono text-xs mt-1" style={{ color: 'var(--color-muted)' }}>
+            {t(interfaceLanguage, 'practiceSectionForms', { count: total })}
+          </p>
+        </button>
+      </li>
+    );
+
+    const backLink = (label: string, onClick: () => void) => (
+      <button onClick={onClick} className="font-mono text-sm transition-colors hover:opacity-80"
+              style={{ color: 'var(--color-muted)' }}>
+        ← {label}
+      </button>
+    );
+
+    if (!spec) {
+      return (
+        <div className="max-w-2xl">
+          {heading(t(interfaceLanguage, 'munliToolConjugation'))}
           <p className="font-mono text-sm" style={{ color: 'var(--color-muted)' }}>
             {t(interfaceLanguage, 'conjugationUnavailable')}
           </p>
-        ) : (
-          <>
-            <p className="text-xs font-mono uppercase tracking-widest mb-3" style={{ color: 'var(--color-muted)' }}>
-              {t(interfaceLanguage, 'conjugationTenses')}
+        </div>
+      );
+    }
+
+    /* ── The start screen for what was chosen ─────────────────────────── */
+    if (chosen) {
+      const label = chosen.subjectKey
+        ? `${openSection?.label ?? ''} · ${openSection?.subjects.find(s => s.key === chosen.subjectKey)?.label ?? ''}`
+        : chosen.tenseId
+          ? sections.find(section => section.tenseId === chosen.tenseId)?.label ?? ''
+          : t(interfaceLanguage, 'practiceEverything');
+      return (
+        <div className="max-w-2xl">
+          {heading(t(interfaceLanguage, 'munliToolConjugation'))}
+          {backLink(t(interfaceLanguage, 'practiceBackToSections'), () => setChosen(null))}
+          <p className="mt-4 font-mono font-bold" style={{ color: 'var(--color-text)' }}>{label}</p>
+          <p className="font-mono text-sm mb-6" style={{ color: 'var(--color-muted)' }}>
+            {dueInSelection > 0
+              ? t(interfaceLanguage, 'conjugationDue', { count: dueInSelection })
+              : t(interfaceLanguage, 'practiceNothingDue')}
+          </p>
+
+          {/* The switch that used to be a silent fallback in the draw. It
+              belongs here rather than on the list: it is about this session,
+              not about which part of the set you are looking at. */}
+          <label className="flex items-center gap-3 mb-6 font-mono text-sm cursor-pointer" style={{ color: 'var(--color-text)' }}>
+            <input type="checkbox" checked={includeNotDue} onChange={e => setIncludeNotDue(e.target.checked)} />
+            {t(interfaceLanguage, 'practiceIncludeNotDue')}
+          </label>
+
+          <button
+            onClick={start}
+            disabled={dueInSelection === 0 && !includeNotDue}
+            className={primary}
+            style={{ background: 'var(--color-highlight)', color: 'var(--color-bg)' }}
+          >
+            {t(interfaceLanguage, 'practiceStart')}
+          </button>
+          {dueInSelection === 0 && !includeNotDue && (
+            <p className="font-mono text-xs mt-3" style={{ color: 'var(--color-muted)' }}>
+              {t(interfaceLanguage, 'practiceSessionEmpty')}
             </p>
-            <div className="flex flex-wrap gap-2 mb-6">
-              {enrolledTenseIds.map(tenseId => {
-                const tense = spec.tenses.find(x => x.id === tenseId);
-                if (!tense) return null;
-                const on = tenseIds.includes(tenseId);
-                return (
-                  <button
-                    key={tenseId}
-                    aria-pressed={on}
-                    onClick={() => setChosenTenses(on ? tenseIds.filter(x => x !== tenseId) : [...tenseIds, tenseId])}
-                    className="px-3 py-1.5 rounded-full text-sm font-mono border transition-colors"
-                    style={on
-                      ? { background: 'var(--color-highlight)', color: 'var(--color-bg)', borderColor: 'var(--color-highlight)' }
-                      : { color: 'var(--color-text)', borderColor: 'var(--color-muted)' }}
-                  >
-                    {tense.label}
-                  </button>
-                );
-              })}
-            </div>
+          )}
+        </div>
+      );
+    }
 
-            <p className="text-xs font-mono uppercase tracking-widest mb-3" style={{ color: 'var(--color-muted)' }}>
-              {t(interfaceLanguage, 'practiceGroups')}
-            </p>
-            <div className="flex flex-wrap gap-2 mb-6">
-              {enrolledSubjectKeys.map(key => {
-                const subject = findSubject(spec, key);
-                if (!subject) return null;
-                const on = subjectKeys.includes(key);
-                return (
-                  <button
-                    key={key}
-                    aria-pressed={on}
-                    onClick={() => setChosenSubjects(on ? subjectKeys.filter(x => x !== key) : [...subjectKeys, key])}
-                    className="px-3 py-1.5 rounded-full text-sm font-mono border transition-colors"
-                    style={on
-                      ? { background: 'var(--color-highlight)', color: 'var(--color-bg)', borderColor: 'var(--color-highlight)' }
-                      : { color: 'var(--color-text)', borderColor: 'var(--color-muted)' }}
-                  >
-                    {subject.kind === 'group' ? subject.label : subject.infinitive}
-                  </button>
-                );
-              })}
-            </div>
-
-            <label className="flex items-center gap-3 mb-6 font-mono text-sm cursor-pointer" style={{ color: 'var(--color-text)' }}>
-              <input type="checkbox" checked={includeNotDue} onChange={e => setIncludeNotDue(e.target.checked)} />
-              {t(interfaceLanguage, 'practiceIncludeNotDue')}
-            </label>
-
-            {tenseIds.length === 0 || subjectKeys.length === 0 ? (
-              <p className="font-mono text-sm" style={{ color: 'var(--color-muted)' }}>
-                {t(interfaceLanguage, 'conjugationPickTense')}
-              </p>
-            ) : (
-              <>
-                <p className="font-mono text-sm mb-3" style={{ color: 'var(--color-muted)' }}>
-                  {dueInSelection > 0
-                    ? t(interfaceLanguage, 'conjugationDue', { count: dueInSelection })
-                    : t(interfaceLanguage, 'practiceNothingDue')}
-                </p>
-                <button
-                  onClick={start}
-                  disabled={dueInSelection === 0 && !includeNotDue}
-                  className={primary}
-                  style={{ background: 'var(--color-highlight)', color: 'var(--color-bg)' }}
-                >
-                  {t(interfaceLanguage, 'practiceStart')}
-                </button>
-                {dueInSelection === 0 && !includeNotDue && (
-                  <p className="font-mono text-xs mt-3" style={{ color: 'var(--color-muted)' }}>
-                    {t(interfaceLanguage, 'practiceSessionEmpty')}
-                  </p>
-                )}
-              </>
+    /* ── One section's patterns ───────────────────────────────────────── */
+    if (openSection) {
+      return (
+        <div className="max-w-2xl">
+          {heading(t(interfaceLanguage, 'munliToolConjugation'))}
+          {backLink(t(interfaceLanguage, 'practiceBackToSections'), () => setOpenTense(null))}
+          <p className="mt-4 font-mono font-bold" style={{ color: 'var(--color-text)' }}>{openSection.label}</p>
+          <p className="font-mono text-sm mb-4" style={{ color: 'var(--color-muted)' }}>
+            {t(interfaceLanguage, 'practicePickSubject')}
+          </p>
+          <ul className="flex flex-col gap-3">
+            {/* The whole-tense row is deliberately there and deliberately
+                first — Review's reasoning, and the same one: practising the
+                patterns one at a time is the same material several times. */}
+            {row(
+              'whole', t(interfaceLanguage, 'practiceWholeTense'), openSection.due, openSection.total,
+              () => setChosen({ tenseId: openSection.tenseId, subjectKey: null }),
             )}
-          </>
-        )}
+            {openSection.subjects.map(subject => row(
+              subject.key, subject.label, subject.due, subject.total,
+              () => setChosen({ tenseId: openSection.tenseId, subjectKey: subject.key }),
+            ))}
+          </ul>
+        </div>
+      );
+    }
+
+    /* ── The sections ─────────────────────────────────────────────────── */
+    return (
+      <div className="max-w-2xl">
+        {heading(t(interfaceLanguage, 'munliToolConjugation'))}
+        <p className="font-mono text-sm mb-4" style={{ color: 'var(--color-muted)' }}>
+          {t(interfaceLanguage, 'practicePickSection')}
+        </p>
+        <ul className="flex flex-col gap-3">
+          {/* Everything first, for the learner who did not sit down with one
+              tense in mind — and because it is what the tool did before it had
+              sections at all. */}
+          {row(
+            'everything', t(interfaceLanguage, 'practiceEverything'), dueCount, totalCount,
+            () => setChosen({ tenseId: null, subjectKey: null }),
+          )}
+          {sections.map(section => row(
+            section.tenseId, section.label, section.due, section.total,
+            () => (section.subjects.length > 1
+              ? setOpenTense(section.tenseId)
+              : setChosen({ tenseId: section.tenseId, subjectKey: null })),
+            section.subjects.length > 1,
+          ))}
+        </ul>
       </div>
     );
   }
