@@ -1,10 +1,10 @@
 'use client';
 import { useMemo, useState } from 'react';
 import {
-  buildConjugationQueue, buildTables, conjugationHints, dueTables, enrolledTenses,
-  findSubject, hintedVerdict, isCorrectForm, rateTable, tableItemId,
+  boxItemId, buildConjugationQueue, buildTables, conjugationHints, countDueBoxes,
+  countQuestions, enrolledTenses, findSubject, hintedVerdict, isCorrectForm, rateBox,
 } from '@amgi/core';
-import type { ConjugationQuestion } from '@amgi/core';
+import type { ConjugationProgressMap, ConjugationRound } from '@amgi/core';
 import { useUser } from '@/components/UserContext';
 import { useConjugation } from '@/hooks/useConjugation';
 import { t } from '@/lib/i18n';
@@ -17,6 +17,11 @@ import { t } from '@/lib/i18n';
  * from then on, so ratings written mid-session move the picker's counts and
  * leave the questions alone; a miss comes back in the *next* session rather
  * than rejoining this one.
+ *
+ * ⚠️ **A question is a round, and a round is a table** — every box of it that is
+ * due, asked together as its paradigm, each rating independently. See the grain
+ * note at the head of `conjugation.ts`; the counts everywhere on this page are
+ * in boxes, because a box is what carries a schedule.
  *
  * Progress is loaded here rather than in a provider, unlike native: web has no
  * second surface reading it during a session — the Progress page mounts fresh
@@ -34,23 +39,22 @@ export default function PracticePage() {
   const [chosenSubjects, setChosenSubjects] = useState<string[] | null>(null);
   const [includeNotDue, setIncludeNotDue] = useState(false);
 
-  const [queue, setQueue] = useState<ConjugationQuestion[]>([]);
+  const [queue, setQueue] = useState<ConjugationRound[]>([]);
   const [index, setIndex] = useState(0);
   const [stopped, setStopped] = useState(false);
-  const [typed, setTyped] = useState('');
-  const [hintsTaken, setHintsTaken] = useState(0);
-  const [verdict, setVerdict] = useState<'correct' | 'wrong' | null>(null);
+  /** Person id → what the learner typed, for the round on screen. */
+  const [typed, setTyped] = useState<Record<string, string>>({});
+  /** Person id → hints taken, so a hint costs the box it was taken on. */
+  const [hints, setHints] = useState<Record<string, number>>({});
+  const [checked, setChecked] = useState(false);
 
-  /**
-   * What this session will cover — the practice set, optionally narrowed.
-   *
-   * ⚠️ Enrolment is the outer bound: a tense that is not in the practice set
-   * cannot be selected here. Adding it is a decision made on the Verbs page.
-   */
   /**
    * The tenses and groups the practice set touches, which is what the setup
    * chips offer — derived from the enrolment rather than stored beside it, so a
    * chip can never offer something that is not in the set.
+   *
+   * ⚠️ Enrolment is the outer bound: a tense that is not in the practice set
+   * cannot be selected here. Adding it is a decision made on the Topics page.
    */
   const enrolledTenseIds = useMemo(
     () => (spec && enrolment ? enrolledTenses(spec, enrolment).map(tense => tense.id) : []),
@@ -76,11 +80,11 @@ export default function PracticePage() {
   );
   /** For the count on the picker — the whole practice set, unnarrowed. */
   const dueCount = useMemo(
-    () => (spec && enrolment ? dueTables(spec, buildTables(spec, enrolment), progress).length : 0),
+    () => (spec && enrolment ? countDueBoxes(spec, buildTables(spec, enrolment), progress) : 0),
     [spec, enrolment, progress],
   );
   const dueInSelection = useMemo(
-    () => (spec ? dueTables(spec, tables, progress).length : 0),
+    () => (spec ? countDueBoxes(spec, tables, progress) : 0),
     [spec, tables, progress],
   );
 
@@ -89,26 +93,37 @@ export default function PracticePage() {
     setQueue(buildConjugationQueue(spec, tables, progress, { includeNotDue }));
     setIndex(0);
     setStopped(false);
-    setTyped('');
-    setHintsTaken(0);
-    setVerdict(null);
+    setTyped({});
+    setHints({});
+    setChecked(false);
     setStage('session');
   };
 
+  /**
+   * Rate every box of the round, each on its own answer.
+   *
+   * ⚠️ **One write for the round, not one per box.** The provider merges key by
+   * key, so six ratings are one round trip — and a rating that is a blank box is
+   * still `again`, because not producing a form is not knowing it.
+   */
   const check = () => {
-    const current = queue[index];
-    if (!spec || !current || !typed.trim() || verdict) return;
-    const correct = isCorrectForm(spec, current.table, current.personId, typed);
-    setVerdict(correct ? 'correct' : 'wrong');
-    const itemId = tableItemId(spec, current.table);
-    rate(itemId, rateTable(progress[itemId], current.personId, hintedVerdict(hintsTaken, correct)));
+    const round = queue[index];
+    if (!spec || !round || checked) return;
+    const updates: ConjugationProgressMap = {};
+    for (const personId of round.personIds) {
+      const correct = isCorrectForm(spec, round.table, personId, typed[personId] ?? '');
+      const id = boxItemId(spec, round.table, personId);
+      updates[id] = rateBox(progress[id], hintedVerdict(hints[personId] ?? 0, correct));
+    }
+    rate(updates);
+    setChecked(true);
   };
 
   const advance = () => {
     setIndex(i => i + 1);
-    setTyped('');
-    setHintsTaken(0);
-    setVerdict(null);
+    setTyped({});
+    setHints({});
+    setChecked(false);
   };
 
   const heading = (text: string) => (
@@ -235,15 +250,18 @@ export default function PracticePage() {
     );
   }
 
-  const current = queue[index];
+  const round = queue[index];
+  /** Boxes, not rounds: the same unit the picker counts in. */
+  const total = countQuestions(queue);
+  const answered = countQuestions(queue.slice(0, index));
 
-  if (!current) {
+  if (!round) {
     return (
       <div className="max-w-2xl">
         {heading(t(interfaceLanguage, stopped ? 'practiceStoppedTitle' : 'practiceDoneTitle'))}
         <p className="font-mono text-sm mb-6" style={{ color: 'var(--color-muted)' }}>
           {stopped
-            ? t(interfaceLanguage, 'practiceCount', { done: index, total: queue.length })
+            ? t(interfaceLanguage, 'practiceCount', { done: answered, total })
             : t(interfaceLanguage, 'practiceDoneBody')}
         </p>
         <button
@@ -257,8 +275,7 @@ export default function PracticePage() {
     );
   }
 
-  const person = spec?.persons.find(p => p.id === current.personId);
-  const hints = conjugationHints(current.table, current.personId);
+  const ready = round.personIds.every(id => (typed[id] ?? '').trim().length > 0);
 
   return (
     <div className="max-w-2xl">
@@ -271,70 +288,114 @@ export default function PracticePage() {
           {t(interfaceLanguage, 'practiceStop')}
         </button>
         <span className="ml-auto font-mono text-sm" style={{ color: 'var(--color-muted)' }}>
-          {t(interfaceLanguage, 'practiceCount', { done: index + 1, total: queue.length })}
+          {t(interfaceLanguage, 'practiceCount', {
+            done: answered + (checked ? round.personIds.length : 0),
+            total,
+          })}
         </span>
       </div>
 
       <div className="p-8 rounded-xl border" style={{ background: 'var(--color-surface)', borderColor: 'var(--color-muted)' }}>
         <p className="font-mono text-2xl font-bold mb-1" style={{ color: 'var(--color-text)' }}>
-          {current.table.infinitive}
+          {round.table.infinitive}
         </p>
         {/* The verb is the vehicle; the subject is what is being tested. For a
             group they differ, and the learner needs both. */}
-        <p className="font-mono text-sm mb-6" style={{ color: 'var(--color-muted)' }}>
-          {person?.label} · {current.table.tenseLabel}
-          {current.table.subjectKind === 'group' ? ` · ${current.table.subjectLabel}` : ''}
+        <p className="font-mono text-sm" style={{ color: 'var(--color-muted)' }}>
+          {round.table.tenseLabel}
+          {round.table.subjectKind === 'group' ? ` · ${round.table.subjectLabel}` : ''}
         </p>
-
-        <input
-          value={typed}
-          onChange={e => setTyped(e.target.value)}
-          onKeyDown={e => {
-            if (e.key !== 'Enter') return;
-            // Enter checks, then Enter moves on — the same key all the way
-            // through, so a five-second question needs no mouse.
-            if (verdict) advance();
-            else check();
-          }}
-          placeholder={t(interfaceLanguage, 'conjugationAnswerPlaceholder')}
-          autoFocus
-          spellCheck={false}
-          autoComplete="off"
-          disabled={!!verdict}
-          className="w-full p-3 rounded-lg font-mono text-lg bg-[var(--color-bg)] border border-[var(--color-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--color-highlight)] text-[var(--color-text)] placeholder-[var(--color-muted)]"
-        />
-
-        {!verdict && hintsTaken < hints.length && (
-          <button
-            onClick={() => setHintsTaken(n => n + 1)}
-            className="mt-3 text-xs px-3 py-1 rounded-full border transition-colors"
-            style={{ color: 'var(--color-muted)', borderColor: 'var(--color-muted)' }}
-          >
-            {t(interfaceLanguage, 'conjugationHint')}
-          </button>
-        )}
-        {hintsTaken > 0 && (
-          <p className="mt-3 font-mono text-lg tracking-widest" style={{ color: 'var(--color-muted)' }}>
-            {hints.slice(0, hintsTaken).join('  ')}
+        {!checked && (
+          <p className="font-mono text-xs mt-3" style={{ color: 'var(--color-muted)' }}>
+            {t(interfaceLanguage, 'conjugationFillDue')}
           </p>
         )}
 
-        {verdict && (
-          <p className="mt-4 font-mono text-sm" style={{ color: verdict === 'correct' ? 'var(--color-muted)' : 'var(--color-highlight)' }}>
-            {verdict === 'correct'
-              ? t(interfaceLanguage, 'conjugationCorrect')
-              : `${t(interfaceLanguage, 'conjugationWrong')} ${current.table.forms[current.personId]}`}
-          </p>
-        )}
+        <div className="mt-6 flex flex-col gap-2">
+          {spec?.persons.map(person => {
+            const due = round.personIds.includes(person.id);
+            const form = round.table.forms[person.id];
+            const answer = (typed[person.id] ?? '').trim();
+            const correct = !!spec && isCorrectForm(spec, round.table, person.id, answer);
+            const taken = hints[person.id] ?? 0;
+            const hintHalves = conjugationHints(round.table, person.id);
+
+            return (
+              <div key={person.id} className="flex items-start gap-3">
+                <span className="w-20 shrink-0 pt-2 font-mono text-sm" style={{ color: 'var(--color-muted)' }}>
+                  {person.label}
+                </span>
+                <div className="min-w-0 flex-1">
+                  {/* ⚠️ A box that is not due stays masked until the round is
+                      checked: `nous parlons` on screen makes `tu parles` free,
+                      and the paradigm is only reference once it has been
+                      answered. */}
+                  {!due ? (
+                    <p className="py-2 font-mono text-lg" style={{ color: 'var(--color-muted)' }}
+                       aria-label={checked ? undefined : t(interfaceLanguage, 'conjugationNotDue')}>
+                      {checked ? form : '—'}
+                    </p>
+                  ) : checked ? (
+                    <>
+                      <p className="py-2 font-mono text-lg"
+                         style={{ color: correct ? 'var(--color-text)' : 'var(--color-highlight)' }}>
+                        {form}
+                      </p>
+                      {!correct && answer && (
+                        <p className="font-mono text-xs line-through" style={{ color: 'var(--color-muted)' }}>
+                          {answer}
+                        </p>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <input
+                        value={typed[person.id] ?? ''}
+                        onChange={e => setTyped(prev => ({ ...prev, [person.id]: e.target.value }))}
+                        onKeyDown={e => {
+                          if (e.key !== 'Enter') return;
+                          // Enter checks once the table is filled, then Enter
+                          // moves on — the same key all the way through.
+                          if (ready) check();
+                        }}
+                        placeholder={t(interfaceLanguage, 'conjugationAnswerPlaceholder')}
+                        aria-label={`${person.label} · ${round.table.tenseLabel}`}
+                        spellCheck={false}
+                        autoComplete="off"
+                        className="w-full p-2 rounded-lg font-mono text-lg bg-[var(--color-bg)] border border-[var(--color-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--color-highlight)] text-[var(--color-text)] placeholder-[var(--color-muted)]"
+                      />
+                      {taken > 0 && (
+                        <p className="mt-1 font-mono text-sm tracking-widest" style={{ color: 'var(--color-muted)' }}>
+                          {hintHalves.slice(0, taken).join('  ')}
+                        </p>
+                      )}
+                    </>
+                  )}
+                </div>
+                {/* A hint costs the box it is taken on, which is only possible
+                    now that the box carries its own schedule. */}
+                {due && !checked && taken < hintHalves.length && (
+                  <button
+                    onClick={() => setHints(prev => ({ ...prev, [person.id]: taken + 1 }))}
+                    className="mt-1.5 shrink-0 text-xs px-3 py-1 rounded-full border transition-colors"
+                    style={{ color: 'var(--color-muted)', borderColor: 'var(--color-muted)' }}
+                  >
+                    {t(interfaceLanguage, 'conjugationHint')}
+                  </button>
+                )}
+              </div>
+            );
+          })}
+        </div>
 
         <div className="mt-6 flex justify-end">
           <button
-            onClick={() => (verdict ? advance() : check())}
-            disabled={!verdict && !typed.trim()}
+            onClick={() => (checked ? advance() : check())}
+            disabled={!checked && !ready}
             className={primary}
             style={{ background: 'var(--color-highlight)', color: 'var(--color-bg)' }}
           >
-            {t(interfaceLanguage, verdict ? 'conjugationNext' : 'conjugationCheck')}
+            {t(interfaceLanguage, checked ? 'conjugationNext' : 'conjugationCheck')}
           </button>
         </div>
       </div>
