@@ -233,7 +233,13 @@ Moved High → Medium 2026-09-21, on the user's call, when Munli took High._
 - [ ] **Mobile launch should feel instant, behind a branded splash.** **Asked
       for 2026-09-22**: every open *"takes longer than I feel it should"*; the
       user wants it to feel professional, with the logo up while it loads the
-      way Instagram does. **Talked through, not started.**
+      way Instagram does. **Built 2026-09-22 on `worktree-launch-speed`,
+      awaiting a TestFlight build to judge** — all three steps below are in,
+      with the animated hand-off (`LaunchSplash.tsx`) on the user's call. The
+      splash logo is `assets/splash-icon.png`, rendered from web's `AmgiLogo`
+      paths; the user had no separate file. No dark variant: the splash is the
+      brand green in both, as the icon is. Still to do: time a launch on the
+      build before and after (the user found the slowness on TestFlight).
       **The device already holds what launch needs; launch waits for the
       server anyway.** `onAuthStateChanged` in
       `apps/mobile/src/context/UserContext.tsx` awaits
