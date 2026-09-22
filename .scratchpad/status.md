@@ -369,6 +369,46 @@ once, so a path that worked on build 14 is not evidence about build 15.
 Closed calls, kept with their reasoning — a decision whose reasoning is lost gets
 reopened by the next person to notice the symptom. Newest first.
 
+### Amgi goes to Play, on the internal testing track (2026-09-22)
+
+**Taken up the same day it was scoped**, against the trigger set when Android
+went sideloaded on 2026-08-22 — *"revisit Play internal testing when re-sending
+links costs more than $25 and a review cycle"*. It is worth it: an APK has no
+update path at all, so every Android release is a fresh link and a manual
+re-install by every tester, and the internal track replaces that with
+auto-updates for $25 and no review queue. **Production is explicitly not in
+scope.** The steps are the item at the top of High in [backlog.md](backlog.md).
+
+Four calls, all the user's:
+
+**A personal developer account, not an organization one.** An organization
+account needs a D-U-N-S number — free, but up to ~30 business days — and its
+only real benefit is exemption from the closed-testing gate personal accounts
+face *before production*. Since production is not the destination, that exemption
+buys nothing today. ⚠️ **If production is ever wanted, this is the decision to
+revisit first, and it cannot be converted** — it would mean a second account and
+a second listing.
+
+**Owned by the Google account that already owns Firebase and the Android OAuth
+client.** Registering the Play app-signing SHA-1 and granting the release service
+account then happen in one place with no cross-account grants. **This is the
+opposite of the iOS situation deliberately**: `com.tegi.amgi` lives on a borrowed
+Apple account, `com.miinjaekim.amgi` does not, and Play is not being set up to
+repeat that.
+
+**The sideloaded APK channel is retired once Play internal is live**, rather than
+run alongside. The two are signed differently, so no tester can move between them
+without uninstalling — keeping both means two builds per release, two sets of
+instructions, and a one-way door between them. One channel that auto-updates is
+the whole point of paying the $25. The cost is paid once, by each tester, at the
+switch: uninstalling loses the AsyncStorage layer (streak, offline snapshot,
+rating queue). Cards are in Firestore and survive.
+
+**Listing copy in English and Korean**, mirroring `docs/testflight-beta-info.md`.
+The app ships both locales throughout and the TestFlight description is most of
+the full description already; adding a locale to a listing later is worse than
+writing it now.
+
 ### Three Munli follow-ups leave High; the backlog is the user's list (2026-09-22)
 
 **Removed from High on the user's call, with the reason that they were never
