@@ -255,6 +255,89 @@ Moved High → Medium 2026-09-21, on the user's call, when Munli took High._
       looking. Neither item blocks the other, but landing them together is one
       menu built once instead of a menu and then a menu edit.
 
+- [ ] **Amgi on Google Play** — scoped 2026-09-22 from a question; **nothing is
+      decided**. The trigger set when Android went sideloaded is now the thing to
+      weigh: _"revisit Play internal testing when re-sending links costs more than
+      $25 and a review cycle"_ (Decisions 2026-08-22 in [status.md](status.md)).
+      **It is two decisions, not one, and only the first is cheap.**
+      **Internal testing track** — $25, no review queue, up to 100 testers by
+      email — is close to a drop-in replacement for the sideload model and fixes
+      its one real defect: an APK has **no update path at all**, so every release
+      today is a fresh EAS link and a manual re-install by each tester. Play
+      auto-updates them.
+      **A production listing** is the expensive half: store listing, data-safety
+      declaration, content rating, review cycles, and possibly a multi-week
+      testing gate before you may even apply (below). The build work is nearly
+      identical for both; the difference is policy and calendar.
+      ⚠️ **Play App Signing changes the SHA-1, and that breaks Google sign-in on
+      Play installs only.** Google re-signs the AAB with its own key, so the
+      fingerprint an end user's install carries is *not* the EAS upload
+      keystore's — and the Android OAuth client is keyed to package name + SHA-1.
+      Register the **Play App Signing certificate's** SHA-1 (as well as the upload
+      key's) in Google Cloud and Firebase *before* the first internal-track
+      install, and test sign-in on a **Play-delivered** build specifically. This
+      is the exact shape of the failure [lessons.md](lessons.md) already paid four
+      release builds for: nothing in a diff points at it, and a build installed
+      any other way will pass.
+      ⚠️ **A Play build cannot install over the sideloaded APK** — different
+      signing key, so testers uninstall first. Cards survive (Firestore); the
+      AsyncStorage layer does not, so the offline review snapshot, the rating
+      queue and the **streak** go with it.
+      **The repo work is small.** `app.json` needs nothing — `com.miinjaekim.amgi`
+      is already permanent and keyed into the OAuth client, and `adaptiveIcon`
+      exists. It is `apps/mobile/eas.json`: an Android side to the `production`
+      profile (`distribution: internal` on `preview` is what makes today's build an
+      APK; `production` already defaults to an AAB), plus
+      `submit.production.android` with a Google Play service account key, which
+      today holds `ios.ascAppId` only. `appVersionSource: remote` already covers
+      Android — EAS keeps a separate counter per platform, at `versionCode` 6.
+      **Console work, mostly writing:** listing copy, phone screenshots (tablet
+      too if tablet support is declared — `supportsTablet` is iOS-only today),
+      512px icon, 1024×500 feature graphic; the **data-safety form** (Firebase Auth
+      identifiers, card content in Firestore, text sent to Gemini through the API
+      routes, TTS audio in Storage — and the shared pronunciation cache, keyed by
+      text hash rather than by user, is a genuine "not deleted with the account"
+      disclosure that must match what `/privacy` already says); content rating;
+      **App access** notes, since there is no email/password path and a reviewer
+      has to get past Google sign-in. The privacy policy URL exists in both
+      locales. Play wants in-app account deletion **and** a public deletion-request
+      URL — `deleteUser()` is wired (`UserContext.tsx`), so only the URL is
+      missing, probably a section on the privacy page.
+      ⚠️ **Two policy questions to check in the console rather than assume**, both
+      of which can change the size of this item:
+      **(1) the closed-testing gate** — personal developer accounts registered
+      after Nov 2023 have had to run closed testing with a minimum number of
+      opted-in testers (12, most recently) for 14 continuous days before applying
+      for production. Organization accounts are exempt but need a D-U-N-S number.
+      If it still holds, production is a **multi-week** item gated on recruiting a
+      dozen real testers, and it should drive the personal-vs-organization choice
+      *before* the $25 is spent.
+      **(2) the generative-AI policy** — Play has required an in-app way to report
+      offensive AI output. Amgi generates card content through Gemini, so this
+      could be a small feature to build rather than a form to fill.
+      **The precondition is not paperwork.** **Nothing but sign-in has ever been
+      exercised on Android** (the never-verified ⚠️ under Builds in
+      [status.md](status.md)) — audio, export, sharing, offline, account deletion,
+      reminders, and reminders need the runtime `POST_NOTIFICATIONS` grant on 13+
+      and land in the default "Miscellaneous" channel, with no
+      `setNotificationChannel` call anywhere in mobile. Sideloading to people you
+      know tolerates that; a public listing is arbitrary devices and one-star
+      reviews. Work that list on a Play-delivered build before any production push.
+      **Recommended shape, if it is taken up:** internal track now, production
+      later — an afternoon (eas.json profile, service account, SHA-1 registration,
+      one AAB, one sign-in test) buys the auto-update path and starts any
+      tester-count clock running while the untested Android surfaces get
+      exercised. Production then becomes forms on top of proven infrastructure.
+      ⚠️ It also **retires the line at the foot of this file**: a Play release is
+      reviewed, so "Android is the exception — a fix there ships the same day"
+      stops being true for whatever is on Play. Both can coexist (the APK stays a
+      valid channel) but only if it stays deliberate rather than forgotten.
+      _Also relevant and still open: custom URI schemes on Android are a reprieve
+      Google may withdraw ([lessons.md](lessons.md)), and a listing makes that a
+      dependency for real users rather than a handful of testers. It raises the
+      value of the `@react-native-google-signin` migration; it does not block
+      anything here._
+
 ## Bigger bets
 
 _Empty as of 2026-09-08 — the gloss ceiling was the only item here, and it
