@@ -15,9 +15,10 @@ import {
   shareImageFilename,
   shareImageQuery,
   shiftDate,
+  studyTimeTile,
   type DailyProgress,
 } from '@amgi/core';
-import { readShareImageParams } from '@/app/api/stats-image/route';
+import { chartWeekdays, readShareImageParams } from '@/app/api/stats-image/route';
 
 /** A day with only the fields a test cares about; the rest stay zero. */
 function day(date: string, patch: Partial<DailyProgress> = {}): DailyProgress {
@@ -286,6 +287,14 @@ describe('shareImageQuery', () => {
     expect(asChart.get('v')).toBe('chart');
     expect(asChart.get('bd')).toBe('1');
     expect(asChart.get('c')?.split(',')).toHaveLength(30);
+  });
+
+  it('sends the chart its last day, so a chart of days can name them', () => {
+    const stats = buildShareStats([day(LATER, { newCards: 4 })], {
+      streak: 7, endDate: LATER, windowDays: 7,
+    });
+    expect(new URLSearchParams(shareImageQuery(stats, null, 'chart')).get('e')).toBe(LATER);
+    expect(new URLSearchParams(shareImageQuery(stats, null, 'window')).has('e')).toBe(false);
   });
 
   it('sends one series — the measure the card draws, never both', () => {
@@ -756,5 +765,70 @@ describe('formatStudyTime', () => {
     expect(formatStudyTime(2 * 3600 + 40 * 60, 'Korean')).toBe('2시간 40분');
     expect(formatStudyTime(40 * 60, 'Korean')).toBe('40분');
     expect(formatStudyTime(2 * 3600, 'Korean')).toBe('2시간');
+  });
+});
+
+describe('studyTimeTile', () => {
+  it('averages over every day in the window, days off included', () => {
+    // 30 minutes across a week with one day studied is 4m a day, not 30.
+    expect(studyTimeTile(30 * 60, 7)).toEqual({ labelKey: 'shareStatTimePerDay', seconds: (30 * 60) / 7 });
+    expect(formatStudyTime(studyTimeTile(30 * 60, 7)!.seconds)).toBe('4m');
+  });
+
+  it('keeps the total under its old label on a one-day card, where the two are one figure', () => {
+    expect(studyTimeTile(40 * 60, 1)).toEqual({ labelKey: 'shareStatTime', seconds: 40 * 60 });
+  });
+
+  it('draws nothing for a withheld figure', () => {
+    expect(studyTimeTile(null, 30)).toBeNull();
+  });
+
+  it('draws nothing when the average rounds to no minutes, rather than a 0m tile', () => {
+    // 20 minutes over 90 days is 13 seconds a day.
+    expect(studyTimeTile(20 * 60, 90)).toBeNull();
+    expect(studyTimeTile(0, 7)).toBeNull();
+    expect(studyTimeTile(29, 1)).toBeNull();
+    expect(studyTimeTile(30, 1)).not.toBeNull();
+  });
+
+  it('needs nothing the URL does not already carry, so old links get the average', () => {
+    // `t` is still the window's total; the route divides by `w`.
+    const stats = statsFor([day(LATER, { reviews: 10, studySeconds: 70 * 60 })], 7);
+    const params = readShareImageParams(new URLSearchParams(shareImageQuery(stats)));
+    expect(params.studySeconds).toBe(70 * 60);
+    expect(studyTimeTile(params.studySeconds, params.windowDays)).toEqual({
+      labelKey: 'shareStatTimePerDay', seconds: 10 * 60,
+    });
+  });
+});
+
+describe('chartWeekdays', () => {
+  /** A chart's params, as the route would read them from a URL. */
+  function chartParams(query: string) {
+    return readShareImageParams(new URLSearchParams(`v=chart&${query}`)).chart;
+  }
+
+  // 2026-09-24 is a Thursday, so the week ending on it starts on a Friday.
+  it('names each day of a 7-day chart, oldest first, ending on the last day', () => {
+    const chart = chartParams('w=7&bd=1&c=1,2,3,4,5,6,7&e=2026-09-24');
+    expect(chartWeekdays(chart, null)).toEqual(['Fri', 'Sat', 'Sun', 'Mon', 'Tue', 'Wed', 'Thu']);
+    expect(chartWeekdays(chart, 'Korean')).toEqual(['금', '토', '일', '월', '화', '수', '목']);
+  });
+
+  it('draws none when a bar is a week', () => {
+    expect(chartWeekdays(chartParams('w=90&bd=7&c=1,2,3,4,5,6,7,8,9,10,11,12,13&e=2026-09-24'), null))
+      .toBeUndefined();
+  });
+
+  // The dashboard's own threshold: past it, a name per bar is a grey smear.
+  it('draws none on a daily chart too long to label every bar', () => {
+    const thirty = Array.from({ length: 30 }, () => '1').join(',');
+    expect(chartWeekdays(chartParams(`w=30&bd=1&c=${thirty}&e=2026-09-24`), null)).toBeUndefined();
+  });
+
+  it('draws none for a link made before the end date was sent, or a junk one', () => {
+    expect(chartWeekdays(chartParams('w=7&bd=1&c=1,2,3,4,5,6,7'), null)).toBeUndefined();
+    expect(chartWeekdays(chartParams('w=7&bd=1&c=1,2,3,4,5,6,7&e=yesterday'), null)).toBeUndefined();
+    expect(chartWeekdays(chartParams('w=7&bd=1&c=1,2,3,4,5,6,7&e=2026-13-45'), null)).toBeUndefined();
   });
 });

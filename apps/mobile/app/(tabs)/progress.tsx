@@ -11,7 +11,7 @@ import Svg, { Polyline } from 'react-native-svg';
 import {
   PROGRESS_HISTORY_START, buildCardsAddedSeries, buildHeatmap,
   CARD_COLLECTIONS, buildWeekGrid,
-  historyStartsMidWindow, localDateString, mergeLanguageRows, niceCeiling, weekdayIndex,
+  historyStartsMidWindow, localDateString, mergeLanguageRows, niceCeiling, weekdayIndex, weekdayLabels,
   shiftDate, weekAxisTicks,
   summarizeProgress, t,
   type DailyProgress, type HeatmapCell, type LanguageProgress,
@@ -46,20 +46,6 @@ const RANGES = [
  */
 function levelColor(C: Palette, level: HeatmapCell['level']): string {
   return C.heat[level];
-}
-
-/**
- * Sunday-first weekday names in the reader's language.
- *
- * Built from a known Sunday through `Intl` rather than from translation keys:
- * seven more keys per locale to say what the platform already knows, and any
- * locale added later gets them for free.
- */
-function weekdayLabels(interfaceLanguage: string | null | undefined): string[] {
-  const locale = interfaceLanguage === 'Korean' ? 'ko-KR' : 'en-GB';
-  // 1970-01-04 was a Sunday.
-  return [0, 1, 2, 3, 4, 5, 6].map(offset => new Date(Date.UTC(1970, 0, 4 + offset, 12))
-    .toLocaleDateString(locale, { weekday: 'short' }));
 }
 
 /**

@@ -7,7 +7,7 @@ import { fetchRecentProgress } from '@/services/progress';
 import {
   CARD_COLLECTIONS, buildCardsAddedSeries, buildHeatmap, buildShareStats, buildTodayStats, buildWeekGrid,
   hasShareableChart, hasShareableHistory, localDateString, mergeLanguageRows, niceCeiling, summarizeProgress,
-  weekAxisTicks, weekdayIndex,
+  weekAxisTicks, weekdayIndex, weekdayLabels,
   type DailyProgress, type HeatmapCell, type StudyLanguage,
 } from '@amgi/core';
 import { backfillMatureFlags, countMatureFlashcards } from '@/services/firestore';
@@ -49,19 +49,6 @@ const LEVEL_STYLES = [
  * calendar labels, and it is enough to key the other four.
  */
 const LABELLED_WEEKDAYS = [1, 3, 5];
-
-/**
- * Sunday-first weekday names in the reader's language.
- *
- * Built from a known Sunday through `Intl` rather than from translation keys:
- * seven more keys per locale to say what the platform already knows.
- */
-function weekdayLabels(interfaceLanguage: string | null | undefined): string[] {
-  const locale = interfaceLanguage === 'Korean' ? 'ko-KR' : 'en-GB';
-  // 1970-01-04 was a Sunday.
-  return [0, 1, 2, 3, 4, 5, 6].map(offset => new Date(Date.UTC(1970, 0, 4 + offset, 12))
-    .toLocaleDateString(locale, { weekday: 'short' }));
-}
 
 export default function ProgressPage() {
   const { user, authLoading, interfaceLanguage, streak } = useUser();

@@ -61,6 +61,13 @@ section worth seeing without scrolling._
   after it. Several are native modules (`expo-audio`, `expo-notifications`,
   `expo-updates`…), so the build is where they land.
 
+- **The 7-day chart share card names its days** (2026-09-24). A weekday sits
+  under each bar or point, but only when each mark is one day and there are no
+  more than 14 of them, which is the dashboard's rule. The route needs the
+  chart's last day to do it, so `shareImageQuery` now sends `e`. Web has it on
+  merge. Mobile builds its own share URL, so charts shared from phones get
+  weekdays from the build on; older links render without them.
+
 ⚠️ **In testers' hands is not the same as seen.** Nothing in that build has been
 opened on a device, which is most of what Munli is. Untracked here by the
 2026-09-04 decision that these checks come from using the app, not a list; the
@@ -76,19 +83,6 @@ picker narrowed (#146). Both are written up in their Decisions entries of
 2026-09-22.
 
 ## Medium
-
-- [ ] **Average time studied per day, not the window's total.** Time studied is
-      only shown on the **share image** today (`shareStatTime`, from
-      `summary.totalStudySeconds`), where a 90-day total says little. The
-      per-day `studySeconds` rollups already exist, so this is display only —
-      and the route can derive it from `t` and the window it already knows, so
-      **old shared URLs keep working** with no new parameter.
-      ⚠️ **One call to make: the denominator.** Days in the window (honest about
-      days off; low) or days actually studied (flattering; says how long a
-      session runs). Either way, a window reaching back past
-      `DETAILED_HISTORY_START` must divide by the days that were measured, not
-      the window. Also worth deciding: whether the Progress tab should show it
-      too, since it currently shows no time at all.
 
 - [ ] **Tag French verbs with what kind of verb they are** — all four kinds,
       per the user 2026-09-23: **conjugation group**, **pronominal**,

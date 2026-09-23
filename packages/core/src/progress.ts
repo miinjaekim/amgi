@@ -740,6 +740,22 @@ export function weekdayIndex(date: string): number {
   return new Date(`${date}T12:00:00Z`).getUTCDay();
 }
 
+/**
+ * Sunday-first weekday names in the reader's language, indexed like
+ * `weekdayIndex`.
+ *
+ * Built from a known Sunday through `Intl` rather than from translation keys:
+ * seven more keys per locale to say what the platform already knows. Shared
+ * because both dashboards on both platforms and the share image all label
+ * days, and a name drawn two ways would be two answers to one question.
+ */
+export function weekdayLabels(interfaceLanguage: string | null | undefined): string[] {
+  const locale = interfaceLanguage === 'Korean' ? 'ko-KR' : 'en-GB';
+  // 1970-01-04 was a Sunday.
+  return [0, 1, 2, 3, 4, 5, 6].map(offset => new Date(Date.UTC(1970, 0, 4 + offset, 12))
+    .toLocaleDateString(locale, { weekday: 'short' }));
+}
+
 /** Sunday, matching the calendars both locales print. */
 export const WEEK_STARTS_ON = 0;
 

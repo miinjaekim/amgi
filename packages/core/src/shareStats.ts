@@ -500,6 +500,9 @@ export function shareImageQuery(
     q.set('c', chartValues(stats, chart.measure).join(','));
     if (chart.measure !== 'cards') q.set('cm', 'r');
     if (chart.mark !== 'bars') q.set('mk', 'l');
+    // The last day the bars cover, so a chart of days can name them. The route
+    // cannot work it out itself: "today" is the sharer's, not the server's.
+    q.set('e', stats.windowEnd);
   }
   // Codes rather than display names: shorter, stable, and it leaves the label
   // in the reader's own language rather than the sharer's.
@@ -562,4 +565,42 @@ export function formatStudyTime(seconds: number, lang?: string | null): string {
   if (hours === 0) return t(lang, 'shareTimeMinutes', { m: rest });
   if (rest === 0) return t(lang, 'shareTimeHours', { h: hours });
   return t(lang, 'shareTimeHoursMinutes', { h: hours, m: rest });
+}
+
+/** What the study-time tile says: a label, and the seconds to format under it. */
+export interface StudyTimeTile {
+  labelKey: 'shareStatTime' | 'shareStatTimePerDay';
+  seconds: number;
+}
+
+/**
+ * The study-time tile for a window, or `null` when there is none to draw.
+ *
+ * **An average per day, not the window's total** (2026-09-23). "41h" over 90
+ * days says how long the window was more than how much anyone studied; "27m a
+ * day" reads the same at any length, so a 7-day card and a 90-day one can be
+ * compared at a glance.
+ *
+ * ⚠️ **The divisor is every day in the window, days off included** — the
+ * user's call, over dividing by days studied. That is the honest reading of
+ * "a day" on a canvas whose heatmap already shows which days were off, and a
+ * per-study-day figure would need its own label to not overclaim. It is also
+ * why this needs nothing new from the URL: `t` stays the total and `w` is the
+ * window, so every link an installed build ever made renders the new tile.
+ *
+ * Dividing by the window is only honest because `studySeconds` is already
+ * withheld for a window reaching back past `DETAILED_HISTORY_START` — every
+ * day it divides by was measured, so no unmeasured day drags it down.
+ *
+ * A one-day window keeps the total under its old label: an average of one day
+ * *is* the total, and "per day" on the today card would be a strange thing to
+ * say. And an average that rounds to no minutes draws no tile, for the reason
+ * zero never does — `0m` beside a streak reads as a rebuke.
+ */
+export function studyTimeTile(studySeconds: number | null, windowDays: number): StudyTimeTile | null {
+  if (studySeconds === null) return null;
+  const days = Math.max(1, Math.round(windowDays));
+  const seconds = studySeconds / days;
+  if (Math.round(seconds / 60) < 1) return null;
+  return { labelKey: days === 1 ? 'shareStatTime' : 'shareStatTimePerDay', seconds };
 }
