@@ -25,6 +25,7 @@ import {
 import type { PackEntry, PackSection } from '@amgi/core';
 import CardDetailModal from '@/components/CardDetailModal';
 import PronounceButton from '@/components/PronounceButton';
+import { usePackLost } from '@/hooks/usePackLost';
 import { t } from '@/lib/i18n';
 
 /** The id used for the whole-deck enrol, which is not a section. */
@@ -35,6 +36,7 @@ export default function DeckDetailPage() {
   const router = useRouter();
   const { user, interfaceLanguage, deckNativeLanguage, studyLanguage } = useUser();
   const pack = getVocabPack(studyLanguage, packId);
+  const packLost = usePackLost(pack);
   const [cards, setCards] = useState<Flashcard[] | null>(null);
   const [enrolling, setEnrolling] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -115,9 +117,16 @@ export default function DeckDetailPage() {
   );
 
   // A pack belongs to one study language, so switching languages while a deck
-  // is open leaves this URL pointing at nothing. Same message serves a stale
-  // bookmark and a pack that was removed from the registry.
+  // is open leaves this URL pointing at nothing. Land on the Decks list, now
+  // showing the new language's packs; `replace` so Back doesn't return here.
+  useEffect(() => {
+    if (packLost) router.replace('/decks');
+  }, [packLost, router]);
+
+  // A URL that never resolved is a stale bookmark or a pack removed from the
+  // registry, and gets the message.
   if (!pack) {
+    if (packLost) return null;
     return (
       <div className="max-w-3xl mx-auto">
         {backLink}

@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router, useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams, useNavigation } from 'expo-router';
+import { StackActions } from 'expo-router/react-navigation';
 import {
   buildPackCardDraft, cardInCollection, collectSavedTerms, countSavedEntries,
   getPackEntries, getPackText, getStudyLangSide, getVocabPack, packRefId,
@@ -15,6 +16,7 @@ import type { Flashcard } from '../../../../src/services/firestore';
 import CardDetailModal from '../../../../src/components/CardDetailModal';
 import PronounceButton from '../../../../src/components/PronounceButton';
 import { useFloatingTabBarHeight } from '../../../../src/components/FloatingTabBar';
+import { usePackLost } from '../../../../src/hooks/usePackLost';
 import type { Palette } from '../../../../src/theme';
 
 /** The id used for the whole-deck enrol, which is not a section. */
@@ -27,6 +29,8 @@ export default function DeckDetailScreen() {
   const s = useMemo(() => makeStyles(C, tabBarHeight), [C, tabBarHeight]);
   const { user, interfaceLanguage, deckNativeLanguage, studyLanguage } = useUser();
   const pack = getVocabPack(studyLanguage, packId);
+  const packLost = usePackLost(pack);
+  const navigation = useNavigation();
   const [cards, setCards] = useState<Flashcard[] | null>(null);
   const [enrolling, setEnrolling] = useState<string | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
@@ -125,8 +129,17 @@ export default function DeckDetailScreen() {
   );
 
   // A pack belongs to one study language, so switching languages while a deck
-  // is open leaves this route pointing at nothing.
+  // is open leaves this route pointing at nothing. Land on the Decks list, now
+  // showing the new language's packs. Popping this screen's own stack rather
+  // than calling `router`: the switch usually happens from another tab or from
+  // Settings, and the global router acts on whatever is focused. It also keeps
+  // one list at the root instead of pushing a second on top.
+  useEffect(() => {
+    if (packLost) navigation.dispatch(StackActions.popToTop());
+  }, [packLost, navigation]);
+
   if (!pack) {
+    if (packLost) return <SafeAreaView style={s.safe} edges={['top', 'bottom']} />;
     return (
       <SafeAreaView style={s.safe} edges={['top', 'bottom']}>
         {header}

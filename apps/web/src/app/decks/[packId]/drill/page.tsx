@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { useUser } from '@/components/UserContext';
 import {
   DRILL_SIZES,
@@ -19,6 +19,7 @@ import {
 } from '@amgi/core';
 import type { DrillDirection, PackEntry } from '@amgi/core';
 import PronounceButton from '@/components/PronounceButton';
+import { usePackLost } from '@/hooks/usePackLost';
 import { t } from '@/lib/i18n';
 
 /**
@@ -30,9 +31,11 @@ import { t } from '@/lib/i18n';
  */
 export default function DrillPage() {
   const { packId } = useParams<{ packId: string }>();
+  const router = useRouter();
   const { interfaceLanguage, deckNativeLanguage, studyLanguage } = useUser();
   const langConfig = getStudyLanguageConfig(studyLanguage);
   const pack = getVocabPack(studyLanguage, packId);
+  const packLost = usePackLost(pack);
 
   /**
    * The subpack being drilled, from `?section=`, or null for the whole pack.
@@ -64,10 +67,17 @@ export default function DrillPage() {
     </Link>
   );
 
+  // The study language changed under the drill. Straight to the Decks list —
+  // the deck page would only bounce there too.
+  useEffect(() => {
+    if (packLost) router.replace('/decks');
+  }, [packLost, router]);
+
   // Every pack is drillable now that every pack is pre-authored — the check
   // that used to sit here excluded exactly the word lists this is most useful
   // for. Only a missing pack is an error.
   if (!pack) {
+    if (packLost) return null;
     return (
       <div className="max-w-xl mx-auto">
         {backToDeck}
