@@ -42,37 +42,18 @@ the build, before and after) in the Decisions entry of 2026-09-22, and the
 
 ## High
 
-_Reordered 2026-09-22 on the user's call: the three Munli items that sat here
-were removed, because they were written up without being asked for. The Decisions
-entry of that date in [status.md](status.md) records what they were and why they
-left, so none of them gets reopened from here. Munli's own plan is in the two
-entries of 2026-09-21._
+_Empty as of 2026-09-23._ The narration that filled this section — which Munli
+items arrived, which were built, which were reviewed, and what the stack came
+back with — described work that has shipped in 2.0.0, and git and the Decisions
+entries of 2026-09-21 and 2026-09-22 in [status.md](status.md) hold all of it.
+Per this file's own rule, shipped work leaves.
 
-_**Play led this section for part of that day and is now in Parked**, blocked on
-a Korean phone number it cannot reach from abroad — same-day Decisions entry.
-Munli has the focus back._
-
-_**The five Munli items that sat here were asked for by the user on
-2026-09-22**, after using the tabs — unlike the three that left this section the
-same day._
-
-_**All five are built, as a stack of six PRs (#145 → #150), and High is empty.**
-They shipped in 2.0.0 (build 17) on 2026-09-23, so Queued for the next build no
-longer holds them; each has a Decisions entry of 2026-09-22 in
-[status.md](status.md) with the calls made while building it. **Nothing here has
-been opened on a device or in a browser**, which is still the whole of what is
-left to do on them — now possible on a real build rather than only in Expo Go._
-
-_⚠️ **Two of those PRs left a call for the user** and neither blocks a merge:
-whether `faire` joins the three irregular verbs (#150), and whether a practice
-session should be able to cover several tenses at once again, which the section
-picker narrowed (#146). Both are in the entries._
-
-_**The stack was reviewed on 2026-09-22 and #151 is what came back** — four
-corrections, two of which turned out to be sourced content. The Decisions
-entries of that date hold both, and the second is the one worth re-reading:
-"explain the tense" and "show an example" read as UI work and are claims about
-French._
+⚠️ **Two open calls came out of that stack and neither has been answered**, which
+is the one thing here that is not finished: whether `faire` joins the three
+sourced irregular verbs (#150), and whether a practice session should be able to
+cover several tenses at once again, which the section picker narrowed (#146).
+Both are questions for the user, not work items, and both are written up in
+their Decisions entries of 2026-09-22.
 
 ## Medium
 
