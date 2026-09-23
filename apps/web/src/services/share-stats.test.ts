@@ -5,6 +5,7 @@ import {
   buildShareCards,
   buildShareStats,
   buildTodayStats,
+  hasShareableChart,
   emptyDailyProgress,
   emptyLanguageProgress,
   formatStudyTime,
@@ -270,6 +271,35 @@ describe('shareImageQuery', () => {
     expect(query([day(LATER, { reviews: 1 })], 30, undefined).has('lang')).toBe(false);
   });
 
+  it('sends the bars and the grain only for the chart card', () => {
+    // A window card's URL is byte-for-byte what it was before the chart card
+    // existed, which is the whole of "backward compatible by construction".
+    const stats = buildShareStats([day(LATER, { newCards: 4 })], {
+      streak: 7, endDate: LATER, windowDays: 30,
+    });
+    const asWindow = new URLSearchParams(shareImageQuery(stats, null, 'window'));
+    expect(asWindow.has('c')).toBe(false);
+    expect(asWindow.has('bd')).toBe(false);
+
+    const asChart = new URLSearchParams(shareImageQuery(stats, null, 'chart'));
+    expect(asChart.get('v')).toBe('chart');
+    expect(asChart.get('bd')).toBe('1');
+    expect(asChart.get('c')?.split(',')).toHaveLength(30);
+  });
+
+  it('round-trips the bars through the route parser unchanged', () => {
+    const stats = buildShareStats(
+      [day(LATER, { newCards: 4, packCards: 20 }), day(shiftDate(LATER, -40), { newCards: 7 })],
+      { streak: 7, endDate: LATER, windowDays: 90 },
+    );
+    const parsed = readShareImageParams(
+      new URLSearchParams(shareImageQuery(stats, null, 'chart')),
+    );
+    expect(parsed.variant).toBe('chart');
+    expect(parsed.chart.values).toEqual(stats.chart.values);
+    expect(parsed.chart.bucketDays).toBe(stats.chart.bucketDays);
+  });
+
   it('round-trips through the route parser to the same numbers', () => {
     // The property that keeps the two halves from drifting: whatever the
     // builder puts in, the route must read back out.
@@ -326,6 +356,13 @@ describe('shareImageFilename', () => {
     const b = buildShareStats([], { streak: 0, endDate: LATER, windowDays: 364 });
     expect(shareImageFilename(a)).not.toBe(shareImageFilename(b));
     expect(shareImageFilename(a)).toMatch(/^amgi-\d{4}-\d{2}-\d{2}-30d\.png$/);
+  });
+
+  it('tells a chart apart from the window card covering the same days', () => {
+    const stats = buildShareStats([], { streak: 0, endDate: LATER, windowDays: 30 });
+    expect(shareImageFilename(stats, 'chart'))
+      .toMatch(/^amgi-\d{4}-\d{2}-\d{2}-30d-chart\.png$/);
+    expect(shareImageFilename(stats, 'chart')).not.toBe(shareImageFilename(stats, 'window'));
   });
 });
 
@@ -396,12 +433,117 @@ describe('buildShareCards', () => {
     }
   });
 
-  it('gives each card a distinct filename, today included', () => {
+  it('offers a chart card per chart window, after the cards that were there first', () => {
+    // Existing cards keep their order and their indices: a reader opening the
+    // sheet from the range row must still land where they always did, and the
+    // chart's own button says which card it wants by name.
+    const cards = buildShareCards(
+      [day(LATER, { reviews: 5, newCards: 3 }), day(shiftDate(LATER, -60), { reviews: 5, packCards: 9 })],
+      { streak: 7, endDate: LATER, windows: [30, 90], chartWindows: [7, 30, 90] },
+    );
+    expect(cards.map(card => card.id)).toEqual(['w30', 'w90', 'today', 'c7', 'c30', 'c90']);
+    expect(cards.filter(card => card.variant === 'chart').map(card => card.windowDays))
+      .toEqual([7, 30, 90]);
+  });
+
+  it('charts the same windows it offers when it is not told otherwise', () => {
+    const cards = buildShareCards([day(LATER, { reviews: 5, newCards: 3 })], {
+      streak: 7, endDate: LATER, windows: [30],
+    });
+    expect(cards.map(card => card.id)).toEqual(['w30', 'today', 'c30']);
+  });
+
+  it('labels a chart card by its own window', () => {
+    const cards = buildShareCards([day(LATER, { reviews: 5, newCards: 3 })], {
+      streak: 7, endDate: LATER, windows: [30], chartWindows: [7],
+    });
+    expect(cards.at(-1)).toMatchObject({ id: 'c7', labelKey: 'shareVariantChart', windowDays: 7 });
+  });
+
+  it('drops a chart card whose window had nothing added, window card and all', () => {
+    // Reviews without adds: every window card stands and no chart card does.
+    const cards = buildShareCards([day(LATER, { reviews: 12 })], {
+      streak: 7, endDate: LATER, windows: [30], chartWindows: [7, 30],
+    });
+    expect(cards.map(card => card.id)).toEqual(['w30', 'today']);
+  });
+
+  it('keeps a chart card for a window that had adds but no reviews', () => {
+    // Nothing was rated, so neither the window card nor the today card
+    // survives — and the chart still has bars, which is the point of asking
+    // the two gates separately.
+    const cards = buildShareCards([day(LATER, { packCards: 40 })], {
+      streak: 0, endDate: LATER, windows: [30], chartWindows: [30],
+    });
+    expect(cards.map(card => card.id)).toEqual(['c30']);
+  });
+
+  it('gives each card a distinct filename, today and the charts included', () => {
     // Mobile deletes by filename before downloading, so a collision is a stale
-    // picture going out — and a one-day window would otherwise collide.
-    const names = cardsFor(busyThroughout)
-      .map(card => shareImageFilename(card.stats, card.variant));
+    // picture going out — and a one-day window, or a chart over the very same
+    // days as a window card, would otherwise collide.
+    const names = buildShareCards(
+      [day(LATER, { reviews: 5, newCards: 3 }), day(shiftDate(LATER, -60), { reviews: 5, packCards: 9 })],
+      { streak: 7, endDate: LATER, windows: [30, 90], chartWindows: [7, 30, 90] },
+    ).map(card => shareImageFilename(card.stats, card.variant));
+    expect(names).toHaveLength(6);
     expect(new Set(names).size).toBe(names.length);
+  });
+});
+
+describe('the chart series', () => {
+  /** A day whose cards came from both sources, since the series sums the two. */
+  const added = (date: string, lookup: number, pack = 0) =>
+    day(date, { newCards: lookup, packCards: pack });
+
+  it('draws one bar per day up to thirty, then one per week', () => {
+    // The grain is `chartBucketDays`, which is the same rule both detail
+    // screens draw by — a shared chart and the one on screen must not disagree
+    // about what a bar is.
+    expect(statsFor([], 30).chart).toMatchObject({ bucketDays: 1 });
+    expect(statsFor([], 30).chart.values).toHaveLength(30);
+    expect(statsFor([], 90).chart).toMatchObject({ bucketDays: 7 });
+    // 90 days at seven to a bar is twelve whole weeks and a short one.
+    expect(statsFor([], 90).chart.values).toHaveLength(13);
+  });
+
+  it('adds up to the figure every other surface shows', () => {
+    // The bars are `lookup + pack`, which is what `cardsAdded` counts and what
+    // the dashboard tile says. A chart that summed to something else would put
+    // two numbers for one window on one canvas.
+    const stats = statsFor([added(LATER, 4, 20), added(shiftDate(LATER, -3), 6)], 30);
+    expect(stats.chart.values.reduce((sum, value) => sum + value, 0)).toBe(stats.cardsAdded);
+    expect(stats.cardsAdded).toBe(30);
+  });
+
+  it('puts the newest bar last, where the reader expects today', () => {
+    const stats = statsFor([added(LATER, 5)], 30);
+    expect(stats.chart.values.at(-1)).toBe(5);
+    expect(stats.chart.values.slice(0, -1).every(value => value === 0)).toBe(true);
+  });
+
+  it('counts nothing from outside the window it names', () => {
+    expect(statsFor([added(shiftDate(LATER, -40), 99)], 30).chart.values
+      .every(value => value === 0)).toBe(true);
+  });
+});
+
+describe('hasShareableChart', () => {
+  it('asks about the bars rather than about the reviews', () => {
+    // A month of reviews with nothing added draws an empty plot, which is the
+    // broken-looking image the gate exists to prevent — even though the very
+    // same window is worth a window card.
+    const reviewedOnly = statsFor([day(LATER, { reviews: 200 })], 30);
+    expect(hasShareableChart(reviewedOnly)).toBe(false);
+    expect(hasShareableHistory(reviewedOnly)).toBe(true);
+  });
+
+  it('holds for a window spent adding and not rating', () => {
+    // The converse: nothing was reviewed, so there is no window card here, but
+    // the chart is a real chart and the two gates disagree on purpose.
+    const addedOnly = statsFor([day(LATER, { packCards: 40 })], 30);
+    expect(hasShareableChart(addedOnly)).toBe(true);
+    expect(hasShareableHistory(addedOnly)).toBe(false);
   });
 });
 

@@ -52,8 +52,19 @@ const API_BASE_URL = (process.env.EXPO_PUBLIC_API_BASE_URL ?? '').replace(/\/$/,
  */
 const WINDOWS = [30, 90] as const;
 
+/**
+ * The windows the cards-added chart is offered over.
+ *
+ * The same two, plus the seven days the Progress tab's own chart draws —
+ * because that chart's title row is where the Share button for these lives, and
+ * a reader who tapped it should find the picture they were looking at. The
+ * shorter window costs no extra rows: it is inside the longest one already
+ * fetched.
+ */
+const CHART_WINDOWS = [7, ...WINDOWS] as const;
+
 /** Enough rows for the longest card. One query, same as picking "1yr". */
-const HISTORY_DAYS = Math.max(...WINDOWS);
+const HISTORY_DAYS = Math.max(...WINDOWS, ...CHART_WINDOWS);
 
 /** Story format, the shape every card is drawn at. */
 const ASPECT = 9 / 16;
@@ -63,7 +74,7 @@ export default function ShareScreen() {
   const s = useMemo(() => makeStyles(C), [C]);
   const { user, interfaceLanguage, streak } = useUser();
   // Which card to open on, so the preview starts where the reader just was.
-  const { range } = useLocalSearchParams<{ range?: string }>();
+  const { range, open } = useLocalSearchParams<{ range?: string; open?: string }>();
 
   const [days, setDays] = useState<DailyProgress[] | null>(null);
   /**
@@ -105,21 +116,25 @@ export default function ShareScreen() {
       streak,
       endDate: localDateString(),
       windows: WINDOWS,
+      chartWindows: CHART_WINDOWS,
     }),
     [days, streak],
   );
 
   /**
-   * Open on the range the Progress tab had selected.
+   * Open on the card the reader came from.
    *
-   * Falls through to the first card when that window has nothing in it — it was
-   * filtered out, and starting on a card that is not there would leave the
-   * carousel scrolled past its own content.
+   * Two ways of saying which: `open` names a card outright, which is what the
+   * chart's own Share button sends, and `range` names a window, which is what
+   * the range row has always sent. Both fall through to the first card when the
+   * card they name was filtered out for having nothing in it — starting on a
+   * card that is not there would leave the carousel scrolled past its own
+   * content.
    */
   const openAt = useMemo(() => {
-    const wanted = cards.findIndex(card => card.id === `w${range}`);
+    const wanted = cards.findIndex(card => card.id === (open ?? `w${range}`));
     return wanted === -1 ? 0 : wanted;
-  }, [cards, range]);
+  }, [cards, open, range]);
 
   /** Where the carousel actually is: the reader's choice, else where it opened. */
   const index = swiped ?? openAt;

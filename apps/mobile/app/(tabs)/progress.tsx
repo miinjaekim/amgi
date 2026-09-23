@@ -427,6 +427,12 @@ export default function ProgressScreen() {
               weekdays={weekdays}
               measure={weekMeasure}
               onMeasureChange={setWeekMeasure}
+              // The chart's own Share button. It opens the preview on the
+              // seven-day chart card — the picture of the chart being looked
+              // at — rather than on whichever window the chip above selected.
+              onShare={hasHistory
+                ? () => router.push({ pathname: '/share', params: { open: 'c7' } })
+                : undefined}
             />
 
             {languageRows.length > 0 && (
@@ -648,7 +654,7 @@ function measureKey(measure: WeekMeasure): TranslationKey {
  * rounded ceiling is what turns seven heights into seven readable numbers.
  */
 function WeekChart({
-  C, s, interfaceLanguage, cells, values, daysByDate, weekdays, measure, onMeasureChange,
+  C, s, interfaceLanguage, cells, values, daysByDate, weekdays, measure, onMeasureChange, onShare,
 }: {
   C: Palette;
   s: ReturnType<typeof makeStyles>;
@@ -660,6 +666,8 @@ function WeekChart({
   weekdays: string[];
   measure: WeekMeasure;
   onMeasureChange: (measure: WeekMeasure) => void;
+  /** Opens the share preview, or absent when there is no history to share. */
+  onShare?: () => void;
 }) {
   /**
    * The remembered mark.
@@ -783,6 +791,21 @@ function WeekChart({
               </Text>
             </TouchableOpacity>
           ))}
+          {/* Icon only, for the reason the range row's chip is: the mark
+              toggles already take the width a labelled third control would
+              need, and an icon survives both locales. The name is on the
+              accessibility label, as it is there. */}
+          {onShare && (
+            <TouchableOpacity
+              onPress={onShare}
+              hitSlop={10}
+              accessibilityRole="button"
+              accessibilityLabel={t(interfaceLanguage, 'shareTitle')}
+              style={[s.weekMarkBtn, { borderColor: C.highlight }]}
+            >
+              <Ionicons name="share-outline" size={13} color={C.highlight} />
+            </TouchableOpacity>
+          )}
         </View>
       </View>
 

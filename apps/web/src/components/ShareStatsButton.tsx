@@ -92,7 +92,9 @@ export default function ShareStatsButton({
     const filename = shareImageFilename(option.stats, option.variant);
     return (
       <a
-        key={option.variant}
+        // Two cards can share a variant — a chart of the week and a chart of
+        // the selected range — so the window has to be part of the key.
+        key={`${option.variant}-${option.stats.windowDays}`}
         href={href}
         download={filename}
         onClick={handleClick(href, filename)}
@@ -127,10 +129,16 @@ export default function ShareStatsButton({
     />
   );
 
-  const label = (option: ShareOption) => t(
-    interfaceLanguage,
-    option.variant === 'today' ? 'shareVariantToday' : 'shareVariantWindow',
-  );
+  /**
+   * What the row under each thumbnail says.
+   *
+   * The chart cards name their window because there can be two of them; the
+   * other two name themselves, since "This window" is the window the chips
+   * directly above are already set to.
+   */
+  const label = (option: ShareOption) => (option.variant === 'chart'
+    ? t(interfaceLanguage, 'shareVariantChart', { count: option.stats.windowDays })
+    : t(interfaceLanguage, option.variant === 'today' ? 'shareVariantToday' : 'shareVariantWindow'));
 
   const chip = 'px-3 py-1.5 rounded-lg text-sm font-mono border transition-colors hover:opacity-80';
   const chipStyle = 'border-[var(--color-highlight)] text-[var(--color-highlight)]';
@@ -150,7 +158,9 @@ export default function ShareStatsButton({
             >
               {t(interfaceLanguage, 'shareTitle')}
             </summary>
-            <div className="absolute right-0 mt-1 z-10 flex gap-2 p-2 rounded-xl border border-[var(--color-muted)] bg-[var(--color-surface)] whitespace-nowrap">
+            {/* Wraps rather than growing: four cards in one row is wider than a
+                phone screen, and this is pinned to the right edge of one. */}
+            <div className="absolute right-0 mt-1 z-10 flex flex-wrap justify-end gap-2 p-2 max-w-[15rem] rounded-xl border border-[var(--color-muted)] bg-[var(--color-surface)] whitespace-nowrap">
               {options.map(option => linkFor(
                 option,
                 <span className="flex flex-col items-center gap-1.5">

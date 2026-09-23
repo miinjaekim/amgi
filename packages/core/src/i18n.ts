@@ -414,6 +414,12 @@ const translations = {
     shareChoose: 'What to share',
     shareVariantWindow: 'This window',
     shareVariantToday: 'Today',
+    // The chart card's own label, in the chooser rather than on the image —
+    // the picture says "Last 30 days" at the top and names its hero, so this
+    // only has to tell the two cards for one window apart. Deliberately
+    // compact: on web it sits under an 80px thumbnail in a popover that grows
+    // to fit its widest label.
+    shareVariantChart: 'Cards added · {count}d',
     shareFooter: 'Amgi',
     shareNothingYet: 'Study a little first — there is nothing to share yet.',
     shareFailed: 'Could not build the image.',
@@ -1199,6 +1205,7 @@ const translations = {
     shareChoose: '무엇을 공유할까요?',
     shareVariantWindow: '이 기간',
     shareVariantToday: '오늘',
+    shareVariantChart: '담은 카드 · {count}일',
     shareFooter: 'Amgi',
     shareNothingYet: '아직 공유할 기록이 없습니다. 조금만 더 공부해 보세요.',
     shareFailed: '이미지를 만들지 못했습니다.',
