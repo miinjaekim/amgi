@@ -756,6 +756,14 @@ const translations = {
     posAffix: 'Affix',
     posPhrase: 'Phrase',
     posIdiom: 'Idiom',
+    // A French verb's badge names its group in place of "Verb" — read through
+    // `partOfSpeechLabel`, like the codes above. The groups are Munli's.
+    verbGroupEr: '-er verb',
+    verbGroupCer: '-cer verb',
+    verbGroupGer: '-ger verb',
+    verbGroupIr: '-ir verb',
+    verbGroupRe: '-re verb',
+    verbGroupIrregular: 'Irregular verb',
   },
   Korean: {
     // Learn page
@@ -1350,6 +1358,12 @@ const translations = {
     posAffix: '접사',
     posPhrase: '표현',
     posIdiom: '관용구',
+    verbGroupEr: '-er 동사',
+    verbGroupCer: '-cer 동사',
+    verbGroupGer: '-ger 동사',
+    verbGroupIr: '-ir 동사',
+    verbGroupRe: '-re 동사',
+    verbGroupIrregular: '불규칙 동사',
   },
 } as const;
 
@@ -1429,10 +1443,17 @@ export function pronunciationNoteNeedsCredit(studyLanguage: StudyLanguage | unde
  */
 export function partOfSpeechLabel(
   nativeLanguage: string | null | undefined,
-  card: Pick<TermCore, 'partOfSpeech'>
+  card: Pick<TermCore, 'partOfSpeech' | 'verbGroup'>
 ): string | undefined {
   const pos = card.partOfSpeech;
   if (!pos) return undefined;
+  // "-ir verb" rather than "Verb" beside it: the group says that it is a verb,
+  // so one badge carries both and every site that shows one shows the other.
+  if (pos === 'verb' && card.verbGroup) {
+    const group = card.verbGroup;
+    const groupKey = `verbGroup${group.charAt(0).toUpperCase()}${group.slice(1)}` as TranslationKey;
+    if (groupKey in translations.English) return t(nativeLanguage, groupKey);
+  }
   const key = `pos${pos.charAt(0).toUpperCase()}${pos.slice(1)}` as TranslationKey;
   return key in translations.English ? t(nativeLanguage, key) : undefined;
 }

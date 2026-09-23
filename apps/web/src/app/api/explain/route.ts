@@ -5,6 +5,7 @@ import {
   getBackSideConfig,
   getStudyLanguageConfig,
   normalizePartOfSpeech,
+  normalizeVerbGroup,
   parseModelJson,
 } from '@amgi/core';
 import { lookupPitchAccent } from '@/lib/pitchAccentLookup';
@@ -96,6 +97,10 @@ When you do set it, every other field — the meanings too, if it is ambiguous �
   const studyLabel = getStudyLanguageConfig(studyLanguage).label;
   const posRule = `\n- "partOfSpeech": the part of speech of the ${studyLabel} word — exactly one of: ${PART_OF_SPEECH_CODES.join(' | ')}. Judge it by ${studyLabel}'s own grammar, not English's. "particle" covers Korean 조사 and Japanese 助詞; "counter" covers counting words like 個, 枚, 마리; "affix" is a prefix or suffix that is not a word on its own. A multi-word entry is "phrase", or "idiom" when its meaning does not follow from its parts. Set null rather than guessing when none of them fits.`;
   const posJson = `\n  "partOfSpeech": "${PART_OF_SPEECH_CODES.join(' | ')}" | null,`;
+  // French only. The model is asked for the four classes a textbook teaches;
+  // `normalizeVerbGroup` settles -cer/-ger and anything Munli already carries.
+  const verbGroupRule = `\n- "verbGroup": if the French word is a verb, its conjugation group — "er" for a regular -er verb (parler, manger, appeler), "ir" for a regular -ir verb that conjugates like finir (nous finissons), "re" for a regular -re verb that conjugates like vendre, and "irregular" for every other verb (aller, partir, venir, prendre, faire). Judge a pronominal verb by its infinitive without se. Otherwise set to null.`;
+  const verbGroupJson = `\n  "verbGroup": "er" | "ir" | "re" | "irregular" | null,`;
 
   let prompt: string;
 
@@ -176,7 +181,7 @@ IMPORTANT:
 - "french" must always be the French word or phrase written in French
 - "english" must always be the English word or phrase written in English${nativeBackRule}
 ${glossRuleBullet(true)}
-- "gender": if the French term is a noun, set to "le" or "la". Otherwise set to null.${posRule}
+- "gender": if the French term is a noun, set to "le" or "la". Otherwise set to null.${posRule}${verbGroupRule}
 - "briefDefinition": a single clear sentence defining the term in ${nativeLanguage}.
 
 Respond with only this JSON:
@@ -185,7 +190,7 @@ Respond with only this JSON:
   "termLanguage": "French or English",
   "french": "French word/phrase",
   "english": "English word/phrase",${nativeBackJson}
-  "gender": "le" | "la" | null,${posJson}
+  "gender": "le" | "la" | null,${posJson}${verbGroupJson}
   "briefDefinition": "one-sentence definition"
 }`;
     } else {
@@ -220,7 +225,7 @@ If NOT ambiguous, respond with only this JSON:
   "termLanguage": "French or English",
   "french": "French word/phrase",
   "english": "English word/phrase",${nativeBackJson}
-  "gender": "le" | "la" | null,${posJson}
+  "gender": "le" | "la" | null,${posJson}${verbGroupJson}
   "briefDefinition": "one-sentence definition in ${nativeLanguage}"
 }
 
@@ -228,7 +233,7 @@ IMPORTANT for the non-ambiguous case:
 - "french" must always be written in French
 - "english" must always be written in English${nativeBackRule}
 ${glossRuleBullet(false)}
-- "gender": if the French term is a noun, set to "le" or "la". Otherwise set to null.${posRule}
+- "gender": if the French term is a noun, set to "le" or "la". Otherwise set to null.${posRule}${verbGroupRule}
 - "briefDefinition" must be a single sentence defining the core meaning. No examples, no cultural context.`;
     }
   } else if (studyLanguage === 'Spanish') {
@@ -831,6 +836,20 @@ ${glossRuleBullet(false)}
     const pos = normalizePartOfSpeech(record.partOfSpeech);
     if (pos) record.partOfSpeech = pos;
     else delete record.partOfSpeech;
+  }
+
+  // A code too, and checked against the French side rather than trusted: see
+  // `normalizeVerbGroup`. Kept only on a verb, so a stray answer on a noun
+  // never reaches a card — and asked even when the model left it out, because
+  // a verb Munli carries has an answer regardless.
+  if (parsed && typeof parsed === 'object' && !('ambiguous' in parsed)) {
+    const record = parsed as Record<string, unknown>;
+    const french = typeof record.french === 'string' ? record.french : '';
+    const group = studyLanguage === 'French' && record.partOfSpeech === 'verb'
+      ? normalizeVerbGroup(record.verbGroup, french)
+      : undefined;
+    if (group) record.verbGroup = group;
+    else delete record.verbGroup;
   }
 
   // Japanese pitch accent is the one reading field on any language that this

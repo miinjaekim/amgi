@@ -1,6 +1,6 @@
 // Type-only, so it is erased at compile time and the cycle with `conjugation.ts`
 // (which imports `StudyLanguage` from here) never exists at runtime.
-import type { ConjugationEnrolment, ConjugationProgressMap } from './conjugation';
+import type { ConjugationEnrolment, ConjugationProgressMap, VerbGroup } from './conjugation';
 import { isAllKana, markPitchAccent } from './pitchAccent';
 import { kanaToHangul, kanaToRomaji, kikuyuToEnglish, kikuyuToHangul } from './transliterate';
 
@@ -553,6 +553,15 @@ export interface TermCore {
    * cards, which author no part of speech.
    */
   partOfSpeech?: PartOfSpeech;
+  /**
+   * The conjugation group of a French verb, as Munli names it — see
+   * `normalizeVerbGroup`, which is the only way a value gets here.
+   *
+   * French only, and only beside `partOfSpeech: 'verb'`; absent on every card
+   * saved before it existed, with no backfill. Rendered inside the
+   * part-of-speech badge ("-ir verb") rather than as a badge of its own.
+   */
+  verbGroup?: VerbGroup;
   formality?: string;
   gender?: string; // grammatical gender: Swedish 'en'/'ett', French 'le'/'la'
   furigana?: string; // Japanese kana reading, present when the term contains kanji

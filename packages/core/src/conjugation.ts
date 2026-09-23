@@ -390,6 +390,63 @@ export function hasConjugation(language: StudyLanguage): boolean {
   return conjugationSpec(language) !== undefined;
 }
 
+/* ── A card's verb group ─────────────────────────────────────────────────── */
+
+/**
+ * Which conjugation group a French verb card belongs to: one of Munli's five
+ * regular groups, or `irregular`.
+ *
+ * **Munli's groups, so a card and the Verbs surface cannot disagree** about
+ * the same verb. That is why `-cer` and `-ger` are their own values here too,
+ * though a grammar book files them under `-er` — see the note at the top.
+ */
+export type VerbGroup = ConjugationGroupId | 'irregular';
+
+export const VERB_GROUP_CODES: readonly VerbGroup[] = ['er', 'cer', 'ger', 'ir', 're', 'irregular'];
+
+/**
+ * A model's verb-group answer for a French infinitive, settled against what
+ * Munli already knows — or `undefined` when it cannot be trusted.
+ *
+ * ⚠️ **The group is not derivable from the ending**, which is why the model is
+ * asked at all: `partir` ends in `-ir` and is irregular, `aller` ends in `-er`
+ * and is too. But the model is only asked for the four classes a textbook
+ * teaches — `er`, `ir`, `re`, `irregular` — and the rest is decided here:
+ *
+ * - **A verb Munli carries is Munli's answer**, whatever the model said. The
+ *   three sourced irregulars and every group's vehicles are facts this repo
+ *   already stands behind.
+ * - **`-cer` and `-ger` come from the spelling**, not the model. Every regular
+ *   `-er` verb ending in them takes the softening, so asking would only add a
+ *   way to be wrong.
+ * - **A regular group that contradicts the ending is dropped** — `ir` on
+ *   `vendre` is a wrong answer, and no tag is better than a wrong one.
+ *
+ * A pronominal verb is judged on its bare infinitive: `se lever` is an `-er`
+ * verb.
+ */
+export function normalizeVerbGroup(value: unknown, infinitive: string): VerbGroup | undefined {
+  const bare = infinitive.trim().toLowerCase().replace(/^(se\s+|s['’]\s*)/, '');
+
+  // What Munli carries wins outright, including over a missing answer.
+  if (FRENCH_IRREGULARS.some(verb => verb.infinitive === bare)) return 'irregular';
+  const vehicleOf = FRENCH_GROUPS.find(group => group.vehicles.includes(bare));
+  if (vehicleOf) return vehicleOf.id;
+  if (typeof value !== 'string') return undefined;
+
+  // Tolerant of "-er", "IR" and "irregular verb", the shapes a model reaches for.
+  const code = value.toLowerCase().trim().replace(/^-/, '').split(/[\s/,(]/)[0];
+  if (code === 'irregular') return 'irregular';
+  if (code === 'er' || code === 'cer' || code === 'ger') {
+    if (!bare.endsWith('er')) return undefined;
+    if (bare.endsWith('cer')) return 'cer';
+    if (bare.endsWith('ger')) return 'ger';
+    return 'er';
+  }
+  if (code === 'ir' || code === 're') return bare.endsWith(code) ? code : undefined;
+  return undefined;
+}
+
 /**
  * The subjects of one kind — the two topics Munli browses verbs through.
  *
