@@ -98,6 +98,52 @@ picker narrowed (#146). Both are written up in their Decisions entries of
 
 ## Medium
 
+- [ ] **Users add their own French verbs to Munli** — scoped with the user
+      2026-09-24. **Any verb, forms from the model**, the way a term lookup
+      works. What an added verb *becomes* follows the split `conjugation.ts`
+      already turns on:
+      - **A regular verb becomes a vehicle, not an item.** `danser` joins the
+        `-er` group's vehicles *for that user only* — nothing new is scheduled,
+        it just starts turning up in `-er` questions. Scheduling it would drill
+        the `-er` endings again under a new name, which is what the 2026-09-22
+        rework removed.
+      - **An irregular verb gets its own table**, per verb, exactly as `être`,
+        `avoir` and `aller` do — with stored forms for every tense the spec
+        knows (présent, imparfait, futur simple).
+      - **The group comes from the model and is checked locally.** It is not
+        derivable from the ending (`partir`). When the model calls a verb
+        regular, conjugate it by the rule and compare against the model's
+        forms; a mismatch means it is not the group claimed. Irregular forms
+        have no such check.
+      ⚠️ **This is a written exception to `docs/packs/README.md`**, which says
+      the model is not a source. The exception holds only if a user-added verb
+      is **labelled as unverified** wherever its forms are shown, and **never
+      reaches another user**. Write the exception into the README when this is
+      built, not only here.
+      **Two entry points**, per the user: an *Add a verb* field on Topics →
+      Irregular verbs, and a *Practise its conjugation* action on a French verb
+      card in Amgi (a French verb card already carries its conjugation group,
+      #165, so it knows what it would be practised as).
+      Still to decide:
+      - **Pronominal verbs.** `se lever` needs `me`/`te`/`se` and `subjectFor`
+        only knows `je`/`j'`. Refuse them in the first cut, or handle them.
+      - **An added verb that is already there** — `être`, or a vehicle already
+        in a group. Presumably a no-op that points at the existing table.
+      - **Whether this settles `faire`** (#150): a user can now add it
+        themselves, but a model-generated `faire` is not the sourced one. The
+        curated list and user-added verbs are two different things.
+
+- [ ] **Writing's worked example for Chinese** — scoped with the user
+      2026-09-24, and it is all "Munli for Mandarin" means for now; other
+      grammar practice for Chinese needs its own planning. **Traditional**,
+      because that is the Chinese study language the app has (confirmed by the
+      user). Same shape as French in
+      `docs/packs/writing-worked-example-draft.md`: a **dictionary's own
+      example sentence**, quoted and cited rather than composed, with the
+      native-language word dropped in for both an English and a Korean
+      learner, then one entry in `WRITING_EXAMPLES`. Nothing in the component
+      changes. Draft and sourcing first, per the README.
+
 - [ ] **Watch the kanji deck on the "All" chip.** The kanji pack is the first
       single-glyph pack laid out as a `list`, because its back carries readings
       that do not fit a tile — and `isGridDeck` exempts only *grid* decks from
@@ -159,6 +205,14 @@ picker narrowed (#146). Both are written up in their Decisions entries of
 _Empty as of 2026-09-08._
 
 ## Parked
+
+- [ ] **Reload for term lookups, Dig Deeper and examples.** ⏸ Passed on "at
+      least for now" by the user, 2026-09-24. Worth keeping for when it
+      returns: none of these routes caches, so a reload is just another call,
+      and at the lookup's 0.1 it would come back near-identical. A reload has
+      to run hotter than the first call, or be told what not to repeat.
+      Reloading on a *saved* card overwrites stored fields, which the
+      lookup-before-save case does not.
 
 - [ ] **Amgi on Google Play — internal testing track.** ⏸ **On hold from
       2026-09-22, the same day it was scoped and taken up**, on the user's call.
@@ -375,6 +429,27 @@ measured 2026-09-23. What's left is what those two now *show*.
       the other badge is a claim the rest of the card doesn't back up. Keep (a)
       for the rare case where the meaning really is the same across parts of
       speech. Awaiting the user's call._
+
+- [ ] **English articles and prepositions, in Munli.** Not designed yet — the
+      user hasn't settled what a question looks like (2026-09-24), and it needs
+      its own session. What's known going in: Munli's only practice type today
+      is a conjugation table, and an article is a *choice* rather than a form,
+      so this is a new practice type, not a new dataset. The shape that fits
+      the rules in `vision.md` (typed production, no multiple choice) and the
+      sourcing standard is **fill the gap on sourced sentences** — e.g.
+      Tatoeba (CC BY) with the article blanked. ⚠️ The hard part is that one gap
+      often has several right answers (*I saw a/the dog*), so each needs an
+      accepted set. And the audience is mostly Korean speakers, whose language
+      has no articles.
+
+- [ ] **Temperature: 0 or keep 0.1?** Lookup, Dig Deeper and writing run at
+      0.1; examples at 0.4. _2026-09-24 recommendation: keep 0.1._ The two
+      barely differ, and 0 is not strictly deterministic on Gemini either. The
+      pitch-accent check in `apps/web/src/data/README.md` was measured at 0.1
+      and would need re-running after a change. The temperature question only
+      really matters if reload comes back (Parked), where a reload has to run
+      hotter than the first call or it returns the same answer. Awaiting the
+      user's call.
 
 - [ ] **Personalised explanation preferences** — emphasis knobs (etymology,
       cultural context, example-heavy). Store in `users/{uid}`, include in prompt.
