@@ -29,7 +29,7 @@
 import { ImageResponse } from 'next/og';
 import { NextRequest } from 'next/server';
 import {
-  chartBucketDays, formatStudyTime, isStudyLanguage, niceCeiling, t,
+  chartBucketDays, formatStudyTime, isStudyLanguage, niceCeiling, studyTimeTile, t,
   type ShareChartMark, type ShareChartMeasure, type ShareVariant,
   type StudyLanguage, type TranslationKey,
 } from '@amgi/core';
@@ -561,8 +561,11 @@ export async function GET(req: NextRequest) {
   if (cardsMatured !== null && cardsMatured > 0) {
     tiles.push({ label: label('shareStatMatured'), value: formatCount(cardsMatured) });
   }
-  if (studySeconds !== null && studySeconds > 0) {
-    tiles.push({ label: label('shareStatTime'), value: formatStudyTime(studySeconds, lang) });
+  // A daily average over a window and the total on a today card — derived from
+  // `t` and `w` rather than sent, so an installed build's URL gets it too.
+  const time = studyTimeTile(studySeconds, windowDays);
+  if (time) {
+    tiles.push({ label: label(time.labelKey), value: formatStudyTime(time.seconds, lang) });
   }
   // Not under a cards-added hero, where this number *is* the hero: a tile
   // repeating it would be the same figure twice on one canvas.

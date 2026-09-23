@@ -77,19 +77,6 @@ picker narrowed (#146). Both are written up in their Decisions entries of
 
 ## Medium
 
-- [ ] **Average time studied per day, not the window's total.** Time studied is
-      only shown on the **share image** today (`shareStatTime`, from
-      `summary.totalStudySeconds`), where a 90-day total says little. The
-      per-day `studySeconds` rollups already exist, so this is display only —
-      and the route can derive it from `t` and the window it already knows, so
-      **old shared URLs keep working** with no new parameter.
-      ⚠️ **One call to make: the denominator.** Days in the window (honest about
-      days off; low) or days actually studied (flattering; says how long a
-      session runs). Either way, a window reaching back past
-      `DETAILED_HISTORY_START` must divide by the days that were measured, not
-      the window. Also worth deciding: whether the Progress tab should show it
-      too, since it currently shows no time at all.
-
 - [ ] **Tag French verbs with what kind of verb they are** — all four kinds,
       per the user 2026-09-23: **conjugation group**, **pronominal**,
       **auxiliary (être/avoir)** and **transitivity**. They are not the same kind

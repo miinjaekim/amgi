@@ -15,6 +15,7 @@ import {
   shareImageFilename,
   shareImageQuery,
   shiftDate,
+  studyTimeTile,
   type DailyProgress,
 } from '@amgi/core';
 import { readShareImageParams } from '@/app/api/stats-image/route';
@@ -756,5 +757,39 @@ describe('formatStudyTime', () => {
     expect(formatStudyTime(2 * 3600 + 40 * 60, 'Korean')).toBe('2시간 40분');
     expect(formatStudyTime(40 * 60, 'Korean')).toBe('40분');
     expect(formatStudyTime(2 * 3600, 'Korean')).toBe('2시간');
+  });
+});
+
+describe('studyTimeTile', () => {
+  it('averages over every day in the window, days off included', () => {
+    // 30 minutes across a week with one day studied is 4m a day, not 30.
+    expect(studyTimeTile(30 * 60, 7)).toEqual({ labelKey: 'shareStatTimePerDay', seconds: (30 * 60) / 7 });
+    expect(formatStudyTime(studyTimeTile(30 * 60, 7)!.seconds)).toBe('4m');
+  });
+
+  it('keeps the total under its old label on a one-day card, where the two are one figure', () => {
+    expect(studyTimeTile(40 * 60, 1)).toEqual({ labelKey: 'shareStatTime', seconds: 40 * 60 });
+  });
+
+  it('draws nothing for a withheld figure', () => {
+    expect(studyTimeTile(null, 30)).toBeNull();
+  });
+
+  it('draws nothing when the average rounds to no minutes, rather than a 0m tile', () => {
+    // 20 minutes over 90 days is 13 seconds a day.
+    expect(studyTimeTile(20 * 60, 90)).toBeNull();
+    expect(studyTimeTile(0, 7)).toBeNull();
+    expect(studyTimeTile(29, 1)).toBeNull();
+    expect(studyTimeTile(30, 1)).not.toBeNull();
+  });
+
+  it('needs nothing the URL does not already carry, so old links get the average', () => {
+    // `t` is still the window's total; the route divides by `w`.
+    const stats = statsFor([day(LATER, { reviews: 10, studySeconds: 70 * 60 })], 7);
+    const params = readShareImageParams(new URLSearchParams(shareImageQuery(stats)));
+    expect(params.studySeconds).toBe(70 * 60);
+    expect(studyTimeTile(params.studySeconds, params.windowDays)).toEqual({
+      labelKey: 'shareStatTimePerDay', seconds: 10 * 60,
+    });
   });
 });

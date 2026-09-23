@@ -403,6 +403,9 @@ const translations = {
     // Sharing a label would make the image contradict the dashboard.
     shareStatMatured: 'Newly learned',
     shareStatTime: 'Time studied',
+    // The same seconds divided by every day in the window — days off count as
+    // zero. The today card keeps 'Time studied', where the two are one figure.
+    shareStatTimePerDay: 'Daily average',
     // Read at story size, so the unit is spelled the short way. The hour-only
     // case is separate because "2h 0m" is not something anyone writes.
     shareTimeHoursMinutes: '{h}h {m}m',
@@ -1208,6 +1211,7 @@ const translations = {
     shareStatLearned: '익힌 카드',
     shareStatMatured: '새로 익힘',
     shareStatTime: '공부 시간',
+    shareStatTimePerDay: '하루 평균',
     shareTimeHoursMinutes: '{h}시간 {m}분',
     shareTimeHours: '{h}시간',
     shareTimeMinutes: '{m}분',
