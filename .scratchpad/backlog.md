@@ -54,20 +54,28 @@ stopwatch** (2026-09-22) and the **Slow speed** artifact question.
 
 ## High
 
-- [ ] **Dig Deeper's definition should read like a dictionary entry.** From the
+- [ ] **Dig Deeper should open on a dictionary-style definition.** From the
       user (2026-08-18): the top section is wordier than it needs to be; start
       with what a dictionary would say, and let the breakdown and notes carry
-      the nuance and context. The cause is the prompt, which says the opposite
-      on purpose — *"the user already has a one-sentence definition… add what
-      the one-liner misses: connotation, nuance, near-synonyms"*.
-      Change **both** `api/explain/depth-stream` (what both apps call) and
-      `api/explain/depth` (JSON) together: Definition becomes a plain
-      dictionary-style sense, and connotation / near-synonym contrast moves into
-      Notes. ⚠️ **Decide how it sits beside `briefDefinition`**, which is
-      already a one-sentence definition on the same card — a dictionary line
-      right under it risks saying the same thing twice. Saved cards keep their
-      old text; no backfill. Card-back glosses are a separate rule
-      (`GLOSS_RULE`) and are untouched.
+      the nuance and context.
+      _Rescoped 2026-09-23._ The dictionary line already exists: `/api/explain`
+      returns `briefDefinition`, and web's lookup shows it under the
+      translation (`apps/web/src/app/page.tsx:616`, since 997ec3d). The depth
+      prompt was written on the assumption the user has already read it, so it
+      opens with *"the user already has a one-sentence definition… add what
+      the one-liner misses"*. That assumption is true in only one place:
+      - **Mobile lookup never renders `briefDefinition`.** The data arrives
+        (same core call, and it's passed on to depth as `sense`), but
+        `(tabs)/index.tsx` goes straight from translation/gloss to Dig Deeper.
+      - **Saved-card detail on both platforms** (`CardDetailModal`) doesn't
+        show it either, though the card stores it.
+      So on those surfaces Dig Deeper starts with nuance about a meaning nobody
+      stated. The work is to show `briefDefinition` on mobile lookup and in
+      both `CardDetailModal`s — no prompt change. Tightening `briefDefinition`
+      towards a dictionary sense, or trimming depth's Definition, waits until
+      the user has lived with the line visible everywhere.
+      Saved cards keep their old text; no backfill. Card-back glosses are a
+      separate rule (`GLOSS_RULE`) and are untouched.
 
 ⚠️ **Two questions for the user are open**, neither of them a work item:
 whether `faire` joins the three sourced irregular verbs (#150), and whether a

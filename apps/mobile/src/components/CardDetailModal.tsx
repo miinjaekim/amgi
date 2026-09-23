@@ -85,6 +85,7 @@ export default function CardDetailModal({
   const backSide = saved
     ? getBackSide(saved, deckNativeLanguage)
     : entry ? resolvePackBack(entry.back, lang, deckNativeLanguage) : '';
+  const senseLine = saved ? saved.briefDefinition : entry?.context;
 
   /**
    * A hanja card's back is 훈음 for every reader, and an English native gets
@@ -187,9 +188,11 @@ export default function CardDetailModal({
               </View>
               <Text style={s.back}>{lang === 'Hanja' ? hunEumLine : backSide}</Text>
               {!!glossLine && <Text style={s.backGloss}>{glossLine}</Text>}
-              {/* The hint an unsaved entry carries, which is also the sense any
-                  generated depth will be pinned to. */}
-              {!saved && !!entry?.context && <Text style={s.hint}>{entry.context}</Text>}
+              {/* The card's one-line definition, or the hint an unsaved entry
+                  carries, which becomes that definition once saved. Either way
+                  it is the sense any generated depth is pinned to, and Dig
+                  Deeper's prompt assumes the reader has already seen it. */}
+              {!!senseLine && <Text style={s.hint}>{senseLine}</Text>}
             </View>
             <TouchableOpacity onPress={onClose} hitSlop={12}>
               <Text style={s.close}>×</Text>

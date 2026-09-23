@@ -695,6 +695,9 @@ export default function LearnScreen() {
                 )}
               </View>
               {!!hanjaGloss && <Text style={s.hanjaGloss}>{hanjaGloss}</Text>}
+              {/* Web has shown this since the brief definition was added;
+                  Dig Deeper's prompt assumes it has already been read. */}
+              {!!core.briefDefinition && <Text style={s.briefDefinition}>{core.briefDefinition}</Text>}
 
               {!depth ? (
                 <TouchableOpacity style={s.loadBtn} onPress={handleLoadDepth} disabled={loadingDepth}>
@@ -883,6 +886,7 @@ function makeStyles(C: Palette, tabBarHeight: number) {
   translationText: { fontSize: 18, color: C.text, lineHeight: 26 },
   // Quieter than the 훈음 above it: a second fact about the character.
   hanjaGloss: { fontSize: 16, color: C.muted, marginTop: 2 },
+  briefDefinition: { fontSize: 14, color: C.muted, marginTop: 8, lineHeight: 20 },
   bodyText: { fontSize: 15, color: C.text, lineHeight: 22, opacity: 0.85 },
   exampleStudyRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   exampleStudyText: { flexShrink: 1 },
