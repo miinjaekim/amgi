@@ -26,8 +26,11 @@ _Kept at the top of the file, ahead of priority order, from 2026-09-22 on the
 user's call — this list changes every time something merges, and it is the one
 section worth seeing without scrolling._
 
-_Empty as of 2026-09-23_ — everything that sat here went out in 2.0.0 (build
-17). What it carried is under Builds in [status.md](status.md).
+- **Switching study language on an open deck lands on the Decks list.** The
+  deck and its drill used to render `deckNotFound`; now a pack that resolved and
+  then stopped resolving (`usePackLost`) sends the deck to the root of the Decks
+  tab stack and the drill back through it. A link that never resolved still
+  gets `deckNotFound`. JS only; web is live on merge.
 
 - **My Cards opens on "All"** (2026-09-23) — `DEFAULT_DECK_FILTER` flipped
   from `'mine'`; web has it on merge. Reasoning under Decisions in
@@ -40,17 +43,6 @@ two with something hanging on them live with their decisions — the **launch
 stopwatch** (2026-09-22) and the **Slow speed** artifact question.
 
 ## High
-
-- [ ] **Switching study language on an open deck should land on the Decks
-      list.** Today `decks/[packId]` (and its `drill`) looks the pack up under
-      the *current* language, so a switch leaves the route pointing at a pack
-      that isn't there and it renders `deckNotFound` — mobile even has a comment
-      saying so (`app/(tabs)/decks/[packId]/index.tsx`, above `if (!pack)`).
-      Fix on both platforms: when the pack stops resolving *because the
-      language changed*, replace to `/decks` rather than rendering the dead
-      end. On mobile Decks is a tab stack, so pop to its root rather than
-      pushing a second list on top. Keep `deckNotFound` for a genuinely bad
-      URL. Small; no build-only native code.
 
 - [ ] **My Cards and Progress are slow on an iOS cold open** — the app fully
       closed and reopened (the user, 2026-09-23). Tab switching and web weren't

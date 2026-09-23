@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -10,6 +10,7 @@ import type { DrillDirection, PackEntry } from '@amgi/core';
 import { useUser } from '../../../src/context/UserContext';
 import { useTheme } from '../../../src/context/ThemeContext';
 import PronounceButton from '../../../src/components/PronounceButton';
+import { usePackLost } from '../../../src/hooks/usePackLost';
 import type { Palette } from '../../../src/theme';
 
 export default function DrillScreen() {
@@ -20,6 +21,7 @@ export default function DrillScreen() {
   const { interfaceLanguage, deckNativeLanguage, studyLanguage } = useUser();
   const langConfig = getStudyLanguageConfig(studyLanguage);
   const pack = getVocabPack(studyLanguage, packId);
+  const packLost = usePackLost(pack);
 
   const [direction, setDirection] = useState<DrillDirection>('studyToBack');
   const [size, setSize] = useState<number | null>(null);
@@ -37,10 +39,20 @@ export default function DrillScreen() {
     </View>
   );
 
+  // The study language changed under the drill. This screen sits on the root
+  // stack above the tabs, so going back uncovers the deck — which has popped
+  // itself to the Decks list for the same reason.
+  useEffect(() => {
+    if (!packLost) return;
+    if (router.canGoBack()) router.back();
+    else router.replace('/decks');
+  }, [packLost]);
+
   // Every pack is drillable now that every pack is pre-authored — the check
   // that used to sit here excluded exactly the word lists this is most useful
   // for. Only a missing pack is an error.
   if (!pack) {
+    if (packLost) return <SafeAreaView style={s.safe} edges={['top', 'bottom']} />;
     return (
       <SafeAreaView style={s.safe} edges={['top', 'bottom']}>
         {header}
