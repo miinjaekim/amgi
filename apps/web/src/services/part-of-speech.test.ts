@@ -2,11 +2,13 @@ import { describe, it, expect } from 'vitest';
 import {
   PART_OF_SPEECH_CODES,
   SUPPORTED_NATIVE_LANGUAGES,
+  VERB_GROUP_CODES,
   normalizePartOfSpeech,
+  normalizeVerbGroup,
   partOfSpeechLabel,
   wordOfTheDayCore,
 } from '@amgi/core';
-import type { PartOfSpeech, WordOfTheDay } from '@amgi/core';
+import type { PartOfSpeech, VerbGroup, WordOfTheDay } from '@amgi/core';
 
 describe('normalizePartOfSpeech', () => {
   it('accepts every code it publishes', () => {
@@ -81,5 +83,71 @@ describe('wordOfTheDayCore', () => {
   it('drops the field entirely when the word of the day has none', () => {
     const wotd: WordOfTheDay = { term: '눈치', english: 'social awareness' };
     expect('partOfSpeech' in wordOfTheDayCore(wotd, 'Korean', 'English')).toBe(false);
+  });
+});
+
+describe('normalizeVerbGroup', () => {
+  it('takes the four classes the model is asked for, checked against the ending', () => {
+    expect(normalizeVerbGroup('er', 'appeler')).toBe('er');
+    expect(normalizeVerbGroup('ir', 'bâtir')).toBe('ir');
+    expect(normalizeVerbGroup('re', 'perdre')).toBe('re');
+    expect(normalizeVerbGroup('irregular', 'partir')).toBe('irregular');
+  });
+
+  it('tolerates the shapes a model reaches for', () => {
+    expect(normalizeVerbGroup('-er', 'appeler')).toBe('er');
+    expect(normalizeVerbGroup(' IR ', 'bâtir')).toBe('ir');
+    expect(normalizeVerbGroup('Irregular verb', 'prendre')).toBe('irregular');
+  });
+
+  // Munli practises these as their own groups, so a card calling manger an
+  // -er verb would disagree with the Verbs surface about the same word.
+  it('splits -cer and -ger out by spelling, whatever the model said', () => {
+    expect(normalizeVerbGroup('er', 'effacer')).toBe('cer');
+    expect(normalizeVerbGroup('er', 'nager')).toBe('ger');
+    expect(normalizeVerbGroup('ger', 'nager')).toBe('ger');
+  });
+
+  it('gives Munli\'s answer for a verb Munli carries, even over the model', () => {
+    expect(normalizeVerbGroup('er', 'aller')).toBe('irregular');
+    expect(normalizeVerbGroup('irregular', 'finir')).toBe('ir');
+    expect(normalizeVerbGroup(null, 'être')).toBe('irregular');
+    expect(normalizeVerbGroup(undefined, 'manger')).toBe('ger');
+  });
+
+  it('judges a pronominal verb by its bare infinitive', () => {
+    expect(normalizeVerbGroup('er', 'se lever')).toBe('er');
+    expect(normalizeVerbGroup('er', "s'appeler")).toBe('er');
+    expect(normalizeVerbGroup('er', 's’engager')).toBe('ger');
+  });
+
+  // No tag is better than a wrong one.
+  it('drops a regular group that contradicts the ending, and anything unknown', () => {
+    expect(normalizeVerbGroup('ir', 'perdre')).toBeUndefined();
+    expect(normalizeVerbGroup('er', 'partir')).toBeUndefined();
+    expect(normalizeVerbGroup('third group', 'prendre')).toBeUndefined();
+    expect(normalizeVerbGroup(null, 'appeler')).toBeUndefined();
+  });
+});
+
+describe('partOfSpeechLabel on a French verb', () => {
+  it('names the group in place of "Verb", in the reader\'s language', () => {
+    const card = { partOfSpeech: 'verb' as PartOfSpeech, verbGroup: 'ir' as VerbGroup };
+    expect(partOfSpeechLabel('English', card)).toBe('-ir verb');
+    expect(partOfSpeechLabel('Korean', card)).toBe('-ir 동사');
+    expect(partOfSpeechLabel('Korean', { ...card, verbGroup: 'irregular' as VerbGroup })).toBe('불규칙 동사');
+  });
+
+  it('has a label for every group it can store', () => {
+    for (const verbGroup of VERB_GROUP_CODES) {
+      const label = partOfSpeechLabel('English', { partOfSpeech: 'verb', verbGroup });
+      expect(label).toMatch(/verb$/);
+      expect(label).not.toBe('Verb');
+    }
+  });
+
+  it('is plain "Verb" without a group, and ignores a group on anything else', () => {
+    expect(partOfSpeechLabel('English', { partOfSpeech: 'verb' })).toBe('Verb');
+    expect(partOfSpeechLabel('English', { partOfSpeech: 'noun', verbGroup: 'er' })).toBe('Noun');
   });
 });

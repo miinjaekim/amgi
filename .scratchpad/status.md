@@ -394,6 +394,32 @@ once, so a path that worked on build 14 is not evidence about build 15.
 Closed calls, kept with their reasoning — a decision whose reasoning is lost gets
 reopened by the next person to notice the symptom. Newest first.
 
+### French verbs are tagged with their group, and only their group (2026-09-23)
+
+**The backlog item asked for four facts, and one shipped.** They were the
+conjugation group, pronominal, the auxiliary (être/avoir) and transitivity. The
+user cut it to the group: *"i don't think i actually know what the other pieces
+of information are, so i think we should hold off on adding them."* A tag the
+reader can't interpret is noise on the card, however correct it is. **Held
+off, not rejected**, so if they come back, here is what was already worked out:
+pronominal can be derived from a `se`/`s'` prefix with no model call. Auxiliary
+and transitivity depend on the *sense* (`sortir` takes être going out and
+avoir taking something out), so they would have to be written per card, not
+looked up per verb. And four badges next to the part of speech was already
+judged too many for a card front.
+
+**How the group is decided.** The model gives the four classes a textbook
+uses (`er` / `ir` / `re` / irregular), and `normalizeVerbGroup` settles the
+rest: Munli's own verbs (its three irregulars and every group's vehicles) take
+Munli's answer, `-cer`/`-ger` are split out by spelling, and a regular group
+that contradicts the ending is dropped. So a card and the Verbs surface
+cannot disagree about a verb they both know.
+
+**It lives inside the part-of-speech badge** ("-ir verb" in place of "Verb"),
+not as a badge of its own. The group already says the word is a verb, so one
+badge carries both facts, and every place that shows part of speech shows the
+group with no per-site change.
+
 ### My Cards opens on "All", reversing #80 (2026-09-23)
 
 **The card list opens on every card, not only the ones you made** — the user's

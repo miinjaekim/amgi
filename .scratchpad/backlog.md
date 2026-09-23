@@ -68,6 +68,14 @@ section worth seeing without scrolling._
   merge. Mobile builds its own share URL, so charts shared from phones get
   weekdays from the build on; older links render without them.
 
+- **French verb cards name their conjugation group** (2026-09-23) — the
+  part-of-speech badge reads "-ir verb" / 「-ir 동사」 in place of "Verb", with
+  Munli's six groups (`-er`, `-cer`, `-ger`, `-ir`, `-re`, irregular).
+  `/api/explain` sets `verbGroup`, so cards saved from either app carry it once
+  web deploys. Mobile only *shows* it from the build on; until then it shows
+  "Verb". Only on cards looked up after the merge, with no backfill. Only the
+  group, and the reasoning is under Decisions in [status.md](status.md).
+
 ⚠️ **In testers' hands is not the same as seen.** Nothing in that build has been
 opened on a device, which is most of what Munli is. Untracked here by the
 2026-09-04 decision that these checks come from using the app, not a list; the
@@ -83,27 +91,6 @@ picker narrowed (#146). Both are written up in their Decisions entries of
 2026-09-22.
 
 ## Medium
-
-- [ ] **Tag French verbs with what kind of verb they are** — all four kinds,
-      per the user 2026-09-23: **conjugation group**, **pronominal**,
-      **auxiliary (être/avoir)** and **transitivity**. They are not the same kind
-      of fact, and that sets the work:
-      - **Group** (`-er` / `-ir` finir-type / `-re` / irregular) belongs to the
-        infinitive, but is **not derivable from the ending** — `partir` ends in
-        `-ir` and is irregular, `aller` ends in `-er`. Use Munli's groups
-        (`conjugation.ts`) so the two surfaces agree.
-      - **Pronominal** is derivable: the saved term starts with `se`/`s'`. No
-        model call.
-      - **Auxiliary and transitivity depend on the sense**, not the verb:
-        `sortir` takes être going out and avoir taking something out, and is
-        intransitive in one and transitive in the other. So these must be
-        written for the card's sense, which fits how a card already works (one
-        sense per card), but it means they can't be looked up per verb.
-      So: new optional fields set by `/api/explain`, normalized to closed code
-      sets the way `partOfSpeech` is, plus pronominal computed locally. Absent
-      on existing cards; no backfill. ⚠️ **Four badges plus the part of speech
-      is too many for a card front**. Decide where they go: probably one short
-      line on the detail view, not badges in review.
 
 - [ ] **Per-context pronunciation speed** — the last of the mobile UI redesign
       queued 2026-09-01, moved here 2026-09-12 on the user's call. Nothing about
