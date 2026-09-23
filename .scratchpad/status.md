@@ -8,7 +8,7 @@ show: the reasoning behind closed calls (Decisions), the console and binary stat
 that lives outside the repo (Builds, TestFlight), and what is currently
 unverified.
 
-_Reconciled against `release/1.7.0` @ `cb7c19c`, 2026-09-19. `npm test` 639/639
+_Reconciled against `release/1.8.0` @ `62415d5`, 2026-09-23. `npm test` 854/854
 and `npm run lint` 0 errors / 21 warnings, both measured._
 
 ## Now
@@ -53,6 +53,28 @@ and `npm run lint` 0 errors / 21 warnings, both measured._
   compiler, `next build` and `expo export`; **nobody has looked at either surface
   on a device or in a browser.**
 
+- **2.0.0 is build 17, live in TestFlight and approved for external testing**
+  (2026-09-23), cut from `69476aa` on `release/1.8.0`, submitted and approved the
+  same day. External testers can be invited without another review as long as the
+  version doesn't change.
+  It carries everything queued since build 16: the two modes and the switcher,
+  writing review and verb conjugation as Munli's tools, the Munli stack, the
+  launch that paints from the device behind a splash, and sharing a chart.
+  **Pre-flight was clean, and found two things rather than confirming none**:
+  the Apple review notes still described one mode and one route into Settings,
+  which is the same staleness 1.6.0's caught; and the privacy policy did not
+  cover writing review, while the notes told Apple it did. Both fixed before
+  submission — the policy in both locales, on web, so it deploys with the merge
+  rather than with the binary.
+  **A new pre-flight step came out of it**: Beta App Review Information has a
+  4000-character ceiling, hit for the first time at 4145. It is step 5 in
+  Cutting a build now.
+  ⚠️ **The version breaks the cadence deliberately** — 1.3.0 through 1.7.0 were
+  one minor per build, and this is 2.0.0 on the user's call. The reasoning, and
+  the argument against it, are in the Decisions entry of 2026-09-23.
+  ⚠️ **Nothing in it has been opened on a device**, which is true of every
+  Munli surface and of both Share buttons. Step 1's Expo Go half covered the
+  Munli stack on 2026-09-22; everything merged after that is unseen.
 - **1.7.0 is build 16**, cut 2026-09-19 from `cb7c19c` on `release/1.7.0`, with
   the Android APK as `versionCode` 6 from the same commit. ⚠️ **Approval is not
   recorded here because it has not been reported** — 1.6.0's external approval
@@ -99,7 +121,7 @@ and `npm run lint` 0 errors / 21 warnings, both measured._
   reads as an artifact the fallback is server-side rates behind the same three
   chips, and that is written down in its Decisions entry, not waiting on a list.
 - **Mobile merges are unblocked.** The freeze holds only until submission; the
-  next mobile change waits for build 17.
+  next mobile change waits for build 18.
 - **Languages are per-deck** (2026-09-12, merged as PR #127, on mobile in build
   16). Each study language carries the language it is explained in, and the app's
   own language is a separate setting — see the Decisions entry below.
@@ -108,8 +130,10 @@ and `npm run lint` 0 errors / 21 warnings, both measured._
   against a real multi-deck account** — not on web, where it has been live since
   the merge, and not on a binary. `nativeLanguage` is still written alongside
   `interfaceLanguage` because build 15 is in testers' hands and reads the old
-  field; that stays until build 15 is out of circulation, which external approval
-  of 1.7.0 does not by itself accomplish.
+  field; that stays until build 15 is out of circulation. ⚠️ **Two approved
+  releases now sit above it (builds 16 and 17) and that still does not retire
+  it** — approval lets testers update, it does not make them. What would settle
+  this is the console showing no sessions on build 15, not another release.
 - **The progress dashboard is on both platforms** (2026-08-20) but only in users'
   hands on web, since mobile ships by build. Daily rollups are written on every
   rating and every card save. The Firestore security rule for
@@ -261,6 +285,7 @@ No OTA, so every mobile change reaches users through one of these.
 
 | Version | Build | Date | Cut from |
 |---|---|---|---|
+| 2.0.0 | 17 | 2026-09-23 | `69476aa` on `release/1.8.0` (version bump + mode-name localization + TestFlight copy) — external testing approved 09-23, same day. **Branch name says 1.8.0**: it was cut before the 2.0.0 call, and renaming it would have lost PR #156 |
 | 1.7.0 | 16 | 2026-09-19 | `cb7c19c` on `release/1.7.0` (version bump + TestFlight copy) — external approval not reported as of this line |
 | 1.6.0 | 15 | 2026-09-10 | `c8c113a` on `release/1.6.0` (version bump + TestFlight copy) — external testing approved 09-10, same day |
 | 1.5.0 | 14 | 2026-09-02 | `84be8af` on `release/1.5.0` (PR #109, version bump + TestFlight copy) — external testing approved 09-02, same day |
@@ -368,6 +393,41 @@ once, so a path that worked on build 14 is not evidence about build 15.
 
 Closed calls, kept with their reasoning — a decision whose reasoning is lost gets
 reopened by the next person to notice the symptom. Newest first.
+
+### The modes are named in the reader's language, and 2.0.0 (2026-09-23)
+
+**Two calls made while cutting the build**, both the user's.
+
+**The mode names are translated.** A Korean interface says 암기 and 문리; every
+other one says Amgi and Munli. `modes.ts` had carried this as an open question
+since the mode shipped — it said the names were not translated, that "Amgi"
+rendering as "Amgi" in a Korean interface was the precedent Munli followed, and
+that a Korean 문리 was the user's call. It is now answered.
+
+⚠️ **The question was only about Munli, and both names had to move.** The
+switcher lists the modes as rows, one above the other: "Amgi / 문리" reads as two
+products from two companies. A name is localized here or neither is — which is
+why answering a question about one name changed two.
+
+**What this does not touch** is `Amgi · 암기`, the document title and the welcome
+line. Those are bilingual on purpose: they greet a reader *before* the interface
+language is known. The mode names are read by someone already inside the app,
+who has answered that question. The same split governs the TestFlight copy —
+the Korean description still opens "Amgi는 언어 학습용 플래시카드 앱입니다",
+because that names the product, and only the mode bullets say 암기 and 문리.
+
+The shape is `nameKey: TranslationKey` replacing `name: string`, so the compiler
+found all four consumers rather than a grep: web's `SideNav`, `ModeSwitcher` and
+Munli's home, and native's `ModeSwitcherSheet`.
+
+**The version is 2.0.0, not 1.8.0.** The recommendation here was 1.8.0 and the
+user chose 2.0.0; the reasoning for the number is that Munli makes this two apps
+in one, and the version is what a tester sees. ⚠️ **What was argued against it,
+recorded so the cadence change is not mistaken for a slip**: the version had been
+a build-batch counter, one minor per build from 1.3.0 through 1.7.0, and it never
+expressed how large a batch was; and 2.0.0 is spent on a build where nothing has
+been opened on a device. The counter-argument is that a beta with no public 1.0
+has no launch number to protect.
 
 ### A chart card, and the hero that has to agree with it (2026-09-23)
 

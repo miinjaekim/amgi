@@ -53,7 +53,7 @@ export default function ModeSwitcher({ onSwitch }: { onSwitch?: () => void }) {
               }}
             >
               <span className="min-w-0 text-left">
-                <span className="block truncate font-semibold">{mode.name}</span>
+                <span className="block truncate font-semibold">{t(interfaceLanguage, mode.nameKey)}</span>
                 <span className="block text-xs opacity-60 truncate">
                   {t(interfaceLanguage, mode.taglineKey)}
                 </span>

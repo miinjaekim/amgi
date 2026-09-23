@@ -26,135 +26,34 @@ _Kept at the top of the file, ahead of priority order, from 2026-09-22 on the
 user's call — this list changes every time something merges, and it is the one
 section worth seeing without scrolling._
 
-- [ ] **A chart is a card you can post** (2026-09-23). Web is live; **native is
-      not**. A third `ShareVariant`, `chart`, drawing **the weekly chart as it
-      is currently drawn** — the measure the dropdown is set to and the mark the
-      toggle is on — reached from a Share button in that chart's own title row,
-      beside Bars / Line, on both platforms. It joins the carousel rather than
-      replacing it: windows, today, then a chart card per chart window
-      (7 · 30 · 90 on mobile, 7 and the selected range on web).
-      ⚠️ **The first pass got this wrong and the user caught it**: it shared
-      cards-added bars whatever the chart showed, so Share on a Reviews line
-      gave back a different picture — and because every chart card was gated on
-      cards added, a reader with a full reviews chart and a quiet month of
-      adding was dropped onto the 30-day calendar instead. Both are fixed;
-      `hasShareableChart` now takes the measure it is being asked about.
-      **Satori draws the line**, checked rather than assumed: it serializes an
-      inline `<svg>` to a data URI and maps `strokeWidth` to `stroke-width`, so
-      the geometry just has to be absolute pixels against a fixed `viewBox`, and
-      `<text>` throws. The calls are in the Decisions entry of 2026-09-23 in
-      [status.md](status.md).
-      ⚠️ **Repaired a live bug on the way**: the image's font subset was missing
-      nine glyphs it draws, so 「담은 카드」, 「새로 익힘」 and the `N` of "Newly
-      learned" were being fetched from Google Fonts at render time by satori's
-      `loadDynamicAsset` — invisible in the output, and a network call on the
-      share path. Subset regenerated to 138 glyphs from an audit of the drawn
-      strings, and `fonts.ts` now says how to repeat it.
-      ⚠️ **What has not been exercised**: nothing has been opened on a device or
-      in a browser. The route itself was rendered — every measure × mark pair,
-      at 7, 30, 90 and 364 days, in both locales, plus the window and today
-      cards to confirm they are unchanged — but the two Share buttons and the
-      widened chooser have only been typechecked and linted. **That is what let
-      the first pass ship the wrong picture**: the route was exercised and the
-      button that feeds it was not.
+**Empty as of 2026-09-23.** Everything that sat here went out in 2.0.0 (build
+17), approved for external testing the day it was submitted: the two modes and
+the switcher, writing review and verb conjugation as Munli's tools, the Munli
+stack, the launch that paints from the device behind a splash, Munli waiting for
+the snapshot, and sharing a chart.
 
-- [ ] **A launch that paints from the device, behind a splash** (PR #152).
-      **Native only**, and ⚠️ **the one item in this list a build is *required*
-      to judge**: the user found the slowness on TestFlight, and the splash
-      cannot be seen in Expo Go at all.
-      Cache first with a timeout on the server read, `expo-splash-screen` held
-      from the first line of JS with an animated hand-off, Review gated on
-      `authLoading`, and `expo-updates` no longer checking at launch. All three
-      steps of the original plan are in — verified against the code on
-      2026-09-22, not taken on trust.
-      ⚠️ **The acceptance test is a stopwatch, not a screenshot**: time a cold
-      launch on the build, before and after. The reasoning, the calls and the
-      accepted costs are in the Decisions entry of that date in
-      [status.md](status.md), which was written from the shipped code when this
-      item moved here.
-      ⚠️ **It is what made #153 necessary** — painting before the server
-      answers is right, and it exposed a plausible fallback in Munli that
-      `authLoading` had been hiding.
-
-- [ ] **Munli waits for the snapshot** (PR #153). Web is live; **native is
-      not**. Found merging the stack against the launch work: an
-      absent enrolment fell back to the *default* practice set, so a cold
-      launch could paint five patterns nobody saved with everything due — and
-      a save pill tapped in that window would have written the default over
-      the real set. The Decisions entry of 2026-09-22 holds the general lesson.
-      ⚠️ **Only a device on a slow connection shows it**, which is why it went
-      unnoticed.
-
-- [ ] **The Munli stack** (PRs #145–#151, merged 2026-09-22). Web is live;
-      **native is not**. Six PRs, each with a Decisions entry of that date:
-      the box carries the schedule (#145), the practice setup is a section
-      list (#146), Tables becomes Saved and then an inventory of tiles (#147,
-      #151), Writing gets a help sheet and a worked example (#148, #151),
-      Munli's titles come from one place (#149), and `être`, `avoir` and
-      `aller` are sourced (#150).
-      **Exercised in Expo Go by the user on 2026-09-22**: one-form practice,
-      the keyboard fix, the tab press, Saved's inventory, Writing, and the
-      round feedback (✓ / ✗ per box and a score line).
-      ⚠️ **Two things in it nobody has seen.** The **instant advance** on a
-      right answer — it was tried at 800ms, and the version that merged is the
-      one with no pause at all. And **web**, which has had no pass on any of
-      the six.
-
-- [ ] **Verb conjugation, and Munli's tabs** (PR #143). Web is live on merge;
-      **native is not**. The practice loop, the verbs page, Tables and Munli's
-      Progress have been exercised in Expo Go, and **the Firestore write path has
-      run**. ⚠️ **Two things it does not cover.** The **cross-device claim** has
-      never been tried — practise on web, and the phone should update without a
-      relaunch. And **the last round post-dates that testing**: the regular /
-      irregular split, the two filter dropdowns, the per-section verb dropdown
-      and the per-tense save pills are all unseen on a device. Also worth a look:
-      five icons on a narrow tab bar, and whether a six-row paradigm reads at
-      phone width, since it scrolls horizontally.
-
-- [ ] **Writing review, in Munli** (PR #136). Web is live on merge; **native is
-      not**. ⚠️ **No model call has been made through the restored UI on either
-      platform** — the route never changed and its parser is under test, but
-      nobody has submitted a passage and read what came back.
-
-- [ ] **The mode switcher** (PR #135). Web is live on merge; **native is not**.
-      Holding the last tab, the switcher sheet, Munli's home and the cold-open
-      landing all exist only in a build nobody has cut. ⚠️ **And nothing here has
-      been exercised on a device at all** — `expo export` bundles and `tsc` is
-      clean, which says the routes resolve, not that the gesture feels right or
-      that the sheet is reachable one-handed.
+⚠️ **In testers' hands is not the same as seen.** Nothing in that build has been
+opened on a device, which is most of what Munli is. That is not tracked here as
+work, by the 2026-09-04 decision that these checks come from using the app rather
+than from a list — the two with something actually hanging on them are recorded
+where the decision is, not here: the **launch stopwatch** (time a cold launch on
+the build, before and after) in the Decisions entry of 2026-09-22, and the
+**Slow speed** artifact question in its own.
 
 ## High
 
-_Reordered 2026-09-22 on the user's call: the three Munli items that sat here
-were removed, because they were written up without being asked for. The Decisions
-entry of that date in [status.md](status.md) records what they were and why they
-left, so none of them gets reopened from here. Munli's own plan is in the two
-entries of 2026-09-21._
+_Empty as of 2026-09-23._ The narration that filled this section — which Munli
+items arrived, which were built, which were reviewed, and what the stack came
+back with — described work that has shipped in 2.0.0, and git and the Decisions
+entries of 2026-09-21 and 2026-09-22 in [status.md](status.md) hold all of it.
+Per this file's own rule, shipped work leaves.
 
-_**Play led this section for part of that day and is now in Parked**, blocked on
-a Korean phone number it cannot reach from abroad — same-day Decisions entry.
-Munli has the focus back._
-
-_**The five Munli items that sat here were asked for by the user on
-2026-09-22**, after using the tabs — unlike the three that left this section the
-same day._
-
-_**All five are built, as a stack of six PRs (#145 → #150), and High is empty.** Each is under Queued for the next build with what it does and what has
-not been exercised; each has a Decisions entry of 2026-09-22 in
-[status.md](status.md) with the calls made while building it. **Nothing here has
-been opened on a device or in a browser**, which is the whole of what is left to
-do on them._
-
-_⚠️ **Two of those PRs left a call for the user** and neither blocks a merge:
-whether `faire` joins the three irregular verbs (#150), and whether a practice
-session should be able to cover several tenses at once again, which the section
-picker narrowed (#146). Both are in the entries._
-
-_**The stack was reviewed on 2026-09-22 and #151 is what came back** — four
-corrections, two of which turned out to be sourced content. The Decisions
-entries of that date hold both, and the second is the one worth re-reading:
-"explain the tense" and "show an example" read as UI work and are claims about
-French._
+⚠️ **Two open calls came out of that stack and neither has been answered**, which
+is the one thing here that is not finished: whether `faire` joins the three
+sourced irregular verbs (#150), and whether a practice session should be able to
+cover several tenses at once again, which the section picker narrowed (#146).
+Both are questions for the user, not work items, and both are written up in
+their Decisions entries of 2026-09-22.
 
 ## Medium
 
@@ -397,8 +296,9 @@ green. What's left is what those two now *show*.
       **The gate is open**: it was "once no build predating the 2026-08-18 grammar
       removal is still in use". What is left is not a condition but a fact to
       check — that testers have actually updated, since an un-updated 1.3.0 device
-      still has the UI compiled in and calls the route. Two releases now sit
-      between them and it, which makes this cheaper to believe than it was, but it
+      still has the UI compiled in and calls the route. Three releases now sit
+      between them and it as of 2026-09-23, which makes this cheaper to believe
+      than it was, but it
       is still console state rather than a repo fact. The file carries a
       `DO NOT DELETE AS DEAD CODE` header; the reasoning is in
       [status.md](status.md). **`typedAnswer.ts` is not part of this** —
@@ -461,8 +361,8 @@ to Test rule, and the `--non-interactive` warning. What a build *carries* is
 derivable from its commit; what is queued, released or never verified on a
 binary is under Builds in [status.md](status.md).
 
-**Pre-flight**, in order. Steps 2–6 were all exercised cutting 1.6.0 and again
-cutting 1.7.0; step 1 was half done for the first time on 1.7.0:
+**Pre-flight**, in order. Steps 2–7 were all exercised cutting 2.0.0; step 5 is
+new there, and step 1 remains half done — the Expo Go half only:
 
 1. Smoke-test in Expo Go, then verify the native-adjacent paths on the build
    itself — Expo Go runs the SDK's own bundled native modules, so a clean pass
@@ -488,11 +388,31 @@ cutting 1.7.0; step 1 was half done for the first time on 1.7.0:
    review notes that still routed the reviewer to a Settings tab the redesign
    had removed, which is a 5.1.1(v) problem because account deletion lives
    behind it.
-5. **Diff the listing copy's character set against the version Apple last
+5. **Check Beta App Review Information fits 4000 characters** — App Store
+   Connect's ceiling, and newlines count. 2.0.0 hit it at 4145, the first build
+   that did. ⚠️ **What you cut is prose, never a paragraph**: each one answers a
+   question review has asked, so dropping one invites that question back as a
+   rejection. Look instead for the same claim made twice. The file's own ⚠️ says
+   don't shorten this section; both warnings are true and this is how they meet.
+
+   ```
+   python3 -c "
+   import re,pathlib
+   s=pathlib.Path('docs/testflight-beta-info.md').read_text()
+   print(len(re.split(r'\*\*Review Notes:\*\*',s)[1].split('\`\`\`')[1].lstrip('\n')))"
+   ```
+
+   Anchored on "Review Notes:" rather than on the section. A fenced block in
+   that file means "copy pasted into App Store Connect" — both this check and
+   the character-set diff below rely on that, so picking blocks by position
+   breaks the moment anything else in the file is fenced. Verified 2026-09-23:
+   prints 3805.
+
+6. **Diff the listing copy's character set against the version Apple last
    accepted** before pasting — not read it, diff it. That is what catches a
    non-BMP character, and blank error bullets are all App Store Connect will
    tell you. See [lessons.md](lessons.md).
-6. Submit (`ascAppId` is in `eas.json`), then paste the copy into Test
+7. Submit (`ascAppId` is in `eas.json`), then paste the copy into Test
    Information in **both ko and en**.
 
 ⚠️ **What to Test is a skimmable list of what's new and nothing else** (set

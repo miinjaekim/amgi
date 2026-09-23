@@ -66,6 +66,13 @@ export default function PrivacyPageKo() {
             이름, 이메일, 계정 ID는 전송하지 않습니다.
           </li>
           <li>
+            Google의 Gemini AI로 이용자가 쓴 글을 첨삭하기 위해 사용합니다. 이때
+            작성한 글과 언어 설정만 전송하며 이름, 이메일, 계정 ID는 전송하지
+            않습니다. 작성한 글과 첨삭 결과는 저장하지 않습니다. 요청을 처리하는
+            동안에만 존재하며, 표현을 플래시카드로 저장하는 경우를 제외하면 남는
+            것이 없습니다.
+          </li>
+          <li>
             Google Cloud Text-to-Speech로 발음 음성을 생성하기 위해 사용합니다.
             이때는 단어 텍스트만 전송되며, 생성된 음성 파일은 캐시되어 공개 저장소
             URL에서 제공됩니다.
@@ -79,7 +86,7 @@ export default function PrivacyPageKo() {
           Amgi는 Google 인프라 위에서 운영됩니다. 다음 Google 서비스가 Amgi를
           대신해 데이터를 처리합니다: Firebase Authentication 및 Cloud
           Firestore(로그인 및 앱 데이터 저장), Firebase Storage(발음 음성 캐시),
-          Gemini API(단어 설명 및 예문), Google Cloud Text-to-Speech(발음 음성).
+          Gemini API(단어 설명, 예문 및 글 첨삭), Google Cloud Text-to-Speech(발음 음성).
           Google이 이 데이터를 어떻게 처리하는지는{" "}
           <a
             href="https://policies.google.com/privacy?hl=ko"

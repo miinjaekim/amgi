@@ -135,10 +135,11 @@ const translations = {
     navCards: 'Cards',
     navDecks: 'Packs',
     navProgress: 'Progress',
-    // Modes. The names themselves are not translated — see `MODES` in
-    // `modes.ts` for why, and for the open question about a Korean rendering.
-    // One word each: the switcher is read at a glance, and the mode's own
-    // surfaces say the rest.
+    // Modes. Both the names and the taglines are translated — see `MODES` in
+    // `modes.ts` for why they move together. One word each: the switcher is
+    // read at a glance, and the mode's own surfaces say the rest.
+    modeAmgiName: 'Amgi',
+    modeMunliName: 'Munli',
     modeAmgiTagline: 'Words',
     modeMunliTagline: 'Grammar',
     modeSwitchTitle: 'Switch mode',
@@ -1030,6 +1031,8 @@ const translations = {
     navCards: '카드',
     navDecks: '단어팩',
     navProgress: '기록',
+    modeAmgiName: '암기',
+    modeMunliName: '문리',
     modeAmgiTagline: '단어',
     modeMunliTagline: '문법',
     modeSwitchTitle: '모드 전환',
