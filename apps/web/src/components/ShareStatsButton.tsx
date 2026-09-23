@@ -3,13 +3,21 @@
 import React, { useState } from 'react';
 import {
   shareImageFilename, shareImagePath,
-  type ShareStats, type ShareVariant,
+  type ShareChartOptions, type ShareStats, type ShareVariant,
 } from '@amgi/core';
 import { t } from '@/lib/i18n';
 
 export interface ShareOption {
   variant: ShareVariant;
   stats: ShareStats;
+  /**
+   * How the chart was drawn, on the chart options and absent on the rest.
+   *
+   * It has to travel with the option rather than be read where the image is
+   * requested: the preview, the downloaded file and the label under it are
+   * three separate call sites, and all three must describe one chart.
+   */
+  chart?: ShareChartOptions;
 }
 
 /**
@@ -88,11 +96,13 @@ export default function ShareStatsButton({
     };
 
   const linkFor = (option: ShareOption, children: React.ReactNode, className: string) => {
-    const href = shareImagePath(option.stats, interfaceLanguage, option.variant);
-    const filename = shareImageFilename(option.stats, option.variant);
+    const href = shareImagePath(option.stats, interfaceLanguage, option.variant, option.chart);
+    const filename = shareImageFilename(option.stats, option.variant, option.chart);
     return (
       <a
-        key={option.variant}
+        // Two cards can share a variant — a chart of the week and a chart of
+        // the selected range — so the window has to be part of the key.
+        key={`${option.variant}-${option.stats.windowDays}`}
         href={href}
         download={filename}
         onClick={handleClick(href, filename)}
@@ -120,17 +130,30 @@ export default function ShareStatsButton({
     // above the element it excuses.
     // eslint-disable-next-line @next/next/no-img-element
     <img
-      src={shareImagePath(option.stats, interfaceLanguage, option.variant)}
+      src={shareImagePath(option.stats, interfaceLanguage, option.variant, option.chart)}
       alt=""
       loading="lazy"
       className="w-20 rounded-md border border-[var(--color-muted)]"
     />
   );
 
-  const label = (option: ShareOption) => t(
-    interfaceLanguage,
-    option.variant === 'today' ? 'shareVariantToday' : 'shareVariantWindow',
-  );
+  /**
+   * What the row under each thumbnail says.
+   *
+   * A chart option names its measure *and* its window: there can be two of
+   * them, and the measure is what the reader just chose in the dropdown above.
+   * The other two name themselves, since "This window" is the window the chips
+   * directly above are already set to.
+   */
+  const label = (option: ShareOption) => {
+    if (option.variant === 'chart') {
+      const key = option.chart?.measure === 'reviews'
+        ? 'shareVariantChartReviews'
+        : 'shareVariantChartCards';
+      return t(interfaceLanguage, key, { count: option.stats.windowDays });
+    }
+    return t(interfaceLanguage, option.variant === 'today' ? 'shareVariantToday' : 'shareVariantWindow');
+  };
 
   const chip = 'px-3 py-1.5 rounded-lg text-sm font-mono border transition-colors hover:opacity-80';
   const chipStyle = 'border-[var(--color-highlight)] text-[var(--color-highlight)]';
@@ -150,7 +173,9 @@ export default function ShareStatsButton({
             >
               {t(interfaceLanguage, 'shareTitle')}
             </summary>
-            <div className="absolute right-0 mt-1 z-10 flex gap-2 p-2 rounded-xl border border-[var(--color-muted)] bg-[var(--color-surface)] whitespace-nowrap">
+            {/* Wraps rather than growing: four cards in one row is wider than a
+                phone screen, and this is pinned to the right edge of one. */}
+            <div className="absolute right-0 mt-1 z-10 flex flex-wrap justify-end gap-2 p-2 max-w-[15rem] rounded-xl border border-[var(--color-muted)] bg-[var(--color-surface)] whitespace-nowrap">
               {options.map(option => linkFor(
                 option,
                 <span className="flex flex-col items-center gap-1.5">

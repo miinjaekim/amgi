@@ -29,8 +29,8 @@ import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { File, Paths } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import {
-  buildShareCards, localDateString, shareImageFilename, shareImagePath, t,
-  type DailyProgress, type ShareCard,
+  DEFAULT_SHARE_CHART, buildShareCards, localDateString, shareImageFilename, shareImagePath, t,
+  type DailyProgress, type ShareCard, type ShareChartOptions,
 } from '@amgi/core';
 import { useUser } from '../src/context/UserContext';
 import { useTheme } from '../src/context/ThemeContext';
@@ -52,8 +52,19 @@ const API_BASE_URL = (process.env.EXPO_PUBLIC_API_BASE_URL ?? '').replace(/\/$/,
  */
 const WINDOWS = [30, 90] as const;
 
+/**
+ * The windows the cards-added chart is offered over.
+ *
+ * The same two, plus the seven days the Progress tab's own chart draws —
+ * because that chart's title row is where the Share button for these lives, and
+ * a reader who tapped it should find the picture they were looking at. The
+ * shorter window costs no extra rows: it is inside the longest one already
+ * fetched.
+ */
+const CHART_WINDOWS = [7, ...WINDOWS] as const;
+
 /** Enough rows for the longest card. One query, same as picking "1yr". */
-const HISTORY_DAYS = Math.max(...WINDOWS);
+const HISTORY_DAYS = Math.max(...WINDOWS, ...CHART_WINDOWS);
 
 /** Story format, the shape every card is drawn at. */
 const ASPECT = 9 / 16;
@@ -63,7 +74,25 @@ export default function ShareScreen() {
   const s = useMemo(() => makeStyles(C), [C]);
   const { user, interfaceLanguage, streak } = useUser();
   // Which card to open on, so the preview starts where the reader just was.
-  const { range } = useLocalSearchParams<{ range?: string }>();
+  const {
+    range, open, measure, mark,
+  } = useLocalSearchParams<{
+    range?: string; open?: string; measure?: string; mark?: string;
+  }>();
+
+  /**
+   * How the chart was drawn on the tab that sent the reader here.
+   *
+   * ⚠️ **Read from the params, not decided here.** The weekly chart's measure
+   * and mark are what the reader has been looking at, and a chart card that
+   * picked its own would be a different picture under the button they pressed.
+   * Anything unrecognised — including arriving from the range row, which sends
+   * neither — falls back to the dashboard's own defaults.
+   */
+  const chart: ShareChartOptions = useMemo(() => ({
+    measure: measure === 'reviews' ? 'reviews' : DEFAULT_SHARE_CHART.measure,
+    mark: mark === 'line' ? 'line' : DEFAULT_SHARE_CHART.mark,
+  }), [measure, mark]);
 
   const [days, setDays] = useState<DailyProgress[] | null>(null);
   /**
@@ -105,21 +134,26 @@ export default function ShareScreen() {
       streak,
       endDate: localDateString(),
       windows: WINDOWS,
+      chartWindows: CHART_WINDOWS,
+      chart,
     }),
-    [days, streak],
+    [days, streak, chart],
   );
 
   /**
-   * Open on the range the Progress tab had selected.
+   * Open on the card the reader came from.
    *
-   * Falls through to the first card when that window has nothing in it — it was
-   * filtered out, and starting on a card that is not there would leave the
-   * carousel scrolled past its own content.
+   * Two ways of saying which: `open` names a card outright, which is what the
+   * chart's own Share button sends, and `range` names a window, which is what
+   * the range row has always sent. Both fall through to the first card when the
+   * card they name was filtered out for having nothing in it — starting on a
+   * card that is not there would leave the carousel scrolled past its own
+   * content.
    */
   const openAt = useMemo(() => {
-    const wanted = cards.findIndex(card => card.id === `w${range}`);
+    const wanted = cards.findIndex(card => card.id === (open ?? `w${range}`));
     return wanted === -1 ? 0 : wanted;
-  }, [cards, range]);
+  }, [cards, open, range]);
 
   /** Where the carousel actually is: the reader's choice, else where it opened. */
   const index = swiped ?? openAt;
@@ -173,14 +207,14 @@ export default function ShareScreen() {
       if (!API_BASE_URL) throw new Error('no API base url configured');
       if (!(await Sharing.isAvailableAsync())) throw new Error('sharing unavailable');
 
-      const target = new File(Paths.cache, shareImageFilename(card.stats, card.variant));
+      const target = new File(Paths.cache, shareImageFilename(card.stats, card.variant, card.chart));
       // A cached file from an earlier share would be silently reused, so the
       // window's own numbers could go out under a newer window's filename —
       // which is also why the variant is part of that name.
       if (target.exists) target.delete();
 
       const file = await withTimeout(File.downloadFileAsync(
-        `${API_BASE_URL}${shareImagePath(card.stats, interfaceLanguage, card.variant)}`,
+        `${API_BASE_URL}${shareImagePath(card.stats, interfaceLanguage, card.variant, card.chart)}`,
         target,
       ));
       await Sharing.shareAsync(file.uri, {
@@ -268,7 +302,7 @@ export default function ShareScreen() {
                 ) : (
                   <Image
                     source={{
-                      uri: `${API_BASE_URL}${shareImagePath(card.stats, interfaceLanguage, card.variant)}`,
+                      uri: `${API_BASE_URL}${shareImagePath(card.stats, interfaceLanguage, card.variant, card.chart)}`,
                     }}
                     style={[s.card, { width: cardWidth, height: cardWidth / ASPECT }]}
                     resizeMode="contain"

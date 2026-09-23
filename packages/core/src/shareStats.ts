@@ -31,8 +31,9 @@
  * good, where stopping the render costs nothing to undo.
  */
 import {
-  DETAILED_HISTORY_START, buildHeatmap, detailedHistoryStartsMidWindow,
-  historyStartsMidWindow, shiftDate, summarizeProgress,
+  DETAILED_HISTORY_START, buildCardsAddedSeries, buildHeatmap, buildReviewsSeries,
+  chartBucketDays, detailedHistoryStartsMidWindow, historyStartsMidWindow, shiftDate,
+  summarizeProgress,
   type DailyProgress, type HeatmapCell,
 } from './progress';
 import { t } from './i18n';
@@ -51,8 +52,86 @@ import type { StudyLanguage } from './types';
  * ⚠️ **A today card is not the window template at `w=1`.** That layout is
  * window-shaped — a hero, a wrapped calendar, a row of window figures — and one
  * day of it is a single square and a tile reading "1 day studied".
+ *
+ * ⚠️ **`chart` is the one variant whose hero is not `reviews`.** It draws cards
+ * added over the window, so its big number has to be the number the bars add up
+ * to — a hero counting one thing above a chart counting another is read as the
+ * chart's own total by anyone who sees it. That is also why it drops the
+ * language line: `languages` names the languages *reviewed*, which is the
+ * honest caption for a review count and a wrong one for cards added.
+ *
+ * ⚠️ **Anything unrecognised parses as `window`**, which is also what a URL with
+ * no `v` at all means, so every link an installed build ever produced keeps
+ * rendering what it always rendered. No parameter may ever become a parse
+ * failure — that rule is what makes a new variant safe to add at all.
  */
-export type ShareVariant = 'window' | 'today';
+export type ShareVariant = 'window' | 'today' | 'chart';
+
+/**
+ * Which of the two things the dashboard's chart can plot.
+ *
+ * ⚠️ **They are counted in different units and may never share an axis or a
+ * label.** `reviews` counts *directions* — a card due both ways contributes two
+ * — where `cards` counts cards. The chart card names whichever one it drew as
+ * its hero for exactly that reason.
+ */
+export type ShareChartMeasure = 'reviews' | 'cards';
+
+/** Which mark it was drawn with — the dashboard's own toggle. */
+export type ShareChartMark = 'bars' | 'line';
+
+/**
+ * How the chart was drawn when the reader pressed Share.
+ *
+ * **This is the whole point of the chart card.** It is reached from the weekly
+ * chart's own title row, so the asset has to be *that chart*: the measure the
+ * dropdown was set to and the mark the toggle was on. A card that always drew
+ * one of the four is a different picture wearing the same button.
+ */
+export interface ShareChartOptions {
+  measure: ShareChartMeasure;
+  mark: ShareChartMark;
+}
+
+/** What an unspecified chart is: the dashboard's own defaults. */
+export const DEFAULT_SHARE_CHART: ShareChartOptions = { measure: 'cards', mark: 'bars' };
+
+/**
+ * Both series the chart card can draw, and what one bar covers.
+ *
+ * **Built for every card, not only the chart one, and both measures at once.**
+ * They are the same rows the rest of `ShareStats` is summed from, so carrying
+ * them costs nothing and keeps `buildShareStats` a single pass over one window.
+ * `shareImageQuery` is where they stop travelling: it sends the one series the
+ * card actually draws, and only for `v=chart`.
+ *
+ * ⚠️ **The grain is carried rather than left to be worked out.** Past
+ * `DAILY_CHART_MAX_DAYS` a bar is a week, so a 90-day window is 13 bars and not
+ * 90 — the route has to be *told* that, because inferring it from the count
+ * would mean an installed build's URL changing meaning the day that threshold
+ * moves.
+ */
+export interface ShareChart {
+  /** How many days one bar covers: 1, or 7 past `DAILY_CHART_MAX_DAYS`. */
+  bucketDays: number;
+  /**
+   * Cards added per bar, oldest first — always `lookup + pack`.
+   *
+   * ⚠️ **Never one source on its own.** The detail screen's chart can be
+   * filtered to looked-up or pack cards, and that filter deliberately does not
+   * travel: the total is the figure the dashboard tile and every other share
+   * card already show, so a shared chart cannot quietly mean something narrower
+   * than the label it wears.
+   */
+  cards: number[];
+  /** Reviews per bar, oldest first — directions, as `reviews` always is. */
+  reviews: number[];
+}
+
+/** The series one measure draws. */
+export function chartValues(stats: ShareStats, measure: ShareChartMeasure): number[] {
+  return measure === 'reviews' ? stats.chart.reviews : stats.chart.cards;
+}
 
 /** What the caller knows that the rows do not. */
 export interface ShareStatsInput {
@@ -149,6 +228,12 @@ export interface ShareStats {
   heatmap: HeatmapCell[];
 
   /**
+   * The window's cards-added bars, for the chart card. Always built; see
+   * `ShareChart`.
+   */
+  chart: ShareChart;
+
+  /**
    * True when the window reaches back before any rollup exists at all, so
    * every total in it is a total over less time than the label claims.
    *
@@ -194,6 +279,14 @@ export function buildShareStats(days: DailyProgress[], input: ShareStatsInput): 
       .filter(entry => entry.progress.reviews > 0)
       .map(entry => entry.studyLanguage),
     heatmap: buildHeatmap(inWindow, endDate, windowDays),
+    // The same builder both detail screens draw, over the whole account rather
+    // than one language — so a shared chart and the one on screen cannot
+    // disagree about a bar they share.
+    chart: {
+      bucketDays: chartBucketDays(windowDays),
+      cards: buildCardsAddedSeries(inWindow, endDate, windowDays).map(bucket => bucket.total),
+      reviews: buildReviewsSeries(inWindow, endDate, windowDays).map(bucket => bucket.reviews),
+    },
     partialHistory: historyStartsMidWindow(windowStart),
   };
 }
@@ -245,6 +338,22 @@ export function hasShareableHistory(stats: ShareStats): boolean {
 }
 
 /**
+ * Whether the chart card has a chart to draw, for the measure it would draw.
+ *
+ * ⚠️ **A different question from `hasShareableHistory`, and it has to be asked
+ * of the right series.** That one asks whether anything was *reviewed*; a chart
+ * of cards added over a month of empty bars is the broken-looking image,
+ * however much was reviewed in it. The converse holds too — a fortnight spent
+ * importing packs and rating nothing is a real chart. Asking it of the wrong
+ * measure is how the Share button on the chart came to open on a calendar: the
+ * reader was looking at a full reviews chart while every card on offer was
+ * gated on cards added.
+ */
+export function hasShareableChart(stats: ShareStats, measure: ShareChartMeasure): boolean {
+  return chartValues(stats, measure).some(value => value > 0);
+}
+
+/**
  * One picture on offer, and the numbers behind it.
  *
  * Built here rather than on each screen because "what may be shared" is a rule,
@@ -256,17 +365,28 @@ export interface ShareCard {
   /** Stable across renders and unique within a list — a React key, and a param. */
   id: string;
   variant: ShareVariant;
+  /**
+   * How this card's chart is drawn, on the chart cards and absent on the rest.
+   *
+   * Carried on the card rather than read from the screen at the call site, so
+   * the picture in the preview, the file that gets shared and the label under
+   * it cannot describe three different charts.
+   */
+  chart?: ShareChartOptions;
   /** How many days the card covers; 1 for the today card. */
   windowDays: number;
   /**
    * The label the card wears under the preview.
    *
-   * `shareWindowDays` takes a `{count}`, which is `windowDays`; the today key
-   * ignores it. Kept here rather than at the call site so the chooser and the
+   * `shareWindowDays` and both `shareVariantChart*` keys take a `{count}`, which
+   * is `windowDays`; the today key ignores it. The chart keys are two rather
+   * than one because a chart card has to say *what* it plots — the two measures
+   * are counted in different units. Kept here rather than at the call site so the chooser and the
    * image itself cannot describe the same picture differently — the render
    * route reaches for the very same two keys.
    */
-  labelKey: 'shareWindowDays' | 'shareVariantToday';
+  labelKey: 'shareWindowDays' | 'shareVariantToday'
+    | 'shareVariantChartCards' | 'shareVariantChartReviews';
   stats: ShareStats;
 }
 
@@ -274,22 +394,39 @@ export interface ShareCard {
  * Every picture worth offering, in the order they should be swiped through.
  *
  * Windows first, shortest to longest, then today — matching the range chips on
- * the Progress screen, which is where the reader just came from. A window with
- * nothing in it is dropped rather than offered blank, per `hasShareableHistory`,
- * and an account with no history at all yields an empty list, which is the
- * caller's cue to say so instead of drawing an empty carousel.
+ * the Progress screen, which is where the reader just came from — and the chart
+ * cards last, because they arrived last and a reader who opened the sheet from
+ * the range row should still land on the card they used to get. Whoever opens
+ * it from the chart says so, and the caller scrolls to that id.
  *
- * ⚠️ **The gate is asked per card.** A today card on a day with nothing rated is
- * exactly the zeroed image that check exists to prevent, however full the year
- * beside it happens to be.
+ * A window with nothing in it is dropped rather than offered blank, and an
+ * account with no history at all yields an empty list, which is the caller's
+ * cue to say so instead of drawing an empty carousel.
+ *
+ * ⚠️ **The gate is asked per card, and it is not the same gate for every
+ * card.** A today card on a day with nothing rated is exactly the zeroed image
+ * `hasShareableHistory` exists to prevent, however full the year beside it
+ * happens to be; a chart card is asked `hasShareableChart` instead, because the
+ * two ask about different numbers.
+ *
+ * `chartWindows` defaults to `windows`, so a caller that wants the same ranges
+ * charted says nothing. The dashboards pass the chart's own seven-day window in
+ * as well, since that is the chart the Share button sits on — and `chart`, so
+ * that every chart card is the picture that button was pressed on, at three
+ * lengths.
  */
 export function buildShareCards(
   days: DailyProgress[],
-  input: Omit<ShareStatsInput, 'windowDays'> & { windows: readonly number[] },
+  input: Omit<ShareStatsInput, 'windowDays'> & {
+    windows: readonly number[];
+    chartWindows?: readonly number[];
+    chart?: ShareChartOptions;
+  },
 ): ShareCard[] {
-  const { windows, ...rest } = input;
+  const { windows, chartWindows = windows, chart = DEFAULT_SHARE_CHART, ...rest } = input;
+  const ascending = (values: readonly number[]) => [...values].sort((a, b) => a - b);
   const cards: ShareCard[] = [
-    ...[...windows].sort((a, b) => a - b).map((windowDays): ShareCard => ({
+    ...ascending(windows).map((windowDays): ShareCard => ({
       id: `w${windowDays}`,
       variant: 'window',
       windowDays,
@@ -303,8 +440,20 @@ export function buildShareCards(
       labelKey: 'shareVariantToday',
       stats: buildTodayStats(days, rest),
     },
+    ...ascending(chartWindows).map((windowDays): ShareCard => ({
+      id: `c${windowDays}`,
+      variant: 'chart',
+      windowDays,
+      chart,
+      labelKey: chart.measure === 'reviews'
+        ? 'shareVariantChartReviews'
+        : 'shareVariantChartCards',
+      stats: buildShareStats(days, { ...rest, windowDays }),
+    })),
   ];
-  return cards.filter(card => hasShareableHistory(card.stats));
+  return cards.filter(card => (card.variant === 'chart'
+    ? hasShareableChart(card.stats, chart.measure)
+    : hasShareableHistory(card.stats)));
 }
 
 /**
@@ -322,6 +471,7 @@ export function shareImageQuery(
   stats: ShareStats,
   nativeLanguage?: string | null,
   variant: ShareVariant = 'window',
+  chart: ShareChartOptions = DEFAULT_SHARE_CHART,
 ): string {
   const q = new URLSearchParams();
   // Omitted for the window card, so every URL an older build ever built still
@@ -336,6 +486,21 @@ export function shareImageQuery(
   if (stats.cardsMatured !== null) q.set('m', String(stats.cardsMatured));
   if (stats.studySeconds !== null) q.set('t', String(stats.studySeconds));
   if (stats.cardsAdded > 0) q.set('a', String(stats.cardsAdded));
+  // Only the chart card carries its marks, and it carries the grain beside them
+  // rather than leaving the route to work it out — see `ShareChart`. A window
+  // card's URL is unchanged by the chart existing, which is the whole of what
+  // "backward compatible by construction" means here.
+  //
+  // One series, not both: the card draws one measure, and sending the other
+  // would be a second set of numbers on a URL that has no way to label them.
+  // `cm` and `mk` are omitted at the default, so the shortest URL is also the
+  // one an absent parameter already means.
+  if (variant === 'chart') {
+    q.set('bd', String(stats.chart.bucketDays));
+    q.set('c', chartValues(stats, chart.measure).join(','));
+    if (chart.measure !== 'cards') q.set('cm', 'r');
+    if (chart.mark !== 'bars') q.set('mk', 'l');
+  }
   // Codes rather than display names: shorter, stable, and it leaves the label
   // in the reader's own language rather than the sharer's.
   if (stats.languages.length > 0) q.set('g', stats.languages.join(','));
@@ -351,8 +516,9 @@ export function shareImagePath(
   stats: ShareStats,
   nativeLanguage?: string | null,
   variant: ShareVariant = 'window',
+  chart: ShareChartOptions = DEFAULT_SHARE_CHART,
 ): string {
-  return `/api/stats-image?${shareImageQuery(stats, nativeLanguage, variant)}`;
+  return `/api/stats-image?${shareImageQuery(stats, nativeLanguage, variant, chart)}`;
 }
 
 /**
@@ -365,10 +531,16 @@ export function shareImagePath(
 export function shareImageFilename(
   stats: ShareStats,
   variant: ShareVariant = 'window',
+  chart: ShareChartOptions = DEFAULT_SHARE_CHART,
 ): string {
-  return variant === 'today'
-    ? `amgi-${stats.windowEnd}-today.png`
-    : `amgi-${stats.windowEnd}-${stats.windowDays}d.png`;
+  if (variant === 'today') return `amgi-${stats.windowEnd}-today.png`;
+  // A chart and a window card can cover the very same days, and so can two
+  // charts of different measures — so both go in the name, for the reason the
+  // today card needed the variant there.
+  if (variant === 'chart') {
+    return `amgi-${stats.windowEnd}-${stats.windowDays}d-${chart.measure}.png`;
+  }
+  return `amgi-${stats.windowEnd}-${stats.windowDays}d.png`;
 }
 
 /**

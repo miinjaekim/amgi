@@ -414,6 +414,19 @@ const translations = {
     shareChoose: 'What to share',
     shareVariantWindow: 'This window',
     shareVariantToday: 'Today',
+    // The chart card's own label, in the chooser rather than on the image —
+    // the picture says "Last 30 days" at the top and names its hero, so this
+    // only has to tell the two cards for one window apart. Deliberately
+    // compact: on web it sits under an 80px thumbnail in a popover that grows
+    // to fit its widest label.
+    // Two keys, not one: a chart card has to say which measure it plots,
+    // because reviews count directions and cards count cards.
+    shareVariantChartCards: 'Cards added · {count}d',
+    shareVariantChartReviews: 'Reviews · {count}d',
+    // `progressChartWeeklyNote`'s sibling, for the mark that has no bars. The
+    // shared chart carries both marks; a note calling a point a bar is the
+    // wrong word in the one place there is no way to ask.
+    shareChartWeeklyPoints: 'Each point is one week.',
     shareFooter: 'Amgi',
     shareNothingYet: 'Study a little first — there is nothing to share yet.',
     shareFailed: 'Could not build the image.',
@@ -1199,6 +1212,9 @@ const translations = {
     shareChoose: '무엇을 공유할까요?',
     shareVariantWindow: '이 기간',
     shareVariantToday: '오늘',
+    shareVariantChartCards: '담은 카드 · {count}일',
+    shareVariantChartReviews: '복습 · {count}일',
+    shareChartWeeklyPoints: '점 하나가 1주일입니다.',
     shareFooter: 'Amgi',
     shareNothingYet: '아직 공유할 기록이 없습니다. 조금만 더 공부해 보세요.',
     shareFailed: '이미지를 만들지 못했습니다.',

@@ -32,8 +32,10 @@ describe('reading the parameters', () => {
 
   it('reads the variant, defaulting to the window card', () => {
     // Absent means window, so every URL an older build ever produced keeps
-    // rendering exactly what it rendered before the today card existed.
+    // rendering exactly what it rendered before the today card existed — and
+    // the same holds for the chart card that arrived after it.
     expect(parse('v=today').variant).toBe('today');
+    expect(parse('v=chart').variant).toBe('chart');
     expect(parse('').variant).toBe('window');
     expect(parse('v=window').variant).toBe('window');
     expect(parse('v=nonsense').variant).toBe('window');
@@ -139,6 +141,71 @@ describe('the heat string', () => {
 
   it('is all-zero when absent, rather than empty', () => {
     expect(parse('w=5').cells).toEqual([0, 0, 0, 0, 0]);
+  });
+});
+
+describe('the chart bars', () => {
+  it('reads one value per bar, in the order they are drawn', () => {
+    expect(parse('v=chart&w=7&bd=1&c=0,3,0,12,1,0,4').chart.values)
+      .toEqual([0, 3, 0, 12, 1, 0, 4]);
+  });
+
+  it('is empty when absent, so no other card draws a plot', () => {
+    expect(parse('w=30').chart.values).toEqual([]);
+  });
+
+  it('reads junk in a bar as zero rather than dropping the bar', () => {
+    // A bar is a position in a series: dropping one would shift every bar
+    // after it, which moves real counts onto the wrong days.
+    expect(parse('v=chart&w=7&c=3,nonsense,5').chart.values).toEqual([3, 0, 5]);
+  });
+
+  it('floors and rounds, since a bar is drawn as a whole number', () => {
+    expect(parse('v=chart&w=7&c=-4,2.6').chart.values).toEqual([0, 3]);
+  });
+
+  it('reads the grain rather than working it out', () => {
+    // ⚠️ The whole reason `bd` travels: an installed build's URL must not
+    // change meaning the day `DAILY_CHART_MAX_DAYS` moves.
+    expect(parse('v=chart&w=90&bd=1&c=1,2,3').chart.bucketDays).toBe(1);
+    expect(parse('v=chart&w=7&bd=7&c=1').chart.bucketDays).toBe(7);
+  });
+
+  it('falls back to the app rule when a URL omits the grain', () => {
+    expect(parse('v=chart&w=30&c=1').chart.bucketDays).toBe(1);
+    expect(parse('v=chart&w=90&c=1').chart.bucketDays).toBe(7);
+  });
+
+  it('refuses a bar spanning more days than the window it covers', () => {
+    expect(parse('v=chart&w=30&bd=900&c=1').chart.bucketDays).toBe(30);
+    expect(parse('v=chart&w=30&bd=0&c=1').chart.bucketDays).toBe(1);
+  });
+
+  it('bounds what a hand-edited URL can ask to be laid out', () => {
+    const many = Array(900).fill('1').join(',');
+    expect(parse(`v=chart&w=364&c=${many}`).chart.values.length).toBeLessThanOrEqual(400);
+  });
+
+  it('treats an empty series as no chart rather than as one empty bar', () => {
+    expect(parse('v=chart&w=30&c=').chart.values).toEqual([]);
+  });
+
+  it('reads the measure and the mark, defaulting to cards drawn as bars', () => {
+    // Absent is the default on both, so the shortest URL the builder can
+    // produce and a URL from a build that never knew about either mean the
+    // same picture.
+    expect(parse('v=chart&w=7&c=1')).toMatchObject({
+      chart: { measure: 'cards', mark: 'bars' },
+    });
+    expect(parse('v=chart&w=7&c=1&cm=r&mk=l')).toMatchObject({
+      chart: { measure: 'reviews', mark: 'line' },
+    });
+  });
+
+  it('reads anything unrecognised as the default, never as a failure', () => {
+    expect(parse('v=chart&w=7&c=1&cm=nonsense&mk=nonsense')).toMatchObject({
+      chart: { measure: 'cards', mark: 'bars' },
+    });
   });
 });
 

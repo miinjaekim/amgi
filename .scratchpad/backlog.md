@@ -26,6 +26,38 @@ _Kept at the top of the file, ahead of priority order, from 2026-09-22 on the
 user's call — this list changes every time something merges, and it is the one
 section worth seeing without scrolling._
 
+- [ ] **A chart is a card you can post** (2026-09-23). Web is live; **native is
+      not**. A third `ShareVariant`, `chart`, drawing **the weekly chart as it
+      is currently drawn** — the measure the dropdown is set to and the mark the
+      toggle is on — reached from a Share button in that chart's own title row,
+      beside Bars / Line, on both platforms. It joins the carousel rather than
+      replacing it: windows, today, then a chart card per chart window
+      (7 · 30 · 90 on mobile, 7 and the selected range on web).
+      ⚠️ **The first pass got this wrong and the user caught it**: it shared
+      cards-added bars whatever the chart showed, so Share on a Reviews line
+      gave back a different picture — and because every chart card was gated on
+      cards added, a reader with a full reviews chart and a quiet month of
+      adding was dropped onto the 30-day calendar instead. Both are fixed;
+      `hasShareableChart` now takes the measure it is being asked about.
+      **Satori draws the line**, checked rather than assumed: it serializes an
+      inline `<svg>` to a data URI and maps `strokeWidth` to `stroke-width`, so
+      the geometry just has to be absolute pixels against a fixed `viewBox`, and
+      `<text>` throws. The calls are in the Decisions entry of 2026-09-23 in
+      [status.md](status.md).
+      ⚠️ **Repaired a live bug on the way**: the image's font subset was missing
+      nine glyphs it draws, so 「담은 카드」, 「새로 익힘」 and the `N` of "Newly
+      learned" were being fetched from Google Fonts at render time by satori's
+      `loadDynamicAsset` — invisible in the output, and a network call on the
+      share path. Subset regenerated to 138 glyphs from an audit of the drawn
+      strings, and `fonts.ts` now says how to repeat it.
+      ⚠️ **What has not been exercised**: nothing has been opened on a device or
+      in a browser. The route itself was rendered — every measure × mark pair,
+      at 7, 30, 90 and 364 days, in both locales, plus the window and today
+      cards to confirm they are unchanged — but the two Share buttons and the
+      widened chooser have only been typechecked and linted. **That is what let
+      the first pass ship the wrong picture**: the route was exercised and the
+      button that feeds it was not.
+
 - [ ] **A launch that paints from the device, behind a splash** (PR #152).
       **Native only**, and ⚠️ **the one item in this list a build is *required*
       to judge**: the user found the slowness on TestFlight, and the splash
@@ -129,56 +161,13 @@ French._
 _Launch speed led this section and left it on 2026-09-22, merged as PR #152 —
 it is under Queued for the next build._
 
-_One of the three Progress items scoped 2026-09-15 is left. The other two —
-the per-language detail view and both charts — are built on
-`feat/progress-language-detail`, which is what unblocks this one. The three
-calls the user made on them, and the boundary finding that came out of building
-them, are in the Decisions entry of that date in [status.md](status.md).
-Moved High → Medium 2026-09-21, on the user's call, when Munli took High._
-
-- [ ] **Share a chart as an asset.** The chart it depends on now exists:
-      `buildCardsAddedSeries` and `buildLearnedSeries` are in core, per-language,
-      and both platforms draw them. The
-      shipped share pipeline answers most of this, and its two hard constraints
-      decide the rest.
-      **Two things changed under this item on 2026-09-15.** Cards added is no
-      longer stacked but **filtered** by source, so a shared chart has to decide
-      whether the filter travels — it is one more query parameter, and the
-      backward-compatibility rule below covers it. And the charts now **follow
-      the range, bucketed by week past 30 days** (`chartBucketDays`), so the
-      asset's series is not necessarily one value per day: the route must be
-      told the grain or be handed the buckets, not infer either.
-      ⚠️ **It must be server-rendered by `/api/stats-image`.** Mobile cannot
-      rasterize a view without `react-native-view-shot` — a native module that
-      costs an EAS build *and* stops the feature working in Expo Go. That is why
-      one route draws every variant and both platforms only ever fetch a URL.
-      ⚠️ **The series travels in the query string**, because the route takes no
-      uid and never touches Firestore — the privacy design, not an optimisation: a
-      route that resolved a uid would let anyone render anyone's stats. `h` is the
-      precedent (one character per day, 364 for a year) but it sends *levels* 0–4
-      precisely so the route need not know the window's busiest day. A labelled
-      axis needs real counts, so this wants its own parameter and the route
-      calling `niceCeiling` itself — it is in core, so the asset gets the same
-      scale the app drew.
-      **A new variant is backward compatible by construction.** `ShareVariant` is
-      `'window' | 'today'` and the parser reads anything unrecognised as
-      `'window'`, so every URL an installed build produces keeps rendering what it
-      always did. The rule that no parameter may ever become a parse failure
-      applies to the new one too. `buildShareCards` then offers the card and
-      `hasShareableHistory` gates it, per card.
-      ⚠️ **Satori is flexbox-only, and the line mark may not survive it.** Bars are
-      divs with heights; the line is SVG on both platforms, which `next/og` does
-      not draw the way either of them does. **Check this before promising both
-      marks** — bars-only on the shared asset is a fine answer, silently dropping
-      the line is not.
-      ⚠️ **A per-language chart re-opens a rule `shareStats.ts` closed.** It sends
-      language *names only*, never a per-language split of the numbers, because
-      `byLanguage.reviews` reaches back to the start while `cardsMatured` only
-      reaches 2026-09-06 — so a per-language figure breaks the one-window rule
-      over any window worth posting. A **cards-added** chart is exempt (full
-      per-language history since 2026-08-20); a **learned** chart is not, and must
-      be withheld over a window reaching past that date exactly as `cardsMatured`
-      already is.
+_**All three Progress items scoped 2026-09-15 are now built.** The per-language
+detail view and both charts shipped on `feat/progress-language-detail`; the
+third, sharing a chart as an asset, left this section on 2026-09-23 and is
+under Queued for the next build. The three calls the user made on the first two,
+and the boundary finding that came out of building them, are in the Decisions
+entry of that date in [status.md](status.md); the chart card's own calls are in
+the entry of 2026-09-23._
 
 - [ ] **Per-context pronunciation speed** — the last of the mobile UI redesign
       queued 2026-09-01, moved here 2026-09-12 on the user's call. Nothing about

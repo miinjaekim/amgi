@@ -20,14 +20,18 @@
  * ⚠️ **`next/og` is Satori, not a browser.** Flexbox only, and every container
  * with more than one child needs an explicit `display: flex` or it throws.
  * Inline style objects only — no Tailwind, no `globals.css`, no CSS variables.
- * And **there is no system font**: the bundled default is Geist, which has no
- * Hangul, so Korean would render as blank boxes without the faces loaded below.
+ * And **there is no system font**: a `fonts` option replaces the bundled Geist
+ * rather than adding to it, and Geist has no Hangul — so every glyph this draws
+ * has to be in the subsets below. What actually happens when one is not is
+ * neither a blank box nor an error, and is worth reading before changing a
+ * label: see the header of `fonts.ts`.
  */
 import { ImageResponse } from 'next/og';
 import { NextRequest } from 'next/server';
 import {
-  formatStudyTime, isStudyLanguage, t,
-  type ShareVariant, type StudyLanguage, type TranslationKey,
+  chartBucketDays, formatStudyTime, isStudyLanguage, niceCeiling, t,
+  type ShareChartMark, type ShareChartMeasure, type ShareVariant,
+  type StudyLanguage, type TranslationKey,
 } from '@amgi/core';
 import { NOTO_SANS_KR_BOLD_BASE64, NOTO_SANS_KR_REGULAR_BASE64, fontData } from './fonts';
 
@@ -158,6 +162,157 @@ function columnsFor(dayCount: number): number {
 const HEATMAP_MAX_HEIGHT = 620;
 
 /**
+ * The tallest the cards-added chart may be.
+ *
+ * The calendar's own maximum, deliberately: the chart stands in the calendar's
+ * slot, and a shorter block leaves the root's `space-between` to spread the
+ * difference as dead green between the hero and the tiles — which reads as
+ * something that failed to load rather than as room.
+ */
+const CHART_HEIGHT = HEATMAP_MAX_HEIGHT;
+
+/**
+ * The most bars the route will draw.
+ *
+ * The longest window the app offers is a year, which is 52 weekly bars, so this
+ * is not a limit any real URL reaches — it is a bound on what a hand-edited one
+ * can ask the renderer to lay out.
+ */
+const CHART_MAX_BARS = 400;
+
+/** The plot's drawn width: the canvas less its two gutters. */
+const PLOT_WIDTH = WIDTH - PAD * 2;
+
+/**
+ * The most marks a line decorates one by one.
+ *
+ * The detail screens' own threshold, for their reason: at seven points a dot
+ * per reading says "these are seven discrete counts", which is true and is what
+ * a line otherwise hides; at 52 it is a beaded string.
+ */
+const DECORATED_MARK_MAX = 14;
+
+/**
+ * The dot on a line's reading.
+ *
+ * ⚠️ **A reading at zero or at the ceiling is clipped in half by the plot's own
+ * edge, and that is left alone.** Nudging the dot inwards to keep it whole
+ * would put the marker somewhere the line is not, which is the one thing a
+ * chart may not do — a marker meeting the axis is the ordinary way this looks.
+ */
+const DOT_RADIUS = 10;
+
+/**
+ * The chart, drawn the way the reader had it drawn.
+ *
+ * ⚠️ **Both marks, because the button is on a chart that has both.** The card
+ * is reached from the weekly chart's own title row, beside the Bars / Line
+ * toggle — an asset that was always bars would be a different picture wearing
+ * that button. The first pass shipped exactly that and the user caught it.
+ *
+ * **Satori draws the line, which was checked rather than assumed.** `next/og`
+ * is flexbox-only for *layout*, but it handles an inline `<svg>` by serializing
+ * the subtree to a `data:` URI and rasterizing it, mapping `strokeWidth` to
+ * `stroke-width` on the way. Two rules come out of that: the geometry is in
+ * absolute pixels against a fixed `viewBox`, since there is no percentage to
+ * resolve against, and **`<text>` throws** — so the ceiling label stays an HTML
+ * div outside the svg.
+ *
+ * **The scale is `niceCeiling`, called here rather than sent.** It is in core,
+ * so the asset lands on the same round number the app drew its own chart
+ * against — 47 gives a ceiling of 50 on both. Sending it would be one more
+ * forgeable parameter for a figure the route can derive exactly.
+ */
+function Chart({ values, ceiling, mark }: {
+  values: number[];
+  ceiling: number;
+  mark: ShareChartMark;
+}) {
+  /**
+   * A value's height in px. Both marks read it, so they sit on one scale.
+   *
+   * ⚠️ **Bars give an empty bucket nothing at all, unlike the app's charts.**
+   * They give an empty day a hairline because an absent bar and an empty one
+   * look identical — but here the zero rule runs right across the plot, so the
+   * empty bucket is already marked, and a row of stubs sitting on that rule
+   * turns it into a dashed line. Seen by rendering the 30-day card.
+   */
+  const heightOf = (value: number) => (ceiling > 0 && value > 0
+    ? Math.round((value / ceiling) * CHART_HEIGHT)
+    : 0);
+  /** A bar short enough to vanish is given a floor; the line needs no such thing. */
+  const barHeight = (value: number) => (value > 0 ? Math.max(8, heightOf(value)) : 0);
+
+  // The same threshold the detail screens switch gutters at: past 26 bars there
+  // is no room for a gap that still reads as one.
+  const gap = values.length > 26 ? 4 : 8;
+  /** Horizontal centre of a bucket's slot, in the svg's own pixels. */
+  const centre = (index: number) => ((index + 0.5) * PLOT_WIDTH) / values.length;
+  const y = (value: number) => CHART_HEIGHT - heightOf(value);
+  const dotted = values.length <= DECORATED_MARK_MAX;
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
+      {/* The ceiling, sitting on the rule it names. Only one gridline is drawn:
+          a shared image is read at thumbnail size, where a second rule is
+          texture rather than information. */}
+      <div style={{ display: 'flex', width: '100%' }}>
+        <div style={{ fontSize: 28, color: C.muted }}>{formatCount(ceiling)}</div>
+      </div>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'flex-end',
+          width: '100%',
+          height: CHART_HEIGHT,
+          borderTopWidth: 2,
+          borderTopStyle: 'solid',
+          borderTopColor: C.surface,
+          borderBottomWidth: 2,
+          borderBottomStyle: 'solid',
+          borderBottomColor: C.muted,
+        }}
+      >
+        {mark === 'line' ? (
+          <svg
+            width={PLOT_WIDTH}
+            height={CHART_HEIGHT}
+            viewBox={`0 0 ${PLOT_WIDTH} ${CHART_HEIGHT}`}
+          >
+            <polyline
+              points={values.map((value, index) => `${centre(index)},${y(value)}`).join(' ')}
+              fill="none"
+              stroke={C.highlight}
+              strokeWidth={7}
+              strokeLinejoin="round"
+              strokeLinecap="round"
+            />
+            {/* A dot per reading when there are few enough to tell apart. At a
+                year's 52 points they close up into the line itself. */}
+            {dotted && values.map((value, index) => (
+              <circle key={index} cx={centre(index)} cy={y(value)} r={DOT_RADIUS} fill={C.highlight} />
+            ))}
+          </svg>
+        ) : (
+          values.map((value, index) => (
+            <div
+              key={index}
+              style={{
+                flex: 1,
+                height: barHeight(value),
+                marginRight: index === values.length - 1 ? 0 : gap,
+                borderRadius: 4,
+                backgroundColor: C.highlight,
+              }}
+            />
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
+/**
  * Everything the image is built from, read out of the query string.
  *
  * Separated from the render because the render cannot be unit-tested: resvg's
@@ -197,6 +352,25 @@ export interface ShareImageParams {
   cardsAdded: number;
   /** Exactly `windowDays` levels, 0–4, padded and truncated to fit. */
   cells: number[];
+  /**
+   * The chart the card draws: its marks, what one of them covers, which of the
+   * two measures they count, and which mark they are drawn as.
+   *
+   * Only `v=chart` sends them, so every other card parses an empty series and
+   * draws no chart — which is also what a hand-edited `v=chart` with no `c` at
+   * all gets, rather than an empty plot frame.
+   *
+   * ⚠️ **`bucketDays` is read, not worked out.** `chartBucketDays` is the
+   * fallback for a URL that omits it and nothing more: deriving it would mean
+   * every link an installed build had already produced changing meaning the day
+   * that threshold moved.
+   */
+  chart: {
+    bucketDays: number;
+    values: number[];
+    measure: ShareChartMeasure;
+    mark: ShareChartMark;
+  };
 }
 
 export function readShareImageParams(q: URLSearchParams): ShareImageParams {
@@ -231,11 +405,25 @@ export function readShareImageParams(q: URLSearchParams): ShareImageParams {
   const heat = (q.get('h') ?? '').slice(0, windowDays).split('')
     .map(ch => (ch >= '0' && ch <= '4' ? Number(ch) : 0));
 
+  /**
+   * One bar's count. Junk reads as zero rather than as a gap: a bar is a
+   * position in a series, so dropping one would shift every bar after it.
+   */
+  const bar = (part: string): number => {
+    const raw = Number(part);
+    return Number.isFinite(raw) ? Math.max(0, Math.round(raw)) : 0;
+  };
+  const values = (q.get('c') ?? '')
+    .split(',')
+    .filter(part => part.trim() !== '')
+    .slice(0, CHART_MAX_BARS)
+    .map(bar);
+
   return {
     // `t` falls back to English for anything it does not recognise, so the raw
     // parameter goes straight through rather than being validated twice.
     lang: q.get('lang'),
-    variant: q.get('v') === 'today' ? 'today' : 'window',
+    variant: readVariant(q.get('v')),
     windowDays,
     reviews: Math.max(0, Math.round(num('r'))),
     streak: Math.max(0, Math.round(num('s'))),
@@ -253,7 +441,34 @@ export function readShareImageParams(q: URLSearchParams): ShareImageParams {
     // *windowed* maturity count that arrived later — a different number under a
     // different key, so an old build's `l` can never be mistaken for it.)
     cells: [...heat, ...Array(Math.max(0, windowDays - heat.length)).fill(0)],
+    chart: {
+      // Clamped to the window it claims to cover: a bar spanning more days than
+      // the window has is the only reading of `bd` that could not have come
+      // from the app.
+      bucketDays: Math.max(1, Math.min(windowDays, Math.round(num('bd', chartBucketDays(windowDays))))),
+      values,
+      // Single letters, and the default is the absent value — so the common
+      // card's URL carries neither. Anything unrecognised is the default, for
+      // the reason `readVariant` gives.
+      measure: q.get('cm') === 'r' ? 'reviews' : 'cards',
+      mark: q.get('mk') === 'l' ? 'line' : 'bars',
+    },
   };
+}
+
+/**
+ * The layout the URL asks for, with anything unrecognised read as the window
+ * card.
+ *
+ * ⚠️ **This is the backward-compatibility rule in one function.** An installed
+ * build goes on producing whatever `v` it knew about, and a build older than
+ * the chart card produces none at all — both have to keep rendering, so an
+ * unknown variant may never be a parse failure.
+ */
+function readVariant(value: string | null): ShareVariant {
+  if (value === 'today') return 'today';
+  if (value === 'chart') return 'chart';
+  return 'window';
 }
 
 /** The calendar block: cell size in px and the rows it wraps into. */
@@ -271,23 +486,46 @@ export function layoutHeatmap(cells: number[], windowDays: number) {
 
 export async function GET(req: NextRequest) {
   const {
-    lang, variant, windowDays, reviews, streak, languages, cells,
+    lang, variant, windowDays, reviews, streak, languages, cells, chart,
     cardsMatured, studySeconds, cardsAdded,
   } = readShareImageParams(req.nextUrl.searchParams);
   const label = (key: TranslationKey, vars?: Record<string, string | number>) => t(lang, key, vars);
+  const isChart = variant === 'chart' && chart.values.length > 0;
 
   /**
    * What was being studied, under the number that counts it.
    *
    * Three names at most. A fourth does not fit the width at this size, and a
    * remainder is more honestly a count than a truncated list.
+   *
+   * ⚠️ **Not under a cards-added hero.** `languages` is the languages
+   * *reviewed* in the window — that is what `ShareStats` promises and what
+   * makes it an honest caption for a review count. Under a cards-added figure
+   * the same line would read as the languages those cards were added to, which
+   * is a different question these rows are not being asked. So it follows the
+   * hero rather than the variant: a reviews chart keeps it.
    */
   const named = languages.slice(0, 3).map(code => label(`label${code}` as TranslationKey));
   const rest = languages.length - named.length;
-  const languageLine = named.length === 0
+  const countsCards = isChart && chart.measure === 'cards';
+  const languageLine = countsCards || named.length === 0
     ? null
     : `${named.join(' · ')}${rest > 0 ? ` +${rest}` : ''}`;
   const { gap, cell, rows } = layoutHeatmap(cells, windowDays);
+
+  /**
+   * The hero figure, and the word under it.
+   *
+   * ⚠️ **The chart card's hero is the total its bars add up to, not reviews.**
+   * A big number above a chart is read as the chart's own total by anyone who
+   * sees it, so the two have to be the same measure — and they are two
+   * different measures here, because `reviews` counts *directions* where cards
+   * added counts cards. The label is the dashboard's own, reused rather than
+   * restated.
+   */
+  const hero = countsCards
+    ? { value: formatCount(cardsAdded), label: label('progressStatNewCards') }
+    : { value: formatCount(reviews), label: label('shareStatReviews') };
 
   const regular = fontData(NOTO_SANS_KR_REGULAR_BASE64);
   const bold = fontData(NOTO_SANS_KR_BOLD_BASE64);
@@ -307,6 +545,13 @@ export async function GET(req: NextRequest) {
   const tiles: { label: string; value: string }[] = [
     { label: label('shareStatStreak'), value: formatCount(streak) },
   ];
+  // Reviews is the hero on every other card and a tile only under a cards-added
+  // one, where the hero is already spoken for. It names the same window as the
+  // rest of the row, which is the only thing that has ever qualified a figure
+  // for it.
+  if (countsCards && reviews > 0) {
+    tiles.push({ label: label('shareStatReviews'), value: formatCount(reviews) });
+  }
   // ⚠️ **Zero hides the tile, and that is a render rule, not a data one.** The
   // null/zero distinction is load-bearing upstream — withheld and none are
   // different facts, which is why the parser keeps them apart — but neither is
@@ -319,7 +564,9 @@ export async function GET(req: NextRequest) {
   if (studySeconds !== null && studySeconds > 0) {
     tiles.push({ label: label('shareStatTime'), value: formatStudyTime(studySeconds, lang) });
   }
-  if (cardsAdded > 0) {
+  // Not under a cards-added hero, where this number *is* the hero: a tile
+  // repeating it would be the same figure twice on one canvas.
+  if (cardsAdded > 0 && !countsCards) {
     // The dashboard's own words, reused rather than restated: the two surfaces
     // count the same thing and must not name it differently.
     tiles.push({ label: label('progressStatNewCards'), value: formatCount(cardsAdded) });
@@ -357,12 +604,13 @@ export async function GET(req: NextRequest) {
             number this large would leave neither of them readable. */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
           <div style={{ fontSize: 260, fontWeight: 700, lineHeight: 1, color: C.highlight }}>
-            {formatCount(reviews)}
+            {hero.value}
           </div>
-          {/* Never "cards reviewed": `reviews` counts directions, so this label
-              is load-bearing. See `ShareStats.reviews`. */}
+          {/* Never "cards reviewed" where this is the review count: `reviews`
+              counts directions, so the label is load-bearing. See
+              `ShareStats.reviews`, and `hero` for the chart card's own. */}
           <div style={{ fontSize: 46, color: C.text, marginTop: 12 }}>
-            {label('shareStatReviews')}
+            {hero.label}
           </div>
           {/* Directly under the figure it qualifies: "1,204 reviews" never said
               of what. The window line at the top stays the window. */}
@@ -382,6 +630,34 @@ export async function GET(req: NextRequest) {
             of the today card as dead green and read as something that had
             failed to load. Emptying the children is not the same as removing
             the child. */}
+        {/* The chart stands in the calendar's slot, and like it goes entirely
+            rather than emptying: the root is `space-between`, so a childless
+            div still claims a slot and spreads the rest of the card apart. */}
+        {isChart && (
+          <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
+            <Chart
+              values={chart.values}
+              ceiling={niceCeiling(Math.max(0, ...chart.values))}
+              mark={chart.mark}
+            />
+            {/* ⚠️ **Said out loud whenever a bar is not a day.** Past 30 days
+                the app buckets by week, so a 90-day window is 13 bars — read as
+                13 days by anyone who is not told otherwise, which turns a busy
+                quarter into a quiet fortnight. The app's own note, reused. */}
+            {chart.bucketDays > 1 && (
+              <div style={{
+                display: 'flex', justifyContent: 'flex-end', width: '100%', marginTop: 14,
+              }}>
+                <div style={{ fontSize: 26, color: C.muted }}>
+                  {label(chart.mark === 'line'
+                    ? 'shareChartWeeklyPoints'
+                    : 'progressChartWeeklyNote')}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {variant === 'window' && (
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             {rows.map((row, y) => (

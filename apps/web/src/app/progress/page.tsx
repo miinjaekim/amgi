@@ -6,7 +6,7 @@ import { useUser } from '@/components/UserContext';
 import { fetchRecentProgress } from '@/services/progress';
 import {
   CARD_COLLECTIONS, buildCardsAddedSeries, buildHeatmap, buildShareStats, buildTodayStats, buildWeekGrid,
-  hasShareableHistory, localDateString, mergeLanguageRows, niceCeiling, summarizeProgress,
+  hasShareableChart, hasShareableHistory, localDateString, mergeLanguageRows, niceCeiling, summarizeProgress,
   weekAxisTicks, weekdayIndex,
   type DailyProgress, type HeatmapCell, type StudyLanguage,
 } from '@amgi/core';
@@ -192,16 +192,53 @@ export default function ProgressPage() {
   );
 
   /**
+   * The seven days the chart below draws, as numbers the image route can take.
+   *
+   * A window of its own rather than the selected range: the chart card is
+   * reached from the weekly chart's own Share button, and a card covering a
+   * different stretch of time than the chart it was launched from is the one
+   * thing that would make the button confusing.
+   */
+  const weekStats = useMemo(
+    () => buildShareStats(days ?? [], { streak, endDate: localDateString(), windowDays: 7 }),
+    [days, streak],
+  );
+
+  /**
+   * The chart as it is currently drawn — the measure the dropdown is set to and
+   * the mark the toggle is on.
+   *
+   * ⚠️ **This is what makes the chart card the chart you are looking at.** The
+   * first pass shared cards-added bars whatever the chart showed, so pressing
+   * Share on a Reviews line gave back something else entirely.
+   */
+  const chartOptions = useMemo(
+    () => ({ measure: weekMeasure, mark: weekMark }),
+    [weekMeasure, weekMark],
+  );
+
+  /**
    * What there is to share, and nothing that would go out blank.
    *
-   * ⚠️ **The gate is asked per variant.** A today card on a day with nothing
-   * rated is exactly the zeroed image `hasShareableHistory` exists to prevent,
-   * however full the 90-day window beside it happens to be.
+   * ⚠️ **The gate is asked per variant, and it is not the same gate.** A today
+   * card on a day with nothing rated is exactly the zeroed image
+   * `hasShareableHistory` exists to prevent, however full the 90-day window
+   * beside it happens to be — while a chart card is asked about *its own
+   * measure's* marks, because a month of reviews with nothing added draws an
+   * empty cards chart and a perfectly good reviews one.
+   *
+   * Both entry points show this same list: the chip in the range row and the
+   * one in the chart's own title. What differs is only which card the reader
+   * arrived expecting, and every card names its own window.
    */
   const shareOptions = useMemo(() => ([
     { variant: 'window' as const, stats: shareStats },
     { variant: 'today' as const, stats: todayStats },
-  ].filter(option => hasShareableHistory(option.stats))), [shareStats, todayStats]);
+    { variant: 'chart' as const, stats: weekStats, chart: chartOptions },
+    { variant: 'chart' as const, stats: shareStats, chart: chartOptions },
+  ].filter(option => (option.variant === 'chart'
+    ? hasShareableChart(option.stats, chartOptions.measure)
+    : hasShareableHistory(option.stats)))), [shareStats, todayStats, weekStats, chartOptions]);
 
   /**
    * Cards learned — all of them, not a window's worth.
@@ -457,6 +494,12 @@ export default function ProgressPage() {
             onMarkChange={weekMarkStore.set}
             measure={weekMeasure}
             onMeasureChange={setWeekMeasure}
+            // Handed in as a node rather than built inside the chart: what may
+            // be shared is a rule this page already owns, and a chart that
+            // imported the share plumbing would own it twice.
+            share={shareOptions.length > 0 && (
+              <ShareStatsButton options={shareOptions} interfaceLanguage={interfaceLanguage} />
+            )}
           />
 
           {languageRows.length > 0 && (
@@ -639,7 +682,7 @@ const weekMarkStore = {
  * so switching cannot shift the layout.
  */
 function WeekChart({
-  interfaceLanguage, cells, values, daysByDate, mark, onMarkChange, measure, onMeasureChange,
+  interfaceLanguage, cells, values, daysByDate, mark, onMarkChange, measure, onMeasureChange, share,
 }: {
   interfaceLanguage: string | null | undefined;
   cells: HeatmapCell[];
@@ -650,6 +693,8 @@ function WeekChart({
   onMarkChange: (mark: WeekMark) => void;
   measure: WeekMeasure;
   onMeasureChange: (measure: WeekMeasure) => void;
+  /** The share control, or nothing when there is nothing worth sharing. */
+  share?: React.ReactNode;
 }) {
   const weekdays = weekdayLabels(interfaceLanguage);
   /** A day's plotted value, by position. Zero if the series is somehow short. */
@@ -699,21 +744,27 @@ function WeekChart({
             {t(interfaceLanguage, 'progressWeekLast7')}
           </span>
         </label>
-        <div className="flex gap-1">
-          {(['bars', 'line'] as const).map(option => (
-            <button
-              key={option}
-              type="button"
-              onClick={() => onMarkChange(option)}
-              aria-pressed={mark === option}
-              className="px-2 py-0.5 rounded-md text-[11px] font-mono border transition-colors"
-              style={mark === option
-                ? { borderColor: 'var(--color-highlight)', color: 'var(--color-highlight)' }
-                : { borderColor: 'var(--color-muted)', color: 'var(--color-muted)' }}
-            >
-              {t(interfaceLanguage, option === 'bars' ? 'progressChartBars' : 'progressChartLine')}
-            </button>
-          ))}
+        {/* The mark toggle and Share, in that order: one changes the chart you
+            are looking at and the other sends it, so the control that only
+            leaves the page sits furthest from the chart. */}
+        <div className="flex items-center gap-2">
+          <div className="flex gap-1">
+            {(['bars', 'line'] as const).map(option => (
+              <button
+                key={option}
+                type="button"
+                onClick={() => onMarkChange(option)}
+                aria-pressed={mark === option}
+                className="px-2 py-0.5 rounded-md text-[11px] font-mono border transition-colors"
+                style={mark === option
+                  ? { borderColor: 'var(--color-highlight)', color: 'var(--color-highlight)' }
+                  : { borderColor: 'var(--color-muted)', color: 'var(--color-muted)' }}
+              >
+                {t(interfaceLanguage, option === 'bars' ? 'progressChartBars' : 'progressChartLine')}
+              </button>
+            ))}
+          </div>
+          {share}
         </div>
       </div>
 
