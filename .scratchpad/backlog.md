@@ -46,6 +46,12 @@ section worth seeing without scrolling._
   copy instead of a blank chart. ⚠️ **Felt "faster (?)" in Expo Go — undecided.**
   Judge it on the build, alongside the launch stopwatch.
 
+- **Expo SDK 57 patch bumps** (2026-09-23) — `expo` 57.0.20 → 57.0.24 and the
+  `expo-*` modules to match, the updates Expo's CLI flagged. Taken because Expo
+  Go loaded the app slowly from every checkout until the update, and quickly
+  after it. Several are native modules (`expo-audio`, `expo-notifications`,
+  `expo-updates`…), so the build is where they land.
+
 ⚠️ **In testers' hands is not the same as seen.** Nothing in that build has been
 opened on a device, which is most of what Munli is. Untracked here by the
 2026-09-04 decision that these checks come from using the app, not a list; the
