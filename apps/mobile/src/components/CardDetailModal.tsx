@@ -321,7 +321,7 @@ export default function CardDetailModal({
                             <View key={i} style={s.exampleItem}>
                               <View style={s.exampleStudyRow}>
                                 <Text style={[s.exampleStudy, s.exampleStudyText]}>{sides.study}</Text>
-                                <PronounceButton text={sides.study} studyLanguage={lang} size="sm" />
+                                <PronounceButton text={sides.study} studyLanguage={lang} kind="sentence" size="sm" />
                               </View>
                               {sides.back ? <Text style={s.exampleBack}>{sides.back}</Text> : null}
                             </View>

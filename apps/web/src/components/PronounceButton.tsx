@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { getPronunciationUrl, getSpokenText, getStudyLanguageConfig } from '@amgi/core';
-import type { StudyLanguage } from '@amgi/core';
+import type { PronunciationKind, StudyLanguage } from '@amgi/core';
 import { usePronunciation } from '@/components/PronunciationContext';
 
 interface Props {
@@ -12,15 +12,17 @@ interface Props {
   /** A hanja's 음, spoken instead of the glyph. Required on the Hanja deck. */
   eum?: string;
   studyLanguage: StudyLanguage;
+  /** `sentence` for running text — example sentences, Writing's rewrite. Picks the speed. */
+  kind?: PronunciationKind;
   className?: string;
   size?: 'sm' | 'md';
 }
 
 type Status = 'idle' | 'loading' | 'playing' | 'error';
 
-export default function PronounceButton({ text, furigana, eum, studyLanguage, className = '', size = 'md' }: Props) {
+export default function PronounceButton({ text, furigana, eum, studyLanguage, kind = 'term', className = '', size = 'md' }: Props) {
   const [status, setStatus] = useState<Status>('idle');
-  const { rate } = usePronunciation();
+  const rate = usePronunciation().rateFor(kind);
 
   const disabled = !text.trim() || status === 'loading' || status === 'playing';
 

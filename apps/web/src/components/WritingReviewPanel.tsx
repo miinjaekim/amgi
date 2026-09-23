@@ -225,7 +225,7 @@ export default function WritingReviewPanel() {
               <h2 className="text-xs font-semibold uppercase tracking-widest shrink" style={{ color: 'var(--color-muted)' }}>
                 {t(interfaceLanguage, 'writingRewriteHeading')}
               </h2>
-              <PronounceButton text={review.rewrite} studyLanguage={studyLanguage} />
+              <PronounceButton text={review.rewrite} studyLanguage={studyLanguage} kind="sentence" />
               <div className="ml-auto flex items-center gap-2">
                 {/* Always the clean rewrite, never the diff — copying markup
                     with deletions in it would paste back the mistakes. */}

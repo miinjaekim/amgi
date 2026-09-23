@@ -1,29 +1,45 @@
 'use client';
 import { createContext, useContext, useEffect, useState } from 'react';
 import {
-  DEFAULT_PRONUNCIATION_SPEED, PRONUNCIATION_SPEEDS,
-  parsePronunciationSpeed, pronunciationRate,
+  DEFAULT_PRONUNCIATION_SPEED, PRONUNCIATION_KINDS, PRONUNCIATION_SPEEDS,
+  pronunciationRate, resolvePronunciationSpeeds,
 } from '@amgi/core';
-import type { PronunciationSpeed } from '@amgi/core';
+import type { PronunciationKind, PronunciationSpeed, PronunciationSpeeds } from '@amgi/core';
 
-const STORAGE_KEY = 'amgi-pronunciation-speed';
+// The first key is the one that predates the split, and it is the term speed
+// now — see `resolvePronunciationSpeeds`.
+const STORAGE_KEYS: Record<PronunciationKind, string> = {
+  term: 'amgi-pronunciation-speed',
+  sentence: 'amgi-pronunciation-speed-sentence',
+};
 
-function readStoredSpeed(): PronunciationSpeed {
-  if (typeof window === 'undefined') return DEFAULT_PRONUNCIATION_SPEED;
-  return parsePronunciationSpeed(localStorage.getItem(STORAGE_KEY));
+const DEFAULT_SPEEDS: PronunciationSpeeds = {
+  term: DEFAULT_PRONUNCIATION_SPEED,
+  sentence: DEFAULT_PRONUNCIATION_SPEED,
+};
+
+function readStoredSpeeds(): PronunciationSpeeds {
+  if (typeof window === 'undefined') return DEFAULT_SPEEDS;
+  return resolvePronunciationSpeeds(
+    localStorage.getItem(STORAGE_KEYS.term),
+    localStorage.getItem(STORAGE_KEYS.sentence),
+  );
 }
 
 const PronunciationContext = createContext<{
-  speed: PronunciationSpeed;
-  /** The playback multiplier for `speed` — what `HTMLAudioElement.playbackRate` wants. */
-  rate: number;
-  setSpeed: (s: PronunciationSpeed) => void;
-  speeds: typeof PRONUNCIATION_SPEEDS;
+  /** What the user picked, per kind. Use for the settings selector. */
+  speeds: PronunciationSpeeds;
+  /** The playback multiplier for one kind — what `HTMLAudioElement.playbackRate` wants. */
+  rateFor: (kind: PronunciationKind) => number;
+  setSpeed: (kind: PronunciationKind, s: PronunciationSpeed) => void;
+  options: typeof PRONUNCIATION_SPEEDS;
+  kinds: typeof PRONUNCIATION_KINDS;
 }>({
-  speed: DEFAULT_PRONUNCIATION_SPEED,
-  rate: 1,
+  speeds: DEFAULT_SPEEDS,
+  rateFor: () => 1,
   setSpeed: () => {},
-  speeds: PRONUNCIATION_SPEEDS,
+  options: PRONUNCIATION_SPEEDS,
+  kinds: PRONUNCIATION_KINDS,
 });
 
 /**
@@ -32,15 +48,24 @@ const PronunciationContext = createContext<{
  * rate is a property of the speakers you happen to be listening through.
  */
 export function PronunciationProvider({ children }: { children: React.ReactNode }) {
-  const [speed, setSpeedState] = useState<PronunciationSpeed>(readStoredSpeed);
+  const [speeds, setSpeeds] = useState<PronunciationSpeeds>(readStoredSpeeds);
 
+  // Writes both on mount too, which is what makes the sentence speed's
+  // fallback to the old key a one-time migration rather than a live link.
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, speed);
-  }, [speed]);
+    localStorage.setItem(STORAGE_KEYS.term, speeds.term);
+    localStorage.setItem(STORAGE_KEYS.sentence, speeds.sentence);
+  }, [speeds]);
 
   return (
     <PronunciationContext.Provider
-      value={{ speed, rate: pronunciationRate(speed), setSpeed: setSpeedState, speeds: PRONUNCIATION_SPEEDS }}
+      value={{
+        speeds,
+        rateFor: kind => pronunciationRate(speeds[kind]),
+        setSpeed: (kind, s) => setSpeeds(prev => ({ ...prev, [kind]: s })),
+        options: PRONUNCIATION_SPEEDS,
+        kinds: PRONUNCIATION_KINDS,
+      }}
     >
       {children}
     </PronunciationContext.Provider>

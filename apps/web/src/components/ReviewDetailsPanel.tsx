@@ -106,7 +106,7 @@ export default function ReviewDetailsPanel({
                     <li key={i}>
                       <div>
                         {sides.study}
-                        <PronounceButton text={sides.study} studyLanguage={studyLanguage} size="sm" className="ml-1 align-middle" />
+                        <PronounceButton text={sides.study} studyLanguage={studyLanguage} kind="sentence" size="sm" className="ml-1 align-middle" />
                       </div>
                       <div className="text-[var(--color-highlight)] text-sm">{sides.back}</div>
                     </li>

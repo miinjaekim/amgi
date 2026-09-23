@@ -680,7 +680,7 @@ export default function Home() {
                       {sides.study && (
                         <div>
                           {sides.study}
-                          <PronounceButton text={sides.study} studyLanguage={studyLanguage} size="sm" className="ml-1 align-middle" />
+                          <PronounceButton text={sides.study} studyLanguage={studyLanguage} kind="sentence" size="sm" className="ml-1 align-middle" />
                         </div>
                       )}
                       {sides.back && <div className="text-[var(--color-highlight)] text-sm mt-0.5">{sides.back}</div>}

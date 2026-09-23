@@ -38,7 +38,7 @@ export default function SettingsScreen() {
   // `themes` rather than a fixed list: the picker offers the themes of the mode
   // this screen was opened from, which is what the `?mode=` in the route says.
   const { C, theme, setTheme, themes } = useTheme();
-  const { speed, setSpeed, speeds } = usePronunciation();
+  const { speeds, setSpeed, options, kinds } = usePronunciation();
   const s = useMemo(() => makeStyles(C), [C]);
   const {
     user, authLoading, interfaceLanguage, languages, studyLanguage, hanjaPartition,
@@ -362,30 +362,35 @@ export default function SettingsScreen() {
           </View>
         </View>
 
-        {/* Pronunciation speed. One control for every play button in the app —
-            term, translation and example sentences all render the same
-            PronounceButton, so a second setting would have nothing to name. */}
+        {/* Pronunciation speed, one row per kind of text: a word and a sentence
+            want different paces on every screen, which is why the split is by
+            content rather than by surface. See `PronunciationKind`. */}
         <Text style={s.sectionLabel}>{t(interfaceLanguage, 'settingsPronunciationSpeed')}</Text>
         <View style={s.card}>
           <Text style={s.settingDescription}>
             {t(interfaceLanguage, 'settingsPronunciationSpeedDesc')}
           </Text>
-          <View style={s.langRow}>
-            {speeds.map(({ value, labelKey }) => {
-              const active = speed === value;
-              return (
-                <TouchableOpacity
-                  key={value}
-                  style={[s.langChip, active && s.langChipActive]}
-                  onPress={() => setSpeed(value)}
-                >
-                  <Text style={[s.langChipText, active && s.langChipTextActive]}>
-                    {t(interfaceLanguage, labelKey)}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
+          {kinds.map(({ kind, labelKey }, i) => (
+            <View key={kind} style={i > 0 && s.speedKindRow}>
+              <Text style={s.speedKindLabel}>{t(interfaceLanguage, labelKey)}</Text>
+              <View style={s.langRow}>
+                {options.map(({ value, labelKey: speedLabelKey }) => {
+                  const active = speeds[kind] === value;
+                  return (
+                    <TouchableOpacity
+                      key={value}
+                      style={[s.langChip, active && s.langChipActive]}
+                      onPress={() => setSpeed(kind, value)}
+                    >
+                      <Text style={[s.langChipText, active && s.langChipTextActive]}>
+                        {t(interfaceLanguage, speedLabelKey)}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+          ))}
         </View>
 
         {/* Reminders. Both default off — switching notifications on for someone
@@ -538,6 +543,8 @@ function makeStyles(C: Palette) {
 
   // Language
   settingDescription: { fontSize: 14, color: C.muted, marginBottom: 14 },
+  speedKindLabel: { fontSize: 13, fontWeight: '600', color: C.text, marginBottom: 8 },
+  speedKindRow: { marginTop: 16 },
   langRow: { flexDirection: 'row', gap: 10, flexWrap: 'wrap' },
   langChip: {
     paddingHorizontal: 18, paddingVertical: 9,

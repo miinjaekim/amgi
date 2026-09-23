@@ -75,3 +75,51 @@ export function parsePronunciationSpeed(raw: string | null | undefined): Pronunc
     ? (raw as PronunciationSpeed)
     : DEFAULT_PRONUNCIATION_SPEED;
 }
+
+/**
+ * What a play button is reading, which picks which of the two speeds it plays at.
+ *
+ * **Split by content, not by surface** — the user's call, 2026-09-23. A word
+ * and a sentence want different speeds for a reason that holds on every
+ * screen: a word at normal pace is easy to catch, and a sentence is where a
+ * learner loses the thread and wants it slower. Splitting by surface (browsing
+ * against studying) would have given the same example sentence two speeds
+ * depending on where it was heard.
+ *
+ * `term` is everything a card *is* — the headword, its translation, a pack
+ * entry, a drill prompt. `sentence` is running text: example sentences and
+ * Writing's native version. A call site says `sentence` or gets `term`.
+ */
+export type PronunciationKind = 'term' | 'sentence';
+
+/** The two settings rows, in the order they are shown. */
+export const PRONUNCIATION_KINDS: {
+  kind: PronunciationKind;
+  labelKey: 'speedKindTerm' | 'speedKindSentence';
+}[] = [
+  { kind: 'term', labelKey: 'speedKindTerm' },
+  { kind: 'sentence', labelKey: 'speedKindSentence' },
+];
+
+export type PronunciationSpeeds = Record<PronunciationKind, PronunciationSpeed>;
+
+/**
+ * Both speeds, from the two stored values.
+ *
+ * ⚠️ **The term speed is the key that always existed**, and a missing sentence
+ * speed falls back to it, not to the default. Everyone who set a speed before
+ * the split set it for every button, so their example sentences keep playing
+ * at the pace they picked instead of resetting to normal on update. Callers
+ * write the resolved sentence speed back on first read, so the fallback
+ * happens once and the two are independent from then on.
+ */
+export function resolvePronunciationSpeeds(
+  storedTerm: string | null | undefined,
+  storedSentence: string | null | undefined,
+): PronunciationSpeeds {
+  const term = parsePronunciationSpeed(storedTerm);
+  return {
+    term,
+    sentence: storedSentence ? parsePronunciationSpeed(storedSentence) : term,
+  };
+}
