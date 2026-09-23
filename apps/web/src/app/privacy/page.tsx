@@ -63,6 +63,13 @@ export default function PrivacyPage() {
             Gemini for this purpose.
           </li>
           <li>
+            To review writing you submit, using Google&apos;s Gemini AI — we send
+            the passage you wrote and your language settings (never your name,
+            email, or account ID). The passage and the review are not stored: they
+            exist only for the length of the request, and nothing is saved unless
+            you choose to keep a phrase as a flashcard.
+          </li>
+          <li>
             To generate pronunciation audio using Google Cloud Text-to-Speech —
             only the vocabulary text is sent for this purpose. The resulting audio
             is cached and served from a public storage URL.
@@ -76,7 +83,7 @@ export default function PrivacyPage() {
           Amgi is built on Google infrastructure. The following Google services
           process data on our behalf: Firebase Authentication and Cloud Firestore
           (sign-in and app data storage), Firebase Storage (cached pronunciation
-          audio), the Gemini API (word explanations and examples), and Google Cloud
+          audio), the Gemini API (word explanations, examples and writing review), and Google Cloud
           Text-to-Speech (pronunciation audio). See{" "}
           <a
             href="https://policies.google.com/privacy"
