@@ -250,15 +250,39 @@ export async function fetchProgressRange(
   start: string,
   end: string,
 ): Promise<DailyProgress[]> {
+  const { days } = await readRange(uid, start, end);
+  return replayQueueOver(uid, days, start, end);
+}
+
+/**
+ * `fromServer` is false when `getDocs` fell back to the memory cache, which on
+ * React Native after a cold open means offline and empty — not "no history".
+ */
+async function readRange(
+  uid: string,
+  start: string,
+  end: string,
+): Promise<{ days: DailyProgress[]; fromServer: boolean }> {
   const snapshot = await withTimeout(getDocs(query(
     collection(db, 'users', uid, 'progress'),
     where(documentId(), '>=', start),
     where(documentId(), '<=', end),
   )));
+  return {
+    days: snapshot.docs.map(document => parseDailyProgress(document.id, document.data())),
+    fromServer: !snapshot.metadata.fromCache,
+  };
+}
 
+async function replayQueueOver(
+  uid: string,
+  serverDays: DailyProgress[],
+  start: string,
+  end: string,
+): Promise<DailyProgress[]> {
   const days = new Map<string, DailyProgress>();
-  for (const document of snapshot.docs) {
-    days.set(document.id, parseDailyProgress(document.id, document.data()));
+  for (const day of serverDays) {
+    if (day.date >= start && day.date <= end) days.set(day.date, day);
   }
 
   for (const entry of await readQueue(uid)) {
@@ -270,10 +294,90 @@ export async function fetchProgressRange(
   return [...days.values()].sort((a, b) => a.date.localeCompare(b.date));
 }
 
-/** The last `days` days ending today. */
-export function fetchRecentProgress(uid: string, days: number): Promise<DailyProgress[]> {
+/**
+ * The last `days` days ending today.
+ *
+ * Only an answer from the server is stored as the device's copy. One from
+ * Firestore's own cache is the offline case, and there the device's copy is
+ * the better answer, so it is returned instead when there is one — storing
+ * the cache-backed read would overwrite real history with nothing.
+ */
+export async function fetchRecentProgress(uid: string, days: number): Promise<DailyProgress[]> {
   const today = localDateString();
-  return fetchProgressRange(uid, shiftDate(today, -(days - 1)), today);
+  const start = shiftDate(today, -(days - 1));
+  const read = await readRange(uid, start, today);
+  if (read.fromServer) void writeCachedDays(uid, days, read.days);
+  else {
+    const cached = await readCachedRecentProgress(uid, days);
+    if (cached) return cached;
+  }
+  return replayQueueOver(uid, read.days, start, today);
+}
+
+// ---------------------------------------------------------------------------
+// The device's copy, for a cold open
+// ---------------------------------------------------------------------------
+
+/**
+ * Firestore's cache on React Native is memory-only, so after a cold open the
+ * Progress tab would wait on the network for every number it draws. These
+ * keep the last answers on the device so the tab paints at once and the fetch
+ * replaces them behind it.
+ *
+ * **What is stored is the server's answer, not what was drawn.** The unsent
+ * queue is replayed on the way out, as `fetchProgressRange` does, so a rating
+ * queued since the copy was taken still shows — and one already inside the
+ * copy cannot be counted twice by a later replay.
+ *
+ * Keyed per range because each range is its own read, and a copy from an
+ * earlier day is trimmed to today's window on read rather than thrown away:
+ * yesterday's ninety days are eighty-nine of today's.
+ */
+const daysKey = (uid: string, range: number) => `amgi_progress_days_${uid}_${range}`;
+const matureKey = (uid: string) => `amgi_mature_count_${uid}`;
+
+export interface MatureCount {
+  total: number;
+  byLanguage: Partial<Record<StudyLanguage, number>>;
+}
+
+async function writeCachedDays(uid: string, range: number, days: DailyProgress[]): Promise<void> {
+  try {
+    await AsyncStorage.setItem(daysKey(uid, range), JSON.stringify(days));
+  } catch {
+    // Best-effort; the fetched days still drive this visit.
+  }
+}
+
+/** The last `days` days as last read from the server, or null if never read here. */
+export async function readCachedRecentProgress(uid: string, days: number): Promise<DailyProgress[] | null> {
+  try {
+    const raw = await AsyncStorage.getItem(daysKey(uid, days));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return null;
+    const today = localDateString();
+    return await replayQueueOver(uid, parsed, shiftDate(today, -(days - 1)), today);
+  } catch {
+    return null;
+  }
+}
+
+export async function readCachedMatureCount(uid: string): Promise<MatureCount | null> {
+  try {
+    const raw = await AsyncStorage.getItem(matureKey(uid));
+    return raw ? (JSON.parse(raw) as MatureCount) : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function writeCachedMatureCount(uid: string, count: MatureCount): Promise<void> {
+  try {
+    await AsyncStorage.setItem(matureKey(uid), JSON.stringify(count));
+  } catch {
+    // Best-effort.
+  }
 }
 
 /**

@@ -21,7 +21,10 @@ import { useUser } from '../../src/context/UserContext';
 import { useTheme } from '../../src/context/ThemeContext';
 import ProgressHeader from '../../src/components/ProgressHeader';
 import { useFloatingTabBarHeight } from '../../src/components/FloatingTabBar';
-import { fetchRecentProgress } from '../../src/services/progress';
+import {
+  fetchRecentProgress, readCachedMatureCount, readCachedRecentProgress, writeCachedMatureCount,
+  type MatureCount,
+} from '../../src/services/progress';
 import { backfillMatureFlags, countMatureFlashcards } from '../../src/services/firestore';
 import { getUserPreferences, saveUserPreferences } from '../../src/services/userPreferences';
 import type { Palette } from '../../src/theme';
@@ -94,32 +97,46 @@ export default function ProgressScreen() {
    * Null while counting, and null if the count fails: an absent tile says less
    * than a tile showing a wrong number.
    */
-  const [matureCount, setMatureCount] = useState<
-    { total: number; byLanguage: Partial<Record<StudyLanguage, number>> } | null
-  >(null);
+  const [matureCount, setMatureCount] = useState<MatureCount | null>(null);
 
   // Refetch on focus, matching every other mobile screen — the review tab is
-  // where these numbers change, and it is one tap away.
+  // where these numbers change, and it is one tap away. The device's copy
+  // paints first, so a cold open is not a round trip of "Loading…"; it only
+  // fills a gap and never replaces an answer the fetch already gave.
   useFocusEffect(
     useCallback(() => {
       if (!user) { setDays(null); return; }
       let cancelled = false;
+      let fetched = false;
+      let painted = false;
+      void readCachedRecentProgress(user.uid, rangeDays).then(cached => {
+        if (cancelled || fetched || !cached) return;
+        painted = true;
+        setDays(cached);
+      });
       fetchRecentProgress(user.uid, rangeDays)
-        .then(result => { if (!cancelled) setDays(result); })
+        .then(result => { fetched = true; if (!cancelled) setDays(result); })
         // An empty list is the "nothing yet" state, which is also the honest
-        // thing to show when the read failed: there is no number to report
-        // either way, and a dashboard is not worth an error dialog.
-        .catch(() => { if (!cancelled) setDays([]); });
+        // thing to show when the read failed with nothing cached: there is no
+        // number to report either way, and a dashboard is not worth an error
+        // dialog. With the device's copy on screen, that copy stays.
+        .catch(() => { fetched = true; if (!cancelled && !painted) setDays([]); });
       return () => { cancelled = true; };
     }, [user, rangeDays]),
   );
 
   // Counted on focus like the rollups beside it: the review tab is one tap away
-  // and is exactly where this number changes.
+  // and is exactly where this number changes. Painted from the device first,
+  // for the same reason the rollups are.
   useFocusEffect(
     useCallback(() => {
       if (!user) { setMatureCount(null); return; }
+      const uid = user.uid;
       let cancelled = false;
+      let counted = false;
+      void readCachedMatureCount(uid).then(cached => {
+        if (!cancelled && !counted && cached) setMatureCount(prev => prev ?? cached);
+      });
       (async () => {
         try {
           // The flag is written by every rating from 2026-09-12, but a card not
@@ -140,16 +157,19 @@ export default function ProgressScreen() {
           const counts = await Promise.all(CARD_COLLECTIONS.map(
             async ({ code }) => [code, await countMatureFlashcards(user.uid, code)] as const,
           ));
-          if (cancelled) return;
           const byLanguage: Partial<Record<StudyLanguage, number>> = {};
           let total = 0;
           for (const [code, count] of counts) {
             if (count > 0) byLanguage[code] = count;
             total += count;
           }
-          setMatureCount({ total, byLanguage });
+          counted = true;
+          void writeCachedMatureCount(uid, { total, byLanguage });
+          if (!cancelled) setMatureCount({ total, byLanguage });
         } catch {
-          if (!cancelled) setMatureCount(null);
+          // A count that could not be taken leaves whatever is on screen — the
+          // last one this device took is still a count, just an older one. With
+          // none, the tile stays absent rather than showing a guess.
         }
       })();
       return () => { cancelled = true; };
