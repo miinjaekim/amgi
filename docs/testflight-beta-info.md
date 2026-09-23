@@ -120,6 +120,19 @@ Send feedback via TestFlight's "Send Beta Feedback" or to kenyamjkim@gmail.com.
 삭제 위치(5.1.1(v)), 알림이 기본 꺼짐이라는 사실, 제3자 데이터 처리. 각 문단은
 심사에서 실제로 물어봤거나 물어볼 만한 것에 대한 답입니다.
 
+⚠️ **그러면서 4000자를 넘으면 안 됩니다 — App Store Connect의 상한입니다.** 2.0.0
+작업 때 4145자로 처음 부딪혔고, 줄여야 하는 것은 **문장이지 내용이 아닙니다**.
+위 문단들은 각각 심사 질문 하나에 대한 답이라 통째로 빼면 그 질문이 리젝으로
+돌아옵니다. 실제로 통한 방법은 같은 말을 두 번 하는 곳을 찾는 것이었습니다 —
+"is not stored"와 "is not written to the account"는 한 문장이면 충분했고, 모드
+문단은 주장을 하나도 버리지 않고 847자에서 657자가 되었습니다.
+
+길이 재는 법은 [backlog.md](../.scratchpad/backlog.md)의 "Cutting a build"에
+있습니다(줄바꿈도 글자 수에 포함). ⚠️ **이 파일에 코드 블록을 새로 추가하지
+마세요.** 이 파일의 ``` 블록은 "App Store Connect에 붙여넣는 문구"라는 뜻이고,
+길이 측정과 문자셋 대조 둘 다 그 규칙에 기대고 있습니다 — 붙여넣지 않을 것이
+블록 안에 들어가면 두 검사가 같이 틀립니다.
+
 **Sign-in required:** Yes
 **Demo account:** 심사용으로 만들어 둔 Google 계정을 App Store Connect의 Demo Account
 필드에 그대로 유지하세요. 이전 빌드 심사에서 사용된 계정입니다.
@@ -131,19 +144,19 @@ Amgi is a language-learning app that pairs AI-generated word explanations with s
 
 Sign-in: The app uses Google Sign-In (Firebase Authentication) only. Demo credentials are provided in the demo account fields above. Any Google account can sign in and immediately access all functionality.
 
-How to test: On first launch the app asks three questions before anything else, and cannot be used until all three are answered: what language the app itself should be in, what language to study, and what language that deck should be explained in. The third is asked because explanations are stored on the card and are not regenerated, and it is prefilled from the first, so answering it is one tap. A learner cannot pick the language they already speak as the language they are studying. A short tour of the three main screens follows. The app's own language is changed later in Settings; a deck's explanation language is chosen when that language is added.
+How to test: On first launch the app asks three questions before anything else, and cannot be used until all three are answered: what language the app itself should be in, what language to study, and what language that deck is explained in. The third is asked because explanations are stored on the card and never regenerated; it is prefilled from the first, so answering it is one tap. A learner cannot pick the language they already speak as the language they are studying. A short tour of the three main screens follows. The app's own language is changed later in Settings; a deck's explanation language is chosen when that language is added.
 
-Amgi mode has five tabs, icon-only, left to right: Review, Cards, Learn, Packs, Progress. Review, where the app opens, runs the spaced-repetition session over saved cards. Cards lists, edits, and exports saved cards. Learn, in the middle, is where you type any word or phrase and tap Learn to get an explanation, then save it as a flashcard. Packs holds pre-made decks that can be saved as cards or drilled directly. Progress shows which days were reviewed, with a row per language that opens that language's own charts.
+Amgi mode has five tabs, icon-only, left to right: Review, Cards, Learn, Packs, Progress. Review, where the app opens, runs the spaced-repetition session over saved cards. Cards lists, edits and exports them. Learn, in the middle, is where you type any word or phrase and tap Learn for an explanation, then save it as a flashcard. Packs holds pre-made decks to save as cards or drill directly. Progress shows which days were reviewed, a row per language opening that language's charts.
 
-Modes: a fresh install always opens in Amgi, and nothing needs to be done with modes to review the app. The second mode, Munli, is reached by holding the last tab in the tab bar, or by the mode button beside the gear at the top right of Progress; the same gesture returns to Amgi. In a Korean interface the two modes are named 암기 and 문리 respectively. Munli has its own five tabs: Practice, Saved, Writing, Topics, Progress. Practice drills verb conjugation, Topics browses the verb tables, Saved lists what is scheduled, and Writing submits a passage for correction. Conjugation content exists for French only at present: with any other study language selected, Munli's Practice and Progress tabs say so on screen rather than appearing broken. To see it populated, add French from Settings → the study language list → Add language, then select it.
+Modes: a fresh install opens in Amgi, and nothing need be done with modes to review the app. The second mode, Munli, is reached by holding the last tab, or by the mode button beside the gear on Progress; the same returns to Amgi. A Korean interface names the two 암기 and 문리. Munli's own five tabs are Practice, Saved, Writing, Topics, Progress: Practice drills verb conjugation, Topics browses the tables, Saved lists what is scheduled, Writing submits a passage for correction. Conjugation covers French only, and under any other study language those tabs say so on screen rather than appearing broken. To populate it, add French in Settings → Add language.
 
 Settings: the gear icon at the top right of the Progress tab, in either mode. There is no Settings tab — that gear is the only route in, and it is present whether or not anyone is signed in.
 
-Account deletion: Progress tab → the gear icon at its top right → Delete account, at the bottom of the Settings screen. The Progress tab of either mode carries that gear, so this route does not depend on which mode the app is in. This permanently deletes the account and all associated data from within the app, as required by guideline 5.1.1(v). It asks for confirmation and may re-prompt for Google sign-in, because deleting an account requires a recent authentication.
+Account deletion: Progress tab → the gear icon at its top right → Delete account, at the bottom of the Settings screen. Either mode's Progress carries that gear, so the route does not depend on the mode. This permanently deletes the account and all associated data from within the app, as required by guideline 5.1.1(v). It asks for confirmation and may re-prompt for Google sign-in, because deletion requires a recent authentication.
 
 Notifications: The app can schedule local reminders for the word of the day and for due reviews. Both are off by default and are turned on individually in Settings; the permission prompt appears only when one is enabled. These are local notifications scheduled on the device — the app sends no remote push and stores no push tokens.
 
-Third-party processing: Word explanations and writing corrections are generated with Google's Gemini API, and pronunciation audio with Google Cloud Text-to-Speech. Only the submitted text, optional context, and language settings are sent — never account identifiers. A passage submitted to Munli's Writing tab is sent for correction and is not stored: neither the passage nor the correction is written to the account, and nothing persists unless the user saves a phrase from it as a flashcard. All of this is described in the privacy policy.
+Third-party processing: Word explanations and writing corrections are generated with Google's Gemini API, and pronunciation audio with Google Cloud Text-to-Speech. Only the submitted text, optional context, and language settings are sent — never account identifiers. A passage submitted to Munli's Writing tab is not stored: neither it nor the correction is written to the account, unless the user saves a phrase as a flashcard. All of this is described in the privacy policy.
 
 The app contains no ads, no analytics, and no tracking. It does not access location, contacts, camera, or photos.
 

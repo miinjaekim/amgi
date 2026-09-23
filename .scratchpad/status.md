@@ -53,6 +53,28 @@ and `npm run lint` 0 errors / 21 warnings, both measured._
   compiler, `next build` and `expo export`; **nobody has looked at either surface
   on a device or in a browser.**
 
+- **2.0.0 is build 17**, cut 2026-09-23 from `69476aa` on `release/1.8.0` and
+  submitted the same day. ⚠️ **Approval is not recorded here because it has not
+  been reported** — a version bump queues a fresh Beta App Review, and 1.7.0's
+  approval (if it was granted) covers 1.7.0 only. Confirm before assuming.
+  It carries everything queued since build 16: the two modes and the switcher,
+  writing review and verb conjugation as Munli's tools, the Munli stack, the
+  launch that paints from the device behind a splash, and sharing a chart.
+  **Pre-flight was clean, and found two things rather than confirming none**:
+  the Apple review notes still described one mode and one route into Settings,
+  which is the same staleness 1.6.0's caught; and the privacy policy did not
+  cover writing review, while the notes told Apple it did. Both fixed before
+  submission — the policy in both locales, on web, so it deploys with the merge
+  rather than with the binary.
+  **A new pre-flight step came out of it**: Beta App Review Information has a
+  4000-character ceiling, hit for the first time at 4145. It is step 5 in
+  Cutting a build now.
+  ⚠️ **The version breaks the cadence deliberately** — 1.3.0 through 1.7.0 were
+  one minor per build, and this is 2.0.0 on the user's call. The reasoning, and
+  the argument against it, are in the Decisions entry of 2026-09-23.
+  ⚠️ **Nothing in it has been opened on a device**, which is true of every
+  Munli surface and of both Share buttons. Step 1's Expo Go half covered the
+  Munli stack on 2026-09-22; everything merged after that is unseen.
 - **1.7.0 is build 16**, cut 2026-09-19 from `cb7c19c` on `release/1.7.0`, with
   the Android APK as `versionCode` 6 from the same commit. ⚠️ **Approval is not
   recorded here because it has not been reported** — 1.6.0's external approval
@@ -261,6 +283,7 @@ No OTA, so every mobile change reaches users through one of these.
 
 | Version | Build | Date | Cut from |
 |---|---|---|---|
+| 2.0.0 | 17 | 2026-09-23 | `69476aa` on `release/1.8.0` (version bump + mode-name localization + TestFlight copy) — submitted; Beta App Review not reported as of this line. **Branch name says 1.8.0**: it was cut before the 2.0.0 call, and renaming it would have lost PR #156 |
 | 1.7.0 | 16 | 2026-09-19 | `cb7c19c` on `release/1.7.0` (version bump + TestFlight copy) — external approval not reported as of this line |
 | 1.6.0 | 15 | 2026-09-10 | `c8c113a` on `release/1.6.0` (version bump + TestFlight copy) — external testing approved 09-10, same day |
 | 1.5.0 | 14 | 2026-09-02 | `84be8af` on `release/1.5.0` (PR #109, version bump + TestFlight copy) — external testing approved 09-02, same day |

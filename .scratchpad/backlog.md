@@ -461,8 +461,8 @@ to Test rule, and the `--non-interactive` warning. What a build *carries* is
 derivable from its commit; what is queued, released or never verified on a
 binary is under Builds in [status.md](status.md).
 
-**Pre-flight**, in order. Steps 2–6 were all exercised cutting 1.6.0 and again
-cutting 1.7.0; step 1 was half done for the first time on 1.7.0:
+**Pre-flight**, in order. Steps 2–7 were all exercised cutting 2.0.0; step 5 is
+new there, and step 1 remains half done — the Expo Go half only:
 
 1. Smoke-test in Expo Go, then verify the native-adjacent paths on the build
    itself — Expo Go runs the SDK's own bundled native modules, so a clean pass
@@ -488,11 +488,31 @@ cutting 1.7.0; step 1 was half done for the first time on 1.7.0:
    review notes that still routed the reviewer to a Settings tab the redesign
    had removed, which is a 5.1.1(v) problem because account deletion lives
    behind it.
-5. **Diff the listing copy's character set against the version Apple last
+5. **Check Beta App Review Information fits 4000 characters** — App Store
+   Connect's ceiling, and newlines count. 2.0.0 hit it at 4145, the first build
+   that did. ⚠️ **What you cut is prose, never a paragraph**: each one answers a
+   question review has asked, so dropping one invites that question back as a
+   rejection. Look instead for the same claim made twice. The file's own ⚠️ says
+   don't shorten this section; both warnings are true and this is how they meet.
+
+   ```
+   python3 -c "
+   import re,pathlib
+   s=pathlib.Path('docs/testflight-beta-info.md').read_text()
+   print(len(re.split(r'\*\*Review Notes:\*\*',s)[1].split('\`\`\`')[1].lstrip('\n')))"
+   ```
+
+   Anchored on "Review Notes:" rather than on the section. A fenced block in
+   that file means "copy pasted into App Store Connect" — both this check and
+   the character-set diff below rely on that, so picking blocks by position
+   breaks the moment anything else in the file is fenced. Verified 2026-09-23:
+   prints 3805.
+
+6. **Diff the listing copy's character set against the version Apple last
    accepted** before pasting — not read it, diff it. That is what catches a
    non-BMP character, and blank error bullets are all App Store Connect will
    tell you. See [lessons.md](lessons.md).
-6. Submit (`ascAppId` is in `eas.json`), then paste the copy into Test
+7. Submit (`ascAppId` is in `eas.json`), then paste the copy into Test
    Information in **both ko and en**.
 
 ⚠️ **What to Test is a skimmable list of what's new and nothing else** (set
