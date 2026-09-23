@@ -122,6 +122,22 @@ Backlog priority mirrors the user's Google Tasks list — `backlog.md` is the
 scoped version of it. Keep entries at the size that says what to do next; the
 argument behind a call goes in `status.md`, not in the item.
 
+**Parallel agents:** the main checkout is for scoping and planning into
+`backlog.md`; building happens in worktrees made by
+`scripts/new-worktree.sh <branch>`, one agent each. The script branches from
+`origin/main`, so a plan has to be pushed before its worktree exists. Changes
+confined to `.scratchpad/` and `docs/` may be committed straight to main (pull
+first); code always goes through a branch and PR. If you are an agent in a
+worktree:
+
+- **Your backlog item is yours to edit.** Rescope it in your PR as the work
+  changes; when it merges, remove it per the convention above, or move it to
+  "Queued for the next build" if it's mobile. The planning session leaves a
+  handed-off item alone until your PR merges.
+- **Bring your branch up to date with main before the PR merges**
+  (`git pull --rebase origin main`). "Queued for the next build" and its
+  `_Empty as of…_` line are where two PRs usually collide — keep both sides.
+
 _This pass **found that the streak chip and the Progress tab were keeping two
 copies of one number**, from a three-review gap the user noticed (202 against
 205). The full diagnosis is in the 2026-09-15 Decisions entry in
