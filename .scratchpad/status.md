@@ -8,7 +8,7 @@ show: the reasoning behind closed calls (Decisions), the console and binary stat
 that lives outside the repo (Builds, TestFlight), and what is currently
 unverified.
 
-_Reconciled against `release/1.7.0` @ `cb7c19c`, 2026-09-19. `npm test` 639/639
+_Reconciled against `release/1.8.0` @ `62415d5`, 2026-09-23. `npm test` 854/854
 and `npm run lint` 0 errors / 21 warnings, both measured._
 
 ## Now
@@ -53,10 +53,10 @@ and `npm run lint` 0 errors / 21 warnings, both measured._
   compiler, `next build` and `expo export`; **nobody has looked at either surface
   on a device or in a browser.**
 
-- **2.0.0 is build 17**, cut 2026-09-23 from `69476aa` on `release/1.8.0` and
-  submitted the same day. ⚠️ **Approval is not recorded here because it has not
-  been reported** — a version bump queues a fresh Beta App Review, and 1.7.0's
-  approval (if it was granted) covers 1.7.0 only. Confirm before assuming.
+- **2.0.0 is build 17, live in TestFlight and approved for external testing**
+  (2026-09-23), cut from `69476aa` on `release/1.8.0`, submitted and approved the
+  same day. External testers can be invited without another review as long as the
+  version doesn't change.
   It carries everything queued since build 16: the two modes and the switcher,
   writing review and verb conjugation as Munli's tools, the Munli stack, the
   launch that paints from the device behind a splash, and sharing a chart.
@@ -121,7 +121,7 @@ and `npm run lint` 0 errors / 21 warnings, both measured._
   reads as an artifact the fallback is server-side rates behind the same three
   chips, and that is written down in its Decisions entry, not waiting on a list.
 - **Mobile merges are unblocked.** The freeze holds only until submission; the
-  next mobile change waits for build 17.
+  next mobile change waits for build 18.
 - **Languages are per-deck** (2026-09-12, merged as PR #127, on mobile in build
   16). Each study language carries the language it is explained in, and the app's
   own language is a separate setting — see the Decisions entry below.
@@ -130,8 +130,10 @@ and `npm run lint` 0 errors / 21 warnings, both measured._
   against a real multi-deck account** — not on web, where it has been live since
   the merge, and not on a binary. `nativeLanguage` is still written alongside
   `interfaceLanguage` because build 15 is in testers' hands and reads the old
-  field; that stays until build 15 is out of circulation, which external approval
-  of 1.7.0 does not by itself accomplish.
+  field; that stays until build 15 is out of circulation. ⚠️ **Two approved
+  releases now sit above it (builds 16 and 17) and that still does not retire
+  it** — approval lets testers update, it does not make them. What would settle
+  this is the console showing no sessions on build 15, not another release.
 - **The progress dashboard is on both platforms** (2026-08-20) but only in users'
   hands on web, since mobile ships by build. Daily rollups are written on every
   rating and every card save. The Firestore security rule for
@@ -283,7 +285,7 @@ No OTA, so every mobile change reaches users through one of these.
 
 | Version | Build | Date | Cut from |
 |---|---|---|---|
-| 2.0.0 | 17 | 2026-09-23 | `69476aa` on `release/1.8.0` (version bump + mode-name localization + TestFlight copy) — submitted; Beta App Review not reported as of this line. **Branch name says 1.8.0**: it was cut before the 2.0.0 call, and renaming it would have lost PR #156 |
+| 2.0.0 | 17 | 2026-09-23 | `69476aa` on `release/1.8.0` (version bump + mode-name localization + TestFlight copy) — external testing approved 09-23, same day. **Branch name says 1.8.0**: it was cut before the 2.0.0 call, and renaming it would have lost PR #156 |
 | 1.7.0 | 16 | 2026-09-19 | `cb7c19c` on `release/1.7.0` (version bump + TestFlight copy) — external approval not reported as of this line |
 | 1.6.0 | 15 | 2026-09-10 | `c8c113a` on `release/1.6.0` (version bump + TestFlight copy) — external testing approved 09-10, same day |
 | 1.5.0 | 14 | 2026-09-02 | `84be8af` on `release/1.5.0` (PR #109, version bump + TestFlight copy) — external testing approved 09-02, same day |
