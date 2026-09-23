@@ -29,7 +29,8 @@
 import { ImageResponse } from 'next/og';
 import { NextRequest } from 'next/server';
 import {
-  chartBucketDays, formatStudyTime, isStudyLanguage, niceCeiling, studyTimeTile, t,
+  chartBucketDays, formatStudyTime, isStudyLanguage, niceCeiling, shiftDate, studyTimeTile, t,
+  weekdayIndex, weekdayLabels,
   type ShareChartMark, type ShareChartMeasure, type ShareVariant,
   type StudyLanguage, type TranslationKey,
 } from '@amgi/core';
@@ -223,10 +224,12 @@ const DOT_RADIUS = 10;
  * against — 47 gives a ceiling of 50 on both. Sending it would be one more
  * forgeable parameter for a figure the route can derive exactly.
  */
-function Chart({ values, ceiling, mark }: {
+function Chart({ values, ceiling, mark, weekdays }: {
   values: number[];
   ceiling: number;
   mark: ShareChartMark;
+  /** One name per mark, drawn under it — or absent, when a mark is not a day. */
+  weekdays?: string[];
 }) {
   /**
    * A value's height in px. Both marks read it, so they sit on one scale.
@@ -308,6 +311,28 @@ function Chart({ values, ceiling, mark }: {
           ))
         )}
       </div>
+      {/* Under each mark, in the same slots the bars take — same flex, same
+          gap — so a name sits under its own bar and, on a line, under its own
+          dot, which is centred in that slot too. */}
+      {weekdays && (
+        <div style={{ display: 'flex', width: '100%', marginTop: 14 }}>
+          {weekdays.map((name, index) => (
+            <div
+              key={index}
+              style={{
+                flex: 1,
+                display: 'flex',
+                justifyContent: 'center',
+                marginRight: index === weekdays.length - 1 ? 0 : gap,
+                fontSize: 30,
+                color: C.muted,
+              }}
+            >
+              {name}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -370,6 +395,12 @@ export interface ShareImageParams {
     values: number[];
     measure: ShareChartMeasure;
     mark: ShareChartMark;
+    /**
+     * The last day the chart covers, `YYYY-MM-DD`, or `null` when the URL has
+     * none — every chart link made before weekdays were drawn, which simply
+     * draws none.
+     */
+    end: string | null;
   };
 }
 
@@ -452,8 +483,35 @@ export function readShareImageParams(q: URLSearchParams): ShareImageParams {
       // the reason `readVariant` gives.
       measure: q.get('cm') === 'r' ? 'reviews' : 'cards',
       mark: q.get('mk') === 'l' ? 'line' : 'bars',
+      end: readDate(q.get('e')),
     },
   };
+}
+
+/** A `YYYY-MM-DD` that is a real day, or `null` — never a throw. */
+function readDate(value: string | null): string | null {
+  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+  return Number.isNaN(new Date(`${value}T12:00:00Z`).getTime()) ? null : value;
+}
+
+/**
+ * The weekday under each of a chart's marks, oldest first, or `undefined`.
+ *
+ * **The dashboard's rule, so the shared chart reads like the one it came
+ * from:** only when a mark is a day, and only at a count where every mark is
+ * labelled anyway (`DECORATED_MARK_MAX`) — in practice, the 7-day chart. A
+ * 30-day chart of names would be a grey smear at this size.
+ */
+export function chartWeekdays(
+  chart: ShareImageParams['chart'],
+  lang: string | null,
+): string[] | undefined {
+  const { values, bucketDays, end } = chart;
+  if (!end || bucketDays !== 1 || values.length === 0 || values.length > DECORATED_MARK_MAX) {
+    return undefined;
+  }
+  const names = weekdayLabels(lang);
+  return values.map((_, index) => names[weekdayIndex(shiftDate(end, index - (values.length - 1)))]);
 }
 
 /**
@@ -642,6 +700,7 @@ export async function GET(req: NextRequest) {
               values={chart.values}
               ceiling={niceCeiling(Math.max(0, ...chart.values))}
               mark={chart.mark}
+              weekdays={chartWeekdays(chart, lang)}
             />
             {/* ⚠️ **Said out loud whenever a bar is not a day.** Past 30 days
                 the app buckets by week, so a 90-day window is 13 bars — read as

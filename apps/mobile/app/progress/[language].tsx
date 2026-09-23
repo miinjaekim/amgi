@@ -27,7 +27,7 @@ import Svg, { Polyline } from 'react-native-svg';
 import {
   DETAILED_HISTORY_START, SUPPORTED_STUDY_LANGUAGES, buildCardsAddedSeries,
   buildLearnedSeries, chartBucketDays, languageAveragePerActiveDay, localDateString,
-  niceCeiling, summarizeProgress, weekAxisTicks, weekdayIndex, t,
+  niceCeiling, summarizeProgress, weekAxisTicks, weekdayIndex, weekdayLabels, t,
   type CardsAddedBucket, type DailyProgress, type LearnedPoint,
   type StudyLanguage, type TranslationKey,
 } from '@amgi/core';
@@ -648,19 +648,6 @@ function Gridlines({ s, ticks, ceiling }: {
       ))}
     </>
   );
-}
-
-/**
- * Sunday-first weekday names in the reader's language.
- *
- * Built from a known Sunday through `Intl` rather than from translation keys:
- * seven more keys per locale to say what the platform already knows.
- */
-function weekdayLabels(interfaceLanguage: string | null | undefined): string[] {
-  const locale = interfaceLanguage === 'Korean' ? 'ko-KR' : 'en-GB';
-  // 1970-01-04 was a Sunday.
-  return [0, 1, 2, 3, 4, 5, 6].map(offset => new Date(Date.UTC(1970, 0, 4 + offset, 12))
-    .toLocaleDateString(locale, { weekday: 'short' }));
 }
 
 /**

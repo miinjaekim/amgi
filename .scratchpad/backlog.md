@@ -61,6 +61,13 @@ section worth seeing without scrolling._
   after it. Several are native modules (`expo-audio`, `expo-notifications`,
   `expo-updates`…), so the build is where they land.
 
+- **The 7-day chart share card names its days** (2026-09-24). A weekday sits
+  under each bar or point, but only when each mark is one day and there are no
+  more than 14 of them, which is the dashboard's rule. The route needs the
+  chart's last day to do it, so `shareImageQuery` now sends `e`. Web has it on
+  merge. Mobile builds its own share URL, so charts shared from phones get
+  weekdays from the build on; older links render without them.
+
 ⚠️ **In testers' hands is not the same as seen.** Nothing in that build has been
 opened on a device, which is most of what Munli is. Untracked here by the
 2026-09-04 decision that these checks come from using the app, not a list; the

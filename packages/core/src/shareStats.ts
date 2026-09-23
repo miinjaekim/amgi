@@ -500,6 +500,9 @@ export function shareImageQuery(
     q.set('c', chartValues(stats, chart.measure).join(','));
     if (chart.measure !== 'cards') q.set('cm', 'r');
     if (chart.mark !== 'bars') q.set('mk', 'l');
+    // The last day the bars cover, so a chart of days can name them. The route
+    // cannot work it out itself: "today" is the sharer's, not the server's.
+    q.set('e', stats.windowEnd);
   }
   // Codes rather than display names: shorter, stable, and it leaves the label
   // in the reader's own language rather than the sharer's.
