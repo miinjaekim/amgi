@@ -14,17 +14,17 @@ const hiragana = card('kana-hiragana', 'あ');
 const katakana = card('kana-katakana', 'ア');
 const toeic = card('toeic-core', 'comply');
 
-// A product decision, not an implementation detail: the page is called My
-// Cards, so it opens on them and widening to a pack is deliberate. Pinned so a
-// refactor cannot quietly change what every account sees first.
+// A product decision, not an implementation detail: the list opens on
+// everything you have enrolled, and narrowing to your own words is deliberate.
+// Pinned so a refactor cannot quietly change what every account sees first.
 describe('the default deck', () => {
-  it('is your own cards', () => {
-    expect(DEFAULT_DECK_FILTER).toBe('mine');
+  it('is all cards', () => {
+    expect(DEFAULT_DECK_FILTER).toBe('all');
   });
 
-  it('shows no pack cards on a mixed library', () => {
+  it('shows pack cards but not grid decks on a mixed library', () => {
     expect(filterCardsByDeck([mine, toeic, hiragana], DEFAULT_DECK_FILTER, 'Japanese'))
-      .toEqual([mine]);
+      .toEqual([mine, toeic]);
   });
 });
 

@@ -184,12 +184,14 @@ export type DeckFilterId = 'all' | 'mine' | (string & {});
  * What the card list opens on, and where a selection falls back to when the
  * deck it pointed at stops existing.
  *
- * Your own cards, not everything: the page is called My Cards, so it opens
- * showing what it is named and widening to a pack is a thing you do on purpose.
- * The reverse default made every account's first view of the list a mix it had
- * not asked for.
+ * Everything, not only your own cards. This was 'mine' from 2026-08-04 (#80),
+ * on the reading that a page called My Cards should open on what it is named;
+ * the user reversed it 2026-09-23. An enrolled pack card is one of your cards
+ * too, and opening on a narrowed list hid most of the library behind a chip.
+ * Grid decks stay out of "All" regardless (`isGridDeck`), so kana does not
+ * swamp it.
  */
-export const DEFAULT_DECK_FILTER: DeckFilterId = 'mine';
+export const DEFAULT_DECK_FILTER: DeckFilterId = 'all';
 
 export interface DeckFilter {
   id: DeckFilterId;

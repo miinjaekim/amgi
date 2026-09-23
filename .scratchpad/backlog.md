@@ -29,6 +29,10 @@ section worth seeing without scrolling._
 _Empty as of 2026-09-23_ — everything that sat here went out in 2.0.0 (build
 17). What it carried is under Builds in [status.md](status.md).
 
+- **My Cards opens on "All"** (2026-09-23) — `DEFAULT_DECK_FILTER` flipped
+  from `'mine'`; web has it on merge. Reasoning under Decisions in
+  [status.md](status.md).
+
 ⚠️ **In testers' hands is not the same as seen.** Nothing in that build has been
 opened on a device, which is most of what Munli is. Untracked here by the
 2026-09-04 decision that these checks come from using the app, not a list; the
@@ -47,18 +51,6 @@ stopwatch** (2026-09-22) and the **Slow speed** artifact question.
       end. On mobile Decks is a tab stack, so pop to its root rather than
       pushing a second list on top. Keep `deckNotFound` for a genuinely bad
       URL. Small; no build-only native code.
-
-- [ ] **My Cards opens on "All", not "My cards".** Decided by the user
-      2026-09-23 — this reverses #80 (2026-08-04), whose reasoning is the doc
-      comment on `DEFAULT_DECK_FILTER` in `collections.ts` ("the page is called
-      My Cards, so it opens showing what it is named"). Flip the constant to
-      `'all'` and rewrite that comment; both platforms read it, so it is one
-      line plus the comment, and a stale selection falls back to the new
-      default for free. The old reasoning goes to Decisions in
-      [status.md](status.md) with the reversal. ⚠️ **"All" still leaves grid
-      decks out** (`isGridDeck`), so kana stays hidden — but the kanji pack is a
-      *list* and will now be on the opening view of any account that enrolled
-      it. That is the Medium item below, and it gets more urgent with this.
 
 - [ ] **My Cards and Progress are slow on an iOS cold open** — the app fully
       closed and reopened (the user, 2026-09-23). Tab switching and web weren't
