@@ -26,47 +26,26 @@ _Kept at the top of the file, ahead of priority order, from 2026-09-22 on the
 user's call — this list changes every time something merges, and it is the one
 section worth seeing without scrolling._
 
-**Empty as of 2026-09-23.** Everything that sat here went out in 2.0.0 (build
-17), approved for external testing the day it was submitted: the two modes and
-the switcher, writing review and verb conjugation as Munli's tools, the Munli
-stack, the launch that paints from the device behind a splash, Munli waiting for
-the snapshot, and sharing a chart.
+_Empty as of 2026-09-23_ — everything that sat here went out in 2.0.0 (build
+17). What it carried is under Builds in [status.md](status.md).
 
 ⚠️ **In testers' hands is not the same as seen.** Nothing in that build has been
-opened on a device, which is most of what Munli is. That is not tracked here as
-work, by the 2026-09-04 decision that these checks come from using the app rather
-than from a list — the two with something actually hanging on them are recorded
-where the decision is, not here: the **launch stopwatch** (time a cold launch on
-the build, before and after) in the Decisions entry of 2026-09-22, and the
-**Slow speed** artifact question in its own.
+opened on a device, which is most of what Munli is. Untracked here by the
+2026-09-04 decision that these checks come from using the app, not a list; the
+two with something hanging on them live with their decisions — the **launch
+stopwatch** (2026-09-22) and the **Slow speed** artifact question.
 
 ## High
 
-_Empty as of 2026-09-23._ The narration that filled this section — which Munli
-items arrived, which were built, which were reviewed, and what the stack came
-back with — described work that has shipped in 2.0.0, and git and the Decisions
-entries of 2026-09-21 and 2026-09-22 in [status.md](status.md) hold all of it.
-Per this file's own rule, shipped work leaves.
+_Empty as of 2026-09-23._
 
-⚠️ **Two open calls came out of that stack and neither has been answered**, which
-is the one thing here that is not finished: whether `faire` joins the three
-sourced irregular verbs (#150), and whether a practice session should be able to
-cover several tenses at once again, which the section picker narrowed (#146).
-Both are questions for the user, not work items, and both are written up in
-their Decisions entries of 2026-09-22.
+⚠️ **Two questions for the user are open**, neither of them a work item:
+whether `faire` joins the three sourced irregular verbs (#150), and whether a
+practice session should cover several tenses at once again, which the section
+picker narrowed (#146). Both are written up in their Decisions entries of
+2026-09-22.
 
 ## Medium
-
-_Launch speed led this section and left it on 2026-09-22, merged as PR #152 —
-it is under Queued for the next build._
-
-_**All three Progress items scoped 2026-09-15 are now built.** The per-language
-detail view and both charts shipped on `feat/progress-language-detail`; the
-third, sharing a chart as an asset, left this section on 2026-09-23 and is
-under Queued for the next build. The three calls the user made on the first two,
-and the boundary finding that came out of building them, are in the Decisions
-entry of that date in [status.md](status.md); the chart card's own calls are in
-the entry of 2026-09-23._
 
 - [ ] **Per-context pronunciation speed** — the last of the mobile UI redesign
       queued 2026-09-01, moved here 2026-09-12 on the user's call. Nothing about
@@ -139,16 +118,15 @@ the entry of 2026-09-23._
       Convention to follow, from the user 2026-09-09: an image of Claude's
       account menu — rows with leading icons, thin separators grouping them,
       the destructive action last and alone.
-      **It gained a second reason on 2026-09-21.** The mode switcher (shipped in
-      PR #135, under Queued for the next build) wants a *Switch mode ›* row as its discoverable door, and a row menu is
-      where that row goes — a hold on a tab is not something a user finds by
+      **It gained a second reason on 2026-09-21.** The mode switcher (PR #135,
+      shipped in 2.0.0) wants a *Switch mode ›* row as its discoverable door,
+      and a row menu is where that row goes — a hold on a tab is not something a user finds by
       looking. Neither item blocks the other, but landing them together is one
       menu built once instead of a menu and then a menu edit.
 
 ## Bigger bets
 
-_Empty as of 2026-09-08 — the gloss ceiling was the only item here, and it
-closed (Decisions in [status.md](status.md))._
+_Empty as of 2026-09-08._
 
 ## Parked
 
@@ -275,8 +253,8 @@ closed (Decisions in [status.md](status.md))._
 
 ## Housekeeping — tooling that hides signal
 
-`npm test` (407/407, measured 2026-09-04) and `npx eslint .` (0 errors) are
-green. What's left is what those two now *show*.
+`npm test` (854/854) and `npm run lint` (0 errors, 21 warnings) are green,
+measured 2026-09-23. What's left is what those two now *show*.
 
 - [ ] **The Google consent screen says "Amgi AI".** Rename it to **Amgi** in the
       Google Cloud OAuth consent screen → Branding → App name. Console-side, no
@@ -298,8 +276,8 @@ green. What's left is what those two now *show*.
       check — that testers have actually updated, since an un-updated 1.3.0 device
       still has the UI compiled in and calls the route. Three releases now sit
       between them and it as of 2026-09-23, which makes this cheaper to believe
-      than it was, but it
-      is still console state rather than a repo fact. The file carries a
+      than it was, but it is still console state rather than a repo fact. The
+      file carries a
       `DO NOT DELETE AS DEAD CODE` header; the reasoning is in
       [status.md](status.md). **`typedAnswer.ts` is not part of this** —
       `grammar.ts` imports its folding rules rather than owning them, so the
@@ -327,15 +305,18 @@ green. What's left is what those two now *show*.
       that, then a constant can cover all four screens; skipping review would
       leave the thing a constant exists to prevent.
 
-- [ ] **20 lint warnings.** 13 React Compiler
-      (`react-hooks/set-state-in-effect` ×11, `react-hooks/immutability` ×2) and
-      they're real: a `useEffect` calling `setState` synchronously renders twice
-      on mount. Most want `useSyncExternalStore`, so each is a small design call,
-      not a mechanical edit. Set to `warn` so landing the lint fix didn't mean
-      landing 13 rushed ones — clear them, then delete the override, and
-      **don't silence them further**. The other five: two dead bindings in
-      `decks/[packId]/{page,drill/page}.tsx`, two `<img>` that should be
-      `next/image` (`Header`, `SideNav`), one missing dep in `cards/page.tsx`.
+- [ ] **21 lint warnings**, counted 2026-09-23 — the number has drifted up as
+      the app grew, so recount rather than trusting this line. 17 are React
+      Compiler (`react-hooks/set-state-in-effect` ×15,
+      `react-hooks/immutability` ×2) and they're real: a `useEffect` calling
+      `setState` synchronously renders twice on mount. Most want
+      `useSyncExternalStore`, so each is a small design call, not a mechanical
+      edit. Set to `warn` so landing the lint fix didn't mean landing rushed
+      ones — clear them, then delete the override, and **don't silence them
+      further**. The other four: two `<img>` that should be `next/image`
+      (`Header.tsx:94`, `SideNav.tsx:187`), one unused binding
+      (`decks/[packId]/drill/page.tsx:34`), one missing dep
+      (`cards/page.tsx:123`).
 
 - [ ] **Lint covers `apps/web` only** — core and mobile have no `lint` script, so
       `turbo lint` runs one package and reports success. Honest today, misleading
