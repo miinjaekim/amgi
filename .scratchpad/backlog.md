@@ -37,7 +37,58 @@ stopwatch** (2026-09-22) and the **Slow speed** artifact question.
 
 ## High
 
-_Empty as of 2026-09-23._
+- [ ] **Switching study language on an open deck should land on the Decks
+      list.** Today `decks/[packId]` (and its `drill`) looks the pack up under
+      the *current* language, so a switch leaves the route pointing at a pack
+      that isn't there and it renders `deckNotFound` — mobile even has a comment
+      saying so (`app/(tabs)/decks/[packId]/index.tsx`, above `if (!pack)`).
+      Fix on both platforms: when the pack stops resolving *because the
+      language changed*, replace to `/decks` rather than rendering the dead
+      end. On mobile Decks is a tab stack, so pop to its root rather than
+      pushing a second list on top. Keep `deckNotFound` for a genuinely bad
+      URL. Small; no build-only native code.
+
+- [ ] **My Cards opens on "All", not "My cards".** Decided by the user
+      2026-09-23 — this reverses #80 (2026-08-04), whose reasoning is the doc
+      comment on `DEFAULT_DECK_FILTER` in `collections.ts` ("the page is called
+      My Cards, so it opens showing what it is named"). Flip the constant to
+      `'all'` and rewrite that comment; both platforms read it, so it is one
+      line plus the comment, and a stale selection falls back to the new
+      default for free. The old reasoning goes to Decisions in
+      [status.md](status.md) with the reversal. ⚠️ **"All" still leaves grid
+      decks out** (`isGridDeck`), so kana stays hidden — but the kanji pack is a
+      *list* and will now be on the opening view of any account that enrolled
+      it. That is the Medium item below, and it gets more urgent with this.
+
+- [ ] **My Cards and Progress are slow on an iOS cold open** — the app fully
+      closed and reopened (the user, 2026-09-23). Tab switching and web weren't
+      named. The cause is on the device: **mobile has no persistent Firestore
+      cache** (`getFirestore` in `src/config/firebase.ts`), so after a cold
+      start Cards subscribes from nothing and sits on skeletons until the server
+      answers, and Progress fetches its rollups plus the mature-card count
+      (aggregation queries, one per language shard) from the network.
+      Direction: **the one launch already took** (Decisions, 2026-09-22) —
+      paint from the device and reconcile behind it. Keep the last cards list
+      and the last rollups in AsyncStorage, render them at once, and let the
+      live read replace them. `@react-native-firebase` was rejected there as too
+      large a migration and still is.
+      ⚠️ **Confirm it was 2.0.0** — the build carrying the cache-first launch.
+      Only judgeable on a build, like the launch stopwatch.
+
+- [ ] **Dig Deeper's definition should read like a dictionary entry.** From the
+      user (2026-08-18): the top section is wordier than it needs to be; start
+      with what a dictionary would say, and let the breakdown and notes carry
+      the nuance and context. The cause is the prompt, which says the opposite
+      on purpose — *"the user already has a one-sentence definition… add what
+      the one-liner misses: connotation, nuance, near-synonyms"*.
+      Change **both** `api/explain/depth-stream` (what both apps call) and
+      `api/explain/depth` (JSON) together: Definition becomes a plain
+      dictionary-style sense, and connotation / near-synonym contrast moves into
+      Notes. ⚠️ **Decide how it sits beside `briefDefinition`**, which is
+      already a one-sentence definition on the same card — a dictionary line
+      right under it risks saying the same thing twice. Saved cards keep their
+      old text; no backfill. Card-back glosses are a separate rule
+      (`GLOSS_RULE`) and are untouched.
 
 ⚠️ **Two questions for the user are open**, neither of them a work item:
 whether `faire` joins the three sourced irregular verbs (#150), and whether a
@@ -46,6 +97,40 @@ picker narrowed (#146). Both are written up in their Decisions entries of
 2026-09-22.
 
 ## Medium
+
+- [ ] **Average time studied per day, not the window's total.** Time studied is
+      only shown on the **share image** today (`shareStatTime`, from
+      `summary.totalStudySeconds`), where a 90-day total says little. The
+      per-day `studySeconds` rollups already exist, so this is display only —
+      and the route can derive it from `t` and the window it already knows, so
+      **old shared URLs keep working** with no new parameter.
+      ⚠️ **One call to make: the denominator.** Days in the window (honest about
+      days off; low) or days actually studied (flattering; says how long a
+      session runs). Either way, a window reaching back past
+      `DETAILED_HISTORY_START` must divide by the days that were measured, not
+      the window. Also worth deciding: whether the Progress tab should show it
+      too, since it currently shows no time at all.
+
+- [ ] **Tag French verbs with what kind of verb they are** — all four kinds,
+      per the user 2026-09-23: **conjugation group**, **pronominal**,
+      **auxiliary (être/avoir)** and **transitivity**. They are not the same kind
+      of fact, and that sets the work:
+      - **Group** (`-er` / `-ir` finir-type / `-re` / irregular) belongs to the
+        infinitive, but is **not derivable from the ending** — `partir` ends in
+        `-ir` and is irregular, `aller` ends in `-er`. Use Munli's groups
+        (`conjugation.ts`) so the two surfaces agree.
+      - **Pronominal** is derivable: the saved term starts with `se`/`s'`. No
+        model call.
+      - **Auxiliary and transitivity depend on the sense**, not the verb:
+        `sortir` takes être going out and avoir taking something out, and is
+        intransitive in one and transitive in the other. So these must be
+        written for the card's sense, which fits how a card already works (one
+        sense per card), but it means they can't be looked up per verb.
+      So: new optional fields set by `/api/explain`, normalized to closed code
+      sets the way `partOfSpeech` is, plus pronominal computed locally. Absent
+      on existing cards; no backfill. ⚠️ **Four badges plus the part of speech
+      is too many for a card front**. Decide where they go: probably one short
+      line on the detail view, not badges in review.
 
 - [ ] **Per-context pronunciation speed** — the last of the mobile UI redesign
       queued 2026-09-01, moved here 2026-09-12 on the user's call. Nothing about
@@ -328,6 +413,23 @@ measured 2026-09-23. What's left is what those two now *show*.
       dead code web's lint catches on the next commit.
 
 ## Needs clarification
+
+- [ ] **Words with several parts of speech.** A card carries one
+      `partOfSpeech`, and `normalizePartOfSpeech` keeps only the first of
+      "noun/verb". Two shapes are possible, and which one is the item:
+      **(a) one card, several badges** — `partOfSpeech` becomes a list; or
+      **(b) each part of speech is its own sense** — the lookup already offers
+      a meanings picker for ambiguous terms, and a card is already one sense
+      (the depth and example prompts are scoped to it), so a noun/verb split
+      would become two pickable meanings. (b) fits the model better, since the
+      definition and examples differ by part of speech anyway. Needs an example
+      word that went wrong.
+      _2026-09-23: the user leaned toward (a) but asked for a recommendation.
+      Recommended (b): the definition, examples and review prompt all differ by
+      part of speech, so a two-badge card still has to explain one of them, and
+      the other badge is a claim the rest of the card doesn't back up. Keep (a)
+      for the rare case where the meaning really is the same across parts of
+      speech. Awaiting the user's call._
 
 - [ ] **Personalised explanation preferences** — emphasis knobs (etymology,
       cultural context, example-heavy). Store in `users/{uid}`, include in prompt.
