@@ -394,6 +394,25 @@ once, so a path that worked on build 14 is not evidence about build 15.
 Closed calls, kept with their reasoning — a decision whose reasoning is lost gets
 reopened by the next person to notice the symptom. Newest first.
 
+### My Cards opens on "All", reversing #80 (2026-09-23)
+
+**The card list opens on every card, not only the ones you made** — the user's
+call. `DEFAULT_DECK_FILTER` in `collections.ts` went from `'mine'` to `'all'`;
+web and mobile both read it, and a selection pointing at a deck that no longer
+exists falls back to the same constant, so nothing else moved.
+
+**What it reverses**, kept so the next reader does not flip it back: #80
+(2026-08-04) chose `'mine'` because the page is called My Cards, so it should
+open showing what it is named, and a mixed list was a view nobody had asked for.
+The reply is that an enrolled pack card *is* one of your cards — you chose to
+study it — and opening on a narrowed list hid most of an account's library
+behind a chip.
+
+⚠️ **Grid decks are still left out of "All"** (`isGridDeck`), so kana does not
+swamp the opening view. The kanji pack is a `list`, though, so any account that
+enrolled it now sees 240 kanji on first open. That is the Medium item "Watch
+the kanji deck on the 'All' chip", which this makes more pressing.
+
 ### The modes are named in the reader's language, and 2.0.0 (2026-09-23)
 
 **Two calls made while cutting the build**, both the user's.
