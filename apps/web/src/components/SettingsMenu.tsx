@@ -95,7 +95,7 @@ export default function SettingsMenu({ onClose }: { onClose: () => void }) {
     setInterfaceLanguage, setHanjaPartition, removeLanguage, handleSignOut,
   } = useUser();
   const { theme, setTheme, themes } = useTheme();
-  const { speed, setSpeed, speeds } = usePronunciation();
+  const { speeds, setSpeed, options, kinds } = usePronunciation();
   const [langListOpen, setLangListOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
 
@@ -292,29 +292,36 @@ export default function SettingsMenu({ onClose }: { onClose: () => void }) {
         </div>
       </div>
 
-      {/* Pronunciation speed. One control for every play button in the app —
-          term, translation and example sentences all render the same
-          PronounceButton, so a second setting would have nothing to name. */}
+      {/* Pronunciation speed, one row per kind of text: a word and a sentence
+          want different paces on every screen, which is why the split is by
+          content rather than by surface. See `PronunciationKind`. */}
       <div className="px-4 py-3 border-b border-[var(--color-muted)]/50">
         <p className="text-xs font-mono uppercase tracking-widest" style={{ color: 'var(--color-muted)' }}>
           {t(interfaceLanguage, 'settingsPronunciationSpeed')}
         </p>
-        <div className="grid grid-cols-3 gap-2 mt-2">
-          {speeds.map((sp) => (
-            <button
-              key={sp.value}
-              onClick={() => setSpeed(sp.value)}
-              className="py-2.5 rounded-lg text-sm font-mono border transition-colors"
-              style={
-                speed === sp.value
-                  ? { background: 'var(--color-highlight)', color: 'var(--color-bg)', borderColor: 'var(--color-highlight)' }
-                  : { background: 'transparent', color: 'var(--color-text)', borderColor: 'var(--color-muted)' }
-              }
-            >
-              {t(interfaceLanguage, sp.labelKey)}
-            </button>
-          ))}
-        </div>
+        {kinds.map(({ kind, labelKey }) => (
+          <div key={kind} className="mt-2">
+            <p className="text-xs" style={{ color: 'var(--color-muted)' }}>
+              {t(interfaceLanguage, labelKey)}
+            </p>
+            <div className="grid grid-cols-3 gap-2 mt-1">
+              {options.map((sp) => (
+                <button
+                  key={sp.value}
+                  onClick={() => setSpeed(kind, sp.value)}
+                  className="py-2.5 rounded-lg text-sm font-mono border transition-colors"
+                  style={
+                    speeds[kind] === sp.value
+                      ? { background: 'var(--color-highlight)', color: 'var(--color-bg)', borderColor: 'var(--color-highlight)' }
+                      : { background: 'transparent', color: 'var(--color-text)', borderColor: 'var(--color-muted)' }
+                  }
+                >
+                  {t(interfaceLanguage, sp.labelKey)}
+                </button>
+              ))}
+            </div>
+          </div>
+        ))}
       </div>
 
       {/* What is held, in plain language, next to the control that erases it —

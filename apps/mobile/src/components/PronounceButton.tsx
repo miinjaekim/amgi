@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { TouchableOpacity, ActivityIndicator, Text, StyleSheet, StyleProp, ViewStyle } from 'react-native';
 import { createAudioPlayer, setAudioModeAsync } from 'expo-audio';
 import { getSpokenText, getStudyLanguageConfig } from '@amgi/core';
-import type { StudyLanguage } from '@amgi/core';
+import type { PronunciationKind, StudyLanguage } from '@amgi/core';
 import { getPronunciationUrl } from '../services/gemini';
 import { useTheme } from '../context/ThemeContext';
 import { usePronunciation } from '../context/PronunciationContext';
@@ -14,6 +14,8 @@ interface Props {
   /** A hanja's 음, spoken instead of the glyph. Required on the Hanja deck. */
   eum?: string;
   studyLanguage: StudyLanguage;
+  /** `sentence` for running text — example sentences, Writing's rewrite. Picks the speed. */
+  kind?: PronunciationKind;
   size?: 'sm' | 'md';
   style?: StyleProp<ViewStyle>;
 }
@@ -28,9 +30,9 @@ function ensureAudioMode() {
   return audioModeReady;
 }
 
-export default function PronounceButton({ text, furigana, eum, studyLanguage, size = 'md', style }: Props) {
+export default function PronounceButton({ text, furigana, eum, studyLanguage, kind = 'term', size = 'md', style }: Props) {
   const { C } = useTheme();
-  const { rate } = usePronunciation();
+  const rate = usePronunciation().rateFor(kind);
   const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('idle');
 
   // No voice configured for this language yet — don't render a button that

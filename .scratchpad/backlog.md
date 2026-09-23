@@ -76,6 +76,12 @@ section worth seeing without scrolling._
   "Verb". Only on cards looked up after the merge, with no backfill. Only the
   group, and the reasoning is under Decisions in [status.md](status.md).
 
+- **Two pronunciation speeds: words and sentences** (2026-09-23). Settings
+  shows two chip rows. Example sentences and Writing's native version play at
+  the sentence speed; everything else plays at the word speed. The old single
+  setting became the word speed, and it also seeds the sentence speed once, so
+  nobody's pace resets. Web has it on merge. JS only.
+
 ⚠️ **In testers' hands is not the same as seen.** Nothing in that build has been
 opened on a device, which is most of what Munli is. Untracked here by the
 2026-09-04 decision that these checks come from using the app, not a list; the
@@ -91,27 +97,6 @@ picker narrowed (#146). Both are written up in their Decisions entries of
 2026-09-22.
 
 ## Medium
-
-- [ ] **Per-context pronunciation speed** — the last of the mobile UI redesign
-      queued 2026-09-01, moved here 2026-09-12 on the user's call. Nothing about
-      it was decided; it is the axis question below that keeps it unscoped.
-      One setting drives every play button today, and the comment above the
-      speed selector in `app/settings.tsx` says why: term, translation and
-      example all render the same `PronounceButton`, so a second setting had
-      nothing to name. The ask names two things it could split on — **content**
-      (term vs example sentence) and **surface** (browsing vs learn/review).
-      ⚠️ **Pick one axis.** Both is a 2×2 — four controls for something a user
-      sets once and forgets.
-      Mechanically cheap: rate is applied at playback (`setPlaybackRate` native,
-      `playbackRate` web), so **no re-synthesis and no cache churn**. The work is
-      a `kind` prop at the call sites — example sentences are the ones passing
-      `sides.study` (grep it: `index.tsx`, `review.tsx`, `CardDetailModal.tsx`),
-      everything else is the term — plus a second AsyncStorage key, with the
-      existing `amgi_pronunciation_speed` read as the default for both so nobody's
-      setting resets.
-      Web has the same button and the same context, so this lands on both. And
-      `settingsPronunciationSpeedDesc` ("applies to terms, translations, and
-      example sentences", both locales) becomes false the moment it ships.
 
 - [ ] **Watch the kanji deck on the "All" chip.** The kanji pack is the first
       single-glyph pack laid out as a `list`, because its back carries readings

@@ -201,7 +201,7 @@ export default function WritingReviewPanel() {
           <View style={s.card}>
             <View style={s.rewriteHeaderRow}>
               <Text style={[s.sectionLabel, s.sectionLabelShrink]}>{t(interfaceLanguage, 'writingRewriteHeading')}</Text>
-              <PronounceButton text={review.rewrite} studyLanguage={studyLanguage} />
+              <PronounceButton text={review.rewrite} studyLanguage={studyLanguage} kind="sentence" />
               {/* Always the clean rewrite, never the diff — copying text with
                   the deletions in it would paste the mistakes back. */}
               <CopyButton text={review.rewrite} interfaceLanguage={interfaceLanguage} />

@@ -1500,6 +1500,7 @@ export default function ReviewScreen() {
                                       <PronounceButton
                                         text={sides.study}
                                         studyLanguage={studyLanguage}
+                                        kind="sentence"
                                         size="sm"
                                       />
                                     )}

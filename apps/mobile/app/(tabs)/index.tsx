@@ -747,7 +747,7 @@ export default function LearnScreen() {
                         {sides.study ? (
                           <View style={s.exampleStudyRow}>
                             <Text style={[s.bodyText, s.exampleStudyText]}>{sides.study}</Text>
-                            <PronounceButton text={sides.study} studyLanguage={studyLanguage} size="sm" />
+                            <PronounceButton text={sides.study} studyLanguage={studyLanguage} kind="sentence" size="sm" />
                           </View>
                         ) : null}
                         {sides.back ? <Text style={s.exampleTranslation}>{sides.back}</Text> : null}

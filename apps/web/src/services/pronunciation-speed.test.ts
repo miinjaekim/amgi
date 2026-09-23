@@ -4,6 +4,7 @@ import {
   PRONUNCIATION_SPEEDS,
   parsePronunciationSpeed,
   pronunciationRate,
+  resolvePronunciationSpeeds,
 } from '@amgi/core';
 
 describe('parsePronunciationSpeed', () => {
@@ -43,5 +44,26 @@ describe('pronunciationRate', () => {
       expect(rate).toBeGreaterThan(0.5);
       expect(rate).toBeLessThanOrEqual(2);
     }
+  });
+});
+
+describe('resolvePronunciationSpeeds', () => {
+  it('reads each kind from its own key', () => {
+    expect(resolvePronunciationSpeeds('fast', 'slow')).toEqual({ term: 'fast', sentence: 'slow' });
+  });
+
+  // Everyone who set a speed before the split set it for every button, so
+  // their example sentences must not jump back to normal on update.
+  it('gives an unset sentence speed the old single speed, not the default', () => {
+    expect(resolvePronunciationSpeeds('slow', null)).toEqual({ term: 'slow', sentence: 'slow' });
+    expect(resolvePronunciationSpeeds('slow', undefined)).toEqual({ term: 'slow', sentence: 'slow' });
+  });
+
+  it('falls back to the default for anything unset or unrecognized', () => {
+    expect(resolvePronunciationSpeeds(null, null)).toEqual({
+      term: DEFAULT_PRONUNCIATION_SPEED, sentence: DEFAULT_PRONUNCIATION_SPEED,
+    });
+    expect(resolvePronunciationSpeeds('turbo', 'slow')).toEqual({ term: DEFAULT_PRONUNCIATION_SPEED, sentence: 'slow' });
+    expect(resolvePronunciationSpeeds('fast', 'turbo').sentence).toBe(DEFAULT_PRONUNCIATION_SPEED);
   });
 });

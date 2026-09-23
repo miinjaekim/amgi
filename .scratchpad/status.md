@@ -394,6 +394,22 @@ once, so a path that worked on build 14 is not evidence about build 15.
 Closed calls, kept with their reasoning — a decision whose reasoning is lost gets
 reopened by the next person to notice the symptom. Newest first.
 
+### Pronunciation speed splits by content, not by surface (2026-09-23)
+
+**Two speeds, one for words and one for sentences**, the user's pick of the
+two axes the backlog offered. Doing both would have been a 2×2: four controls
+for something a user sets once. The reason content wins is that it holds on
+every screen: a single word at normal pace is easy to catch, and a sentence is
+where a learner loses the thread. Splitting by surface would give the same
+example sentence two speeds depending on where it was heard.
+
+A call site passes `kind="sentence"` (examples, Writing's native version) or
+gets `term`. The rate is still applied at playback, so there's no
+re-synthesis and no cache churn. The key that predates the split is now the
+word speed, and it seeds the sentence speed on first read
+(`resolvePronunciationSpeeds`), which is then written back so the two are
+independent from then on.
+
 ### French verbs are tagged with their group, and only their group (2026-09-23)
 
 **The backlog item asked for four facts, and one shipped.** They were the

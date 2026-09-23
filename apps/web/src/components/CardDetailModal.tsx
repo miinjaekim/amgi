@@ -397,7 +397,7 @@ export default function CardDetailModal({
                             <li key={i}>
                               <div className="text-sm" style={{ color: 'var(--color-text)' }}>
                                 {sides.study}
-                                <PronounceButton text={sides.study} studyLanguage={lang} size="sm" className="ml-1 align-middle" />
+                                <PronounceButton text={sides.study} studyLanguage={lang} kind="sentence" size="sm" className="ml-1 align-middle" />
                               </div>
                               <div className="text-sm mt-0.5" style={{ color: 'var(--color-highlight)' }}>{sides.back}</div>
                             </li>
