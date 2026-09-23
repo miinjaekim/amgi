@@ -189,6 +189,24 @@ describe('the chart bars', () => {
   it('treats an empty series as no chart rather than as one empty bar', () => {
     expect(parse('v=chart&w=30&c=').chart.values).toEqual([]);
   });
+
+  it('reads the measure and the mark, defaulting to cards drawn as bars', () => {
+    // Absent is the default on both, so the shortest URL the builder can
+    // produce and a URL from a build that never knew about either mean the
+    // same picture.
+    expect(parse('v=chart&w=7&c=1')).toMatchObject({
+      chart: { measure: 'cards', mark: 'bars' },
+    });
+    expect(parse('v=chart&w=7&c=1&cm=r&mk=l')).toMatchObject({
+      chart: { measure: 'reviews', mark: 'line' },
+    });
+  });
+
+  it('reads anything unrecognised as the default, never as a failure', () => {
+    expect(parse('v=chart&w=7&c=1&cm=nonsense&mk=nonsense')).toMatchObject({
+      chart: { measure: 'cards', mark: 'bars' },
+    });
+  });
 });
 
 describe('the heatmap layout', () => {

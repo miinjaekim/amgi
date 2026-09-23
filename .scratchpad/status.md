@@ -375,7 +375,38 @@ reopened by the next person to notice the symptom. Newest first.
 scoped 2026-09-15. The backlog item had done most of the thinking already; what
 was left were four calls and one thing it had flagged as unknown.
 
-**Which chart: cards added, as bars.** The user's call, from three offered. The
+**Which chart: the one on screen.** ⚠️ **The first pass answered this wrong,
+and it is the mistake worth keeping.** The question was put to the user as
+"which chart does the asset draw", and the answer — cards added, as bars — was
+given about the *per-language* detail charts, which have one measure each and no
+mark toggle. The user then chose a different home for the button: the
+dashboard's weekly chart, which plots **either** reviews or cards added, as
+**either** bars or a line. Those two answers were taken as independent and they
+were not. What shipped was cards-added bars under a button sitting on a Reviews
+line chart, which is a different picture wearing that button, and the user
+caught it immediately: *"i expected a copy of the Reviews bar/line chart or the
+Cards added bar/line chart, but i just get another calendar grid"*.
+
+**The general lesson**: an answer about *what to draw* is only as good as the
+surface it was asked about. Moving the entry point moved the question, and
+nothing re-asked it.
+
+**So the measure and the mark travel.** `ShareChart` carries both series over
+the same buckets — they cost one pass over rows already fetched — and
+`ShareChartOptions` says which of them the card draws and how. The hero follows
+the measure, because a big number above a chart is read as the chart's own
+total: reviews chart, reviews hero, and the language line comes back with it
+(`languages` *is* the languages reviewed); cards chart, cards-added hero, no
+language line, and reviews drops to a tile.
+
+**The second half of the same bug: the gate.** `hasShareableChart` asked only
+about cards added. A reader looking at a full Reviews chart who had added
+nothing that month had *every* chart card filtered out, so the Share button on
+their chart opened the carousel on the 30-day calendar — the "another calendar
+grid" in the report. It now takes the measure it is being asked about.
+
+**Which series, originally: cards added, as bars.** The user's call, from three
+offered, and still the default. The
 learned curve was the alternative and costs more than it looks: it needs the
 all-time `learnedNow` anchor, which the mobile share screen does not fetch and
 would have to buy a read for, and `buildLearnedSeries` is `null` before
@@ -387,21 +418,15 @@ until October. Cards added is honest over every window the tab offers, because
 The item warned that `next/og` is flexbox-only and that the line "may not
 survive it". It does: satori handles an inline `<svg>` by serializing the
 subtree to a `data:` URI and rasterizing it as an image (`Ks()` in the compiled
-bundle), so `polyline` and `preserveAspectRatio` pass straight through — given
-an explicit `viewBox` and numeric `width`/`height`. **Bars are drawn anyway**,
-for a reason that is about the data rather than the renderer: cards added is a
-count per bar, not a running level, so a line would draw a rate as a level. The
-curve belongs to cards learned, and that card does not exist. The item's "check
-this before promising both marks" is discharged, not dodged.
+bundle), and `ti` maps `strokeWidth` to `stroke-width` on the way, so a
+React-shaped `<polyline>` and `<circle>` come out right. Three rules follow:
+give the `<svg>` an explicit `viewBox` and numeric `width`/`height`; put the
+geometry in **absolute pixels**, since there is no percentage to resolve
+against; and keep every label outside it, because **`<text>` throws outright**.
 
-**The hero is cards added, not reviews — and that forced two more changes.** A
-big number above a chart is read as the chart's own total by anyone who sees it,
-and `reviews` counts *directions* where the bars count cards, so the two cannot
-sit on one canvas under one figure. So on this card the hero is the number the
-bars add up to, reviews drops to a tile, and the cards-added tile goes because
-the hero already is it. **The language line goes too**: `ShareStats.languages`
-is the languages *reviewed*, which is an honest caption under a review count and
-a quietly wrong one under a cards-added hero.
+That check was made for the first pass, which then drew bars anyway. It is what
+made the fix cheap when the mark turned out to have to travel — the finding was
+already written down, and only the drawing was missing.
 
 **The source filter does not travel.** The user's call. The detail screens can
 filter the same chart to looked-up or pack cards; the shared asset is always the
@@ -416,10 +441,12 @@ new `open` param naming a card by id, beside the `range` param the range row has
 always sent. The carousel shows **chart cards plus the existing cards**, charts
 last, so a reader arriving from the range row still lands where they always did.
 
-⚠️ **A new variant stayed backward compatible by construction.** `bd` and `c`
-are sent *only* for `v=chart`, so a window card's URL is byte-for-byte what it
-was; `readVariant` reads anything unrecognised as `window`, so a build older
-than this card keeps rendering what it always did. And the grain is **carried,
+⚠️ **A new variant stayed backward compatible by construction.** `bd`, `c`,
+`cm` and `mk` are sent *only* for `v=chart`, so a window card's URL is
+byte-for-byte what it was; `cm` and `mk` are omitted at their defaults, so the
+shortest URL and an absent parameter mean the same picture; and `readVariant`
+reads anything unrecognised as `window`, so a build older than this card keeps
+rendering what it always did. And the grain is **carried,
 never derived** — `chartBucketDays` is the fallback for a URL that omits `bd`
 and nothing more, because deriving it would change what every already-installed
 build's links mean the day `DAILY_CHART_MAX_DAYS` moves.
@@ -446,7 +473,7 @@ knowing for its own sake: a `fonts` option **replaces** the bundled Geist rather
 than adding to it, so Latin is no safer than Hangul here — the missing `N` and
 the missing 새 were the same bug.
 
-**The repair**: subset regenerated to 137 glyphs from an audit of what the route
+**The repair**: subset regenerated to 138 glyphs from an audit of what the route
 actually draws — a fixed list of keys, not "every `share*` value", since
 `shareTitle`, `shareChoose`, `shareBack`, `shareNothingYet` and `shareFailed`
 are chooser strings that never reach a canvas. `fonts.ts` now carries that list,

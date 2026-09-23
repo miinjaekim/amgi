@@ -15,7 +15,7 @@ import {
   shiftDate, weekAxisTicks,
   summarizeProgress, t,
   type DailyProgress, type HeatmapCell, type LanguageProgress,
-  type StudyLanguage, type TranslationKey,
+  type ShareChartOptions, type StudyLanguage, type TranslationKey,
 } from '@amgi/core';
 import { useUser } from '../../src/context/UserContext';
 import { useTheme } from '../../src/context/ThemeContext';
@@ -429,9 +429,14 @@ export default function ProgressScreen() {
               onMeasureChange={setWeekMeasure}
               // The chart's own Share button. It opens the preview on the
               // seven-day chart card — the picture of the chart being looked
-              // at — rather than on whichever window the chip above selected.
+              // at — rather than on whichever window the chip above selected,
+              // and carries how that chart is drawn, because the mark lives
+              // inside the chart and the measure beside it.
               onShare={hasHistory
-                ? () => router.push({ pathname: '/share', params: { open: 'c7' } })
+                ? chart => router.push({
+                  pathname: '/share',
+                  params: { open: 'c7', measure: chart.measure, mark: chart.mark },
+                })
                 : undefined}
             />
 
@@ -666,8 +671,13 @@ function WeekChart({
   weekdays: string[];
   measure: WeekMeasure;
   onMeasureChange: (measure: WeekMeasure) => void;
-  /** Opens the share preview, or absent when there is no history to share. */
-  onShare?: () => void;
+  /**
+   * Opens the share preview, or absent when there is no history to share.
+   *
+   * Handed the chart's own shape, since the mark is state this component owns
+   * and the screen above has no way to read it.
+   */
+  onShare?: (chart: ShareChartOptions) => void;
 }) {
   /**
    * The remembered mark.
@@ -797,7 +807,10 @@ function WeekChart({
               accessibility label, as it is there. */}
           {onShare && (
             <TouchableOpacity
-              onPress={onShare}
+              // `WeekMeasure` and `WeekMark` are the same two unions core names
+              // `ShareChartMeasure` and `ShareChartMark`; they are declared
+              // here because this chart predates the card.
+              onPress={() => onShare({ measure, mark })}
               hitSlop={10}
               accessibilityRole="button"
               accessibilityLabel={t(interfaceLanguage, 'shareTitle')}

@@ -205,13 +205,27 @@ export default function ProgressPage() {
   );
 
   /**
+   * The chart as it is currently drawn — the measure the dropdown is set to and
+   * the mark the toggle is on.
+   *
+   * ⚠️ **This is what makes the chart card the chart you are looking at.** The
+   * first pass shared cards-added bars whatever the chart showed, so pressing
+   * Share on a Reviews line gave back something else entirely.
+   */
+  const chartOptions = useMemo(
+    () => ({ measure: weekMeasure, mark: weekMark }),
+    [weekMeasure, weekMark],
+  );
+
+  /**
    * What there is to share, and nothing that would go out blank.
    *
    * ⚠️ **The gate is asked per variant, and it is not the same gate.** A today
    * card on a day with nothing rated is exactly the zeroed image
    * `hasShareableHistory` exists to prevent, however full the 90-day window
-   * beside it happens to be — while a chart card is asked about the bars,
-   * because a month of reviews with nothing added draws an empty plot.
+   * beside it happens to be — while a chart card is asked about *its own
+   * measure's* marks, because a month of reviews with nothing added draws an
+   * empty cards chart and a perfectly good reviews one.
    *
    * Both entry points show this same list: the chip in the range row and the
    * one in the chart's own title. What differs is only which card the reader
@@ -220,11 +234,11 @@ export default function ProgressPage() {
   const shareOptions = useMemo(() => ([
     { variant: 'window' as const, stats: shareStats },
     { variant: 'today' as const, stats: todayStats },
-    { variant: 'chart' as const, stats: weekStats },
-    { variant: 'chart' as const, stats: shareStats },
+    { variant: 'chart' as const, stats: weekStats, chart: chartOptions },
+    { variant: 'chart' as const, stats: shareStats, chart: chartOptions },
   ].filter(option => (option.variant === 'chart'
-    ? hasShareableChart(option.stats)
-    : hasShareableHistory(option.stats)))), [shareStats, todayStats, weekStats]);
+    ? hasShareableChart(option.stats, chartOptions.measure)
+    : hasShareableHistory(option.stats)))), [shareStats, todayStats, weekStats, chartOptions]);
 
   /**
    * Cards learned — all of them, not a window's worth.

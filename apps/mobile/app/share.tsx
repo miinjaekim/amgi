@@ -29,8 +29,8 @@ import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { File, Paths } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import {
-  buildShareCards, localDateString, shareImageFilename, shareImagePath, t,
-  type DailyProgress, type ShareCard,
+  DEFAULT_SHARE_CHART, buildShareCards, localDateString, shareImageFilename, shareImagePath, t,
+  type DailyProgress, type ShareCard, type ShareChartOptions,
 } from '@amgi/core';
 import { useUser } from '../src/context/UserContext';
 import { useTheme } from '../src/context/ThemeContext';
@@ -74,7 +74,25 @@ export default function ShareScreen() {
   const s = useMemo(() => makeStyles(C), [C]);
   const { user, interfaceLanguage, streak } = useUser();
   // Which card to open on, so the preview starts where the reader just was.
-  const { range, open } = useLocalSearchParams<{ range?: string; open?: string }>();
+  const {
+    range, open, measure, mark,
+  } = useLocalSearchParams<{
+    range?: string; open?: string; measure?: string; mark?: string;
+  }>();
+
+  /**
+   * How the chart was drawn on the tab that sent the reader here.
+   *
+   * ⚠️ **Read from the params, not decided here.** The weekly chart's measure
+   * and mark are what the reader has been looking at, and a chart card that
+   * picked its own would be a different picture under the button they pressed.
+   * Anything unrecognised — including arriving from the range row, which sends
+   * neither — falls back to the dashboard's own defaults.
+   */
+  const chart: ShareChartOptions = useMemo(() => ({
+    measure: measure === 'reviews' ? 'reviews' : DEFAULT_SHARE_CHART.measure,
+    mark: mark === 'line' ? 'line' : DEFAULT_SHARE_CHART.mark,
+  }), [measure, mark]);
 
   const [days, setDays] = useState<DailyProgress[] | null>(null);
   /**
@@ -117,8 +135,9 @@ export default function ShareScreen() {
       endDate: localDateString(),
       windows: WINDOWS,
       chartWindows: CHART_WINDOWS,
+      chart,
     }),
-    [days, streak],
+    [days, streak, chart],
   );
 
   /**
@@ -188,14 +207,14 @@ export default function ShareScreen() {
       if (!API_BASE_URL) throw new Error('no API base url configured');
       if (!(await Sharing.isAvailableAsync())) throw new Error('sharing unavailable');
 
-      const target = new File(Paths.cache, shareImageFilename(card.stats, card.variant));
+      const target = new File(Paths.cache, shareImageFilename(card.stats, card.variant, card.chart));
       // A cached file from an earlier share would be silently reused, so the
       // window's own numbers could go out under a newer window's filename —
       // which is also why the variant is part of that name.
       if (target.exists) target.delete();
 
       const file = await withTimeout(File.downloadFileAsync(
-        `${API_BASE_URL}${shareImagePath(card.stats, interfaceLanguage, card.variant)}`,
+        `${API_BASE_URL}${shareImagePath(card.stats, interfaceLanguage, card.variant, card.chart)}`,
         target,
       ));
       await Sharing.shareAsync(file.uri, {
@@ -283,7 +302,7 @@ export default function ShareScreen() {
                 ) : (
                   <Image
                     source={{
-                      uri: `${API_BASE_URL}${shareImagePath(card.stats, interfaceLanguage, card.variant)}`,
+                      uri: `${API_BASE_URL}${shareImagePath(card.stats, interfaceLanguage, card.variant, card.chart)}`,
                     }}
                     style={[s.card, { width: cardWidth, height: cardWidth / ASPECT }]}
                     resizeMode="contain"

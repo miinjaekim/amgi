@@ -27,28 +27,36 @@ user's call — this list changes every time something merges, and it is the one
 section worth seeing without scrolling._
 
 - [ ] **A chart is a card you can post** (2026-09-23). Web is live; **native is
-      not**. A third `ShareVariant`, `chart`, drawing cards added as bars over
-      its window — reached from a Share button in the weekly chart's own title
-      row, beside Bars / Line, on both platforms. It joins the carousel rather
-      than replacing it: windows, today, then a chart card per chart window
+      not**. A third `ShareVariant`, `chart`, drawing **the weekly chart as it
+      is currently drawn** — the measure the dropdown is set to and the mark the
+      toggle is on — reached from a Share button in that chart's own title row,
+      beside Bars / Line, on both platforms. It joins the carousel rather than
+      replacing it: windows, today, then a chart card per chart window
       (7 · 30 · 90 on mobile, 7 and the selected range on web).
-      **The line mark was checked rather than assumed** — satori draws an inline
-      `<svg>` by serializing it to a data URI, so a curve *is* possible. Bars
-      are drawn anyway because cards added is a count per bar and not a running
-      level; the curve belongs to cards learned, which this card does not draw.
-      Both calls, and why the hero is cards added rather than reviews, are in
-      the Decisions entry of 2026-09-23 in [status.md](status.md).
+      ⚠️ **The first pass got this wrong and the user caught it**: it shared
+      cards-added bars whatever the chart showed, so Share on a Reviews line
+      gave back a different picture — and because every chart card was gated on
+      cards added, a reader with a full reviews chart and a quiet month of
+      adding was dropped onto the 30-day calendar instead. Both are fixed;
+      `hasShareableChart` now takes the measure it is being asked about.
+      **Satori draws the line**, checked rather than assumed: it serializes an
+      inline `<svg>` to a data URI and maps `strokeWidth` to `stroke-width`, so
+      the geometry just has to be absolute pixels against a fixed `viewBox`, and
+      `<text>` throws. The calls are in the Decisions entry of 2026-09-23 in
+      [status.md](status.md).
       ⚠️ **Repaired a live bug on the way**: the image's font subset was missing
       nine glyphs it draws, so 「담은 카드」, 「새로 익힘」 and the `N` of "Newly
       learned" were being fetched from Google Fonts at render time by satori's
       `loadDynamicAsset` — invisible in the output, and a network call on the
-      share path. Subset regenerated to 137 glyphs from an audit of the drawn
+      share path. Subset regenerated to 138 glyphs from an audit of the drawn
       strings, and `fonts.ts` now says how to repeat it.
       ⚠️ **What has not been exercised**: nothing has been opened on a device or
-      in a browser. The route itself was rendered — the chart card at 7, 30, 90
-      and 364 days, in both locales, plus the window and today cards to confirm
-      they are unchanged — but the two Share buttons and the widened chooser
-      have only been typechecked and linted.
+      in a browser. The route itself was rendered — every measure × mark pair,
+      at 7, 30, 90 and 364 days, in both locales, plus the window and today
+      cards to confirm they are unchanged — but the two Share buttons and the
+      widened chooser have only been typechecked and linted. **That is what let
+      the first pass ship the wrong picture**: the route was exercised and the
+      button that feeds it was not.
 
 - [ ] **A launch that paints from the device, behind a splash** (PR #152).
       **Native only**, and ⚠️ **the one item in this list a build is *required*

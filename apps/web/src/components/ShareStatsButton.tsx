@@ -3,13 +3,21 @@
 import React, { useState } from 'react';
 import {
   shareImageFilename, shareImagePath,
-  type ShareStats, type ShareVariant,
+  type ShareChartOptions, type ShareStats, type ShareVariant,
 } from '@amgi/core';
 import { t } from '@/lib/i18n';
 
 export interface ShareOption {
   variant: ShareVariant;
   stats: ShareStats;
+  /**
+   * How the chart was drawn, on the chart options and absent on the rest.
+   *
+   * It has to travel with the option rather than be read where the image is
+   * requested: the preview, the downloaded file and the label under it are
+   * three separate call sites, and all three must describe one chart.
+   */
+  chart?: ShareChartOptions;
 }
 
 /**
@@ -88,8 +96,8 @@ export default function ShareStatsButton({
     };
 
   const linkFor = (option: ShareOption, children: React.ReactNode, className: string) => {
-    const href = shareImagePath(option.stats, interfaceLanguage, option.variant);
-    const filename = shareImageFilename(option.stats, option.variant);
+    const href = shareImagePath(option.stats, interfaceLanguage, option.variant, option.chart);
+    const filename = shareImageFilename(option.stats, option.variant, option.chart);
     return (
       <a
         // Two cards can share a variant — a chart of the week and a chart of
@@ -122,7 +130,7 @@ export default function ShareStatsButton({
     // above the element it excuses.
     // eslint-disable-next-line @next/next/no-img-element
     <img
-      src={shareImagePath(option.stats, interfaceLanguage, option.variant)}
+      src={shareImagePath(option.stats, interfaceLanguage, option.variant, option.chart)}
       alt=""
       loading="lazy"
       className="w-20 rounded-md border border-[var(--color-muted)]"
@@ -132,13 +140,20 @@ export default function ShareStatsButton({
   /**
    * What the row under each thumbnail says.
    *
-   * The chart cards name their window because there can be two of them; the
-   * other two name themselves, since "This window" is the window the chips
+   * A chart option names its measure *and* its window: there can be two of
+   * them, and the measure is what the reader just chose in the dropdown above.
+   * The other two name themselves, since "This window" is the window the chips
    * directly above are already set to.
    */
-  const label = (option: ShareOption) => (option.variant === 'chart'
-    ? t(interfaceLanguage, 'shareVariantChart', { count: option.stats.windowDays })
-    : t(interfaceLanguage, option.variant === 'today' ? 'shareVariantToday' : 'shareVariantWindow'));
+  const label = (option: ShareOption) => {
+    if (option.variant === 'chart') {
+      const key = option.chart?.measure === 'reviews'
+        ? 'shareVariantChartReviews'
+        : 'shareVariantChartCards';
+      return t(interfaceLanguage, key, { count: option.stats.windowDays });
+    }
+    return t(interfaceLanguage, option.variant === 'today' ? 'shareVariantToday' : 'shareVariantWindow');
+  };
 
   const chip = 'px-3 py-1.5 rounded-lg text-sm font-mono border transition-colors hover:opacity-80';
   const chipStyle = 'border-[var(--color-highlight)] text-[var(--color-highlight)]';

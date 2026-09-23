@@ -5,6 +5,7 @@ import {
   buildShareCards,
   buildShareStats,
   buildTodayStats,
+  chartValues,
   hasShareableChart,
   emptyDailyProgress,
   emptyLanguageProgress,
@@ -271,7 +272,7 @@ describe('shareImageQuery', () => {
     expect(query([day(LATER, { reviews: 1 })], 30, undefined).has('lang')).toBe(false);
   });
 
-  it('sends the bars and the grain only for the chart card', () => {
+  it('sends the marks and the grain only for the chart card', () => {
     // A window card's URL is byte-for-byte what it was before the chart card
     // existed, which is the whole of "backward compatible by construction".
     const stats = buildShareStats([day(LATER, { newCards: 4 })], {
@@ -287,17 +288,58 @@ describe('shareImageQuery', () => {
     expect(asChart.get('c')?.split(',')).toHaveLength(30);
   });
 
-  it('round-trips the bars through the route parser unchanged', () => {
+  it('sends one series — the measure the card draws, never both', () => {
+    const stats = buildShareStats([day(LATER, { reviews: 12, newCards: 4 })], {
+      streak: 7, endDate: LATER, windowDays: 7,
+    });
+    const cards = new URLSearchParams(
+      shareImageQuery(stats, null, 'chart', { measure: 'cards', mark: 'bars' }),
+    );
+    expect(cards.get('c')?.split(',').at(-1)).toBe('4');
+
+    const reviews = new URLSearchParams(
+      shareImageQuery(stats, null, 'chart', { measure: 'reviews', mark: 'bars' }),
+    );
+    expect(reviews.get('c')?.split(',').at(-1)).toBe('12');
+  });
+
+  it('omits the measure and the mark at their defaults', () => {
+    // The shortest URL and the absent parameter have to mean the same thing,
+    // or an older build's links would start rendering something else.
+    const stats = buildShareStats([day(LATER, { newCards: 4 })], {
+      streak: 7, endDate: LATER, windowDays: 7,
+    });
+    const plain = new URLSearchParams(
+      shareImageQuery(stats, null, 'chart', { measure: 'cards', mark: 'bars' }),
+    );
+    expect(plain.has('cm')).toBe(false);
+    expect(plain.has('mk')).toBe(false);
+
+    const drawn = new URLSearchParams(
+      shareImageQuery(stats, null, 'chart', { measure: 'reviews', mark: 'line' }),
+    );
+    expect(drawn.get('cm')).toBe('r');
+    expect(drawn.get('mk')).toBe('l');
+  });
+
+  it('round-trips the chart through the route parser unchanged', () => {
     const stats = buildShareStats(
-      [day(LATER, { newCards: 4, packCards: 20 }), day(shiftDate(LATER, -40), { newCards: 7 })],
+      [day(LATER, { reviews: 30, newCards: 4, packCards: 20 }), day(shiftDate(LATER, -40), { newCards: 7 })],
       { streak: 7, endDate: LATER, windowDays: 90 },
     );
-    const parsed = readShareImageParams(
-      new URLSearchParams(shareImageQuery(stats, null, 'chart')),
-    );
-    expect(parsed.variant).toBe('chart');
-    expect(parsed.chart.values).toEqual(stats.chart.values);
-    expect(parsed.chart.bucketDays).toBe(stats.chart.bucketDays);
+    for (const chart of [
+      { measure: 'cards', mark: 'bars' },
+      { measure: 'reviews', mark: 'line' },
+    ] as const) {
+      const parsed = readShareImageParams(
+        new URLSearchParams(shareImageQuery(stats, null, 'chart', chart)),
+      );
+      expect(parsed.variant).toBe('chart');
+      expect(parsed.chart.values).toEqual(chartValues(stats, chart.measure));
+      expect(parsed.chart.bucketDays).toBe(stats.chart.bucketDays);
+      expect(parsed.chart.measure).toBe(chart.measure);
+      expect(parsed.chart.mark).toBe(chart.mark);
+    }
   });
 
   it('round-trips through the route parser to the same numbers', () => {
@@ -361,8 +403,15 @@ describe('shareImageFilename', () => {
   it('tells a chart apart from the window card covering the same days', () => {
     const stats = buildShareStats([], { streak: 0, endDate: LATER, windowDays: 30 });
     expect(shareImageFilename(stats, 'chart'))
-      .toMatch(/^amgi-\d{4}-\d{2}-\d{2}-30d-chart\.png$/);
+      .toMatch(/^amgi-\d{4}-\d{2}-\d{2}-30d-cards\.png$/);
     expect(shareImageFilename(stats, 'chart')).not.toBe(shareImageFilename(stats, 'window'));
+  });
+
+  it('tells the two measures apart, since mobile deletes by name first', () => {
+    const stats = buildShareStats([], { streak: 0, endDate: LATER, windowDays: 7 });
+    const reviews = shareImageFilename(stats, 'chart', { measure: 'reviews', mark: 'bars' });
+    const cards = shareImageFilename(stats, 'chart', { measure: 'cards', mark: 'bars' });
+    expect(reviews).not.toBe(cards);
   });
 });
 
@@ -453,19 +502,54 @@ describe('buildShareCards', () => {
     expect(cards.map(card => card.id)).toEqual(['w30', 'today', 'c30']);
   });
 
-  it('labels a chart card by its own window', () => {
-    const cards = buildShareCards([day(LATER, { reviews: 5, newCards: 3 })], {
+  it('labels a chart card by what it plots and how long for', () => {
+    const cardsChart = buildShareCards([day(LATER, { reviews: 5, newCards: 3 })], {
       streak: 7, endDate: LATER, windows: [30], chartWindows: [7],
     });
-    expect(cards.at(-1)).toMatchObject({ id: 'c7', labelKey: 'shareVariantChart', windowDays: 7 });
+    expect(cardsChart.at(-1)).toMatchObject({
+      id: 'c7', labelKey: 'shareVariantChartCards', windowDays: 7,
+    });
+
+    const reviewsChart = buildShareCards([day(LATER, { reviews: 5, newCards: 3 })], {
+      streak: 7, endDate: LATER, windows: [30], chartWindows: [7],
+      chart: { measure: 'reviews', mark: 'line' },
+    });
+    expect(reviewsChart.at(-1)).toMatchObject({
+      id: 'c7', labelKey: 'shareVariantChartReviews',
+    });
   });
 
-  it('drops a chart card whose window had nothing added, window card and all', () => {
-    // Reviews without adds: every window card stands and no chart card does.
+  it('carries how the chart was drawn onto every chart card', () => {
+    // The mark and the measure are read off the screen once, at the button, and
+    // then belong to the card — three call sites build a URL from it.
+    const chart = { measure: 'reviews', mark: 'line' } as const;
+    const cards = buildShareCards([day(LATER, { reviews: 9 })], {
+      streak: 7, endDate: LATER, windows: [30], chartWindows: [7, 30], chart,
+    });
+    for (const card of cards.filter(entry => entry.variant === 'chart')) {
+      expect(card.chart).toEqual(chart);
+    }
+    expect(cards.find(card => card.variant === 'window')?.chart).toBeUndefined();
+  });
+
+  it('drops a chart card whose own measure had nothing in it', () => {
+    // Reviews without adds, charting cards: every window card stands and no
+    // chart card does.
     const cards = buildShareCards([day(LATER, { reviews: 12 })], {
       streak: 7, endDate: LATER, windows: [30], chartWindows: [7, 30],
     });
     expect(cards.map(card => card.id)).toEqual(['w30', 'today']);
+  });
+
+  it('keeps that same window once the chart is the reviews one', () => {
+    // ⚠️ The bug the user caught, at the level it was introduced: the reader is
+    // looking at a full reviews chart, so pressing Share must not leave the
+    // carousel with nothing but calendars to open on.
+    const cards = buildShareCards([day(LATER, { reviews: 12 })], {
+      streak: 7, endDate: LATER, windows: [30], chartWindows: [7, 30],
+      chart: { measure: 'reviews', mark: 'bars' },
+    });
+    expect(cards.map(card => card.id)).toEqual(['w30', 'today', 'c7', 'c30']);
   });
 
   it('keeps a chart card for a window that had adds but no reviews', () => {
@@ -485,7 +569,7 @@ describe('buildShareCards', () => {
     const names = buildShareCards(
       [day(LATER, { reviews: 5, newCards: 3 }), day(shiftDate(LATER, -60), { reviews: 5, packCards: 9 })],
       { streak: 7, endDate: LATER, windows: [30, 90], chartWindows: [7, 30, 90] },
-    ).map(card => shareImageFilename(card.stats, card.variant));
+    ).map(card => shareImageFilename(card.stats, card.variant, card.chart));
     expect(names).toHaveLength(6);
     expect(new Set(names).size).toBe(names.length);
   });
@@ -501,10 +585,20 @@ describe('the chart series', () => {
     // screens draw by — a shared chart and the one on screen must not disagree
     // about what a bar is.
     expect(statsFor([], 30).chart).toMatchObject({ bucketDays: 1 });
-    expect(statsFor([], 30).chart.values).toHaveLength(30);
+    expect(statsFor([], 30).chart.cards).toHaveLength(30);
     expect(statsFor([], 90).chart).toMatchObject({ bucketDays: 7 });
     // 90 days at seven to a bar is twelve whole weeks and a short one.
-    expect(statsFor([], 90).chart.values).toHaveLength(13);
+    expect(statsFor([], 90).chart.cards).toHaveLength(13);
+  });
+
+  it('carries both measures over the same buckets', () => {
+    // The card picks one at share time, so the two have to be built together
+    // and line up bar for bar — one of them plotted against the other's grain
+    // would put a week of reviews under a day's label.
+    const stats = statsFor([day(LATER, { reviews: 12, newCards: 3 })], 90);
+    expect(stats.chart.reviews).toHaveLength(stats.chart.cards.length);
+    expect(stats.chart.reviews.at(-1)).toBe(12);
+    expect(stats.chart.cards.at(-1)).toBe(3);
   });
 
   it('adds up to the figure every other surface shows', () => {
@@ -512,37 +606,49 @@ describe('the chart series', () => {
     // the dashboard tile says. A chart that summed to something else would put
     // two numbers for one window on one canvas.
     const stats = statsFor([added(LATER, 4, 20), added(shiftDate(LATER, -3), 6)], 30);
-    expect(stats.chart.values.reduce((sum, value) => sum + value, 0)).toBe(stats.cardsAdded);
+    expect(stats.chart.cards.reduce((sum, value) => sum + value, 0)).toBe(stats.cardsAdded);
     expect(stats.cardsAdded).toBe(30);
+  });
+
+  it('sums reviews to the figure the window card heroes', () => {
+    const stats = statsFor([day(LATER, { reviews: 40 }), day(shiftDate(LATER, -20), { reviews: 9 })], 90);
+    expect(stats.chart.reviews.reduce((sum, value) => sum + value, 0)).toBe(stats.reviews);
   });
 
   it('puts the newest bar last, where the reader expects today', () => {
     const stats = statsFor([added(LATER, 5)], 30);
-    expect(stats.chart.values.at(-1)).toBe(5);
-    expect(stats.chart.values.slice(0, -1).every(value => value === 0)).toBe(true);
+    expect(stats.chart.cards.at(-1)).toBe(5);
+    expect(stats.chart.cards.slice(0, -1).every(value => value === 0)).toBe(true);
   });
 
   it('counts nothing from outside the window it names', () => {
-    expect(statsFor([added(shiftDate(LATER, -40), 99)], 30).chart.values
+    expect(statsFor([added(shiftDate(LATER, -40), 99)], 30).chart.cards
       .every(value => value === 0)).toBe(true);
+  });
+
+  it('hands out the series the measure names', () => {
+    const stats = statsFor([day(LATER, { reviews: 12, newCards: 3 })], 30);
+    expect(chartValues(stats, 'reviews')).toBe(stats.chart.reviews);
+    expect(chartValues(stats, 'cards')).toBe(stats.chart.cards);
   });
 });
 
 describe('hasShareableChart', () => {
-  it('asks about the bars rather than about the reviews', () => {
-    // A month of reviews with nothing added draws an empty plot, which is the
-    // broken-looking image the gate exists to prevent — even though the very
-    // same window is worth a window card.
+  it('asks about the measure being drawn, not about the other one', () => {
+    // ⚠️ The bug the user caught: a full reviews chart with nothing added was
+    // gated out, so the Share button on that chart opened on a calendar.
     const reviewedOnly = statsFor([day(LATER, { reviews: 200 })], 30);
-    expect(hasShareableChart(reviewedOnly)).toBe(false);
+    expect(hasShareableChart(reviewedOnly, 'reviews')).toBe(true);
+    expect(hasShareableChart(reviewedOnly, 'cards')).toBe(false);
     expect(hasShareableHistory(reviewedOnly)).toBe(true);
   });
 
   it('holds for a window spent adding and not rating', () => {
     // The converse: nothing was reviewed, so there is no window card here, but
-    // the chart is a real chart and the two gates disagree on purpose.
+    // the cards chart is a real chart and the two gates disagree on purpose.
     const addedOnly = statsFor([day(LATER, { packCards: 40 })], 30);
-    expect(hasShareableChart(addedOnly)).toBe(true);
+    expect(hasShareableChart(addedOnly, 'cards')).toBe(true);
+    expect(hasShareableChart(addedOnly, 'reviews')).toBe(false);
     expect(hasShareableHistory(addedOnly)).toBe(false);
   });
 });

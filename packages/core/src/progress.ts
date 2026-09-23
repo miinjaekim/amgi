@@ -930,6 +930,41 @@ export function buildCardsAddedSeries(
   });
 }
 
+/** One bar of the reviews chart. Directions, like `reviews` everywhere else. */
+export interface ReviewsBucket extends ChartBucket {
+  /**
+   * Ratings submitted in this bar, counting **directions**.
+   *
+   * ⚠️ **Never beside a card count on one axis.** This is the same number
+   * `reviews` is everywhere else in this module, and it reads roughly double
+   * what a learner pictures — so any label over it has to say *reviews*.
+   */
+  reviews: number;
+}
+
+/**
+ * Reviews per bar, the sibling of `buildCardsAddedSeries`.
+ *
+ * The dashboard's weekly chart plots either measure over seven days, reading
+ * reviews straight off the heatmap cells because at that window a bar is a day.
+ * This exists for the windows where it is not: the shared chart card offers the
+ * same two measures over 30 and 90 days, where a bar is a week and the cells
+ * would have to be summed by whoever drew them.
+ */
+export function buildReviewsSeries(
+  days: DailyProgress[],
+  endDate: string,
+  dayCount: number,
+  language?: StudyLanguage,
+): ReviewsBucket[] {
+  const byDate = new Map(days.map(day => [day.date, day]));
+  return chartBuckets(endDate, dayCount, chartBucketDays(dayCount)).map(bucket => {
+    let reviews = 0;
+    for (const date of bucket.dates) reviews += sliceFor(byDate.get(date), language).reviews;
+    return { start: bucket.start, end: bucket.end, reviews };
+  });
+}
+
 /**
  * The oldest day the learned curve can honestly reach.
  *
