@@ -2,7 +2,7 @@
 
 _한국어와 영어 문구가 모두 이 파일에 있습니다. Both languages live here._
 
-_마지막 갱신: 2026-09-23, 1.8.0용._
+_마지막 갱신: 2026-09-23, 2.0.0용._
 
 App Store Connect → TestFlight → **Test Information**에 붙여넣는 문구 모음입니다.
 Test Information은 로컬라이제이션을 지원하므로, 언어 목록에 **Korean (ko)** 과
@@ -27,7 +27,7 @@ Amgi는 언어 학습용 플래시카드 앱입니다.
 
 단어팩으로 한 분야의 어휘나 한 언어의 기초를 한번에 담을 수 있고, 학습 기록에서 어느 날 얼마나 복습했는지 언어별로 돌아볼 수 있습니다.
 
-문법은 Munli에서 따로 연습합니다. 동사 변화를 시제 하나씩 연습하고, 직접 쓴 글을 첨삭받을 수 있습니다. 동사 변화는 지금은 프랑스어만 있습니다.
+문법은 문리 모드에서 따로 연습합니다. 동사 변화를 시제 하나씩 연습하고, 직접 쓴 글을 첨삭받을 수 있습니다. 동사 변화는 지금은 프랑스어만 있습니다.
 
 AI가 만든 설명이라 틀릴 수 있습니다. 어색하거나 잘못된 부분을 알려 주시는 것이 이번 베타에서 가장 도움이 됩니다.
 
@@ -85,9 +85,9 @@ kenyamjkim@gmail.com
 ```
 이번 빌드에 새로 들어간 것:
 
-· 모드가 둘이 되었습니다 — 단어는 Amgi, 문법은 Munli. 마지막 탭을 길게 누르거나 학습 기록의 모드 버튼으로 바꿉니다.
-· Munli 동사 변화 — 시제를 하나씩 연습하고, 표를 직접 보고, 일정에 넣을 시제만 저장합니다. 지금은 프랑스어만 있어요.
-· Munli 글 첨삭 — 문단을 넣으면 고쳐 주고, 떠올리지 못했던 표현은 카드로 저장합니다.
+· 모드가 둘이 되었습니다 — 단어는 암기, 문법은 문리. 마지막 탭을 길게 누르거나 학습 기록의 모드 버튼으로 바꿉니다.
+· 문리 동사 변화 — 시제를 하나씩 연습하고, 표를 직접 보고, 일정에 넣을 시제만 저장합니다. 지금은 프랑스어만 있어요.
+· 문리 글 첨삭 — 문단을 넣으면 고쳐 주고, 떠올리지 못했던 표현은 카드로 저장합니다.
 · 켜지는 속도 — 기기에 있는 것부터 그려서, 서버를 기다리는 빈 화면이 없어졌습니다.
 · 그래프 공유 — 그래프 제목 줄의 공유 버튼이 지금 보고 있는 그대로를 이미지로 만듭니다.
 
@@ -135,7 +135,7 @@ How to test: On first launch the app asks three questions before anything else, 
 
 Amgi mode has five tabs, icon-only, left to right: Review, Cards, Learn, Packs, Progress. Review, where the app opens, runs the spaced-repetition session over saved cards. Cards lists, edits, and exports saved cards. Learn, in the middle, is where you type any word or phrase and tap Learn to get an explanation, then save it as a flashcard. Packs holds pre-made decks that can be saved as cards or drilled directly. Progress shows which days were reviewed, with a row per language that opens that language's own charts.
 
-Modes: a fresh install always opens in Amgi, and nothing needs to be done with modes to review the app. The second mode, Munli, is reached by holding the last tab in the tab bar, or by the mode button beside the gear at the top right of Progress; the same gesture returns to Amgi. Munli has its own five tabs: Practice, Saved, Writing, Topics, Progress. Practice drills verb conjugation, Topics browses the verb tables, Saved lists what is scheduled, and Writing submits a passage for correction. Conjugation content exists for French only at present: with any other study language selected, Munli's Practice and Progress tabs say so on screen rather than appearing broken. To see it populated, add French from Settings → the study language list → Add language, then select it.
+Modes: a fresh install always opens in Amgi, and nothing needs to be done with modes to review the app. The second mode, Munli, is reached by holding the last tab in the tab bar, or by the mode button beside the gear at the top right of Progress; the same gesture returns to Amgi. In a Korean interface the two modes are named 암기 and 문리 respectively. Munli has its own five tabs: Practice, Saved, Writing, Topics, Progress. Practice drills verb conjugation, Topics browses the verb tables, Saved lists what is scheduled, and Writing submits a passage for correction. Conjugation content exists for French only at present: with any other study language selected, Munli's Practice and Progress tabs say so on screen rather than appearing broken. To see it populated, add French from Settings → the study language list → Add language, then select it.
 
 Settings: the gear icon at the top right of the Progress tab, in either mode. There is no Settings tab — that gear is the only route in, and it is present whether or not anyone is signed in.
 

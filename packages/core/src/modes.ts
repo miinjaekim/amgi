@@ -30,8 +30,8 @@ export type AppMode = 'amgi' | 'munli';
 
 export interface ModeDescriptor {
   id: AppMode;
-  /** The product name. Not translated — see `nameKey`'s absence. */
-  name: string;
+  /** The product name, in the reader's language. */
+  nameKey: TranslationKey;
   /** What the mode is for, one word, in the reader's language. */
   taglineKey: TranslationKey;
   /** Where this mode starts, as a web path. Native mirrors it segment for segment. */
@@ -39,15 +39,21 @@ export interface ModeDescriptor {
 }
 
 /**
- * ⚠️ **The names are not translated, and that is the open question here.**
- * "Amgi" renders as "Amgi" in a Korean interface today (`SideNav`, and the
- * document title is `Amgi · 암기`), so "Munli" follows the precedent it set.
- * Whether a Korean interface should say 문리 instead is the user's call and is
- * recorded as open in `.scratchpad/backlog.md`.
+ * **The names are translated, decided 2026-09-23 on the user's call.** A Korean
+ * interface says 암기 and 문리; every other one says Amgi and Munli.
+ *
+ * ⚠️ **Both names move together, and that is the whole of the decision.** The
+ * question was only ever about Munli, but the switcher lists the modes as rows
+ * one above the other — "Amgi / 문리" would read as two products from two
+ * companies. A name is localized here or neither is.
+ *
+ * This does not touch `Amgi · 암기`, the document title and the welcome line,
+ * which are bilingual on purpose: they greet a reader before the interface
+ * language is known. These names are read by someone already inside the app.
  */
 export const MODES: readonly ModeDescriptor[] = [
-  { id: 'amgi',  name: 'Amgi',  taglineKey: 'modeAmgiTagline',  home: '/' },
-  { id: 'munli', name: 'Munli', taglineKey: 'modeMunliTagline', home: '/munli' },
+  { id: 'amgi',  nameKey: 'modeAmgiName',  taglineKey: 'modeAmgiTagline',  home: '/' },
+  { id: 'munli', nameKey: 'modeMunliName', taglineKey: 'modeMunliTagline', home: '/munli' },
 ];
 
 export const DEFAULT_MODE: AppMode = 'amgi';

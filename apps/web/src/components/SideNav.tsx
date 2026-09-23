@@ -62,7 +62,7 @@ export default function SideNav({ collapsed, onToggle }: Props) {
             <AmgiLogo color="var(--color-highlight)" stroke="var(--color-text)" size={30} />
           </span>
           <span className="sidenav-label font-mono font-bold text-lg whitespace-nowrap" style={{ color: 'var(--color-text)' }}>
-            {mode.name}
+            {t(interfaceLanguage, mode.nameKey)}
           </span>
         </Link>
         <button

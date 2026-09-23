@@ -369,6 +369,41 @@ once, so a path that worked on build 14 is not evidence about build 15.
 Closed calls, kept with their reasoning — a decision whose reasoning is lost gets
 reopened by the next person to notice the symptom. Newest first.
 
+### The modes are named in the reader's language, and 2.0.0 (2026-09-23)
+
+**Two calls made while cutting the build**, both the user's.
+
+**The mode names are translated.** A Korean interface says 암기 and 문리; every
+other one says Amgi and Munli. `modes.ts` had carried this as an open question
+since the mode shipped — it said the names were not translated, that "Amgi"
+rendering as "Amgi" in a Korean interface was the precedent Munli followed, and
+that a Korean 문리 was the user's call. It is now answered.
+
+⚠️ **The question was only about Munli, and both names had to move.** The
+switcher lists the modes as rows, one above the other: "Amgi / 문리" reads as two
+products from two companies. A name is localized here or neither is — which is
+why answering a question about one name changed two.
+
+**What this does not touch** is `Amgi · 암기`, the document title and the welcome
+line. Those are bilingual on purpose: they greet a reader *before* the interface
+language is known. The mode names are read by someone already inside the app,
+who has answered that question. The same split governs the TestFlight copy —
+the Korean description still opens "Amgi는 언어 학습용 플래시카드 앱입니다",
+because that names the product, and only the mode bullets say 암기 and 문리.
+
+The shape is `nameKey: TranslationKey` replacing `name: string`, so the compiler
+found all four consumers rather than a grep: web's `SideNav`, `ModeSwitcher` and
+Munli's home, and native's `ModeSwitcherSheet`.
+
+**The version is 2.0.0, not 1.8.0.** The recommendation here was 1.8.0 and the
+user chose 2.0.0; the reasoning for the number is that Munli makes this two apps
+in one, and the version is what a tester sees. ⚠️ **What was argued against it,
+recorded so the cadence change is not mistaken for a slip**: the version had been
+a build-batch counter, one minor per build from 1.3.0 through 1.7.0, and it never
+expressed how large a batch was; and 2.0.0 is spent on a build where nothing has
+been opened on a device. The counter-argument is that a beta with no public 1.0
+has no launch number to protect.
+
 ### A chart card, and the hero that has to agree with it (2026-09-23)
 
 **The ask**: share a chart as an asset — the last of the three Progress items

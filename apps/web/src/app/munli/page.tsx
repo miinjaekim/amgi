@@ -28,7 +28,7 @@ export default function MunliHome() {
   return (
     <div className="max-w-2xl">
       <h1 className="text-3xl font-mono font-bold mb-1" style={{ color: 'var(--color-text)' }}>
-        {munli.name}
+        {t(interfaceLanguage, munli.nameKey)}
       </h1>
       <p className="text-sm font-mono mb-8" style={{ color: 'var(--color-muted)' }}>
         {t(interfaceLanguage, 'munliTagline')}

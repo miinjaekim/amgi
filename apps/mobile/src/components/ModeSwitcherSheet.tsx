@@ -49,7 +49,7 @@ export default function ModeSwitcherSheet({ visible, onClose }: { visible: boole
                 }}
               >
                 <View style={s.rowText}>
-                  <Text style={s.name}>{mode.name}</Text>
+                  <Text style={s.name}>{t(interfaceLanguage, mode.nameKey)}</Text>
                   <Text style={s.tagline}>{t(interfaceLanguage, mode.taglineKey)}</Text>
                 </View>
                 {active && (
