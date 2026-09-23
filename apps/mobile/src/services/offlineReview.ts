@@ -17,6 +17,7 @@ import type { Flashcard, PendingReview, StreakState, StudyLanguage } from '@amgi
 import { isStudyLanguage } from '@amgi/core';
 
 const cardsKey = (uid: string, lang: StudyLanguage) => `amgi_cards_${uid}_${lang}`;
+const libraryKey = (uid: string, lang: StudyLanguage) => `amgi_library_${uid}_${lang}`;
 const knownLanguagesKey = (uid: string) => `amgi_known_languages_${uid}`;
 const pendingKey = (uid: string) => `amgi_pending_reviews_${uid}`;
 const streakKey = (uid: string) => `amgi_streak_${uid}`;
@@ -92,6 +93,48 @@ export async function readKnownLanguages(uid: string): Promise<StudyLanguage[]> 
     return Array.isArray(parsed) ? parsed.filter(isStudyLanguage) : [];
   } catch {
     return [];
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Library snapshots
+// ---------------------------------------------------------------------------
+
+/**
+ * The Cards tab's own copy, kept apart from the review snapshot above because
+ * it holds a different set: that one is the reviewable cards, this one is
+ * every card, archived included. Folding them into one would mean either Review
+ * filtering archived cards out of its offline copy on every read, or Cards
+ * opening without its Archived tab.
+ *
+ * This one only paints a cold open — nothing reviews from it and nothing warms
+ * it — so it does not record the language in the known set.
+ */
+/** Every card last seen for this language, or null if the Cards tab never loaded it here. */
+export async function readCachedLibrary(
+  uid: string,
+  studyLanguage: StudyLanguage,
+): Promise<Flashcard[] | null> {
+  try {
+    const raw = await AsyncStorage.getItem(libraryKey(uid, studyLanguage));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.map(reviveCard) : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Only ever with cards the server sent — see `persistReviewSnapshot`. */
+export async function writeCachedLibrary(
+  uid: string,
+  studyLanguage: StudyLanguage,
+  cards: Flashcard[],
+): Promise<void> {
+  try {
+    await AsyncStorage.setItem(libraryKey(uid, studyLanguage), JSON.stringify(cards));
+  } catch {
+    // Best-effort; the live list is unaffected.
   }
 }
 

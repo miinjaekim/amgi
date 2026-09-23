@@ -12,6 +12,8 @@ import {
   deleteFlashcard, updateFlashcardFields,
 } from '../../src/services/firestore';
 import type { Flashcard } from '../../src/services/firestore';
+import { readCachedLibrary, writeCachedLibrary } from '../../src/services/offlineReview';
+import { SNAPSHOT_WRITE_DEBOUNCE_MS } from '../../src/services/reviewSync';
 import { t, DEFAULT_DECK_FILTER, buildDeckFilters, filterCardsByDeck, getCharacterBreakdown, getStudyLanguageConfig, getBackSideConfig, getStudyLangSide, getBackSide, getExampleSides, partOfSpeechLabel } from '@amgi/core';
 import type { CardSideField, DeckFilterId } from '@amgi/core';
 import { useTheme } from '../../src/context/ThemeContext';
@@ -68,16 +70,60 @@ export default function CardsScreen() {
    * listener is both fresher and cheaper: Firestore bills the first snapshot
    * and thereafter only documents that actually change, and the list now
    * updates while you are looking at it rather than on the way back in.
+   *
+   * The device's copy paints first, as Review's does. Firestore's cache on
+   * React Native is memory-only, so after a cold open the listener starts from
+   * nothing and the list would sit on skeletons for a full round trip. The
+   * cached read stays behind `delivered` so a slow disk cannot put a stale list
+   * over a snapshot that already landed, and storing is debounced for the
+   * reason `SNAPSHOT_WRITE_DEBOUNCE_MS` gives.
    */
   useEffect(() => {
     if (!user) { setAllCards([]); return; }
+    const uid = user.uid;
+    let active = true;
+    let delivered = false;
     setLoading(true);
-    return subscribeToAllUserFlashcards(
-      user.uid,
+
+    void readCachedLibrary(uid, studyLanguage).then(cached => {
+      if (!active || delivered || !cached) return;
+      setAllCards(cached);
+      setLoading(false);
+    });
+
+    let storeTimer: ReturnType<typeof setTimeout> | null = null;
+    let toStore: Flashcard[] | null = null;
+    const storeSoon = (fresh: Flashcard[]) => {
+      toStore = fresh;
+      if (storeTimer) return;
+      storeTimer = setTimeout(() => {
+        storeTimer = null;
+        const next = toStore;
+        toStore = null;
+        if (next) void writeCachedLibrary(uid, studyLanguage, next);
+      }, SNAPSHOT_WRITE_DEBOUNCE_MS);
+    };
+
+    const unsubscribe = subscribeToAllUserFlashcards(
+      uid,
       studyLanguage,
-      cards => { setAllCards(cards); setError(null); setLoading(false); },
+      (cards, { fromCache }) => {
+        delivered = true;
+        // Only the server's word may replace the durable copy.
+        if (!fromCache) storeSoon(cards);
+        setAllCards(cards); setError(null); setLoading(false);
+      },
       () => { setError('Failed to load cards.'); setLoading(false); },
     );
+
+    return () => {
+      active = false;
+      unsubscribe();
+      if (storeTimer) {
+        clearTimeout(storeTimer);
+        if (toStore) void writeCachedLibrary(uid, studyLanguage, toStore);
+      }
+    };
   }, [user, studyLanguage]);
 
   // The chips to offer and which one is lit. `deckKey` is validated against the

@@ -36,6 +36,16 @@ section worth seeing without scrolling._
   from `'mine'`; web has it on merge. Reasoning under Decisions in
   [status.md](status.md).
 
+- **My Cards and Progress paint from the device on a cold open** (2026-09-23).
+  Mobile's Firestore cache is memory-only, so both used to wait a round trip
+  after the app was killed. Cards keeps its own AsyncStorage copy of every card
+  (`amgi_library_*`, archived included — Review's copy is active-only) and
+  Progress keeps its rollups per range plus the learned count; each paints at
+  once and the live read replaces it. Only server-backed reads are stored, and
+  an offline `getDocs` (which resolves *empty* on RN) now returns the device's
+  copy instead of a blank chart. ⚠️ **Felt "faster (?)" in Expo Go — undecided.**
+  Judge it on the build, alongside the launch stopwatch.
+
 ⚠️ **In testers' hands is not the same as seen.** Nothing in that build has been
 opened on a device, which is most of what Munli is. Untracked here by the
 2026-09-04 decision that these checks come from using the app, not a list; the
@@ -43,21 +53,6 @@ two with something hanging on them live with their decisions — the **launch
 stopwatch** (2026-09-22) and the **Slow speed** artifact question.
 
 ## High
-
-- [ ] **My Cards and Progress are slow on an iOS cold open** — the app fully
-      closed and reopened (the user, 2026-09-23). Tab switching and web weren't
-      named. The cause is on the device: **mobile has no persistent Firestore
-      cache** (`getFirestore` in `src/config/firebase.ts`), so after a cold
-      start Cards subscribes from nothing and sits on skeletons until the server
-      answers, and Progress fetches its rollups plus the mature-card count
-      (aggregation queries, one per language shard) from the network.
-      Direction: **the one launch already took** (Decisions, 2026-09-22) —
-      paint from the device and reconcile behind it. Keep the last cards list
-      and the last rollups in AsyncStorage, render them at once, and let the
-      live read replace them. `@react-native-firebase` was rejected there as too
-      large a migration and still is.
-      ⚠️ **Confirm it was 2.0.0** — the build carrying the cache-first launch.
-      Only judgeable on a build, like the launch stopwatch.
 
 - [ ] **Dig Deeper's definition should read like a dictionary entry.** From the
       user (2026-08-18): the top section is wordier than it needs to be; start
