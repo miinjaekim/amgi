@@ -394,6 +394,19 @@ once, so a path that worked on build 14 is not evidence about build 15.
 Closed calls, kept with their reasoning — a decision whose reasoning is lost gets
 reopened by the next person to notice the symptom. Newest first.
 
+### Munli's practice sets are per language unless marked general (2026-09-25)
+
+**The user's rule:** a Munli topic shows only for languages it was made for,
+unless it is explicitly generalizable. Before this, Mandarin got French's
+Regular verbs and Irregular verbs rows on Topics, a Conjugation row on Practice,
+and "French is the only one so far" in the empty states. Showing a topic
+everywhere and apologising for it where it's empty made French's data look like
+Munli's own structure. `munliTopics(language)` in `conjugation.ts` is now the
+list. Verb topics come from a conjugation spec, and each one shows only when
+the spec has subjects of that kind. A general topic would go in unconditionally.
+Writing is the one surface that works in any language, so the empty state
+points to it.
+
 ### Pronunciation speed splits by content, not by surface (2026-09-23)
 
 **Two speeds, one for words and one for sentences**, the user's pick of the

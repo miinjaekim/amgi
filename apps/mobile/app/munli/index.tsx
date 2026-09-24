@@ -8,8 +8,8 @@ import { useNavigation } from 'expo-router';
 import type { BottomTabNavigationProp } from 'expo-router/tabs';
 import {
   boxItemId, buildConjugationQueue, buildTables, conjugationHints, conjugationSpec,
-  countDueBoxes, countQuestions, hintedVerdict, isCorrectForm, listPracticeSections,
-  rateBox, t,
+  countDueBoxes, countQuestions, getStudyLanguageConfig, hintedVerdict, isCorrectForm,
+  listPracticeSections, rateBox, t,
 } from '@amgi/core';
 import type { ConjugationProgressMap, ConjugationRound } from '@amgi/core';
 import { useUser } from '../../src/context/UserContext';
@@ -17,6 +17,7 @@ import { useTheme } from '../../src/context/ThemeContext';
 import { useConjugation } from '../../src/context/ConjugationContext';
 import { useFloatingTabBarHeight } from '../../src/components/FloatingTabBar';
 import { PAGE_TITLE_SIZE, SCREEN_GUTTER } from '../../src/components/PageHeader';
+import MunliLanguageChip from '../../src/components/MunliLanguageChip';
 import type { Palette } from '../../src/theme';
 
 /**
@@ -184,6 +185,7 @@ export default function PracticeScreen() {
         </TouchableOpacity>
       )}
       <Text style={s.title}>{title}</Text>
+      <MunliLanguageChip />
     </View>
   );
 
@@ -222,10 +224,18 @@ export default function PracticeScreen() {
       <SafeAreaView style={s.safe} edges={['top']}>
         {header(t(interfaceLanguage, 'practiceTitle'))}
         <ScrollView contentContainerStyle={s.content}>
-          {/* One row per practice type, with its due count on the right —
-              Review's collection picker, which is the state the user asked to
-              start from. Writing is not here: it diagnoses rather than
-              practises, so it keeps its own tab. */}
+          {/* One row per practice type *this language has*, with its due
+              count on the right — Review's collection picker, which is the
+              state the user asked to start from. Writing is not here: it
+              diagnoses rather than practises, so it keeps its own tab. */}
+          {!spec ? (
+            <View style={s.empty}>
+              <Text style={s.emptyTitle}>
+                {t(interfaceLanguage, 'munliUnavailable', { language: getStudyLanguageConfig(studyLanguage).label })}
+              </Text>
+              <Text style={s.emptyBody}>{t(interfaceLanguage, 'munliUnavailableBody')}</Text>
+            </View>
+          ) : (
           <TouchableOpacity
             style={s.row}
             activeOpacity={0.7}
@@ -243,6 +253,7 @@ export default function PracticeScreen() {
                 : t(interfaceLanguage, 'practiceNothingDue')}
             </Text>
           </TouchableOpacity>
+          )}
         </ScrollView>
       </SafeAreaView>
     );
@@ -294,8 +305,8 @@ export default function PracticeScreen() {
           {header(t(interfaceLanguage, 'munliToolConjugation'), () => setStage('picker'))}
           <ScrollView contentContainerStyle={s.content}>
             <View style={s.empty}>
-              <Text style={s.emptyTitle}>{t(interfaceLanguage, 'conjugationUnavailable')}</Text>
-              <Text style={s.emptyBody}>{t(interfaceLanguage, 'conjugationUnavailableBody')}</Text>
+              <Text style={s.emptyTitle}>{t(interfaceLanguage, 'munliUnavailable', { language: getStudyLanguageConfig(studyLanguage).label })}</Text>
+              <Text style={s.emptyBody}>{t(interfaceLanguage, 'munliUnavailableBody')}</Text>
             </View>
           </ScrollView>
         </SafeAreaView>

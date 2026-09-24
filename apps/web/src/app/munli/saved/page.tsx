@@ -1,6 +1,6 @@
 'use client';
 import { useMemo, useState } from 'react';
-import { daysUntil, listSavedKinds, setEnrolled } from '@amgi/core';
+import { daysUntil, getStudyLanguageConfig, listSavedKinds, setEnrolled } from '@amgi/core';
 import type { ConjugationSavedSubject } from '@amgi/core';
 import { useUser } from '@/components/UserContext';
 import { useConjugation } from '@/hooks/useConjugation';
@@ -35,7 +35,7 @@ import { t } from '@/lib/i18n';
  * that makes expo-router draw a tab icon per screen on native.
  */
 export default function SavedPage() {
-  const { interfaceLanguage } = useUser();
+  const { interfaceLanguage, studyLanguage } = useUser();
   const { spec, progress, enrolment, setEnrolment, loading } = useConjugation();
   const [openKind, setOpenKind] = useState<string | null>(null);
   const [openSubject, setOpenSubject] = useState<string | null>(null);
@@ -111,7 +111,7 @@ export default function SavedPage() {
       <div className="max-w-2xl">
         <PageHeader titleKey="savedTitle" className="mb-1" />
         <p className="font-mono text-sm mt-6" style={{ color: 'var(--color-muted)' }}>
-          {t(interfaceLanguage, loading ? 'munliLoading' : 'conjugationUnavailable')}
+          {t(interfaceLanguage, loading ? 'munliLoading' : 'munliUnavailable', { language: getStudyLanguageConfig(studyLanguage).label })}
         </p>
       </div>
     );

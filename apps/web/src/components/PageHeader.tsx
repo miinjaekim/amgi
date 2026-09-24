@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
-import { modeFromPath } from '@amgi/core';
+import { getStudyLanguageConfig, modeFromPath } from '@amgi/core';
 import type { TranslationKey } from '@amgi/core';
 import { useUser } from '@/components/UserContext';
 import { t } from '@/lib/i18n';
@@ -33,6 +33,10 @@ import { t } from '@/lib/i18n';
  * chrome around another mode's page. A prop would be one more thing to get
  * wrong on a new page; the colour is shared either way, which is the whole
  * point of this change.
+ *
+ * **Munli titles carry the study language at the right end**, off the same
+ * path check. What Munli offers depends on the language — French has verb
+ * tables, Mandarin does not — so the page says which one it is showing.
  */
 export default function PageHeader({
   titleKey, helpTitleKey, helpLeadKey, helpPointsKey, className = 'mb-6',
@@ -44,10 +48,12 @@ export default function PageHeader({
   /** Spacing below the row, since pages differ in what follows the title. */
   className?: string;
 }) {
-  const { interfaceLanguage } = useUser();
+  const { interfaceLanguage, studyLanguage } = useUser();
   const [open, setOpen] = useState(false);
   const hasHelp = !!helpTitleKey && !!helpLeadKey && !!helpPointsKey;
-  const face = modeFromPath(usePathname()) === 'munli' ? 'font-mono' : '';
+  const munli = modeFromPath(usePathname()) === 'munli';
+  const face = munli ? 'font-mono' : '';
+  const language = getStudyLanguageConfig(studyLanguage).label;
 
   useEffect(() => {
     if (!open) return;
@@ -74,6 +80,15 @@ export default function PageHeader({
               <path strokeLinecap="round" strokeLinejoin="round" d="M9.5 9.5a2.5 2.5 0 1 1 3.2 2.4c-.6.2-.9.7-.9 1.3v.4M12 16.8h.01" />
             </svg>
           </button>
+        )}
+        {munli && (
+          <span
+            className="ml-auto shrink-0 rounded-full border px-2.5 py-0.5 font-mono text-xs"
+            style={{ borderColor: 'var(--color-muted)', color: 'var(--color-muted)' }}
+            aria-label={t(interfaceLanguage, 'munliLanguageChipLabel', { language })}
+          >
+            {language}
+          </span>
         )}
       </div>
 

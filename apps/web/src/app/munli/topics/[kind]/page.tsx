@@ -1,7 +1,7 @@
 'use client';
 import { useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { enrolledTenses, isEnrolled, setEnrolled, subjectKey, subjectsOfKind } from '@amgi/core';
+import { enrolledTenses, getStudyLanguageConfig, isEnrolled, setEnrolled, subjectKey, subjectsOfKind } from '@amgi/core';
 import type { ConjugationSubject } from '@amgi/core';
 import { useUser } from '@/components/UserContext';
 import { useConjugation } from '@/hooks/useConjugation';
@@ -28,7 +28,7 @@ import { t } from '@/lib/i18n';
  * chips swap which verb the pattern lands on instead.
  */
 export default function VerbTopicPage() {
-  const { interfaceLanguage } = useUser();
+  const { interfaceLanguage, studyLanguage } = useUser();
   const { spec, enrolment, setEnrolment, loading } = useConjugation();
   // Anything unrecognised reads as regular rather than erroring: the cost of
   // being wrong is landing on the topic that has content in it.
@@ -74,7 +74,7 @@ export default function VerbTopicPage() {
       <div className="max-w-2xl">
         <PageHeader titleKey={irregular ? 'verbsIrregular' : 'topicRegularVerbs'} />
         <p className="font-mono text-sm" style={{ color: 'var(--color-muted)' }}>
-          {t(interfaceLanguage, loading ? 'munliLoading' : 'conjugationUnavailable')}
+          {t(interfaceLanguage, loading ? 'munliLoading' : 'munliUnavailable', { language: getStudyLanguageConfig(studyLanguage).label })}
         </p>
       </div>
     );

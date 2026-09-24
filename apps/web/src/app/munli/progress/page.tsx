@@ -1,6 +1,6 @@
 'use client';
 import { useMemo } from 'react';
-import { summarizeConjugation } from '@amgi/core';
+import { getStudyLanguageConfig, summarizeConjugation } from '@amgi/core';
 import { useUser } from '@/components/UserContext';
 import { useConjugation } from '@/hooks/useConjugation';
 import PageHeader from '@/components/PageHeader';
@@ -14,7 +14,7 @@ import { t } from '@/lib/i18n';
  * nothing to count. Naming the gap beats a zero that reads as a bug.
  */
 export default function MunliProgressPage() {
-  const { interfaceLanguage } = useUser();
+  const { interfaceLanguage, studyLanguage } = useUser();
   // The shared live source, not a fetch of its own.
   const { spec, progress, enrolment, loading } = useConjugation();
 
@@ -46,7 +46,7 @@ export default function MunliProgressPage() {
           plausible enough picture to be believed. */}
       {loading || !summary ? (
         <p className="font-mono text-sm" style={{ color: 'var(--color-muted)' }}>
-          {t(interfaceLanguage, loading ? 'munliLoading' : 'conjugationUnavailable')}
+          {t(interfaceLanguage, loading ? 'munliLoading' : 'munliUnavailable', { language: getStudyLanguageConfig(studyLanguage).label })}
         </p>
       ) : (
         <>

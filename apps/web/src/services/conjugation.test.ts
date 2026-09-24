@@ -21,6 +21,7 @@ import {
   findSubject,
   freshProgress,
   hasConjugation,
+  munliTopics,
   hintedVerdict,
   isCorrectForm,
   listPracticeSections,
@@ -790,6 +791,12 @@ describe('languages', () => {
   it('has nothing for a language with no spec yet', () => {
     expect(hasConjugation('Korean')).toBe(false);
     expect(conjugationSpec('Korean')).toBeUndefined();
+  });
+
+  it('offers verb topics only to a language with a spec', () => {
+    expect(munliTopics('French').map(topic => topic.id)).toEqual(['regular', 'irregular']);
+    expect(munliTopics('TraditionalChinese')).toEqual([]);
+    expect(munliTopics('Korean')).toEqual([]);
   });
 
   it('keys every subject uniquely', () => {

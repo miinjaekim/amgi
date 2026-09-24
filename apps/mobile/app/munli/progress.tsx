@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { conjugationSpec, summarizeConjugation, t } from '@amgi/core';
+import { conjugationSpec, getStudyLanguageConfig, summarizeConjugation, t } from '@amgi/core';
 import { useUser } from '../../src/context/UserContext';
 import { useTheme } from '../../src/context/ThemeContext';
 import { useConjugation } from '../../src/context/ConjugationContext';
@@ -50,7 +50,7 @@ export default function MunliProgressScreen() {
             is a plausible enough picture to be believed. */}
         {loading || !summary ? (
           <Text style={s.note}>
-            {t(interfaceLanguage, loading ? 'munliLoading' : 'conjugationUnavailable')}
+            {t(interfaceLanguage, loading ? 'munliLoading' : 'munliUnavailable', { language: getStudyLanguageConfig(studyLanguage).label })}
           </Text>
         ) : (
           <>
