@@ -4,7 +4,6 @@ import { usePathname } from 'next/navigation';
 import { getStudyLanguageConfig, modeFromPath } from '@amgi/core';
 import type { TranslationKey } from '@amgi/core';
 import { useUser } from '@/components/UserContext';
-import { StudyLanguageList } from '@/components/SettingsMenu';
 import { t } from '@/lib/i18n';
 
 /**
@@ -41,11 +40,6 @@ import { t } from '@/lib/i18n';
  * behind the path check; Amgi's took it on 2026-09-25. The two Progress pages
  * are the exception and do not use this: Munli's has its own language row, and
  * Amgi's covers every language at once.
- *
- * **The chip is also the switcher**, at the user's ask the same day: moving
- * between two decks (Korean and Hanja, say) meant opening settings each time.
- * It drops down the same `StudyLanguageList` the sidebar's language popover
- * uses, so a switch made here behaves like one made there.
  */
 export default function PageHeader({
   titleKey, helpTitleKey, helpLeadKey, helpPointsKey, className = 'mb-6',
@@ -59,20 +53,17 @@ export default function PageHeader({
 }) {
   const { interfaceLanguage, studyLanguage } = useUser();
   const [open, setOpen] = useState(false);
-  const [langOpen, setLangOpen] = useState(false);
   const hasHelp = !!helpTitleKey && !!helpLeadKey && !!helpPointsKey;
   const munli = modeFromPath(usePathname()) === 'munli';
   const face = munli ? 'font-mono' : '';
   const language = getStudyLanguageConfig(studyLanguage).label;
 
   useEffect(() => {
-    if (!open && !langOpen) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') { setOpen(false); setLangOpen(false); }
-    };
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [open, langOpen]);
+  }, [open]);
 
   return (
     <>
@@ -93,36 +84,13 @@ export default function PageHeader({
             </svg>
           </button>
         )}
-        <div className="relative ml-auto shrink-0">
-          <button
-            onClick={() => setLangOpen(v => !v)}
-            aria-label={t(interfaceLanguage, 'studyLanguageChipLabel', { language })}
-            aria-haspopup="menu"
-            aria-expanded={langOpen}
-            className={`flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs transition-colors hover:text-[var(--color-text)] hover:border-[var(--color-text)] ${face}`}
-            style={{ borderColor: 'var(--color-muted)', color: 'var(--color-muted)' }}
-          >
-            {language}
-            <svg
-              className={`w-3 h-3 transition-transform ${langOpen ? 'rotate-180' : ''}`}
-              fill="none" stroke="currentColor" viewBox="0 0 24 24"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-            </svg>
-          </button>
-          {langOpen && (
-            <>
-              <div className="fixed inset-0 z-10" onClick={() => setLangOpen(false)} />
-              <div
-                role="menu"
-                className="absolute right-0 top-8 z-20 w-64 rounded-xl border border-[var(--color-muted)] shadow-xl overflow-hidden"
-                style={{ background: 'var(--color-surface)' }}
-              >
-                <StudyLanguageList onSelect={() => setLangOpen(false)} />
-              </div>
-            </>
-          )}
-        </div>
+        <span
+          className={`ml-auto shrink-0 rounded-full border px-2.5 py-0.5 text-xs ${face}`}
+          style={{ borderColor: 'var(--color-muted)', color: 'var(--color-muted)' }}
+          aria-label={t(interfaceLanguage, 'studyLanguageChipLabel', { language })}
+        >
+          {language}
+        </span>
       </div>
 
       {open && hasHelp && (
