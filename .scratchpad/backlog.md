@@ -26,6 +26,15 @@ _Kept at the top of the file, ahead of priority order, from 2026-09-22 on the
 user's call — this list changes every time something merges, and it is the one
 section worth seeing without scrolling._
 
+- **Editing a card mid-review** (2026-09-25). An edit now reaches the card's
+  other direction: both platforms' save handlers match queue entries by
+  `card.id` instead of by index, and patch the card list too, as enrichment
+  does. On mobile, Save and Cancel moved into the card header in place of the
+  `···`, and the editing card uses the typed card's tighter padding, so the
+  keyboard can no longer cover them. ⚠️ **Not yet seen on a small iPhone** —
+  check it with a long gloss on the back. JS only; web gets the first fix on
+  merge.
+
 - **Switching study language on an open deck lands on the Decks list.** The
   deck and its drill used to render `deckNotFound`; now a pack that resolved and
   then stopped resolving (`usePackLost`) sends the deck to the root of the Decks
@@ -111,43 +120,6 @@ whether `faire` joins the three sourced irregular verbs (#150), and whether a
 practice session should cover several tenses at once again, which the section
 picker narrowed (#146). Both are written up in their Decisions entries of
 2026-09-22.
-
-- [ ] **Editing a card mid-review** — two bugs from the user's list
-      (2026-09-24), in one item because both are in the review screen's edit
-      path and one PR touches both.
-      1. **An edit doesn't reach the card's other direction.** A card due both
-         ways is two queue entries holding separate copies of one card, and the
-         save handlers patch only the entry on screen: `i === index` in mobile's
-         `handleEditSave`, `i === currentReviewIdx` in web's
-         `handleManageEditSave`. Firestore gets the edit, but when the reverse
-         comes up later in the session it still shows the old text. Both
-         platforms have this bug. **Fix: match by `card.id`**, the way
-         enrichment's `onChanged` and archive already do. Also patch the
-         screen's card list (`cards` on mobile, `userFlashcards` on web), as
-         enrichment does. Otherwise a queue rebuilt later in the session, from
-         the missed cards or a second collection, brings the old text back.
-      2. **Save/Cancel end up covered — mobile.** Web's panel sits inline above
-         the card and pushes it down, so nothing covers it there. On mobile the
-         edit form replaces the card's content inside `cardWrap` (`flex: 1`,
-         28pt padding) with no scroll container. The screen reserves exactly the
-         keyboard's height, so whatever the form can't fit draws past the
-         card's bottom edge, under the keyboard. The `autoFocus` on the first
-         field raises the keyboard as soon as Edit is tapped. Two traps for the
-         fix:
-         - **Don't reach for a ScrollView.** While editing, `DismissArea` is a
-           `Pressable`, and a scroll view under a press handler is the
-           responder fight in lessons.md. The comment above `canRaiseKeyboard`
-           counts on the edit form having no ScrollView.
-         - **Android reserves nothing.** The listeners are
-           `keyboardWillShow`/`keyboardWillHide`, and Android only fires
-           `keyboardDid*`. That affects the typed-answer field too, not only
-           editing. Fix it here if it's cheap; otherwise leave a note on the
-           Play item.
-         Suggested direction: **keep Save/Cancel above the keyboard's reach.**
-         Put them in the card header beside the `···`, or at the top of the
-         form, so a short card can't push them under the keyboard. Check it on
-         a small iPhone with a long gloss on the back.
-      JS only; web gets fix 1 on merge.
 
 ## Medium
 
@@ -371,6 +343,13 @@ _Empty as of 2026-09-08._
       "Miscellaneous" channel if they arrive at all — and **nothing but sign-in
       has ever been exercised on Android** (the never-verified ⚠️ under Builds in
       [status.md](status.md)).
+      The review screen is part of that: it reserves the keyboard's height from
+      `keyboardWillShow`/`keyboardWillHide`, which Android never fires (it
+      has only `keyboardDid*`). So on Android nothing is reserved for the typed
+      answer field or the mid-review edit form, and whether the window's own
+      resize covers for it under edge-to-edge is untested. Left as it
+      was on 2026-09-25 because it can't be checked without a device. Look at it
+      on the first Play install.
 
 - [ ] **Goal-based generation** — vocab lists and card generation from a goal.
       Deprioritized 2026-07-24: it generates word lists for a user who hasn't

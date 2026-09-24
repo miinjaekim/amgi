@@ -688,9 +688,14 @@ export default function ReviewScreen() {
       // visibly. Firestore's write promise simply never settles without a
       // connection, which would leave the form hanging with no explanation.
       await withTimeout(updateFlashcardFields(item.card.id, editDraft, studyLanguage));
-      setQueue(prev => prev.map((qi, i) =>
-        i === index ? { ...qi, card: { ...qi.card, ...editDraft } } : qi
+      // By card, not by index: a card due both ways is two queue entries, and
+      // patching only the one on screen brought the old text back when the
+      // other direction came up. `cards` too, as enrichment's `onChanged`
+      // does, or a queue rebuilt later in the session brings it back again.
+      setQueue(prev => prev.map(qi =>
+        qi.card.id === item.card.id ? { ...qi, card: { ...qi.card, ...editDraft } } : qi
       ));
+      setCards(prev => prev.map(c => (c.id === item.card.id ? { ...c, ...editDraft } : c)));
       setEditing(false);
       setEditDraft(null);
       setShowOptions(false);
@@ -1313,7 +1318,7 @@ export default function ReviewScreen() {
           {...(canRaiseKeyboard ? { onPress: Keyboard.dismiss } : null)}
         >
           {/* Card */}
-          <View style={[s.cardWrap, typingThisCard && !revealed && s.cardWrapSnug]}>
+          <View style={[s.cardWrap, typingThisCard && !revealed && s.cardWrapSnug, editing && s.cardWrapEditing]}>
             {/* Card header: the options button alone. The question the card is
                 asking used to be spelled out here — "이것을 영어로 어떻게
                 말하나요?" — and it was saying a third time what the direction
@@ -1321,18 +1326,27 @@ export default function ReviewScreen() {
                 makes obvious. On a typed card it also stood between the word and
                 the field. */}
             <View style={[s.cardHeader, typingThisCard && !revealed && s.cardHeaderSnug]}>
-              <TouchableOpacity
-                style={s.optionsBtn}
-                onPress={() => {
-                  if (editing) {
-                    setEditing(false);
-                    setEditDraft(null);
-                  }
-                  setShowOptions(v => !v);
-                }}
-              >
-                <Text style={s.optionsBtnText}>···</Text>
-              </TouchableOpacity>
+              {/* While editing, Save and Cancel take the ⋯'s place. They sat
+                  under the form, and the form is the one thing on this card
+                  that grows: nothing in it scrolls (see `canRaiseKeyboard`),
+                  so on a small phone with the keyboard up whatever didn't fit
+                  was drawn past the card's bottom edge, under the keyboard —
+                  and those two buttons were what didn't fit. Up here nothing
+                  is above them to push them down. */}
+              {editing ? (
+                <View style={s.editActions}>
+                  <TouchableOpacity style={s.editCancelBtn} onPress={() => { setEditing(false); setEditDraft(null); }}>
+                    <Text style={s.editCancelBtnText}>Cancel</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={s.editSaveBtn} onPress={handleEditSave}>
+                    <Text style={s.editSaveBtnText}>Save</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <TouchableOpacity style={s.optionsBtn} onPress={() => setShowOptions(v => !v)}>
+                  <Text style={s.optionsBtnText}>···</Text>
+                </TouchableOpacity>
+              )}
             </View>
 
             {/* Options menu */}
@@ -1371,14 +1385,6 @@ export default function ReviewScreen() {
                   value={editDraft[backConfig.backField] ?? ''}
                   onChangeText={v => setEditDraft(d => d ? { ...d, [backConfig.backField]: v } : d)}
                 />
-                <View style={s.editActions}>
-                  <TouchableOpacity style={s.editSaveBtn} onPress={handleEditSave}>
-                    <Text style={s.editSaveBtnText}>Save</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={s.editCancelBtn} onPress={() => { setEditing(false); setEditDraft(null); }}>
-                    <Text style={s.editCancelBtnText}>Cancel</Text>
-                  </TouchableOpacity>
-                </View>
               </View>
             ) : typingThisCard && !revealed ? (
               // **No scroll container, and the card is sized to these two
@@ -1671,6 +1677,9 @@ function makeStyles(C: Palette, tabBarHeight: number) {
   // ~36pt of padding that was holding nothing.
   cardWrapSnug: { flex: 0, paddingVertical: 16 },
   cardHeaderSnug: { marginBottom: 4 },
+  // The editing card's padding is `cardWrapSnug`'s, for the same reason: with
+  // the keyboard up, the height is better spent on the form than on margin.
+  cardWrapEditing: { paddingVertical: 16 },
   typedSpacer: { flex: 1 },
   cardHeader: { flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'flex-start', marginBottom: 16 },
   optionsBtn: { paddingHorizontal: 8, paddingVertical: 2, marginLeft: 8 },
@@ -1691,10 +1700,10 @@ function makeStyles(C: Palette, tabBarHeight: number) {
     paddingHorizontal: 12, paddingVertical: 10, fontSize: 16, color: C.text,
     backgroundColor: C.bg,
   },
-  editActions: { flexDirection: 'row', gap: 8, marginTop: 4 },
-  editSaveBtn: { flex: 1, backgroundColor: C.highlight, borderRadius: 10, paddingVertical: 10, alignItems: 'center' },
+  editActions: { flexDirection: 'row', gap: 8 },
+  editSaveBtn: { backgroundColor: C.highlight, borderRadius: 10, paddingVertical: 7, paddingHorizontal: 18, alignItems: 'center' },
   editSaveBtnText: { color: C.bg, fontWeight: '700', fontSize: 15 },
-  editCancelBtn: { flex: 1, backgroundColor: C.border, borderRadius: 10, paddingVertical: 10, alignItems: 'center' },
+  editCancelBtn: { backgroundColor: C.border, borderRadius: 10, paddingVertical: 7, paddingHorizontal: 18, alignItems: 'center' },
   editCancelBtnText: { color: C.text, fontWeight: '600', fontSize: 15 },
 
   frontText: { fontSize: 32, fontWeight: '700', color: C.text, lineHeight: 40 },
