@@ -406,6 +406,9 @@ the user's pick over Settings. Export still takes `visibleCards`, and Settings
 would have forced a choice between "everything" and "one language". Web also
 has no Settings page to put them on. On mobile the ⋯ is a two-step `Alert`
 (Import / Export, then CSV / Anki), because Android shows at most three buttons.
+**The chip is also the study-language switcher**, the user's ask so switching
+decks (Korean ↔ Hanja) doesn't mean a trip to settings. It opens the same
+`StudyLanguageList` as the sidebar popover (web) and Progress's sheet (mobile).
 ⚠️ On phone-width web the top bar already shows the study language, so the
 chip repeats it. Munli's web pages already did this before the change.
 

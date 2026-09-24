@@ -537,7 +537,7 @@ export default function CardsScreen() {
                       accessibilityRole="button"
                       accessibilityLabel={t(interfaceLanguage, 'cardsMoreActions')}
                     >
-                      <Ionicons name="ellipsis-horizontal" size={14} color={C.muted} />
+                      <Ionicons name="ellipsis-vertical" size={14} color={C.muted} />
                     </TouchableOpacity>
                   </View>
                 </>

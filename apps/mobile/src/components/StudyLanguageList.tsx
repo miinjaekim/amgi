@@ -22,7 +22,8 @@ import type { Palette } from '../theme';
  * the language it is explained in.
  *
  * Mirrors web's `StudyLanguageList` and exists for the same reason: the
- * settings screen and the quick switcher on Progress both offer this choice,
+ * settings screen, the quick switcher on Progress and the language chip on
+ * every title row all offer this choice,
  * and a switch that behaves differently depending on where it was made is a
  * switch nobody trusts.
  */

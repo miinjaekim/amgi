@@ -415,7 +415,7 @@ export default function CardsPage() {
                       aria-expanded={showMoreMenu}
                       className="text-xs px-2.5 py-1 rounded-lg border border-[var(--color-muted)] text-[var(--color-muted)] hover:text-[var(--color-text)] hover:border-[var(--color-text)] transition-colors"
                     >
-                      ⋯
+                      ⋮
                     </button>
                     {showMoreMenu && (
                       <>
