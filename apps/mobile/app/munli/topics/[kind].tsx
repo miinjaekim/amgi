@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { conjugationSpec, enrolledTenses, isEnrolled, setEnrolled, subjectsOfKind, subjectKey, t } from '@amgi/core';
+import { conjugationSpec, enrolledTenses, getStudyLanguageConfig, isEnrolled, setEnrolled, subjectKey, subjectsOfKind, t } from '@amgi/core';
 import type { ConjugationSubject } from '@amgi/core';
 import { useUser } from '../../../src/context/UserContext';
 import { useTheme } from '../../../src/context/ThemeContext';
@@ -11,6 +11,7 @@ import { useConjugation } from '../../../src/context/ConjugationContext';
 import ParadigmTable from '../../../src/components/ParadigmTable';
 import FilterSheet, { type FilterGroup } from '../../../src/components/FilterSheet';
 import { PAGE_TITLE_SIZE, SCREEN_GUTTER } from '../../../src/components/PageHeader';
+import MunliLanguageChip from '../../../src/components/MunliLanguageChip';
 import type { Palette } from '../../../src/theme';
 
 /**
@@ -82,6 +83,7 @@ export default function VerbTopicScreen() {
       <Text style={s.title}>
         {t(interfaceLanguage, irregular ? 'verbsIrregular' : 'topicRegularVerbs')}
       </Text>
+      <MunliLanguageChip />
     </View>
   );
 
@@ -105,7 +107,7 @@ export default function VerbTopicScreen() {
       <SafeAreaView style={s.safe} edges={['top']}>
         {header}
         <Text style={s.empty}>
-          {t(interfaceLanguage, loading ? 'munliLoading' : 'conjugationUnavailable')}
+          {t(interfaceLanguage, loading ? 'munliLoading' : 'munliUnavailable', { language: getStudyLanguageConfig(studyLanguage).label })}
         </Text>
       </SafeAreaView>
     );

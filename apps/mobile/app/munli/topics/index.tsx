@@ -3,8 +3,8 @@ import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { conjugationSpec, enrolledCountOfKind, t } from '@amgi/core';
-import type { ConjugationSubject, TranslationKey } from '@amgi/core';
+import { conjugationSpec, enrolledCountOfKind, getStudyLanguageConfig, munliTopics, t } from '@amgi/core';
+import type { MunliTopic } from '@amgi/core';
 import { useUser } from '../../../src/context/UserContext';
 import { useTheme } from '../../../src/context/ThemeContext';
 import { useConjugation } from '../../../src/context/ConjugationContext';
@@ -23,6 +23,11 @@ import type { Palette } from '../../../src/theme';
  * Each row's subtitle says what is enrolled, so the practice set is legible
  * without opening anything.
  */
+const ICONS: Record<MunliTopic['id'], 'repeat-outline' | 'shuffle-outline'> = {
+  regular: 'repeat-outline',
+  irregular: 'shuffle-outline',
+};
+
 export default function TopicsScreen() {
   const { C } = useTheme();
   const tabBarHeight = useFloatingTabBarHeight();
@@ -31,18 +36,10 @@ export default function TopicsScreen() {
   const { enrolment, loading } = useConjugation();
   const router = useRouter();
   const spec = conjugationSpec(studyLanguage);
-
-  /**
-   * ⚠️ **Two topics, not one with two halves.** A regular group is a rule that
-   * one example demonstrates; an irregular verb is a fact no other verb tells
-   * you anything about. Browsing them together meant one page whose halves
-   * wanted different shapes — a handful of patterns against what will be a long
-   * list of verbs.
-   */
-  const TOPICS: { kind: ConjugationSubject['kind']; route: string; labelKey: TranslationKey; icon: 'repeat-outline' | 'shuffle-outline' }[] = [
-    { kind: 'group', route: '/munli/topics/regular', labelKey: 'topicRegularVerbs', icon: 'repeat-outline' },
-    { kind: 'verb', route: '/munli/topics/irregular', labelKey: 'verbsIrregular', icon: 'shuffle-outline' },
-  ];
+  // Only this language's topics — see `munliTopics`. Regular and irregular
+  // verbs are two topics, not one with two halves: a rule one example
+  // demonstrates against a fact no other verb tells you anything about.
+  const topics = munliTopics(studyLanguage);
 
   return (
     <SafeAreaView style={s.safe} edges={['top']}>
@@ -50,17 +47,26 @@ export default function TopicsScreen() {
       <ScrollView contentContainerStyle={s.content}>
         <Text style={s.intro}>{t(interfaceLanguage, 'topicsIntro')}</Text>
 
-        {TOPICS.map(topic => {
+        {topics.length === 0 && (
+          <View style={s.empty}>
+            <Text style={s.emptyTitle}>
+              {t(interfaceLanguage, 'munliUnavailable', { language: getStudyLanguageConfig(studyLanguage).label })}
+            </Text>
+            <Text style={s.emptyBody}>{t(interfaceLanguage, 'munliUnavailableBody')}</Text>
+          </View>
+        )}
+
+        {topics.map(topic => {
           const saved = spec && enrolment ? enrolledCountOfKind(spec, enrolment, topic.kind) : 0;
           return (
             <TouchableOpacity
-              key={topic.route}
+              key={topic.id}
               style={s.row}
               activeOpacity={0.7}
               accessibilityRole="button"
-              onPress={() => router.push(topic.route as never)}
+              onPress={() => router.push(`/munli/topics/${topic.id}` as never)}
             >
-              <Ionicons name={topic.icon} size={22} color={C.muted} />
+              <Ionicons name={ICONS[topic.id]} size={22} color={C.muted} />
               <View style={s.rowText}>
                 <Text style={s.rowLabel}>{t(interfaceLanguage, topic.labelKey)}</Text>
                 {/* ⚠️ A count off an enrolment that has not arrived is the
@@ -68,8 +74,6 @@ export default function TopicsScreen() {
                 <Text style={s.rowSub}>
                   {loading
                     ? t(interfaceLanguage, 'munliLoading')
-                    : !spec
-                    ? t(interfaceLanguage, 'conjugationUnavailable')
                     : saved > 0
                       ? t(interfaceLanguage, 'topicVerbsSummary', { count: saved })
                       : t(interfaceLanguage, 'topicNothingSaved')}
@@ -97,5 +101,8 @@ function makeStyles(C: Palette, tabBarHeight: number) {
     rowText: { flex: 1 },
     rowLabel: { color: C.text, fontSize: 16, fontWeight: '600' },
     rowSub: { color: C.muted, fontSize: 12, marginTop: 3 },
+    empty: { borderWidth: 1, borderStyle: 'dashed', borderColor: C.muted, borderRadius: 16, padding: 28 },
+    emptyTitle: { color: C.text, fontSize: 15, textAlign: 'center' },
+    emptyBody: { color: C.muted, fontSize: 12, textAlign: 'center', marginTop: 6 },
   });
 }

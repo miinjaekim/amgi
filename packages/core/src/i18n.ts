@@ -157,13 +157,16 @@ const translations = {
     // Conjugation practice. The verb, the tense and the person are written in
     // the language being studied — `présent`, `nous` — and are not translated:
     // a learner of French learns the French names. Only the chrome is here.
-    // ⚠️ Not the same state as `conjugationUnavailable`. That one means this
-    // language has no conjugation; this one means the practice set has not
+    // ⚠️ Not the same state as `munliUnavailable`. That one means Munli has
+    // nothing for this language; this one means the practice set has not
     // arrived yet, and the difference matters because the fallback for an
     // absent enrolment is a *plausible* one — the default set, everything due.
     munliLoading: 'Loading your practice set…',
-    conjugationUnavailable: 'No conjugation practice for this language yet.',
-    conjugationUnavailableBody: 'French is the only one so far. Switch decks to try it.',
+    // A language with no Munli topics. It names nothing that belongs to another
+    // language — Mandarin used to be told about French conjugation here.
+    munliUnavailable: 'Nothing to practise in {language} yet.',
+    munliUnavailableBody: 'Writing works in any language.',
+    munliLanguageChipLabel: 'Studying {language}',
     conjugationTenses: 'Tenses',
     conjugationDue: '{count} due',
     conjugationAnswerPlaceholder: 'the form',
@@ -229,7 +232,7 @@ const translations = {
     // practice set, which is the half it did not have until 2026-09-22.
     // to Topics (the catalogue) and Progress (the totals).
     munliTabSaved: 'Saved',
-    savedTitle: 'What you have saved',
+    savedTitle: 'Saved',
     savedIntro: 'Everything you have saved to practise. Open one to see what is in it.',
     savedEmpty: 'Nothing saved yet. Add a tense or a verb group from Topics.',
     savedNotStarted: 'not started',
@@ -1061,8 +1064,9 @@ const translations = {
     munliToolConjugation: '동사 변화',
     munliToolConjugationBlurb: '동사 하나, 시제 하나, 인칭 하나. 형태를 직접 써보세요.',
     munliLoading: '연습 목록을 불러오는 중...',
-    conjugationUnavailable: '이 언어는 아직 동사 변화 연습이 없어요.',
-    conjugationUnavailableBody: '지금은 프랑스어만 있어요. 다른 단어장으로 바꿔보세요.',
+    munliUnavailable: '아직 {language} 연습이 없어요.',
+    munliUnavailableBody: '글쓰기는 어떤 언어로든 할 수 있어요.',
+    munliLanguageChipLabel: '{language} 공부 중',
     conjugationTenses: '시제',
     conjugationDue: '{count}개 복습',
     conjugationAnswerPlaceholder: '형태를 입력하세요',
@@ -1103,7 +1107,7 @@ const translations = {
     practiceSectionForms: '{count}개 형태',
     munliTabTopics: '주제',
     munliTabSaved: '저장함',
-    savedTitle: '저장한 목록',
+    savedTitle: '저장함',
     savedIntro: '연습하려고 저장한 것들이에요. 눌러서 안에 뭐가 있는지 볼 수 있어요.',
     savedEmpty: '아직 저장한 게 없어요. 주제에서 시제나 동사 유형을 추가해보세요.',
     savedNotStarted: '시작 전',

@@ -390,6 +390,34 @@ export function hasConjugation(language: StudyLanguage): boolean {
   return conjugationSpec(language) !== undefined;
 }
 
+/** A row on Munli's Topics tab. `id` is its route segment under `/munli/topics`. */
+export interface MunliTopic {
+  id: 'regular' | 'irregular';
+  kind: ConjugationSubject['kind'];
+  labelKey: TranslationKey;
+}
+
+const CONJUGATION_TOPICS: readonly MunliTopic[] = [
+  { id: 'regular', kind: 'group', labelKey: 'topicRegularVerbs' },
+  { id: 'irregular', kind: 'verb', labelKey: 'verbsIrregular' },
+];
+
+/**
+ * The topics Munli offers for a language.
+ *
+ * ⚠️ **Language-specific unless a topic says otherwise** — the user's rule,
+ * 2026-09-25, after Mandarin showed French's regular and irregular verbs with
+ * "nothing for this language" under each. A topic appears where its data
+ * exists, not everywhere with an apology. Verb topics come from a conjugation
+ * spec, and each only when the spec has subjects of that kind. A topic that
+ * genuinely works in any language would be listed here unconditionally.
+ */
+export function munliTopics(language: StudyLanguage): MunliTopic[] {
+  const spec = conjugationSpec(language);
+  if (!spec) return [];
+  return CONJUGATION_TOPICS.filter(topic => subjectsOfKind(spec, topic.kind).length > 0);
+}
+
 /* ── A card's verb group ─────────────────────────────────────────────────── */
 
 /**

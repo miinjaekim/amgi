@@ -1,6 +1,6 @@
 'use client';
 import Link from 'next/link';
-import { getMode } from '@amgi/core';
+import { getMode, hasConjugation } from '@amgi/core';
 import { useUser } from '@/components/UserContext';
 import { getMunliNavItems } from '@/components/nav-items';
 import { t } from '@/lib/i18n';
@@ -19,11 +19,15 @@ const BLURBS: Record<string, TranslationKey> = {
  * one and not the other.
  */
 export default function MunliHome() {
-  const { interfaceLanguage } = useUser();
+  const { interfaceLanguage, studyLanguage } = useUser();
   const munli = getMode('munli');
   // Only the rows with a blurb: Progress is in the nav beside them but it is
   // not a tool, and listing it here would read as a third thing to practise.
-  const tools = getMunliNavItems(interfaceLanguage, '/munli').filter(item => BLURBS[item.href]);
+  // Practice is conjugation today, so it is listed only where there is some —
+  // its blurb promises verb tables a language without a spec does not have.
+  const tools = getMunliNavItems(interfaceLanguage, '/munli').filter(
+    item => BLURBS[item.href] && (item.href !== '/munli/practice' || hasConjugation(studyLanguage)),
+  );
 
   return (
     <div className="max-w-2xl">

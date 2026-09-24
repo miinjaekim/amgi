@@ -89,6 +89,15 @@ section worth seeing without scrolling._
   `docs/packs/writing-worked-example-draft.md`. Other grammar practice for
   Chinese still needs its own planning. Web has it on merge. JS only.
 
+- **Munli shows only the current language's practice** (2026-09-25). For a
+  language with no conjugation spec (every language except French), Topics,
+  Practice, Saved and Progress show "Nothing to practise in {language} yet"
+  and point to Writing. They no longer list French's verb topics or mention
+  French. Every Munli title row ends in a chip naming the study language, except
+  Progress, whose header already shows it. Saved's page title is now "Saved"
+  (「저장함」), the same as its tab. The rule is under Decisions in
+  [status.md](status.md). Web has it on merge. JS only.
+
 ⚠️ **In testers' hands is not the same as seen.** Nothing in that build has been
 opened on a device, which is most of what Munli is. Untracked here by the
 2026-09-04 decision that these checks come from using the app, not a list; the

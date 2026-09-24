@@ -2,7 +2,8 @@
 import { useMemo, useState } from 'react';
 import {
   boxItemId, buildConjugationQueue, buildTables, conjugationHints, countDueBoxes,
-  countQuestions, hintedVerdict, isCorrectForm, listPracticeSections, rateBox,
+  countQuestions, getStudyLanguageConfig, hintedVerdict, isCorrectForm,
+  listPracticeSections, rateBox,
 } from '@amgi/core';
 import type { ConjugationProgressMap, ConjugationRound, TranslationKey } from '@amgi/core';
 import { useUser } from '@/components/UserContext';
@@ -32,7 +33,7 @@ type Stage = 'picker' | 'setup' | 'session';
 
 
 export default function PracticePage() {
-  const { interfaceLanguage } = useUser();
+  const { interfaceLanguage, studyLanguage } = useUser();
   const { spec, progress, enrolment, rate, loading } = useConjugation();
 
   const [stage, setStage] = useState<Stage>('picker');
@@ -180,8 +181,18 @@ export default function PracticePage() {
     return (
       <div className="max-w-2xl">
         {heading('practiceTitle')}
-        {/* One row per practice type. Writing is not here — it diagnoses
-            rather than practises, so it keeps its own surface. */}
+        {/* One row per practice type *this language has*. Writing is not here —
+            it diagnoses rather than practises, so it keeps its own surface. */}
+        {!spec ? (
+          <div className="rounded-xl border border-dashed p-8 text-center" style={{ borderColor: 'var(--color-muted)' }}>
+            <p className="font-mono text-sm mb-1" style={{ color: 'var(--color-text)' }}>
+              {t(interfaceLanguage, 'munliUnavailable', { language: getStudyLanguageConfig(studyLanguage).label })}
+            </p>
+            <p className="font-mono text-xs" style={{ color: 'var(--color-muted)' }}>
+              {t(interfaceLanguage, 'munliUnavailableBody')}
+            </p>
+          </div>
+        ) : (
         <button
           onClick={() => setStage('setup')}
           className="w-full flex items-center gap-4 p-4 rounded-xl border transition-colors hover:bg-[var(--color-muted)]/20"
@@ -196,6 +207,7 @@ export default function PracticePage() {
               : t(interfaceLanguage, 'practiceNothingDue')}
           </span>
         </button>
+        )}
       </div>
     );
   }
@@ -253,7 +265,7 @@ export default function PracticePage() {
         <div className="max-w-2xl">
           {heading('munliToolConjugation')}
           <p className="font-mono text-sm" style={{ color: 'var(--color-muted)' }}>
-            {t(interfaceLanguage, 'conjugationUnavailable')}
+            {t(interfaceLanguage, 'munliUnavailable', { language: getStudyLanguageConfig(studyLanguage).label })}
           </p>
         </div>
       );

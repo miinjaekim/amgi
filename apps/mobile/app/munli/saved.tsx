@@ -2,13 +2,14 @@ import React, { useMemo, useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { conjugationSpec, daysUntil, listSavedKinds, setEnrolled, t } from '@amgi/core';
+import { conjugationSpec, daysUntil, getStudyLanguageConfig, listSavedKinds, setEnrolled, t } from '@amgi/core';
 import { useUser } from '../../src/context/UserContext';
 import { useTheme } from '../../src/context/ThemeContext';
 import { useConjugation } from '../../src/context/ConjugationContext';
 import { useFloatingTabBarHeight } from '../../src/components/FloatingTabBar';
 import ParadigmTable from '../../src/components/ParadigmTable';
 import PageHeader, { PAGE_TITLE_SIZE, SCREEN_GUTTER } from '../../src/components/PageHeader';
+import MunliLanguageChip from '../../src/components/MunliLanguageChip';
 import type { Palette } from '../../src/theme';
 
 /**
@@ -74,6 +75,7 @@ export default function SavedScreen() {
         <Ionicons name="chevron-back" size={22} color={C.text} />
       </TouchableOpacity>
       <Text style={s.title} numberOfLines={1}>{title}</Text>
+      <MunliLanguageChip />
     </View>
   );
 
@@ -120,7 +122,7 @@ export default function SavedScreen() {
         <PageHeader titleKey="savedTitle" />
         <ScrollView contentContainerStyle={s.content}>
           <Text style={s.empty}>
-            {t(interfaceLanguage, loading ? 'munliLoading' : 'conjugationUnavailable')}
+            {t(interfaceLanguage, loading ? 'munliLoading' : 'munliUnavailable', { language: getStudyLanguageConfig(studyLanguage).label })}
           </Text>
         </ScrollView>
       </SafeAreaView>

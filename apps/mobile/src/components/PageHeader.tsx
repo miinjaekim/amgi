@@ -1,11 +1,13 @@
 import React, { useMemo, useState } from 'react';
 import { Modal, View, Text, TouchableOpacity, Pressable, ScrollView, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { t } from '@amgi/core';
+import { usePathname } from 'expo-router';
+import { modeFromPath, t } from '@amgi/core';
 import type { TranslationKey } from '@amgi/core';
 import { useUser } from '../context/UserContext';
 import { useTheme } from '../context/ThemeContext';
 import StreakBadge from './StreakBadge';
+import MunliLanguageChip from './MunliLanguageChip';
 import type { Palette } from '../theme';
 
 /**
@@ -75,12 +77,16 @@ interface Props {
  * Explaining rather than demonstrating is fine here, and only here: the user
  * asked. Unsolicited, the same text would be the lecture that the first-run
  * checklist was rejected for being.
+ *
+ * **On Munli's screens the title row ends in the study language**, read off
+ * the path rather than a prop — web's `PageHeader` makes the same check.
  */
 export default function PageHeader({ titleKey, helpTitleKey, helpLeadKey, helpPointsKey, streak }: Props) {
   const { interfaceLanguage } = useUser();
   const { C } = useTheme();
   const s = useMemo(() => makeStyles(C), [C]);
   const [helpOpen, setHelpOpen] = useState(false);
+  const munli = modeFromPath(usePathname()) === 'munli';
   // An object rather than a boolean, so the three keys narrow together: they
   // are all present or all absent, and nothing downstream has to assert it.
   const help = helpTitleKey && helpLeadKey && helpPointsKey
@@ -103,6 +109,7 @@ export default function PageHeader({ titleKey, helpTitleKey, helpLeadKey, helpPo
             <Ionicons name="help-circle-outline" size={20} color={C.muted} />
           </TouchableOpacity>
         )}
+        {munli && <MunliLanguageChip />}
       </View>
 
       {/* Under the title, not beside it. Sharing the row cost the title the

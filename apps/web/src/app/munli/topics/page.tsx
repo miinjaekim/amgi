@@ -1,7 +1,6 @@
 'use client';
 import Link from 'next/link';
-import { conjugationSpec, enrolledCountOfKind } from '@amgi/core';
-import type { ConjugationSubject, TranslationKey } from '@amgi/core';
+import { conjugationSpec, enrolledCountOfKind, getStudyLanguageConfig, munliTopics } from '@amgi/core';
 import { useUser } from '@/components/UserContext';
 import { useConjugation } from '@/hooks/useConjugation';
 import PageHeader from '@/components/PageHeader';
@@ -19,17 +18,10 @@ export default function TopicsPage() {
   const { interfaceLanguage, studyLanguage } = useUser();
   const { enrolment, loading } = useConjugation();
   const spec = conjugationSpec(studyLanguage);
-
-  /**
-   * ⚠️ **Two topics, not one with two halves.** A regular group is a rule that
-   * one example demonstrates; an irregular verb is a fact no other verb tells
-   * you anything about — a handful of patterns against what will be a long list
-   * of verbs.
-   */
-  const topics: { kind: ConjugationSubject['kind']; href: string; labelKey: TranslationKey }[] = [
-    { kind: 'group', href: '/munli/topics/regular', labelKey: 'topicRegularVerbs' },
-    { kind: 'verb', href: '/munli/topics/irregular', labelKey: 'verbsIrregular' },
-  ];
+  // Only this language's topics — see `munliTopics`. Regular and irregular
+  // verbs are two topics, not one with two halves: a rule one example
+  // demonstrates against a fact no other verb tells you anything about.
+  const topics = munliTopics(studyLanguage);
 
   return (
     <div className="max-w-2xl">
@@ -38,12 +30,23 @@ export default function TopicsPage() {
         {t(interfaceLanguage, 'topicsIntro')}
       </p>
 
+      {topics.length === 0 && (
+        <div className="rounded-xl border border-dashed p-8 text-center" style={{ borderColor: 'var(--color-muted)' }}>
+          <p className="font-mono text-sm mb-1" style={{ color: 'var(--color-text)' }}>
+            {t(interfaceLanguage, 'munliUnavailable', { language: getStudyLanguageConfig(studyLanguage).label })}
+          </p>
+          <p className="font-mono text-xs" style={{ color: 'var(--color-muted)' }}>
+            {t(interfaceLanguage, 'munliUnavailableBody')}
+          </p>
+        </div>
+      )}
+
       {topics.map(topic => {
         const saved = spec && enrolment ? enrolledCountOfKind(spec, enrolment, topic.kind) : 0;
         return (
           <Link
-            key={topic.href}
-            href={topic.href}
+            key={topic.id}
+            href={`/munli/topics/${topic.id}`}
             className="flex items-center gap-4 p-4 mb-3 rounded-xl border transition-colors hover:bg-[var(--color-muted)]/20"
             style={{ background: 'var(--color-surface)', borderColor: 'var(--color-muted)' }}
           >
@@ -56,8 +59,6 @@ export default function TopicsPage() {
                     default set's count, not this account's. */}
                 {loading
                   ? t(interfaceLanguage, 'munliLoading')
-                  : !spec
-                  ? t(interfaceLanguage, 'conjugationUnavailable')
                   : saved > 0
                     ? t(interfaceLanguage, 'topicVerbsSummary', { count: saved })
                     : t(interfaceLanguage, 'topicNothingSaved')}
