@@ -587,7 +587,7 @@ and there is no way to install an older one from the App Store.
   - **The symptom is not reliably intermittent.** The line above says "only
     sometimes", and review's card instead failed to scroll *at all*, every time.
     Don't rule this cause out because the report says total failure.
-  - `CardDetailModal`, `ImportModal` (now `ListLookupModal`) and the first-run tour never had this,
+  - `CardDetailModal`, `ImportModal` (removed 2026-09-25) and the first-run tour never had this,
     because all three use plain `View` sheets. The house pattern was already
     right; the bug came from copying the one modal that isn't scrollable.
 - **`EXPO_PUBLIC_*` env vars are baked at bundle time** — restart Metro with

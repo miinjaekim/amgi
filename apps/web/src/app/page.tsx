@@ -18,7 +18,6 @@ import type { WordOfTheDay } from '@amgi/core';
 import { useUser } from '@/components/UserContext';
 import { t, partOfSpeechLabel } from '@/lib/i18n';
 import SaveFlashcardModal from '@/components/SaveFlashcardModal';
-import ListLookupModal from '@/components/ListLookupModal';
 import PronounceButton from '@/components/PronounceButton';
 import Spinner from '@/components/Spinner';
 import React from 'react';
@@ -89,8 +88,6 @@ export default function Home() {
   const [showFlashcardForm, setShowFlashcardForm] = useState(false);
   const [flashcardDraft, setFlashcardDraft] = useState<Partial<Flashcard> | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
-  const [showListLookup, setShowListLookup] = useState(false);
-  const [listSaved, setListSaved] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [showContextInput, setShowContextInput] = useState(false);
   const [contextInput, setContextInput] = useState('');
@@ -430,39 +427,6 @@ export default function Home() {
           </button>
         </div>
       </form>
-
-      {/* Several words at once, each through the same lookup as the field
-          above. On Learn since 2026-09-25 — it was My Cards's "Import", which
-          sat beside a list it had nothing to do with. Signed in only, since
-          what it ends in is saving cards, and only on the empty screen, where
-          it is an alternative to typing rather than a distraction from a
-          result. */}
-      {user && !core && !ambiguity && !loading && (
-        <div className="mt-2 text-right">
-          <button
-            type="button"
-            onClick={() => setShowListLookup(true)}
-            className="text-sm text-[var(--color-muted)] underline-offset-2 hover:underline hover:text-[var(--color-text)] transition-colors"
-          >
-            {t(interfaceLanguage, 'listLookupOpen')} →
-          </button>
-        </div>
-      )}
-      {listSaved && (
-        <div className="mt-4 p-4 rounded-lg bg-[var(--color-muted)] text-[var(--color-text)] font-semibold">
-          {listSaved}
-        </div>
-      )}
-      {showListLookup && (
-        <ListLookupModal
-          onClose={() => setShowListLookup(false)}
-          onSaved={count => {
-            setShowListLookup(false);
-            setListSaved(t(interfaceLanguage, count === 1 ? 'listLookupSavedToastOne' : 'listLookupSavedToast', { count }));
-            setTimeout(() => setListSaved(null), 4000);
-          }}
-        />
-      )}
 
       {/* Empty state — word of the day + example terms below the search bar */}
       {!loading && !core && !ambiguity && !error && (

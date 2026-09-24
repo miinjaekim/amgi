@@ -394,7 +394,7 @@ once, so a path that worked on build 14 is not evidence about build 15.
 Closed calls, kept with their reasoning — a decision whose reasoning is lost gets
 reopened by the next person to notice the symptom. Newest first.
 
-### Amgi's titles name the study language; Import and Export leave My Cards (2026-09-25)
+### Amgi's titles name the study language; Import removed, Export to Your data (2026-09-25)
 
 **The chip Munli got the same day now ends every Amgi title row too**: Learn
 (mobile only, since web's Learn has no title), Review, Packs and My Cards.
@@ -406,11 +406,10 @@ on a phone, called it overkill, and switching stays on Progress.
 ⚠️ On phone-width web the top bar already shows the study language, so the
 chip repeats it. Munli's web pages already did this before the change.
 
-**Import became "Look up a list" and moved to Learn** (`ListLookupModal`,
-`listLookup*` keys). It never imported a file. You paste words, and each one runs
-through Learn's own lookup, so the name was underselling it and My Cards was
-the wrong home. It shows under the search field, signed in only (and on web,
-only on the empty screen).
+**Import is gone.** It never imported a file: it ran pasted words through
+Learn's lookup. It was briefly renamed "Look up a list" and moved to Learn, and
+then the user removed it outright. Pack-creation features planned for later
+will cover bulk-adding, so this would have been a second way in.
 
 **Export moved to Settings → Your data, and now takes everything**: every
 language, archived cards included (`fetchAllCardsForExport`, then core's
