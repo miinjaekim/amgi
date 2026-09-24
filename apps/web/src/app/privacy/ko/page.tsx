@@ -12,7 +12,7 @@ export default function PrivacyPageKo() {
       <div>
         <h1 className="text-2xl font-bold mb-1">개인정보처리방침</h1>
         <p className="opacity-70 text-sm">
-          최종 수정일: 2026년 7월 27일 ·{" "}
+          최종 수정일: 2026년 9월 25일 ·{" "}
           <Link href="/privacy" className="underline">
             English
           </Link>
@@ -120,7 +120,8 @@ export default function PrivacyPageKo() {
           앱의 설정 화면에서 언제든지 직접 삭제할 수 있습니다. 삭제는 즉시
           이루어지며 되돌릴 수 없습니다. 계정, 모든 언어의 저장된 카드, 복습
           기록과 연속 학습 기록, 설정이 모두 지워집니다. 저장한 단어를 남겨두고
-          싶다면 삭제하기 전에 카드 페이지에서 내보내 주세요.
+          싶다면 삭제하기 전에 설정의 &apos;내 데이터&apos;에서 내보내 주세요. 모든
+          언어의 카드를 한 번에 내려받을 수 있습니다.
         </p>
         <p>
           한 가지는 삭제되지 않습니다. 발음 오디오는 계정이 아니라 단어 자체에서

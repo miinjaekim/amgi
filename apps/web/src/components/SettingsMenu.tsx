@@ -4,7 +4,9 @@ import { useUser } from '@/components/UserContext';
 import { useTheme } from '@/components/ThemeContext';
 import { usePronunciation } from '@/components/PronunciationContext';
 import { SUPPORTED_NATIVE_LANGUAGES } from '@/services/userPreferences';
-import { HANJA_PARTITIONS, getStudyLanguageConfig, type HanjaPartition, type StudyLanguage } from '@amgi/core';
+import { HANJA_PARTITIONS, cardsToAnki, cardsToCSV, getStudyLanguageConfig, type HanjaPartition, type StudyLanguage } from '@amgi/core';
+import { fetchAllCardsForExport } from '@/services/firestore';
+import { downloadFile } from '@/lib/download';
 import { t } from '@/lib/i18n';
 import DeleteAccountModal from '@/components/DeleteAccountModal';
 import ModeSwitcher from '@/components/ModeSwitcher';
@@ -71,6 +73,62 @@ export function StudyLanguageList({ onSelect }: { onSelect?: () => void }) {
 
       {addOpen && <AddLanguageModal onClose={() => { setAddOpen(false); onSelect?.(); }} />}
     </>
+  );
+}
+
+/**
+ * Every card you own, downloaded as CSV or Anki text.
+ *
+ * Here rather than on My Cards since 2026-09-25: a copy of your data belongs
+ * beside the button that erases it, which is also where the privacy policy
+ * and the delete warning send you. That is why it takes everything — see
+ * `cardsToCSV` — rather than whatever a list happened to be filtered to.
+ */
+function ExportCards() {
+  const { user, interfaceLanguage, languages } = useUser();
+  const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState(false);
+  if (!user) return null;
+
+  const run = async (format: 'csv' | 'anki') => {
+    setBusy(true);
+    setFailed(false);
+    try {
+      const cards = await fetchAllCardsForExport(user.uid);
+      if (format === 'csv') downloadFile(cardsToCSV(cards, languages), 'amgi-cards.csv', 'text/csv');
+      else downloadFile(cardsToAnki(cards, languages), 'amgi-cards.txt', 'text/plain');
+    } catch {
+      setFailed(true);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const buttonClass = 'flex-1 py-2 rounded-lg text-sm font-mono border transition-colors hover:border-[var(--color-text)] disabled:opacity-40 disabled:cursor-wait';
+  const buttonStyle = { background: 'transparent', color: 'var(--color-text)', borderColor: 'var(--color-muted)' };
+
+  return (
+    <div className="mt-3">
+      <p className="text-sm font-mono" style={{ color: 'var(--color-text)' }}>
+        {t(interfaceLanguage, 'settingsExportCards')}
+      </p>
+      <p className="text-xs mt-0.5 leading-snug" style={{ color: 'var(--color-muted)' }}>
+        {t(interfaceLanguage, 'settingsExportCardsDesc')}
+      </p>
+      <div className="flex gap-2 mt-2">
+        <button onClick={() => run('csv')} disabled={busy} className={buttonClass} style={buttonStyle}>
+          {t(interfaceLanguage, 'cardsExportCSV')}
+        </button>
+        <button onClick={() => run('anki')} disabled={busy} className={buttonClass} style={buttonStyle}>
+          {t(interfaceLanguage, 'cardsExportAnki')}
+        </button>
+      </div>
+      {failed && (
+        <p className="text-xs mt-2" style={{ color: 'var(--color-error, #c0392b)' }}>
+          {t(interfaceLanguage, 'settingsExportFailed')}
+        </p>
+      )}
+    </div>
   );
 }
 
@@ -333,6 +391,7 @@ export default function SettingsMenu({ onClose }: { onClose: () => void }) {
         <p className="text-xs leading-relaxed" style={{ color: 'var(--color-muted)' }}>
           {t(interfaceLanguage, 'settingsYourDataBlurb')}
         </p>
+        <ExportCards />
       </div>
 
       <a

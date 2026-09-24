@@ -11,13 +11,12 @@ import {
   getCardsCollection,
   Flashcard,
 } from '@/services/firestore';
-import { DEFAULT_DECK_FILTER, buildDeckFilters, filterCardsByDeck, getBackSide, getBackSideConfig, getCharacterBreakdown, getExampleSides, getStudyLanguageConfig } from '@amgi/core';
+import { DEFAULT_DECK_FILTER, buildDeckFilters, filterCardsByDeck, getBackSide, getBackSideConfig, getStudyLanguageConfig } from '@amgi/core';
 import type { DeckFilterId } from '@amgi/core';
 import { db } from '@/config/firebase';
 import { doc, updateDoc } from 'firebase/firestore';
-import { t, partOfSpeechLabel } from '@/lib/i18n';
+import { t } from '@/lib/i18n';
 import CardDetailModal from '@/components/CardDetailModal';
-import ImportModal from '@/components/ImportModal';
 import PageHeader from '@/components/PageHeader';
 
 type SortKey = 'newest' | 'oldest' | 'az';
@@ -54,9 +53,6 @@ export default function CardsPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkWorking, setBulkWorking] = useState(false);
   const [cardOrder, setCardOrder] = useState<'korean-first' | 'english-first'>('korean-first');
-  const [showImport, setShowImport] = useState(false);
-  const [importSuccess, setImportSuccess] = useState<string | null>(null);
-  const [showMoreMenu, setShowMoreMenu] = useState(false);
 
   const langConfig = getStudyLanguageConfig(studyLanguage);
   const backConfig = getBackSideConfig(studyLanguage, deckNativeLanguage);
@@ -250,79 +246,10 @@ export default function CardsPage() {
     { key: 'all', label: t(interfaceLanguage, 'cardsFilterAll'), count: deckCards.length },
   ];
 
-  const downloadFile = (content: string, filename: string, mime: string) => {
-    const blob = new Blob([content], { type: mime });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  // Both exports take `visibleCards` — what you are looking at is what you get,
-  // filters, search and sort included. That is the whole contract, and it is
-  // why neither of them re-filters: an Anki export used to drop archived cards
-  // on its own, which now would hand you an empty file from the Archived tab.
-  const exportCSV = () => {
-    const rows = [[langConfig.label, backConfig.backLanguage, 'Part of speech', 'Formality', 'Definition', 'Characters', 'Notes', 'Examples', 'Saved', 'Status']];
-    for (const c of visibleCards) {
-      const studySide = getStudySide(c);
-      const examples = c.examples?.map(e => {
-        const sides = getExampleSides(e, studyLanguage, deckNativeLanguage);
-        return `${sides.study} / ${sides.back}`;
-      }).join(' | ') ?? '';
-      const saved = c.createdAt instanceof Date ? c.createdAt.toISOString().slice(0, 10) : '';
-      rows.push([
-        studySide,
-        getBackSide(c, deckNativeLanguage),
-        // The label, not the code: the column is read by a person, and it is
-        // the same word the badge showed them.
-        partOfSpeechLabel(deckNativeLanguage, c) || '',
-        c.formality || '',
-        c.definition || '',
-        getCharacterBreakdown(c) || '',
-        c.notes || '',
-        examples,
-        saved,
-        c.archived ? 'archived' : 'active',
-      ]);
-    }
-    const csv = rows.map(r => r.map(v => `"${v.replace(/"/g, '""')}"`).join(',')).join('\n');
-    downloadFile(csv, 'amgi-cards.csv', 'text/csv');
-    setShowMoreMenu(false);
-  };
-
-  const exportAnki = () => {
-    const lines = ['#separator:Tab', '#html:false', '#notetype:Basic', '#deck:Amgi'];
-    for (const c of visibleCards) {
-      const front = getStudySide(c);
-      const backParts = [getBackSide(c, deckNativeLanguage)];
-      if (c.briefDefinition) backParts.push(c.briefDefinition);
-      else if (c.definition) backParts.push(c.definition);
-      lines.push(`${front}\t${backParts.join(' — ')}`);
-    }
-    downloadFile(lines.join('\n'), 'amgi-cards.txt', 'text/plain');
-    setShowMoreMenu(false);
-  };
-
-  const handleImportSaved = async (count: number) => {
-    setShowImport(false);
-    // No reload: the imported cards arrive on the subscription.
-    setImportSuccess(t(interfaceLanguage, count === 1 ? 'importSavedToastOne' : 'importSavedToast', { count }));
-    setTimeout(() => setImportSuccess(null), 4000);
-  };
-
   return (
     <div className="max-w-2xl mx-auto font-mono text-base pb-36" style={{ color: 'var(--color-text)' }}>
       <PageHeader titleKey="cardsPageTitle" className="mt-8 mb-2" />
       <p className="text-sm mb-6 text-[var(--color-muted)]">{t(interfaceLanguage, 'cardsPageDescription')}</p>
-      {importSuccess && (
-        <div className="mb-4 p-3 rounded-lg text-sm font-semibold" style={{ background: 'var(--color-muted)', color: 'var(--color-bg)' }}>
-          {importSuccess}
-        </div>
-      )}
-      {showImport && <ImportModal onClose={() => setShowImport(false)} onSaved={handleImportSaved} />}
 
       {!user ? (
         <div className="p-6 rounded-xl bg-[var(--color-surface)] border border-[var(--color-muted)] text-center">
@@ -395,72 +322,13 @@ export default function CardsPage() {
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
               {!selectMode ? (
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setSelectMode(true)}
-                    disabled={visibleCards.length === 0}
-                    className="text-xs px-2.5 py-1 rounded-lg border border-[var(--color-muted)] text-[var(--color-muted)] hover:text-[var(--color-text)] hover:border-[var(--color-text)] transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                  >
-                    {t(interfaceLanguage, 'bulkSelect')}
-                  </button>
-                  {/* Import and export, moved off the title row on 2026-09-25
-                      to make room for the language. Here rather than in
-                      settings because export takes what the list is showing,
-                      and the rows above this are what decide that. */}
-                  <div className="relative">
-                    <button
-                      onClick={() => setShowMoreMenu(v => !v)}
-                      aria-label={t(interfaceLanguage, 'cardsMoreActions')}
-                      aria-haspopup="menu"
-                      aria-expanded={showMoreMenu}
-                      className="text-xs px-2.5 py-1 rounded-lg border border-[var(--color-muted)] text-[var(--color-muted)] hover:text-[var(--color-text)] hover:border-[var(--color-text)] transition-colors"
-                    >
-                      ⋮
-                    </button>
-                    {showMoreMenu && (
-                      <>
-                        <div className="fixed inset-0 z-10" onClick={() => setShowMoreMenu(false)} />
-                        <div
-                          role="menu"
-                          className="absolute left-0 top-8 z-20 w-40 rounded-lg border border-[var(--color-muted)] shadow-lg overflow-hidden"
-                          style={{ background: 'var(--color-surface)' }}
-                        >
-                          <button
-                            role="menuitem"
-                            onClick={() => { setShowMoreMenu(false); setShowImport(true); }}
-                            className="w-full text-left px-4 py-2.5 text-xs text-[var(--color-text)] hover:bg-[var(--color-muted)] hover:text-[var(--color-bg)] transition-colors"
-                          >
-                            {t(interfaceLanguage, 'cardsImport')}
-                          </button>
-                          {/* The formats keep their bare labels under a heading
-                              rather than growing an "Export" each. Absent on
-                              an empty list, as the Export button was disabled. */}
-                          {visibleCards.length > 0 && (
-                            <>
-                              <p className="px-4 pt-2.5 pb-1 text-[10px] uppercase tracking-wide border-t border-[var(--color-muted)] text-[var(--color-muted)]">
-                                {t(interfaceLanguage, 'cardsExport')}
-                              </p>
-                              <button
-                                role="menuitem"
-                                onClick={exportCSV}
-                                className="w-full text-left px-4 py-2.5 text-xs text-[var(--color-text)] hover:bg-[var(--color-muted)] hover:text-[var(--color-bg)] transition-colors"
-                              >
-                                {t(interfaceLanguage, 'cardsExportCSV')}
-                              </button>
-                              <button
-                                role="menuitem"
-                                onClick={exportAnki}
-                                className="w-full text-left px-4 py-2.5 text-xs text-[var(--color-text)] hover:bg-[var(--color-muted)] hover:text-[var(--color-bg)] transition-colors"
-                              >
-                                {t(interfaceLanguage, 'cardsExportAnki')}
-                              </button>
-                            </>
-                          )}
-                        </div>
-                      </>
-                    )}
-                  </div>
-                </div>
+                <button
+                  onClick={() => setSelectMode(true)}
+                  disabled={visibleCards.length === 0}
+                  className="text-xs px-2.5 py-1 rounded-lg border border-[var(--color-muted)] text-[var(--color-muted)] hover:text-[var(--color-text)] hover:border-[var(--color-text)] transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  {t(interfaceLanguage, 'bulkSelect')}
+                </button>
               ) : (
                 <div className="flex items-center gap-2">
                   <button

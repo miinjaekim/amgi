@@ -13,12 +13,14 @@ import { usePronunciation } from '../src/context/PronunciationContext';
 import BottomSheet, { SheetRow } from '../src/components/BottomSheet';
 import StudyLanguageList from '../src/components/StudyLanguageList';
 import { clearAllLocalData } from '../src/services/offlineReview';
+import { fetchAllCardsForExport } from '../src/services/firestore';
+import { shareFile } from '../src/services/shareFile';
 import {
   cancelAllReminders, ensureNotificationPermission, hasNotificationPermission,
   readReminderPreferences, refreshReminders, writeReminderPreferences,
 } from '../src/services/reminders';
 import {
-  HANJA_PARTITIONS, SUPPORTED_LANGUAGES, formatReminderTime,
+  HANJA_PARTITIONS, SUPPORTED_LANGUAGES, cardsToAnki, cardsToCSV, formatReminderTime,
   getStudyLanguageConfig, reminderTimeOptions, t,
   type HanjaPartition, type ReminderPreferences, type StudyLanguage,
 } from '@amgi/core';
@@ -50,6 +52,32 @@ export default function SettingsScreen() {
   const [remindersBlocked, setRemindersBlocked] = useState(false);
   const [timePickerOpen, setTimePickerOpen] = useState(false);
   const [studyListOpen, setStudyListOpen] = useState(false);
+  const [exporting, setExporting] = useState(false);
+
+  /**
+   * Every card you own, as CSV or Anki text, through the share sheet.
+   *
+   * Here rather than on My Cards since 2026-09-25: a copy of your data belongs
+   * beside the button that erases it, which is also where the privacy policy
+   * and the delete warning send you. That is why it takes everything — see
+   * `cardsToCSV` — rather than whatever a list happened to be filtered to.
+   */
+  const exportCards = async (format: 'csv' | 'anki') => {
+    if (!user) return;
+    setExporting(true);
+    try {
+      const cards = await fetchAllCardsForExport(user.uid);
+      if (format === 'csv') {
+        await shareFile(cardsToCSV(cards, languages), 'amgi-cards.csv', 'text/csv', 'public.comma-separated-values-text');
+      } else {
+        await shareFile(cardsToAnki(cards, languages), 'amgi-cards.txt', 'text/plain', 'public.plain-text');
+      }
+    } catch {
+      Alert.alert(t(interfaceLanguage, 'settingsExportFailed'));
+    } finally {
+      setExporting(false);
+    }
+  };
 
   useEffect(() => {
     readReminderPreferences().then(setReminders);
@@ -451,6 +479,29 @@ export default function SettingsScreen() {
         <Text style={s.sectionLabel}>{t(interfaceLanguage, 'settingsYourData')}</Text>
         <View style={s.card}>
           <Text style={s.blurbText}>{t(interfaceLanguage, 'settingsYourDataBlurb')}</Text>
+          {user && (
+            <>
+              <View style={s.toggleDivider} />
+              <Text style={s.linkRowText}>{t(interfaceLanguage, 'settingsExportCards')}</Text>
+              <Text style={s.toggleDesc}>{t(interfaceLanguage, 'settingsExportCardsDesc')}</Text>
+              <View style={[s.langRow, s.exportRow]}>
+                {(['csv', 'anki'] as const).map(format => (
+                  <TouchableOpacity
+                    key={format}
+                    style={[s.langChip, exporting && s.exportBusy]}
+                    onPress={() => exportCards(format)}
+                    disabled={exporting}
+                    accessibilityRole="button"
+                  >
+                    <Text style={s.langChipText}>
+                      {t(interfaceLanguage, format === 'csv' ? 'cardsExportCSV' : 'cardsExportAnki')}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+                {exporting && <ActivityIndicator size="small" color={C.muted} />}
+              </View>
+            </>
+          )}
         </View>
 
         {/* About */}
@@ -602,6 +653,8 @@ function makeStyles(C: Palette) {
   toggleLabel: { flex: 1 },
   toggleDesc: { fontSize: 12, color: C.muted, marginTop: 2, lineHeight: 17 },
   toggleDivider: { height: 1, backgroundColor: C.border, marginVertical: 14 },
+  exportRow: { marginTop: 12, alignItems: 'center' },
+  exportBusy: { opacity: 0.4 },
   timeRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     marginTop: 14, paddingTop: 12, borderTopWidth: 1, borderTopColor: C.border,

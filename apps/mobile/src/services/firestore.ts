@@ -156,6 +156,20 @@ export async function fetchUserFlashcardsFromServer(
   return snap.docs.map(d => mapDoc(d, studyLanguage));
 }
 
+/**
+ * Every card the user owns, in every language, archived included — the export
+ * in Settings → Your data. Web's `fetchAllCardsForExport`, from the server
+ * rather than the cache: a copy of your data should not be a stale one.
+ */
+export async function fetchAllCardsForExport(uid: string): Promise<Flashcard[]> {
+  const perLanguage = await Promise.all(CARD_COLLECTIONS.map(async ({ code, collection: name }) => {
+    const snap = await getDocsFromServer(query(collection(db, name), where('uid', '==', uid)));
+    return snap.docs.map(d => mapDoc(d, code))
+      .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
+  }));
+  return perLanguage.flat();
+}
+
 /** What a live card read hands back alongside the cards. */
 export interface CardSnapshotMeta {
   /**

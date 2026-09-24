@@ -25,6 +25,7 @@ import type { TermCore, TermDepth, TermAmbiguous, ExamplePair, SpellingCorrectio
 import { saveFlashcardToFirestore } from '../../src/services/firestore';
 import type { Flashcard } from '../../src/services/firestore';
 import SaveFlashcardModal from '../../src/components/SaveFlashcardModal';
+import ListLookupModal from '../../src/components/ListLookupModal';
 import PronounceButton from '../../src/components/PronounceButton';
 import PageHeader from '../../src/components/PageHeader';
 import StreakBadge, { streakRowStyle } from '../../src/components/StreakBadge';
@@ -114,6 +115,8 @@ export default function LearnScreen() {
   const [flashcardDraft, setFlashcardDraft] = useState<Partial<Flashcard> | null>(null);
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [showListLookup, setShowListLookup] = useState(false);
+  const [listSaved, setListSaved] = useState<string | null>(null);
   const [showContextInput, setShowContextInput] = useState(false);
   const [contextInput, setContextInput] = useState('');
   const [wordOfTheDay, setWordOfTheDay] = useState<WordOfTheDay | null>(null);
@@ -495,6 +498,11 @@ export default function LearnScreen() {
                 <Text style={s.successText}>{t(interfaceLanguage, 'flashcardSaved')}</Text>
               </View>
             )}
+            {listSaved && (
+              <View style={s.successBanner}>
+                <Text style={s.successText}>{listSaved}</Text>
+              </View>
+            )}
             <View style={s.exampleRow}>
               <Text style={s.exampleLabel}>{t(interfaceLanguage, 'exampleTermsLabel')}</Text>
               {exampleTerms.map(ex => (
@@ -530,6 +538,20 @@ export default function LearnScreen() {
                 <Text style={s.searchBtnText}>{t(interfaceLanguage, 'learnButton')}</Text>
               </TouchableOpacity>
             </View>
+            {/* Several words at once, each through the same lookup as the
+                field above. On Learn since 2026-09-25 — it was My Cards's
+                "Import", which sat beside a list it had nothing to do with.
+                Signed in only, since what it ends in is saving cards. */}
+            {user && (
+              <TouchableOpacity
+                style={s.listLookupLink}
+                onPress={() => setShowListLookup(true)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                accessibilityRole="button"
+              >
+                <Text style={s.listLookupText}>{t(interfaceLanguage, 'listLookupOpen')} →</Text>
+              </TouchableOpacity>
+            )}
           </View>
 
           {/* The space the keyboard will take, held open whether or not it is
@@ -582,6 +604,17 @@ export default function LearnScreen() {
           </View>
         </Pressable>
         {saveModal}
+        {showListLookup && (
+          <ListLookupModal
+            studyLanguage={studyLanguage}
+            onClose={() => setShowListLookup(false)}
+            onSaved={count => {
+              setShowListLookup(false);
+              setListSaved(t(interfaceLanguage, count === 1 ? 'listLookupSavedToastOne' : 'listLookupSavedToast', { count }));
+              setTimeout(() => setListSaved(null), 4000);
+            }}
+          />
+        )}
       </SafeAreaView>
     );
   }
@@ -820,6 +853,10 @@ function makeStyles(C: Palette, tabBarHeight: number) {
   keyboardReserve: { flexShrink: 0, paddingHorizontal: 16 },
 
   searchRow: { flexDirection: 'row', gap: 8, marginBottom: 16 },
+  // Tucked under the field's right end, eating into the gap below it rather
+  // than adding a row's worth of height to the bar.
+  listLookupLink: { alignSelf: 'flex-end', marginTop: -8, marginBottom: 12 },
+  listLookupText: { color: C.muted, fontSize: 13 },
   searchInput: {
     flex: 1, borderWidth: 1, borderColor: C.border, borderRadius: 12,
     paddingHorizontal: 14, paddingVertical: 12, fontSize: 16,
