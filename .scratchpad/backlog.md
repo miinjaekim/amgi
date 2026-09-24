@@ -103,6 +103,43 @@ practice session should cover several tenses at once again, which the section
 picker narrowed (#146). Both are written up in their Decisions entries of
 2026-09-22.
 
+- [ ] **Editing a card mid-review** — two bugs from the user's list
+      (2026-09-24), in one item because both are in the review screen's edit
+      path and one PR touches both.
+      1. **An edit doesn't reach the card's other direction.** A card due both
+         ways is two queue entries holding separate copies of one card, and the
+         save handlers patch only the entry on screen: `i === index` in mobile's
+         `handleEditSave`, `i === currentReviewIdx` in web's
+         `handleManageEditSave`. Firestore gets the edit, but when the reverse
+         comes up later in the session it still shows the old text. Both
+         platforms have this bug. **Fix: match by `card.id`**, the way
+         enrichment's `onChanged` and archive already do. Also patch the
+         screen's card list (`cards` on mobile, `userFlashcards` on web), as
+         enrichment does. Otherwise a queue rebuilt later in the session, from
+         the missed cards or a second collection, brings the old text back.
+      2. **Save/Cancel end up covered — mobile.** Web's panel sits inline above
+         the card and pushes it down, so nothing covers it there. On mobile the
+         edit form replaces the card's content inside `cardWrap` (`flex: 1`,
+         28pt padding) with no scroll container. The screen reserves exactly the
+         keyboard's height, so whatever the form can't fit draws past the
+         card's bottom edge, under the keyboard. The `autoFocus` on the first
+         field raises the keyboard as soon as Edit is tapped. Two traps for the
+         fix:
+         - **Don't reach for a ScrollView.** While editing, `DismissArea` is a
+           `Pressable`, and a scroll view under a press handler is the
+           responder fight in lessons.md. The comment above `canRaiseKeyboard`
+           counts on the edit form having no ScrollView.
+         - **Android reserves nothing.** The listeners are
+           `keyboardWillShow`/`keyboardWillHide`, and Android only fires
+           `keyboardDid*`. That affects the typed-answer field too, not only
+           editing. Fix it here if it's cheap; otherwise leave a note on the
+           Play item.
+         Suggested direction: **keep Save/Cancel above the keyboard's reach.**
+         Put them in the card header beside the `···`, or at the top of the
+         form, so a short card can't push them under the keyboard. Check it on
+         a small iPhone with a long gloss on the back.
+      JS only; web gets fix 1 on merge.
+
 ## Medium
 
 - [ ] **Users add their own French verbs to Munli** — scoped with the user
