@@ -123,9 +123,13 @@ scoped version of it. Keep entries at the size that says what to do next; the
 argument behind a call goes in `status.md`, not in the item.
 
 **Parallel agents:** the main checkout is for scoping and planning into
-`backlog.md`; building happens in worktrees made by
-`scripts/new-worktree.sh <branch>`, one agent each. The script branches from
-`origin/main`, so a plan has to be pushed before its worktree exists. Changes
+`backlog.md`; building happens in long-lived lanes
+(`../amgi-ai-2-worktrees/lane-<n>`, made once with `scripts/new-lane.sh <n>`),
+one agent and one task at a time. Each task starts in a fresh chat after
+`scripts/next-task.sh <branch>`, which branches from `origin/main` (so a plan
+has to be pushed first), deletes the previous branch once merged, and reinstalls
+if the lockfile changed. Lane n uses Metro 8081+n and Next 3000+n.
+`scripts/new-worktree.sh <branch>` is still there for a one-off worktree. Changes
 confined to `.scratchpad/` and `docs/` may be committed straight to main (pull
 first); code always goes through a branch and PR. If you are an agent in a
 worktree:
