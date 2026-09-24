@@ -82,6 +82,13 @@ section worth seeing without scrolling._
   setting became the word speed, and it also seeds the sentence speed once, so
   nobody's pace resets. Web has it on merge. JS only.
 
+- **Writing's worked example for Traditional Chinese** (2026-09-24). This is
+  all "Munli for Mandarin" means for now. The empty Writing tab shows
+  他騎著 bicycle / 자전거 走了。 → 他騎著腳踏車走了。 and the card 腳踏車. The
+  sentence is the MOE 國語辭典's own example; citations are in
+  `docs/packs/writing-worked-example-draft.md`. Other grammar practice for
+  Chinese still needs its own planning. Web has it on merge. JS only.
+
 ⚠️ **In testers' hands is not the same as seen.** Nothing in that build has been
 opened on a device, which is most of what Munli is. Untracked here by the
 2026-09-04 decision that these checks come from using the app, not a list; the
@@ -132,17 +139,6 @@ picker narrowed (#146). Both are written up in their Decisions entries of
       - **Whether this settles `faire`** (#150): a user can now add it
         themselves, but a model-generated `faire` is not the sourced one. The
         curated list and user-added verbs are two different things.
-
-- [ ] **Writing's worked example for Chinese** — scoped with the user
-      2026-09-24, and it is all "Munli for Mandarin" means for now; other
-      grammar practice for Chinese needs its own planning. **Traditional**,
-      because that is the Chinese study language the app has (confirmed by the
-      user). Same shape as French in
-      `docs/packs/writing-worked-example-draft.md`: a **dictionary's own
-      example sentence**, quoted and cited rather than composed, with the
-      native-language word dropped in for both an English and a Korean
-      learner, then one entry in `WRITING_EXAMPLES`. Nothing in the component
-      changes. Draft and sourcing first, per the README.
 
 - [ ] **Watch the kanji deck on the "All" chip.** The kanji pack is the first
       single-glyph pack laid out as a `list`, because its back carries readings

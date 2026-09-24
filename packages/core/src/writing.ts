@@ -356,7 +356,8 @@ export function buildWritingCardDraft(
  * ⚠️ **Sourced, because it is a sentence in the study language.** A worked
  * example asserts "this is what a native would write", which is exactly the
  * claim `docs/packs/README.md` forbids the model from being the source of. The
- * French one is **Larousse's own example sentence** under `marché`, quoted
+ * French one is **Larousse's own example sentence** under `marché` and the
+ * Traditional Chinese one is the MOE 國語辭典's under `腳踏車`, each quoted
  * rather than composed; the citations are in
  * `docs/packs/writing-worked-example-draft.md`.
  *
@@ -389,6 +390,15 @@ const WRITING_EXAMPLES: Partial<Record<StudyLanguage, WritingExample>> = {
     rewrite: "Je l'ai acheté au marché.",
     study: 'le marché',
     gap: { English: 'market', Korean: '시장' },
+  },
+  // The Ministry of Education dictionary's own example under 腳踏車, the
+  // Taiwan-standard word. The spaces around `{gap}` belong to the learner's
+  // half only; the rewrite is the dictionary's sentence exactly.
+  TraditionalChinese: {
+    written: '他騎著 {gap} 走了。',
+    rewrite: '他騎著腳踏車走了。',
+    study: '腳踏車',
+    gap: { English: 'bicycle', Korean: '자전거' },
   },
 };
 

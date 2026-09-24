@@ -173,6 +173,7 @@ describe('offersCard', () => {
 describe('writingExample', () => {
   it('has one for French and none for a language without a sourced sentence', () => {
     expect(writingExample('French')).toBeDefined();
+    expect(writingExample('TraditionalChinese')).toBeDefined();
     expect(writingExample('Japanese')).toBeUndefined();
     expect(writingExample('Kikuyu')).toBeUndefined();
   });
@@ -187,6 +188,13 @@ describe('writingExample', () => {
     const example = writingExample('French')!;
     expect(example.written).not.toContain('marché');
     expect(example.rewrite).toContain('marché');
+  });
+
+  it('leaves the Chinese study word out of what the learner wrote and in what comes back', () => {
+    const example = writingExample('TraditionalChinese')!;
+    expect(example.written.split('{gap}')).toHaveLength(2);
+    expect(example.written).not.toContain('腳踏車');
+    expect(example.rewrite).toContain(example.study);
   });
 
   it('gives the gap word in both native languages', () => {
