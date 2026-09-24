@@ -216,7 +216,54 @@ picker narrowed (#146). Both are written up in their Decisions entries of
 
 ## Bigger bets
 
-_Empty as of 2026-09-08._
+- [ ] **Users make their own vocab packs** — scoped with the user 2026-09-25.
+      **Vocab only**: Munli grammar waits until the user has written a few more
+      grammar topics by hand. The starting point is how the user's own packs
+      began: someone with a **goal** (TOEIC), a **struggle** (English idioms)
+      or a **situation** (moving to Argentina). Replaces *Goal-based
+      generation*, which was parked because it made words nobody asked for.
+      Here the user does ask, and an agent **finds the words in sources**
+      rather than writing them, so the model is still not the source.
+      1. **A few set questions**, not one text box and not a chat. First draft:
+         what's the pack for (goal / struggle / situation, plus a sentence);
+         where will you use these words; any material to hand (optional
+         paste or upload); anything to focus on or leave out (optional).
+         **No level question**: skip words the user already has and read their
+         level from their cards. The language is the current study language.
+         The Korean copy needs the user's approval.
+      2. **The agent proposes subtopics**, each with a rough word count. The
+         user ticks, unticks or adds their own. **Each subtopic becomes a
+         subpack**, so pack size follows the domain. It grows by adding a
+         subtopic and shrinks by removing one. This step is cheap, so the slow
+         part only runs for what was chosen.
+      3. **Sourcing runs in the background** per subtopic: search, pull words
+         from sources, and **keep a citation per word**. It takes minutes, so the
+         user gets a notice when it's done, not a spinner. Card backs come from
+         the existing lookup route (reuse rule). **No word-by-word review
+         for now**, per the user: choosing subtopics is enough control, and
+         unwanted cards are deleted like any card.
+      4. **The user can make it official.** Citations let the user review a
+         user pack against `docs/packs/README.md` and adopt it. How packs get
+         nominated waits for sharing.
+      **Entry point:** a *Make a pack* action on Packs.
+      **Test against the packs already built.** Answer the questions as the
+      people behind the TOEIC, idioms and Argentina packs would have, and compare
+      the agent's pack with the hand-made one before any user sees it.
+      ⚠️ **This extends the sourcing exception** that *Users add their own
+      French verbs to Munli* (Medium) makes: labelled as user-made, never
+      reaching another user. The exception goes into the README when built.
+      ⚠️ **Store packs so they can have an owner and a visibility later**, even
+      though phase 1 is private. Sharing is where this is headed.
+      **Later phases**, raised by the user and not yet scoped:
+      - **Profile**, opened from the icon on Progress. It holds why the user is
+        studying, which pre-fills step 1 and shapes suggestions.
+      - **Sharing a pack** with specific people.
+      - **Finding and connecting with similar learners.** Privacy, moderation
+        and what "connect" means are all open.
+      Open, not blocking: **cost per pack** (several search-backed calls). The
+      user is setting it aside while the focus is making the app usable.
+      **Copyright** matters once packs are shared: taking words from a source is
+      fine, but copying a published list wholesale is not.
 
 ## Parked
 
@@ -351,11 +398,6 @@ _Empty as of 2026-09-08._
       was on 2026-09-25 because it can't be checked without a device. Look at it
       on the first Play install.
 
-- [ ] **Goal-based generation** — vocab lists and card generation from a goal.
-      Deprioritized 2026-07-24: it generates word lists for a user who hasn't
-      asked for a specific word, a different and unproven job from the core loop.
-      `/api/vocab-list` exists and takes `previousWords` + `feedback`.
-
 ## Housekeeping — tooling that hides signal
 
 `npm test` (854/854) and `npm run lint` (0 errors, 21 warnings) are green,
@@ -433,25 +475,6 @@ measured 2026-09-23. What's left is what those two now *show*.
       dead code web's lint catches on the next commit.
 
 ## Needs clarification
-
-- [ ] **Users creating content: vocab packs and grammar practice** — raised
-      2026-09-25 as something to **think through together**, not a spec. The
-      user writes every pack and every Munli dataset by hand today. The
-      question is whether users could generate their own, the way a term
-      lookup generates a card. The user has more to say, and this needs its
-      own session.
-      Where it touches things already decided:
-      - **Sourcing.** `docs/packs/README.md` says the model is not a source.
-        *Users add their own French verbs to Munli* (Medium) already makes a
-        narrow exception to that: the content is labelled unverified and never
-        reaches another user. Whatever comes out of this session either extends
-        that exception or replaces it.
-      - **Goal-based generation** (Parked, 2026-07-24) is a close relative. It
-        was deprioritised because it produces words nobody asked for.
-        `/api/vocab-list` is still there. Per the reuse rule, a new surface
-        calls that route, not a parallel prompt.
-      - The verbs item is the first concrete case of this and could be where
-        the pattern gets built.
 
 - [ ] **Words with several parts of speech.** A card carries one
       `partOfSpeech`, and `normalizePartOfSpeech` keeps only the first of

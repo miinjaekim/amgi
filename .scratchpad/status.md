@@ -394,6 +394,21 @@ once, so a path that worked on build 14 is not evidence about build 15.
 Closed calls, kept with their reasoning — a decision whose reasoning is lost gets
 reopened by the next person to notice the symptom. Newest first.
 
+### Users make vocab packs from a goal, and an agent sources them (2026-09-25)
+
+**Goal-based generation (parked 2026-07-24) is replaced, not revived.** It was
+parked because it made word lists nobody asked for, and because the model is not
+a source. The new shape answers both. Every pack the user has built started with
+someone's goal, struggle or situation, so the user states one. An agent then
+finds words in sources and cites them, rather than writing a list. The scoped
+item is *Users make their own vocab packs* under Bigger bets.
+
+**The user's calls:** vocab before Munli grammar. Set questions rather than a
+chat or a single box. Subtopics picked by the user decide the pack's size, one
+subpack each. No word-by-word review for now. A *Make a pack* action on Packs.
+User packs the user approves can become official. Sharing, profiles and
+connecting learners are where this is headed. Cost is set aside for now.
+
 ### Amgi's titles name the study language; Import removed, Export to Your data (2026-09-25)
 
 **The chip Munli got the same day now ends every Amgi title row too**: Learn
