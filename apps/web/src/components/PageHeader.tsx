@@ -34,9 +34,12 @@ import { t } from '@/lib/i18n';
  * wrong on a new page; the colour is shared either way, which is the whole
  * point of this change.
  *
- * **Munli titles carry the study language at the right end**, off the same
- * path check. What Munli offers depends on the language — French has verb
- * tables, Mandarin does not — so the page says which one it is showing.
+ * **The title row ends in the study language**, on every page that uses this.
+ * Both modes show one language at a time — Munli's verb tables, Amgi's cards
+ * and packs — so the page says which one it is showing. Munli's had it first,
+ * behind the path check; Amgi's took it on 2026-09-25. The two Progress pages
+ * are the exception and do not use this: Munli's has its own language row, and
+ * Amgi's covers every language at once.
  */
 export default function PageHeader({
   titleKey, helpTitleKey, helpLeadKey, helpPointsKey, className = 'mb-6',
@@ -81,15 +84,13 @@ export default function PageHeader({
             </svg>
           </button>
         )}
-        {munli && (
-          <span
-            className="ml-auto shrink-0 rounded-full border px-2.5 py-0.5 font-mono text-xs"
-            style={{ borderColor: 'var(--color-muted)', color: 'var(--color-muted)' }}
-            aria-label={t(interfaceLanguage, 'munliLanguageChipLabel', { language })}
-          >
-            {language}
-          </span>
-        )}
+        <span
+          className={`ml-auto shrink-0 rounded-full border px-2.5 py-0.5 text-xs ${face}`}
+          style={{ borderColor: 'var(--color-muted)', color: 'var(--color-muted)' }}
+          aria-label={t(interfaceLanguage, 'studyLanguageChipLabel', { language })}
+        >
+          {language}
+        </span>
       </div>
 
       {open && hasHelp && (

@@ -4,6 +4,7 @@ import {
   StyleSheet, Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { File, Paths } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import { useUser } from '../../src/context/UserContext';
@@ -19,6 +20,7 @@ import type { CardSideField, DeckFilterId } from '@amgi/core';
 import { useTheme } from '../../src/context/ThemeContext';
 import { useFloatingTabBarHeight } from '../../src/components/FloatingTabBar';
 import { PAGE_TITLE_SIZE } from '../../src/components/PageHeader';
+import StudyLanguageChip from '../../src/components/StudyLanguageChip';
 import CardDetailModal from '../../src/components/CardDetailModal';
 import ImportModal from '../../src/components/ImportModal';
 import FilterSheet from '../../src/components/FilterSheet';
@@ -272,6 +274,17 @@ export default function CardsScreen() {
     ]);
   };
 
+  // Import and export share one "⋯", in two steps rather than one list of
+  // three, because Android's `Alert` shows at most three buttons and Cancel is
+  // one of them. Export drops out while the list is empty, as its button did.
+  const promptMore = () => {
+    Alert.alert(t(interfaceLanguage, 'cardsMoreActions'), undefined, [
+      { text: t(interfaceLanguage, 'cardsImport'), onPress: () => setShowImport(true) },
+      ...(visibleCards.length > 0 ? [{ text: t(interfaceLanguage, 'cardsExport'), onPress: promptExport }] : []),
+      { text: t(interfaceLanguage, 'cancel'), style: 'cancel' as const },
+    ]);
+  };
+
   const handleImportSaved = (count: number) => {
     setShowImport(false);
     // The imported cards arrive on their own — the listener reports the batch
@@ -460,20 +473,7 @@ export default function CardsScreen() {
       <View style={s.header}>
         <View style={s.headerTop}>
           <Text style={s.title}>{t(interfaceLanguage, 'cardsPageTitle')}</Text>
-          {user && (
-            <View style={s.headerActions}>
-              <TouchableOpacity style={s.headerBtn} onPress={() => setShowImport(true)}>
-                <Text style={s.headerBtnText}>{t(interfaceLanguage, 'cardsImport')}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[s.headerBtn, visibleCards.length === 0 && s.headerBtnDisabled]}
-                onPress={promptExport}
-                disabled={visibleCards.length === 0}
-              >
-                <Text style={s.headerBtnText}>{t(interfaceLanguage, 'cardsExport')}</Text>
-              </TouchableOpacity>
-            </View>
-          )}
+          <StudyLanguageChip />
         </View>
         <Text style={s.subtitle}>{t(interfaceLanguage, 'cardsPageDescription')}</Text>
       </View>
@@ -519,13 +519,27 @@ export default function CardsScreen() {
                     <Text style={s.filterBtnText} numberOfLines={1}>{filterSummary}</Text>
                     <Text style={s.filterBtnCaret}>▾</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[s.selectBtn, visibleCards.length === 0 && s.headerBtnDisabled]}
-                    onPress={() => setSelectMode(true)}
-                    disabled={visibleCards.length === 0}
-                  >
-                    <Text style={s.selectBtnText}>{t(interfaceLanguage, 'bulkSelect')}</Text>
-                  </TouchableOpacity>
+                  <View style={s.selectControls}>
+                    <TouchableOpacity
+                      style={[s.selectBtn, visibleCards.length === 0 && s.headerBtnDisabled]}
+                      onPress={() => setSelectMode(true)}
+                      disabled={visibleCards.length === 0}
+                    >
+                      <Text style={s.selectBtnText}>{t(interfaceLanguage, 'bulkSelect')}</Text>
+                    </TouchableOpacity>
+                    {/* Import and export, moved off the title row on 2026-09-25
+                        to make room for the language. Here rather than in
+                        Settings because export takes what the list is showing,
+                        and this is the row that decides what that is. */}
+                    <TouchableOpacity
+                      style={s.selectBtn}
+                      onPress={promptMore}
+                      accessibilityRole="button"
+                      accessibilityLabel={t(interfaceLanguage, 'cardsMoreActions')}
+                    >
+                      <Ionicons name="ellipsis-horizontal" size={14} color={C.muted} />
+                    </TouchableOpacity>
+                  </View>
                 </>
               ) : (
                 <View style={s.selectControls}>
@@ -649,16 +663,14 @@ function makeStyles(C: Palette, tabBarHeight: number) {
   // Every horizontal value below that sets a content edge matches it; the
   // smaller ones left alone are padding *inside* a control, not a gutter.
   header: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 4 },
-  headerTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  // `gap` rather than `space-between`: the language chip pushes itself to the
+  // end with `marginLeft: 'auto'`, as it does in `PageHeader`.
+  headerTop: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   // Shared with PageHeader, which this screen can't use: it has no help copy
-  // and carries Import/Export plus a subtitle.
+  // and carries a subtitle.
   title: { fontSize: PAGE_TITLE_SIZE, fontWeight: '700', color: C.highlight },
   subtitle: { fontSize: 13, color: C.muted, marginTop: 2 },
-  headerActions: { flexDirection: 'row', gap: 8 },
-  headerBtn: { borderWidth: 1, borderColor: C.border, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5 },
   headerBtnDisabled: { opacity: 0.3 },
-
-  headerBtnText: { fontSize: 12, color: C.muted },
 
   successBanner: { marginHorizontal: 20, marginTop: 8, backgroundColor: C.border, borderRadius: 10, padding: 12 },
   successText: { color: C.text, fontSize: 13, fontWeight: '600' },

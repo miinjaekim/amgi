@@ -166,7 +166,7 @@ const translations = {
     // language — Mandarin used to be told about French conjugation here.
     munliUnavailable: 'Nothing to practise in {language} yet.',
     munliUnavailableBody: 'Writing works in any language.',
-    munliLanguageChipLabel: 'Studying {language}',
+    studyLanguageChipLabel: 'Studying {language}',
     conjugationTenses: 'Tenses',
     conjugationDue: '{count} due',
     conjugationAnswerPlaceholder: 'the form',
@@ -670,6 +670,9 @@ const translations = {
     // Import / export
     cardsImport: 'Import',
     cardsExport: 'Export',
+    // The "⋯" both of them sit behind. Named for what is in it rather than
+    // "More", since that is all there is.
+    cardsMoreActions: 'Import and export',
     // No "(all cards)" qualifier on either: an export now carries exactly the
     // rows the filters leave on screen, so naming a scope here would be a lie.
     cardsExportCSV: 'CSV',
@@ -1066,7 +1069,7 @@ const translations = {
     munliLoading: '연습 목록을 불러오는 중...',
     munliUnavailable: '아직 {language} 연습이 없어요.',
     munliUnavailableBody: '글쓰기는 어떤 언어로든 할 수 있어요.',
-    munliLanguageChipLabel: '{language} 공부 중',
+    studyLanguageChipLabel: '{language} 공부 중',
     conjugationTenses: '시제',
     conjugationDue: '{count}개 복습',
     conjugationAnswerPlaceholder: '형태를 입력하세요',
@@ -1279,6 +1282,7 @@ const translations = {
     // Import / export
     cardsImport: '가져오기',
     cardsExport: '내보내기',
+    cardsMoreActions: '가져오기·내보내기',
     cardsExportCSV: 'CSV',
     cardsExportAnki: 'Anki (.txt)',
     importTitle: '단어 가져오기',

@@ -394,6 +394,21 @@ once, so a path that worked on build 14 is not evidence about build 15.
 Closed calls, kept with their reasoning — a decision whose reasoning is lost gets
 reopened by the next person to notice the symptom. Newest first.
 
+### Amgi's titles name the study language; Import/Export go behind a ⋯ (2026-09-25)
+
+**The chip Munli got the same day now ends every Amgi title row too**: Learn
+(mobile only, since web's Learn has no title), Review, Packs and My Cards.
+`PageHeader` shows it unconditionally on both platforms. Mobile's component is
+`StudyLanguageChip` now, no longer `MunliLanguageChip`. Neither Progress has
+it: Munli's has its own switcher, and Amgi's covers every language.
+**Import and Export moved off My Cards's title row into a ⋯ beside Select**,
+the user's pick over Settings. Export still takes `visibleCards`, and Settings
+would have forced a choice between "everything" and "one language". Web also
+has no Settings page to put them on. On mobile the ⋯ is a two-step `Alert`
+(Import / Export, then CSV / Anki), because Android shows at most three buttons.
+⚠️ On phone-width web the top bar already shows the study language, so the
+chip repeats it. Munli's web pages already did this before the change.
+
 ### Munli's practice sets are per language unless marked general (2026-09-25)
 
 **The user's rule:** a Munli topic shows only for languages it was made for,

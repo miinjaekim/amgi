@@ -2,6 +2,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useUser } from '@/components/UserContext';
+import PageHeader from '@/components/PageHeader';
 import { subscribeToUserFlashcards, getCardsCollection, Flashcard, migrateExistingCards, archiveFlashcard, deleteFlashcard } from '@/services/firestore';
 import {
   DIRECTION_FILTERS,
@@ -780,7 +781,7 @@ export default function ReviewPage() {
           Offline — showing cached cards. Progress will sync when reconnected.
         </div>
       )}
-      <h1 className="text-2xl font-bold mb-2 mt-8 text-[var(--color-highlight)]">{t(interfaceLanguage, 'reviewPageTitle')}</h1>
+      <PageHeader titleKey="reviewPageTitle" className="mt-8 mb-2" />
       <p className="text-sm mb-6 text-[var(--color-muted)]">{t(interfaceLanguage, 'reviewPageDescription')}</p>
       <div className="p-6 rounded-xl bg-[var(--color-surface)] border border-[var(--color-muted)] shadow-lg">
         {user ? (

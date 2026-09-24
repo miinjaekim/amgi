@@ -1,21 +1,19 @@
 import React, { useMemo, useState } from 'react';
 import { Modal, View, Text, TouchableOpacity, Pressable, ScrollView, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { usePathname } from 'expo-router';
-import { modeFromPath, t } from '@amgi/core';
+import { t } from '@amgi/core';
 import type { TranslationKey } from '@amgi/core';
 import { useUser } from '../context/UserContext';
 import { useTheme } from '../context/ThemeContext';
 import StreakBadge from './StreakBadge';
-import MunliLanguageChip from './MunliLanguageChip';
+import StudyLanguageChip from './StudyLanguageChip';
 import type { Palette } from '../theme';
 
 /**
  * The size of a tab's page title.
  *
- * Exported because `cards.tsx` cannot use this component — it carries
- * Import/Export buttons and a subtitle, neither of which this shape supports —
- * so it renders its own title and would otherwise drift. It already had: it sat
+ * Exported because `cards.tsx` cannot use this component — it carries a
+ * subtitle, which this shape does not support — so it renders its own title and would otherwise drift. It already had: it sat
  * at 24 against this file's 21 until 2026-09-04. A shared constant is the only
  * thing that keeps two headers the same size without either one knowing about
  * the other.
@@ -78,15 +76,17 @@ interface Props {
  * asked. Unsolicited, the same text would be the lecture that the first-run
  * checklist was rejected for being.
  *
- * **On Munli's screens the title row ends in the study language**, read off
- * the path rather than a prop — web's `PageHeader` makes the same check.
+ * **The title row ends in the study language**, on every screen that uses
+ * this. Munli's had it first, behind a check on the path; Amgi's took it on
+ * 2026-09-25, and with every caller showing one language the check had nothing
+ * left to decide. Progress is the exception on both sides, and it does not use
+ * this component.
  */
 export default function PageHeader({ titleKey, helpTitleKey, helpLeadKey, helpPointsKey, streak }: Props) {
   const { interfaceLanguage } = useUser();
   const { C } = useTheme();
   const s = useMemo(() => makeStyles(C), [C]);
   const [helpOpen, setHelpOpen] = useState(false);
-  const munli = modeFromPath(usePathname()) === 'munli';
   // An object rather than a boolean, so the three keys narrow together: they
   // are all present or all absent, and nothing downstream has to assert it.
   const help = helpTitleKey && helpLeadKey && helpPointsKey
@@ -109,7 +109,7 @@ export default function PageHeader({ titleKey, helpTitleKey, helpLeadKey, helpPo
             <Ionicons name="help-circle-outline" size={20} color={C.muted} />
           </TouchableOpacity>
         )}
-        {munli && <MunliLanguageChip />}
+        <StudyLanguageChip />
       </View>
 
       {/* Under the title, not beside it. Sharing the row cost the title the

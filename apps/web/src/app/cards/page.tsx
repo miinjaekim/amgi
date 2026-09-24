@@ -18,6 +18,7 @@ import { doc, updateDoc } from 'firebase/firestore';
 import { t, partOfSpeechLabel } from '@/lib/i18n';
 import CardDetailModal from '@/components/CardDetailModal';
 import ImportModal from '@/components/ImportModal';
+import PageHeader from '@/components/PageHeader';
 
 type SortKey = 'newest' | 'oldest' | 'az';
 type FilterKey = 'active' | 'archived' | 'all';
@@ -55,7 +56,7 @@ export default function CardsPage() {
   const [cardOrder, setCardOrder] = useState<'korean-first' | 'english-first'>('korean-first');
   const [showImport, setShowImport] = useState(false);
   const [importSuccess, setImportSuccess] = useState<string | null>(null);
-  const [showExportMenu, setShowExportMenu] = useState(false);
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
 
   const langConfig = getStudyLanguageConfig(studyLanguage);
   const backConfig = getBackSideConfig(studyLanguage, deckNativeLanguage);
@@ -289,7 +290,7 @@ export default function CardsPage() {
     }
     const csv = rows.map(r => r.map(v => `"${v.replace(/"/g, '""')}"`).join(',')).join('\n');
     downloadFile(csv, 'amgi-cards.csv', 'text/csv');
-    setShowExportMenu(false);
+    setShowMoreMenu(false);
   };
 
   const exportAnki = () => {
@@ -302,7 +303,7 @@ export default function CardsPage() {
       lines.push(`${front}\t${backParts.join(' — ')}`);
     }
     downloadFile(lines.join('\n'), 'amgi-cards.txt', 'text/plain');
-    setShowExportMenu(false);
+    setShowMoreMenu(false);
   };
 
   const handleImportSaved = async (count: number) => {
@@ -314,53 +315,7 @@ export default function CardsPage() {
 
   return (
     <div className="max-w-2xl mx-auto font-mono text-base pb-36" style={{ color: 'var(--color-text)' }}>
-      <div className="flex items-start justify-between mt-8 mb-2">
-        <h1 className="text-2xl font-bold text-[var(--color-highlight)]">{t(interfaceLanguage, 'cardsPageTitle')}</h1>
-        {/* Import and export are card-shaped — CSV columns, Anki notes — so
-            they leave with the card list rather than sitting greyed out over a
-            list they cannot act on. */}
-        {user && (
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setShowImport(true)}
-              className="text-xs px-3 py-1.5 rounded-lg border border-[var(--color-muted)] text-[var(--color-muted)] hover:text-[var(--color-text)] hover:border-[var(--color-text)] transition-colors"
-            >
-              {t(interfaceLanguage, 'cardsImport')}
-            </button>
-            <div className="relative">
-              <button
-                onClick={() => setShowExportMenu(v => !v)}
-                disabled={visibleCards.length === 0}
-                className="text-xs px-3 py-1.5 rounded-lg border border-[var(--color-muted)] text-[var(--color-muted)] hover:text-[var(--color-text)] hover:border-[var(--color-text)] transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-              >
-                {t(interfaceLanguage, 'cardsExport')}
-              </button>
-              {showExportMenu && (
-                <>
-                  <div className="fixed inset-0 z-10" onClick={() => setShowExportMenu(false)} />
-                  <div
-                    className="absolute right-0 top-8 z-20 w-36 rounded-lg border border-[var(--color-muted)] shadow-lg overflow-hidden"
-                    style={{ background: 'var(--color-surface)' }}
-                  >
-                    <button
-                      onClick={exportCSV}
-                      className="w-full text-left px-4 py-2.5 text-xs text-[var(--color-text)] hover:bg-[var(--color-muted)] hover:text-[var(--color-bg)] transition-colors"
-                    >
-                      {t(interfaceLanguage, 'cardsExportCSV')}
-                    </button>
-                    <button
-                      onClick={exportAnki}
-                      className="w-full text-left px-4 py-2.5 text-xs text-[var(--color-text)] hover:bg-[var(--color-muted)] hover:text-[var(--color-bg)] transition-colors"
-                    >
-                      {t(interfaceLanguage, 'cardsExportAnki')}
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-        )}
-      </div>
+      <PageHeader titleKey="cardsPageTitle" className="mt-8 mb-2" />
       <p className="text-sm mb-6 text-[var(--color-muted)]">{t(interfaceLanguage, 'cardsPageDescription')}</p>
       {importSuccess && (
         <div className="mb-4 p-3 rounded-lg text-sm font-semibold" style={{ background: 'var(--color-muted)', color: 'var(--color-bg)' }}>
@@ -440,13 +395,72 @@ export default function CardsPage() {
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
               {!selectMode ? (
-                <button
-                  onClick={() => setSelectMode(true)}
-                  disabled={visibleCards.length === 0}
-                  className="text-xs px-2.5 py-1 rounded-lg border border-[var(--color-muted)] text-[var(--color-muted)] hover:text-[var(--color-text)] hover:border-[var(--color-text)] transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                >
-                  {t(interfaceLanguage, 'bulkSelect')}
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setSelectMode(true)}
+                    disabled={visibleCards.length === 0}
+                    className="text-xs px-2.5 py-1 rounded-lg border border-[var(--color-muted)] text-[var(--color-muted)] hover:text-[var(--color-text)] hover:border-[var(--color-text)] transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                  >
+                    {t(interfaceLanguage, 'bulkSelect')}
+                  </button>
+                  {/* Import and export, moved off the title row on 2026-09-25
+                      to make room for the language. Here rather than in
+                      settings because export takes what the list is showing,
+                      and the rows above this are what decide that. */}
+                  <div className="relative">
+                    <button
+                      onClick={() => setShowMoreMenu(v => !v)}
+                      aria-label={t(interfaceLanguage, 'cardsMoreActions')}
+                      aria-haspopup="menu"
+                      aria-expanded={showMoreMenu}
+                      className="text-xs px-2.5 py-1 rounded-lg border border-[var(--color-muted)] text-[var(--color-muted)] hover:text-[var(--color-text)] hover:border-[var(--color-text)] transition-colors"
+                    >
+                      ⋯
+                    </button>
+                    {showMoreMenu && (
+                      <>
+                        <div className="fixed inset-0 z-10" onClick={() => setShowMoreMenu(false)} />
+                        <div
+                          role="menu"
+                          className="absolute left-0 top-8 z-20 w-40 rounded-lg border border-[var(--color-muted)] shadow-lg overflow-hidden"
+                          style={{ background: 'var(--color-surface)' }}
+                        >
+                          <button
+                            role="menuitem"
+                            onClick={() => { setShowMoreMenu(false); setShowImport(true); }}
+                            className="w-full text-left px-4 py-2.5 text-xs text-[var(--color-text)] hover:bg-[var(--color-muted)] hover:text-[var(--color-bg)] transition-colors"
+                          >
+                            {t(interfaceLanguage, 'cardsImport')}
+                          </button>
+                          {/* The formats keep their bare labels under a heading
+                              rather than growing an "Export" each. Absent on
+                              an empty list, as the Export button was disabled. */}
+                          {visibleCards.length > 0 && (
+                            <>
+                              <p className="px-4 pt-2.5 pb-1 text-[10px] uppercase tracking-wide border-t border-[var(--color-muted)] text-[var(--color-muted)]">
+                                {t(interfaceLanguage, 'cardsExport')}
+                              </p>
+                              <button
+                                role="menuitem"
+                                onClick={exportCSV}
+                                className="w-full text-left px-4 py-2.5 text-xs text-[var(--color-text)] hover:bg-[var(--color-muted)] hover:text-[var(--color-bg)] transition-colors"
+                              >
+                                {t(interfaceLanguage, 'cardsExportCSV')}
+                              </button>
+                              <button
+                                role="menuitem"
+                                onClick={exportAnki}
+                                className="w-full text-left px-4 py-2.5 text-xs text-[var(--color-text)] hover:bg-[var(--color-muted)] hover:text-[var(--color-bg)] transition-colors"
+                              >
+                                {t(interfaceLanguage, 'cardsExportAnki')}
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
               ) : (
                 <div className="flex items-center gap-2">
                   <button
