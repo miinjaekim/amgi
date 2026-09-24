@@ -394,6 +394,34 @@ once, so a path that worked on build 14 is not evidence about build 15.
 Closed calls, kept with their reasoning — a decision whose reasoning is lost gets
 reopened by the next person to notice the symptom. Newest first.
 
+### Amgi's titles name the study language; Import removed, Export to Your data (2026-09-25)
+
+**The chip Munli got the same day now ends every Amgi title row too**: Learn
+(mobile only, since web's Learn has no title), Review, Packs and My Cards.
+`PageHeader` shows it unconditionally on both platforms. Mobile's component is
+`StudyLanguageChip` now, no longer `MunliLanguageChip`. Neither Progress has
+it: Munli's has its own switcher, and Amgi's covers every language.
+**It's a label, not a switcher.** It was briefly a dropdown. The user tried it
+on a phone, called it overkill, and switching stays on Progress.
+⚠️ On phone-width web the top bar already shows the study language, so the
+chip repeats it. Munli's web pages already did this before the change.
+
+**Import is gone.** It never imported a file: it ran pasted words through
+Learn's lookup. It was briefly renamed "Look up a list" and moved to Learn, and
+then the user removed it outright. Pack-creation features planned for later
+will cover bulk-adding, so this would have been a second way in.
+
+**Export moved to Settings → Your data, and now takes everything**: every
+language, archived cards included (`fetchAllCardsForExport`, then core's
+`cardsToCSV` / `cardsToAnki`). It used to export whatever My Cards was
+filtered to. The move is what forced the scope change. The privacy policy and
+the delete-account warning both say "take a copy first", and a copy that
+misses a removed language or the archive isn't a copy. The CSV gained a
+Language column, and the Anki file puts each language in its own subdeck
+(`Amgi::Korean`). Both privacy pages point there now (last updated 2026-09-25).
+The file builder is shared, so the two platforms can't drift again. They had
+already drifted over how they found a card's study side.
+
 ### Munli's practice sets are per language unless marked general (2026-09-25)
 
 **The user's rule:** a Munli topic shows only for languages it was made for,

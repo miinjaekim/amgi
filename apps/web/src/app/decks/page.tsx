@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useUser } from '@/components/UserContext';
+import PageHeader from '@/components/PageHeader';
 import { subscribeToAllUserFlashcards } from '@/services/firestore';
 import {
   collectSavedTerms,
@@ -37,9 +38,7 @@ export default function DecksPage() {
 
   return (
     <div className="max-w-2xl mx-auto">
-      <h1 className="text-2xl font-bold text-[var(--color-highlight)] mb-6">
-        {t(interfaceLanguage, 'decksTitle')}
-      </h1>
+      <PageHeader titleKey="decksTitle" />
 
       {packs.length === 0 ? (
         // Packs is in the nav for every language, so this state is reachable on

@@ -161,6 +161,21 @@ export async function fetchUserFlashcards(uid: string, studyLanguage?: StudyLang
   }
 }
 
+/**
+ * Every card the user owns, in every language, archived included — the export
+ * in Settings → Your data. One read per collection, and only `uid` in the
+ * query, so it needs no composite index and cannot miss a collection that has
+ * never had one built. Order is left to the caller.
+ */
+export async function fetchAllCardsForExport(uid: string): Promise<Flashcard[]> {
+  const perLanguage = await Promise.all(CARD_COLLECTIONS.map(async ({ code, collection: name }) => {
+    const snapshot = await getDocs(query(collection(db, name), where('uid', '==', uid)));
+    return snapshot.docs.map(d => mapDocToFlashcard(d, code))
+      .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
+  }));
+  return perLanguage.flat();
+}
+
 export async function countUserFlashcards(uid: string, studyLanguage?: StudyLanguage): Promise<number> {
   const q = query(
     collection(db, getCardsCollection(studyLanguage)),

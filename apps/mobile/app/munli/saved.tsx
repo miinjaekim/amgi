@@ -9,7 +9,7 @@ import { useConjugation } from '../../src/context/ConjugationContext';
 import { useFloatingTabBarHeight } from '../../src/components/FloatingTabBar';
 import ParadigmTable from '../../src/components/ParadigmTable';
 import PageHeader, { PAGE_TITLE_SIZE, SCREEN_GUTTER } from '../../src/components/PageHeader';
-import MunliLanguageChip from '../../src/components/MunliLanguageChip';
+import StudyLanguageChip from '../../src/components/StudyLanguageChip';
 import type { Palette } from '../../src/theme';
 
 /**
@@ -75,7 +75,7 @@ export default function SavedScreen() {
         <Ionicons name="chevron-back" size={22} color={C.text} />
       </TouchableOpacity>
       <Text style={s.title} numberOfLines={1}>{title}</Text>
-      <MunliLanguageChip />
+      <StudyLanguageChip />
     </View>
   );
 

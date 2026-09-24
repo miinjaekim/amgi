@@ -6,17 +6,19 @@ import { useTheme } from '../context/ThemeContext';
 import type { Palette } from '../theme';
 
 /**
- * The study language, at the right end of a Munli title row.
+ * The study language, at the right end of a title row.
  *
- * What Munli offers depends on the language — French has verb tables, Mandarin
- * does not — so each screen says which one it is showing. A label, not a
- * switcher: the switcher is `ProgressHeader`'s, which is also why Progress
- * does not carry this.
+ * Both modes show one language at a time — Munli's verb tables, Amgi's cards
+ * and packs — so each screen says which one it is showing. Munli's first, and
+ * Amgi's since 2026-09-25, which is why it lost the `Munli` from its name.
+ *
+ * A label, not a switcher. Neither Progress carries it: Munli's has the switcher
+ * in `ProgressHeader`, and Amgi's covers every language at once.
  *
  * `marginLeft: 'auto'` pushes it to the end of whatever row it is dropped
  * into, so a header needs no layout of its own to hold it.
  */
-export default function MunliLanguageChip() {
+export default function StudyLanguageChip() {
   const { C } = useTheme();
   const s = useMemo(() => makeStyles(C), [C]);
   const { interfaceLanguage, studyLanguage } = useUser();
@@ -26,7 +28,7 @@ export default function MunliLanguageChip() {
     <Text
       style={s.chip}
       numberOfLines={1}
-      accessibilityLabel={t(interfaceLanguage, 'munliLanguageChipLabel', { language })}
+      accessibilityLabel={t(interfaceLanguage, 'studyLanguageChipLabel', { language })}
     >
       {language}
     </Text>

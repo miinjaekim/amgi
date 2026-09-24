@@ -12,7 +12,7 @@ export default function PrivacyPage() {
       <div>
         <h1 className="text-2xl font-bold mb-1">Privacy Policy</h1>
         <p className="opacity-70 text-sm">
-          Last updated: July 27, 2026 ·{" "}
+          Last updated: September 25, 2026 ·{" "}
           <Link href="/privacy/ko" className="underline">
             한국어
           </Link>
@@ -114,7 +114,8 @@ export default function PrivacyPage() {
           app. Deletion is immediate and permanent: it removes your account,
           every saved card in every language, your review history and streak,
           and your settings. It cannot be undone, so if you want a copy of your
-          vocabulary, export it from the Cards page first.
+          vocabulary, export it first from the Your data section of Settings,
+          which downloads every card in every language.
         </p>
         <p>
           One thing is deliberately not deleted: cached pronunciation audio.

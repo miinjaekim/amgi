@@ -4,8 +4,6 @@ import {
   StyleSheet, Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { File, Paths } from 'expo-file-system';
-import * as Sharing from 'expo-sharing';
 import { useUser } from '../../src/context/UserContext';
 import {
   subscribeToAllUserFlashcards, archiveFlashcard, restoreFlashcard,
@@ -14,13 +12,13 @@ import {
 import type { Flashcard } from '../../src/services/firestore';
 import { readCachedLibrary, writeCachedLibrary } from '../../src/services/offlineReview';
 import { SNAPSHOT_WRITE_DEBOUNCE_MS } from '../../src/services/reviewSync';
-import { t, DEFAULT_DECK_FILTER, buildDeckFilters, filterCardsByDeck, getCharacterBreakdown, getStudyLanguageConfig, getBackSideConfig, getStudyLangSide, getBackSide, getExampleSides, partOfSpeechLabel } from '@amgi/core';
+import { t, DEFAULT_DECK_FILTER, buildDeckFilters, filterCardsByDeck, getStudyLanguageConfig, getBackSideConfig, getStudyLangSide, getBackSide } from '@amgi/core';
 import type { CardSideField, DeckFilterId } from '@amgi/core';
 import { useTheme } from '../../src/context/ThemeContext';
 import { useFloatingTabBarHeight } from '../../src/components/FloatingTabBar';
 import { PAGE_TITLE_SIZE } from '../../src/components/PageHeader';
+import StudyLanguageChip from '../../src/components/StudyLanguageChip';
 import CardDetailModal from '../../src/components/CardDetailModal';
-import ImportModal from '../../src/components/ImportModal';
 import FilterSheet from '../../src/components/FilterSheet';
 import type { FilterGroup } from '../../src/components/FilterSheet';
 import { SkeletonBar, SkeletonGroup, SkeletonRows } from '../../src/components/Skeleton';
@@ -49,9 +47,7 @@ export default function CardsScreen() {
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkWorking, setBulkWorking] = useState(false);
-  const [showImport, setShowImport] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
-  const [importSuccess, setImportSuccess] = useState<string | null>(null);
 
   // Every card for this language, packs included. A card used to belong to a
   // pack *or* to your list, and the load dropped anything with a `packId` — but
@@ -212,72 +208,6 @@ export default function CardsScreen() {
         },
       },
     ]);
-  };
-
-  // ── Export ──
-  const shareFile = async (content: string, filename: string, mimeType: string, uti: string) => {
-    try {
-      const file = new File(Paths.cache, filename);
-      if (file.exists) file.delete();
-      file.create();
-      file.write(content);
-      if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(file.uri, { mimeType, UTI: uti });
-      }
-    } catch {
-      setError('Export failed.');
-    }
-  };
-
-  // Both exports take `visibleCards` — what you are looking at is what you get,
-  // filters, search and sort included. That is the whole contract, and it is
-  // why neither of them re-filters: an Anki export used to drop archived cards
-  // on its own, which now would hand you an empty file from the Archived tab.
-  const exportCSV = () => {
-    const rows = [[config.label, backConfig.backLanguage, 'Part of speech', 'Formality', 'Definition', 'Characters', 'Notes', 'Examples', 'Saved', 'Status']];
-    for (const c of visibleCards) {
-      const examples = c.examples?.map(e => {
-        const sides = getExampleSides(e, studyLanguage, deckNativeLanguage);
-        return `${sides.study} / ${sides.back}`;
-      }).join(' | ') ?? '';
-      const saved = c.createdAt instanceof Date ? c.createdAt.toISOString().slice(0, 10) : '';
-      rows.push([
-        getStudyLangSide(c), getBackSide(c, deckNativeLanguage),
-        // The label, not the code — the column is read by a person.
-        partOfSpeechLabel(deckNativeLanguage, c) || '', c.formality || '', c.definition || '',
-        getCharacterBreakdown(c) || '', c.notes || '', examples, saved, c.archived ? 'archived' : 'active',
-      ]);
-    }
-    const csv = rows.map(r => r.map(v => `"${v.replace(/"/g, '""')}"`).join(',')).join('\n');
-    shareFile(csv, 'amgi-cards.csv', 'text/csv', 'public.comma-separated-values-text');
-  };
-
-  const exportAnki = () => {
-    const lines = ['#separator:Tab', '#html:false', '#notetype:Basic', '#deck:Amgi'];
-    for (const c of visibleCards) {
-      const backParts = [getBackSide(c, deckNativeLanguage)];
-      if (c.briefDefinition) backParts.push(c.briefDefinition);
-      else if (c.definition) backParts.push(c.definition);
-      lines.push(`${getStudyLangSide(c)}\t${backParts.join(' — ')}`);
-    }
-    shareFile(lines.join('\n'), 'amgi-cards.txt', 'text/plain', 'public.plain-text');
-  };
-
-  const promptExport = () => {
-    if (visibleCards.length === 0) return;
-    Alert.alert(t(interfaceLanguage, 'cardsExport'), undefined, [
-      { text: t(interfaceLanguage, 'cardsExportCSV'), onPress: exportCSV },
-      { text: t(interfaceLanguage, 'cardsExportAnki'), onPress: exportAnki },
-      { text: t(interfaceLanguage, 'cancel'), style: 'cancel' },
-    ]);
-  };
-
-  const handleImportSaved = (count: number) => {
-    setShowImport(false);
-    // The imported cards arrive on their own — the listener reports the batch
-    // as it lands, so there is nothing to go and fetch.
-    setImportSuccess(t(interfaceLanguage, count === 1 ? 'importSavedToastOne' : 'importSavedToast', { count }));
-    setTimeout(() => setImportSuccess(null), 4000);
   };
 
   // ── Per-card actions ──
@@ -460,29 +390,10 @@ export default function CardsScreen() {
       <View style={s.header}>
         <View style={s.headerTop}>
           <Text style={s.title}>{t(interfaceLanguage, 'cardsPageTitle')}</Text>
-          {user && (
-            <View style={s.headerActions}>
-              <TouchableOpacity style={s.headerBtn} onPress={() => setShowImport(true)}>
-                <Text style={s.headerBtnText}>{t(interfaceLanguage, 'cardsImport')}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[s.headerBtn, visibleCards.length === 0 && s.headerBtnDisabled]}
-                onPress={promptExport}
-                disabled={visibleCards.length === 0}
-              >
-                <Text style={s.headerBtnText}>{t(interfaceLanguage, 'cardsExport')}</Text>
-              </TouchableOpacity>
-            </View>
-          )}
+          <StudyLanguageChip />
         </View>
         <Text style={s.subtitle}>{t(interfaceLanguage, 'cardsPageDescription')}</Text>
       </View>
-
-      {importSuccess && (
-        <View style={s.successBanner}>
-          <Text style={s.successText}>{importSuccess}</Text>
-        </View>
-      )}
 
       {!user ? (
         <View style={s.emptyState}>
@@ -619,13 +530,6 @@ export default function CardsScreen() {
           onClose={() => setShowFilters(false)}
         />
       )}
-      {showImport && (
-        <ImportModal
-          studyLanguage={studyLanguage}
-          onClose={() => setShowImport(false)}
-          onSaved={handleImportSaved}
-        />
-      )}
       {detailCard && (
         <CardDetailModal
           card={detailCard}
@@ -649,19 +553,14 @@ function makeStyles(C: Palette, tabBarHeight: number) {
   // Every horizontal value below that sets a content edge matches it; the
   // smaller ones left alone are padding *inside* a control, not a gutter.
   header: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 4 },
-  headerTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  // `gap` rather than `space-between`: the language chip pushes itself to the
+  // end with `marginLeft: 'auto'`, as it does in `PageHeader`.
+  headerTop: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   // Shared with PageHeader, which this screen can't use: it has no help copy
-  // and carries Import/Export plus a subtitle.
+  // and carries a subtitle.
   title: { fontSize: PAGE_TITLE_SIZE, fontWeight: '700', color: C.highlight },
   subtitle: { fontSize: 13, color: C.muted, marginTop: 2 },
-  headerActions: { flexDirection: 'row', gap: 8 },
-  headerBtn: { borderWidth: 1, borderColor: C.border, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5 },
   headerBtnDisabled: { opacity: 0.3 },
-
-  headerBtnText: { fontSize: 12, color: C.muted },
-
-  successBanner: { marginHorizontal: 20, marginTop: 8, backgroundColor: C.border, borderRadius: 10, padding: 12 },
-  successText: { color: C.text, fontSize: 13, fontWeight: '600' },
 
   controls: { paddingHorizontal: 20, paddingBottom: 8, gap: 8 },
   searchInput: {

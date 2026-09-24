@@ -121,29 +121,6 @@ practice session should cover several tenses at once again, which the section
 picker narrowed (#146). Both are written up in their Decisions entries of
 2026-09-22.
 
-- [ ] **Amgi gets Munli's study-language chip** — asked for 2026-09-25. The
-      chip at the end of each title row naming the language (#169). **Import
-      and Export leave My Cards to make room**; the user suggested Settings as
-      their new home but hasn't settled it.
-      - **Reuse, don't fork.** Web's chip sits inside `PageHeader` behind the
-        `munli` check, so it mostly means dropping that condition. Mobile's is
-        `MunliLanguageChip`, which would get a mode-neutral name. My Cards
-        draws its own title on both platforms rather than using `PageHeader`,
-        so it needs the chip added directly. Munli leaves it off Progress
-        because that header already shows the language; check which Amgi
-        screens do the same.
-      ⚠️ **Moving Export to Settings breaks what it does now.** Both exports
-      take `visibleCards`, so you get exactly what the list is showing, with
-      filters, search and sort applied (see the comment above `exportCSV`).
-      From Settings nothing is filtered, so it becomes "export everything"
-      or "export one language". Decide which before moving it. Import has no
-      such problem.
-      ⚠️ **Web has no Settings page to move them to.** Its settings live in
-      the sidebar popover, and the Medium item about the sidebar menu is the
-      decision on giving web a real settings surface. So "Settings" on web
-      either waits for that item or adds two more rows to a popover that has
-      already overflowed once. Mobile has `app/settings.tsx`.
-
 ## Medium
 
 - [ ] **Users add their own French verbs to Munli** — scoped with the user

@@ -11,7 +11,7 @@ import { useConjugation } from '../../../src/context/ConjugationContext';
 import ParadigmTable from '../../../src/components/ParadigmTable';
 import FilterSheet, { type FilterGroup } from '../../../src/components/FilterSheet';
 import { PAGE_TITLE_SIZE, SCREEN_GUTTER } from '../../../src/components/PageHeader';
-import MunliLanguageChip from '../../../src/components/MunliLanguageChip';
+import StudyLanguageChip from '../../../src/components/StudyLanguageChip';
 import type { Palette } from '../../../src/theme';
 
 /**
@@ -83,7 +83,7 @@ export default function VerbTopicScreen() {
       <Text style={s.title}>
         {t(interfaceLanguage, irregular ? 'verbsIrregular' : 'topicRegularVerbs')}
       </Text>
-      <MunliLanguageChip />
+      <StudyLanguageChip />
     </View>
   );
 

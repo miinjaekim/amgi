@@ -17,7 +17,7 @@ import { useTheme } from '../../src/context/ThemeContext';
 import { useConjugation } from '../../src/context/ConjugationContext';
 import { useFloatingTabBarHeight } from '../../src/components/FloatingTabBar';
 import { PAGE_TITLE_SIZE, SCREEN_GUTTER } from '../../src/components/PageHeader';
-import MunliLanguageChip from '../../src/components/MunliLanguageChip';
+import StudyLanguageChip from '../../src/components/StudyLanguageChip';
 import type { Palette } from '../../src/theme';
 
 /**
@@ -185,7 +185,7 @@ export default function PracticeScreen() {
         </TouchableOpacity>
       )}
       <Text style={s.title}>{title}</Text>
-      <MunliLanguageChip />
+      <StudyLanguageChip />
     </View>
   );
 

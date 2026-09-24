@@ -1,6 +1,5 @@
 'use client';
 import React, { useState } from 'react';
-import Link from 'next/link';
 import { deleteUser, reauthenticateWithPopup } from 'firebase/auth';
 import { auth, googleProvider } from '@/config/firebase';
 import { useUser } from '@/components/UserContext';
@@ -88,10 +87,8 @@ export default function DeleteAccountModal({ onClose }: { onClose: () => void })
         <h2 className="text-lg font-bold">{t(interfaceLanguage, 'deleteAccountConfirmTitle')}</h2>
         <p className="text-sm text-[var(--color-muted)]">{t(interfaceLanguage, 'deleteAccountWarning')}</p>
         <p className="text-sm text-[var(--color-muted)]">
-          {t(interfaceLanguage, 'deleteAccountExportHint')}{' '}
-          <Link href="/cards" className="underline" onClick={onClose}>
-            {t(interfaceLanguage, 'navCards')}
-          </Link>
+          {/* No link: the export sits in the panel this was opened from. */}
+          {t(interfaceLanguage, 'deleteAccountExportHint')}
         </p>
 
         <label className="block text-sm">
