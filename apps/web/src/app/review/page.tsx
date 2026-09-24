@@ -557,11 +557,14 @@ export default function ReviewPage() {
     };
     try {
       await updateDoc(doc(db, collectionName, card.id), update);
-      setActiveQueue(prev => prev.map((item, i) =>
-        i === currentReviewIdx
-          ? { ...item, card: { ...item.card, ...update } }
-          : item
+      // By card, not by index: a card due both ways is two queue entries, and
+      // patching only the one on screen brought the old text back when the
+      // other direction came up. `userFlashcards` too, as `handleCardEnriched`
+      // does, or a queue rebuilt later in the session brings it back again.
+      setActiveQueue(prev => prev.map(item =>
+        item.card.id === card.id ? { ...item, card: { ...item.card, ...update } } : item
       ));
+      setUserFlashcards(prev => prev.map(c => (c.id === card.id ? { ...c, ...update } : c)));
       setManageStatus(t(interfaceLanguage, 'reviewCardSaved'));
       setShowManage(false);
     } catch {
