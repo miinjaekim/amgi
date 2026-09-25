@@ -11,7 +11,7 @@ import {
   countDueBoxes, countQuestions, getStudyLanguageConfig, hintedVerdict, isCorrectForm,
   listPracticeSections, rateBox, t,
 } from '@amgi/core';
-import type { ConjugationProgressMap, ConjugationRound } from '@amgi/core';
+import type { ConjugationProgress, ConjugationProgressMap, ConjugationRound } from '@amgi/core';
 import { useUser } from '../../src/context/UserContext';
 import { useTheme } from '../../src/context/ThemeContext';
 import { useConjugation } from '../../src/context/ConjugationContext';
@@ -78,6 +78,16 @@ export default function PracticeScreen() {
   /** Person id → hints taken, so a hint costs the box it was taken on. */
   const [hints, setHints] = useState<Record<string, number>>({});
   const [checked, setChecked] = useState(false);
+  /**
+   * Person id → the box's progress as it stood before `check` rated it. A typo
+   * override re-rates from here, so it *replaces* the miss rather than stacking
+   * a second rating on top of it.
+   */
+  const [before, setBefore] = useState<Record<string, ConjugationProgress | undefined>>({});
+  /** Person ids the learner marked as a typo, which then count as right. */
+  const [typos, setTypos] = useState<Record<string, true>>({});
+  /** Person id → its input, so Done can move to the next box and a new question can take the keyboard. */
+  const inputs = useRef<Record<string, TextInput | null>>({});
 
   /**
    * The practice set as sections with due counts — one row per tense, each
@@ -125,6 +135,22 @@ export default function PracticeScreen() {
     setChosen(null);
   }), [navigation]);
 
+  /**
+   * Every new question takes the keyboard, in its first due box.
+   *
+   * ⚠️ **An effect on the question, not `autoFocus`.** `autoFocus` fires on
+   * mount only, and the single box stays mounted from one question to the next,
+   * so after a miss, once the keyboard had gone, Next brought the question back
+   * without it (reported 2026-09-25). Focusing on every change of `index` covers
+   * that, a table's first box and the first question alike.
+   */
+  useEffect(() => {
+    const round = queue[index];
+    if (stage !== 'session' || !spec || !round) return;
+    const first = spec.persons.find(p => round.personIds.includes(p.id))?.id;
+    if (first) inputs.current[first]?.focus();
+  }, [stage, index, queue, spec]);
+
   const start = () => {
     if (!spec) return;
     setQueue(buildConjugationQueue(spec, tables, progress, { includeNotDue, wholeTable }));
@@ -133,6 +159,8 @@ export default function PracticeScreen() {
     setTyped({});
     setHints({});
     setChecked(false);
+    setBefore({});
+    setTypos({});
     setStage('session');
   };
 
@@ -147,14 +175,17 @@ export default function PracticeScreen() {
     const round = queue[index];
     if (!spec || !round || checked) return;
     const updates: ConjugationProgressMap = {};
+    const previous: Record<string, ConjugationProgress | undefined> = {};
     let right = 0;
     for (const personId of round.personIds) {
       const correct = isCorrectForm(spec, round.table, personId, typed[personId] ?? '');
       if (correct) right += 1;
       const id = boxItemId(spec, round.table, personId);
+      previous[personId] = progress[id];
       updates[id] = rateBox(progress[id], hintedVerdict(hints[personId] ?? 0, correct));
     }
     rate(updates);
+    setBefore(previous);
     // ⚠️ **A right answer to one question moves on with no pause at all.**
     // This held the correct form on screen for 800ms first, and the user's
     // call after trying it was that the pause is the thing worth removing:
@@ -174,6 +205,28 @@ export default function PracticeScreen() {
     setTyped({});
     setHints({});
     setChecked(false);
+    setBefore({});
+    setTypos({});
+  };
+
+  /**
+   * "That was a typo" — the box counts as right after all.
+   *
+   * ⚠️ **It replaces the rating `check` already wrote**, recomputed from the
+   * progress the box had before it. Rating the post-miss progress instead would
+   * leave the miss in the schedule and the tally, which is the one thing the
+   * override exists to undo. A hint still costs what it cost: the verdict is the
+   * one a right answer with those hints would have earned.
+   *
+   * A single box then moves on, because that is what a right answer does.
+   */
+  const markTypo = (personId: string) => {
+    const round = queue[index];
+    if (!spec || !round || typos[personId]) return;
+    const id = boxItemId(spec, round.table, personId);
+    rate({ [id]: rateBox(before[personId], hintedVerdict(hints[personId] ?? 0, true)) });
+    if (round.personIds.length === 1) advance();
+    else setTypos(prev => ({ ...prev, [personId]: true }));
   };
 
   const header = (title: string, onBack?: () => void) => (
@@ -240,7 +293,13 @@ export default function PracticeScreen() {
             style={s.row}
             activeOpacity={0.7}
             accessibilityRole="button"
-            onPress={() => setStage('setup')}
+            // ⚠️ Always into the section list, never into the last choice. The
+            // finished screen's back chevron lands here with `chosen` still
+            // set, and reopening from this row went straight to that choice's
+            // start screen — which, just after clearing everything due, reads
+            // "Nothing due" and looked like the end screen (reported
+            // 2026-09-25). *Practice again* is the path that keeps the choice.
+            onPress={() => { setChosen(null); setOpenTense(null); setStage('setup'); }}
           >
             <Ionicons name="grid-outline" size={22} color={C.muted} />
             <Text style={s.rowLabel}>{t(interfaceLanguage, 'munliToolConjugation')}</Text>
@@ -464,6 +523,30 @@ export default function PracticeScreen() {
   const only = round.personIds[0];
   const onlyPerson = spec?.persons.find(p => p.id === only);
   const onlyHints = conjugationHints(round.table, only);
+  /** The due boxes top to bottom, which is the order Done walks them in. */
+  const dueOrder = spec ? spec.persons.map(p => p.id).filter(id => round.personIds.includes(id)) : round.personIds;
+  const countsRight = (personId: string) =>
+    !!typos[personId] || (!!spec && isCorrectForm(spec, round.table, personId, (typed[personId] ?? '').trim()));
+  /**
+   * Whether a checked box offers the typo override. Not for a blank box —
+   * nothing was typed, so there is nothing to have mistyped — and not after
+   * both hints, where a right answer would have been `again` anyway.
+   */
+  const offersTypo = (personId: string) =>
+    checked && !countsRight(personId) && !!(typed[personId] ?? '').trim()
+    && hintedVerdict(hints[personId] ?? 0, true) !== 'again';
+  /**
+   * Done in a table box: on to the next due box, and from the last one, check —
+   * or, if a box is still empty, back to it, so Done never strands the learner
+   * on a Check button that is switched off.
+   */
+  const submitBox = (personId: string) => {
+    const next = dueOrder[dueOrder.indexOf(personId) + 1];
+    if (next) { inputs.current[next]?.focus(); return; }
+    const empty = dueOrder.find(id => !(typed[id] ?? '').trim());
+    if (empty) inputs.current[empty]?.focus();
+    else check();
+  };
 
   return (
     <SafeAreaView style={s.safe} edges={['top']}>
@@ -525,9 +608,15 @@ export default function PracticeScreen() {
                 // hand the learner the form being asked for.
                 autoComplete="off"
                 spellCheck={false}
+                ref={el => { inputs.current[only] = el; }}
                 // ⚠️ Never made read-only. Doing so dismisses the keyboard
                 // between two questions meant to run together; `check` guards
                 // the double-submit instead.
+                // ⚠️ `submit`, not the default blur. The keyboard's own Done key
+                // is how most answers get checked, and blurring on it dropped
+                // the keyboard after every one (reported 2026-09-25) — the
+                // Check button never blurred, which is why only Done did it.
+                submitBehavior="submit"
                 onSubmitEditing={() => (checked ? advance() : ready && check())}
                 returnKeyType="done"
               />
@@ -555,6 +644,11 @@ export default function PracticeScreen() {
                       <Text style={s.yoursStruck}>{(typed[only] ?? '').trim()}</Text>
                     </Text>
                   )}
+                  {offersTypo(only) && (
+                    <TouchableOpacity style={s.typoBtn} accessibilityRole="button" onPress={() => markTypo(only)}>
+                      <Text style={s.hintBtnText}>{t(interfaceLanguage, 'conjugationTypo')}</Text>
+                    </TouchableOpacity>
+                  )}
                 </>
               )}
             </View>
@@ -564,7 +658,7 @@ export default function PracticeScreen() {
               const due = round.personIds.includes(person.id);
               const form = round.table.forms[person.id];
               const answer = (typed[person.id] ?? '').trim();
-              const correct = !!spec && isCorrectForm(spec, round.table, person.id, answer);
+              const correct = countsRight(person.id);
               const taken = hints[person.id] ?? 0;
               const hintHalves = conjugationHints(round.table, person.id);
 
@@ -591,10 +685,21 @@ export default function PracticeScreen() {
                           {correct ? '✓' : '✗'} {form}
                         </Text>
                         {!correct && !!answer && <Text style={s.typedWrong}>{answer}</Text>}
+                        {offersTypo(person.id) && (
+                          <TouchableOpacity
+                            style={s.typoBtnInline}
+                            accessibilityRole="button"
+                            accessibilityLabel={`${t(interfaceLanguage, 'conjugationTypo')} · ${person.label}`}
+                            onPress={() => markTypo(person.id)}
+                          >
+                            <Text style={s.hintBtnText}>{t(interfaceLanguage, 'conjugationTypo')}</Text>
+                          </TouchableOpacity>
+                        )}
                       </>
                     ) : (
                       <>
                         <TextInput
+                          ref={el => { inputs.current[person.id] = el; }}
                           style={s.input}
                           value={typed[person.id] ?? ''}
                           onChangeText={next => setTyped(prev => ({ ...prev, [person.id]: next }))}
@@ -605,7 +710,11 @@ export default function PracticeScreen() {
                           autoCorrect={false}
                           autoComplete="off"
                           spellCheck={false}
-                          returnKeyType="done"
+                          // ⚠️ `submit`, not the default blur: moving between
+                          // boxes must not drop the keyboard in between.
+                          submitBehavior="submit"
+                          onSubmitEditing={() => submitBox(person.id)}
+                          returnKeyType={person.id === dueOrder[dueOrder.length - 1] ? 'done' : 'next'}
                         />
                         {taken > 0 && <Text style={s.hint}>{hintHalves.slice(0, taken).join('  ')}</Text>}
                       </>
@@ -630,9 +739,7 @@ export default function PracticeScreen() {
 
           {/* How the round went, said whether or not anything needs fixing. */}
           {checked && !single && (() => {
-            const right = round.personIds.filter(
-              id => !!spec && isCorrectForm(spec, round.table, id, (typed[id] ?? '').trim()),
-            ).length;
+            const right = round.personIds.filter(countsRight).length;
             const all = right === round.personIds.length;
             return (
               <Text style={[s.score, all && s.scoreAll]}>
@@ -733,6 +840,16 @@ function makeStyles(C: Palette, tabBarHeight: number) {
       borderRadius: 16, borderWidth: 1, borderColor: C.border,
     },
     hintBtnText: { color: C.muted, fontSize: 12 },
+    // The hint chip's shape, since it is the same kind of aside. Self-sized
+    // rather than stretched: it sits in a column that would widen it.
+    typoBtn: {
+      alignSelf: 'flex-start', marginTop: 12, paddingHorizontal: 10, paddingVertical: 6,
+      borderRadius: 16, borderWidth: 1, borderColor: C.border,
+    },
+    typoBtnInline: {
+      alignSelf: 'flex-start', marginBottom: 4, paddingHorizontal: 10, paddingVertical: 4,
+      borderRadius: 16, borderWidth: 1, borderColor: C.border,
+    },
     hint: { color: C.muted, fontSize: 15, letterSpacing: 2, marginTop: 6 },
     empty: { borderWidth: 1, borderStyle: 'dashed', borderColor: C.muted, borderRadius: 16, padding: 28 },
     emptyTitle: { color: C.text, fontSize: 15, textAlign: 'center' },

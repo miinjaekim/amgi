@@ -174,6 +174,9 @@ const translations = {
     conjugationHint: 'Hint',
     conjugationNext: 'Next',
     conjugationWrong: 'The form is',
+    // Amgi's typed review lets a miss be overridden from the rating row. Practice
+    // has no rating row, so this is that override: the box counts as right.
+    conjugationTypo: 'That was a typo',
     // ⚠️ Getting everything right used to look exactly like getting no
     // feedback: nothing was corrected, so nothing was said. A round says how it
     // went whether or not there is anything to fix.
@@ -1060,6 +1063,7 @@ const translations = {
     conjugationHint: '힌트',
     conjugationNext: '다음',
     conjugationWrong: '정답은',
+    conjugationTypo: '오타였어요',
     conjugationAllRight: '전부 맞았어요.',
     conjugationRoundScore: '{total}개 중 {correct}개 정답',
     conjugationFillDue: '복습할 차례인 형태를 채워보세요.',
