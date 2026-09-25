@@ -39,8 +39,8 @@ and `npm run lint` 0 errors / 21 warnings, both measured._
   Done walks a table's boxes, and a miss offers **That was a typo**, which
   *replaces* the rating Check wrote (re-rated from the box's pre-check progress)
   rather than adding one. Not offered for a blank box or after both hints.
-  ⚠️ **Type-checked only, not yet held in Expo Go** — autofocus timing on
-  Android in particular is unverified.
+  **Exercised in Expo Go** (2026-09-25, by the user): single questions
+  answered with the keyboard's Done key, and the table.
 
 - **Writing review is back, as Munli's first tool** (PR #136, 2026-09-21).
   Restored from the removal commit rather than rebuilt; the surface is unchanged
