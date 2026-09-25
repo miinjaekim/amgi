@@ -86,7 +86,7 @@ export default function PracticeScreen() {
   const [before, setBefore] = useState<Record<string, ConjugationProgress | undefined>>({});
   /** Person ids the learner marked as a typo, which then count as right. */
   const [typos, setTypos] = useState<Record<string, true>>({});
-  /** The table's inputs, so Done can move to the next box. */
+  /** Person id → its input, so Done can move to the next box and a new question can take the keyboard. */
   const inputs = useRef<Record<string, TextInput | null>>({});
 
   /**
@@ -134,6 +134,22 @@ export default function PracticeScreen() {
     setOpenTense(null);
     setChosen(null);
   }), [navigation]);
+
+  /**
+   * Every new question takes the keyboard, in its first due box.
+   *
+   * ⚠️ **An effect on the question, not `autoFocus`.** `autoFocus` fires on
+   * mount only, and the single box stays mounted from one question to the next,
+   * so after a miss, once the keyboard had gone, Next brought the question back
+   * without it (reported 2026-09-25). Focusing on every change of `index` covers
+   * that, a table's first box and the first question alike.
+   */
+  useEffect(() => {
+    const round = queue[index];
+    if (stage !== 'session' || !spec || !round) return;
+    const first = spec.persons.find(p => round.personIds.includes(p.id))?.id;
+    if (first) inputs.current[first]?.focus();
+  }, [stage, index, queue, spec]);
 
   const start = () => {
     if (!spec) return;
@@ -586,9 +602,7 @@ export default function PracticeScreen() {
                 // hand the learner the form being asked for.
                 autoComplete="off"
                 spellCheck={false}
-                // The keyboard opens with the question. The input then stays
-                // mounted across single questions, so it stays open too.
-                autoFocus
+                ref={el => { inputs.current[only] = el; }}
                 // ⚠️ Never made read-only. Doing so dismisses the keyboard
                 // between two questions meant to run together; `check` guards
                 // the double-submit instead.
@@ -685,10 +699,6 @@ export default function PracticeScreen() {
                           autoCorrect={false}
                           autoComplete="off"
                           spellCheck={false}
-                          // The first due box takes the keyboard. The inputs
-                          // unmount at Check, so every table round mounts
-                          // fresh and this fires each time.
-                          autoFocus={person.id === dueOrder[0]}
                           // ⚠️ `submit`, not the default blur: moving between
                           // boxes must not drop the keyboard in between.
                           submitBehavior="submit"
