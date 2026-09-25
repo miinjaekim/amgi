@@ -11,7 +11,8 @@
     "backfill:pack-backs": "tsx --env-file=.env.local scripts/backfill-pack-backs.ts",
     "dedupe:pack-cards": "tsx --env-file=.env.local scripts/dedupe-pack-cards.ts",
     "remap:subpacks": "tsx --env-file=.env.local scripts/remap-pack-subpacks.ts",
-    "migrate:legacy-hanja": "tsx --env-file=.env.local scripts/migrate-legacy-hanja.ts"
+    "migrate:legacy-hanja": "tsx --env-file=.env.local scripts/migrate-legacy-hanja.ts",
+    "eval:user-packs": "tsx --env-file=.env.local scripts/eval-user-packs.ts"
   },
   "dependencies": {
     "@amgi/core": "*",

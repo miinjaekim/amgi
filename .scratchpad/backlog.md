@@ -151,6 +151,13 @@ picker narrowed (#146). Both are written up in their Decisions entries of
          user pack against `docs/packs/README.md` and adopt it. How packs get
          nominated waits for sharing.
       **Entry point:** a *Make a pack* action on Packs.
+      **Progress.** PR 1 (2026-09-25, `feat/user-vocab-packs`) built steps 2
+      and 3 with no UI: `POST /api/user-packs/subtopics` and
+      `POST /api/user-packs/source`, plus `npm run eval:user-packs`, which
+      writes `docs/packs/user-pack-eval.md`. **The comparison there needs the
+      user's verdict before PR 2.** PR 2 is the web flow: the questions,
+      subtopic picker, background job, notice, and private storage with an
+      owner. PR 3 is mobile.
       **Test against the packs already built.** Answer the questions as the
       people behind the TOEIC, idioms and Argentina packs would have, and compare
       the agent's pack with the hand-made one before any user sees it.
