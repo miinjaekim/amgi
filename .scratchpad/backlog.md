@@ -182,26 +182,6 @@ picker narrowed (#146). Both are written up in their Decisions entries of
       accepted set. And the audience is mostly Korean speakers, whose language
       has no articles.
 
-- [ ] **Smoother conjugation practice** — from the user's task list,
-      2026-09-25: *"Automatically open keyboard, allow users to overwrite
-      typos."* Mobile only (`apps/mobile/app/munli/index.tsx`).
-      - **The keyboard should open by itself.** Neither the single box nor the
-        table's boxes use `autoFocus` today, so every question starts with a tap.
-        In a table, **Done should move to the next box**. Today only the single
-        box has `onSubmitEditing`. Keep the single box editable between
-        questions (the ⚠️ there): that is what keeps the keyboard up.
-      - **Typos.** Amgi's review already handles this: a miss shows both strings
-        and keeps the rating row, so the learner can override. Munli has no
-        equivalent. ⚠️ **`check` writes the rating immediately** (`rate(updates)`),
-        so an override has to replace that rating, or the rating has to wait
-        until the learner moves on. Otherwise a typo still counts as a miss on
-        the box's schedule.
-      ❓ **"Overwrite typos" has two readings**, and the user hasn't said which:
-      **(a)** after a miss, a *That was a typo* action counts it as right, like
-      Amgi's override; or **(b)** the learner fixes the typed text and checks
-      again. (b) is weaker, because the right form is already on screen when
-      they retype it.
-
 - [ ] **Users add their own French verbs to Munli** — scoped with the user
       2026-09-24. **Any verb, forms from the model**, the way a term lookup
       works. What an added verb *becomes* follows the split `conjugation.ts`

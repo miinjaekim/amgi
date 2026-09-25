@@ -35,6 +35,12 @@ and `npm run lint` 0 errors / 21 warnings, both measured._
   testing** — the two-topic split, the split filter dropdowns, the per-verb
   dropdown and the save pills were all built after the surfaces were last held.
   Native is in no build either way.
+  **Smoother practice** (2026-09-25): the keyboard opens with each question,
+  Done walks a table's boxes, and a miss offers **That was a typo**, which
+  *replaces* the rating Check wrote (re-rated from the box's pre-check progress)
+  rather than adding one. Not offered for a blank box or after both hints.
+  ⚠️ **Type-checked only, not yet held in Expo Go** — autofocus timing on
+  Android in particular is unverified.
 
 - **Writing review is back, as Munli's first tool** (PR #136, 2026-09-21).
   Restored from the removal commit rather than rebuilt; the surface is unchanged
