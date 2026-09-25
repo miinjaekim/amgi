@@ -606,6 +606,11 @@ export default function PracticeScreen() {
                 // ⚠️ Never made read-only. Doing so dismisses the keyboard
                 // between two questions meant to run together; `check` guards
                 // the double-submit instead.
+                // ⚠️ `submit`, not the default blur. The keyboard's own Done key
+                // is how most answers get checked, and blurring on it dropped
+                // the keyboard after every one (reported 2026-09-25) — the
+                // Check button never blurred, which is why only Done did it.
+                submitBehavior="submit"
                 onSubmitEditing={() => (checked ? advance() : ready && check())}
                 returnKeyType="done"
               />
