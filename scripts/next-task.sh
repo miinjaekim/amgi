@@ -6,7 +6,8 @@
 #
 # Run inside a lane made by scripts/new-lane.sh. It refuses to run on a dirty
 # tree or when the current branch has commits that aren't on origin. The previous
-# branch is deleted once merged into main, otherwise kept. The .env files are
+# branch is deleted once merged into main, otherwise kept, and its copy on origin
+# goes with it (only if everything on it is in main). The .env files are
 # re-copied from the main checkout, and npm install runs if the lockfile changed.
 set -euo pipefail
 
@@ -63,6 +64,18 @@ fi
 if $delete_prev; then
   git branch --quiet -D "$prev"
   echo "deleted merged branch $prev"
+  # The fetch above pruned it if GitHub already deleted it. Checking the remote
+  # tip, not the local one, keeps anything pushed after the merge.
+  remote_tip="$(git rev-parse --verify --quiet "refs/remotes/origin/$prev" || true)"
+  if [ -n "$remote_tip" ] && git merge-base --is-ancestor "$remote_tip" origin/main; then
+    if git push --quiet origin --delete "$prev"; then
+      echo "deleted merged remote branch origin/$prev"
+    else
+      echo "note: couldn't delete origin/$prev; delete it on GitHub." >&2
+    fi
+  elif [ -n "$remote_tip" ]; then
+    echo "note: origin/$prev has commits that aren't in main; keeping it."
+  fi
 fi
 
 for env in apps/web/.env.local apps/web/.env.production apps/mobile/.env.local; do
