@@ -771,6 +771,14 @@ pack authoring the overwritten side and shipping cards with no readable back.
   "use only this sense" clause. Web spreads it automatically; mobile wrappers
   pass it explicitly. This is what makes pack context hints and the
   disambiguation picker actually stick.
+- `POST /api/user-packs/subtopics` and `POST /api/user-packs/source` — the two
+  steps behind a user-made pack (`packages/core/src/userPacks.ts`,
+  `apps/web/src/lib/userPackSourcing.ts`). Subtopics is one JSON call with no
+  search. Source is one search-grounded call per subtopic. It then fetches
+  **every** page the search returned and keeps a word only if a page contains
+  it (tier A = two domains, B = one). Google's per-line `groundingSupports` is
+  not used: on the eval it attributed words to pages without them and left a
+  whole subtopic unattributed. Nothing is stored yet.
 - `POST /api/vocab-list` — goal-based word lists; accepts `previousWords` +
   `feedback` for refinement
 - `GET /api/word-of-the-day` — Firestore-backed. One doc per
