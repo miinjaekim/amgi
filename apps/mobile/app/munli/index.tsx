@@ -293,7 +293,13 @@ export default function PracticeScreen() {
             style={s.row}
             activeOpacity={0.7}
             accessibilityRole="button"
-            onPress={() => setStage('setup')}
+            // ⚠️ Always into the section list, never into the last choice. The
+            // finished screen's back chevron lands here with `chosen` still
+            // set, and reopening from this row went straight to that choice's
+            // start screen — which, just after clearing everything due, reads
+            // "Nothing due" and looked like the end screen (reported
+            // 2026-09-25). *Practice again* is the path that keeps the choice.
+            onPress={() => { setChosen(null); setOpenTense(null); setStage('setup'); }}
           >
             <Ionicons name="grid-outline" size={22} color={C.muted} />
             <Text style={s.rowLabel}>{t(interfaceLanguage, 'munliToolConjugation')}</Text>
