@@ -85,7 +85,8 @@ function escapeCell(s: string): string {
 
 async function runPersona(apiKey: string, p: Persona): Promise<string> {
   const started = Date.now();
-  const subtopics = await proposeSubtopics({ apiKey, brief: p.brief, studyLanguage: p.studyLanguage, knownTerms: [] });
+  const proposal = await proposeSubtopics({ apiKey, brief: p.brief, studyLanguage: p.studyLanguage, knownTerms: [] });
+  const subtopics = proposal?.subtopics ?? [];
 
   const results: { name: string; estimated: number; result: SourcingResult | null; error?: string }[] = [];
   const sofar: string[] = [];

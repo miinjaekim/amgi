@@ -4,7 +4,7 @@ import { proposeSubtopics } from '@/lib/userPackSourcing';
 
 /**
  * Step 2 of making a pack: `{ brief, studyLanguage, knownTerms? }` →
- * `{ subtopics }`. No search, so it is quick enough to wait on.
+ * `{ name, description, subtopics }`. No search, so it is quick enough to wait on.
  */
 export async function POST(req: NextRequest) {
   const body = await req.json();
@@ -19,16 +19,16 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const subtopics = await proposeSubtopics({
+    const proposal = await proposeSubtopics({
       apiKey,
       brief,
       studyLanguage: body.studyLanguage ?? 'Korean',
       knownTerms: parseKnownTerms(body.knownTerms),
     });
-    if (subtopics.length === 0) {
+    if (!proposal) {
       return NextResponse.json({ error: 'No subtopics came back' }, { status: 502 });
     }
-    return NextResponse.json({ subtopics });
+    return NextResponse.json(proposal);
   } catch (error) {
     console.error('user-packs/subtopics failed', error);
     return NextResponse.json({ error: 'Failed to propose subtopics' }, { status: 500 });
