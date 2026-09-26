@@ -771,6 +771,30 @@ pack authoring the overwritten side and shipping cards with no readable back.
   "use only this sense" clause. Web spreads it automatically; mobile wrappers
   pass it explicitly. This is what makes pack context hints and the
   disambiguation picker actually stick.
+- **User-made packs** (`packages/core/src/userPacks.ts`,
+  `apps/web/src/lib/userPackSourcing.ts`, `userPackJobs.ts`). One Firestore
+  doc per pack in **`userPacks`**: `ownerUid`, `visibility: 'private'`,
+  `studyLanguage`, `brief`, title, and `subtopics[]`, each with a `status`
+  (`pending | sourcing | ready | failed`) and its `entries` (a `PackEntry`
+  plus `tier` and `sources`). **Only the server writes** (admin SDK, after
+  checking the caller's ID token); the client subscribes to its own. Ready
+  subtopics become sections through `userPackToVocabPack`, and
+  `setUserVocabPacks` adds them to `getVocabPacks`, so the deck page, drill,
+  review picker and subpack names treat a user pack like a curated one. Its
+  id is `user-<docId>`.
+  - `POST /api/user-packs/subtopics` — the set questions → a title and
+    subtopics. One JSON call, no search, thinking off (30s → 4s).
+  - `POST /api/user-packs` — creates the doc from the chosen subtopics.
+  - `POST /api/user-packs/{id}/source` — one subtopic, in `after()`, because
+    a whole pack took 10 minutes in the eval, past a function's 300s. It runs
+    a search-grounded call, fetches **every** page returned, and keeps a word
+    only if a page contains it (tier A = two domains, B = one). Google's
+    per-line `groundingSupports` is not used: in the eval it attributed words
+    to pages without them. Backs come from `/api/explain` over HTTP (the reuse
+    rule), with the sense as `context`. A term already in another subtopic is
+    dropped on write. Also the retry: a subtopic stuck in `sourcing` past
+    `SOURCING_STALE_MS` can be restarted.
+  - `DELETE /api/user-packs/{id}` — cards already saved from it stay.
 - `POST /api/vocab-list` — goal-based word lists; accepts `previousWords` +
   `feedback` for refinement
 - `GET /api/word-of-the-day` — Firestore-backed. One doc per
