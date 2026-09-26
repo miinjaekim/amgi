@@ -59,6 +59,21 @@ and `npm run lint` 0 errors / 21 warnings, both measured._
   compiler, `next build` and `expo export`; **nobody has looked at either surface
   on a device or in a browser.**
 
+- **2.1.0 is build 18, submitted and waiting on external Beta App Review**
+  (2026-09-27), cut from `d1de37e` on `release/2.1.0` (PR #176). It carries
+  everything under Queued for the next build in [backlog.md](backlog.md): the
+  Expo SDK 57 patch updates, smoother conjugation practice, the study-language
+  chip on every title, the two pronunciation speeds, the one-line definition,
+  French verb groups, the mid-review edit fix, the cold-open cache and Export's
+  move to Settings → Your data. **Pre-flight was clean**: 885/885 tests,
+  `entitlements: {}`, `expo export` compiled, review notes 3848/4000, and the
+  copy's new characters against 2.0.0's were 30 Hangul syllables, `Y` and `…`,
+  nothing outside the BMP. The one stale line was the review notes still
+  saying Cards exports. ⚠️ **Step 1's Expo Go half was not recorded for this
+  build**, so the mid-review edit on a small iPhone and the cold-open cache are
+  as unseen as the backlog says.
+  Testers stay on build 17 until approval; the queue turns over then, not now.
+
 - **2.0.0 is build 17, live in TestFlight and approved for external testing**
   (2026-09-23), cut from `69476aa` on `release/1.8.0`, submitted and approved the
   same day. External testers can be invited without another review as long as the
@@ -126,8 +141,8 @@ and `npm run lint` 0 errors / 21 warnings, both measured._
   speed**, a pitch-corrected 0.7× stretch rather than a slow synthesis: if it
   reads as an artifact the fallback is server-side rates behind the same three
   chips, and that is written down in its Decisions entry, not waiting on a list.
-- **Mobile merges are unblocked.** The freeze holds only until submission; the
-  next mobile change waits for build 18.
+- **Mobile merges are unblocked.** The freeze holds only until submission, and
+  build 18 was submitted 2026-09-27; the next mobile change waits for build 19.
 - **Languages are per-deck** (2026-09-12, merged as PR #127, on mobile in build
   16). Each study language carries the language it is explained in, and the app's
   own language is a separate setting — see the Decisions entry below.
@@ -291,6 +306,7 @@ No OTA, so every mobile change reaches users through one of these.
 
 | Version | Build | Date | Cut from |
 |---|---|---|---|
+| 2.1.0 | 18 | 2026-09-27 | `d1de37e` on `release/2.1.0` (PR #176, version bump + TestFlight copy) — waiting on external review |
 | 2.0.0 | 17 | 2026-09-23 | `69476aa` on `release/1.8.0` (version bump + mode-name localization + TestFlight copy) — external testing approved 09-23, same day. **Branch name says 1.8.0**: it was cut before the 2.0.0 call, and renaming it would have lost PR #156 |
 | 1.7.0 | 16 | 2026-09-19 | `cb7c19c` on `release/1.7.0` (version bump + TestFlight copy) — external approval not reported as of this line |
 | 1.6.0 | 15 | 2026-09-10 | `c8c113a` on `release/1.6.0` (version bump + TestFlight copy) — external testing approved 09-10, same day |

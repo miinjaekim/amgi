@@ -26,6 +26,11 @@ _Kept at the top of the file, ahead of priority order, from 2026-09-22 on the
 user's call — this list changes every time something merges, and it is the one
 section worth seeing without scrolling._
 
+⚠️ **Everything below is in build 18 (2.1.0)**, submitted 2026-09-27 and
+waiting on external review. It leaves this list when approval puts it in
+testers' hands. Anything merged after that submission goes **above this note**,
+because it waits for build 19.
+
 - **Smoother conjugation practice** (#173, 2026-09-25) — the keyboard opens
   with each question, Done walks a table, and a miss offers **That was a
   typo**. Detail under Now in [status.md](status.md). JS only.
