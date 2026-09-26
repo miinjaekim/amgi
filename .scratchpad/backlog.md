@@ -26,6 +26,16 @@ _Kept at the top of the file, ahead of priority order, from 2026-09-22 on the
 user's call — this list changes every time something merges, and it is the one
 section worth seeing without scrolling._
 
+- **Smoother conjugation practice** (#173, 2026-09-25) — the keyboard opens
+  with each question, Done walks a table, and a miss offers **That was a
+  typo**. Detail under Now in [status.md](status.md). JS only.
+
+- **Amgi's titles name the study language too** (#172, 2026-09-25) — the same
+  chip Munli's titles carry; informative, not a switcher. In the same PR
+  **Export moved to Settings → Your data** and takes every card in every
+  language, archived included, and Import was removed rather than moved. JS
+  only; web is live on merge.
+
 - **Editing a card mid-review** (2026-09-25). An edit now reaches the card's
   other direction: both platforms' save handlers match queue entries by
   `card.id` instead of by index, and patch the card list too, as enrichment

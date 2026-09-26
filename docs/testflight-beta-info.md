@@ -2,7 +2,7 @@
 
 _한국어와 영어 문구가 모두 이 파일에 있습니다. Both languages live here._
 
-_마지막 갱신: 2026-09-23, 2.0.0용._
+_마지막 갱신: 2026-09-26, 2.1.0용._
 
 App Store Connect → TestFlight → **Test Information**에 붙여넣는 문구 모음입니다.
 Test Information은 로컬라이제이션을 지원하므로, 언어 목록에 **Korean (ko)** 과
@@ -85,11 +85,14 @@ kenyamjkim@gmail.com
 ```
 이번 빌드에 새로 들어간 것:
 
-· 모드가 둘이 되었습니다 — 단어는 암기, 문법은 문리. 마지막 탭을 길게 누르거나 학습 기록의 모드 버튼으로 바꿉니다.
-· 문리 동사 변화 — 시제를 하나씩 연습하고, 표를 직접 보고, 일정에 넣을 시제만 저장합니다. 지금은 프랑스어만 있어요.
-· 문리 글 첨삭 — 문단을 넣으면 고쳐 주고, 떠올리지 못했던 표현은 카드로 저장합니다.
-· 켜지는 속도 — 기기에 있는 것부터 그려서, 서버를 기다리는 빈 화면이 없어졌습니다.
-· 그래프 공유 — 그래프 제목 줄의 공유 버튼이 지금 보고 있는 그대로를 이미지로 만듭니다.
+· 문리 동사 변화 연습이 매끄러워졌습니다 — 문제마다 키보드가 바로 뜨고, 완료 키로 표의 다음 칸으로 넘어가고, 틀렸을 때 '오타였어요'로 바로잡을 수 있어요.
+· 제목 옆에 지금 공부하는 언어가 표시되고, 문리는 그 언어의 연습만 보여 줍니다.
+· 발음 속도를 단어와 문장에 따로 정합니다 (설정).
+· 단어를 찾으면 번역 아래에 한 줄 뜻이 나오고, 카드 상세에서도 보입니다.
+· 프랑스어 동사 카드에 변화 유형(-er, -ir…)이 표시됩니다.
+· 복습 중 카드를 고치면 반대 방향 카드에도 반영됩니다.
+· 카드와 학습 기록이 앱을 다시 열 때 바로 뜹니다.
+· 카드 내보내기가 설정 → 내 데이터로 옮겨졌고, 모든 언어의 카드를 한번에 내보냅니다.
 
 피드백은 TestFlight의 '피드백 보내기' 또는 kenyamjkim@gmail.com으로.
 ```
@@ -99,11 +102,14 @@ kenyamjkim@gmail.com
 ```
 New in this build:
 
-· Two modes — Amgi for words, Munli for grammar. Hold the last tab, or tap the mode button on Progress, to switch.
-· Munli conjugation — practise a tense at a time, browse the full tables, and save only the tenses you want scheduled. French is the only language so far.
-· Munli writing review — paste a passage, get it corrected, and keep the phrases you were reaching for as cards.
-· Faster launch — the app paints from the device instead of waiting on the server behind a blank screen.
-· Share a chart — the Share button in a chart's title row posts that chart exactly as you are looking at it.
+· Smoother Munli conjugation practice — the keyboard opens with each question, Done walks through a table, and "That was a typo" fixes a miss.
+· Titles name the language you're studying, and Munli shows only that language's practice.
+· Separate pronunciation speeds for words and sentences, in Settings.
+· Looking up a word shows a one-line definition under the translation, and card detail shows it too.
+· French verb cards name their conjugation group (-er, -ir…).
+· Editing a card mid-review now reaches its other direction too.
+· Cards and Progress appear at once when you reopen the app.
+· Export moved to Settings → Your data, and now takes every card in every language.
 
 Send feedback via TestFlight's "Send Beta Feedback" or to kenyamjkim@gmail.com.
 ```
@@ -146,7 +152,7 @@ Sign-in: The app uses Google Sign-In (Firebase Authentication) only. Demo creden
 
 How to test: On first launch the app asks three questions before anything else, and cannot be used until all three are answered: what language the app itself should be in, what language to study, and what language that deck is explained in. The third is asked because explanations are stored on the card and never regenerated; it is prefilled from the first, so answering it is one tap. A learner cannot pick the language they already speak as the language they are studying. A short tour of the three main screens follows. The app's own language is changed later in Settings; a deck's explanation language is chosen when that language is added.
 
-Amgi mode has five tabs, icon-only, left to right: Review, Cards, Learn, Packs, Progress. Review, where the app opens, runs the spaced-repetition session over saved cards. Cards lists, edits and exports them. Learn, in the middle, is where you type any word or phrase and tap Learn for an explanation, then save it as a flashcard. Packs holds pre-made decks to save as cards or drill directly. Progress shows which days were reviewed, a row per language opening that language's charts.
+Amgi mode has five tabs, icon-only, left to right: Review, Cards, Learn, Packs, Progress. Review, where the app opens, runs the spaced-repetition session over saved cards. Cards lists and edits them; exporting every card is under Settings → Your data. Learn, in the middle, is where you type any word or phrase and tap Learn for an explanation, then save it as a flashcard. Packs holds pre-made decks to save as cards or drill directly. Progress shows which days were reviewed, a row per language opening that language's charts.
 
 Modes: a fresh install opens in Amgi, and nothing need be done with modes to review the app. The second mode, Munli, is reached by holding the last tab, or by the mode button beside the gear on Progress; the same returns to Amgi. A Korean interface names the two 암기 and 문리. Munli's own five tabs are Practice, Saved, Writing, Topics, Progress: Practice drills verb conjugation, Topics browses the tables, Saved lists what is scheduled, Writing submits a passage for correction. Conjugation covers French only, and under any other study language those tabs say so on screen rather than appearing broken. To populate it, add French in Settings → Add language.
 
