@@ -3,6 +3,7 @@ import {
   getStudyLanguageConfig,
   normalizeTerm,
   parseSourcedLines,
+  parsePackTitle,
   parseSubtopics,
   textContainsTerm,
   tierFor,
@@ -10,6 +11,7 @@ import {
   type GroundingMetadataLike,
   type PackBrief,
   type ProposedSubtopic,
+  type SubtopicProposal,
   type SourcedWord,
   type StudyLanguage,
   type WordSource,
@@ -62,12 +64,14 @@ export async function proposeSubtopics(opts: {
   brief: PackBrief;
   studyLanguage: StudyLanguage;
   knownTerms: string[];
-}): Promise<ProposedSubtopic[]> {
+}): Promise<SubtopicProposal | null> {
   const { brief, studyLanguage, knownTerms } = opts;
   const language = getStudyLanguageConfig(studyLanguage).label;
   const model = new GoogleGenerativeAI(opts.apiKey).getGenerativeModel({
     model: MODEL,
-    generationConfig: { temperature: 0.4, responseMimeType: 'application/json' },
+    // No thinking: this is the step the learner waits on, and it took 30s
+    // with it. Splitting a brief into parts is not where reasoning pays.
+    generationConfig: { temperature: 0.4, responseMimeType: 'application/json', thinkingConfig: { thinkingBudget: 0 } } as never,
   });
 
   const prompt = `A learner of ${language} wants a vocabulary pack of their own.
@@ -85,16 +89,19 @@ Split what they need into subtopics. Each subtopic becomes its own deck the lear
 - "searchHint" is the web search you would run to find published word lists, glossaries or real texts for this subtopic, written in whichever language those sources are published in.
 - Write names and notes in both English and natural Korean.
 
+Also name the whole pack: a short "name" a learner would recognise as theirs, and a one-line "description" of what it covers, both in English and natural Korean.
+
 Respond with only this JSON:
-{"subtopics": [{"name": {"English": "...", "Korean": "..."}, "note": {"English": "...", "Korean": "..."}, "estimatedWords": 20, "searchHint": "..."}]}`;
+{"name": {"English": "...", "Korean": "..."}, "description": {"English": "...", "Korean": "..."}, "subtopics": [{"name": {"English": "...", "Korean": "..."}, "note": {"English": "...", "Korean": "..."}, "estimatedWords": 20, "searchHint": "..."}]}`;
 
   // Retried once: the eval saw a well-formed prompt come back with nothing
   // parseable, and a second call is cheap next to making the learner re-ask.
   for (let attempt = 0; attempt < 2; attempt++) {
-    const subtopics = parseSubtopics((await model.generateContent(prompt)).response.text());
-    if (subtopics.length) return subtopics;
+    const raw = (await model.generateContent(prompt)).response.text();
+    const subtopics = parseSubtopics(raw);
+    if (subtopics.length) return { ...parsePackTitle(raw, brief), subtopics };
   }
-  return [];
+  return null;
 }
 
 /**

@@ -14,12 +14,14 @@ import {
   getPackText,
   getStudyLanguageConfig,
   getVocabPack,
+  isUserPackId,
   startDrillQueue,
   getPackEntries,
 } from '@amgi/core';
 import type { DrillDirection, PackEntry } from '@amgi/core';
 import PronounceButton from '@/components/PronounceButton';
 import { usePackLost } from '@/hooks/usePackLost';
+import { useUserPacks } from '@/components/UserPacksContext';
 import { t } from '@/lib/i18n';
 
 /**
@@ -32,7 +34,9 @@ import { t } from '@/lib/i18n';
 export default function DrillPage() {
   const { packId } = useParams<{ packId: string }>();
   const router = useRouter();
-  const { interfaceLanguage, deckNativeLanguage, studyLanguage } = useUser();
+  const { user, interfaceLanguage, deckNativeLanguage, studyLanguage } = useUser();
+  // Re-renders once a learner's own packs load, so their pack resolves below.
+  const { userPacks } = useUserPacks();
   const langConfig = getStudyLanguageConfig(studyLanguage);
   const pack = getVocabPack(studyLanguage, packId);
   const packLost = usePackLost(pack);
@@ -77,7 +81,7 @@ export default function DrillPage() {
   // that used to sit here excluded exactly the word lists this is most useful
   // for. Only a missing pack is an error.
   if (!pack) {
-    if (packLost) return null;
+    if (packLost || (isUserPackId(packId) && user && userPacks === null)) return null;
     return (
       <div className="max-w-xl mx-auto">
         {backToDeck}

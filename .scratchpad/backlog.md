@@ -151,13 +151,20 @@ picker narrowed (#146). Both are written up in their Decisions entries of
          user pack against `docs/packs/README.md` and adopt it. How packs get
          nominated waits for sharing.
       **Entry point:** a *Make a pack* action on Packs.
-      **Progress.** PR 1 (2026-09-25, `feat/user-vocab-packs`) built steps 2
-      and 3 with no UI: `POST /api/user-packs/subtopics` and
-      `POST /api/user-packs/source`, plus `npm run eval:user-packs`, which
-      writes `docs/packs/user-pack-eval.md`. **The comparison there needs the
-      user's verdict before PR 2.** PR 2 is the web flow: the questions,
-      subtopic picker, background job, notice, and private storage with an
-      owner. PR 3 is mobile.
+      **Progress.** Web is built (PR #175, `feat/user-vocab-packs`,
+      2026-09-25/26): *Make a pack* on Packs → `/decks/new` (the questions,
+      then the subtopic picker) → one background job per subtopic → the pack
+      page fills in, with a notice when it finishes. Also
+      `npm run eval:user-packs`, which writes `docs/packs/user-pack-eval.md`.
+      The user asked to judge the flow in the app rather than from that
+      document. **Mobile is next**, plus the open questions below.
+      ⚠️ **Console step: the `userPacks` security rule** (owner may read, and
+      nobody writes from a client, since the server writes with admin).
+      Open from the eval: the learner's level with no saved cards is too low
+      for TOEIC 900; the model sometimes skips search (the subtopic shows as
+      failed, with a retry); the notice is in-app only, with no push or
+      email; and the Korean copy in `i18n.ts` (`makePack*`, `userPack*`)
+      needs the user's approval.
       **Test against the packs already built.** Answer the questions as the
       people behind the TOEIC, idioms and Argentina packs would have, and compare
       the agent's pack with the hand-made one before any user sees it.

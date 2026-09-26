@@ -1,6 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import {
+  SOURCING_STALE_MS,
+  canRetrySubtopic,
+  getVocabPack,
+  getVocabPacks,
+  isUserPackId,
   normalizeTerm,
+  parsePackTitle,
+  setUserVocabPacks,
+  userPackProgress,
+  userPackToVocabPack,
   parseKnownTerms,
   parsePackBrief,
   parseSourcedLine,
@@ -9,6 +18,8 @@ import {
   subtopicId,
   textContainsTerm,
   tierFor,
+  type UserPack,
+  type UserPackSubtopic,
 } from '@amgi/core';
 
 describe('parsePackBrief', () => {
@@ -124,5 +135,76 @@ describe('tierFor', () => {
   it('counts the learner’s material as a source of its own', () => {
     expect(tierFor([{ kind: 'material' }, web('https://a.com')])).toBe('A');
     expect(tierFor([])).toBeNull();
+  });
+});
+
+describe('stored user packs', () => {
+  const subtopic = (id: string, status: UserPackSubtopic['status'], words: string[] = []): UserPackSubtopic => ({
+    id,
+    name: { English: id, Korean: id },
+    estimatedWords: 10,
+    searchHint: id,
+    status,
+    entries: words.map(study => ({ study, back: { Korean: '뜻' }, tier: 'B', sources: [{ kind: 'material' }] })),
+  });
+  const pack = (subtopics: UserPackSubtopic[]): UserPack => ({
+    id: 'abc',
+    ownerUid: 'u',
+    visibility: 'private',
+    studyLanguage: 'English',
+    nativeLanguage: 'Korean',
+    brief: { purpose: 'goal', about: 'TOEIC', usage: 'exam' },
+    name: { English: 'Mine', Korean: '내 팩' },
+    description: { English: 'd', Korean: 'd' },
+    subtopics,
+    createdAt: 0,
+  });
+
+  it('becomes a namespaced, user-made pack with only finished parts as sections', () => {
+    const vocab = userPackToVocabPack(
+      pack([subtopic('a', 'ready', ['lease']), subtopic('b', 'sourcing'), subtopic('c', 'ready')]),
+    );
+    expect(vocab.id).toBe('user-abc');
+    expect(isUserPackId(vocab.id)).toBe(true);
+    expect(vocab.userMade).toBe(true);
+    expect(vocab.sections.map(s => s.id)).toEqual(['a']);
+  });
+
+  it('is done once nothing is pending or running', () => {
+    expect(userPackProgress(pack([subtopic('a', 'ready'), subtopic('b', 'sourcing')]))).toMatchObject({ done: false, ready: 1 });
+    expect(userPackProgress(pack([subtopic('a', 'ready'), subtopic('b', 'failed')]))).toMatchObject({ done: true, failed: 1 });
+  });
+
+  it('offers a retry on failure, and on a job that never came back', () => {
+    const now = 10 * SOURCING_STALE_MS;
+    expect(canRetrySubtopic({ status: 'failed' }, now)).toBe(true);
+    expect(canRetrySubtopic({ status: 'sourcing', startedAt: now - 1000 }, now)).toBe(false);
+    expect(canRetrySubtopic({ status: 'sourcing', startedAt: now - SOURCING_STALE_MS - 1 }, now)).toBe(true);
+    expect(canRetrySubtopic({ status: 'ready' }, now)).toBe(false);
+  });
+
+  it('joins the pack registry after the curated packs', () => {
+    setUserVocabPacks({ English: [userPackToVocabPack(pack([subtopic('a', 'ready', ['lease'])]))] });
+    try {
+      const ids = getVocabPacks('English').map(p => p.id);
+      expect(ids[ids.length - 1]).toBe('user-abc');
+      expect(getVocabPack('English', 'user-abc')?.sections).toHaveLength(1);
+      expect(getVocabPack('Korean', 'user-abc')).toBeUndefined();
+    } finally {
+      setUserVocabPacks({});
+    }
+  });
+});
+
+describe('parsePackTitle', () => {
+  const brief = { purpose: 'goal' as const, about: 'TOEIC 900점 넘기기', usage: 'exam' };
+
+  it('reads the title the model gave', () => {
+    const raw = JSON.stringify({ name: { English: 'TOEIC 900', Korean: '토익 900' }, description: { English: 'd', Korean: '설명' } });
+    expect(parsePackTitle(raw, brief).name).toEqual({ English: 'TOEIC 900', Korean: '토익 900' });
+  });
+
+  it("falls back to the learner's own words", () => {
+    expect(parsePackTitle('{}', brief).name.Korean).toBe('TOEIC 900점 넘기기');
   });
 });
