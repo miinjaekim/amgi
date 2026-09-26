@@ -1,4 +1,5 @@
 import { parseModelJson } from './modelJson';
+import type { PackEntry, VocabPack } from './packs';
 import type { StudyLanguage } from './types';
 
 /**
@@ -290,4 +291,131 @@ export function tierFor(sources: WordSource[]): SourceTier | null {
   if (independent.size >= 2) return 'A';
   if (independent.size === 1) return 'B';
   return null;
+}
+
+/** A pack's name and one-line description, in both interface languages. */
+export interface PackTitle {
+  name: { English: string; Korean: string };
+  description: { English: string; Korean: string };
+}
+
+/** What the subtopics step returns: a proposed title, and the subtopics. */
+export interface SubtopicProposal extends PackTitle {
+  subtopics: ProposedSubtopic[];
+}
+
+/**
+ * The title in a subtopics response, or a plain fallback made from the
+ * learner's own words when the model left it out.
+ */
+export function parsePackTitle(raw: string, brief: PackBrief): PackTitle {
+  let parsed: Record<string, unknown> = {};
+  try {
+    const value = parseModelJson(raw);
+    if (value && typeof value === 'object' && !Array.isArray(value)) parsed = value as Record<string, unknown>;
+  } catch {}
+  const pair = (v: unknown, fallback: string) => {
+    const p = v as Record<string, unknown> | undefined;
+    return {
+      English: typeof p?.English === 'string' && p.English.trim() ? p.English.trim() : fallback,
+      Korean: typeof p?.Korean === 'string' && p.Korean.trim() ? p.Korean.trim() : fallback,
+    };
+  };
+  const short = brief.about.length > 40 ? `${brief.about.slice(0, 40)}…` : brief.about;
+  return { name: pair(parsed.name, short), description: pair(parsed.description, brief.about) };
+}
+
+/**
+ * A learner's pack as stored, one Firestore document per pack in `userPacks`.
+ *
+ * **Owner and visibility are here from the start**, though phase 1 is private:
+ * sharing is where this is headed, and adding an owner to documents that were
+ * written without one is a migration. Only the server writes these; the
+ * client reads its own.
+ */
+export interface UserPack extends PackTitle {
+  id: string;
+  ownerUid: string;
+  visibility: 'private';
+  studyLanguage: StudyLanguage;
+  nativeLanguage: string;
+  brief: PackBrief;
+  subtopics: UserPackSubtopic[];
+  /** Epoch ms. */
+  createdAt: number;
+}
+
+/**
+ * `failed` covers a search that returned no pages as well as an error: the
+ * eval saw the model skip search even when retried, and the learner can try
+ * again.
+ */
+export type SubtopicStatus = 'pending' | 'sourcing' | 'ready' | 'failed';
+
+export interface UserPackEntry extends PackEntry {
+  tier: SourceTier;
+  sources: WordSource[];
+}
+
+export interface UserPackSubtopic extends ProposedSubtopic {
+  status: SubtopicStatus;
+  entries: UserPackEntry[];
+  /**
+   * Epoch ms when sourcing last started. A function that times out never
+   * writes `failed`, so a subtopic stuck in `sourcing` past
+   * `SOURCING_STALE_MS` is offered for retry.
+   */
+  startedAt?: number;
+}
+
+/** Longer than a sourcing function is allowed to run (300s), with margin. */
+export const SOURCING_STALE_MS = 6 * 60 * 1000;
+
+/** Whether the learner can start this subtopic again. */
+export function canRetrySubtopic(subtopic: Pick<UserPackSubtopic, 'status' | 'startedAt'>, now = Date.now()): boolean {
+  if (subtopic.status === 'failed') return true;
+  return subtopic.status === 'sourcing' && now - (subtopic.startedAt ?? 0) > SOURCING_STALE_MS;
+}
+
+/** Pack ids are namespaced so they can never collide with a curated one. */
+export const USER_PACK_PREFIX = 'user-';
+
+export function userPackId(docId: string): string {
+  return `${USER_PACK_PREFIX}${docId}`;
+}
+
+export function isUserPackId(packId: string): boolean {
+  return packId.startsWith(USER_PACK_PREFIX);
+}
+
+/**
+ * The pack as every pack surface sees it. Only finished subtopics become
+ * sections, so a pack still being sourced shows what it has so far.
+ */
+export function userPackToVocabPack(pack: UserPack): VocabPack {
+  return {
+    id: userPackId(pack.id),
+    name: pack.name,
+    description: pack.description,
+    layout: 'list',
+    pronounceable: true,
+    userMade: true,
+    sections: pack.subtopics
+      .filter(s => s.status === 'ready' && s.entries.length > 0)
+      .map(s => ({
+        id: s.id,
+        name: s.name,
+        ...(s.note ? { note: s.note } : {}),
+        entries: s.entries,
+      })),
+  };
+}
+
+/** How far along sourcing is. Done means nothing is pending or running. */
+export function userPackProgress(pack: Pick<UserPack, 'subtopics'>) {
+  const count = (status: SubtopicStatus) => pack.subtopics.filter(s => s.status === status).length;
+  const ready = count('ready');
+  const failed = count('failed');
+  const total = pack.subtopics.length;
+  return { ready, failed, total, done: ready + failed === total };
 }

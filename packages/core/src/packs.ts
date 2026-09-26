@@ -137,6 +137,12 @@ export interface VocabPack {
   layout: 'grid' | 'list';
   /** Show a pronunciation button per entry — worth it when the card *is* a sound. */
   pronounceable?: boolean;
+  /**
+   * Made by a learner rather than curated here. Its words were sourced by
+   * search, not reviewed against `docs/packs/README.md`, so every surface that
+   * shows it says so.
+   */
+  userMade?: boolean;
 }
 
 /** Every entry in a pack, in section order. */
@@ -553,8 +559,25 @@ export const VOCAB_PACKS: Partial<Record<StudyLanguage, VocabPack[]>> = {
   Hanja: [HANJA_GEUPSU_PACK],
 };
 
+/**
+ * The signed-in learner's own packs, set by the app as they load.
+ *
+ * Module state rather than a parameter, and that is deliberate. Every surface
+ * that names, orders or opens a pack (the deck page, the review picker, the
+ * card list's chips, subpack names) resolves through `getVocabPacks`, and a
+ * user pack has to behave like a curated one on all of them. Threading a list
+ * through each of those call sites on two apps would be the larger and
+ * riskier change. The app re-renders from its own state when this changes.
+ */
+let userVocabPacks: Partial<Record<StudyLanguage, VocabPack[]>> = {};
+
+export function setUserVocabPacks(byLanguage: Partial<Record<StudyLanguage, VocabPack[]>>): void {
+  userVocabPacks = byLanguage;
+}
+
+/** Curated packs first, in registry order, then the learner's own. */
 export function getVocabPacks(studyLanguage: StudyLanguage): VocabPack[] {
-  return VOCAB_PACKS[studyLanguage] ?? [];
+  return [...(VOCAB_PACKS[studyLanguage] ?? []), ...(userVocabPacks[studyLanguage] ?? [])];
 }
 
 /** One pack by id, or undefined — a deck route's id comes from the URL. */

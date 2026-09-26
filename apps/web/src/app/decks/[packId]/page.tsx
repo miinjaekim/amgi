@@ -17,15 +17,21 @@ import {
   getPackEntries,
   getPackText,
   getStudyLangSide,
+  canRetrySubtopic,
   getVocabPack,
+  isUserPackId,
   packRefId,
+  sourceDomain,
+  userPackId,
   resolvePackBack,
   unsavedEntries,
 } from '@amgi/core';
-import type { PackEntry, PackSection } from '@amgi/core';
+import type { PackEntry, PackSection, UserPackSubtopic } from '@amgi/core';
 import CardDetailModal from '@/components/CardDetailModal';
 import PronounceButton from '@/components/PronounceButton';
 import { usePackLost } from '@/hooks/usePackLost';
+import { useUserPacks } from '@/components/UserPacksContext';
+import { deleteUserPack, startPackSubtopic } from '@/services/userPacks';
 import { t } from '@/lib/i18n';
 
 /** The id used for the whole-deck enrol, which is not a section. */
@@ -35,6 +41,11 @@ export default function DeckDetailPage() {
   const { packId } = useParams<{ packId: string }>();
   const router = useRouter();
   const { user, interfaceLanguage, deckNativeLanguage, studyLanguage } = useUser();
+  // A learner's own pack resolves through the registry like any other, but only
+  // once their packs have loaded; reading them here also re-renders the page
+  // as sourcing fills the pack in.
+  const { userPacks } = useUserPacks();
+  const userPack = isUserPackId(packId) ? userPacks?.find(p => userPackId(p.id) === packId) : undefined;
   const pack = getVocabPack(studyLanguage, packId);
   const packLost = usePackLost(pack);
   const [cards, setCards] = useState<Flashcard[] | null>(null);
@@ -122,6 +133,8 @@ export default function DeckDetailPage() {
   useEffect(() => {
     if (packLost) router.replace('/decks');
   }, [packLost, router]);
+
+  if (!pack && isUserPackId(packId) && user && userPacks === null) return <div className="max-w-3xl mx-auto">{backLink}</div>;
 
   // A URL that never resolved is a stale bookmark or a pack removed from the
   // registry, and gets the message.
@@ -241,6 +254,89 @@ export default function DeckDetailPage() {
   }
   const detailCard = detail ? cardsByTerm.get(detail.entry.study.toLowerCase()) : undefined;
 
+  async function retry(subtopic: UserPackSubtopic) {
+    if (!user || !userPack) return;
+    const knownTerms = (cards ?? []).map(card => getStudyLangSide(card)).filter(Boolean);
+    try {
+      await startPackSubtopic(user, userPack.id, subtopic.id, knownTerms);
+    } catch {
+      setError(t(interfaceLanguage, 'makePackError'));
+    }
+  }
+
+  async function removePack() {
+    if (!user || !userPack || !window.confirm(t(interfaceLanguage, 'userPackDeleteConfirm'))) return;
+    try {
+      await deleteUserPack(user, userPack.id);
+      router.replace('/decks');
+    } catch {
+      setError(t(interfaceLanguage, 'makePackError'));
+    }
+  }
+
+  /**
+   * The parts of a learner's pack that are not a section yet: still being
+   * sourced, or come back empty and waiting for a retry.
+   */
+  function renderUnfinished() {
+    const open = userPack?.subtopics.filter(s => s.status !== 'ready') ?? [];
+    if (open.length === 0) return null;
+    return (
+      <ul className="mb-6 flex flex-col gap-2">
+        {open.map(s => {
+          const name = getPackText(s.name, interfaceLanguage);
+          const retryable = canRetrySubtopic(s);
+          return (
+            <li key={s.id} className="flex items-center gap-3 p-3 rounded-lg border border-dashed border-[var(--color-muted)] text-sm">
+              <span className="flex-1 text-[var(--color-muted)]">
+                {retryable
+                  ? t(interfaceLanguage, 'userPackPartFailed', { name })
+                  : t(interfaceLanguage, 'userPackPartPending', { name })}
+              </span>
+              {retryable && (
+                <button onClick={() => retry(s)} className="font-semibold text-[var(--color-highlight)]">
+                  {t(interfaceLanguage, 'userPackRetry')}
+                </button>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+    );
+  }
+
+  /**
+   * Where a section's words came from, one link per site. Citations are what
+   * let a user pack be checked, and later adopted, against the sourcing
+   * standard, so they are on the page rather than only in the data.
+   */
+  function renderSources(section: PackSection) {
+    const entries = userPack?.subtopics.find(s => s.id === section.id)?.entries ?? [];
+    const sites = new Map<string, string>();
+    let material = false;
+    for (const entry of entries) {
+      for (const source of entry.sources) {
+        if (source.kind === 'material') material = true;
+        else if (!sites.has(sourceDomain(source.url))) sites.set(sourceDomain(source.url), source.url);
+      }
+    }
+    if (sites.size === 0 && !material) return null;
+    return (
+      <p className="text-xs text-[var(--color-muted)] mt-3">
+        {t(interfaceLanguage, 'userPackSources')}:{' '}
+        {[...sites].map(([domain, url], i) => (
+          <React.Fragment key={domain}>
+            {i > 0 && ', '}
+            <a href={url} target="_blank" rel="noopener noreferrer" className="underline hover:text-[var(--color-text)]">
+              {domain}
+            </a>
+          </React.Fragment>
+        ))}
+        {material && `${sites.size ? ', ' : ''}${t(interfaceLanguage, 'userPackMaterial')}`}
+      </p>
+    );
+  }
+
   function renderSection(section: PackSection) {
     const sectionSaved = savedTerms ? countSavedEntries(section.entries, savedTerms) : null;
     const allSaved = sectionSaved === section.entries.length;
@@ -310,6 +406,7 @@ export default function DeckDetailPage() {
             {section.entries.map(entry => renderListRow(entry, section))}
           </div>
         )}
+        {pack!.userMade && renderSources(section)}
       </section>
     );
   }
@@ -377,6 +474,9 @@ export default function DeckDetailPage() {
       <p className="text-sm text-[var(--color-muted)] mt-2">
         {getPackText(pack.description, interfaceLanguage)}
       </p>
+      {pack.userMade && (
+        <p className="text-xs text-[var(--color-highlight)] mt-2">{t(interfaceLanguage, 'userPackLabel')}</p>
+      )}
       <p className="text-xs text-[var(--color-muted)] opacity-70 mt-2 mb-4">
         {t(interfaceLanguage, pack.layout === 'grid' ? 'packTapHintCards' : 'packTapHint')}
       </p>
@@ -427,9 +527,17 @@ export default function DeckDetailPage() {
         </div>
       )}
 
+      {renderUnfinished()}
+
       {renderSubpackPicker()}
 
       {shownSections.map(renderSection)}
+
+      {userPack && (
+        <button onClick={removePack} className="mt-4 text-sm text-[var(--color-muted)] hover:text-[var(--color-highlight)] transition-colors">
+          {t(interfaceLanguage, 'userPackDelete')}
+        </button>
+      )}
 
       {/* One tap opens the card, saved or not. This replaces both the old
           save-on-tap and the deck's own management panel, and it is what makes
