@@ -3,6 +3,8 @@ import {
   getStudyLanguageConfig,
   normalizeTerm,
   parseSourcedLines,
+  parseModelJson,
+  parsePackLevel,
   parsePackTitle,
   parseSubtopics,
   textContainsTerm,
@@ -10,6 +12,7 @@ import {
   type DroppedWord,
   type GroundingMetadataLike,
   type PackBrief,
+  type PackLevel,
   type ProposedSubtopic,
   type SubtopicProposal,
   type SourcedWord,
@@ -52,6 +55,35 @@ function describeKnown(knownTerms: string[], language: string): string {
   return `These are ${language} words they have already saved. Read their level from them, and never include any of them:\n${knownTerms.join(', ')}`;
 }
 
+/** The floor every sourcing call picks against. */
+function describeLevel(level: PackLevel | undefined): string {
+  if (!level) return '';
+  const easy = level.tooEasy.length ? ` Words like ${level.tooEasy.join(', ')} are below it: nothing that easy.` : '';
+  return `\nThe words must be at ${level.cefr}: ${level.summary.English}.${easy}\n`;
+}
+
+/**
+ * Token use across a run, for the eval's cost line. Thinking is billed as
+ * output, so it is counted there.
+ */
+export interface ModelUsage {
+  input: number;
+  output: number;
+  /** Calls made with search on; the part of the bill counted per call. */
+  grounded: number;
+}
+
+type OnUsage = (usage: ModelUsage) => void;
+
+function reportUsage(onUsage: OnUsage | undefined, response: unknown, grounded: boolean) {
+  const meta = (response as { usageMetadata?: Record<string, number> }).usageMetadata ?? {};
+  onUsage?.({
+    input: meta.promptTokenCount ?? 0,
+    output: (meta.candidatesTokenCount ?? 0) + (meta.thoughtsTokenCount ?? 0),
+    grounded: grounded ? 1 : 0,
+  });
+}
+
 function materialBlock(brief: PackBrief): string {
   return brief.material
     ? `\nThey handed over this material:\n"""\n${brief.material}\n"""\n`
@@ -64,6 +96,7 @@ export async function proposeSubtopics(opts: {
   brief: PackBrief;
   studyLanguage: StudyLanguage;
   knownTerms: string[];
+  onUsage?: OnUsage;
 }): Promise<SubtopicProposal | null> {
   const { brief, studyLanguage, knownTerms } = opts;
   const language = getStudyLanguageConfig(studyLanguage).label;
@@ -80,26 +113,41 @@ ${describeBrief(brief)}
 ${materialBlock(brief)}
 ${describeKnown(knownTerms, language)}
 
-Split what they need into subtopics. Each subtopic becomes its own deck the learner can take or leave, so:
+First decide the level the words should be at, as "level":
+- "cefr" is a CEFR band such as "B1" or "B2–C1". Read it from their saved words when there are enough of them. Otherwise read it from what they are aiming at: an exam score, a job, a situation, or what they say they already know. An exam or score sets a high floor. Do not lower it for safety.
+- "summary" is one plain line saying who these words are for, in English and natural Korean, e.g. "Advanced business English for a TOEIC 900 score".
+- "tooEasy" is five to eight ${language} words this learner certainly already knows and must not be given, chosen from their own topic so the floor is concrete.
+
+Then split what they need into subtopics. Each subtopic becomes its own deck the learner can take or leave, so:
 - Split along lines this learner would recognise from their own situation, not along parts of speech or difficulty bands.
-- Cover what they asked for and nothing next to it. Three to eight subtopics.
+- Every subtopic must follow from something they wrote. Leave out neighbouring topics they did not ask for: someone asking about idioms in meetings did not ask for slang or phrasal verbs. Three to eight subtopics.
+- No two subtopics may share words. If two would overlap, merge them into one.
+- Split by what trips this learner up, not only by topic, when that is what their goal tests. An exam has its traps: familiar words used in a second meaning, pairs that are easily confused, collocations. A struggle has a shape of its own. Make such a subtopic when it fits what they wrote.
 - "name" is short and concrete, and must make sense read alone in a list with no description beside it. "Group 3" or "Miscellaneous" is never a name.
 - "note" is one short line on why these words belong together.
 - "estimatedWords" is how many words the subtopic honestly holds for this learner, between 8 and 40. Leave out words any learner at their level already knows; a small subtopic is fine.
-- "searchHint" is the web search you would run to find published word lists, glossaries or real texts for this subtopic, written in whichever language those sources are published in.
+- "searchHint" is the web search you would run to find published word lists, glossaries or real texts for this subtopic, written in whichever language those sources are published in. When their goal names an exam, a course or a standard, search for sources made for it ("TOEIC Part 5 vocabulary list"), never a general glossary of the field.
 - Write names and notes in both English and natural Korean.
 
 Also name the whole pack: a short "name" a learner would recognise as theirs, and a one-line "description" of what it covers, both in English and natural Korean.
 
 Respond with only this JSON:
-{"name": {"English": "...", "Korean": "..."}, "description": {"English": "...", "Korean": "..."}, "subtopics": [{"name": {"English": "...", "Korean": "..."}, "note": {"English": "...", "Korean": "..."}, "estimatedWords": 20, "searchHint": "..."}]}`;
+{"name": {"English": "...", "Korean": "..."}, "description": {"English": "...", "Korean": "..."}, "level": {"cefr": "...", "summary": {"English": "...", "Korean": "..."}, "tooEasy": ["..."]}, "subtopics": [{"name": {"English": "...", "Korean": "..."}, "note": {"English": "...", "Korean": "..."}, "estimatedWords": 20, "searchHint": "..."}]}`;
 
   // Retried once: the eval saw a well-formed prompt come back with nothing
   // parseable, and a second call is cheap next to making the learner re-ask.
   for (let attempt = 0; attempt < 2; attempt++) {
-    const raw = (await model.generateContent(prompt)).response.text();
+    const result = await model.generateContent(prompt);
+    reportUsage(opts.onUsage, result.response, false);
+    const raw = result.response.text();
     const subtopics = parseSubtopics(raw);
-    if (subtopics.length) return { ...parsePackTitle(raw, brief), subtopics };
+    if (subtopics.length) {
+      let level: PackLevel | undefined;
+      try {
+        level = parsePackLevel((parseModelJson(raw) as { level?: unknown })?.level);
+      } catch {}
+      return { ...parsePackTitle(raw, brief), ...(level ? { level } : {}), subtopics };
+    }
   }
   return null;
 }
@@ -183,8 +231,10 @@ export async function sourceSubtopic(opts: {
   knownTerms: string[];
   /** Words already in the pack's other subtopics. */
   excludeTerms?: string[];
+  level?: PackLevel;
+  onUsage?: OnUsage;
 }): Promise<SourcingResult> {
-  const { brief, studyLanguage, subtopic, knownTerms, excludeTerms = [] } = opts;
+  const { brief, studyLanguage, subtopic, knownTerms, excludeTerms = [], level } = opts;
   const language = getStudyLanguageConfig(studyLanguage).label;
   const model = new GoogleGenerativeAI(opts.apiKey).getGenerativeModel({
     model: MODEL,
@@ -202,10 +252,12 @@ export async function sourceSubtopic(opts: {
 ${describeBrief(brief)}
 ${materialBlock(brief)}
 This part of the pack is "${subtopic.name.English}"${subtopic.note ? ` (${subtopic.note.English})` : ''}.
-
+${describeLevel(level)}
 Search the web for published sources that list or use ${language} vocabulary for this: word lists, glossaries, exam guides, dictionaries, real texts. Start from: ${subtopic.searchHint}
 
-Take up to ${asked} ${language} words or expressions from what you find. Only take words that appear in a source you found${brief.material ? ' or in their material' : ''}; do not add words of your own. Pick the ones this learner most needs, and skip words any learner at their level already knows.
+Use sources made for this learner's goal or situation. When they name an exam, use that exam's own word lists and guides; a general glossary of the field (business, finance, management) is not one, and its jargon is not what the exam asks.
+
+Take up to ${asked} ${language} words or expressions from what you find. Only take words that appear in a source you found${brief.material ? ' or in their material' : ''}; do not add words of your own. Pick the ones this learner most needs, and skip anything below their level.
 ${exclude.length ? `\nNever include any of these, they already have them:\n${exclude.join(', ')}\n` : ''}
 Write each word as a dictionary headword: its dictionary form, lowercase unless it is always capitalised, spelled as the source spells it. One per line. When the word alone is ambiguous, add " | " and a few English words naming the sense meant. No numbering, no headings, nothing else.`;
 
@@ -215,6 +267,7 @@ Write each word as a dictionary headword: its dictionary form, lowercase unless 
   let meta: GroundingMetadataLike | undefined;
   for (let attempt = 0; attempt < 2 && !meta?.groundingChunks?.length; attempt++) {
     const result = await model.generateContent(prompt);
+    reportUsage(opts.onUsage, result.response, true);
     const candidate = result.response.candidates?.[0];
     meta = (candidate as { groundingMetadata?: GroundingMetadataLike } | undefined)?.groundingMetadata;
     text = result.response.text();

@@ -134,6 +134,7 @@ export async function runSubtopic(opts: {
       subtopic,
       knownTerms,
       excludeTerms,
+      level: pack.level,
     });
     const backed = await mapLimit(words, BACK_CONCURRENCY, w =>
       explainBack(origin, w, subtopic.name.English, pack.studyLanguage, pack.nativeLanguage),

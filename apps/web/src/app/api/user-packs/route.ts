@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {
   parsePackBrief,
+  parsePackLevel,
   parseSubtopics,
   type StudyLanguage,
   type UserPack,
@@ -11,7 +12,7 @@ import { USER_PACKS, firestoreSafe } from '@/lib/userPackJobs';
 
 /**
  * Creates a pack from the subtopics the learner kept:
- * `{ brief, studyLanguage, nativeLanguage, name, description, subtopics }` →
+ * `{ brief, studyLanguage, nativeLanguage, name, description, level?, subtopics }` →
  * `{ id }`. Nothing is sourced yet; the client starts each subtopic with
  * `POST /api/user-packs/{id}/source`.
  */
@@ -32,6 +33,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'brief, name, description and subtopics are required' }, { status: 400 });
   }
 
+  const level = parsePackLevel(body?.level);
   const ref = getDb().collection(USER_PACKS).doc();
   const pack: Omit<UserPack, 'id'> = {
     ownerUid: uid,
@@ -39,6 +41,7 @@ export async function POST(req: NextRequest) {
     studyLanguage: (body.studyLanguage ?? 'Korean') as StudyLanguage,
     nativeLanguage: body.nativeLanguage === 'Korean' ? 'Korean' : 'English',
     brief,
+    ...(level ? { level } : {}),
     name: { English: name.English.slice(0, 80), Korean: name.Korean.slice(0, 80) },
     description: { English: description.English.slice(0, 200), Korean: description.Korean.slice(0, 200) },
     subtopics: subtopics.map((s): UserPackSubtopic => ({ ...s, status: 'pending', entries: [] })),

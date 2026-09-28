@@ -117,6 +117,7 @@ export default function MakePackPage() {
         nativeLanguage: deckNativeLanguage,
         name: proposal.name,
         description: proposal.description,
+        level: proposal.level,
         subtopics,
       });
       // Each part is its own background job. Once the server has taken them
@@ -162,6 +163,15 @@ export default function MakePackPage() {
           {getPackText(proposal.name, interfaceLanguage)}
         </h1>
         <p className="text-sm text-[var(--color-muted)] mt-1">{getPackText(proposal.description, interfaceLanguage)}</p>
+        {/* Shown before anything is searched, so a wrong guess about the
+            learner costs a Back tap rather than a pack of wrong words. */}
+        {proposal.level && (
+          <p className="text-sm text-[var(--color-text)] mt-3">
+            {t(interfaceLanguage, 'makePackLevel', {
+              level: `${getPackText(proposal.level.summary, interfaceLanguage)} (${proposal.level.cefr})`,
+            })}
+          </p>
+        )}
 
         <h2 className="text-lg font-semibold text-[var(--color-text)] mt-8">{t(interfaceLanguage, 'makePackPartsTitle')}</h2>
         <p className="text-sm text-[var(--color-muted)] mt-1 mb-4">{t(interfaceLanguage, 'makePackPartsIntro')}</p>

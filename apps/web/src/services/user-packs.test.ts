@@ -6,6 +6,7 @@ import {
   getVocabPacks,
   isUserPackId,
   normalizeTerm,
+  parsePackLevel,
   parsePackTitle,
   setUserVocabPacks,
   userPackProgress,
@@ -206,5 +207,23 @@ describe('parsePackTitle', () => {
 
   it("falls back to the learner's own words", () => {
     expect(parsePackTitle('{}', brief).name.Korean).toBe('TOEIC 900점 넘기기');
+  });
+});
+
+describe('parsePackLevel', () => {
+  it('reads a stated level and caps the examples', () => {
+    const level = parsePackLevel({
+      cefr: 'B2–C1',
+      summary: { English: 'Advanced business English', Korean: '고급 비즈니스 영어' },
+      tooEasy: ['meeting', 'contract', 3, '', ...Array(20).fill('x')],
+    });
+    expect(level?.cefr).toBe('B2–C1');
+    expect(level?.tooEasy.slice(0, 2)).toEqual(['meeting', 'contract']);
+    expect(level?.tooEasy).toHaveLength(12);
+  });
+
+  it('is undefined rather than half-filled', () => {
+    expect(parsePackLevel({ cefr: 'B2' })).toBeUndefined();
+    expect(parsePackLevel(undefined)).toBeUndefined();
   });
 });
