@@ -102,6 +102,15 @@ export interface PackEntry {
    * that carry, asking for depth on 경기 returns a paragraph about sport.
    */
   context?: string;
+  /**
+   * Vulgar or offensive, so the learner is warned before saving it.
+   *
+   * Set by sourcing on user-made packs, where the eval found *coger* (sexual
+   * in Argentina, "to take" in Spain) beside *colectivo* with nothing to tell
+   * them apart. The warning also goes into `context` as `vulgar — …`, the same
+   * way idioms carry `idiom — …`, so it reaches the saved card.
+   */
+  vulgar?: boolean;
 }
 
 /**

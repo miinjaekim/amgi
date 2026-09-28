@@ -163,6 +163,7 @@ async function runPersona(apiKey: string, p: Persona): Promise<string> {
   out.push(
     `**${agentWords.length} words kept** (${tierA} tier A, ${agentWords.length - tierA} tier B) across ` +
       `${subtopics.length} subtopics in ${seconds}s. Cut: ${byReason('not-found')} found on no page, ` +
+      `${byReason('not-headword')} not a headword, ` +
       `${byReason('duplicate') + byReason('known')} repeats. ` +
       `${pages.filter(pg => pg.readable).length} of ${pages.length} pages search returned could be read.`,
     '',
@@ -203,7 +204,7 @@ async function runPersona(apiKey: string, p: Persona): Promise<string> {
     );
     out.push('| word | sense | tier | sources |', '|---|---|---|---|');
     for (const w of r.result.words) {
-      const mark = handSet && !handSet.has(normalizeTerm(w.study)) ? '✚ ' : '';
+      const mark = (w.vulgar ? '⚠ ' : '') + (handSet && !handSet.has(normalizeTerm(w.study)) ? '✚ ' : '');
       out.push(`| ${mark}${escapeCell(w.study)} | ${escapeCell(w.sense ?? '')} | ${w.tier} | ${w.sources.map(cite).join(', ')} |`);
     }
     if (r.result.dropped.length) {
@@ -237,7 +238,7 @@ async function main() {
     '',
     'A word is kept only when a page the search returned was fetched and actually contains it. Tier A is two domains, ' +
       'B is one ([docs/packs/README.md](README.md)). ✚ marks a word the hand-made pack does not have, which is not ' +
-      'the same as wrong.',
+      'the same as wrong. ⚠ marks a word the search step flagged as vulgar or offensive.',
     '',
     `**Whole run:** ${costLine(usage)}.`,
     '',

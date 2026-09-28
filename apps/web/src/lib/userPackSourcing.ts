@@ -9,6 +9,7 @@ import {
   parseSubtopics,
   textContainsTerm,
   tierFor,
+  toHeadword,
   type DroppedWord,
   type GroundingMetadataLike,
   type PackBrief,
@@ -116,7 +117,7 @@ ${describeKnown(knownTerms, language)}
 First decide the level the words should be at, as "level":
 - "cefr" is a CEFR band such as "B1" or "B2–C1". Read it from their saved words when there are enough of them. Otherwise read it from what they are aiming at: an exam score, a job, a situation, or what they say they already know. An exam or score sets a high floor. Do not lower it for safety.
 - "summary" is one plain line saying who these words are for, in English and natural Korean, e.g. "Advanced business English for a TOEIC 900 score".
-- "tooEasy" is five to eight ${language} words this learner certainly already knows and must not be given, chosen from their own topic so the floor is concrete.
+- "tooEasy" is five to eight ${language} words from their own topic that sit just below that level: the hardest words this learner already knows, so the line is drawn where it matters. Never basics like greetings or "work": everyone knows those, and they draw no line.
 
 Then split what they need into subtopics. Each subtopic becomes its own deck the learner can take or leave, so:
 - Split along lines this learner would recognise from their own situation, not along parts of speech or difficulty bands.
@@ -259,7 +260,13 @@ Use sources made for this learner's goal or situation. When they name an exam, u
 
 Take up to ${asked} ${language} words or expressions from what you find. Only take words that appear in a source you found${brief.material ? ' or in their material' : ''}; do not add words of your own. Pick the ones this learner most needs, and skip anything below their level.
 ${exclude.length ? `\nNever include any of these, they already have them:\n${exclude.join(', ')}\n` : ''}
-Write each word as a dictionary headword: its dictionary form, lowercase unless it is always capitalised, spelled as the source spells it. One per line. When the word alone is ambiguous, add " | " and a few English words naming the sense meant. No numbering, no headings, nothing else.`;
+Write each word as a dictionary headword, spelled as the source spells it:
+- its dictionary form: the infinitive for a verb, the base form of an idiom ("burn the midnight oil", not "burning the midnight oil"), lowercase unless always capitalised;
+- no article on a noun, and no "to" before a verb;
+- one form only, never alternatives joined by a slash;
+- a word or a set expression, never a whole sentence, a name, an organisation or a law.
+
+One per line. When the word alone is ambiguous, add " | " and a few English words naming the sense meant. When a word is vulgar, sexual, or offensive where this learner will use it, even if it is harmless elsewhere, end its line with " | vulgar". No numbering, no headings, nothing else.`;
 
   // Search is the model's to choose, and the eval caught it answering from
   // memory with no pages at all. Nothing would survive the check, so ask again.
@@ -291,7 +298,13 @@ Write each word as a dictionary headword: its dictionary form, lowercase unless 
   const words: SourcedWord[] = [];
   const dropped: DroppedWord[] = [];
 
-  for (const line of lines) {
+  for (const raw of lines) {
+    const headword = toHeadword(raw.study, studyLanguage);
+    if (!headword) {
+      dropped.push({ study: raw.study, reason: 'not-headword' });
+      continue;
+    }
+    const line = { ...raw, study: headword };
     const key = normalizeTerm(line.study);
     if (skip.has(key)) {
       dropped.push({ study: line.study, reason: 'known' });
@@ -315,7 +328,13 @@ Write each word as a dictionary headword: its dictionary form, lowercase unless 
       dropped.push({ study: line.study, reason: 'not-found' });
       continue;
     }
-    words.push({ study: line.study, ...(line.sense ? { sense: line.sense } : {}), tier, sources });
+    words.push({
+      study: line.study,
+      ...(line.sense ? { sense: line.sense } : {}),
+      ...(line.vulgar ? { vulgar: true } : {}),
+      tier,
+      sources,
+    });
   }
 
   // The over-ask was insurance against the check, not a bigger subtopic. The

@@ -197,6 +197,8 @@ export interface SourcedWord {
    * pack's `context` is.
    */
   sense?: string;
+  /** Marked by the search step; see `PackEntry.vulgar`. */
+  vulgar?: boolean;
   tier: SourceTier;
   /** Only sources that were checked to contain the word. */
   sources: WordSource[];
@@ -205,7 +207,7 @@ export interface SourcedWord {
 /** Why a word the search attributed did not make it. */
 export interface DroppedWord {
   study: string;
-  reason: 'known' | 'duplicate' | 'not-found';
+  reason: 'known' | 'duplicate' | 'not-headword' | 'not-found';
 }
 
 /**
@@ -222,16 +224,28 @@ export function normalizeTerm(s: string): string {
  * One line of grounded output: `word` or `word | sense`. Numbering and bullets
  * are stripped, because the model adds them however it is asked.
  */
-export function parseSourcedLine(line: string): { study: string; sense?: string } | null {
+export interface SourcedLine {
+  study: string;
+  sense?: string;
+  vulgar?: boolean;
+}
+
+/**
+ * One line of grounded output: `word`, `word | sense`, or either with a final
+ * `| vulgar`.
+ */
+export function parseSourcedLine(line: string): SourcedLine | null {
   const cleaned = line
     .replace(/^\s*(?:[-*•]|\d+[.)])\s*/, '')
     .replace(/\*\*/g, '')
     .trim();
   // A heading or a preamble ("Here are the words:") is not an entry.
   if (!cleaned || cleaned.endsWith(':')) return null;
-  const [studyPart, ...rest] = cleaned.split('|');
-  let study = studyPart.trim().replace(/^["“]|["”]$/g, '');
-  let sense = rest.join('|').trim();
+  const [studyPart, ...rest] = cleaned.split('|').map(f => f.trim());
+  const vulgar = rest.length > 0 && /^(vulgar|offensive)$/i.test(rest[rest.length - 1]);
+  if (vulgar) rest.pop();
+  let study = studyPart.replace(/^["“]|["”]$/g, '');
+  let sense = rest.join(' | ').trim();
   // `CBU (Clave Bancaria Uniforme)`: the brackets are a gloss, and left on the
   // study side they stop the word matching the page it came from.
   const bracket = study.match(/^(.+?)\s*\(([^)]+)\)$/);
@@ -240,7 +254,34 @@ export function parseSourcedLine(line: string): { study: string; sense?: string 
     sense ||= bracket[2].trim();
   }
   if (!study || study.length > 60) return null;
-  return sense ? { study, sense } : { study };
+  return { study, ...(sense ? { sense } : {}), ...(vulgar ? { vulgar } : {}) };
+}
+
+/**
+ * Leading articles a source prints but a headword leaves off. The article is
+ * a field of its own on a card (`gender`, which `/api/explain` fills), so
+ * `la caja` left whole would show it twice.
+ */
+const LEADING_ARTICLES: Partial<Record<StudyLanguage, RegExp>> = {
+  Spanish: /^(el|la|los|las|un|una|unos|unas)\s+/i,
+  French: /^(le|la|les|un|une|des)\s+|^l['’]/i,
+};
+// Not English `to` or Swedish `en`, though the prompt asks for neither: in
+// those languages the same word starts real expressions (`to be honest`,
+// `en gång`), and stripping it would break the entry rather than tidy it.
+
+/**
+ * The entry as a headword, or null when it is not one.
+ *
+ * Alternatives joined by a slash (`el/la cajero/a`, `start/get off on the right
+ * foot`) are two entries in one line and cannot be one card, so they are
+ * dropped rather than guessed apart.
+ */
+export function toHeadword(study: string, studyLanguage: StudyLanguage): string | null {
+  if (/\S\s*\/\s*\S/.test(study)) return null;
+  const article = LEADING_ARTICLES[studyLanguage];
+  const bare = article ? study.replace(article, '').trim() : study.trim();
+  return bare || null;
 }
 
 /** The subset of Gemini's grounding metadata this pipeline reads. */
@@ -249,7 +290,7 @@ export interface GroundingMetadataLike {
 }
 
 /** The entries in a grounded response, one per line. */
-export function parseSourcedLines(text: string): { study: string; sense?: string }[] {
+export function parseSourcedLines(text: string): SourcedLine[] {
   return text.split('\n').flatMap(line => {
     const parsed = parseSourcedLine(line);
     return parsed ? [parsed] : [];

@@ -741,6 +741,7 @@ const translations = {
     userPackDeleteConfirm: 'Delete this pack? Cards you already saved from it stay.',
     userPackSources: 'Sources',
     userPackMaterial: 'your material',
+    userPackVulgar: 'vulgar',
     // Deck detail — enrolling and managing the cards a deck has produced
     deckReviewDeck: 'Review this deck',
     deckEnrolling: 'Adding the rest of the deck…',
@@ -1373,6 +1374,7 @@ const translations = {
     userPackDeleteConfirm: '이 단어팩을 삭제할까요? 이미 저장한 카드는 그대로 남아요.',
     userPackSources: '출처',
     userPackMaterial: '내 자료',
+    userPackVulgar: '비속어',
     // Deck detail — enrolling and managing the cards a deck has produced
     deckReviewDeck: '이 단어팩 복습하기',
     deckEnrolling: '남은 카드를 추가하는 중…',
