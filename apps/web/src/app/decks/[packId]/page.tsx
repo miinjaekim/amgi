@@ -448,6 +448,11 @@ export default function DeckDetailPage() {
         className={`flex items-baseline gap-2 px-3 py-1.5 rounded-lg border border-[var(--color-muted)] text-left hover:bg-[var(--color-muted)]/20 transition-colors ${saved ? 'opacity-50' : ''}`}
       >
         <span className="text-sm text-[var(--color-text)]">{entry.study}</span>
+        {entry.vulgar && (
+          <span className="text-[10px] px-1.5 rounded border border-[var(--color-highlight)] text-[var(--color-highlight)]">
+            {t(interfaceLanguage, 'userPackVulgar')}
+          </span>
+        )}
         <span className="text-xs text-[var(--color-muted)]">
           {resolvePackBack(entry.back, studyLanguage, deckNativeLanguage)}
         </span>

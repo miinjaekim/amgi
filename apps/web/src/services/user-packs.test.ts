@@ -19,6 +19,7 @@ import {
   subtopicId,
   textContainsTerm,
   tierFor,
+  toHeadword,
   type UserPack,
   type UserPackSubtopic,
 } from '@amgi/core';
@@ -225,5 +226,26 @@ describe('parsePackLevel', () => {
   it('is undefined rather than half-filled', () => {
     expect(parsePackLevel({ cefr: 'B2' })).toBeUndefined();
     expect(parsePackLevel(undefined)).toBeUndefined();
+  });
+});
+
+describe('vulgar flag and headwords', () => {
+  it('reads a trailing vulgar marker, with or without a sense', () => {
+    expect(parseSourcedLine('coger | to have sex | vulgar')).toEqual({ study: 'coger', sense: 'to have sex', vulgar: true });
+    expect(parseSourcedLine('boludo | Vulgar')).toEqual({ study: 'boludo', vulgar: true });
+    expect(parseSourcedLine('colectivo | city bus')).toEqual({ study: 'colectivo', sense: 'city bus' });
+  });
+
+  it('drops a leading article in Spanish and French only', () => {
+    expect(toHeadword('la caja', 'Spanish')).toBe('caja');
+    expect(toHeadword("l'hôpital", 'French')).toBe('hôpital');
+    expect(toHeadword('to be honest', 'English')).toBe('to be honest');
+    expect(toHeadword('en gång', 'Swedish')).toBe('en gång');
+  });
+
+  it('refuses alternatives joined by a slash', () => {
+    expect(toHeadword('el/la cajero/a', 'Spanish')).toBeNull();
+    expect(toHeadword('start/get off on the right foot', 'English')).toBeNull();
+    expect(toHeadword('desde / hasta', 'Spanish')).toBeNull();
   });
 });

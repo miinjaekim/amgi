@@ -35,6 +35,7 @@ async function explainBack(
   studyLanguage: UserPack['studyLanguage'],
   nativeLanguage: string,
 ): Promise<UserPackEntry | null> {
+  const context = vulgarContext(word) ?? word.sense;
   try {
     const res = await fetch(`${origin}/api/explain`, {
       method: 'POST',
@@ -43,7 +44,7 @@ async function explainBack(
         term: word.study,
         // Always a context, so the route explains one sense rather than
         // coming back with a list of meanings to pick from.
-        context: word.sense ?? `as used in the topic "${subtopicName}"`,
+        context: context ?? `as used in the topic "${subtopicName}"`,
         studyLanguage,
         nativeLanguage,
         exact: true,
@@ -62,7 +63,8 @@ async function explainBack(
     return {
       study: word.study,
       back,
-      ...(word.sense ? { context: word.sense } : {}),
+      ...(context ? { context } : {}),
+      ...(word.vulgar ? { vulgar: true } : {}),
       ...(typeof data.gender === 'string' && data.gender ? { gender: data.gender } : {}),
       tier: word.tier,
       sources: word.sources,
@@ -70,6 +72,16 @@ async function explainBack(
   } catch {
     return null;
   }
+}
+
+/**
+ * The sense hint for a vulgar word, led by the warning. It is what the card
+ * detail shows as the sense line, so the warning survives the save, the way
+ * `idiom —` does on the idioms pack.
+ */
+function vulgarContext(word: SourcedWord): string | undefined {
+  if (!word.vulgar) return undefined;
+  return word.sense ? `vulgar — ${word.sense}` : 'vulgar';
 }
 
 async function mapLimit<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> {
