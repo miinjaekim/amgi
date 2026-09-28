@@ -53,6 +53,7 @@ export function createUserPack(
     nativeLanguage: string;
     name: SubtopicProposal['name'];
     description: SubtopicProposal['description'];
+    level?: SubtopicProposal['level'];
     subtopics: ProposedSubtopic[];
   },
 ): Promise<{ id: string; subtopicIds: string[] }> {

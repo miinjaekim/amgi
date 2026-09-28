@@ -299,8 +299,44 @@ export interface PackTitle {
   description: { English: string; Korean: string };
 }
 
-/** What the subtopics step returns: a proposed title, and the subtopics. */
+/**
+ * The level the words should be at, stated by the subtopics step.
+ *
+ * Exists because "skip words any learner at their level already knows" gave a
+ * TOEIC 900 learner *service* and *cancel*: with no saved cards there was no
+ * bar to pick against. Stated once, shown to the learner on the parts screen
+ * so a wrong guess is caught before anything is searched, and handed to every
+ * sourcing call as a floor.
+ */
+export interface PackLevel {
+  /** A CEFR band, e.g. `B2–C1`. */
+  cefr: string;
+  summary: { English: string; Korean: string };
+  /** Study-language words this learner certainly knows, as examples of the floor. */
+  tooEasy: string[];
+}
+
+/** The level in a subtopics response, or undefined when it is missing or malformed. */
+export function parsePackLevel(raw: unknown): PackLevel | undefined {
+  const l = raw as Record<string, unknown> | undefined;
+  const summary = l?.summary as Record<string, unknown> | undefined;
+  if (
+    typeof l?.cefr !== 'string' || !l.cefr.trim() ||
+    typeof summary?.English !== 'string' || typeof summary?.Korean !== 'string'
+  ) return undefined;
+  const tooEasy = Array.isArray(l.tooEasy)
+    ? l.tooEasy.filter((w): w is string => typeof w === 'string' && !!w.trim()).map(w => w.trim()).slice(0, 12)
+    : [];
+  return {
+    cefr: l.cefr.trim().slice(0, 20),
+    summary: { English: summary.English.trim().slice(0, 200), Korean: summary.Korean.trim().slice(0, 200) },
+    tooEasy,
+  };
+}
+
+/** What the subtopics step returns: a proposed title, the level, and the subtopics. */
 export interface SubtopicProposal extends PackTitle {
+  level?: PackLevel;
   subtopics: ProposedSubtopic[];
 }
 
@@ -340,6 +376,8 @@ export interface UserPack extends PackTitle {
   studyLanguage: StudyLanguage;
   nativeLanguage: string;
   brief: PackBrief;
+  /** Absent on packs made before the level existed. */
+  level?: PackLevel;
   subtopics: UserPackSubtopic[];
   /** Epoch ms. */
   createdAt: number;

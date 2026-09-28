@@ -24,7 +24,27 @@ import {
   type VocabPack,
   type WordSource,
 } from '@amgi/core';
-import { proposeSubtopics, sourceSubtopic, type SourcingResult } from '../src/lib/userPackSourcing';
+import { proposeSubtopics, sourceSubtopic, type ModelUsage, type SourcingResult } from '../src/lib/userPackSourcing';
+
+/**
+ * Gemini 2.5 Flash list prices (ai.google.dev/gemini-api/docs/pricing,
+ * checked 2026-09-28). Search is free for the first 1,500 grounded calls a
+ * day, so the per-call charge is shown separately rather than added in.
+ */
+const PRICE = { inputPerM: 0.3, outputPerM: 2.5, perGroundedCall: 0.035 };
+
+const usage: ModelUsage = { input: 0, output: 0, grounded: 0 };
+const addUsage = (u: ModelUsage) => {
+  usage.input += u.input;
+  usage.output += u.output;
+  usage.grounded += u.grounded;
+};
+
+function costLine(u: ModelUsage): string {
+  const tokens = (u.input * PRICE.inputPerM + u.output * PRICE.outputPerM) / 1e6;
+  return `${u.input.toLocaleString()} input and ${u.output.toLocaleString()} output tokens ($${tokens.toFixed(3)}), ` +
+    `${u.grounded} searches (free under 1,500 a day, else $${(u.grounded * PRICE.perGroundedCall).toFixed(2)})`;
+}
 
 interface Persona {
   id: string;
@@ -85,7 +105,14 @@ function escapeCell(s: string): string {
 
 async function runPersona(apiKey: string, p: Persona): Promise<string> {
   const started = Date.now();
-  const proposal = await proposeSubtopics({ apiKey, brief: p.brief, studyLanguage: p.studyLanguage, knownTerms: [] });
+  const before = { ...usage };
+  const proposal = await proposeSubtopics({
+    apiKey,
+    brief: p.brief,
+    studyLanguage: p.studyLanguage,
+    knownTerms: [],
+    onUsage: addUsage,
+  });
   const subtopics = proposal?.subtopics ?? [];
 
   const results: { name: string; estimated: number; result: SourcingResult | null; error?: string }[] = [];
@@ -100,6 +127,8 @@ async function runPersona(apiKey: string, p: Persona): Promise<string> {
         subtopic,
         knownTerms: [],
         excludeTerms: sofar,
+        level: proposal?.level,
+        onUsage: addUsage,
       });
       sofar.push(...result.words.map(w => w.study));
       results.push({ name: `${subtopic.name.English} · ${subtopic.name.Korean}`, estimated: subtopic.estimatedWords, result });
@@ -120,6 +149,14 @@ async function runPersona(apiKey: string, p: Persona): Promise<string> {
   out.push(`- Where: ${p.brief.usage}`);
   if (p.brief.focus) out.push(`- Focus: ${p.brief.focus}`);
   out.push('');
+  if (proposal?.level) {
+    out.push(`**Level stated:** ${proposal.level.cefr}, ${proposal.level.summary.English}. Too easy: ${proposal.level.tooEasy.join(', ')}`, '');
+  }
+  out.push(
+    `**Cost:** ${costLine({ input: usage.input - before.input, output: usage.output - before.output, grounded: usage.grounded - before.grounded })}. ` +
+      'Card backs are not made here; in the app each kept word adds one /api/explain call.',
+    '',
+  );
 
   const tierA = agentWords.filter(w => w.tier === 'A').length;
   const byReason = (r: string) => dropped.filter(d => d.reason === r).length;
@@ -202,12 +239,15 @@ async function main() {
       'B is one ([docs/packs/README.md](README.md)). ✚ marks a word the hand-made pack does not have, which is not ' +
       'the same as wrong.',
     '',
+    `**Whole run:** ${costLine(usage)}.`,
+    '',
     ...sections,
   ].join('\n');
 
   const file = path.resolve(__dirname, '../../../docs/packs/user-pack-eval.md');
   writeFileSync(file, doc);
   console.log(`Wrote ${file}`);
+  console.log(`Cost: ${costLine(usage)}`);
 }
 
 main().catch(e => {
