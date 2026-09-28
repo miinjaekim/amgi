@@ -91,17 +91,17 @@ picker narrowed (#146). Both are written up in their Decisions entries of
       **Copyright** matters once packs are shared: taking words from a source is
       fine, but copying a published list wholesale is not.
 
-- [ ] **English articles and prepositions, in Munli.** Not designed yet — the
-      user hasn't settled what a question looks like (2026-09-24), and it needs
-      its own session. What's known going in: Munli's only practice type today
-      is a conjugation table, and an article is a *choice* rather than a form,
-      so this is a new practice type, not a new dataset. The shape that fits
-      the rules in `vision.md` (typed production, no multiple choice) and the
-      sourcing standard is **fill the gap on sourced sentences** — e.g.
-      Tatoeba (CC BY) with the article blanked. ⚠️ The hard part is that one gap
-      often has several right answers (*I saw a/the dog*), so each needs an
-      accepted set. And the audience is mostly Korean speakers, whose language
-      has no articles.
+- [ ] **English articles, in Munli** — designed with the user 2026-09-28;
+      the content is drafted and **waiting on the user's review** of
+      `docs/packs/english-articles-draft.md`, which has six calls at the top.
+      A new practice type, not a conjugation dataset: sourced Tatoeba
+      sentences with **a box on every article slot** (typed `a`/`an`/`the`/`-`),
+      **only contexts that force one answer**, and **the usage rule is what
+      gets scheduled** (8 rules, sentences are vehicles, like verbs in
+      conjugation). Build it as if conjugation didn't exist and extract
+      shared machinery only when a third tool wants it (vision.md, 2026-09-21).
+      English only, so its topic shows only for English (2026-09-25 rule).
+      **Prepositions are the next tool**, separately, after this one.
 
 - [ ] **Users add their own French verbs to Munli** — scoped with the user
       2026-09-24. **Any verb, forms from the model**, the way a term lookup

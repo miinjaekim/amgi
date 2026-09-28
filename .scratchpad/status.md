@@ -417,6 +417,40 @@ once, so a path that worked on build 14 is not evidence about build 15.
 Closed calls, kept with their reasoning — a decision whose reasoning is lost gets
 reopened by the next person to notice the symptom. Newest first.
 
+### English articles: a box on every slot, and the rule is what's scheduled (2026-09-28)
+
+**The user's four calls**, which settle the question the 2026-09-24 backlog
+item left open (what a question looks like):
+
+- **Articles before prepositions**, as separate tools. An article has a closed
+  answer set (`a`/`an`, `the`, nothing), and a preposition's is open-ended.
+- **A box on every slot, including slots where the answer is no article**,
+  typed as `-`. For a Korean speaker the hard part is noticing that an article
+  belongs there at all. A cloze that only blanks real articles never asks that.
+- **Only contexts that force one answer.** Where a slot has several right
+  answers (*I saw a/the dog*), the slot is left out rather than given an
+  accepted set that somebody would have to judge.
+- **The usage rule is scheduled, not the sentence**, the same move as
+  conjugation's rule-not-verb (2026-09-22). Sentences are vehicles.
+
+⚠️ **Two of those collide, and the draft's first call is how.** "Every slot"
+and "only forcing" meet in *There's a cat in **the** box*: `a` is forced and
+`the box` is not. The proposal is to print non-forcing slots filled in. That
+shows the learner where a slot is, and it's the price of keeping the `new`
+rule at all.
+
+⚠️ **Rendering found a leak before any code did.** The capital after a
+sentence-opening box gives the answer away (*[ ] Water is…* against *[ ] cat
+is…*), so the renderer lowercases that word unless it's a proper noun. This is
+the "render the pack before you believe the list" rule in
+`docs/packs/README.md` paying for itself again.
+
+**A general subject only forces no-article when the predicate is about the
+whole kind.** *Dogs are very smart* also reads as *The dogs are very smart*;
+*Gold is heavier than iron* doesn't. Five sentences were swapped on that test.
+The content is in `docs/packs/english-articles-draft.md`, which has six open
+calls for the user.
+
 ### Users make vocab packs from a goal, and an agent sources them (2026-09-25)
 
 **Goal-based generation (parked 2026-07-24) is replaced, not revived.** It was

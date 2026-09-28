@@ -38,6 +38,11 @@ Related docs outside this folder:
   `docs/packs/hanja-geupsu-ingest.py` beside it builds them from the 어문회 list
   and Unihan, so the tier column can be re-checked instead of believed. Read the
   draft before touching the pack.
+- `docs/packs/english-articles-draft.md` — Munli's article practice: 8 rules
+  from Cambridge and the British Council, 54 Tatoeba sentences (CC BY 2.0 FR),
+  **awaiting the user's review** of the six calls at its top. The answer in each
+  box is the sentence's own article, and the rule tags are the model's reading,
+  which is what needs checking.
 - `docs/packs/daily-life-pack-draft.md`, `docs/packs/idioms-pack-draft.md`,
   `docs/packs/kanji-pack-draft.md` — the three packs added 2026-08-24 (referenced
   from `dailyLife.ts`, `idioms.ts`, `kanji.ts`), **approved 2026-08-24**. Each
