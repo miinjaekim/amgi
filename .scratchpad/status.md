@@ -59,9 +59,10 @@ and `npm run lint` 0 errors / 21 warnings, both measured._
   compiler, `next build` and `expo export`; **nobody has looked at either surface
   on a device or in a browser.**
 
-- **2.1.0 is build 18, submitted and waiting on external Beta App Review**
-  (2026-09-27), cut from `d1de37e` on `release/2.1.0` (PR #176). It carries
-  everything under Queued for the next build in [backlog.md](backlog.md): the
+- **2.1.0 is build 18, live in TestFlight and approved for external testing**
+  (2026-09-28), cut from `d1de37e` on `release/2.1.0` (PR #176), submitted
+  2026-09-27. External testers can be invited without another review as long as
+  the version doesn't change. It carries everything queued since build 17: the
   Expo SDK 57 patch updates, smoother conjugation practice, the study-language
   chip on every title, the two pronunciation speeds, the one-line definition,
   French verb groups, the mid-review edit fix, the cold-open cache and Export's
@@ -70,9 +71,9 @@ and `npm run lint` 0 errors / 21 warnings, both measured._
   copy's new characters against 2.0.0's were 30 Hangul syllables, `Y` and `…`,
   nothing outside the BMP. The one stale line was the review notes still
   saying Cards exports. ⚠️ **Step 1's Expo Go half was not recorded for this
-  build**, so the mid-review edit on a small iPhone and the cold-open cache are
-  as unseen as the backlog says.
-  Testers stay on build 17 until approval; the queue turns over then, not now.
+  build**, so two things in it are unseen: the mid-review edit card on a small
+  iPhone with a long gloss on the back, and whether the cold-open cache feels
+  faster, which is to be judged alongside the launch stopwatch.
 
 - **2.0.0 is build 17, live in TestFlight and approved for external testing**
   (2026-09-23), cut from `69476aa` on `release/1.8.0`, submitted and approved the
@@ -151,9 +152,9 @@ and `npm run lint` 0 errors / 21 warnings, both measured._
   against a real multi-deck account** — not on web, where it has been live since
   the merge, and not on a binary. `nativeLanguage` is still written alongside
   `interfaceLanguage` because build 15 is in testers' hands and reads the old
-  field; that stays until build 15 is out of circulation. ⚠️ **Two approved
-  releases now sit above it (builds 16 and 17) and that still does not retire
-  it** — approval lets testers update, it does not make them. What would settle
+  field; that stays until build 15 is out of circulation. ⚠️ **Three approved
+  releases now sit above it (builds 16, 17 and 18) and that still does not
+  retire it** — approval lets testers update, it does not make them. What would settle
   this is the console showing no sessions on build 15, not another release.
 - **The progress dashboard is on both platforms** (2026-08-20) but only in users'
   hands on web, since mobile ships by build. Daily rollups are written on every
@@ -306,7 +307,7 @@ No OTA, so every mobile change reaches users through one of these.
 
 | Version | Build | Date | Cut from |
 |---|---|---|---|
-| 2.1.0 | 18 | 2026-09-27 | `d1de37e` on `release/2.1.0` (PR #176, version bump + TestFlight copy) — waiting on external review |
+| 2.1.0 | 18 | 2026-09-27 | `d1de37e` on `release/2.1.0` (PR #176, version bump + TestFlight copy) — external testing approved 09-28, the day after submission |
 | 2.0.0 | 17 | 2026-09-23 | `69476aa` on `release/1.8.0` (version bump + mode-name localization + TestFlight copy) — external testing approved 09-23, same day. **Branch name says 1.8.0**: it was cut before the 2.0.0 call, and renaming it would have lost PR #156 |
 | 1.7.0 | 16 | 2026-09-19 | `cb7c19c` on `release/1.7.0` (version bump + TestFlight copy) — external approval not reported as of this line |
 | 1.6.0 | 15 | 2026-09-10 | `c8c113a` on `release/1.6.0` (version bump + TestFlight copy) — external testing approved 09-10, same day |
