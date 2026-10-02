@@ -72,20 +72,25 @@ picker narrowed (#146). Both are written up in their Decisions entries of
          user pack against `docs/packs/README.md` and adopt it. How packs get
          nominated waits for sharing.
       **Entry point:** a *Make a pack* action on Packs.
-      **Progress.** Web is built (PR #175, `feat/user-vocab-packs`,
-      2026-09-25/26): *Make a pack* on Packs → `/decks/new` (the questions,
-      then the subtopic picker) → one background job per subtopic → the pack
-      page fills in, with a notice when it finishes. Also
-      `npm run eval:user-packs`, which writes `docs/packs/user-pack-eval.md`.
-      The user asked to judge the flow in the app rather than from that
-      document. **Mobile is next**, plus the open questions below.
-      ⚠️ **Console step: the `userPacks` security rule** (owner may read, and
-      nobody writes from a client, since the server writes with admin).
-      Open from the eval: the learner's level with no saved cards is too low
-      for TOEIC 900; the model sometimes skips search (the subtopic shows as
-      failed, with a retry); the notice is in-app only, with no push or
-      email; and the Korean copy in `i18n.ts` (`makePack*`, `userPack*`)
-      needs the user's approval.
+      **Progress.** Built on web and mobile, **not merged** (PR #175,
+      `feat/user-vocab-packs`; the user wants to see it built out first).
+      *Make a pack* on Packs → the questions → the subtopic picker (with the
+      level the pack is aimed at) → one background job per subtopic → the
+      pack page fills in, with an in-app notice when it finishes. Vulgar
+      words are badged, each part lists its sources, a failed part has a
+      retry, and a pack can be deleted. Mobile calls the same routes.
+      `npm run eval:user-packs` writes `docs/packs/user-pack-eval.md`.
+      ⚠️ **To try mobile before merge**, Expo has to point at a local web
+      server, since production does not have the routes:
+      `EXPO_PUBLIC_API_BASE_URL=http://<this Mac's LAN IP>:3002 npx expo start --port 8083 --clear`.
+      **Waiting on the user:** approval of the Korean copy in `i18n.ts`
+      (`makePack*`, `userPack*`), and whether mild insults (*ortiva*,
+      *chanta*, *mina*) get the vulgar badge too; today only strong ones do.
+      **Left for later, by the user's call 2026-10-02:** a frequency-list
+      level floor (the prompt-stated level is still too low for TOEIC 900)
+      and a second-meanings part for TOEIC. Also open: the model sometimes
+      skips search (that part shows as failed, with a retry), and the notice
+      is in-app only, with no push or email.
       **Test against the packs already built.** Answer the questions as the
       people behind the TOEIC, idioms and Argentina packs would have, and compare
       the agent's pack with the hand-made one before any user sees it.
