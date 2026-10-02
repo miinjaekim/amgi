@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Alert, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams, useNavigation } from 'expo-router';
 import { StackActions } from 'expo-router/react-navigation';
@@ -7,8 +7,11 @@ import {
   buildPackCardDraft, cardInCollection, collectSavedTerms, countSavedEntries,
   getPackEntries, getPackText, getStudyLangSide, getVocabPack, packRefId,
   resolvePackBack, unsavedEntries, t,
+  canRetrySubtopic, isUserPackId, sourceDomain, userPackId,
 } from '@amgi/core';
-import type { PackEntry, PackSection } from '@amgi/core';
+import type { PackEntry, PackSection, UserPackSubtopic } from '@amgi/core';
+import { useUserPacks } from '../../../../src/context/UserPacksContext';
+import { deleteUserPack, startPackSubtopic } from '../../../../src/services/userPacks';
 import { useUser } from '../../../../src/context/UserContext';
 import { useTheme } from '../../../../src/context/ThemeContext';
 import { subscribeToAllUserFlashcards, saveFlashcardsBatch } from '../../../../src/services/firestore';
@@ -28,6 +31,11 @@ export default function DeckDetailScreen() {
   const tabBarHeight = useFloatingTabBarHeight();
   const s = useMemo(() => makeStyles(C, tabBarHeight), [C, tabBarHeight]);
   const { user, interfaceLanguage, deckNativeLanguage, studyLanguage } = useUser();
+  // A learner's own pack resolves through the registry like any other, but only
+  // once their packs have loaded; reading them here also re-renders the screen
+  // as sourcing fills the pack in.
+  const { userPacks } = useUserPacks();
+  const userPack = isUserPackId(packId) ? userPacks?.find(p => userPackId(p.id) === packId) : undefined;
   const pack = getVocabPack(studyLanguage, packId);
   const packLost = usePackLost(pack);
   const navigation = useNavigation();
@@ -139,7 +147,10 @@ export default function DeckDetailScreen() {
   }, [packLost, navigation]);
 
   if (!pack) {
-    if (packLost) return <SafeAreaView style={s.safe} edges={['top', 'bottom']} />;
+    // Still loading the learner's packs is not "no such pack".
+    if (packLost || (isUserPackId(packId) && user && userPacks === null)) {
+      return <SafeAreaView style={s.safe} edges={['top', 'bottom']}>{packLost ? null : header}</SafeAreaView>;
+    }
     return (
       <SafeAreaView style={s.safe} edges={['top', 'bottom']}>
         {header}
@@ -245,6 +256,90 @@ export default function DeckDetailScreen() {
   };
   const detailCard = detail ? cardsByTerm.get(detail.entry.study.toLowerCase()) : undefined;
 
+  const retry = async (subtopic: UserPackSubtopic) => {
+    if (!user || !userPack) return;
+    const knownTerms = (cards ?? []).map(card => getStudyLangSide(card)).filter(Boolean);
+    try {
+      await startPackSubtopic(user, userPack.id, subtopic.id, knownTerms);
+    } catch {
+      setError(t(interfaceLanguage, 'makePackError'));
+    }
+  };
+
+  const removePack = () => {
+    if (!user || !userPack) return;
+    Alert.alert(t(interfaceLanguage, 'userPackDelete'), t(interfaceLanguage, 'userPackDeleteConfirm'), [
+      { text: t(interfaceLanguage, 'cancel'), style: 'cancel' },
+      {
+        text: t(interfaceLanguage, 'userPackDelete'),
+        style: 'destructive',
+        // The listener drops the pack, `packLost` fires, and the screen pops.
+        onPress: () => deleteUserPack(user, userPack.id).catch(() => setError(t(interfaceLanguage, 'makePackError'))),
+      },
+    ]);
+  };
+
+  /**
+   * The parts of a learner's pack that are not a section yet: still being
+   * sourced, or come back empty and waiting for a retry.
+   */
+  const renderUnfinished = () => {
+    const open = userPack?.subtopics.filter(sub => sub.status !== 'ready') ?? [];
+    if (open.length === 0) return null;
+    return (
+      <View style={s.unfinishedWrap}>
+        {open.map(sub => {
+          const name = getPackText(sub.name, interfaceLanguage);
+          const retryable = canRetrySubtopic(sub);
+          return (
+            <View key={sub.id} style={s.unfinishedRow}>
+              <Text style={s.unfinishedText}>
+                {retryable
+                  ? t(interfaceLanguage, 'userPackPartFailed', { name })
+                  : t(interfaceLanguage, 'userPackPartPending', { name })}
+              </Text>
+              {retryable && (
+                <TouchableOpacity onPress={() => retry(sub)} hitSlop={8}>
+                  <Text style={s.retry}>{t(interfaceLanguage, 'userPackRetry')}</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          );
+        })}
+      </View>
+    );
+  };
+
+  /**
+   * Where a section's words came from, one link per site. Citations are what
+   * let a user pack be checked against the sourcing standard, so they are on
+   * the screen rather than only in the data.
+   */
+  const renderSources = (section: PackSection) => {
+    const sourced = userPack?.subtopics.find(sub => sub.id === section.id)?.entries ?? [];
+    const sites = new Map<string, string>();
+    let material = false;
+    for (const entry of sourced) {
+      for (const source of entry.sources) {
+        if (source.kind === 'material') material = true;
+        else if (!sites.has(sourceDomain(source.url))) sites.set(sourceDomain(source.url), source.url);
+      }
+    }
+    if (sites.size === 0 && !material) return null;
+    return (
+      <Text style={s.sources}>
+        {t(interfaceLanguage, 'userPackSources')}:{' '}
+        {[...sites].map(([domain, url], i) => (
+          <Text key={domain}>
+            {i > 0 ? ', ' : ''}
+            <Text style={s.sourceLink} onPress={() => Linking.openURL(url)}>{domain}</Text>
+          </Text>
+        ))}
+        {material ? `${sites.size ? ', ' : ''}${t(interfaceLanguage, 'userPackMaterial')}` : ''}
+      </Text>
+    );
+  };
+
   /** Saved as far as this screen is concerned, a tap the listener has not
    *  reported back yet included. */
   const isSaved = (entry: PackEntry) => {
@@ -338,6 +433,7 @@ export default function DeckDetailScreen() {
         accessibilityLabel={`${saved ? 'Open' : 'Save'} ${entry.study}`}
       >
         <Text style={s.entryStudy}>{entry.study}</Text>
+        {entry.vulgar && <Text style={s.vulgar}>{t(interfaceLanguage, 'userPackVulgar')}</Text>}
         <Text style={s.entryBack} numberOfLines={1}>
           {resolvePackBack(entry.back, studyLanguage, deckNativeLanguage)}
         </Text>
@@ -402,6 +498,7 @@ export default function DeckDetailScreen() {
             (pack.layout === 'grid' ? renderGridTile : renderListRow)(entry, section)
           )}
         </View>
+        {pack.userMade && renderSources(section)}
       </View>
     );
   };
@@ -419,6 +516,7 @@ export default function DeckDetailScreen() {
           </Text>
         </View>
         <Text style={s.desc}>{getPackText(pack.description, interfaceLanguage)}</Text>
+        {pack.userMade && <Text style={s.userMade}>{t(interfaceLanguage, 'userPackLabel')}</Text>}
         <Text style={s.hint}>
           {t(interfaceLanguage, pack.layout === 'grid' ? 'packTapSaveHintCards' : 'packTapSaveHint')}
         </Text>
@@ -460,9 +558,17 @@ export default function DeckDetailScreen() {
         )}
         {error && <Text style={s.error}>{error}</Text>}
 
+        {renderUnfinished()}
+
         {renderSubpackPicker()}
 
         {shownSections.map(renderSection)}
+
+        {userPack && (
+          <TouchableOpacity onPress={removePack} style={s.deleteBtn}>
+            <Text style={s.deleteText}>{t(interfaceLanguage, 'userPackDelete')}</Text>
+          </TouchableOpacity>
+        )}
       </ScrollView>
 
       {/* Opened by a tap on a word you already hold, or a long press on one you
@@ -546,6 +652,24 @@ function makeStyles(C: Palette, tabBarHeight: number) {
     },
     sectionBtnText: { fontSize: 13, fontWeight: '600', color: C.text },
     sectionSubtleBtnText: { fontSize: 13, fontWeight: '600', color: C.muted },
+
+    userMade: { fontSize: 12, color: C.highlight, marginTop: 6 },
+    unfinishedWrap: { gap: 8, marginBottom: 18 },
+    unfinishedRow: {
+      flexDirection: 'row', alignItems: 'center', gap: 12,
+      borderWidth: 1, borderStyle: 'dashed', borderColor: C.border, borderRadius: 10,
+      paddingHorizontal: 12, paddingVertical: 10,
+    },
+    unfinishedText: { flex: 1, fontSize: 13, color: C.muted },
+    retry: { fontSize: 13, fontWeight: '700', color: C.highlight },
+    sources: { fontSize: 12, color: C.muted, marginTop: 10, lineHeight: 18 },
+    sourceLink: { textDecorationLine: 'underline' },
+    vulgar: {
+      fontSize: 10, color: C.highlight,
+      borderWidth: 1, borderColor: C.highlight, borderRadius: 4, paddingHorizontal: 5,
+    },
+    deleteBtn: { paddingVertical: 12, marginBottom: 8 },
+    deleteText: { fontSize: 13, color: C.muted },
 
     dimmed: { opacity: 0.45 },
     entryWrap: { gap: 6 },

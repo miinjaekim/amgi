@@ -795,6 +795,13 @@ pack authoring the overwritten side and shipping cards with no readable back.
     dropped on write. Also the retry: a subtopic stuck in `sourcing` past
     `SOURCING_STALE_MS` can be restarted.
   - `DELETE /api/user-packs/{id}` — cards already saved from it stay.
+  - The subtopics step also states a **level** (`PackLevel`: a CEFR band, a
+    one-line summary, too-easy examples), stored on the pack and handed to
+    every sourcing call. The search step can end a line with `| vulgar`,
+    which sets `PackEntry.vulgar` and leads the entry's `context` with
+    `vulgar — `, so the warning reaches the saved card.
+  - Mobile mirrors web file for file: `src/services/userPacks.ts`,
+    `src/context/UserPacksContext.tsx`, `app/(tabs)/decks/new.tsx`.
 - `POST /api/vocab-list` — goal-based word lists; accepts `previousWords` +
   `feedback` for refinement
 - `GET /api/word-of-the-day` — Firestore-backed. One doc per
