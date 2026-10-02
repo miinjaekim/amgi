@@ -1,6 +1,7 @@
 import { getApps, initializeApp, cert, App } from 'firebase-admin/app';
 import { getStorage } from 'firebase-admin/storage';
 import { getFirestore } from 'firebase-admin/firestore';
+import { getAuth } from 'firebase-admin/auth';
 
 function getAdminApp(): App {
   if (getApps().length > 0) return getApps()[0];
@@ -26,4 +27,20 @@ export function getBucket() {
 
 export function getDb() {
   return getFirestore(getAdminApp());
+}
+
+/**
+ * The signed-in user behind a request, from its `Authorization: Bearer <id
+ * token>` header, or null. Needed wherever the server writes on a user's
+ * behalf; the model routes that write nothing don't ask.
+ */
+export async function verifyRequestUid(req: Request): Promise<string | null> {
+  const header = req.headers.get('authorization') ?? '';
+  const token = header.startsWith('Bearer ') ? header.slice('Bearer '.length) : '';
+  if (!token) return null;
+  try {
+    return (await getAuth(getAdminApp()).verifyIdToken(token)).uid;
+  } catch {
+    return null;
+  }
 }

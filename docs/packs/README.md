@@ -64,6 +64,31 @@ never in doubt. Kikuyu needs one per entry. The test is not "is this language
 obscure" but **"has the model been measured wrong here"**, and for Kikuyu this
 repo has measured it wrong twice already: noun class (3 of 8) and tone (2 of 19).
 
+### The exception: packs a learner makes
+
+_Added 2026-09-26, with user-made packs._
+
+A pack a learner makes for themselves (`packages/core/src/userPacks.ts`) is
+**not held to this standard**, and is allowed on three conditions:
+
+- **It says so.** Every surface labels it as made by the learner and not
+  reviewed by Amgi.
+- **It reaches nobody else.** It is private to its owner. Sharing is a later
+  phase, and copyright becomes a question then, because taking words from a
+  source is fine while copying a published list wholesale is not.
+- **The model is still not the source.** A word is kept only when a page the
+  search returned was fetched and contains it, and the page is stored with the
+  word. That is the tier A/B distinction above, done by a fetch instead of a
+  person. There is no C: an unsourced word is cut, not flagged.
+
+Nothing the README asks about **spelling and variety** is checked. A page
+that contains the word corroborates the spelling only as far as that page is
+reliable, and no one ranks the sources. That is why the label is there, and
+why making a user pack official goes through this README like any draft.
+
+This extends the same exception as *Users add their own French verbs to
+Munli*: labelled as user-made, never reaching another user.
+
 ## Render the pack before you believe the list
 
 A word list is not what the learner sees. Run the entries through whatever
