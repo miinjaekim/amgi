@@ -91,22 +91,6 @@ picker narrowed (#146). Both are written up in their Decisions entries of
       **Copyright** matters once packs are shared: taking words from a source is
       fine, but copying a published list wholesale is not.
 
-- [ ] **English articles, in Munli** — designed with the user 2026-09-28;
-      the content is drafted and **waiting on the user's review** of
-      `docs/packs/english-articles-draft.md`, which has six calls at the top.
-      A new practice type, not a conjugation dataset: sourced Tatoeba
-      sentences with **a box on every article slot** (typed `a`/`an`/`the`/`-`),
-      **only contexts that force one answer**, and **the usage rule is what
-      gets scheduled** (8 rules, sentences are vehicles, like verbs in
-      conjugation). Build it as if conjugation didn't exist and extract
-      shared machinery only when a third tool wants it (vision.md, 2026-09-21).
-      English only, so its topic shows only for English (2026-09-25 rule).
-      **Prepositions are the next tool**, separately, after this one.
-      **Also waiting on the user: may the sentences be generated?** Raised
-      2026-09-28 and measured 2026-10-02 in
-      `docs/packs/english-articles-generation-research.md`. Nothing is decided. The numbers
-      are there to decide from.
-
 - [ ] **Users add their own French verbs to Munli** — scoped with the user
       2026-09-24. **Any verb, forms from the model**, the way a term lookup
       works. What an added verb *becomes* follows the split `conjugation.ts`
@@ -205,6 +189,32 @@ picker narrowed (#146). Both are written up in their Decisions entries of
 _Empty as of 2026-09-25._
 
 ## Parked
+
+- [ ] **English articles, in Munli.** ⏸ Set aside by the user 2026-10-02, to
+      come back to later; the work so far is kept. **No app code exists** —
+      everything is two documents on main, so there is no branch to resume:
+      - `docs/packs/english-articles-draft.md` — 8 rules from two grammars, 54
+        Tatoeba sentences (66 boxes), and six calls at the top still waiting
+        on the user (pre-filled non-tested slots, typing "no article", `a` for
+        `an`, two-rule sentences, the two single-source rules, the Korean rule
+        names).
+      - `docs/packs/english-articles-generation-research.md` — the 2026-10-02
+        measurement of a model checker for generated sentences. The model never
+        contradicted a sourced article (0 of 66) but **cannot judge whether a
+        context forces one answer**: the verdict follows the checker's wording,
+        not the sentence.
+      The design as it stood: a new practice type, not a conjugation dataset —
+      sourced sentences with **a box on every article slot** (typed
+      `a`/`an`/`the`/`-`), and **the usage rule is what gets scheduled**
+      (sentences are vehicles, like verbs in conjugation). English only, so its
+      topic shows only for English (2026-09-25 rule). Prepositions were to be
+      the next tool, separately.
+      **Three questions the measurement raised, undecided when parked:**
+      whether sentences may be generated at all (the checker alone can't
+      license it); whether "only forcing contexts" survives, given that
+      strictly only place names force one answer, or becomes a stored accepted
+      set per box; and the two Earth sentences in the draft, which also take
+      no article. Start from these when it returns.
 
 - [ ] **Reload for term lookups, Dig Deeper and examples.** ⏸ Passed on "at
       least for now" by the user, 2026-09-24. Worth keeping for when it
