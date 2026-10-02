@@ -102,6 +102,10 @@ picker narrowed (#146). Both are written up in their Decisions entries of
       shared machinery only when a third tool wants it (vision.md, 2026-09-21).
       English only, so its topic shows only for English (2026-09-25 rule).
       **Prepositions are the next tool**, separately, after this one.
+      **Also waiting on the user: may the sentences be generated?** Raised
+      2026-09-28 and measured 2026-10-02 in
+      `docs/packs/english-articles-generation-research.md`. Nothing is decided. The numbers
+      are there to decide from.
 
 - [ ] **Users add their own French verbs to Munli** — scoped with the user
       2026-09-24. **Any verb, forms from the model**, the way a term lookup

@@ -43,6 +43,9 @@ Related docs outside this folder:
   **awaiting the user's review** of the six calls at its top. The answer in each
   box is the sentence's own article, and the rule tags are the model's reading,
   which is what needs checking.
+- `docs/packs/english-articles-generation-research.md` — the 2026-10-02 measurement of
+  whether a model checker could license *generated* article sentences, run on
+  that draft's 54 sentences as the answer key. Numbers only, no decision.
 - `docs/packs/daily-life-pack-draft.md`, `docs/packs/idioms-pack-draft.md`,
   `docs/packs/kanji-pack-draft.md` — the three packs added 2026-08-24 (referenced
   from `dailyLife.ts`, `idioms.ts`, `kanji.ts`), **approved 2026-08-24**. Each
