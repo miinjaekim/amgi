@@ -1,6 +1,6 @@
 // Type-only, so it is erased at compile time and the cycle with `conjugation.ts`
 // (which imports `StudyLanguage` from here) never exists at runtime.
-import type { ConjugationEnrolment, ConjugationProgressMap, VerbGroup } from './conjugation';
+import type { ConjugationEnrolment, ConjugationProgressMap, UserVerbMap, VerbGroup } from './conjugation';
 import { isAllKana, markPitchAccent } from './pitchAccent';
 import { kanaToHangul, kanaToRomaji, kikuyuToEnglish, kikuyuToHangul } from './transliterate';
 
@@ -1133,6 +1133,15 @@ export interface UserPreferences {
    * every answer. Absent means the default — see `defaultEnrolment`.
    */
   conjugationEnrolment?: ConjugationEnrolment;
+  /**
+   * Verbs the learner added to Munli themselves, keyed by `conjugationVerbKey`.
+   *
+   * On this document for the reason `conjugation` is, and for one more: an
+   * added verb's forms came from the model, and the exception that allows that
+   * (`docs/packs/README.md`) requires that it never reaches another user. A
+   * field on `users/{uid}` is readable by its owner and nobody else.
+   */
+  conjugationVerbs?: UserVerbMap;
   /**
    * Which part of a hanja card sits on the front. Absent means
    * `DEFAULT_HANJA_PARTITION` — the question the exam asks.

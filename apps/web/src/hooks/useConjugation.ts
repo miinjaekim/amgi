@@ -1,6 +1,6 @@
 'use client';
 import { useCallback, useMemo, useState } from 'react';
-import { conjugationSpec, normalizeEnrolment, normalizeProgress } from '@amgi/core';
+import { conjugationSpec, normalizeEnrolment, normalizeProgress, withUserVerbs } from '@amgi/core';
 import type { ConjugationEnrolment, ConjugationProgressMap } from '@amgi/core';
 import { useUser } from '@/components/UserContext';
 import { saveUserPreferences } from '@/services/userPreferences';
@@ -21,10 +21,19 @@ import { saveUserPreferences } from '@/services/userPreferences';
  * during a session: pages mount fresh when navigated to.
  */
 export function useConjugation() {
-  const { user, studyLanguage, conjugation, conjugationEnrolment } = useUser();
-  const spec = conjugationSpec(studyLanguage);
+  const { user, studyLanguage, conjugation, conjugationEnrolment, conjugationVerbs } = useUser();
 
   const [pending, setPending] = useState<ConjugationProgressMap>({});
+
+  /**
+   * ⚠️ **The learner's spec, not the language's.** Their added verbs are part
+   * of what exists to practise, and `normalizeEnrolment` and
+   * `normalizeProgress` below take the spec as the authority on that.
+   */
+  const spec = useMemo(() => {
+    const base = conjugationSpec(studyLanguage);
+    return base && withUserVerbs(base, conjugationVerbs);
+  }, [studyLanguage, conjugationVerbs]);
   const [pendingEnrolment, setPendingEnrolment] = useState<ConjugationEnrolment | null>(null);
 
   const progress = useMemo(() => {

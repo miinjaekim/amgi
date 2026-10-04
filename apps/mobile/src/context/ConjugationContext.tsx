@@ -1,6 +1,6 @@
 import React, { createContext, useCallback, useContext, useMemo, useRef, useState, ReactNode } from 'react';
-import { conjugationSpec, normalizeEnrolment, normalizeProgress } from '@amgi/core';
-import type { ConjugationEnrolment, ConjugationProgressMap } from '@amgi/core';
+import { conjugationSpec, normalizeEnrolment, normalizeProgress, withUserVerbs } from '@amgi/core';
+import type { ConjugationEnrolment, ConjugationProgressMap, ConjugationSpec } from '@amgi/core';
 import { useUser } from './UserContext';
 import { saveUserPreferences } from '../services/userPreferences';
 
@@ -22,6 +22,14 @@ import { saveUserPreferences } from '../services/userPreferences';
  * as the pending-review replay in `review.tsx`, and the same reason.
  */
 interface ConjugationContextType {
+  /**
+   * The study language's spec with this learner's added verbs in it.
+   *
+   * ⚠️ **Screens read this one rather than calling `conjugationSpec`.** The
+   * enrolment and progress beside it are normalised against it, so a screen
+   * holding the bare spec would not find an added verb's tables.
+   */
+  spec: ConjugationSpec | undefined;
   progress: ConjugationProgressMap;
   enrolment: ConjugationEnrolment | undefined;
   /** True until the first snapshot lands. "Not yet" is not "none". */
@@ -32,6 +40,7 @@ interface ConjugationContextType {
 }
 
 const ConjugationContext = createContext<ConjugationContextType>({
+  spec: undefined,
   progress: {},
   enrolment: undefined,
   loading: true,
@@ -40,8 +49,11 @@ const ConjugationContext = createContext<ConjugationContextType>({
 });
 
 export function ConjugationProvider({ children }: { children: ReactNode }) {
-  const { user, studyLanguage, conjugation, conjugationEnrolment } = useUser();
-  const spec = conjugationSpec(studyLanguage);
+  const { user, studyLanguage, conjugation, conjugationEnrolment, conjugationVerbs } = useUser();
+  const spec = useMemo(() => {
+    const base = conjugationSpec(studyLanguage);
+    return base && withUserVerbs(base, conjugationVerbs);
+  }, [studyLanguage, conjugationVerbs]);
 
   /** Ratings written but not yet seen coming back. */
   const [pending, setPending] = useState<ConjugationProgressMap>({});
@@ -99,8 +111,8 @@ export function ConjugationProvider({ children }: { children: ReactNode }) {
   }, [user]);
 
   const value = useMemo(
-    () => ({ progress, enrolment, loading: conjugation === undefined, rate, setEnrolment }),
-    [progress, enrolment, conjugation, rate, setEnrolment],
+    () => ({ spec, progress, enrolment, loading: conjugation === undefined, rate, setEnrolment }),
+    [spec, progress, enrolment, conjugation, rate, setEnrolment],
   );
 
   return <ConjugationContext.Provider value={value}>{children}</ConjugationContext.Provider>;

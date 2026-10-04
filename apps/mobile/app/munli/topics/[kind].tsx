@@ -3,13 +3,14 @@ import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { conjugationSpec, enrolledTenses, getStudyLanguageConfig, isEnrolled, setEnrolled, subjectKey, subjectsOfKind, t } from '@amgi/core';
+import { enrolledTenses, getStudyLanguageConfig, isEnrolled, setEnrolled, subjectKey, subjectsOfKind, t } from '@amgi/core';
 import type { ConjugationSubject } from '@amgi/core';
 import { useUser } from '../../../src/context/UserContext';
 import { useTheme } from '../../../src/context/ThemeContext';
 import { useConjugation } from '../../../src/context/ConjugationContext';
 import ParadigmTable from '../../../src/components/ParadigmTable';
 import FilterSheet, { type FilterGroup } from '../../../src/components/FilterSheet';
+import AddVerbField from '../../../src/components/AddVerbField';
 import { PAGE_TITLE_SIZE, SCREEN_GUTTER } from '../../../src/components/PageHeader';
 import StudyLanguageChip from '../../../src/components/StudyLanguageChip';
 import type { Palette } from '../../../src/theme';
@@ -40,9 +41,8 @@ export default function VerbTopicScreen() {
   const { C } = useTheme();
   const s = useMemo(() => makeStyles(C), [C]);
   const { interfaceLanguage, studyLanguage } = useUser();
-  const { enrolment, setEnrolment, loading } = useConjugation();
+  const { spec, enrolment, setEnrolment, loading } = useConjugation();
   const router = useRouter();
-  const spec = conjugationSpec(studyLanguage);
   // Anything unrecognised reads as regular rather than erroring: the cost of
   // being wrong is landing on the topic that has content in it.
   const { kind: param } = useLocalSearchParams<{ kind: string }>();
@@ -225,7 +225,7 @@ export default function VerbTopicScreen() {
   return (
     <SafeAreaView style={s.safe} edges={['top']}>
       {header}
-      <ScrollView contentContainerStyle={s.content} stickyHeaderIndices={[0]}>
+      <ScrollView contentContainerStyle={s.content} stickyHeaderIndices={[0]} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
         <View style={s.filterBar}>
           <TouchableOpacity
             style={s.filterBtn}
@@ -256,6 +256,8 @@ export default function VerbTopicScreen() {
         <Text style={s.intro}>
           {t(interfaceLanguage, irregular ? 'irregularIntro' : 'verbsSaveHint')}
         </Text>
+
+        {irregular && <AddVerbField topic="irregular" />}
 
         {/* Three different empties, and they say different things: a topic with
             no content yet, a filter that excludes everything, and one that has

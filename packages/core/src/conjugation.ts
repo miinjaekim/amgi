@@ -141,6 +141,14 @@ export interface ConjugationSpec {
   subjectFor: (person: ConjugationPerson, form: string) => string;
   /** Forms for a regular group's vehicle, by rule. */
   conjugate: (infinitive: string, group: ConjugationGroupId, tenseId: string) => string[];
+  /**
+   * The infinitives this learner added themselves — see `withUserVerbs`.
+   *
+   * Absent on a language's own spec. It is what lets every surface that shows a
+   * form say the form is unverified, which is the condition the exception in
+   * `docs/packs/README.md` holds on.
+   */
+  userVerbs?: readonly string[];
 }
 
 /** One subject in one tense: six boxes, each carrying its own schedule. */
@@ -161,6 +169,11 @@ export interface ConjugationTable {
   tenseLabel: string;
   /** Person id → the form. */
   forms: Record<string, string>;
+  /**
+   * Set when `infinitive` is a verb the learner added, so its forms came from
+   * the model rather than a source. Whatever shows them has to say so.
+   */
+  userAdded?: true;
 }
 
 /**
@@ -475,6 +488,257 @@ export function normalizeVerbGroup(value: unknown, infinitive: string): VerbGrou
   return undefined;
 }
 
+/* ── Verbs a learner adds ────────────────────────────────────────────────── */
+
+/** Tense id → person id → form: what an irregular verb stores. */
+export type ConjugationForms = Record<string, Record<string, string>>;
+
+/**
+ * A verb a learner added to their own Munli.
+ *
+ * ⚠️ **What it becomes follows the split this module turns on.** A regular verb
+ * is a **vehicle** for its group and nothing more: no forms are stored, because
+ * the rule produces them, and nothing new is scheduled. An irregular verb is a
+ * subject of its own, with stored forms, exactly as `être` is.
+ *
+ * ⚠️ **Its forms came from the model**, which `docs/packs/README.md` says is
+ * not a source. The written exception there holds on two conditions: the verb
+ * is labelled as unverified wherever its forms are shown (`userVerbs` on the
+ * spec, `userAdded` on a table), and it never leaves `users/{uid}`.
+ */
+export interface UserVerb {
+  infinitive: string;
+  group: VerbGroup;
+  /** Irregular verbs only. A regular verb's forms are computed. */
+  forms?: ConjugationForms;
+  /** ISO 8601. Orders a learner's verbs the same way on every device. */
+  addedAt: string;
+}
+
+/** A learner's added verbs, keyed by `conjugationVerbKey`. */
+export type UserVerbMap = Record<string, UserVerb>;
+
+/**
+ * The key one verb is filed under on the user document.
+ *
+ * Not specific to an added verb: it names any verb of a language, built-in
+ * vehicles included, so anything else kept per user per verb can share it.
+ */
+export function conjugationVerbKey(language: StudyLanguage, infinitive: string): string {
+  return `${language}:${infinitive}`;
+}
+
+/** `se lever`, `s'appeler` — refused for now, since `subjectFor` only knows `je`/`j'`. */
+export function isPronominalVerb(term: string): boolean {
+  return /^(se\s+|s['’]\s*)\S/.test(term.trim().toLowerCase());
+}
+
+/** One word, ending the way a French infinitive ends. `haïr` is why `ïr` is here. */
+const INFINITIVE = /^\p{L}+(?:-\p{L}+)*(?:er|ir|ïr|re)$/u;
+
+/** The key of the subject a spec already practises this verb under, if any. */
+export function carriedSubjectKey(spec: ConjugationSpec, infinitive: string): string | undefined {
+  const subject = spec.subjects.find(s =>
+    s.kind === 'group' ? s.vehicles.includes(infinitive) : s.infinitive === infinitive);
+  return subject && subjectKey(subject);
+}
+
+/** A form as it is stored: bare, lowercase, with any subject pronoun taken off. */
+function bareForm(spec: ConjugationSpec, person: ConjugationPerson, raw: unknown): string | undefined {
+  if (typeof raw !== 'string') return undefined;
+  let form = raw.normalize('NFC').trim().toLowerCase().replace(/[’ʼ]/g, "'");
+  for (const subject of [person.label, ...person.label.split('/')]) {
+    if (form.startsWith(`${subject} `)) form = form.slice(subject.length).trim();
+  }
+  // `j'ai`: the elided subject, recognised by the spec's own rule.
+  const elided = form.indexOf("'");
+  if (elided > 0 && spec.subjectFor(person, form.slice(elided + 1)) === form.slice(0, elided + 1)) {
+    form = form.slice(elided + 1);
+  }
+  return /^\p{L}+$/u.test(form) ? form : undefined;
+}
+
+/**
+ * Forms from outside the repo, narrowed to what the spec can use.
+ *
+ * Reads both shapes they arrive in: six forms in person order, which is what
+ * the lookup route asks the model for, and the person-keyed map this returns,
+ * which is what is stored. A tense that is not complete is dropped whole, and
+ * so is one the spec does not know.
+ */
+export function parseConjugationForms(spec: ConjugationSpec, raw: unknown): ConjugationForms | undefined {
+  if (!raw || typeof raw !== 'object') return undefined;
+  const forms: ConjugationForms = {};
+  for (const tense of spec.tenses) {
+    const given = (raw as Record<string, unknown>)[tense.id];
+    if (!given || typeof given !== 'object') continue;
+    if (Array.isArray(given) && given.length !== spec.persons.length) continue;
+    const row = spec.persons.map((person, i) => bareForm(
+      spec, person, Array.isArray(given) ? given[i] : (given as Record<string, unknown>)[person.id],
+    ));
+    if (row.some(form => form === undefined)) continue;
+    forms[tense.id] = Object.fromEntries(spec.persons.map((person, i) => [person.id, row[i] as string]));
+  }
+  return Object.keys(forms).length > 0 ? forms : undefined;
+}
+
+/** What the lookup route says about a word, as far as adding a verb reads it. */
+export interface VerbLookup {
+  french?: unknown;
+  partOfSpeech?: unknown;
+  verbGroup?: unknown;
+  conjugation?: unknown;
+}
+
+/** What came of trying to add a verb. `subjectKey` is where it is practised. */
+export type UserVerbOutcome =
+  | { status: 'added'; verb: UserVerb; subjectKey: string }
+  | { status: 'exists'; infinitive: string; subjectKey: string }
+  | { status: 'pronominal' }
+  | { status: 'notVerb' }
+  | { status: 'noForms'; infinitive: string };
+
+/**
+ * Decide what a looked-up verb becomes for this learner.
+ *
+ * ⚠️ **The group comes from the model and is checked here.** It cannot be read
+ * off the ending (`partir`), so the model is asked; but when it says regular,
+ * the verb is conjugated by that group's rule and compared with the forms the
+ * model gave, in every tense. Agreement makes it a vehicle. A mismatch means it
+ * is not the group claimed (`appeler` is called `-er` and gives `appelle`), and
+ * a vehicle the rule gets wrong would mark a learner wrong for knowing the
+ * rule, so it becomes an irregular verb with its own table instead.
+ *
+ * An irregular verb's forms have no such check. That is the unverified part.
+ *
+ * A verb the spec already carries, built in or added earlier, is not added
+ * again: the outcome points at where it already is.
+ */
+export function settleUserVerb(
+  spec: ConjugationSpec,
+  lookup: VerbLookup,
+  now: Date = new Date(),
+): UserVerbOutcome {
+  const infinitive = typeof lookup.french === 'string'
+    ? lookup.french.normalize('NFC').trim().toLowerCase()
+    : '';
+  if (isPronominalVerb(infinitive)) return { status: 'pronominal' };
+  if (lookup.partOfSpeech !== 'verb' || !INFINITIVE.test(infinitive)) return { status: 'notVerb' };
+
+  const carried = carriedSubjectKey(spec, infinitive);
+  if (carried) return { status: 'exists', infinitive, subjectKey: carried };
+
+  const forms = parseConjugationForms(spec, lookup.conjugation);
+  if (!forms || spec.tenses.some(tense => !forms[tense.id])) return { status: 'noForms', infinitive };
+
+  const claimed = normalizeVerbGroup(lookup.verbGroup, infinitive);
+  const group = spec.subjects.find(
+    (subject): subject is ConjugationGroup => subject.kind === 'group' && subject.id === claimed,
+  );
+  const followsRule = group !== undefined && spec.tenses.every(tense => {
+    const byRule = spec.conjugate(infinitive, group.id, tense.id);
+    return spec.persons.every((person, i) => byRule[i] === forms[tense.id][person.id]);
+  });
+
+  const addedAt = now.toISOString();
+  return followsRule
+    ? { status: 'added', verb: { infinitive, group: group.id, addedAt }, subjectKey: subjectKey(group) }
+    : { status: 'added', verb: { infinitive, group: 'irregular', forms, addedAt }, subjectKey: `verb:${infinitive}` };
+}
+
+/**
+ * A language's spec with one learner's verbs in it.
+ *
+ * Regular verbs join the end of their group's vehicles, so the verb a table is
+ * shown through by default stays a built-in one. Irregular verbs follow the
+ * built-in ones, with the infinitive as their id.
+ *
+ * ⚠️ **Every surface has to read this spec, not the language's own.**
+ * `normalizeEnrolment` and `normalizeProgress` treat the spec as the authority
+ * on what exists, so an added verb's saved tenses and schedules read as stale
+ * against the bare one.
+ *
+ * A stored verb is checked again on the way in, since it outlives the build
+ * that wrote it: one the spec now carries itself is dropped, so the built-in
+ * wins the day a verb is sourced, and so is one whose group or forms no longer
+ * fit.
+ */
+export function withUserVerbs(spec: ConjugationSpec, verbs: UserVerbMap | undefined): ConjugationSpec {
+  const vehicles = new Map<string, string[]>();
+  const irregulars: ConjugationIrregularVerb[] = [];
+  const added: string[] = [];
+
+  const stored = Object.entries(verbs ?? {})
+    .filter(([key, verb]) => typeof verb?.infinitive === 'string'
+      && key === conjugationVerbKey(spec.language, verb.infinitive))
+    .map(([, verb]) => verb)
+    .sort((a, b) => String(a.addedAt).localeCompare(String(b.addedAt)) || a.infinitive.localeCompare(b.infinitive));
+
+  for (const verb of stored) {
+    const { infinitive } = verb;
+    if (!INFINITIVE.test(infinitive) || carriedSubjectKey(spec, infinitive)) continue;
+    if (verb.group === 'irregular') {
+      const forms = parseConjugationForms(spec, verb.forms);
+      // The id is the infinitive, and a built-in's id is not always its own
+      // (`etre`), so the two are checked apart.
+      if (!forms || spec.subjects.some(subject => subject.kind === 'verb' && subject.id === infinitive)) continue;
+      irregulars.push({ kind: 'verb', id: infinitive, infinitive, forms });
+    } else {
+      if (normalizeVerbGroup(verb.group, infinitive) !== verb.group) continue;
+      if (!spec.subjects.some(subject => subject.kind === 'group' && subject.id === verb.group)) continue;
+      vehicles.set(verb.group, [...(vehicles.get(verb.group) ?? []), infinitive]);
+    }
+    added.push(infinitive);
+  }
+
+  if (added.length === 0) return spec;
+  return {
+    ...spec,
+    subjects: [
+      ...spec.subjects.map(subject => (subject.kind === 'group' && vehicles.has(subject.id)
+        ? { ...subject, vehicles: [...subject.vehicles, ...(vehicles.get(subject.id) ?? [])] }
+        : subject)),
+      ...irregulars,
+    ],
+    userVerbs: added,
+  };
+}
+
+/**
+ * What to tell the learner about an outcome, as a copy key and its values.
+ *
+ * A key rather than a string because this file is a language's data and the
+ * copy is per interface language — the `aboutLeadKey` arrangement.
+ */
+export function userVerbOutcomeCopy(
+  spec: ConjugationSpec,
+  outcome: UserVerbOutcome,
+): { key: TranslationKey; params?: Record<string, string> } {
+  switch (outcome.status) {
+    case 'pronominal': return { key: 'verbAddPronominal' };
+    case 'notVerb': return { key: 'verbAddNotVerb' };
+    case 'noForms': return { key: 'verbAddNoForms', params: { verb: outcome.infinitive } };
+    case 'exists': return { key: 'verbAddExists', params: { verb: outcome.infinitive } };
+    case 'added': {
+      const subject = findSubject(spec, outcome.subjectKey);
+      return subject?.kind === 'group'
+        ? { key: 'verbAddedRegular', params: { verb: outcome.verb.infinitive, group: subject.label } }
+        : { key: 'verbAddedIrregular', params: { verb: outcome.verb.infinitive } };
+    }
+  }
+}
+
+/** The Topics page an outcome's verb is on, when it is on one. */
+export function userVerbTopic(outcome: UserVerbOutcome): MunliTopic['id'] | undefined {
+  if (outcome.status !== 'added' && outcome.status !== 'exists') return undefined;
+  return outcome.subjectKey.startsWith('group:') ? 'regular' : 'irregular';
+}
+
+/** Whether a verb is one the learner added, so its forms are unverified. */
+export function isUserVerb(spec: ConjugationSpec, infinitive: string): boolean {
+  return spec.userVerbs?.includes(infinitive) ?? false;
+}
+
 /**
  * The subjects of one kind — the two topics Munli browses verbs through.
  *
@@ -619,25 +883,28 @@ export function buildTable(
   const tense = spec.tenses.find(t => t.id === tenseId);
   if (!tense) throw new Error(`Unknown tense: ${tenseId}`);
 
+  const infinitive = subject.kind === 'verb'
+    ? subject.infinitive
+    : vehicle && subject.vehicles.includes(vehicle) ? vehicle : subject.vehicles[0];
   const common = {
     subjectKind: subject.kind,
     subjectId: subject.id,
     tenseId,
     tenseLabel: tense.label,
+    infinitive,
+    ...(isUserVerb(spec, infinitive) ? { userAdded: true as const } : {}),
   };
 
   if (subject.kind === 'verb') {
     const forms = subject.forms[tenseId];
     if (!forms) throw new Error(`${subject.infinitive} has no ${tenseId}`);
-    return { ...common, subjectLabel: subject.infinitive, infinitive: subject.infinitive, forms };
+    return { ...common, subjectLabel: subject.infinitive, forms };
   }
 
-  const infinitive = vehicle && subject.vehicles.includes(vehicle) ? vehicle : subject.vehicles[0];
   const forms = spec.conjugate(infinitive, subject.id, tenseId);
   return {
     ...common,
     subjectLabel: subject.label,
-    infinitive,
     forms: Object.fromEntries(spec.persons.map((p, i) => [p.id, forms[i]])),
   };
 }
@@ -930,6 +1197,8 @@ export interface ConjugationWeakBox {
   personLabel: string;
   form: string;
   misses: number;
+  /** The form is of a verb the learner added — see `ConjugationTable.userAdded`. */
+  userAdded?: true;
 }
 
 export interface ConjugationSummary {
@@ -990,6 +1259,7 @@ export function summarizeConjugation(
             personLabel: person.label,
             form: table.forms[person.id],
             misses: state.misses,
+            ...(table.userAdded ? { userAdded: true as const } : {}),
           });
         }
       }

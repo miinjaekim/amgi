@@ -1,5 +1,7 @@
 import type { ExamplePair, ExplainResult, TermDepth, StudyLanguage, WithCorrection, WordOfTheDay } from './types';
 import { getExampleSides } from './types';
+import { carriedSubjectKey, isPronominalVerb, settleUserVerb } from './conjugation';
+import type { ConjugationSpec, UserVerbOutcome, VerbLookup } from './conjugation';
 
 /**
  * Fetches the daily featured word for a (date, language pair) from
@@ -112,16 +114,57 @@ export async function getTermExplanation(
   context?: string,
   baseUrl = '',
   studyLanguage: StudyLanguage = 'Korean',
-  exact = false
+  exact = false,
+  conjugation = false
 ): Promise<ExplainResult> {
   const res = await fetch(`${baseUrl}/api/explain`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ term, nativeLanguage, context, studyLanguage, exact }),
+    body: JSON.stringify({ term, nativeLanguage, context, studyLanguage, exact, conjugation }),
   });
 
   if (!res.ok) throw new Error('Failed to get term explanation');
   return res.json();
+}
+
+/**
+ * Look a verb up so a learner can add it to Munli, and say what it becomes.
+ *
+ * ⚠️ **The same lookup a term gets**, with `conjugation` set so the route's
+ * French prompt asks for the forms as one more field. No second prompt and no
+ * second route: what the model says about `danser` here is what it says on
+ * Learn, and the group is settled by the same `normalizeVerbGroup`.
+ *
+ * The context does a job of its own. A lookup with context is the route's
+ * pinned-sense prompt, which neither asks whether the term is ambiguous nor
+ * judges its spelling — so `rire` cannot come back as a choice between the
+ * laugh and the verb, and the answer is about the verb. A card passes its gloss
+ * so the verb looked up is the one on the card.
+ *
+ * Refuses without a call what it can: a pronominal verb, and a verb the spec
+ * already carries.
+ */
+export async function lookUpUserVerb(
+  spec: ConjugationSpec,
+  term: string,
+  options: { nativeLanguage?: string; gloss?: string; baseUrl?: string } = {},
+): Promise<UserVerbOutcome> {
+  const typed = term.normalize('NFC').trim().toLowerCase();
+  if (!typed) return { status: 'notVerb' };
+  if (isPronominalVerb(typed)) return { status: 'pronominal' };
+  const carried = carriedSubjectKey(spec, typed);
+  if (carried) return { status: 'exists', infinitive: typed, subjectKey: carried };
+
+  const lookup = await getTermExplanation(
+    typed,
+    options.nativeLanguage,
+    options.gloss ? `the verb, meaning: ${options.gloss}` : 'the verb, in the infinitive',
+    options.baseUrl,
+    spec.language,
+    true,
+    true,
+  );
+  return settleUserVerb(spec, lookup as VerbLookup);
 }
 
 /** A lookup that answered about a different spelling than the one typed. */

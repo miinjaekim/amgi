@@ -69,7 +69,7 @@ export default function MunliProgressPage() {
               {summary.weakest.map(box => row(
                 `${box.subjectLabel}-${box.tenseLabel}-${box.personLabel}`,
                 `${box.subjectLabel} · ${box.personLabel} · ${box.tenseLabel}`,
-                box.form,
+                box.userAdded ? `${box.form} · ${t(interfaceLanguage, 'verbUnverifiedTag')}` : box.form,
               ))}
             </>
           )}

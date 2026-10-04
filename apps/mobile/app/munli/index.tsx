@@ -7,7 +7,7 @@ import { useNavigation } from 'expo-router';
 // its own types from for the same reason.
 import type { BottomTabNavigationProp } from 'expo-router/tabs';
 import {
-  boxItemId, buildConjugationQueue, buildTables, conjugationHints, conjugationSpec,
+  boxItemId, buildConjugationQueue, buildTables, conjugationHints,
   countDueBoxes, countQuestions, getStudyLanguageConfig, hintedVerdict, isCorrectForm,
   listPracticeSections, rateBox, t,
 } from '@amgi/core';
@@ -53,8 +53,7 @@ export default function PracticeScreen() {
   const tabBarHeight = useFloatingTabBarHeight();
   const s = useMemo(() => makeStyles(C, tabBarHeight), [C, tabBarHeight]);
   const { interfaceLanguage, studyLanguage } = useUser();
-  const { progress, enrolment, rate, loading } = useConjugation();
-  const spec = conjugationSpec(studyLanguage);
+  const { spec, progress, enrolment, rate, loading } = useConjugation();
   const navigation = useNavigation<BottomTabNavigationProp<Record<string, undefined>>>();
 
   const [stage, setStage] = useState<Stage>('picker');
@@ -590,6 +589,8 @@ export default function PracticeScreen() {
             {single ? `${onlyPerson?.label} · ` : ''}{round.table.tenseLabel}
             {round.table.subjectKind === 'group' ? ` · ${round.table.subjectLabel}` : ''}
           </Text>
+          {/* The answer about to be shown is the model's, not a source's. */}
+          {round.table.userAdded && <Text style={s.unverified}>{t(interfaceLanguage, 'verbUnverified')}</Text>}
           {!single && !checked && <Text style={s.lead}>{t(interfaceLanguage, 'conjugationFillDue')}</Text>}
 
           {single ? (
@@ -806,6 +807,7 @@ function makeStyles(C: Palette, tabBarHeight: number) {
     card: { backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: 16, padding: 20 },
     infinitive: { color: C.text, fontSize: 26, fontWeight: '700' },
     prompt: { color: C.muted, fontSize: 14, marginTop: 4 },
+    unverified: { color: C.muted, fontSize: 11, marginTop: 4 },
     lead: { color: C.muted, fontSize: 12, marginTop: 10 },
     pickerLead: { color: C.muted, fontSize: 13, marginBottom: 14 },
     // The paradigm, a row per person. ⚠️ No horizontal scroll: a round is one

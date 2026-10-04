@@ -2,10 +2,12 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import { NextRequest, NextResponse } from 'next/server';
 import {
   PART_OF_SPEECH_CODES,
+  conjugationSpec,
   getBackSideConfig,
   getStudyLanguageConfig,
   normalizePartOfSpeech,
   normalizeVerbGroup,
+  parseConjugationForms,
   parseModelJson,
 } from '@amgi/core';
 import { lookupPitchAccent } from '@/lib/pitchAccentLookup';
@@ -28,7 +30,7 @@ function detectChinese(term: string): boolean {
 }
 
 export async function POST(req: NextRequest) {
-  const { term, nativeLanguage = 'English', context, studyLanguage = 'Korean', exact = false } = await req.json();
+  const { term, nativeLanguage = 'English', context, studyLanguage = 'Korean', exact = false, conjugation = false } = await req.json();
 
   if (!term || typeof term !== 'string') {
     return NextResponse.json({ error: 'term is required' }, { status: 400 });
@@ -102,6 +104,22 @@ When you do set it, every other field — the meanings too, if it is ambiguous �
   // `normalizeVerbGroup` settles -cer/-ger and anything Munli already carries.
   const verbGroupRule = `\n- "verbGroup": if the French word is a verb, its conjugation group — "er" for a regular -er verb (parler, manger, appeler), "ir" for a regular -ir verb that conjugates like finir (nous finissons), "re" for a regular -re verb that conjugates like vendre, and "irregular" for every other verb (aller, partir, venir, prendre, faire). Judge a pronominal verb by its infinitive without se. Otherwise set to null.`;
   const verbGroupJson = `\n  "verbGroup": "er" | "ir" | "re" | "irregular" | null,`;
+  // The verb's forms, and only when the caller asks: Munli's "add a verb" is
+  // this same lookup with one more field, not a prompt of its own. Tenses and
+  // persons are read off the spec, so the keys asked for are the keys
+  // `parseConjugationForms` reads below.
+  //
+  // ⚠️ What comes back is the model's, and `docs/packs/README.md` says the
+  // model is not a source. The exception written there covers this field alone:
+  // it goes to the learner who asked, labelled as unverified, and nowhere else.
+  const frenchSpec = conjugation === true ? conjugationSpec('French') : undefined;
+  const personOrder = frenchSpec?.persons.map(person => person.label).join(', ');
+  const conjugationRule = frenchSpec
+    ? `\n- "conjugation": if the French word is a verb, its indicative forms in each of these tenses: ${frenchSpec.tenses.map(tense => `"${tense.id}" (${tense.label})`).join(', ')}. Exactly ${frenchSpec.persons.length} forms per tense, in the order ${personOrder}. Each is the bare verb form with no subject pronoun — "parle", never "je parle"; "ai", never "j'ai" — spelled exactly as French writes it, with its accents and any stem or spelling change (nous mangeons is "mangeons", j'appelle is "appelle"). Otherwise set to null.`
+    : '';
+  const conjugationJson = frenchSpec
+    ? `\n  "conjugation": { ${frenchSpec.tenses.map(tense => `"${tense.id}": [${frenchSpec.persons.length} forms: ${personOrder}]`).join(', ')} } | null,`
+    : '';
 
   let prompt: string;
 
@@ -182,7 +200,7 @@ IMPORTANT:
 - "french" must always be the French word or phrase written in French
 - "english" must always be the English word or phrase written in English${nativeBackRule}
 ${glossRuleBullet(true)}
-- "gender": if the French term is a noun, set to "le" or "la". Otherwise set to null.${posRule}${verbGroupRule}
+- "gender": if the French term is a noun, set to "le" or "la". Otherwise set to null.${posRule}${verbGroupRule}${conjugationRule}
 - "briefDefinition": a single clear sentence defining the term in ${nativeLanguage}.
 
 Respond with only this JSON:
@@ -191,7 +209,7 @@ Respond with only this JSON:
   "termLanguage": "French or English",
   "french": "French word/phrase",
   "english": "English word/phrase",${nativeBackJson}
-  "gender": "le" | "la" | null,${posJson}${verbGroupJson}
+  "gender": "le" | "la" | null,${posJson}${verbGroupJson}${conjugationJson}
   "briefDefinition": "one-sentence definition"
 }`;
     } else {
@@ -226,7 +244,7 @@ If NOT ambiguous, respond with only this JSON:
   "termLanguage": "French or English",
   "french": "French word/phrase",
   "english": "English word/phrase",${nativeBackJson}
-  "gender": "le" | "la" | null,${posJson}${verbGroupJson}
+  "gender": "le" | "la" | null,${posJson}${verbGroupJson}${conjugationJson}
   "briefDefinition": "one-sentence definition in ${nativeLanguage}"
 }
 
@@ -234,7 +252,7 @@ IMPORTANT for the non-ambiguous case:
 - "french" must always be written in French
 - "english" must always be written in English${nativeBackRule}
 ${glossRuleBullet(false)}
-- "gender": if the French term is a noun, set to "le" or "la". Otherwise set to null.${posRule}${verbGroupRule}
+- "gender": if the French term is a noun, set to "le" or "la". Otherwise set to null.${posRule}${verbGroupRule}${conjugationRule}
 - "briefDefinition" must be a single sentence defining the core meaning. No examples, no cultural context.`;
     }
   } else if (studyLanguage === 'Spanish') {
@@ -932,6 +950,13 @@ ${glossRuleBullet(false)}
       : undefined;
     if (group) record.verbGroup = group;
     else delete record.verbGroup;
+
+    // Narrowed for the same reason: complete tenses of bare forms, or nothing.
+    const forms = frenchSpec && record.partOfSpeech === 'verb'
+      ? parseConjugationForms(frenchSpec, record.conjugation)
+      : undefined;
+    if (forms) record.conjugation = forms;
+    else delete record.conjugation;
   }
 
   // Japanese pitch accent is the one reading field on any language that this

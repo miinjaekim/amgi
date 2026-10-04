@@ -8,6 +8,7 @@ import { useConjugation } from '@/hooks/useConjugation';
 import ParadigmTable from '@/components/ParadigmTable';
 import PageHeader from '@/components/PageHeader';
 import MultiSelect from '@/components/MultiSelect';
+import AddVerbField from '@/components/AddVerbField';
 import { t } from '@/lib/i18n';
 
 /**
@@ -173,9 +174,11 @@ export default function VerbTopicPage() {
           />
         )}
       </div>
-      <p className="font-mono text-xs mb-8" style={{ color: 'var(--color-muted)' }}>
+      <p className={`font-mono text-xs ${irregular ? 'mb-4' : 'mb-8'}`} style={{ color: 'var(--color-muted)' }}>
         {t(interfaceLanguage, 'verbsSaveHint')}
       </p>
+
+      {irregular && <AddVerbField topic="irregular" />}
 
       {/* An empty topic is the irregulars until they are sourced — it says so
           rather than rendering a page with nothing on it. */}

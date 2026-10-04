@@ -444,6 +444,12 @@ export default function PracticePage() {
           {single ? `${onlyPerson?.label} · ` : ''}{round.table.tenseLabel}
           {round.table.subjectKind === 'group' ? ` · ${round.table.subjectLabel}` : ''}
         </p>
+        {/* The answer about to be shown is the model's, not a source's. */}
+        {round.table.userAdded && (
+          <p className="font-mono text-xs mt-1" style={{ color: 'var(--color-muted)' }}>
+            {t(interfaceLanguage, 'verbUnverified')}
+          </p>
+        )}
         {!single && !checked && (
           <p className="font-mono text-xs mt-3" style={{ color: 'var(--color-muted)' }}>
             {t(interfaceLanguage, 'conjugationFillDue')}

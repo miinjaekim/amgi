@@ -293,6 +293,23 @@ const translations = {
     // 2026-09-22, so this is the ordinary empty state of a language whose
     // spec carries no irregulars.
     verbsIrregularEmpty: 'None for this language yet.',
+    // Adding a verb of your own. Its forms come from the lookup model, so
+    // `verbUnverified` goes wherever they are shown — the condition the
+    // exception in docs/packs/README.md holds on.
+    verbAddPlaceholder: 'Add a verb, e.g. prendre',
+    verbAddButton: 'Add',
+    verbAddWorking: 'Looking it up…',
+    verbAddedIrregular: '{verb} added. Save a tense to practise it.',
+    verbAddedRegular: '{verb} is a regular {group} verb, so it now turns up in {group} questions.',
+    verbAddExists: '{verb} is already in Munli.',
+    verbAddPronominal: 'Pronominal verbs like se lever are not supported yet.',
+    verbAddNotVerb: 'That does not look like a French verb.',
+    verbAddNoForms: 'Could not get a full table for {verb}.',
+    verbAddFailed: 'Could not look that up. Try again.',
+    verbUnverified: 'Added by you. The forms come from AI and are not checked by Amgi.',
+    verbUnverifiedTag: 'not checked',
+    verbPractise: 'Practise its conjugation',
+    verbOpenInMunli: 'Open in Munli',
     // Writing review. Restored 2026-09-21 with the feature — the strings are
     // the ones that shipped in 1.3.0, unchanged, because the surface they
     // describe is unchanged. Only its address moved.
@@ -1242,6 +1259,20 @@ const translations = {
     verbsFilterNone: '선택된 게 없어요. 시제와 동사 유형을 골라주세요.',
     verbsIrregular: '불규칙 동사',
     verbsIrregularEmpty: '이 언어는 아직 없어요.',
+    verbAddPlaceholder: '동사 추가 (예: prendre)',
+    verbAddButton: '추가',
+    verbAddWorking: '찾는 중...',
+    verbAddedIrregular: '{verb} 동사를 추가했어요. 연습할 시제를 저장하세요.',
+    verbAddedRegular: '{verb}: {group} 규칙 동사예요. 이제 {group} 문제에 함께 나와요.',
+    verbAddExists: '{verb} 동사는 이미 문리에 있어요.',
+    verbAddPronominal: 'se lever 같은 대명동사는 아직 지원하지 않아요.',
+    verbAddNotVerb: '프랑스어 동사가 아닌 것 같아요.',
+    verbAddNoForms: '{verb} 동사의 활용표를 다 가져오지 못했어요.',
+    verbAddFailed: '찾지 못했어요. 다시 시도해 주세요.',
+    verbUnverified: '내가 추가한 동사예요. 활용형은 AI가 만든 것이고, Amgi가 검토하지는 않았어요.',
+    verbUnverifiedTag: '검토 안 됨',
+    verbPractise: '활용 연습하기',
+    verbOpenInMunli: '문리에서 열기',
     writingTagline: '직접 써보세요. 원어민이라면 이렇게 씁니다.',
     writingTaglineSubtitle: '문법이 필요하면 문법을, 아니면 더 자연스러운 표현을 — 쓴 글에 맞춰 짚어드려요. 떠올리지 못했던 표현은 카드로 저장하세요.',
     writingPlaceholder: '{language}로 몇 문장 써보세요. 원어민이라면 어떻게 쓸지 보여드릴게요...',

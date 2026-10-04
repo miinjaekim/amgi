@@ -6,8 +6,9 @@ import {
   getWordOfTheDay as _wotd,
   getPronunciationUrl as _pronounce,
   getWritingReview as _writingReview,
+  lookUpUserVerb as _lookUpUserVerb,
 } from '@amgi/core';
-import type { StudyLanguage } from '@amgi/core';
+import type { ConjugationSpec, StudyLanguage } from '@amgi/core';
 
 export { applySpellingCorrection } from '@amgi/core';
 export type { ExplainResult, TermCore, TermDepth, TermAmbiguous, ExamplePair, SpellingCorrection } from '@amgi/core';
@@ -22,6 +23,13 @@ export const getTermExplanation = (
   studyLanguage: StudyLanguage = 'Korean',
   exact = false,
 ) => _explain(term, nativeLanguage, context, BASE_URL, studyLanguage, exact);
+
+/** Munli's "add a verb": the lookup above, asked for the verb's forms too. */
+export const lookUpUserVerb = (
+  spec: ConjugationSpec,
+  term: string,
+  options: { nativeLanguage?: string; gloss?: string } = {},
+) => _lookUpUserVerb(spec, term, { ...options, baseUrl: BASE_URL });
 
 export const getTermDepth = (
   term: string,

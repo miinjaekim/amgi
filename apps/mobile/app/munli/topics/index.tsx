@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { conjugationSpec, enrolledCountOfKind, getStudyLanguageConfig, munliTopics, t } from '@amgi/core';
+import { enrolledCountOfKind, getStudyLanguageConfig, munliTopics, t } from '@amgi/core';
 import type { MunliTopic } from '@amgi/core';
 import { useUser } from '../../../src/context/UserContext';
 import { useTheme } from '../../../src/context/ThemeContext';
@@ -33,9 +33,8 @@ export default function TopicsScreen() {
   const tabBarHeight = useFloatingTabBarHeight();
   const s = useMemo(() => makeStyles(C, tabBarHeight), [C, tabBarHeight]);
   const { interfaceLanguage, studyLanguage } = useUser();
-  const { enrolment, loading } = useConjugation();
+  const { spec, enrolment, loading } = useConjugation();
   const router = useRouter();
-  const spec = conjugationSpec(studyLanguage);
   // Only this language's topics — see `munliTopics`. Regular and irregular
   // verbs are two topics, not one with two halves: a rule one example
   // demonstrates against a fact no other verb tells you anything about.

@@ -1,6 +1,6 @@
 'use client';
 import Link from 'next/link';
-import { conjugationSpec, enrolledCountOfKind, getStudyLanguageConfig, munliTopics } from '@amgi/core';
+import { enrolledCountOfKind, getStudyLanguageConfig, munliTopics } from '@amgi/core';
 import { useUser } from '@/components/UserContext';
 import { useConjugation } from '@/hooks/useConjugation';
 import PageHeader from '@/components/PageHeader';
@@ -16,8 +16,7 @@ import { t } from '@/lib/i18n';
  */
 export default function TopicsPage() {
   const { interfaceLanguage, studyLanguage } = useUser();
-  const { enrolment, loading } = useConjugation();
-  const spec = conjugationSpec(studyLanguage);
+  const { spec, enrolment, loading } = useConjugation();
   // Only this language's topics — see `munliTopics`. Regular and irregular
   // verbs are two topics, not one with two halves: a rule one example
   // demonstrates against a fact no other verb tells you anything about.

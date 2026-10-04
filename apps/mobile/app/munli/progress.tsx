@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { conjugationSpec, getStudyLanguageConfig, summarizeConjugation, t } from '@amgi/core';
+import { getStudyLanguageConfig, summarizeConjugation, t } from '@amgi/core';
 import { useUser } from '../../src/context/UserContext';
 import { useTheme } from '../../src/context/ThemeContext';
 import { useConjugation } from '../../src/context/ConjugationContext';
@@ -31,8 +31,7 @@ export default function MunliProgressScreen() {
   const { interfaceLanguage, studyLanguage } = useUser();
   // ⚠️ The shared source, not a copy of its own. Holding one here is what made
   // a rating invisible on this tab until the app was restarted.
-  const { progress, enrolment, loading } = useConjugation();
-  const spec = conjugationSpec(studyLanguage);
+  const { spec, progress, enrolment, loading } = useConjugation();
 
   const summary = useMemo(
     () => (spec && enrolment ? summarizeConjugation(spec, enrolment, progress) : null),
@@ -88,7 +87,9 @@ export default function MunliProgressScreen() {
                     <Text style={s.rowLabel} numberOfLines={1}>
                       {box.subjectLabel} · {box.personLabel} · {box.tenseLabel}
                     </Text>
-                    <Text style={s.rowValue}>{box.form}</Text>
+                    <Text style={s.rowValue}>
+                      {box.userAdded ? `${box.form} · ${t(interfaceLanguage, 'verbUnverifiedTag')}` : box.form}
+                    </Text>
                   </View>
                 ))}
               </>
