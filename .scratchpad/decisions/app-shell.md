@@ -3,6 +3,39 @@
 Navigation, titles, mode names, onboarding, help, naming. Newest first. Indexed from
 [status.md](../status.md).
 
+## Onboarding does it once for real (2026-10-04)
+
+The answer to *Onboarding is not a checklist* below, scoped with the user and
+built in PR #178. After the three language questions, first run walks through
+one real lookup, full screen and before the app: a word, the explanation from
+`/api/explain` (the route Learn calls, never a second prompt), the card it
+becomes, one flip, one rating, the packs for that language, then sign-in. It
+replaces the tour card. Munli is left out. Existing users see none of it.
+
+Four calls the user made on a proposal, each against alternatives:
+
+- **Review timing is shown by rating the card once.** Review's own four
+  buttons, answered with the day the scheduler gives and the same card asked
+  the other way round. Rejected: a timeline strip of intervals (a diagram, not
+  something you do) and a sentence (the telling the 2026-08-02 entry rejected).
+- **Packs are the real list**, as the Packs page shows it, not tappable.
+  Rejected: tapping through to a pack, which sends people past sign-in, and
+  showing sample words, which is a curated list needing approval per language.
+  A language with no packs has no packs screen.
+- **The card is kept only by an account set up in this flow**, with its
+  rating. An existing account keeps its own languages and cards and gets
+  nothing added. *Not now* drops the card. Rejected: holding it on the device
+  until a later sign-in, which needs stored state and produces a card the user
+  may not remember making.
+- **Skip drops the card and carries on to packs and sign-in**, and a lookup
+  silent for 15 seconds becomes a retry screen. Rejected: skip ending setup
+  outright, since prompting sign-in was the original ask.
+
+**The suggested words are Learn's existing example chips**, one per language,
+chosen to be in the study language, not a starter word, and single-meaning
+when run through the route (`SETUP_WORDS`). Swapping one means re-running it:
+`sobremesa` and 배 both return the meaning picker.
+
 ## Amgi's titles name the study language; Import removed, Export to Your data (2026-09-25)
 
 **The chip Munli got the same day now ends every Amgi title row too**: Learn
