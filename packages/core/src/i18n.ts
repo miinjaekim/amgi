@@ -478,7 +478,9 @@ const translations = {
     settingsTitle: 'Settings',
     settingsAccount: 'Account',
     // The settings list's rows, where they are not already a section's name.
-    // Each is the title of the screen its row opens.
+    // Each is the title of the screen its row opens. General is web's only:
+    // its settings modal puts theme and pronunciation in one pane.
+    settingsGeneral: 'General',
     settingsLanguages: 'Languages',
     settingsAppearance: 'Appearance',
     settingsPronunciation: 'Pronunciation',
@@ -974,6 +976,7 @@ const translations = {
     // Settings screen (mobile)
     settingsTitle: '설정',
     settingsAccount: '계정',
+    settingsGeneral: '일반',
     settingsLanguages: '언어',
     settingsAppearance: '화면',
     settingsPronunciation: '발음',

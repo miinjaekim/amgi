@@ -1,10 +1,8 @@
 'use client';
 import React from 'react';
-import { usePathname } from 'next/navigation';
-import { modeFromPath } from '@amgi/core';
 import { useUser } from '@/components/UserContext';
-import { SettingsRow, RowSeparator, SwitchModeRow } from '@/components/SettingsRows';
-import { settingsHome } from '@/lib/mode';
+import { MenuRow, RowSeparator, SwitchModeRow } from '@/components/SettingsRows';
+import { useSettingsModal } from '@/components/SettingsModal';
 import { t } from '@/lib/i18n';
 
 /**
@@ -12,20 +10,21 @@ import { t } from '@/lib/i18n';
  *
  * ⚠️ **This used to *be* the settings screen** — every control stacked in a
  * 16rem popover, which had to be given a scroll bound on 2026-09-09 when it
- * outgrew the viewport. It is a menu now: the rows lead to the settings page
- * (`SettingsPage`), and nothing here is a control. A menu this short cannot
+ * outgrew the viewport. It is a menu now: Settings opens the settings modal
+ * (`SettingsModal`), and nothing here is a control. A menu this short cannot
  * overflow, so the containers no longer bound it.
  *
  * **Languages has its own row beside Settings** because it is the one section
  * reached often, and on a narrow screen it is the only way to switch decks —
- * the sidebar's language popover is not there.
+ * the sidebar's language popover is not there. It opens the same modal, on
+ * that section.
  *
  * Rendered inside the header dropdown (narrow) and the sidebar popover (wide).
  * The container provides positioning.
  */
 export default function AccountMenu({ onClose }: { onClose: () => void }) {
   const { user, interfaceLanguage, handleSignOut } = useUser();
-  const settings = settingsHome(modeFromPath(usePathname()));
+  const settings = useSettingsModal();
 
   return (
     <div className="py-1">
@@ -33,13 +32,13 @@ export default function AccountMenu({ onClose }: { onClose: () => void }) {
         {user?.email ?? t(interfaceLanguage, 'settingsNotSignedIn')}
       </p>
       <RowSeparator />
-      <SettingsRow icon="settings" labelKey="settingsTitle" href={settings} onClick={onClose} />
-      <SettingsRow icon="languages" labelKey="settingsLanguages" href={`${settings}/languages`} onClick={onClose} />
+      <MenuRow icon="settings" labelKey="settingsTitle" onClick={() => { settings.open(); onClose(); }} />
+      <MenuRow icon="languages" labelKey="settingsLanguages" onClick={() => { settings.open('languages'); onClose(); }} />
       <SwitchModeRow onSwitch={onClose} />
       {user && (
         <>
           <RowSeparator />
-          <SettingsRow icon="signOut" labelKey="signOut" onClick={() => { handleSignOut(); onClose(); }} />
+          <MenuRow icon="signOut" labelKey="signOut" onClick={() => { handleSignOut(); onClose(); }} />
         </>
       )}
     </div>

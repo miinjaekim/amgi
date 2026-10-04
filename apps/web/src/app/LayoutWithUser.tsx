@@ -7,6 +7,7 @@ import SideNav from '@/components/SideNav';
 import BottomNav from '@/components/BottomNav';
 import LanguageSetupModal from '@/components/LanguageSetupModal';
 import { UserPacksProvider } from '@/components/UserPacksContext';
+import { SettingsModalProvider } from '@/components/SettingsModal';
 
 const COLLAPSED_KEY = 'sidenav-collapsed';
 
@@ -41,6 +42,7 @@ export default function LayoutWithUser({ children }: { children: React.ReactNode
 
   return (
     <UserPacksProvider>
+      <SettingsModalProvider>
       <Header />
       <SideNav collapsed={navCollapsed} onToggle={toggleNav} />
       {/* Gated on the *interface* language, which is the first thing setup
@@ -62,6 +64,7 @@ export default function LayoutWithUser({ children }: { children: React.ReactNode
         {children}
       </main>
       <BottomNav />
+      </SettingsModalProvider>
     </UserPacksProvider>
   );
 }
