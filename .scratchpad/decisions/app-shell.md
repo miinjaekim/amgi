@@ -9,7 +9,7 @@ Mobile settings was one screen of ten stacked sections. The user: it "feels
 overwhelming … a huge list. I'd rather a list that I can skim through, and if
 there's something I want to change, I click into it for more details", as
 Claude, Instagram and iOS Settings do. Built for mobile in PR #180 and for web
-in PR #PRNUM, which gave web a settings route (not a modal) for the first time.
+in PR #181, which gave web a settings route (not a modal) for the first time.
 
 - **The list is the account, then three groups split by thin rules**:
   *Switch mode* · Languages · Appearance · Pronunciation · Reminders — then
@@ -37,7 +37,7 @@ in PR #PRNUM, which gave web a settings route (not a modal) for the first time.
 - **Flat routes on the root stack**, `settings/<name>`, rather than a nested
   navigator. Web uses the same names.
 
-Web, in PR #PRNUM:
+Web, in PR #181:
 
 - **The account button opens a menu, not the settings.** The email, then
   Settings · Languages · Switch mode, then Sign out alone. The popover used to
