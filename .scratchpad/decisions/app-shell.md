@@ -8,7 +8,7 @@ Navigation, titles, mode names, onboarding, help, naming. Newest first. Indexed 
 Mobile settings was one screen of ten stacked sections. The user: it "feels
 overwhelming … a huge list. I'd rather a list that I can skim through, and if
 there's something I want to change, I click into it for more details", as
-Claude, Instagram and iOS Settings do. Built for mobile in PR #PRNUM; web
+Claude, Instagram and iOS Settings do. Built for mobile in PR #180; web
 follows with the same rows and a `/settings` route (not a modal), and is the
 open backlog item.
 

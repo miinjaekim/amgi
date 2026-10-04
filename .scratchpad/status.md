@@ -74,7 +74,7 @@ blank placeholder. On **Android**, only sign-in has ever been exercised.
 - **The Slow pronunciation speed** is a pitch-corrected stretch, not a slow
   synthesis. If it sounds like an artifact, the fallback is written in its
   entry in [pronunciation](decisions/pronunciation.md).
-- **Settings as a list** (PR #PRNUM): typechecked and bundled, never opened,
+- **Settings as a list** (PR #180): typechecked and bundled, never opened,
   not even in Expo Go. Unseen: the list itself, each detail screen keeping its
   mode's theme, and *Switch mode* from settings landing in the other mode with
   no way to swipe back into the old one.

@@ -39,7 +39,7 @@ _Merged, not yet in anyone's hands — mobile ships by build, no OTA._
   is "The brief definition shows after the reveal" in
   [decisions/review.md](decisions/review.md).
 
-- **Settings as a list** (PR #PRNUM) — mobile only. Settings opens on the
+- **Settings as a list** (PR #180) — mobile only. Settings opens on the
   account and eight rows; each pushes its own screen, and *Switch mode* opens
   the mode sheet. Account deletion moved to Settings → Account, and the review
   notes say so. The decision is "Settings is a list of rows" in
@@ -62,7 +62,7 @@ picker narrowed (#146). Both are written up in their Decisions entries of
       2026-10-04. The user's words: opening settings "feels overwhelming … a
       huge list. I'd rather a list that I can skim through, and if there's
       something I want to change, I click into it for more details", as Claude,
-      Instagram and iOS Settings do. **Mobile is done** (PR #PRNUM, queued
+      Instagram and iOS Settings do. **Mobile is done** (PR #180, queued
       above), and web mirrors its shape; the reasoning is "Settings is a list
       of rows" in [decisions/app-shell.md](decisions/app-shell.md).
       **Settled with the user 2026-10-04.** The same rows mobile has, in the
