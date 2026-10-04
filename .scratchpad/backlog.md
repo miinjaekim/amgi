@@ -123,9 +123,26 @@ picker narrowed (#146). Both are written up in their Decisions entries of
       Irregular verbs, and a *Practise its conjugation* action on a French verb
       card in Amgi (a French verb card already carries its conjugation group,
       #165, so it knows what it would be practised as).
-      Still to decide:
-      - **Pronominal verbs.** `se lever` needs `me`/`te`/`se` and `subjectFor`
-        only knows `je`/`j'`. Refuse them in the first cut, or handle them.
+      **Settled with the user 2026-10-04:**
+      - **Pronominal verbs are refused in the first cut.** `se lever` needs
+        `me`/`te`/`se` and `subjectFor` only knows `je`/`j'`; adding one shows a
+        short "not supported yet" message.
+      - **Two PRs, adding first.** PR 1 is adding a verb (both entry points,
+        web and mobile). PR 2 is the weighted draw below.
+      - **PR 2: a regular verb the user keeps missing is drawn more often.**
+        The user's idea: count how often each regular verb is got wrong and let
+        that decide how often it turns up as its group's vehicle. One count per
+        user per verb, across tenses: +1 for each missed box asked through that
+        verb, cleared once a round through it has no misses (the box tally's own
+        rule). Built-in vehicles count too, not only user-added ones.
+        ⚠️ **It biases the draw and nothing else.** The 2026-09-22 rework removed
+        `pickPerson`'s miss-weighted draw and left `misses` as report-only, and
+        `decisions/munli.md` says "nothing here adapts to the learner". This is
+        a deliberate exception to that, and it holds because the schedule is
+        untouched: a box is still asked because it is due, and the count only
+        chooses which verb it is asked through. Write the exception into
+        `decisions/munli.md` when it is built.
+      Still to decide (defaults, not confirmed with the user):
       - **An added verb that is already there** — `être`, or a vehicle already
         in a group. Presumably a no-op that points at the existing table.
       - **Whether this settles `faire`** (#150): a user can now add it
