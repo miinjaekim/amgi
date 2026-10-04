@@ -3,6 +3,36 @@
 The second mode: its shell, conjugation practice, writing review as a tool, English articles. 2026-09-21 on. Newest first. Indexed from
 [status.md](../status.md).
 
+## A verb you keep missing is drawn more often, and that is all it changes (2026-10-05)
+
+**The user's idea, approved 2026-10-04**: count how often each regular verb is
+got wrong, and let that decide how often it turns up as its group's vehicle.
+
+⚠️ **This is a deliberate exception to "nothing here adapts to the learner"**
+(2026-09-22, "A table is six facts"). That rework removed `pickPerson`'s
+miss-weighted draw and left `misses` report-only. **The exception holds on one
+condition: it weighs the draw and nothing else.** `pickPerson` decided *what*
+was asked. Here a box is still asked because it is due, and the count only
+chooses which verb it is asked through. A test asserts the boxes and tenses of
+a session are the same whatever the counts.
+
+- **One count per learner per verb**, across tenses and persons. Each box
+  missed through the verb adds one; a round through it with no miss clears it.
+  That is the per-box tally's own rule, one level up.
+- **Built-in verbs are counted too**, not only added ones.
+- **The weight is `1 + misses`, capped at 5.** A verb never missed weighs 1, so
+  every vehicle stays drawable. One missed three times is drawn four times as
+  often as an unmissed one. The cap is there so one bad verb cannot crowd out
+  its group, which would turn "produce the ending" back into "recall this
+  word" — the thing vehicles exist to prevent.
+- **The draw is still a pure function of a nonce and a snapshot**, taken when
+  the session starts, inside the Start handler. With nothing missed it is the
+  even draw it replaced, roll for roll.
+- **A typo override undoes the verb's miss with the box's**, by re-rating the
+  round from the count it started on (mobile; web has no override).
+- **Nothing shows the count.** It is on `users/{uid}` as
+  `conjugationVehicleMisses`, keyed like `conjugationVerbs`.
+
 ## Verbs are one topic again, and Amgi has a door into it (2026-10-04)
 
 **The user's call, after trying the first cut of adding a verb** (PR #182),

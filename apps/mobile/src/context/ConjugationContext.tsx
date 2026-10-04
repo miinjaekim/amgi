@@ -1,6 +1,6 @@
 import React, { createContext, useCallback, useContext, useMemo, useRef, useState, ReactNode } from 'react';
 import { conjugationSpec, normalizeEnrolment, normalizeProgress, withUserVerbs } from '@amgi/core';
-import type { ConjugationEnrolment, ConjugationProgressMap, ConjugationSpec } from '@amgi/core';
+import type { ConjugationEnrolment, ConjugationProgressMap, ConjugationSpec, VehicleMisses } from '@amgi/core';
 import { useUser } from './UserContext';
 import { saveUserPreferences } from '../services/userPreferences';
 
@@ -34,8 +34,14 @@ interface ConjugationContextType {
   enrolment: ConjugationEnrolment | undefined;
   /** True until the first snapshot lands. "Not yet" is not "none". */
   loading: boolean;
-  /** Write a round's ratings — up to one per box, in a single merge write. */
-  rate: (updates: ConjugationProgressMap) => void;
+  /**
+   * Write a round's ratings — up to one per box, in a single merge write.
+   * `vehicle` is `rateVehicle`'s entry for the verb the round was asked
+   * through, and goes in the same write.
+   */
+  rate: (updates: ConjugationProgressMap, vehicle?: VehicleMisses) => void;
+  /** Miss counts per verb, for `buildConjugationQueue` and `rateVehicle`. */
+  vehicleMisses: VehicleMisses | undefined;
   setEnrolment: (next: ConjugationEnrolment) => void;
 }
 
@@ -45,11 +51,12 @@ const ConjugationContext = createContext<ConjugationContextType>({
   enrolment: undefined,
   loading: true,
   rate: () => {},
+  vehicleMisses: undefined,
   setEnrolment: () => {},
 });
 
 export function ConjugationProvider({ children }: { children: ReactNode }) {
-  const { user, studyLanguage, conjugation, conjugationEnrolment, conjugationVerbs } = useUser();
+  const { user, studyLanguage, conjugation, conjugationEnrolment, conjugationVerbs, conjugationVehicleMisses } = useUser();
   const spec = useMemo(() => {
     const base = conjugationSpec(studyLanguage);
     return base && withUserVerbs(base, conjugationVerbs);
@@ -96,13 +103,20 @@ export function ConjugationProvider({ children }: { children: ReactNode }) {
     return normalizeEnrolment(spec, pendingEnrolment ?? conjugationEnrolment);
   }, [spec, conjugation, pendingEnrolment, conjugationEnrolment]);
 
-  const rate = useCallback((updates: ConjugationProgressMap) => {
+  const rate = useCallback((updates: ConjugationProgressMap, vehicle?: VehicleMisses) => {
     setPending(prev => ({ ...prev, ...updates }));
     // Fire and forget, like every other rating in the app: blocking the next
     // question on a round trip is what makes a five-second exercise feel like a
     // forty-second one. The nested map merges key by key, so a round writes the
     // boxes it asked and not the set — one write rather than six.
-    if (user) void saveUserPreferences(user.uid, { conjugation: updates }).catch(() => {});
+    // The verb's count is not held in `pending`: nothing on screen reads it,
+    // only the draw when a session starts.
+    if (user) {
+      void saveUserPreferences(user.uid, {
+        conjugation: updates,
+        ...(vehicle ? { conjugationVehicleMisses: vehicle } : {}),
+      }).catch(() => {});
+    }
   }, [user]);
 
   const setEnrolment = useCallback((next: ConjugationEnrolment) => {
@@ -111,8 +125,11 @@ export function ConjugationProvider({ children }: { children: ReactNode }) {
   }, [user]);
 
   const value = useMemo(
-    () => ({ spec, progress, enrolment, loading: conjugation === undefined, rate, setEnrolment }),
-    [spec, progress, enrolment, conjugation, rate, setEnrolment],
+    () => ({
+      spec, progress, enrolment, loading: conjugation === undefined, rate, setEnrolment,
+      vehicleMisses: conjugationVehicleMisses,
+    }),
+    [spec, progress, enrolment, conjugation, rate, setEnrolment, conjugationVehicleMisses],
   );
 
   return <ConjugationContext.Provider value={value}>{children}</ConjugationContext.Provider>;

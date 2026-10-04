@@ -1,6 +1,6 @@
 // Type-only, so it is erased at compile time and the cycle with `conjugation.ts`
 // (which imports `StudyLanguage` from here) never exists at runtime.
-import type { ConjugationEnrolment, ConjugationProgressMap, UserVerbMap, VerbGroup } from './conjugation';
+import type { ConjugationEnrolment, ConjugationProgressMap, UserVerbMap, VehicleMisses, VerbGroup } from './conjugation';
 import { isAllKana, markPitchAccent } from './pitchAccent';
 import { kanaToHangul, kanaToRomaji, kikuyuToEnglish, kikuyuToHangul } from './transliterate';
 
@@ -1142,6 +1142,13 @@ export interface UserPreferences {
    * field on `users/{uid}` is readable by its owner and nobody else.
    */
   conjugationVerbs?: UserVerbMap;
+  /**
+   * How often each regular verb has been got wrong in practice, keyed by
+   * `conjugationVerbKey` — the same keys as `conjugationVerbs`, though it
+   * counts built-in verbs too. It weighs which verb a pattern is asked through
+   * and decides nothing else; see `vehicleWeight`.
+   */
+  conjugationVehicleMisses?: VehicleMisses;
   /**
    * Which part of a hanja card sits on the front. Absent means
    * `DEFAULT_HANJA_PARTITION` — the question the exam asks.

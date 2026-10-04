@@ -1168,6 +1168,70 @@ export function rateBox(
   };
 }
 
+/* ── Which verb a pattern is asked through ───────────────────────────────── */
+
+/**
+ * How often each regular verb has been got wrong, keyed by `conjugationVerbKey`.
+ *
+ * One count per learner per verb, across tenses and persons. Built-in vehicles
+ * are counted as well as added ones.
+ */
+export type VehicleMisses = Record<string, number>;
+
+/** A verb is never drawn more than this many times as often as an unmissed one. */
+const VEHICLE_WEIGHT_CAP = 5;
+
+/**
+ * How strongly a verb is drawn as its group's vehicle, from its miss count.
+ *
+ * ⚠️ **A deliberate exception to "nothing here adapts to the learner"**,
+ * approved by the user 2026-10-04, and it holds on one condition: this weighs
+ * the *draw* and nothing else. The 2026-09-22 rework removed `pickPerson`'s
+ * miss-weighted draw because it decided *what* was asked; a box is still asked
+ * because it is due, and this only decides which verb a due box is asked
+ * through.
+ *
+ * `1 + misses`, capped. A verb never missed weighs 1, so **every vehicle stays
+ * drawable**; one missed three times is drawn four times as often as one that
+ * was not. The cap keeps a single bad verb from crowding out the rest of its
+ * group, which would turn "produce the ending" back into "recall this word".
+ */
+export function vehicleWeight(misses: unknown): number {
+  const count = typeof misses === 'number' && Number.isFinite(misses) ? Math.max(0, Math.floor(misses)) : 0;
+  return Math.min(VEHICLE_WEIGHT_CAP, 1 + count);
+}
+
+/**
+ * The miss count of the verb a round was asked through, after that round.
+ *
+ * The per-box tally's own rule, one level up: each box missed through the verb
+ * adds one, and a round through it with no miss clears it — a verb you have
+ * now got right is answered, not "less wrong than before".
+ *
+ * Returns the one entry to write, or nothing when the round was not asked
+ * through a vehicle — an irregular verb has no draw to weigh. `rated` is what
+ * `rateBox` returned for the round's boxes, whose `misses` is above zero
+ * exactly when the verdict was a miss.
+ *
+ * `misses` is the count as it stood **before the round**. A round that is
+ * re-rated — "that was a typo" — passes the same starting count again with the
+ * corrected ratings, so the correction replaces the round's effect rather than
+ * stacking on it.
+ */
+export function rateVehicle(
+  spec: ConjugationSpec,
+  table: ConjugationTable,
+  rated: ConjugationProgressMap,
+  misses: VehicleMisses | undefined,
+): VehicleMisses | undefined {
+  if (table.subjectKind !== 'group') return undefined;
+  const key = conjugationVerbKey(spec.language, table.infinitive);
+  const stored = misses?.[key];
+  const before = typeof stored === 'number' && Number.isFinite(stored) ? Math.max(0, stored) : 0;
+  const missed = Object.values(rated).filter(state => state.misses > 0).length;
+  return { [key]: missed > 0 ? before + missed : 0 };
+}
+
 /* ── Answering ───────────────────────────────────────────────────────────── */
 
 /**
@@ -1360,6 +1424,15 @@ export interface ConjugationQueueOptions {
    * the same number; only the packaging differs.
    */
   wholeTable?: boolean;
+  /**
+   * How often each verb has been missed, as it stood when the session started.
+   *
+   * It weighs which verb a pattern is asked through and nothing else — see
+   * `vehicleWeight`. A snapshot rather than a live value for the reason the
+   * queue itself is fixed at Start: the draw happens once, here, inside an
+   * event handler, which is what keeps it a pure function of its arguments.
+   */
+  vehicleMisses?: VehicleMisses;
 }
 
 /**
@@ -1375,6 +1448,10 @@ export interface ConjugationQueueOptions {
  * it through `parler` every time tests `parlons`. In whole-table mode the draw
  * is once per table rather than once per box, because a paradigm of six
  * different verbs is not a paradigm.
+ *
+ * ⚠️ **The draw leans toward verbs the learner keeps missing**, and that is
+ * all `vehicleMisses` does. Which boxes are asked is settled above this point,
+ * by what is due.
  *
  * ⚠️ **The queue is owned by the session from here on.** Ratings written while
  * it runs move the picker's counts and must not rebuild it under someone eight
@@ -1398,7 +1475,13 @@ export function buildConjugationQueue(
   const vehicled = (table: ConjugationTable): ConjugationTable => {
     const subject = findSubject(spec, `${table.subjectKind}:${table.subjectId}`);
     if (!subject || subject.kind !== 'group') return table;
-    const pick = Math.min(subject.vehicles.length - 1, Math.floor(random() * subject.vehicles.length));
+    const weights = subject.vehicles.map(verb =>
+      vehicleWeight(options.vehicleMisses?.[conjugationVerbKey(spec.language, verb)]));
+    // One roll across the weights laid end to end. With nothing missed every
+    // weight is 1 and this is the even draw it replaced.
+    let roll = random() * weights.reduce((sum, weight) => sum + weight, 0);
+    let pick = weights.findIndex(weight => (roll -= weight) < 0);
+    if (pick < 0) pick = subject.vehicles.length - 1;
     return buildTable(spec, subject, table.tenseId, subject.vehicles[pick]);
   };
 

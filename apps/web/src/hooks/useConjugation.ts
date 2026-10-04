@@ -1,7 +1,7 @@
 'use client';
 import { useCallback, useMemo, useState } from 'react';
 import { conjugationSpec, normalizeEnrolment, normalizeProgress, withUserVerbs } from '@amgi/core';
-import type { ConjugationEnrolment, ConjugationProgressMap } from '@amgi/core';
+import type { ConjugationEnrolment, ConjugationProgressMap, VehicleMisses } from '@amgi/core';
 import { useUser } from '@/components/UserContext';
 import { saveUserPreferences } from '@/services/userPreferences';
 
@@ -21,7 +21,7 @@ import { saveUserPreferences } from '@/services/userPreferences';
  * during a session: pages mount fresh when navigated to.
  */
 export function useConjugation() {
-  const { user, studyLanguage, conjugation, conjugationEnrolment, conjugationVerbs } = useUser();
+  const { user, studyLanguage, conjugation, conjugationEnrolment, conjugationVerbs, conjugationVehicleMisses } = useUser();
 
   const [pending, setPending] = useState<ConjugationProgressMap>({});
 
@@ -78,10 +78,19 @@ export function useConjugation() {
    * ⚠️ **A map rather than one box**, since a round rates up to six of them at
    * once. One merge write per round rather than six is the point: the nested
    * map merges key by key, so this writes the boxes answered and not the set.
+   *
+   * `vehicle` is `rateVehicle`'s entry for the verb the round was asked
+   * through, and goes in the same write. It is not held in `pending`, because
+   * nothing on screen reads it — it is only read when a session starts.
    */
-  const rate = useCallback((updates: ConjugationProgressMap) => {
+  const rate = useCallback((updates: ConjugationProgressMap, vehicle?: VehicleMisses) => {
     setPending(prev => ({ ...prev, ...updates }));
-    if (user) void saveUserPreferences(user.uid, { conjugation: updates }).catch(() => {});
+    if (user) {
+      void saveUserPreferences(user.uid, {
+        conjugation: updates,
+        ...(vehicle ? { conjugationVehicleMisses: vehicle } : {}),
+      }).catch(() => {});
+    }
   }, [user]);
 
   const setEnrolment = useCallback((next: ConjugationEnrolment) => {
@@ -89,5 +98,9 @@ export function useConjugation() {
     if (user) void saveUserPreferences(user.uid, { conjugationEnrolment: next }).catch(() => {});
   }, [user]);
 
-  return { spec, progress, enrolment, loading: conjugation === undefined, rate, setEnrolment };
+  return {
+    spec, progress, enrolment, loading: conjugation === undefined, rate, setEnrolment,
+    /** Miss counts per verb, for `buildConjugationQueue` and `rateVehicle`. */
+    vehicleMisses: conjugationVehicleMisses,
+  };
 }

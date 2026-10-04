@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react';
 import {
   boxItemId, buildConjugationQueue, buildTables, conjugationHints, countDueBoxes,
   countQuestions, getStudyLanguageConfig, hintedVerdict, isCorrectForm,
-  listPracticeSections, rateBox,
+  listPracticeSections, rateBox, rateVehicle,
 } from '@amgi/core';
 import type { ConjugationProgressMap, ConjugationRound, TranslationKey } from '@amgi/core';
 import { useUser } from '@/components/UserContext';
@@ -34,7 +34,7 @@ type Stage = 'picker' | 'setup' | 'session';
 
 export default function PracticePage() {
   const { interfaceLanguage, studyLanguage } = useUser();
-  const { spec, progress, enrolment, rate, loading } = useConjugation();
+  const { spec, progress, enrolment, rate, loading, vehicleMisses } = useConjugation();
 
   const [stage, setStage] = useState<Stage>('picker');
   /** Which section's patterns are open, one level down. */
@@ -95,7 +95,7 @@ export default function PracticePage() {
    */
   const start = () => {
     if (!spec) return;
-    setQueue(buildConjugationQueue(spec, tables, progress, { includeNotDue, wholeTable }));
+    setQueue(buildConjugationQueue(spec, tables, progress, { includeNotDue, wholeTable, vehicleMisses }));
     setIndex(0);
     setStopped(false);
     setTyped({});
@@ -122,7 +122,8 @@ export default function PracticePage() {
       const id = boxItemId(spec, round.table, personId);
       updates[id] = rateBox(progress[id], hintedVerdict(hints[personId] ?? 0, correct));
     }
-    rate(updates);
+    // The verb the round was asked through is counted with it — see `rateVehicle`.
+    rate(updates, rateVehicle(spec, round.table, updates, vehicleMisses));
     // ⚠️ **A right answer to one question moves on with no pause at all.**
     // This held the correct form on screen for 800ms first, and the user's
     // call after trying it was that the pause is the thing worth removing:

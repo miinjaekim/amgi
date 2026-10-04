@@ -11,6 +11,9 @@ import {
   normalizeEnrolment,
   normalizeProgress,
   parseConjugationForms,
+  rateBox,
+  rateVehicle,
+  vehicleWeight,
   settleUserVerb,
   subjectsOfKind,
   summarizeConjugation,
@@ -263,5 +266,77 @@ describe('withUserVerbs', () => {
       'French:danser': { infinitive: 'danser', group: 'er', addedAt: '2026-10-04T00:00:00.000Z' },
     };
     expect(withUserVerbs(spec, map).userVerbs).toEqual(['danser', 'chanter']);
+  });
+});
+
+describe('the vehicle draw', () => {
+  const er = findSubject(spec, 'group:er') as ConjugationGroup;
+  const tables = buildTables(spec, { items: ['group:er:present'] });
+  /** How often each verb is drawn over many sessions, with a fixed sequence of rolls. */
+  const draws = (vehicleMisses: Record<string, number> | undefined) => {
+    const counts: Record<string, number> = {};
+    for (let i = 0; i < 1000; i++) {
+      // The first roll of a whole-table session is the vehicle's.
+      const [round] = buildConjugationQueue(spec, tables, {}, { wholeTable: true, vehicleMisses }, NOW, () => (i + 0.5) / 1000);
+      counts[round.table.infinitive] = (counts[round.table.infinitive] ?? 0) + 1;
+    }
+    return counts;
+  };
+
+  it('weighs a verb by its misses, never below one and never above the cap', () => {
+    expect([0, 1, 3, 4, 50].map(vehicleWeight)).toEqual([1, 2, 4, 5, 5]);
+    expect([undefined, null, -2, NaN, 'three'].map(vehicleWeight)).toEqual([1, 1, 1, 1, 1]);
+  });
+
+  it('is the even draw it replaced when nothing has been missed', () => {
+    const even = draws(undefined);
+    expect(Object.keys(even)).toEqual([...er.vehicles]);
+    for (const verb of er.vehicles) expect(even[verb]).toBe(125);
+    expect(draws({ 'French:parler': 0 })).toEqual(even);
+  });
+
+  it('draws a missed verb more often, and still draws every other one', () => {
+    const counts = draws({ 'French:donner': 3 });
+    // Weight 4 against seven verbs at 1: 4 in 11.
+    expect(counts.donner).toBeGreaterThan(355);
+    expect(counts.donner).toBeLessThan(370);
+    for (const verb of er.vehicles) expect(counts[verb]).toBeGreaterThan(80);
+  });
+
+  it('leaves what is asked alone: the same boxes, whatever the counts', () => {
+    const plain = buildConjugationQueue(spec, tables, {}, {}, NOW, () => 0.5);
+    const weighted = buildConjugationQueue(spec, tables, {}, { vehicleMisses: { 'French:donner': 9 } }, NOW, () => 0.5);
+    expect(weighted.map(round => round.personIds)).toEqual(plain.map(round => round.personIds));
+    expect(weighted.map(round => round.table.tenseId)).toEqual(plain.map(round => round.table.tenseId));
+  });
+
+  it('counts each missed box against the verb, and clears on a clean round', () => {
+    const donner = buildTable(spec, er, 'present', 'donner');
+    const miss = rateBox(undefined, 'again');
+    const hit = rateBox(undefined, 'good');
+    expect(rateVehicle(spec, donner, { a: miss, b: hit, c: miss }, undefined)).toEqual({ 'French:donner': 2 });
+    expect(rateVehicle(spec, donner, { a: miss }, { 'French:donner': 2 })).toEqual({ 'French:donner': 3 });
+    expect(rateVehicle(spec, donner, { a: hit, b: hit }, { 'French:donner': 3 })).toEqual({ 'French:donner': 0 });
+    // A hinted answer that still passed is not a miss.
+    expect(rateVehicle(spec, donner, { a: rateBox(undefined, 'hard') }, { 'French:donner': 3 })).toEqual({ 'French:donner': 0 });
+  });
+
+  /** "That was a typo": the round is rated again from the count it started on. */
+  it('replaces a round rather than stacking on it when re-rated from the same start', () => {
+    const donner = buildTable(spec, er, 'present', 'donner');
+    const start = { 'French:donner': 1 };
+    expect(rateVehicle(spec, donner, { a: rateBox(undefined, 'again') }, start)).toEqual({ 'French:donner': 2 });
+    expect(rateVehicle(spec, donner, { a: rateBox(undefined, 'good') }, start)).toEqual({ 'French:donner': 0 });
+  });
+
+  it('counts nothing for an irregular verb, which has no draw', () => {
+    const etre = buildTable(spec, findSubject(spec, 'verb:etre')!, 'present');
+    expect(rateVehicle(spec, etre, { a: rateBox(undefined, 'again') }, undefined)).toBeUndefined();
+  });
+
+  it('counts a verb the learner added like any other', () => {
+    const mine = withUserVerbs(spec, stored(verb('danser', 'er', DANSER)));
+    const danser = buildTable(mine, findSubject(mine, 'group:er')!, 'present', 'danser');
+    expect(rateVehicle(mine, danser, { a: rateBox(undefined, 'again') }, undefined)).toEqual({ 'French:danser': 1 });
   });
 });

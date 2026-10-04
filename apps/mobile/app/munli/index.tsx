@@ -9,9 +9,9 @@ import type { BottomTabNavigationProp } from 'expo-router/tabs';
 import {
   boxItemId, buildConjugationQueue, buildTables, conjugationHints,
   countDueBoxes, countQuestions, getStudyLanguageConfig, hintedVerdict, isCorrectForm,
-  listPracticeSections, rateBox, t,
+  listPracticeSections, rateBox, rateVehicle, t,
 } from '@amgi/core';
-import type { ConjugationProgress, ConjugationProgressMap, ConjugationRound } from '@amgi/core';
+import type { ConjugationProgress, ConjugationProgressMap, ConjugationRound, VehicleMisses } from '@amgi/core';
 import { useUser } from '../../src/context/UserContext';
 import { useTheme } from '../../src/context/ThemeContext';
 import { useConjugation } from '../../src/context/ConjugationContext';
@@ -53,7 +53,7 @@ export default function PracticeScreen() {
   const tabBarHeight = useFloatingTabBarHeight();
   const s = useMemo(() => makeStyles(C, tabBarHeight), [C, tabBarHeight]);
   const { interfaceLanguage, studyLanguage } = useUser();
-  const { spec, progress, enrolment, rate, loading } = useConjugation();
+  const { spec, progress, enrolment, rate, loading, vehicleMisses } = useConjugation();
   const navigation = useNavigation<BottomTabNavigationProp<Record<string, undefined>>>();
 
   const [stage, setStage] = useState<Stage>('picker');
@@ -83,6 +83,13 @@ export default function PracticeScreen() {
    * a second rating on top of it.
    */
   const [before, setBefore] = useState<Record<string, ConjugationProgress | undefined>>({});
+  /**
+   * What `check` rated this round, and the verbs' miss counts as they stood
+   * before it — `before`, for the verb the round was asked through.
+   */
+  const [roundState, setRound] = useState<{ rated: ConjugationProgressMap; vehicleMisses: VehicleMisses | undefined }>(
+    { rated: {}, vehicleMisses: undefined },
+  );
   /** Person ids the learner marked as a typo, which then count as right. */
   const [typos, setTypos] = useState<Record<string, true>>({});
   /** Person id → its input, so Done can move to the next box and a new question can take the keyboard. */
@@ -152,7 +159,7 @@ export default function PracticeScreen() {
 
   const start = () => {
     if (!spec) return;
-    setQueue(buildConjugationQueue(spec, tables, progress, { includeNotDue, wholeTable }));
+    setQueue(buildConjugationQueue(spec, tables, progress, { includeNotDue, wholeTable, vehicleMisses }));
     setIndex(0);
     setStopped(false);
     setTyped({});
@@ -183,8 +190,10 @@ export default function PracticeScreen() {
       previous[personId] = progress[id];
       updates[id] = rateBox(progress[id], hintedVerdict(hints[personId] ?? 0, correct));
     }
-    rate(updates);
+    // The verb the round was asked through is counted with it — see `rateVehicle`.
+    rate(updates, rateVehicle(spec, round.table, updates, vehicleMisses));
     setBefore(previous);
+    setRound({ rated: updates, vehicleMisses });
     // ⚠️ **A right answer to one question moves on with no pause at all.**
     // This held the correct form on screen for 800ms first, and the user's
     // call after trying it was that the pause is the thing worth removing:
@@ -223,7 +232,12 @@ export default function PracticeScreen() {
     const round = queue[index];
     if (!spec || !round || typos[personId]) return;
     const id = boxItemId(spec, round.table, personId);
-    rate({ [id]: rateBox(before[personId], hintedVerdict(hints[personId] ?? 0, true)) });
+    const corrected = rateBox(before[personId], hintedVerdict(hints[personId] ?? 0, true));
+    // The verb's count is redone from where it stood before the round, with
+    // this box no longer a miss, for the same reason the box's rating is.
+    const rated = { ...roundState.rated, [id]: corrected };
+    rate({ [id]: corrected }, rateVehicle(spec, round.table, rated, roundState.vehicleMisses));
+    setRound(prev => ({ ...prev, rated }));
     if (round.personIds.length === 1) advance();
     else setTypos(prev => ({ ...prev, [personId]: true }));
   };
