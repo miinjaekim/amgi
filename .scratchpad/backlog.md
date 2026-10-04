@@ -25,7 +25,7 @@ _Merged, not yet in anyone's hands — mobile ships by build, no OTA._
 - **User-made vocab packs** (PR #175) — *Make a pack* on Packs, on web and
   mobile. Web is live on merge; mobile needs the build. Packs are labelled as
   made by the user and private to them.
-- **Cantonese** (PR #PRNUM) — an eleventh deck, with Jyutping checked against a
+- **Cantonese** (PR #177) — an eleventh deck, with Jyutping checked against a
   dictionary and `yue-HK` audio. Web is live on merge; mobile needs the build.
   Blocked on the console steps under High until they are done.
 
