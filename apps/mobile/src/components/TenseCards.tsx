@@ -132,7 +132,7 @@ function makeStyles(C: Palette) {
     saveOn: { backgroundColor: C.highlight },
     saveText: { color: C.highlight, fontSize: 12, fontWeight: '700' },
     saveTextOn: { color: C.bg },
-    forms: { flexDirection: 'row', gap: 16, marginTop: 8 },
+    forms: { flexDirection: 'row', gap: 40, marginTop: 8 },
     formStack: { flex: 1 },
     person: { color: C.muted, fontSize: 13, lineHeight: 24 },
     form: { color: C.text, fontSize: 14, lineHeight: 24 },
