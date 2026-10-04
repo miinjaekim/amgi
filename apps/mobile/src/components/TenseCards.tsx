@@ -19,8 +19,10 @@ const ALL_OPEN_UP_TO = 3;
  * per tense grows downward, and carries its own Save in its header, the way a
  * subpack does on a pack's screen.
  *
- * Inside a card the persons run in two columns, singular then plural, which is
- * how a paradigm is printed and fits a phone without scrolling.
+ * ⚠️ **One column of persons, where web has two.** Half a card on a phone
+ * holds about nine characters of verb, and `travaillerons` and `choisissaient`
+ * are thirteen, so two columns wrapped on most verbs' imparfait and futur. One
+ * column gives a form the whole width and reads in the order it is recited.
  *
  * Shared by the Verbs topic and Saved so one cannot disagree with the other —
  * the same reason `buildParadigm` is in core. `tenseIds` narrows which tenses
@@ -57,8 +59,6 @@ export default function TenseCards({
   // Reading the forms is the point, so everything is open while it fits. Once
   // a language has more tenses, the ones not being practised fold to a line.
   const foldable = tenses.length > ALL_OPEN_UP_TO;
-  const half = Math.ceil(spec.persons.length / 2);
-  const columns = [spec.persons.slice(0, half), spec.persons.slice(half)];
 
   return (
     <View style={s.stack}>
@@ -87,25 +87,21 @@ export default function TenseCards({
             </View>
 
             {open ? (
-              <View style={s.columns}>
-                {columns.map((persons, column) => (
-                  // Labels and forms are two stacks side by side rather than a
-                  // row per person: the label stack is then as wide as its
-                  // longest label and no wider, so the form sits right beside
-                  // its person. One line height keeps the two stacks level.
-                  <View key={column} style={s.column}>
-                    <View>
-                      {persons.map(person => (
-                        <Text key={person.id} style={s.person} numberOfLines={1}>{person.label}</Text>
-                      ))}
-                    </View>
-                    <View style={s.forms}>
-                      {persons.map(person => (
-                        <Text key={person.id} style={s.form} numberOfLines={1}>{tense.forms[person.id]}</Text>
-                      ))}
-                    </View>
-                  </View>
-                ))}
+              // Labels and forms are two stacks side by side rather than a
+              // row per person: the label stack is then as wide as its longest
+              // label and no wider, so the form sits right beside its person.
+              // One line height keeps the two stacks level.
+              <View style={s.forms}>
+                <View>
+                  {spec.persons.map(person => (
+                    <Text key={person.id} style={s.person} numberOfLines={1}>{person.label}</Text>
+                  ))}
+                </View>
+                <View style={s.formStack}>
+                  {spec.persons.map(person => (
+                    <Text key={person.id} style={s.form} numberOfLines={1}>{tense.forms[person.id]}</Text>
+                  ))}
+                </View>
               </View>
             ) : (
               <TouchableOpacity onPress={() => setOpened(prev => [...prev, tense.tenseId])} accessibilityRole="button">
@@ -136,11 +132,10 @@ function makeStyles(C: Palette) {
     saveOn: { backgroundColor: C.highlight },
     saveText: { color: C.highlight, fontSize: 12, fontWeight: '700' },
     saveTextOn: { color: C.bg },
-    columns: { flexDirection: 'row', gap: 12, marginTop: 10 },
-    column: { flex: 1, flexDirection: 'row', gap: 14 },
-    forms: { flex: 1 },
-    person: { color: C.muted, fontSize: 13, lineHeight: 26 },
-    form: { color: C.text, fontSize: 14, lineHeight: 26 },
+    forms: { flexDirection: 'row', gap: 16, marginTop: 8 },
+    formStack: { flex: 1 },
+    person: { color: C.muted, fontSize: 13, lineHeight: 24 },
+    form: { color: C.text, fontSize: 14, lineHeight: 24 },
     preview: { color: C.muted, fontSize: 13, marginTop: 8 },
     note: { color: C.muted, fontSize: 12, lineHeight: 17, marginTop: 10 },
     unverified: { color: C.muted, fontSize: 11 },
