@@ -87,7 +87,7 @@ export default function TenseCards({
                 {columns.map((persons, column) => (
                   // The label column is as wide as its longest label and no
                   // wider, so the form sits right beside its person.
-                  <div key={column} className="grid grid-cols-[max-content_1fr] gap-x-5 content-start">
+                  <div key={column} className="grid grid-cols-[max-content_1fr] gap-x-10 content-start">
                     {persons.map(person => (
                       <Fragment key={person.id}>
                         <span className="py-1 whitespace-nowrap" style={{ color: 'var(--color-muted)' }}>{person.label}</span>
