@@ -109,36 +109,40 @@ export default function SideNav({ collapsed, onToggle }: Props) {
       <div className="pb-4 space-y-1 px-2">
         {user && streak > 0 && (
           <div
-            className="flex items-start gap-2 pl-2 pr-3 py-2 font-mono text-sm"
+            className="pl-2 pr-3 py-2 font-mono text-sm"
             style={{ color: 'var(--color-text)' }}
             title={`${interfaceLanguage === 'Korean' ? `${streak}일 연속` : `${streak}-day streak`} · ${t(interfaceLanguage, 'progressChipReviewsToday', { count: reviewedToday })}`}
           >
-            {/* `min-w`, not `w`, unlike the other rows: a flame plus a
-                four-digit streak is exactly as wide as the column, and one
-                that grows a little is better than digits under the label. */}
-            <span className="min-w-[3.6rem] flex items-center justify-center gap-1 flex-shrink-0">
-              <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor" style={{ color: 'var(--color-highlight)' }}>
-                <path d="M12 2C12 2 7 8 7 13a5 5 0 0010 0c0-5-5-11-5-11zm0 15a3 3 0 01-3-3c0-2.5 2-5.5 3-7 1 1.5 3 4.5 3 7a3 3 0 01-3 3z" />
-              </svg>
-              <span className="font-semibold">{streak}</span>
-            </span>
             {/* Two lines, because one does not fit: the sidebar is 14rem and
-                "days · N reviews today" alone is wider than what the icon
-                column leaves. The whole block is one `sidenav-label`, so
-                collapsing leaves only the flame and the number. */}
-            <div className="sidenav-label min-w-0 flex-1" style={{ color: 'var(--color-muted)' }}>
-              <div className="flex items-center gap-1.5">
-                <span className="whitespace-nowrap">
-                  {interfaceLanguage === 'Korean' ? '일' : (streak === 1 ? 'day' : 'days')}
-                </span>
+                "N days · N reviews today" is wider than that. Everything but
+                the flame and the number is a `sidenav-label`, so collapsing
+                leaves only those two. */}
+            <div className="flex items-center gap-1.5">
+              {/* Expanded, the flame sits where the other rows' icons are
+                  centred and the line reads on from it. Collapsed, it is the
+                  same 3.6rem column as every other row — `min-w`, not `w`,
+                  because a flame plus a four-digit streak is exactly that
+                  wide. */}
+              <span className="flex items-center gap-1 flex-shrink-0 pl-[1.175rem] [html.sidenav-collapsed_&]:pl-0 [html.sidenav-collapsed_&]:min-w-[3.6rem] [html.sidenav-collapsed_&]:justify-center">
+                <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor" style={{ color: 'var(--color-highlight)' }}>
+                  <path d="M12 2C12 2 7 8 7 13a5 5 0 0010 0c0-5-5-11-5-11zm0 15a3 3 0 01-3-3c0-2.5 2-5.5 3-7 1 1.5 3 4.5 3 7a3 3 0 01-3 3z" />
+                </svg>
+                <span className="font-semibold">{streak}</span>
+              </span>
+              <span className="sidenav-label whitespace-nowrap" style={{ color: 'var(--color-muted)' }}>
+                {interfaceLanguage === 'Korean' ? '일' : (streak === 1 ? 'day' : 'days')}
+              </span>
+              <span className="sidenav-label">
                 <StreakInfo placement="up" />
-              </div>
-              {/* ⚠️ "reviews", not "cards" or a bare count — this counts
-                  *directions*, the same thing the Progress tab's Reviews counts,
-                  and the ⓘ above it is what explains why it can look high. */}
-              <div className="text-xs leading-snug break-words">
-                {t(interfaceLanguage, 'progressChipReviewsToday', { count: reviewedToday })}
-              </div>
+              </span>
+            </div>
+            {/* ⚠️ "reviews", not "cards" or a bare count — this counts
+                *directions*, the same thing the Progress tab's Reviews counts,
+                and the ⓘ above it is what explains why it can look high.
+                Indented to the flame's drawn left edge, which is inset from
+                its box, so the two lines share a left edge. */}
+            <div className="sidenav-label pl-[1.5rem] text-xs leading-snug break-words" style={{ color: 'var(--color-muted)' }}>
+              {t(interfaceLanguage, 'progressChipReviewsToday', { count: reviewedToday })}
             </div>
           </div>
         )}
