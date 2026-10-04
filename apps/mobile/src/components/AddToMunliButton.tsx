@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
 import { router } from 'expo-router';
-import { t, userVerbOutcomeCopy, userVerbSide } from '@amgi/core';
+import { t, userVerbOutcomeCopy, userVerbSubjectKey } from '@amgi/core';
 import { useUser } from '../context/UserContext';
 import { useTheme } from '../context/ThemeContext';
 import { useAddVerb } from '../hooks/useAddVerb';
@@ -36,7 +36,7 @@ export default function AddToMunliButton({ verb, gloss, style, onOpen }: {
   const working = state.phase === 'working';
   const outcome = state.phase === 'done' ? state.outcome : undefined;
   const copy = outcome && userVerbOutcomeCopy(spec, outcome, state.phase === 'done' ? state.savedTense : undefined);
-  const side = outcome && userVerbSide(outcome);
+  const landed = outcome && userVerbSubjectKey(outcome);
 
   return (
     <View style={style}>
@@ -53,11 +53,11 @@ export default function AddToMunliButton({ verb, gloss, style, onOpen }: {
           {copy ? t(interfaceLanguage, copy.key, copy.params) : t(interfaceLanguage, 'verbAddFailed')}
         </Text>
       )}
-      {side && (
+      {landed && (
         <TouchableOpacity
           hitSlop={8}
           accessibilityRole="link"
-          onPress={() => { onOpen?.(); router.push(`/munli/topics/${side}` as never); }}
+          onPress={() => { onOpen?.(); router.push(`/munli/topics/verbs/${encodeURIComponent(landed)}` as never); }}
         >
           <Text style={s.link}>{t(interfaceLanguage, 'verbOpenInMunli')}</Text>
         </TouchableOpacity>

@@ -29,8 +29,9 @@ _Merged, not yet in anyone's hands — mobile ships by build, no OTA._
   dictionary and `yue-HK` audio. Web is live on merge; mobile needs the build.
   The security rule and both composite indexes were added 2026-10-04.
 - **Users add their own French verbs to Munli** (PR #182) — Topics has one
-  *Verbs* row with a Regular / Irregular switch and an *Add a verb* button
-  above it; *Add to Munli* is on a French verb's Learn result and saved card.
+  *Verbs* row; inside it, a row per pattern and per irregular verb, like the
+  Packs list, each opening its table and tense pills, with an *Add a verb*
+  button on top; *Add to Munli* is on a French verb's Learn result and saved card.
   A regular verb joins its group's vehicles; an irregular one gets its own
   table. Forms come from the lookup model and are labelled as not checked; the
   exception is in `docs/packs/README.md` and the shape is in

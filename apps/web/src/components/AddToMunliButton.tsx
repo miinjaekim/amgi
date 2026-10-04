@@ -1,6 +1,6 @@
 'use client';
 import Link from 'next/link';
-import { userVerbOutcomeCopy, userVerbSide } from '@amgi/core';
+import { userVerbOutcomeCopy, userVerbSubjectKey } from '@amgi/core';
 import { useUser } from '@/components/UserContext';
 import { useAddVerb } from '@/hooks/useAddVerb';
 import { t } from '@/lib/i18n';
@@ -30,7 +30,7 @@ export default function AddToMunliButton({ verb, gloss, className }: {
   const working = state.phase === 'working';
   const outcome = state.phase === 'done' ? state.outcome : undefined;
   const copy = outcome && userVerbOutcomeCopy(spec, outcome, state.phase === 'done' ? state.savedTense : undefined);
-  const side = outcome && userVerbSide(outcome);
+  const landed = outcome && userVerbSubjectKey(outcome);
 
   return (
     <div className={className}>
@@ -45,10 +45,10 @@ export default function AddToMunliButton({ verb, gloss, className }: {
       {(copy || state.phase === 'failed') && (
         <p className="text-xs mt-2" role="status" style={{ color: 'var(--color-muted)' }}>
           {copy ? t(interfaceLanguage, copy.key, copy.params) : t(interfaceLanguage, 'verbAddFailed')}
-          {side && (
+          {landed && (
             <>
               {' '}
-              <Link href={`/munli/topics/${side}`} className="underline" style={{ color: 'var(--color-highlight)' }}>
+              <Link href={`/munli/topics/verbs/${encodeURIComponent(landed)}`} className="underline" style={{ color: 'var(--color-highlight)' }}>
                 {t(interfaceLanguage, 'verbOpenInMunli')}
               </Link>
             </>

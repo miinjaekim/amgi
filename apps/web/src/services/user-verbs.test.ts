@@ -15,7 +15,8 @@ import {
   subjectsOfKind,
   summarizeConjugation,
   userVerbOutcomeCopy,
-  userVerbSide,
+  listVerbRows,
+  userVerbSubjectKey,
   withUserVerbs,
 } from '@amgi/core';
 import type { ConjugationGroup, UserVerbMap } from '@amgi/core';
@@ -155,16 +156,16 @@ describe('settleUserVerb', () => {
 
   it('says where the verb landed', () => {
     const danser = verb('danser', 'er', DANSER);
-    expect(userVerbSide(danser)).toBe('regular');
+    expect(userVerbSubjectKey(danser)).toBe('group:er');
     expect(userVerbOutcomeCopy(spec, danser)).toEqual({ key: 'verbAddedRegular', params: { verb: 'danser', group: '-er' } });
     const prendre = verb('prendre', 'irregular', PRENDRE);
-    expect(userVerbSide(prendre)).toBe('irregular');
+    expect(userVerbSubjectKey(prendre)).toBe('verb:prendre');
     // From Amgi the first tense is saved with the verb, and the line says so.
     expect(userVerbOutcomeCopy(spec, prendre, 'présent'))
       .toEqual({ key: 'verbAddedIrregularSaved', params: { verb: 'prendre', tense: 'présent' } });
     expect(userVerbOutcomeCopy(spec, danser, 'présent').key).toBe('verbAddedRegular');
     expect(userVerbOutcomeCopy(spec, prendre).key).toBe('verbAddedIrregular');
-    expect(userVerbSide({ status: 'pronominal' })).toBeUndefined();
+    expect(userVerbSubjectKey({ status: 'pronominal' })).toBeUndefined();
   });
 });
 
@@ -228,6 +229,16 @@ describe('withUserVerbs', () => {
     expect(summary.weakest).toEqual([
       { subjectLabel: 'prendre', tenseLabel: 'présent', personLabel: 'ils/elles', form: 'prennent', misses: 2, userAdded: true },
     ]);
+  });
+
+  it('lists the topic as rows, each saying how much of it is saved', () => {
+    const rows = listVerbRows(mine, { items: ['group:er:present', 'group:er:futur', 'verb:prendre:present'] });
+    expect(rows.map(row => row.label)).toEqual(['-er', '-cer', '-ger', '-ir', '-re', 'être', 'avoir', 'aller', 'prendre']);
+    expect(rows[0]).toMatchObject({ key: 'group:er', kind: 'group', saved: 2, total: 3, userAdded: false });
+    expect(rows[0].preview).toContain('parler, regarder');
+    expect(rows[0].preview.endsWith('danser')).toBe(true);
+    expect(rows[5]).toMatchObject({ label: 'être', preview: 'suis, es, est…', saved: 0, userAdded: false });
+    expect(rows[8]).toMatchObject({ key: 'verb:prendre', preview: 'prends, prends, prend…', saved: 1, total: 3, userAdded: true });
   });
 
   it('drops a stored verb the spec carries itself, or that no longer fits', () => {

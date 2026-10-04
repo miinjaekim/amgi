@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
-import { userVerbOutcomeCopy, userVerbSide } from '@amgi/core';
-import type { VerbSide } from '@amgi/core';
+import Link from 'next/link';
+import { userVerbOutcomeCopy, userVerbSubjectKey } from '@amgi/core';
 import { useUser } from '@/components/UserContext';
 import { useAddVerb } from '@/hooks/useAddVerb';
 import { t } from '@/lib/i18n';
@@ -9,13 +9,13 @@ import { t } from '@/lib/i18n';
 /**
  * Add a verb of your own to Munli.
  *
- * ⚠️ **One button for both sides of the topic, above the switch.** What a verb
- * becomes is not the learner's choice: a regular verb joins its group as one
- * more verb the pattern is asked through, and an irregular one gets its own
- * table. So the button belongs to neither side, and `onLanded` lets the page
- * turn to wherever the verb went.
+ * ⚠️ **One button above both groups of rows**, drawn as the Packs list draws
+ * "Make a pack". What a verb becomes is not the learner's choice: a regular
+ * verb joins its pattern as one more verb it is asked through, and an
+ * irregular one becomes a row of its own. The line underneath says which, and
+ * links to where it went.
  */
-export default function AddVerbField({ onLanded }: { onLanded: (side: VerbSide) => void }) {
+export default function AddVerbField() {
   const { interfaceLanguage } = useUser();
   const { state, add, spec } = useAddVerb();
   const [open, setOpen] = useState(false);
@@ -25,13 +25,14 @@ export default function AddVerbField({ onLanded }: { onLanded: (side: VerbSide) 
   const working = state.phase === 'working';
   const outcome = state.phase === 'done' ? state.outcome : undefined;
   const copy = outcome && userVerbOutcomeCopy(spec, outcome);
+  const landed = outcome && userVerbSubjectKey(outcome);
 
   return (
     <div className="mb-6">
       {!open ? (
         <button
           onClick={() => setOpen(true)}
-          className="px-3 py-1.5 rounded-lg border font-mono text-sm font-bold"
+          className="block w-full p-4 rounded-xl border border-dashed font-mono font-bold text-center transition-colors hover:bg-[var(--color-muted)]/20"
           style={{ color: 'var(--color-highlight)', borderColor: 'var(--color-highlight)' }}
         >
           + {t(interfaceLanguage, 'verbAddOpen')}
@@ -42,11 +43,7 @@ export default function AddVerbField({ onLanded }: { onLanded: (side: VerbSide) 
           onSubmit={event => {
             event.preventDefault();
             if (!term.trim() || working) return;
-            void add(term).then(added => {
-              setTerm('');
-              const side = added && userVerbSide(added);
-              if (side) onLanded(side);
-            });
+            void add(term).then(() => setTerm(''));
           }}
         >
           <input
@@ -74,6 +71,14 @@ export default function AddVerbField({ onLanded }: { onLanded: (side: VerbSide) 
       {(copy || state.phase === 'failed') && (
         <p className="font-mono text-xs mt-2" role="status" style={{ color: 'var(--color-muted)' }}>
           {copy ? t(interfaceLanguage, copy.key, copy.params) : t(interfaceLanguage, 'verbAddFailed')}
+          {landed && (
+            <>
+              {' '}
+              <Link href={`/munli/topics/verbs/${encodeURIComponent(landed)}`} className="underline" style={{ color: 'var(--color-highlight)' }}>
+                {t(interfaceLanguage, 'verbOpen')}
+              </Link>
+            </>
+          )}
         </p>
       )}
     </div>

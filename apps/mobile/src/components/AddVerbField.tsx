@@ -1,23 +1,22 @@
 import React, { useMemo, useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
-import { t, userVerbOutcomeCopy, userVerbSide } from '@amgi/core';
-import type { VerbSide } from '@amgi/core';
+import { router } from 'expo-router';
+import { t, userVerbOutcomeCopy, userVerbSubjectKey } from '@amgi/core';
 import { useUser } from '../context/UserContext';
 import { useTheme } from '../context/ThemeContext';
 import { useAddVerb } from '../hooks/useAddVerb';
-import { SCREEN_GUTTER } from './PageHeader';
 import type { Palette } from '../theme';
 
 /**
  * Add a verb of your own to Munli.
  *
- * ⚠️ **One button for both sides of the topic, above the switch.** What a verb
- * becomes is not the learner's choice: a regular verb joins its group as one
- * more verb the pattern is asked through, and an irregular one gets its own
- * table. So the button belongs to neither side, and `onLanded` lets the screen
- * turn to wherever the verb went.
+ * ⚠️ **One button above both groups of rows**, drawn as the Packs list draws
+ * "Make a pack". What a verb becomes is not the learner's choice: a regular
+ * verb joins its pattern as one more verb it is asked through, and an
+ * irregular one becomes a row of its own. The line underneath says which, and
+ * links to where it went.
  */
-export default function AddVerbField({ onLanded }: { onLanded: (side: VerbSide) => void }) {
+export default function AddVerbField() {
   const { C } = useTheme();
   const s = useMemo(() => makeStyles(C), [C]);
   const { interfaceLanguage } = useUser();
@@ -29,13 +28,10 @@ export default function AddVerbField({ onLanded }: { onLanded: (side: VerbSide) 
   const working = state.phase === 'working';
   const outcome = state.phase === 'done' ? state.outcome : undefined;
   const copy = outcome && userVerbOutcomeCopy(spec, outcome);
+  const landed = outcome && userVerbSubjectKey(outcome);
   const submit = () => {
     if (!term.trim() || working) return;
-    void add(term).then(added => {
-      setTerm('');
-      const side = added && userVerbSide(added);
-      if (side) onLanded(side);
-    });
+    void add(term).then(() => setTerm(''));
   };
 
   return (
@@ -72,6 +68,15 @@ export default function AddVerbField({ onLanded }: { onLanded: (side: VerbSide) 
       {(copy || state.phase === 'failed') && (
         <Text style={s.note}>
           {copy ? t(interfaceLanguage, copy.key, copy.params) : t(interfaceLanguage, 'verbAddFailed')}
+          {landed && (
+            <Text
+              style={s.link}
+              accessibilityRole="link"
+              onPress={() => router.push(`/munli/topics/verbs/${encodeURIComponent(landed)}` as never)}
+            >
+              {'  '}{t(interfaceLanguage, 'verbOpen')}
+            </Text>
+          )}
         </Text>
       )}
     </View>
@@ -80,12 +85,13 @@ export default function AddVerbField({ onLanded }: { onLanded: (side: VerbSide) 
 
 function makeStyles(C: Palette) {
   return StyleSheet.create({
-    wrap: { paddingHorizontal: SCREEN_GUTTER, marginTop: 8, marginBottom: 12 },
+    wrap: {},
     open: {
-      alignSelf: 'flex-start', borderWidth: 1, borderColor: C.highlight, borderRadius: 10,
-      paddingHorizontal: 12, paddingVertical: 7,
+      padding: 16, borderWidth: 1, borderStyle: 'dashed', borderColor: C.highlight,
+      borderRadius: 14, alignItems: 'center',
     },
-    openText: { color: C.highlight, fontSize: 13, fontWeight: '700' },
+    openText: { color: C.highlight, fontSize: 15, fontWeight: '700' },
+    link: { color: C.highlight, fontWeight: '600' },
     row: { flexDirection: 'row', gap: 8 },
     input: {
       flex: 1, borderWidth: 1, borderColor: C.border, borderRadius: 10,

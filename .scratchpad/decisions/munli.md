@@ -15,11 +15,20 @@ two layouts, and it buried the irregulars at the bottom. What changed is that
 a learner can now add a verb, and they do not know which kind it is before
 adding it. Two rows made them pick a row first.
 
-- **One Verbs row on Topics, and a Regular / Irregular switch inside it.** A
-  switch and not two stacked sections, so each side keeps its own layout and
-  the 2026-09-22 objection still has its answer.
-- **One Add a verb button, above the switch.** It belongs to neither side. The
-  verb is filed by what it is and the page turns to where it landed.
+- **One Verbs row on Topics, and inside it a row per pattern and per verb**,
+  the way Packs lists packs: name, a preview (the pattern's verbs, or the
+  start of an irregular verb's présent), how many tenses are saved, and a bar.
+  Regular and irregular are two headed groups on one list.
+- ⚠️ **Tables are one tap in, not on the list.** The first rework kept every
+  table on the page behind a Regular / Irregular switch and two filters, and
+  the user's words on opening it were "very overwhelmed" and "way too
+  cluttered". **This also reverses "the Verbs page opens on tables" of
+  2026-09-22.** That call was made against a page of checkboxes; a row is
+  neither a checkbox nor a table. The filters are gone with it: a row's page
+  shows every tense, with a save pill each.
+- **One Add a verb button, above both groups**, drawn as Packs draws "Make a
+  pack". The verb is filed by what it is, and the line under the button links
+  to where it went.
 - **Saved still shelves by kind.** It lists what you have, and the two kinds
   are still two kinds of thing to learn.
 

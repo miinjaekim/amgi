@@ -403,18 +403,6 @@ export function hasConjugation(language: StudyLanguage): boolean {
   return conjugationSpec(language) !== undefined;
 }
 
-/**
- * The two sides of the Verbs topic: the patterns, and the verbs that follow
- * none. Also the value of `?side=` on its page.
- */
-export type VerbSide = 'regular' | 'irregular';
-
-/** Which kind of subject a side lists. */
-export const VERB_SIDE_KIND: Record<VerbSide, ConjugationSubject['kind']> = {
-  regular: 'group',
-  irregular: 'verb',
-};
-
 /** A row on Munli's Topics tab. `id` is its route segment under `/munli/topics`. */
 export interface MunliTopic {
   id: 'verbs';
@@ -430,11 +418,10 @@ export interface MunliTopic {
  * exists, not everywhere with an apology. A topic that genuinely works in any
  * language would be listed here unconditionally.
  *
- * ⚠️ **Verbs are one topic with two sides, since 2026-10-04**, on the user's
- * call. They were two rows, because one page holding a handful of patterns and
- * a long list of verbs wanted two shapes. The page keeps the two shapes behind
- * a switch (`VerbSide`); what went is having to know which kind a verb is
- * before knowing which row to open, which adding a verb made a real question.
+ * ⚠️ **Verbs are one topic, since 2026-10-04**, on the user's call. They were
+ * two rows, regular and irregular, and adding a verb made that a question the
+ * learner had to answer before knowing which row to open. The topic's page
+ * lists both kinds as rows — see `listVerbRows`.
  */
 export function munliTopics(language: StudyLanguage): MunliTopic[] {
   return conjugationSpec(language) ? [{ id: 'verbs', labelKey: 'topicVerbs' }] : [];
@@ -742,10 +729,53 @@ export function userVerbOutcomeCopy(
   }
 }
 
-/** The side of the Verbs topic an outcome's verb is on, when it is on one. */
-export function userVerbSide(outcome: UserVerbOutcome): VerbSide | undefined {
-  if (outcome.status !== 'added' && outcome.status !== 'exists') return undefined;
-  return outcome.subjectKey.startsWith('group:') ? 'regular' : 'irregular';
+/** The subject an outcome's verb is practised under, when it is under one. */
+export function userVerbSubjectKey(outcome: UserVerbOutcome): string | undefined {
+  return outcome.status === 'added' || outcome.status === 'exists' ? outcome.subjectKey : undefined;
+}
+
+/** One row of the Verbs topic: a pattern or an irregular verb, and how much of it is saved. */
+export interface VerbRow {
+  /** The subject's key, which is also its route segment under the topic. */
+  key: string;
+  kind: ConjugationSubject['kind'];
+  /** `-er`, `être`. */
+  label: string;
+  /** A group's verbs, or the start of an irregular verb's first tense. */
+  preview: string;
+  /** Tenses saved for practice, out of the tenses it has. */
+  saved: number;
+  total: number;
+  /** An irregular verb the learner added, so its forms are unverified. */
+  userAdded: boolean;
+}
+
+/**
+ * The Verbs topic as rows — Munli's answer to the Packs list.
+ *
+ * ⚠️ **Rows first, tables one tap in**, on the user's call 2026-10-04: every
+ * table of every group on one page, behind two filters, was too much to land
+ * on. This reverses "the Verbs page opens on tables" of 2026-09-22, which was
+ * written against a page of checkboxes. A row is neither: it names the thing,
+ * shows enough of it to recognise, and says how much of it is being practised,
+ * which is what a pack's row does.
+ */
+export function listVerbRows(spec: ConjugationSpec, enrolment: ConjugationEnrolment): VerbRow[] {
+  return spec.subjects.map(subject => {
+    const tenses = spec.tenses.filter(tense => subject.kind === 'group' || subject.forms[tense.id]);
+    const first = subject.kind === 'verb' ? subject.forms[tenses[0]?.id] : undefined;
+    return {
+      key: subjectKey(subject),
+      kind: subject.kind,
+      label: subject.kind === 'group' ? subject.label : subject.infinitive,
+      preview: subject.kind === 'group'
+        ? subject.vehicles.join(', ')
+        : `${spec.persons.slice(0, 3).map(person => first?.[person.id]).filter(Boolean).join(', ')}…`,
+      saved: tenses.filter(tense => isEnrolled(enrolment, subject, tense.id)).length,
+      total: tenses.length,
+      userAdded: subject.kind === 'verb' && isUserVerb(spec, subject.infinitive),
+    };
+  });
 }
 
 /** Whether a verb is one the learner added, so its forms are unverified. */
