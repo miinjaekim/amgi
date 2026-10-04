@@ -58,8 +58,15 @@ picker narrowed (#146). Both are written up in their Decisions entries of
       want to change, I click into it for more details", as Claude, Instagram
       and iOS Settings do.
       **Mobile** (`apps/mobile/app/settings.tsx`) is one long screen today. The
-      wanted shape is a short list of rows, each pushing a detail screen. Which
-      rows, and how they group, is the first thing to settle with the user.
+      wanted shape is a short list of rows, each pushing a detail screen.
+      **Settled with the user 2026-10-04.** Six grouped rows under the account
+      email, in three separator groups: **Languages** (study language, your
+      languages, app language, hanja partition) · **Appearance** (theme) ·
+      **Pronunciation** (speed) · **Reminders** — then **Your data** (export) ·
+      **About** — then **Account** (sign out, delete account) last and alone.
+      The *Switch mode ›* row (below) is part of this work. **Web's settings
+      surface is a `/settings` route**, not a modal. **Two PRs, mobile first**,
+      then web.
       **Web** is the rest of this item:
       Today it toggles `SettingsMenu` inline in a 16rem popover, and that
       component *is* the settings screen: study language, native language,
@@ -70,10 +77,8 @@ picker narrowed (#146). Both are written up in their Decisions entries of
       settings surface from there.
       ⚠️ **This is not only a menu; web has no settings *page*.** Mobile does
       (`apps/mobile/app/settings.tsx`), and web's settings exist only inside
-      that popover — so the Settings row needs somewhere to go. Deciding
-      between a `/settings` route and a modal is the real content of this item:
-      a route is the same surface mobile already has and is linkable, a modal
-      keeps the user where they were. Don't pick it here.
+      that popover — so the Settings row needs somewhere to go: a `/settings`
+      route (settled above), the same surface mobile already has, and linkable.
       **It supersedes a stopgap.** Both popovers were given a viewport max
       height and scroll on 2026-09-09, after the hanja partition section pushed
       the panel off screen — the sidebar one grows *upward* from `bottom-4`, so
