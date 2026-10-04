@@ -8,7 +8,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   getReading, markPitchAccent, splitMorae, isAllKana,
-  pronunciationNote, pronunciationNoteNeedsCredit,
+  pronunciationNote, pronunciationNoteCredit,
 } from '@amgi/core';
 import { kanaToRomaji, kanaToHangul, kikuyuToEnglish, kikuyuToHangul, splitKikuyuSyllables } from '@amgi/core';
 import { lookupPitchAccent } from '@/lib/pitchAccentLookup';
@@ -93,6 +93,11 @@ describe('getReading', () => {
     expect(getReading({ kikuyu: 'rũciũ' }, 'Kikuyu', 'Korean')).toBe('로시오');
   });
 
+  it('shows Jyutping as stored, tone numbers and all', () => {
+    expect(getReading({ jyutping: 'gwong2 dung1 waa2' }, 'Cantonese', 'English')).toBe('gwong2 dung1 waa2');
+    expect(getReading({ jyutping: 'gwong2 dung1 waa2' }, 'Cantonese', 'Korean')).toBe('gwong2 dung1 waa2');
+  });
+
   it('leaves pinyin alone', () => {
     expect(getReading({ pinyin: 'yuánfèn' }, 'TraditionalChinese', 'English')).toBe('yuánfèn');
     expect(getReading({}, 'Korean', 'English')).toBeUndefined();
@@ -175,8 +180,15 @@ describe('pronunciationNote', () => {
 
   it('carries the licence credit exactly where the accent table is used', () => {
     // CC BY-SA 4.0 makes this required, not decorative.
-    expect(pronunciationNoteNeedsCredit('Japanese')).toBe(true);
-    expect(pronunciationNoteNeedsCredit('Kikuyu')).toBe(false);
+    expect(pronunciationNoteCredit('Japanese')?.text).toBe('kanjium (CC BY-SA 4.0)');
+    expect(pronunciationNoteCredit('Kikuyu')).toBeUndefined();
+  });
+
+  it('explains the tone digit on Cantonese, and credits the Jyutping table', () => {
+    expect(pronunciationNote('English', 'Cantonese')).toContain('si1 詩');
+    expect(pronunciationNote('Korean', 'Cantonese')).toContain('성조');
+    // CC BY 4.0: the same obligation as the pitch accent table's.
+    expect(pronunciationNoteCredit('Cantonese')?.text).toBe('rime-cantonese (CC BY 4.0)');
   });
 });
 

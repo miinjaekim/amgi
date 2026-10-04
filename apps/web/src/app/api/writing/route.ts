@@ -30,7 +30,9 @@ export async function POST(req: NextRequest) {
 
   const scriptRule = studyLanguage === 'TraditionalChinese'
     ? '\n- Write all Mandarin in Traditional characters (繁體字) as used in Taiwan, never Simplified (简体字).'
-    : '';
+    : studyLanguage === 'Cantonese'
+      ? '\n- Write all Cantonese as Hong Kong speakers say it (written Cantonese: 係, 唔, 嘅, 佢), in Traditional characters, never Standard Written Chinese or Mandarin.'
+      : '';
 
   const prompt = `A learner of ${language} has written the passage below. Review it.
 

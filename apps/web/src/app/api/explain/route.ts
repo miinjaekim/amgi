@@ -9,6 +9,7 @@ import {
   parseModelJson,
 } from '@amgi/core';
 import { lookupPitchAccent } from '@/lib/pitchAccentLookup';
+import { lookupJyutping, normalizeJyutping } from '@/lib/jyutpingLookup';
 import { glossRuleBullet } from '@/lib/glossRule';
 
 function detectKorean(term: string): boolean {
@@ -594,6 +595,87 @@ ${glossRuleBullet(false)}
 - "pinyin": the full Hanyu Pinyin reading of "traditionalChinese", with tone marks (e.g. "dōngxi"), spaced by word.${posRule}
 - "briefDefinition" must be a single sentence defining the core meaning. No examples, no cultural context.`;
     }
+  } else if (studyLanguage === 'Cantonese') {
+    // Cantonese: Han characters are script-detectable, as they are one branch
+    // up. What differs is everything the characters do not say: the word a
+    // Hong Kong speaker reaches for, and a reading in Jyutping.
+    //
+    // The prompt names the language and little else. Measured before this was
+    // written (2026-10-04): asked for "Cantonese" with no further rule, the
+    // model returned the Cantonese word for 20 of 20 English terms (睇, 嘢, 遮,
+    // 雪櫃, 鍾意 — never 看, 東西, 雨傘) and left 144 of 144 Cantonese terms as
+    // typed. The line about what a speaker says is there so that stays true,
+    // not because it was failing.
+    //
+    // "jyutping" is asked for here and then checked against a dictionary at the
+    // bottom of this route — see `lookupJyutping`.
+    const termLanguage = detectChinese(term) ? 'Cantonese' : 'English';
+    const cantoneseRule = '- "cantonese" must always be the Cantonese word or phrase written in Traditional characters as used in Hong Kong. When the term is English, give the word a Hong Kong speaker actually says (睇, not 看; 嘢, not 東西), not its Mandarin or Standard Written Chinese equivalent. Never return Simplified characters — convert them if the input used them.';
+    const jyutpingRule = '- "jyutping": the full Jyutping reading of "cantonese", with tone numbers 1-6 (e.g. "gwong2 dung1 waa2"), one syllable per character, separated by spaces. Jyutping spelling only, never Yale or pinyin: "jyu5", not "yu5".';
+
+    if (context) {
+      prompt = `Provide a concise translation for the term "${term}" with this context: "${context}".
+
+IMPORTANT: The "cantonese" and "english" fields must ALWAYS be in their respective languages:
+${cantoneseRule}
+- "english" must always be the English word or phrase written in English${nativeBackRule}
+${glossRuleBullet(true)}
+${jyutpingRule}${posRule}
+
+For "briefDefinition", write a single clear sentence defining the term in ${nativeLanguage}. No examples, no cultural context — just the core meaning.
+
+Respond with only this JSON:
+{
+  "term": "${term}",
+  "termLanguage": "${termLanguage}",
+  "cantonese": "Cantonese word/phrase in Traditional characters",
+  "english": "English word/phrase",${nativeBackJson}
+  "jyutping": "Jyutping with tone numbers",${posJson}
+  "briefDefinition": "one-sentence definition"
+}`;
+    } else {
+      prompt = `You are a language learning assistant for Cantonese-English learners studying Hong Kong Cantonese in Traditional characters.
+
+Given the term "${term}", determine whether it has multiple significantly different meanings that would confuse a language learner.
+
+A term is ambiguous when it has 2 or more distinct common meanings that lead to meaningfully different translations or usage contexts (e.g., 行 can mean "to walk" or "a row; a firm", each with its own pronunciation).
+
+A term is NOT ambiguous when:
+- It has one clear primary meaning
+- Secondary meanings are rare or archaic
+- The meanings are closely related variants of the same concept
+
+${spellBlock}
+If AMBIGUOUS, respond with only this JSON:
+{
+  "ambiguous": true,
+  "term": "${term}",${spellJson}
+  "termLanguage": "${termLanguage}",
+  "meanings": [
+    { "label": "short label (3-6 words max)", "hint": "one sentence clarifying this meaning" },
+    { "label": "...", "hint": "..." }
+  ]
+}
+
+Every "label" and "hint" must be written in ${nativeLanguage} — the user may not understand any other language.
+
+If NOT ambiguous, respond with only this JSON:
+{
+  "term": "${term}",${spellJson}
+  "termLanguage": "${termLanguage}",
+  "cantonese": "Cantonese word/phrase in Traditional characters",
+  "english": "English word/phrase",${nativeBackJson}
+  "jyutping": "Jyutping with tone numbers",${posJson}
+  "briefDefinition": "one-sentence definition in ${nativeLanguage}"
+}
+
+IMPORTANT for the non-ambiguous case:
+${cantoneseRule}
+- "english" must always be written in English${nativeBackRule}
+${glossRuleBullet(false)}
+${jyutpingRule}${posRule}
+- "briefDefinition" must be a single sentence defining the core meaning. No examples, no cultural context.`;
+    }
   } else if (studyLanguage === 'Hanja') {
     // Hanja: the front is a single Han character, which the script detects. A
     // learner may equally type the 훈 (물), the 음 (수) or the English meaning
@@ -876,6 +958,28 @@ ${glossRuleBullet(false)}
       // missing word and a flat one must not arrive looking the same.
       if (accent !== undefined) record.pitchAccent = accent;
     }
+  }
+
+  // Jyutping is the other reading this route does not take on trust, and the
+  // arrangement is the reverse of pitch accent's: the model *is* asked, and
+  // the dictionary overrules it. Asked alone it was right on 121 of 143 words
+  // across three runs each, and its misses cluster where a reading has to be
+  // chosen — 重量, 長大, 傳記 — with 7 of the 22 coming back wrong identically
+  // every run. Checked against the table the same answers agree with a second
+  // dictionary on 135 of 140. Numbers in `apps/web/src/data/README.md`.
+  //
+  // The model's reading is kept when the table has no entry, which is what a
+  // phrase or a new coinage looks like, and it is only tidied then.
+  if (
+    studyLanguage === 'Cantonese' &&
+    parsed && typeof parsed === 'object' && !('ambiguous' in parsed)
+  ) {
+    const record = parsed as Record<string, unknown>;
+    const cantonese = typeof record.cantonese === 'string' ? record.cantonese : '';
+    const said = typeof record.jyutping === 'string' ? record.jyutping : undefined;
+    const reading = (cantonese && lookupJyutping(cantonese, said)) || (said && normalizeJyutping(said));
+    if (reading) record.jyutping = reading;
+    else delete record.jyutping;
   }
 
   return NextResponse.json(parsed);

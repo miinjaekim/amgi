@@ -214,6 +214,7 @@ Daily rollups, the streak, the charts, the shareable stats image.
 
 Audio, playback speed, the pronunciation aid, pitch accent.
 
+- [Jyutping: the model answers and a dictionary overrules it (2026-10-04)](decisions/pronunciation.md#jyutping-the-model-answers-and-a-dictionary-overrules-it-2026-10-04)
 - [Pronunciation speed splits by content, not by surface (2026-09-23)](decisions/pronunciation.md#pronunciation-speed-splits-by-content-not-by-surface-2026-09-23)
 - [The hanja button says the 음, and refuses to say anything else (2026-09-09)](decisions/pronunciation.md#the-hanja-button-says-the-음-and-refuses-to-say-anything-else-2026-09-09)
 - [Pronunciation speed is a playback rate, not a synthesis rate (2026-09-01)](decisions/pronunciation.md#pronunciation-speed-is-a-playback-rate-not-a-synthesis-rate-2026-09-01)
@@ -226,6 +227,7 @@ Audio, playback speed, the pronunciation aid, pitch accent.
 
 Per-language calls: Spanish, Kikuyu, Swahili, Hanja, and a native language per deck.
 
+- [Cantonese is its own deck, and the model needed no persuading (2026-10-04)](decisions/languages.md#cantonese-is-its-own-deck-and-the-model-needed-no-persuading-2026-10-04)
 - [A native language per deck, and an interface language beside it (2026-09-12)](decisions/languages.md#a-native-language-per-deck-and-an-interface-language-beside-it-2026-09-12)
 - [A phrase on the Hanja deck stays a list of characters (2026-09-09)](decisions/languages.md#a-phrase-on-the-hanja-deck-stays-a-list-of-characters-2026-09-09)
 - [Three-sided hanja cards cost a setting, not a scheduling axis (2026-09-09)](decisions/languages.md#three-sided-hanja-cards-cost-a-setting-not-a-scheduling-axis-2026-09-09)

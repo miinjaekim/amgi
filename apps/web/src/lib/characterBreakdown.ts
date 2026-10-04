@@ -10,7 +10,8 @@ import type { StudyLanguage } from '@amgi/core';
  * reading differently, so the instruction is per language rather than one
  * generic "explain the characters". Korean gets the hun-eum (훈음) it always
  * had; Japanese needs on'yomi vs kun'yomi, which is the whole difficulty of
- * reading kanji; Mandarin needs per-character pinyin with tones.
+ * reading kanji; Mandarin needs per-character pinyin with tones, and Cantonese
+ * the same in Jyutping.
  *
  * Lives here rather than inside either route because `/depth` and
  * `/depth-stream` ask for the same content in two envelopes (JSON vs. marker
@@ -26,6 +27,8 @@ export function characterBreakdownInstruction(studyLanguage: StudyLanguage): str
       return 'if the term contains kanji, break it down character by character. For each kanji give the reading it takes in this specific word, labelled on\'yomi or kun\'yomi, plus what the character itself means (e.g. "図書館: 図 と (kun) — diagram, plan + 書 しょ (on) — write, book + 館 かん (on) — large building → a building of books, a library"). A term written entirely in hiragana or katakana has no characters to break down.';
     case 'TraditionalChinese':
       return 'break the term down character by character. For each character give its pinyin with the tone mark it takes in this word, plus what the character means on its own (e.g. "電腦: 電 diàn — electricity + 腦 nǎo — brain → computer"). Write every character in Traditional form. For a single-character term, explain the character and one or two common compounds it forms.';
+    case 'Cantonese':
+      return 'break the term down character by character. For each character give the Jyutping it takes in this word, with its tone number, plus what the character means on its own (e.g. "電腦: 電 din6 — electricity + 腦 nou5 — brain → computer"). Give the Cantonese reading only, never pinyin. Write every character in Traditional form. For a single-character term, explain the character and one or two common Cantonese compounds it forms.';
     default:
       return null;
   }

@@ -18,7 +18,7 @@ import {
   getCharacterBreakdown, getDepthTarget, getReading, getStudyLanguageConfig,
   buildLookupCardDraft, lookupCardFaces, getTermBackSide, getExampleSides,
   parseStreamedDepth, parseStreamedExamples, pronunciationNote,
-  pronunciationNoteNeedsCredit, wordOfTheDayCore, PITCH_ACCENT_CREDIT,
+  pronunciationNoteCredit, wordOfTheDayCore,
 } from '@amgi/core';
 import type { StudyLanguage } from '@amgi/core';
 import type { TermCore, TermDepth, TermAmbiguous, ExamplePair, SpellingCorrection, WordOfTheDay } from '../../src/services/gemini';
@@ -70,6 +70,7 @@ const EXAMPLE_TERMS: Record<StudyLanguage, string[]> = {
   Swahili: ['harambee', 'pole pole', 'uhuru', 'longing', 'ndoto'],
   Japanese: ['木漏れ日', '積ん読', 'nostalgia', 'awkward', '侘寂'],
   TraditionalChinese: ['緣分', '撒嬌', 'nostalgia', 'awkward', '將就'],
+  Cantonese: ['執生', '得閒', 'nostalgia', 'awkward', '肉赤'],
   // Single characters, in the traditional forms the 어문회 list assigns —
   // 學, not 学. Nothing here is an English word, unlike every row above:
   // typing "water" into a hanja deck asks for a translation, and the deck
@@ -506,12 +507,12 @@ export default function LearnScreen() {
             {pronunciationNote(deckNativeLanguage, studyLanguage) && (
               <Text style={s.pronunciationNote}>
                 {pronunciationNote(deckNativeLanguage, studyLanguage)}
-                {pronunciationNoteNeedsCredit(studyLanguage) && (
+                {pronunciationNoteCredit(studyLanguage) && (
                   <Text
                     style={s.pronunciationCredit}
-                    onPress={() => Linking.openURL(PITCH_ACCENT_CREDIT.href)}
+                    onPress={() => Linking.openURL(pronunciationNoteCredit(studyLanguage)!.href)}
                   >
-                    {' '}{PITCH_ACCENT_CREDIT.text}
+                    {' '}{pronunciationNoteCredit(studyLanguage)!.text}
                   </Text>
                 )}
               </Text>
