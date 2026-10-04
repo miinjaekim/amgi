@@ -5,6 +5,7 @@ import { UserProvider, useUser } from '../src/context/UserContext';
 import { ModeProvider, useMode } from '../src/context/ModeContext';
 import { ThemeProvider } from '../src/context/ThemeContext';
 import { PronunciationProvider } from '../src/context/PronunciationContext';
+import { UserPacksProvider } from '../src/context/UserPacksContext';
 import LanguageSetupModal from '../src/components/LanguageSetupModal';
 import LaunchSplash from '../src/components/LaunchSplash';
 
@@ -78,6 +79,7 @@ export default function RootLayout() {
   return (
     <ThemeProvider>
       <UserProvider>
+        <UserPacksProvider>
         <PronunciationProvider>
           <ModeProvider>
           <ModeGate>
@@ -122,6 +124,7 @@ export default function RootLayout() {
           <Launch />
           </ModeProvider>
         </PronunciationProvider>
+        </UserPacksProvider>
       </UserProvider>
     </ThemeProvider>
   );

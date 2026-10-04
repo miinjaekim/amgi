@@ -4,7 +4,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import {
   collectSavedTerms, countSavedPackTerms, getPackText, getPackTerms, getVocabPacks, t,
+  userPackId, userPackProgress,
 } from '@amgi/core';
+import { useUserPacks } from '../../../src/context/UserPacksContext';
 import { useUser } from '../../../src/context/UserContext';
 import { useTheme } from '../../../src/context/ThemeContext';
 import { subscribeToAllUserFlashcards } from '../../../src/services/firestore';
@@ -17,7 +19,19 @@ export default function DecksScreen() {
   const tabBarHeight = useFloatingTabBarHeight();
   const s = useMemo(() => makeStyles(C, tabBarHeight), [C, tabBarHeight]);
   const { user, interfaceLanguage, studyLanguage } = useUser();
+  // Read so this re-renders when the learner's own packs arrive or change;
+  // `getVocabPacks` already includes them.
+  const { userPacks } = useUserPacks();
   const packs = getVocabPacks(studyLanguage);
+  const progressOf = (packId: string) => {
+    const pack = userPacks?.find(p => userPackId(p.id) === packId);
+    return pack ? userPackProgress(pack) : null;
+  };
+  const makePack = user ? (
+    <TouchableOpacity style={s.makeRow} onPress={() => router.push('/decks/new')}>
+      <Text style={s.makeText}>+ {t(interfaceLanguage, 'decksMakePack')}</Text>
+    </TouchableOpacity>
+  ) : null;
   const [savedTerms, setSavedTerms] = useState<Set<string> | null>(null);
 
   // Live, so enrolling in a deck or saving a word updates the progress counts
@@ -49,13 +63,16 @@ export default function DecksScreen() {
         // most of them. It says what a pack is rather than promising one:
         // nothing is committed to a date.
         <View style={s.emptyWrap}>
+          {makePack}
           <Text style={s.empty}>{t(interfaceLanguage, 'decksEmpty')}</Text>
           <Text style={s.emptyBody}>{t(interfaceLanguage, 'decksEmptyBody')}</Text>
         </View>
       ) : (
         <ScrollView contentContainerStyle={s.scroll}>
+          {makePack}
           {packs.map(pack => {
             const total = getPackTerms(pack).length;
+            const progress = progressOf(pack.id);
             const saved = savedTerms ? countSavedPackTerms(pack, savedTerms) : null;
             return (
               <TouchableOpacity
@@ -75,6 +92,11 @@ export default function DecksScreen() {
                     six of them stacked is a page to read rather than a list to
                     choose from — it belongs on the deck itself, one tap away,
                     where there is room for it. */}
+                {progress && !progress.done && (
+                  <Text style={s.making}>
+                    {t(interfaceLanguage, 'userPackMaking', { ready: progress.ready, total: progress.total })}
+                  </Text>
+                )}
                 {saved !== null && total > 0 && (
                   <View style={s.progressTrack}>
                     <View style={[s.progressFill, { width: `${(saved / total) * 100}%` }]} />
@@ -96,6 +118,12 @@ function makeStyles(C: Palette, tabBarHeight: number) {
     empty: { fontSize: 14, color: C.muted },
     emptyBody: { fontSize: 13, color: C.muted, opacity: 0.7, lineHeight: 19 },
     scroll: { paddingHorizontal: 20, paddingBottom: tabBarHeight, gap: 12 },
+    makeRow: {
+      padding: 16, borderWidth: 1, borderStyle: 'dashed', borderColor: C.highlight,
+      borderRadius: 14, alignItems: 'center',
+    },
+    makeText: { fontSize: 15, fontWeight: '700', color: C.highlight },
+    making: { fontSize: 12, color: C.highlight, marginTop: 8 },
     packRow: { padding: 16, borderWidth: 1, borderColor: C.border, borderRadius: 14 },
     packTitleRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 },
     packName: { fontSize: 16, fontWeight: '700', color: C.text, flexShrink: 1 },

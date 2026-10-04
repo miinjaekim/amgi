@@ -4,13 +4,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import {
   DRILL_SIZES, advanceDrillQueue, drillAnswer, drillPrompt, drillSpokenText,
-  getPackEntries, getPackText, getStudyLanguageConfig, getVocabPack, startDrillQueue, directionLabel, t,
+  getPackEntries, getPackText, getStudyLanguageConfig, getVocabPack, isUserPackId, startDrillQueue, directionLabel, t,
 } from '@amgi/core';
 import type { DrillDirection, PackEntry } from '@amgi/core';
 import { useUser } from '../../../src/context/UserContext';
 import { useTheme } from '../../../src/context/ThemeContext';
 import PronounceButton from '../../../src/components/PronounceButton';
 import { usePackLost } from '../../../src/hooks/usePackLost';
+import { useUserPacks } from '../../../src/context/UserPacksContext';
 import type { Palette } from '../../../src/theme';
 
 export default function DrillScreen() {
@@ -18,7 +19,9 @@ export default function DrillScreen() {
   const { packId, section: sectionId } = useLocalSearchParams<{ packId: string; section?: string }>();
   const { C } = useTheme();
   const s = useMemo(() => makeStyles(C), [C]);
-  const { interfaceLanguage, deckNativeLanguage, studyLanguage } = useUser();
+  const { user, interfaceLanguage, deckNativeLanguage, studyLanguage } = useUser();
+  // Re-renders once a learner's own packs load, so their pack resolves below.
+  const { userPacks } = useUserPacks();
   const langConfig = getStudyLanguageConfig(studyLanguage);
   const pack = getVocabPack(studyLanguage, packId);
   const packLost = usePackLost(pack);
@@ -52,7 +55,7 @@ export default function DrillScreen() {
   // that used to sit here excluded exactly the word lists this is most useful
   // for. Only a missing pack is an error.
   if (!pack) {
-    if (packLost) return <SafeAreaView style={s.safe} edges={['top', 'bottom']} />;
+    if (packLost || (isUserPackId(packId) && user && userPacks === null)) return <SafeAreaView style={s.safe} edges={['top', 'bottom']} />;
     return (
       <SafeAreaView style={s.safe} edges={['top', 'bottom']}>
         {header}

@@ -26,7 +26,9 @@ _Kept at the top of the file, ahead of priority order, from 2026-09-22 on the
 user's call — this list changes every time something merges, and it is the one
 section worth seeing without scrolling._
 
-_Empty since build 18 (2.1.0) was approved on 2026-09-28._
+- **User-made vocab packs** (PR #175) — *Make a pack* on Packs, on web and
+  mobile. Web is live on merge; mobile needs the build. Packs are labelled as
+  made by the user and private to them.
 
 ⚠️ **In testers' hands is not the same as seen.** Nothing in that build has been
 opened on a device, which is most of what Munli is. Untracked here by the
@@ -42,52 +44,28 @@ practice session should cover several tenses at once again, which the section
 picker narrowed (#146). Both are written up in their Decisions entries of
 2026-09-22.
 
-- [ ] **Users make their own vocab packs** — scoped with the user 2026-09-25.
-      **Vocab only**: Munli grammar waits until the user has written a few more
-      grammar topics by hand. The starting point is how the user's own packs
-      began: someone with a **goal** (TOEIC), a **struggle** (English idioms)
-      or a **situation** (moving to Argentina). Replaces *Goal-based
-      generation*, which was parked because it made words nobody asked for.
-      Here the user does ask, and an agent **finds the words in sources**
-      rather than writing them, so the model is still not the source.
-      1. **A few set questions**, not one text box and not a chat. First draft:
-         what's the pack for (goal / struggle / situation, plus a sentence);
-         where will you use these words; any material to hand (optional
-         paste or upload); anything to focus on or leave out (optional).
-         **No level question**: skip words the user already has and read their
-         level from their cards. The language is the current study language.
-         The Korean copy needs the user's approval.
-      2. **The agent proposes subtopics**, each with a rough word count. The
-         user ticks, unticks or adds their own. **Each subtopic becomes a
-         subpack**, so pack size follows the domain. It grows by adding a
-         subtopic and shrinks by removing one. This step is cheap, so the slow
-         part only runs for what was chosen.
-      3. **Sourcing runs in the background** per subtopic: search, pull words
-         from sources, and **keep a citation per word**. It takes minutes, so the
-         user gets a notice when it's done, not a spinner. Card backs come from
-         the existing lookup route (reuse rule). **No word-by-word review
-         for now**, per the user: choosing subtopics is enough control, and
-         unwanted cards are deleted like any card.
-      4. **The user can make it official.** Citations let the user review a
-         user pack against `docs/packs/README.md` and adopt it. How packs get
-         nominated waits for sharing.
-      **Entry point:** a *Make a pack* action on Packs.
-      **Test against the packs already built.** Answer the questions as the
-      people behind the TOEIC, idioms and Argentina packs would have, and compare
-      the agent's pack with the hand-made one before any user sees it.
-      ⚠️ **This extends the sourcing exception** that *Users add their own
-      French verbs to Munli* (Medium) makes: labelled as user-made, never
-      reaching another user. The exception goes into the README when built.
-      ⚠️ **Store packs so they can have an owner and a visibility later**, even
-      though phase 1 is private. Sharing is where this is headed.
+- [ ] **User-made vocab packs: what's left after phase 1** — phase 1 (the
+      questions, subtopic picker, background sourcing with a citation per word,
+      on web and mobile) merged in PR #175 on 2026-10-04 and is queued for the
+      next build. The design and the sourcing exception are in
+      `docs/packs/README.md`; the eval is `docs/packs/user-pack-eval.md`
+      (`npm run eval:user-packs`).
+      **Waiting on the user:** whether mild insults (*ortiva*, *chanta*,
+      *mina*) get the vulgar badge too; today only strong ones do.
+      **Left for later, by the user's call 2026-10-02:** a frequency-list
+      level floor (the prompt-stated level is still too low for TOEIC 900)
+      and a second-meanings part for TOEIC.
+      **Known, not fixed:** the model sometimes skips search (that part shows
+      as failed, with a retry), and the finished notice is in-app only, with
+      no push or email.
       **Later phases**, raised by the user and not yet scoped:
       - **Profile**, opened from the icon on Progress. It holds why the user is
         studying, which pre-fills step 1 and shapes suggestions.
-      - **Sharing a pack** with specific people.
+      - **Sharing a pack** with specific people. Packs are already stored with
+        an owner and a visibility for this.
       - **Finding and connecting with similar learners.** Privacy, moderation
         and what "connect" means are all open.
-      Open, not blocking: **cost per pack** (several search-backed calls). The
-      user is setting it aside while the focus is making the app usable.
+      Open, not blocking: **cost per pack** (several search-backed calls).
       **Copyright** matters once packs are shared: taking words from a source is
       fine, but copying a published list wholesale is not.
 
