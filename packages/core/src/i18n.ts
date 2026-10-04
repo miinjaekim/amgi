@@ -144,6 +144,8 @@ const translations = {
     modeAmgiTagline: 'Words',
     modeMunliTagline: 'Grammar',
     modeSwitchTitle: 'Switch mode',
+    // Web's menu row, which switches in one click and so names where it goes.
+    modeSwitchTo: 'Switch to {mode}',
     modeCurrent: 'Current mode',
     modeSwitchHint: 'Hold the last tab to switch',
     // Munli's home. It has no tools yet, and says so rather than looking
@@ -478,7 +480,9 @@ const translations = {
     settingsTitle: 'Settings',
     settingsAccount: 'Account',
     // The settings list's rows, where they are not already a section's name.
-    // Each is the title of the screen its row opens.
+    // Each is the title of the screen its row opens. General is web's only:
+    // its settings modal puts theme and pronunciation in one pane.
+    settingsGeneral: 'General',
     settingsLanguages: 'Languages',
     settingsAppearance: 'Appearance',
     settingsPronunciation: 'Pronunciation',
@@ -974,6 +978,7 @@ const translations = {
     // Settings screen (mobile)
     settingsTitle: '설정',
     settingsAccount: '계정',
+    settingsGeneral: '일반',
     settingsLanguages: '언어',
     settingsAppearance: '화면',
     settingsPronunciation: '발음',
@@ -1137,6 +1142,8 @@ const translations = {
     modeAmgiTagline: '단어',
     modeMunliTagline: '문법',
     modeSwitchTitle: '모드 전환',
+    // "모드" after the name so no particle has to agree with it.
+    modeSwitchTo: '{mode} 모드로 전환',
     modeCurrent: '현재 모드',
     modeSwitchHint: '마지막 탭을 길게 누르면 전환돼요',
     munliTagline: '문법을 하나씩 연습해요.',

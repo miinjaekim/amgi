@@ -57,47 +57,6 @@ practice session should cover several tenses at once again, which the section
 picker narrowed (#146). Both are written up in their Decisions entries of
 2026-09-22.
 
-- [ ] **Settings navigation on web: a menu of rows and a `/settings` route** —
-      the web half of *a list you skim and click into*, raised to High
-      2026-10-04. The user's words: opening settings "feels overwhelming … a
-      huge list. I'd rather a list that I can skim through, and if there's
-      something I want to change, I click into it for more details", as Claude,
-      Instagram and iOS Settings do. **Mobile is done** (PR #180, queued
-      above), and web mirrors its shape; the reasoning is "Settings is a list
-      of rows" in [decisions/app-shell.md](decisions/app-shell.md).
-      **Settled with the user 2026-10-04.** The same rows mobile has, in the
-      same three separator groups under the account email: *Switch mode* ·
-      **Languages** (study language, your languages, app language, hanja
-      partition) · **Appearance** (theme) · **Pronunciation** (speed) ·
-      **Reminders** where web has them — then **Your data** (export) ·
-      **About** — then **Account** (sign out, delete account) last and alone.
-      **Web's settings surface is a `/settings` route**, not a modal.
-      Today it toggles `SettingsMenu` inline in a 16rem popover, and that
-      component *is* the settings screen: study language, native language,
-      theme, pronunciation speed, the hanja partition, sign out and delete
-      account, all stacked in one column. The wanted shape is Claude's account
-      menu — the button opens a short list of **rows** (Settings · Language ·
-      Sign out, with the account email at the top), and Settings opens a real
-      settings surface from there.
-      ⚠️ **This is not only a menu; web has no settings *page*.** Mobile does
-      (`apps/mobile/app/settings/`), and web's settings exist only inside
-      that popover — so the Settings row needs somewhere to go: a `/settings`
-      route (settled above), the same surface mobile already has, and linkable.
-      **It supersedes a stopgap.** Both popovers were given a viewport max
-      height and scroll on 2026-09-09, after the hanja partition section pushed
-      the panel off screen — the sidebar one grows *upward* from `bottom-4`, so
-      it ran off the top. A four-row menu cannot overflow by construction, and
-      the scroll bound stops being load-bearing.
-      **Two entry points, one treatment.** `Header.tsx` renders the same
-      `SettingsMenu` in a dropdown on narrow screens. `StudyLanguageList` is
-      already extracted from it for exactly this kind of reuse; follow that
-      rather than forking the panel per entry point.
-      Convention to follow, from the user 2026-09-09: an image of Claude's
-      account menu — rows with leading icons, thin separators grouping them,
-      the destructive action last and alone.
-      **The *Switch mode ›* row belongs in that menu** (raised 2026-09-21): it
-      is the mode switcher's discoverable door, and mobile's list now has it.
-
 - [ ] **Users add their own French verbs to Munli** — scoped with the user
       2026-09-24. **Any verb, forms from the model**, the way a term lookup
       works. What an added verb *becomes* follows the split `conjugation.ts`
