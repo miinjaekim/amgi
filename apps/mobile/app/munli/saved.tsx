@@ -7,7 +7,7 @@ import { useUser } from '../../src/context/UserContext';
 import { useTheme } from '../../src/context/ThemeContext';
 import { useConjugation } from '../../src/context/ConjugationContext';
 import { useFloatingTabBarHeight } from '../../src/components/FloatingTabBar';
-import ParadigmTable from '../../src/components/ParadigmTable';
+import TenseCards from '../../src/components/TenseCards';
 import PageHeader, { PAGE_TITLE_SIZE, SCREEN_GUTTER } from '../../src/components/PageHeader';
 import StudyLanguageChip from '../../src/components/StudyLanguageChip';
 import type { Palette } from '../../src/theme';
@@ -176,7 +176,7 @@ export default function SavedScreen() {
             </Text>
           )}
 
-          <ParadigmTable spec={spec} subject={subject.subject} tenseIds={[tense.tenseId]} />
+          <TenseCards spec={spec} subject={subject.subject} tenseIds={[tense.tenseId]} />
 
           {/* The sourced half — absent rather than invented for a tense with no
               note, which is why the keys are optional on the spec. */}

@@ -95,7 +95,7 @@ A verb a learner adds to Munli (`UserVerb` in
 Here **the model is the source**, which the user-pack exception above never
 allows, so this one is narrower and is allowed on two conditions:
 
-- **It says so wherever its forms are shown.** The paradigm table on Topics
+- **It says so wherever its forms are shown.** The tense cards on Topics
   and Saved, the question in Practice, and the weakest-forms list on Progress
   each label an added verb as added by the learner and not checked by Amgi.
   The label follows the verb (`userAdded` on a table), not the screen.

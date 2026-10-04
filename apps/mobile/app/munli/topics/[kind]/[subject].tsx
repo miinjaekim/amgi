@@ -8,7 +8,7 @@ import { useUser } from '../../../../src/context/UserContext';
 import { useTheme } from '../../../../src/context/ThemeContext';
 import { useConjugation } from '../../../../src/context/ConjugationContext';
 import { useFloatingTabBarHeight } from '../../../../src/components/FloatingTabBar';
-import ParadigmTable from '../../../../src/components/ParadigmTable';
+import TenseCards from '../../../../src/components/TenseCards';
 import FilterSheet from '../../../../src/components/FilterSheet';
 import { PAGE_TITLE_SIZE, SCREEN_GUTTER } from '../../../../src/components/PageHeader';
 import type { Palette } from '../../../../src/theme';
@@ -16,13 +16,14 @@ import type { Palette } from '../../../../src/theme';
 /**
  * One pattern or one irregular verb: its table, and which tenses are saved.
  *
- * What a row on the Verbs topic opens — a pack's screen, for a verb. Every
- * tense the subject has is shown, saved or not, because reading a form is not
- * bounded by practising it; the pills above the table are what commit.
+ * What a row on the Verbs topic opens — a pack's screen, for a verb, with a
+ * card per tense where a pack has a section per subpack. Every tense the
+ * subject has is shown, saved or not, because reading a form is not bounded by
+ * practising it; the Save on a card is what commits.
  *
- * ⚠️ **One save control per tense.** Enrolment is per subject-and-tense pair,
- * so a single Save could only say "all" or "not all", and two saved out of
- * three would read as nothing saved.
+ * ⚠️ **One save control per tense, on its card.** Enrolment is per
+ * subject-and-tense pair, so a single Save could only say "all" or "not all",
+ * and two saved out of three would read as nothing saved.
  */
 export default function VerbSubjectScreen() {
   const { C } = useTheme();
@@ -69,7 +70,6 @@ export default function VerbSubjectScreen() {
     );
   }
 
-  const tenses = spec.tenses.filter(tense => subject.kind === 'group' || subject.forms[tense.id]);
   const vehicle = subject.kind === 'group' ? chosenVehicle ?? subject.vehicles[0] : subject.infinitive;
 
   return (
@@ -92,27 +92,14 @@ export default function VerbSubjectScreen() {
           </TouchableOpacity>
         )}
 
-        <View style={s.pills}>
-          {tenses.map(tense => {
-            const on = isEnrolled(enrolment, subject, tense.id);
-            return (
-              <TouchableOpacity
-                key={tense.id}
-                style={[s.pill, on && s.pillOn]}
-                accessibilityRole="button"
-                accessibilityState={{ selected: on }}
-                accessibilityLabel={t(interfaceLanguage, on ? 'verbsSaved' : 'verbsSave', { tense: tense.label })}
-                onPress={() => setEnrolment(setEnrolled(enrolment, subject, [tense.id], !on))}
-              >
-                <Ionicons name={on ? 'checkmark' : 'add'} size={13} color={on ? C.bg : C.highlight} />
-                <Text style={[s.pillText, on && s.pillTextOn]}>{tense.label}</Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-        <Text style={s.hint}>{t(interfaceLanguage, 'verbsSaveHint')}</Text>
-
-        <ParadigmTable spec={spec} subject={subject} vehicle={vehicle} />
+        <TenseCards
+          spec={spec}
+          subject={subject}
+          vehicle={vehicle}
+          notes
+          isSaved={tenseId => isEnrolled(enrolment, subject, tenseId)}
+          onToggleSave={(tenseId, save) => setEnrolment(setEnrolled(enrolment, subject, [tenseId], save))}
+        />
       </ScrollView>
 
       {pickingVerb && subject.kind === 'group' && (
@@ -147,20 +134,10 @@ function makeStyles(C: Palette, tabBarHeight: number) {
     verbBtn: {
       flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start',
       borderWidth: 1, borderColor: C.border, borderRadius: 10,
-      paddingHorizontal: 12, paddingVertical: 8, marginBottom: 14,
+      paddingHorizontal: 12, paddingVertical: 8,
     },
     verbBtnLabel: { color: C.muted, fontSize: 12 },
     verbBtnText: { color: C.text, fontSize: 13 },
-    pills: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-    pill: {
-      flexDirection: 'row', alignItems: 'center', gap: 5,
-      paddingHorizontal: 11, paddingVertical: 6, borderRadius: 15,
-      borderWidth: 1, borderColor: C.highlight,
-    },
-    pillOn: { backgroundColor: C.highlight },
-    pillText: { color: C.highlight, fontSize: 12, fontWeight: '700' },
-    pillTextOn: { color: C.bg },
-    hint: { color: C.muted, fontSize: 12, marginTop: 8 },
     empty: { color: C.muted, fontSize: 12, paddingHorizontal: SCREEN_GUTTER, paddingVertical: 8 },
   });
 }

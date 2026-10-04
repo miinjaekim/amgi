@@ -26,6 +26,15 @@ adding it. Two rows made them pick a row first.
   2026-09-22.** That call was made against a page of checkboxes; a row is
   neither a checkbox nor a table. The filters are gone with it: a row's page
   shows every tense, with a save pill each.
+- ⚠️ **On a row's page the tense is a card, not a column.** The page was one
+  table with a column per tense and save chips above it. The user's
+  objections: it scrolled sideways with no sign of how far, a chip had to be
+  matched by name to the column it saved, and a new tense made both worse. Now
+  each tense is a card with its own Save in the header and the six forms in two
+  columns, singular then plural; a new tense is one more card. The pattern is
+  the pack and the tense is its subpack. All cards are open while a language
+  has three tenses; past that, unsaved ones fold to a one-line preview. Saved
+  uses the same card (`TenseCards`, which replaced `ParadigmTable`).
 - **One Add a verb button, above both groups**, drawn as Packs draws "Make a
   pack". The verb is filed by what it is, and the line under the button links
   to where it went.
