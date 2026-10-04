@@ -59,10 +59,6 @@ blank placeholder. On **Android**, only sign-in has ever been exercised.
 
 **Never looked at on a device or a real account:**
 
-- the onboarding walkthrough (PR #178), on either platform: the layout, and
-  the sign-in step with a new account, an existing one, and a cancelled
-  sign-in. On mobile the system sign-in sheet opens from a view over the
-  navigator, which has only been reasoned about
 - **Munli on a binary.** Expo Go covered the practice loop, the verbs page,
   Tables and Progress (2026-09-22) and the keyboard flow (2026-09-25). Not
   covered: the changes after 09-22 (two-topic split, filter dropdowns, save
