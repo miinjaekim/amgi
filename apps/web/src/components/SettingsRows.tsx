@@ -70,9 +70,9 @@ export function RowSeparator() {
  * there is, and unfolding it pushed the whole menu upward. The row names the
  * mode it goes to, so it says what it does without showing the current one.
  *
- * ⚠️ **Written as "the next mode", not "the other mode".** `modes.ts` forbids
- * assuming there are two. With a third, this cycles through them — which is
- * the point at which a list earns its place back.
+ * ⚠️ **Written as "the next mode", not "the other mode"**, because `modes.ts`
+ * forbids assuming there are two. What this row becomes with a third mode is
+ * deliberately undecided; cycling is only what the code happens to do.
  */
 export function SwitchModeRow({ onSwitch }: { onSwitch?: () => void }) {
   const { interfaceLanguage } = useUser();
