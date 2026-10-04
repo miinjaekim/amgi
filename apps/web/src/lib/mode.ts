@@ -36,4 +36,14 @@ export function modeHome(mode: AppMode): string {
   return getMode(mode).home;
 }
 
+/**
+ * Where a mode's settings live: `/settings` for Amgi, `/munli/settings` for
+ * Munli. Under the mode's own prefix so the path keeps saying which mode you
+ * are in while you are there.
+ */
+export function settingsHome(mode: AppMode): string {
+  const home = getMode(mode).home;
+  return home === '/' ? '/settings' : `${home}/settings`;
+}
+
 export { parseMode };

@@ -3,7 +3,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import AmgiLogo from './AmgiLogo';
-import SettingsMenu, { StudyLanguageList } from './SettingsMenu';
+import AccountMenu from './AccountMenu';
+import StudyLanguageList from './StudyLanguageList';
 import StreakInfo from './StreakInfo';
 import { useUser } from '@/components/UserContext';
 import { getStudyLanguageConfig, getMode, modeFromPath } from '@amgi/core';
@@ -232,15 +233,11 @@ export default function SideNav({ collapsed, onToggle }: Props) {
           )}
 
           {settingsOpen && (
-            // Bounded to the viewport and scrollable. This popover is anchored
-            // at `bottom-4` and grows *upward*, so an unbounded one runs off
-            // the top of the screen rather than the bottom — the settings you
-            // cannot reach are the first ones in the panel.
             <div
-              className="fixed bottom-4 left-[calc(var(--sidenav-w,14rem)+0.5rem)] w-64 max-h-[calc(100vh-2rem)] overflow-y-auto rounded-xl shadow-xl border border-[var(--color-muted)] z-50"
+              className="fixed bottom-4 left-[calc(var(--sidenav-w,14rem)+0.5rem)] w-64 rounded-xl shadow-xl border border-[var(--color-muted)] z-50 overflow-hidden"
               style={{ background: 'var(--color-surface)' }}
             >
-              <SettingsMenu onClose={() => setSettingsOpen(false)} />
+              <AccountMenu onClose={() => setSettingsOpen(false)} />
             </div>
           )}
         </div>

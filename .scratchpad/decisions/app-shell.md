@@ -8,9 +8,8 @@ Navigation, titles, mode names, onboarding, help, naming. Newest first. Indexed 
 Mobile settings was one screen of ten stacked sections. The user: it "feels
 overwhelming … a huge list. I'd rather a list that I can skim through, and if
 there's something I want to change, I click into it for more details", as
-Claude, Instagram and iOS Settings do. Built for mobile in PR #180; web
-follows with the same rows and a `/settings` route (not a modal), and is the
-open backlog item.
+Claude, Instagram and iOS Settings do. Built for mobile in PR #180 and for web
+in PR #PRNUM, which gave web a settings route (not a modal) for the first time.
 
 - **The list is the account, then three groups split by thin rules**:
   *Switch mode* · Languages · Appearance · Pronunciation · Reminders — then
@@ -36,7 +35,28 @@ open backlog item.
   how the sheet knows which mode is current out there and how the theme stays
   the mode's.
 - **Flat routes on the root stack**, `settings/<name>`, rather than a nested
-  navigator. Web's `/settings` can mirror the same names.
+  navigator. Web uses the same names.
+
+Web, in PR #PRNUM:
+
+- **The account button opens a menu, not the settings.** The email, then
+  Settings · Languages · Switch mode, then Sign out alone. The popover used to
+  *be* the settings screen and had needed a scroll bound since 2026-09-09; a
+  menu this short cannot overflow, so the bound is gone. Languages has its own
+  row because on a narrow screen it is the only way to switch decks.
+- **The page is mobile's list, row for row**, minus Reminders, which web does
+  not have. One column, list then detail, rather than a list beside a detail
+  pane: the same shape on both platforms was the point, and a second pane is
+  an addition that can be made later without moving anything.
+- **⚠️ Settings is mounted under each mode: `/settings` and
+  `/munli/settings`.** A single `/settings` reads as Amgi, so a Munli user
+  would get Amgi's navigation and Amgi's themes on it. Mobile carries the mode
+  in `?mode=`; on web that would have meant teaching the theme provider, both
+  navs and the pre-paint script to read a query param. A second mount needs
+  nothing else to change, and keeps the rule in `modes.ts`: the path says the
+  mode.
+- **Study language is an open list on the Languages page.** The disclosure it
+  sat behind in the popover existed to save height there.
 
 ## Onboarding does it once for real (2026-10-04)
 
