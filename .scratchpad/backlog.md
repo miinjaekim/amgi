@@ -27,7 +27,7 @@ _Merged, not yet in anyone's hands — mobile ships by build, no OTA._
   made by the user and private to them.
 - **Cantonese** (PR #177) — an eleventh deck, with Jyutping checked against a
   dictionary and `yue-HK` audio. Web is live on merge; mobile needs the build.
-  Blocked on the console steps under High until they are done.
+  The security rule and both composite indexes were added 2026-10-04.
 
 What has never been looked at on a device is listed under Unverified in
 [status.md](status.md). It is not tracked here, by the 2026-09-04 decision that
@@ -72,23 +72,6 @@ picker narrowed (#146). Both are written up in their Decisions entries of
         dismiss, so an outage or no connection must not trap anyone in it.
       Existing users must not see any of it: the gate stays
       `interfaceLanguage === null`.
-
-- [ ] **Add Cantonese: the console steps** — built 2026-10-04 in lane-2; the
-      code is in the PR and what is left is not code. The deck cannot save or
-      list a card until these exist, and neither lives in the repo
-      ([data-model.md](data-model.md), [lessons.md](lessons.md)):
-      - a Firestore **security rule** for `cards_cantonese`, copied from
-        `cards_chinese_traditional`'s;
-      - **both** composite indexes on `cards_cantonese`: `uid` ASC, `archived`
-        ASC, `createdAt` DESC (review) and `uid` ASC, `createdAt` DESC (cards,
-        decks, export). The console link in the first error builds only one.
-      Then **listen to the voice**. Sizes say `yue-HK-Chirp3-HD-Charon` speaks,
-      not which reading it gives a lone multi-reading character like 行, and
-      one clip of 唔 came back three times its usual size. What was measured
-      and decided is in
-      [languages](decisions/languages.md#cantonese-is-its-own-deck-and-the-model-needed-no-persuading-2026-10-04)
-      and
-      [pronunciation](decisions/pronunciation.md#jyutping-the-model-answers-and-a-dictionary-overrules-it-2026-10-04).
 
 - [ ] **Include a brief definition during review** — added 2026-10-04 from
       Tasks. Not yet scoped. Cards already carry `briefDefinition`. To settle:
