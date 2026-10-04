@@ -38,27 +38,59 @@ practice session should cover several tenses at once again, which the section
 picker narrowed (#146). Both are written up in their Decisions entries of
 2026-09-22.
 
-- [ ] **Improve onboarding** — added 2026-10-04 from Tasks: *"Prompt login.
-      Have dedicated explanation screens."* Not yet scoped with the user.
-      Today onboarding is two setup questions plus a one-card tour.
-      ⚠️ **Read "Onboarding is not a checklist" (2026-08-02) in
-      [decisions/app-shell.md](decisions/app-shell.md) first.** A checklist
-      card on Learn was built and rejected because it told rather than showed
-      and sat on Learn permanently. Dedicated screens before the app are a
-      different shape, but the same objection is the one they have to answer.
-      To settle: what "prompt login" means (when it appears, and whether
-      anything works before signing in), and what each screen explains.
+- [ ] **Improve onboarding** — scoped with the user 2026-10-04, in lane-1.
+      From Tasks: *"Prompt login. Have dedicated explanation screens."*
+      Today onboarding is three language questions plus a one-card tour, in a
+      blocking modal (`LanguageSetupModal` on both apps).
+      **The shape: do it once for real.** After the language questions the
+      setup walks through one real lookup, full screen and before the app:
+      a suggested word (or the user's own), the actual explanation from
+      `/api/explain` (the same route Learn calls, not a second prompt), the
+      card it becomes, and one flip of that card. This replaces the tour card,
+      which only named the surfaces. It is the answer to "Onboarding is not a
+      checklist" (2026-08-02) in
+      [decisions/app-shell.md](decisions/app-shell.md): it shows rather than
+      tells, and nothing is left sitting on Learn afterwards. Read that entry
+      first.
+      **It covers three things**, per the user: a lookup becomes a card, how
+      review works, and Packs. Munli is left out.
+      **Sign-in is the last step, and skippable.** A screen saying what
+      signing in gets you, with *Not now*. Lookup keeps working signed out, as
+      it does today. The card made in the walkthrough gives that screen its
+      reason: sign in to keep it.
+      Both platforms, in natural Korean as well as English.
+      Left to the lane to propose, then confirm with the user before building:
+      - **How review and Packs are shown, not described.** The flip covers
+        "both directions"; "comes back before you forget" has nothing to show
+        in a minute. Packs could be the real packs for the chosen language.
+      - **What happens to the walkthrough card** when the user skips sign-in,
+        and when they sign in to an account that already has cards.
+      - **The lookup failing or being slow.** The setup is blocking with no
+        dismiss, so an outage or no connection must not trap anyone in it.
+      Existing users must not see any of it: the gate stays
+      `interfaceLanguage === null`.
 
-- [ ] **Add Cantonese** — added 2026-10-04 from Tasks. Not yet scoped.
-      Adding a language is a registry entry, an `/api/explain` prompt branch,
-      i18n keys and example terms, then a security rule and **both** composite
+- [ ] **Add Cantonese** — scoped with the user 2026-10-04, in lane-2.
+      **Decided:** the reading is **Jyutping** with tone numbers
+      (廣東話 *gwong2 dung1 waa2*), by the user. Hong Kong Cantonese in
+      traditional characters. **Its own registry entry and collection**,
+      beside Chinese (Traditional) and Hanja rather than a toggle on either,
+      which is the rule at the top of `packages/core/src/types.ts`.
+      **Being measured before code** (lane-2, 2026-10-04), as Japanese pitch
+      accent was ([decisions/pronunciation.md](decisions/pronunciation.md)):
+      - which `yue-HK` TTS voice, and whether single characters need a
+        `ttsShortVoiceName`;
+      - whether the model can be trusted for Jyutping or the reading ships
+        from a dictionary (CC-Canto or words.hk) on the route;
+      - whether examples come back in written Cantonese (係, 唔, 嘅) or in
+        standard written Chinese, and what the prompt has to say to get the
+        first.
+      Then the usual: a registry entry, an `/api/explain` prompt branch, i18n
+      keys, `EXAMPLE_TERMS` on **both** apps (web's falls back silently), a
+      line in `back-side.test.ts`, then a security rule and **both** composite
       indexes in the console ([data-model.md](data-model.md),
-      [lessons.md](lessons.md)).
-      To settle before code: which romanization the reading uses, whether the
-      deck is written in traditional characters, which TTS voice, and how it
-      sits beside the two Chinese decks. Measure the reading against a
-      dictionary before trusting the model for it, as Japanese pitch accent
-      was ([decisions/pronunciation.md](decisions/pronunciation.md)).
+      [lessons.md](lessons.md)). Check that `Intl.Segmenter` accepts the
+      locale tag, as `ki` and `sw` were checked.
 
 - [ ] **Include a brief definition during review** — added 2026-10-04 from
       Tasks. Not yet scoped. Cards already carry `briefDefinition`. To settle:
