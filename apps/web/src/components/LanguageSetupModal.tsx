@@ -1,10 +1,16 @@
 'use client';
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { SUPPORTED_NATIVE_LANGUAGES, SUPPORTED_STUDY_LANGUAGES } from '@/services/userPreferences';
 import { useUser } from '@/components/UserContext';
 import { applySpellingCorrection, getTermExplanation } from '@/services/gemini';
 import type { TermAmbiguous, TermCore } from '@/services/gemini';
-import { SETUP_WORDS, getReading, getStudyLanguageConfig, lookupCardFaces, nativeOptionsFor } from '@amgi/core';
+import { saveFlashcardToFirestore } from '@/services/firestore';
+import type { Flashcard } from '@/services/firestore';
+import {
+  SETUP_LOOKUP_TIMEOUT_MS, SETUP_WORDS, buildLookupCardDraft, directionPrompt, getNextReviewData, getPackTerms,
+  getPackText, getReading, getStudyLanguageConfig, getVocabPacks, lookupCardFaces, nativeOptionsFor, setupReturnDay,
+} from '@amgi/core';
+import type { ReviewTracking } from '@amgi/core';
 import { t, partOfSpeechLabel } from '@/lib/i18n';
 import Spinner from '@/components/Spinner';
 import type { StudyLanguage } from '@amgi/core';
@@ -33,9 +39,19 @@ import type { StudyLanguage } from '@amgi/core';
  * a canned response and not a second prompt: what a new user sees here has to
  * be what the app will actually say, and a parallel prompt drifts.
  *
- * ⚠️ **Every walkthrough step can be skipped.** This screen has no dismiss, so
- * a lookup that fails or hangs must not be the only way forward. Skipping
- * commits the language answers exactly as finishing does.
+ * After the card: one real rating, which answers with the day the scheduler
+ * gives and the same card asked the other way round; the packs that exist for
+ * the chosen language; and sign-in, last and optional. Review timing and packs
+ * are shown rather than described for the same reason the lookup is real.
+ *
+ * ⚠️ **The card step can always be skipped.** This screen has no dismiss, so a
+ * lookup that fails or hangs must not be the only way forward. Skipping drops
+ * the card and carries on to packs and sign-in.
+ *
+ * ⚠️ **The card is kept only by an account being set up here.** Signing in to
+ * an account that already has preferences unmounts this screen through the
+ * gate, and that account keeps its own languages and cards. *Not now* drops
+ * the card: nothing is held on the device and nothing is left on Learn.
  *
  * Every answer is held locally and committed together on the last tap, not as
  * it is given. That is what lets the caller gate on `interfaceLanguage === null`
@@ -45,8 +61,8 @@ import type { StudyLanguage } from '@amgi/core';
  * is the honest outcome — setup was not finished.
  */
 export default function LanguageSetupModal() {
-  const { setInterfaceLanguage, addLanguage } = useUser();
-  const [step, setStep] = useState<'interface' | 'study' | 'native' | 'word' | 'explain' | 'card'>('interface');
+  const { user, preferencesUid, setInterfaceLanguage, addLanguage, handleSignIn } = useUser();
+  const [step, setStep] = useState<'interface' | 'study' | 'native' | 'word' | 'explain' | 'card' | 'packs' | 'signin'>('interface');
   const [pendingInterface, setPendingInterface] = useState<string | null>(null);
   const [pendingStudy, setPendingStudy] = useState<StudyLanguage | null>(null);
   const [pendingNative, setPendingNative] = useState<string | null>(null);
@@ -57,6 +73,9 @@ export default function LanguageSetupModal() {
   const [loading, setLoading] = useState(false);
   const [failed, setFailed] = useState(false);
   const [flipped, setFlipped] = useState(false);
+  /** The front-to-back tracking the one rating produced, once it is given. */
+  const [rated, setRated] = useState<ReviewTracking | null>(null);
+  const [signingIn, setSigningIn] = useState(false);
   // Which lookup is current. Going back to pick another word leaves the old
   // request in flight, and its answer must not land on the new one.
   const request = useRef(0);
@@ -84,10 +103,14 @@ export default function LanguageSetupModal() {
     setAmbiguity(null);
     setFailed(false);
     setFlipped(false);
+    setRated(null);
     setLoading(true);
     setStep('explain');
     try {
-      const raw = await getTermExplanation(term, pendingNative, context, '', pendingStudy);
+      const raw = await Promise.race([
+        getTermExplanation(term, pendingNative, context, '', pendingStudy),
+        new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), SETUP_LOOKUP_TIMEOUT_MS)),
+      ]);
       if (current !== request.current) return;
       // A corrected spelling is taken as the answer, with no banner: there is
       // nothing to decline it *to* in a flow that makes one card and moves on.
@@ -106,6 +129,57 @@ export default function LanguageSetupModal() {
     setLoading(false);
     setStep('word');
   };
+
+  /**
+   * Commit the answers, and the card if there is an account to put it in.
+   *
+   * The save is not awaited for the reason `handleDone` awaits nothing. A new
+   * card is due in both directions; the rating moves the one that was asked.
+   */
+  const finish = () => {
+    if (user && core && pendingStudy) {
+      const draft = buildLookupCardDraft(core, pendingStudy, pendingNative) as Omit<Flashcard, 'createdAt' | 'id'>;
+      void saveFlashcardToFirestore(
+        { ...draft, uid: user.uid, ...(rated ? { frontToBack: rated } : {}) },
+        pendingStudy,
+      ).catch(() => {});
+    }
+    handleDone();
+  };
+
+  const packs = pendingStudy ? getVocabPacks(pendingStudy) : [];
+  // Someone already signed in has nothing to be asked on the last step.
+  const goToSignIn = () => (user ? finish() : setStep('signin'));
+  // A language with no packs yet has no pack screen: there is nothing to show.
+  const afterCard = () => (packs.length > 0 ? setStep('packs') : goToSignIn());
+
+  const skipCard = () => {
+    request.current++;
+    setLoading(false);
+    setCore(null);
+    setRated(null);
+    afterCard();
+  };
+
+  const signIn = async () => {
+    setSigningIn(true);
+    try {
+      await handleSignIn();
+    } catch {
+      // Popup closed or blocked. The screen is still here to try again from.
+    } finally {
+      setSigningIn(false);
+    }
+  };
+
+  // Signed in on the last step, and the account's preferences have been read.
+  // If it already had an interface language the gate has unmounted this screen
+  // and the effect never runs; still being here means it is this setup's
+  // account to finish. See `preferencesUid` for why `user` alone is too early.
+  useEffect(() => {
+    if (step === 'signin' && user && preferencesUid === user.uid) finish();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, user, preferencesUid]);
 
   const faces = core && pendingStudy ? lookupCardFaces(core, pendingStudy, pendingNative) : null;
   const reading = core && pendingStudy ? getReading(core, pendingStudy, pendingNative) : undefined;
@@ -259,7 +333,7 @@ export default function LanguageSetupModal() {
             </form>
             <div className="mt-8 flex justify-between">
               <button onClick={() => setStep('native')} className={linkClass}>{t(pendingInterface, 'setupBack')}</button>
-              <button onClick={handleDone} className={linkClass}>{t(pendingInterface, 'setupSkip')}</button>
+              <button onClick={skipCard} className={linkClass}>{t(pendingInterface, 'setupSkip')}</button>
             </div>
           </>
         )}
@@ -328,41 +402,144 @@ export default function LanguageSetupModal() {
 
             <div className="mt-8 flex justify-between">
               <button onClick={pickAnotherWord} className={linkClass}>{t(pendingInterface, 'setupOtherWord')}</button>
-              <button onClick={handleDone} className={linkClass}>{t(pendingInterface, 'setupSkip')}</button>
+              <button onClick={skipCard} className={linkClass}>{t(pendingInterface, 'setupSkip')}</button>
             </div>
           </>
         )}
 
-        {step === 'card' && core && faces && (
+        {step === 'card' && core && faces && pendingStudy && (
           <>
             <h2 className="text-2xl font-bold mb-1 text-[var(--color-text)]">{t(pendingInterface, 'setupCardTitle')}</h2>
-            <p className="text-sm mb-8 text-[var(--color-text)] opacity-60">{t(pendingInterface, 'setupCardHint')}</p>
-            <button
-              onClick={() => setFlipped(f => !f)}
-              aria-pressed={flipped}
-              className="w-full min-h-[14rem] p-6 rounded-xl bg-[var(--color-surface)] border border-[var(--color-muted)] shadow-lg flex flex-col items-center justify-center gap-3 hover:border-[var(--color-highlight)] transition-colors"
-            >
-              {flipped ? (
-                <>
+            <p className="text-sm mb-8 text-[var(--color-text)] opacity-60">
+              {rated
+                ? t(pendingInterface, 'setupReturns', { when: setupReturnDay(new Date(rated.nextReview), pendingInterface) })
+                : t(pendingInterface, flipped ? 'setupRateHint' : 'setupCardHint')}
+            </p>
+
+            {!rated ? (
+              <>
+                <button
+                  onClick={() => setFlipped(f => !f)}
+                  aria-pressed={flipped}
+                  className="w-full min-h-[14rem] p-6 rounded-xl bg-[var(--color-surface)] border border-[var(--color-muted)] shadow-lg flex flex-col items-center justify-center gap-3 hover:border-[var(--color-highlight)] transition-colors"
+                >
+                  {flipped ? (
+                    <>
+                      <span className="text-xl font-semibold text-[var(--color-text)]">
+                        {faces.back || t(pendingInterface, 'noTranslation')}
+                      </span>
+                      {faces.gloss && <span className="text-base text-[var(--color-muted)]">{faces.gloss}</span>}
+                      {(partOfSpeech || reading) && (
+                        <span className="flex gap-2 flex-wrap justify-center">
+                          {partOfSpeech && <span className={chipClass}>{partOfSpeech}</span>}
+                          {reading && <span className={chipClass}>{reading}</span>}
+                        </span>
+                      )}
+                    </>
+                  ) : (
+                    <span className="text-3xl font-bold text-[var(--color-highlight)]">{faces.headword}</span>
+                  )}
+                </button>
+                {/* Review's own four buttons and labels, and its scheduler:
+                    the day this answers with is the day the card comes back. */}
+                {flipped && (
+                  <div className="mt-6 grid grid-cols-4 gap-2">
+                    {(['again', 'hard', 'good', 'easy'] as const).map(response => (
+                      <button
+                        key={response}
+                        onClick={() => setRated(getNextReviewData({}, response))}
+                        className={`${optionClass} text-sm`}
+                        style={{ background: 'var(--color-surface)' }}
+                      >
+                        {t(pendingInterface, RATING_KEYS[response])}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </>
+            ) : (
+              <>
+                <p className="text-sm mb-3 text-[var(--color-text)] opacity-60">{t(pendingInterface, 'setupOtherWay')}</p>
+                <div className="w-full min-h-[14rem] p-6 rounded-xl bg-[var(--color-surface)] border border-[var(--color-muted)] shadow-lg flex flex-col items-center justify-center gap-3">
                   <span className="text-xl font-semibold text-[var(--color-text)]">
                     {faces.back || t(pendingInterface, 'noTranslation')}
                   </span>
-                  {faces.gloss && <span className="text-base text-[var(--color-muted)]">{faces.gloss}</span>}
-                  {(partOfSpeech || reading) && (
-                    <span className="flex gap-2 flex-wrap justify-center">
-                      {partOfSpeech && <span className={chipClass}>{partOfSpeech}</span>}
-                      {reading && <span className={chipClass}>{reading}</span>}
+                  <span className="text-[var(--color-muted)] italic">
+                    {directionPrompt(pendingInterface, pendingStudy, pendingNative, 'backToFront')}
+                  </span>
+                </div>
+                <button onClick={afterCard} className={`${primaryClass} mt-6`}>
+                  {t(pendingInterface, 'setupNext')}
+                </button>
+              </>
+            )}
+
+            <div className="mt-8 flex justify-between">
+              <button onClick={() => (rated ? setRated(null) : setStep('explain'))} className={linkClass}>
+                {t(pendingInterface, 'setupBack')}
+              </button>
+              {/* Skips the rating, not the card: it is already made. */}
+              {!rated && <button onClick={afterCard} className={linkClass}>{t(pendingInterface, 'setupSkip')}</button>}
+            </div>
+          </>
+        )}
+
+        {step === 'packs' && (
+          <>
+            <h2 className="text-2xl font-bold mb-1 text-[var(--color-text)]">{t(pendingInterface, 'setupPacksTitle')}</h2>
+            <p className="text-sm mb-8 text-[var(--color-text)] opacity-60">{t(pendingInterface, 'setupPacksSubtitle')}</p>
+            {/* The Packs page's own rows, names and counts. Not links: there is
+                no app behind this screen yet to open one in. */}
+            <ul className="flex flex-col gap-3 max-h-[50vh] overflow-y-auto">
+              {packs.map(pack => (
+                <li key={pack.id} className="p-4 rounded-xl border border-[var(--color-muted)] bg-[var(--color-surface)]">
+                  <div className="flex items-baseline justify-between gap-3 flex-wrap">
+                    <h3 className="font-bold text-[var(--color-text)]">{getPackText(pack.name, pendingInterface)}</h3>
+                    <span className="text-xs text-[var(--color-muted)] shrink-0">
+                      {t(pendingInterface, 'deckEntryCount', { count: getPackTerms(pack).length })}
                     </span>
-                  )}
-                </>
-              ) : (
-                <span className="text-3xl font-bold text-[var(--color-highlight)]">{faces.headword}</span>
-              )}
+                  </div>
+                  <p className="text-sm text-[var(--color-muted)] mt-1">{getPackText(pack.description, pendingInterface)}</p>
+                </li>
+              ))}
+            </ul>
+            <button onClick={goToSignIn} className={`${primaryClass} mt-6`}>
+              {t(pendingInterface, 'setupNext')}
             </button>
-            <button onClick={handleDone} className={`${primaryClass} mt-6`}>
-              {t(pendingInterface, 'setupStart')}
+            <button onClick={() => setStep(core ? 'card' : 'word')} className={`${linkClass} mt-4`}>
+              {t(pendingInterface, 'setupBack')}
             </button>
-            <button onClick={() => setStep('explain')} className={`${linkClass} mt-4`}>
+          </>
+        )}
+
+        {step === 'signin' && (
+          <>
+            <h2 className="text-2xl font-bold mb-3 text-[var(--color-text)]">
+              {t(pendingInterface, core ? 'setupSignInTitle' : 'setupSignInTitleNoCard')}
+            </h2>
+            <p className="text-sm mb-8 text-[var(--color-text)] opacity-70 leading-relaxed">
+              {t(pendingInterface, 'setupSignInBody')}
+            </p>
+            {faces && (
+              <div className="mb-8 p-4 rounded-xl border border-[var(--color-muted)] bg-[var(--color-surface)] flex items-baseline gap-3 flex-wrap">
+                <span className="text-xl font-bold text-[var(--color-highlight)]">{faces.headword}</span>
+                <span className="text-[var(--color-text)] opacity-80">{faces.back}</span>
+              </div>
+            )}
+            {/* `user` set means signed in and waiting on the preferences read. */}
+            <button onClick={signIn} disabled={signingIn || !!user} className={primaryClass}>
+              {signingIn || user ? <Spinner className="w-5 h-5 mx-auto" /> : t(pendingInterface, 'signIn')}
+            </button>
+            <button onClick={finish} className={`${optionClass} mt-3`} style={{ background: 'var(--color-surface)' }}>
+              {t(pendingInterface, 'setupNotNow')}
+            </button>
+            {core && (
+              <p className="mt-3 text-xs text-center text-[var(--color-muted)]">{t(pendingInterface, 'setupSignInDropped')}</p>
+            )}
+            <button
+              onClick={() => setStep(packs.length > 0 ? 'packs' : core ? 'card' : 'word')}
+              className={`${linkClass} mt-6`}
+            >
               {t(pendingInterface, 'setupBack')}
             </button>
           </>
@@ -372,3 +549,10 @@ export default function LanguageSetupModal() {
     </div>
   );
 }
+
+const RATING_KEYS = {
+  again: 'ratingAgain',
+  hard: 'ratingHard',
+  good: 'ratingGood',
+  easy: 'ratingEasy',
+} as const;

@@ -31,3 +31,21 @@ export const SETUP_WORDS: Record<StudyLanguage, string> = {
   TraditionalChinese: '緣分',
   Hanja: '水',
 };
+
+/**
+ * How long first run waits on its lookup before offering a retry.
+ *
+ * The setup screen has no dismiss, and a request on a dead connection does not
+ * fail, it just never answers. Real lookups measured 3 to 9 seconds.
+ */
+export const SETUP_LOOKUP_TIMEOUT_MS = 15_000;
+
+/** The day a card comes back, as first run says it: today, tomorrow, or a date. */
+export function setupReturnDay(date: Date, lang: string | null | undefined, now: Date = new Date()): string {
+  const korean = lang === 'Korean';
+  const tomorrow = new Date(now);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  if (date.toDateString() === now.toDateString()) return korean ? '오늘' : 'today';
+  if (date.toDateString() === tomorrow.toDateString()) return korean ? '내일' : 'tomorrow';
+  return date.toLocaleDateString(korean ? 'ko-KR' : 'en-US', { month: 'short', day: 'numeric' });
+}

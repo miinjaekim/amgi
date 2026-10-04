@@ -195,6 +195,17 @@ interface UserContextType {
   hanjaPartition: HanjaPartition;
   streak: number;
   reviewedToday: number;
+  /**
+   * The account whose preferences have finished being read and applied, or
+   * `null` while signed out or still reading. Only ever set by a read that
+   * reached the server: offline, nobody can say the account is new.
+   *
+   * First run's sign-in step needs this. `user` is set before the preferences
+   * read returns, so for that round trip a returning account looks exactly
+   * like a new one: signed in, no interface language. Acting then would write
+   * the setup answers over an account that already has its own.
+   */
+  preferencesUid: string | null;
   setInterfaceLanguage: (lang: string) => Promise<void>;
   /** Switches decks. Only ever called with a language already added. */
   setStudyLanguage: (lang: StudyLanguage) => Promise<void>;
@@ -215,6 +226,7 @@ const UserContext = createContext<UserContextType | undefined>(undefined);
 export function UserProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
+  const [preferencesUid, setPreferencesUid] = useState<string | null>(null);
   const [interfaceLanguage, setInterfaceLanguageState] = useState<string | null | undefined>(undefined);
   const [languages, setLanguagesState] = useState<StudyLanguagePair[]>([]);
   const [studyLanguage, setStudyLanguageState] = useState<StudyLanguage>('Korean');
@@ -480,7 +492,9 @@ export function UserProvider({ children }: { children: ReactNode }) {
         } else {
           await writeCachedStreak(uid, merged);
         }
+        if (reachedServer && !stale()) setPreferencesUid(uid);
       } else {
+        setPreferencesUid(null);
         // `null`, not a default: an unanswered interface language is what the
         // first-run modal watches for.
         const cached = await readCachedPreferences();
@@ -826,7 +840,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const deckNativeLanguage = nativeForStudy(languages, studyLanguage);
 
   return (
-    <UserContext.Provider value={{ user, authLoading, interfaceLanguage, conjugation, conjugationEnrolment, deckNativeLanguage, languages, studyLanguage, hanjaPartition, streak: streakState.streak, reviewedToday, setInterfaceLanguage, setStudyLanguage, addLanguage, removeLanguage, setHanjaPartition, recordReview, undoReview, deleteAccount, handleSignIn, handleSignOut }}>
+    <UserContext.Provider value={{ user, authLoading, preferencesUid, interfaceLanguage, conjugation, conjugationEnrolment, deckNativeLanguage, languages, studyLanguage, hanjaPartition, streak: streakState.streak, reviewedToday, setInterfaceLanguage, setStudyLanguage, addLanguage, removeLanguage, setHanjaPartition, recordReview, undoReview, deleteAccount, handleSignIn, handleSignOut }}>
       {children}
     </UserContext.Provider>
   );
