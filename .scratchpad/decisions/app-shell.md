@@ -3,6 +3,41 @@
 Navigation, titles, mode names, onboarding, help, naming. Newest first. Indexed from
 [status.md](../status.md).
 
+## Settings is a list of rows, each pushing its own screen (2026-10-04)
+
+Mobile settings was one screen of ten stacked sections. The user: it "feels
+overwhelming … a huge list. I'd rather a list that I can skim through, and if
+there's something I want to change, I click into it for more details", as
+Claude, Instagram and iOS Settings do. Built for mobile in PR #180; web
+follows with the same rows and a `/settings` route (not a modal), and is the
+open backlog item.
+
+- **The list is the account, then three groups split by thin rules**:
+  *Switch mode* · Languages · Appearance · Pronunciation · Reminders — then
+  Your data · About — then Account, last and alone. Settled with the user,
+  after Claude's account menu: rows with leading icons, the destructive
+  actions furthest from the rows tapped often.
+- **Navigation only.** Every control moved as it was, into the screen for its
+  row. Hanja partition still shows only on the Hanja deck and Reminders only
+  signed in.
+- **Languages holds four things** (study language, your languages, app
+  language, hanja partition) because they are one subject to a user, even
+  though they are four settings in the code.
+- **Switch mode leads the first group and shows the current mode.** It is the
+  one row that opens a sheet instead of pushing. First, because the mode
+  decides what the rows under it mean: Appearance offers the current mode's
+  themes. Its own group above the others was the alternative, rejected because
+  it would give the rarest action in settings the most prominent slot.
+  ⚠️ The row is a third visible door, not the first: the swap icon on the
+  Progress header has opened the same sheet since 2.0.0.
+- **Switching from settings clears the stack first.** `switchMode` replaces,
+  and settings is pushed above the mode, so a bare replace would leave the old
+  mode one swipe back. Every settings route also carries `?mode=`, which is
+  how the sheet knows which mode is current out there and how the theme stays
+  the mode's.
+- **Flat routes on the root stack**, `settings/<name>`, rather than a nested
+  navigator. Web's `/settings` can mirror the same names.
+
 ## Onboarding does it once for real (2026-10-04)
 
 The answer to *Onboarding is not a checklist* below, scoped with the user and

@@ -39,6 +39,12 @@ _Merged, not yet in anyone's hands — mobile ships by build, no OTA._
   is "The brief definition shows after the reveal" in
   [decisions/review.md](decisions/review.md).
 
+- **Settings as a list** (PR #180) — mobile only. Settings opens on the
+  account and eight rows; each pushes its own screen, and *Switch mode* opens
+  the mode sheet. Account deletion moved to Settings → Account, and the review
+  notes say so. The decision is "Settings is a list of rows" in
+  [decisions/app-shell.md](decisions/app-shell.md).
+
 What has never been looked at on a device is listed under Unverified in
 [status.md](status.md). It is not tracked here, by the 2026-09-04 decision that
 those checks come from using the app.
@@ -51,23 +57,21 @@ practice session should cover several tenses at once again, which the section
 picker narrowed (#146). Both are written up in their Decisions entries of
 2026-09-22.
 
-- [ ] **Settings navigation: a list you skim and click into** — raised to
-      High 2026-10-04, and widened from the web menu item queued 2026-09-09.
-      The user's words: opening settings "feels overwhelming … a huge list.
-      I'd rather a list that I can skim through, and if there's something I
-      want to change, I click into it for more details", as Claude, Instagram
-      and iOS Settings do.
-      **Mobile** (`apps/mobile/app/settings.tsx`) is one long screen today. The
-      wanted shape is a short list of rows, each pushing a detail screen.
-      **Settled with the user 2026-10-04.** Six grouped rows under the account
-      email, in three separator groups: **Languages** (study language, your
-      languages, app language, hanja partition) · **Appearance** (theme) ·
-      **Pronunciation** (speed) · **Reminders** — then **Your data** (export) ·
+- [ ] **Settings navigation on web: a menu of rows and a `/settings` route** —
+      the web half of *a list you skim and click into*, raised to High
+      2026-10-04. The user's words: opening settings "feels overwhelming … a
+      huge list. I'd rather a list that I can skim through, and if there's
+      something I want to change, I click into it for more details", as Claude,
+      Instagram and iOS Settings do. **Mobile is done** (PR #180, queued
+      above), and web mirrors its shape; the reasoning is "Settings is a list
+      of rows" in [decisions/app-shell.md](decisions/app-shell.md).
+      **Settled with the user 2026-10-04.** The same rows mobile has, in the
+      same three separator groups under the account email: *Switch mode* ·
+      **Languages** (study language, your languages, app language, hanja
+      partition) · **Appearance** (theme) · **Pronunciation** (speed) ·
+      **Reminders** where web has them — then **Your data** (export) ·
       **About** — then **Account** (sign out, delete account) last and alone.
-      The *Switch mode ›* row (below) is part of this work. **Web's settings
-      surface is a `/settings` route**, not a modal. **Two PRs, mobile first**,
-      then web.
-      **Web** is the rest of this item:
+      **Web's settings surface is a `/settings` route**, not a modal.
       Today it toggles `SettingsMenu` inline in a 16rem popover, and that
       component *is* the settings screen: study language, native language,
       theme, pronunciation speed, the hanja partition, sign out and delete
@@ -76,7 +80,7 @@ picker narrowed (#146). Both are written up in their Decisions entries of
       Sign out, with the account email at the top), and Settings opens a real
       settings surface from there.
       ⚠️ **This is not only a menu; web has no settings *page*.** Mobile does
-      (`apps/mobile/app/settings.tsx`), and web's settings exist only inside
+      (`apps/mobile/app/settings/`), and web's settings exist only inside
       that popover — so the Settings row needs somewhere to go: a `/settings`
       route (settled above), the same surface mobile already has, and linkable.
       **It supersedes a stopgap.** Both popovers were given a viewport max
@@ -91,11 +95,8 @@ picker narrowed (#146). Both are written up in their Decisions entries of
       Convention to follow, from the user 2026-09-09: an image of Claude's
       account menu — rows with leading icons, thin separators grouping them,
       the destructive action last and alone.
-      **It gained a second reason on 2026-09-21.** The mode switcher (PR #135,
-      shipped in 2.0.0) wants a *Switch mode ›* row as its discoverable door,
-      and a row menu is where that row goes — a hold on a tab is not something a user finds by
-      looking. Neither item blocks the other, but landing them together is one
-      menu built once instead of a menu and then a menu edit.
+      **The *Switch mode ›* row belongs in that menu** (raised 2026-09-21): it
+      is the mode switcher's discoverable door, and mobile's list now has it.
 
 - [ ] **Users add their own French verbs to Munli** — scoped with the user
       2026-09-24. **Any verb, forms from the model**, the way a term lookup

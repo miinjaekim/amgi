@@ -96,8 +96,12 @@ export default function RootLayout() {
                 a fifth of the bar, while the one that says how you are doing
                 was reachable only from a streak badge that hides itself when
                 the streak breaks. Reached from the gear on the Progress
-                header; nothing deep-links to it. */}
-            <Stack.Screen name="settings" />
+                header; nothing deep-links to it.
+
+                A list since 2026-10-04, with a detail screen per row beside it
+                in `settings/`. Those are pushed onto this same stack rather
+                than a nested one, as `progress/[language]` is below. */}
+            <Stack.Screen name="settings/index" />
             {/* The share preview, pushed rather than presented as a modal —
                 and that is load-bearing, not a style choice. `Sharing.shareAsync`
                 presents a native view controller, which iOS silently refuses

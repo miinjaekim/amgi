@@ -266,6 +266,7 @@ The review session: typed answers, undo, readings, decks and drill.
 
 Navigation, titles, mode names, onboarding, help, naming.
 
+- [Settings is a list of rows, each pushing its own screen (2026-10-04)](decisions/app-shell.md#settings-is-a-list-of-rows-each-pushing-its-own-screen-2026-10-04)
 - [Onboarding does it once for real (2026-10-04)](decisions/app-shell.md#onboarding-does-it-once-for-real-2026-10-04)
 - [Amgi's titles name the study language; Import removed, Export to Your data (2026-09-25)](decisions/app-shell.md#amgis-titles-name-the-study-language-import-removed-export-to-your-data-2026-09-25)
 - [The modes are named in the reader's language, and 2.0.0 (2026-09-23)](decisions/app-shell.md#the-modes-are-named-in-the-readers-language-and-200-2026-09-23)

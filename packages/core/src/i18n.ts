@@ -477,6 +477,11 @@ const translations = {
     // Settings screen (mobile)
     settingsTitle: 'Settings',
     settingsAccount: 'Account',
+    // The settings list's rows, where they are not already a section's name.
+    // Each is the title of the screen its row opens.
+    settingsLanguages: 'Languages',
+    settingsAppearance: 'Appearance',
+    settingsPronunciation: 'Pronunciation',
     settingsNotSignedIn: 'Not signed in',
     settingsNativeLanguage: 'Native Language',
     settingsNativeLanguageDesc: 'Explanations and app text will use this language.',
@@ -969,6 +974,9 @@ const translations = {
     // Settings screen (mobile)
     settingsTitle: '설정',
     settingsAccount: '계정',
+    settingsLanguages: '언어',
+    settingsAppearance: '화면',
+    settingsPronunciation: '발음',
     settingsNotSignedIn: '로그인하지 않았습니다',
     settingsNativeLanguage: '모국어',
     settingsNativeLanguageDesc: '설명과 앱 화면이 이 언어로 표시됩니다.',
