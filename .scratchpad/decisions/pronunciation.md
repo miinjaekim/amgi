@@ -3,6 +3,45 @@
 Audio, playback speed, the pronunciation aid, pitch accent. Newest first. Indexed from
 [status.md](../status.md).
 
+## Jyutping: the model answers and a dictionary overrules it (2026-10-04)
+
+Cantonese needed a reading, the user chose **Jyutping with tone numbers**, and
+the open question was the one pitch accent raised: can the model fill it, or
+does it ship from a dictionary on the route.
+
+**Both, with the dictionary having the last word.** Measured on 144 terms, three
+runs each at `/api/explain`'s temperature and in its prompt shape:
+
+| | right on all three runs |
+|---|---|
+| Gemini alone, against rime-cantonese ∪ CC-Canto | **121 / 143** |
+| …on words built from multi-reading characters | **22 / 30** |
+| Gemini alone, against CC-Canto only | 116 / 140 |
+| the same answers after the lookup, against CC-Canto only | **135 / 140** |
+
+That is a different result from pitch accent's 6/27 and it earns a different
+design. There the model is not asked at all. Here it is asked, because it is
+right most of the time and it knows something the table does not: **which sense
+the learner meant**. 行 is haang4, hang4 or hong4, and only the lookup that
+produced the card knows which. So `lookupJyutping(term, modelReading)` takes the
+table's reading when there is one, keeps the model's **only if it is among the
+several the table lists**, and falls through to the model when the table has no
+entry (3 of the 144, and any phrase).
+
+The misses are why it cannot be left alone: 長大 as `coeng4`, 傳記 as `cyun4`,
+重量 as `zung6`, Yale's `yu` for `jyu`. **7 of the 22 were the same wrong answer
+on every run**, so the earlier warning holds here too: agreement between runs is
+not evidence.
+
+**The dictionary is rime-cantonese, on the user's call**: CC BY 4.0, 128,818
+surfaces, 2.9 MB trimmed, maintained (2026.08.10). The licence and the size were
+theirs to accept. The credit renders with the Cantonese pronunciation note, as
+kanjium's does with the Japanese one. CC-Canto was the independent reference
+rather than the source (8.8 MB, last released 2017); words.hk is non-commercial.
+
+The full breakdown, the alternatives and the rebuild command are in
+`apps/web/src/data/README.md`.
+
 ## Pronunciation speed splits by content, not by surface (2026-09-23)
 
 **Two speeds, one for words and one for sentences**, the user's pick of the

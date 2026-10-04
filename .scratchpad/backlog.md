@@ -25,6 +25,9 @@ _Merged, not yet in anyone's hands — mobile ships by build, no OTA._
 - **User-made vocab packs** (PR #175) — *Make a pack* on Packs, on web and
   mobile. Web is live on merge; mobile needs the build. Packs are labelled as
   made by the user and private to them.
+- **Cantonese** (PR #PRNUM) — an eleventh deck, with Jyutping checked against a
+  dictionary and `yue-HK` audio. Web is live on merge; mobile needs the build.
+  Blocked on the console steps under High until they are done.
 
 What has never been looked at on a device is listed under Unverified in
 [status.md](status.md). It is not tracked here, by the 2026-09-04 decision that
@@ -70,27 +73,22 @@ picker narrowed (#146). Both are written up in their Decisions entries of
       Existing users must not see any of it: the gate stays
       `interfaceLanguage === null`.
 
-- [ ] **Add Cantonese** — scoped with the user 2026-10-04, in lane-2.
-      **Decided:** the reading is **Jyutping** with tone numbers
-      (廣東話 *gwong2 dung1 waa2*), by the user. Hong Kong Cantonese in
-      traditional characters. **Its own registry entry and collection**,
-      beside Chinese (Traditional) and Hanja rather than a toggle on either,
-      which is the rule at the top of `packages/core/src/types.ts`.
-      **Being measured before code** (lane-2, 2026-10-04), as Japanese pitch
-      accent was ([decisions/pronunciation.md](decisions/pronunciation.md)):
-      - which `yue-HK` TTS voice, and whether single characters need a
-        `ttsShortVoiceName`;
-      - whether the model can be trusted for Jyutping or the reading ships
-        from a dictionary (CC-Canto or words.hk) on the route;
-      - whether examples come back in written Cantonese (係, 唔, 嘅) or in
-        standard written Chinese, and what the prompt has to say to get the
-        first.
-      Then the usual: a registry entry, an `/api/explain` prompt branch, i18n
-      keys, `EXAMPLE_TERMS` on **both** apps (web's falls back silently), a
-      line in `back-side.test.ts`, then a security rule and **both** composite
-      indexes in the console ([data-model.md](data-model.md),
-      [lessons.md](lessons.md)). Check that `Intl.Segmenter` accepts the
-      locale tag, as `ki` and `sw` were checked.
+- [ ] **Add Cantonese: the console steps** — built 2026-10-04 in lane-2; the
+      code is in the PR and what is left is not code. The deck cannot save or
+      list a card until these exist, and neither lives in the repo
+      ([data-model.md](data-model.md), [lessons.md](lessons.md)):
+      - a Firestore **security rule** for `cards_cantonese`, copied from
+        `cards_chinese_traditional`'s;
+      - **both** composite indexes on `cards_cantonese`: `uid` ASC, `archived`
+        ASC, `createdAt` DESC (review) and `uid` ASC, `createdAt` DESC (cards,
+        decks, export). The console link in the first error builds only one.
+      Then **listen to the voice**. Sizes say `yue-HK-Chirp3-HD-Charon` speaks,
+      not which reading it gives a lone multi-reading character like 行, and
+      one clip of 唔 came back three times its usual size. What was measured
+      and decided is in
+      [languages](decisions/languages.md#cantonese-is-its-own-deck-and-the-model-needed-no-persuading-2026-10-04)
+      and
+      [pronunciation](decisions/pronunciation.md#jyutping-the-model-answers-and-a-dictionary-overrules-it-2026-10-04).
 
 - [ ] **Include a brief definition during review** — added 2026-10-04 from
       Tasks. Not yet scoped. Cards already carry `briefDefinition`. To settle:

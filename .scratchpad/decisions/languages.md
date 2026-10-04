@@ -3,6 +3,66 @@
 Per-language calls: Spanish, Kikuyu, Swahili, Hanja, and a native language per deck. Newest first. Indexed from
 [status.md](../status.md).
 
+## Cantonese is its own deck, and the model needed no persuading (2026-10-04)
+
+**Hong Kong Cantonese in Traditional characters, as its own registry entry and
+collection** (`cards_cantonese`), beside Chinese (Traditional) and Hanja. It
+shares a script and a card shape with the Chinese deck, so the precedent is not
+Hanja's "the card is different" but the plain one: it is a different language.
+The words differ (佢, 唔, 嘅, 食飯), the reading is Jyutping and not pinyin, and
+the voice is `yue-HK`. The reading is Jyutping with tone numbers, the user's
+choice; how it is filled is in
+[pronunciation](pronunciation.md#jyutping-the-model-answers-and-a-dictionary-overrules-it-2026-10-04).
+
+Three things were measured before code, 2026-10-04.
+
+**The voice is Chirp 3: HD, and single characters need no second voice.** The
+live voice list has 2066 voices in 63 locales; `yue-HK` is the only Cantonese
+one, with 34 voices: 30 Chirp 3: HD and 4 Standard, no WaveNet or Neural2. Six
+words came back 5.4–8.3 kB on `yue-HK-Chirp3-HD-Charon`. The question that
+mattered was single characters, a normal card here, because Chirp 3: HD
+returned silence on 11/70 kana and 9/21 Korean syllables. **On Cantonese it did
+not: 124 single-character clips, 0 under the 2048-byte floor, smallest 3.1 kB.**
+So no `ttsShortVoiceName`. Two caveats are on the registry entry: one clip of 唔
+was 14 kB, three times its usual size, and `yue-HK-Standard-B` (byte-identical
+on every repeat) is the fallback if that is audible.
+
+⚠️ **Unverified: what the voice actually says.** Byte sizes show speech, not
+which reading. 行 alone can be haang4, hang4 or hong4, the voice chooses, and
+nobody has listened. This is the Hanja problem (the button there speaks the 음
+because a glyph's reading is a guess) without Hanja's way out, since Jyutping is
+not something a voice can be handed.
+
+**The model writes Cantonese when the prompt says "Cantonese".** The worry was
+standard written Chinese in Traditional characters. Through the examples
+route's prompt at its temperature, 16 terms (12 Cantonese, 4 English), two runs,
+three wordings:
+
+| wording | sentences | in standard written Chinese |
+|---|---|---|
+| the label, "Cantonese" | 91 | **0** |
+| "Cantonese (Hong Kong)" | 89 | 0 |
+| the label plus an explicit written-Cantonese rule | 89 | 0 |
+
+"Standard written Chinese" means a Mandarin function word (是, 的, 他, 在, 了)
+and no Cantonese one, by pattern. The 27 sentences with neither were read one by
+one and are short Cantonese all the same (今晚不如出去食飯啦, 記得帶遮啊). Formal terms
+did not drag it into 書面語: 經濟, 政府 and 重要 all came back in spoken
+register. On lookups, 20 of 20 English terms returned the Cantonese word (睇,
+嘢, 遮, 雪櫃, 鍾意, never 看, 東西, 雨傘), with or without a rule saying so.
+**So no special wording was needed**, and the examples route is untouched. The
+lookup and list prompts carry one line about what a Hong Kong speaker says, for
+robustness and not because anything failed, the same standing as the
+Traditional-not-Simplified line in [data-model.md](../data-model.md).
+
+Worth knowing: a Mandarin word typed into this deck is answered with its
+Cantonese counterpart. 看 and 东西, each with a sense picked, came back as 睇
+and 嘢. That falls out of the prompt and looks right for a deck whose point is
+what is said.
+
+Not done: no worked example on the Writing tab. Those are quoted from a
+dictionary, never written by the model, and none has been sourced for Cantonese.
+
 ## A native language per deck, and an interface language beside it (2026-09-12)
 
 **`nativeLanguage` was doing three jobs, and the third is why it had to
