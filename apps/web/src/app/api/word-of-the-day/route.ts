@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/firebaseAdmin';
 import { PART_OF_SPEECH_CODES, getStudyLanguageConfig, getBackSideConfig, isStudyLanguage, normalizePartOfSpeech, parseModelJson, wordOfTheDayCore, type WordOfTheDay } from '@amgi/core';
 import { lookupPitchAccent } from '@/lib/pitchAccentLookup';
+import { lookupJyutping, normalizeJyutping } from '@/lib/jyutpingLookup';
 // The day's word is a card back, so it takes the shared gloss ceiling. It used
 // to ask for "the best English translation" and nothing else — the one prompt in
 // the app that stated no rule — so the model answered with a list: `délai` as
@@ -131,6 +132,8 @@ export async function GET(req: NextRequest) {
           ? '"furigana": "reading in hiragana if the word contains kanji" | null'
           : studyLanguage === 'TraditionalChinese'
             ? '"pinyin": "tone-marked Hanyu Pinyin reading of the word"'
+            : studyLanguage === 'Cantonese'
+            ? '"jyutping": "Jyutping reading of the word with tone numbers 1-6, one syllable per character, separated by spaces"'
             : studyLanguage === 'Korean'
               ? '"formality": "Casual | Standard | Formal | Honorific | Slang"'
               : null;
@@ -153,7 +156,9 @@ export async function GET(req: NextRequest) {
   const scriptNote =
     studyLanguage === 'TraditionalChinese'
       ? ' Write it in Traditional characters (繁體字) as used in Taiwan, never Simplified (简体字).'
-      : '';
+      : studyLanguage === 'Cantonese'
+        ? ' Pick a word Hong Kong speakers actually say, written in Traditional characters, never its Mandarin or Standard Written Chinese equivalent.'
+        : '';
 
   // Each date used to generate in isolation, so the model had no history to
   // vary against and common words recurred. Feed it what it already picked.
@@ -228,6 +233,13 @@ Respond with only this JSON:
   if (studyLanguage === 'Japanese' && stored.term) {
     const accent = lookupPitchAccent(stored.term, stored.furigana);
     if (accent !== undefined) stored.pitchAccent = accent;
+  }
+  // The same check `/api/explain` runs, for the same reason the accent above
+  // is looked up here: the two surfaces must not disagree on one word.
+  if (studyLanguage === 'Cantonese' && stored.term) {
+    const reading = lookupJyutping(stored.term, stored.jyutping) || (stored.jyutping && normalizeJyutping(stored.jyutping));
+    if (reading) stored.jyutping = reading;
+    else delete stored.jyutping;
   }
   stored.core = wordOfTheDayCore(stored, isStudyLanguage(studyLanguage) ? studyLanguage : 'Korean', nativeLanguage);
 

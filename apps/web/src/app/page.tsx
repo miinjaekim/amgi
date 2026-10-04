@@ -13,7 +13,7 @@ import {
 } from '@/services/gemini';
 import Markdown from '@/components/Markdown';
 import { saveFlashcardToFirestore, Flashcard } from '@/services/firestore';
-import { buildLookupCardDraft, lookupCardFaces, getTermBackSide, getCharacterBreakdown, getExampleSides, getReading, getStudyLanguageConfig, parseStreamedExamples, parseStreamedDepth, pronunciationNote, pronunciationNoteNeedsCredit, wordOfTheDayCore, PITCH_ACCENT_CREDIT } from '@amgi/core';
+import { buildLookupCardDraft, lookupCardFaces, getTermBackSide, getCharacterBreakdown, getExampleSides, getReading, getStudyLanguageConfig, parseStreamedExamples, parseStreamedDepth, pronunciationNote, pronunciationNoteCredit, wordOfTheDayCore } from '@amgi/core';
 import type { WordOfTheDay } from '@amgi/core';
 import { useUser } from '@/components/UserContext';
 import { t, partOfSpeechLabel } from '@/lib/i18n';
@@ -32,6 +32,7 @@ const EXAMPLE_TERMS: Record<string, string[]> = {
   Swahili: ['harambee', 'pole pole', 'uhuru', 'longing', 'ndoto'],
   Japanese: ['木漏れ日', '積ん読', 'nostalgia', 'awkward', '侘寂'],
   TraditionalChinese: ['緣分', '撒嬌', 'nostalgia', 'awkward', '將就'],
+  Cantonese: ['執生', '得閒', 'nostalgia', 'awkward', '肉赤'],
   // Single characters, in the traditional forms the 어문회 list assigns —
   // 學, not 学. Nothing here is an English word, unlike every row above:
   // typing "water" into a hanja deck asks for a translation, and the deck
@@ -496,16 +497,16 @@ export default function Home() {
           {pronunciationNote(deckNativeLanguage, studyLanguage) && (
             <p className="mt-3 text-xs text-[var(--color-muted)] max-w-md mx-auto leading-relaxed">
               {pronunciationNote(deckNativeLanguage, studyLanguage)}
-              {pronunciationNoteNeedsCredit(studyLanguage) && (
+              {pronunciationNoteCredit(studyLanguage) && (
                 <>
                   {' '}
                   <a
-                    href={PITCH_ACCENT_CREDIT.href}
+                    href={pronunciationNoteCredit(studyLanguage)!.href}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="underline hover:text-[var(--color-text)]"
                   >
-                    {PITCH_ACCENT_CREDIT.text}
+                    {pronunciationNoteCredit(studyLanguage)!.text}
                   </a>
                 </>
               )}

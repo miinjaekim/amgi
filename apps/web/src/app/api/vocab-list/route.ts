@@ -40,7 +40,9 @@ Generate a new list that addresses the feedback. Keep previous words that still 
   const scriptNote =
     studyLanguage === 'TraditionalChinese'
       ? ' Write every word in Traditional characters (繁體字) as used in Taiwan, never Simplified (简体字).'
-      : '';
+      : studyLanguage === 'Cantonese'
+        ? ' Write every word as Hong Kong speakers say it, in Traditional characters, never its Mandarin or Standard Written Chinese equivalent.'
+        : '';
 
   const prompt = `A learner of ${languageName} described why they are learning:
 

@@ -30,6 +30,7 @@ const translations = {
     labelFrench: 'French',
     labelJapanese: 'Japanese',
     labelTraditionalChinese: 'Chinese (Traditional)',
+    labelCantonese: 'Cantonese',
     labelSpanish: 'Spanish',
     labelKikuyu: 'Kikuyu',
     labelSwahili: 'Swahili',
@@ -607,6 +608,8 @@ const translations = {
       'ĩ and ũ are separate vowels, not i and u with a mark on them — swapping them changes the word. Gĩkũyũ has seven vowels.',
     pronunciationNoteJapanese:
       'Readings carry pitch accent: は＼し drops after は (箸), はし＼ drops after し (橋), はし stays level (端).',
+    pronunciationNoteCantonese:
+      'Readings are in Jyutping. The number ending each syllable is its tone, 1 to 6: si1 詩, si2 史, si3 試, si4 時, si5 市, si6 事.',
     wordOfTheDay: 'Word of the day',
     copy: 'Copy',
     copied: 'Copied',
@@ -832,6 +835,7 @@ const translations = {
     labelFrench: '프랑스어',
     labelJapanese: '일본어',
     labelTraditionalChinese: '중국어(번체)',
+    labelCantonese: '광둥어',
     labelSpanish: '스페인어',
     labelKikuyu: '키쿠유어',
     labelSwahili: '스와힐리어',
@@ -1053,6 +1057,8 @@ const translations = {
       'ĩ와 ũ는 i, u에 기호를 붙인 변형이 아니라 별개의 모음입니다. 바꿔 쓰면 다른 단어가 됩니다. 기쿠유어의 모음은 일곱 개입니다.',
     pronunciationNoteJapanese:
       '발음 표기에 고저 악센트가 함께 표시됩니다. は＼し는 は 뒤에서 내려가고(箸), はし＼는 し 뒤에서 내려가며(橋), はし는 평판형입니다(端).',
+    pronunciationNoteCantonese:
+      '발음은 월병(Jyutping)으로 표기합니다. 음절 끝의 숫자는 1부터 6까지의 성조입니다. si1 詩, si2 史, si3 試, si4 時, si5 市, si6 事.',
     wordOfTheDay: '오늘의 단어',
     copy: '복사',
     copied: '복사됨',
@@ -1460,7 +1466,8 @@ export function t(
  * `undefined` where there is none.
  *
  * This is the third of the three ways a language can get a pronunciation aid,
- * beside a stored field (Japanese pitch accent, Traditional Chinese pinyin) and
+ * beside a stored field (Japanese pitch accent, Traditional Chinese pinyin,
+ * Cantonese Jyutping) and
  * a render-time transform. It exists because for some languages the useful
  * thing is not per-card data at all:
  *
@@ -1475,6 +1482,10 @@ export function t(
  * - **Japanese** has per-card data, and the note is how a learner learns to
  *   read ＼ at all. A notation nobody explains is not an aid. The romaji or
  *   Hangul beside it needs no note, which is the point of a transliteration.
+ * - **Cantonese** has per-card data too, and its note is the Japanese one's
+ *   argument again: `si2` means nothing to someone who has not been told the
+ *   digit is a tone. Traditional Chinese has no note because pinyin's tone
+ *   marks are drawn on the vowel and read as what they are.
  */
 export function pronunciationNote(
   nativeLanguage: string | null | undefined,
@@ -1482,6 +1493,7 @@ export function pronunciationNote(
 ): string | undefined {
   if (studyLanguage === 'Kikuyu') return t(nativeLanguage, 'pronunciationNoteKikuyu');
   if (studyLanguage === 'Japanese') return t(nativeLanguage, 'pronunciationNoteJapanese');
+  if (studyLanguage === 'Cantonese') return t(nativeLanguage, 'pronunciationNoteCantonese');
   return undefined;
 }
 
@@ -1496,9 +1508,27 @@ export const PITCH_ACCENT_CREDIT = {
   href: 'https://github.com/mifunetoshiro/kanjium',
 } as const;
 
-/** True when this language's note carries the pitch accent attribution. */
-export function pronunciationNoteNeedsCredit(studyLanguage: StudyLanguage | undefined): boolean {
-  return studyLanguage === 'Japanese';
+/**
+ * Attribution for the Jyutping table, required by its CC BY 4.0 licence on the
+ * same terms as the credit above: wherever the Cantonese note renders.
+ */
+export const JYUTPING_CREDIT = {
+  text: 'rime-cantonese (CC BY 4.0)',
+  href: 'https://github.com/rime/rime-cantonese',
+} as const;
+
+/**
+ * The dictionary credit this language's note carries, or `undefined`.
+ *
+ * One lookup rather than a boolean per dictionary, so a render site that shows
+ * the note cannot show it without the credit that goes with it.
+ */
+export function pronunciationNoteCredit(
+  studyLanguage: StudyLanguage | undefined
+): { text: string; href: string } | undefined {
+  if (studyLanguage === 'Japanese') return PITCH_ACCENT_CREDIT;
+  if (studyLanguage === 'Cantonese') return JYUTPING_CREDIT;
+  return undefined;
 }
 
 /**

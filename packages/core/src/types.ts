@@ -17,6 +17,13 @@ import { kanaToHangul, kanaToRomaji, kikuyuToEnglish, kikuyuToHangul } from './t
  * the learner chooses which of them is the front. 훈 and 음 have to be
  * addressable separately for that, and a pack cannot add a field. Traditional
  * vs Simplified is the precedent that fits: a script with its own collection.
+ *
+ * `Cantonese` is an entry for the first reason, not the second. It shares its
+ * script with `TraditionalChinese` and a card with the same shape, and it is
+ * still a different language: 佢, 唔, 嘅 and 食飯 are not Mandarin words in
+ * other characters, the reading is Jyutping rather than pinyin, and the voice
+ * is `yue-HK`. A toggle on the Chinese deck would pool two vocabularies under
+ * one set of readings.
  */
 export type StudyLanguage =
   | 'Korean'
@@ -25,6 +32,7 @@ export type StudyLanguage =
   | 'French'
   | 'Japanese'
   | 'TraditionalChinese'
+  | 'Cantonese'
   | 'Spanish'
   | 'Kikuyu'
   | 'Swahili'
@@ -43,6 +51,7 @@ export type FieldLabelKey =
   | 'labelFrench'
   | 'labelJapanese'
   | 'labelTraditionalChinese'
+  | 'labelCantonese'
   | 'labelSpanish'
   | 'labelKikuyu'
   | 'labelSwahili'
@@ -55,6 +64,7 @@ export type CardSideField =
   | 'french'
   | 'japanese'
   | 'traditionalChinese'
+  | 'cantonese'
   | 'spanish'
   | 'kikuyu'
   | 'swahili'
@@ -261,6 +271,41 @@ export const STUDY_LANGUAGE_CONFIGS: Record<StudyLanguage, StudyLanguageConfig> 
     ttsLanguageCode: 'cmn-TW',
     ttsVoiceName: 'cmn-TW-Wavenet-A',
   },
+  Cantonese: {
+    code: 'Cantonese',
+    label: 'Cantonese',
+    labelNative: '廣東話',
+    collection: 'cards_cantonese',
+    // `yue` is the ISO 639-3 code, and `Intl.Segmenter` accepts it — verified
+    // the way `ki` and `sw` were, because an unrecognised tag resolves silently
+    // to the host locale. It segments 我哋今晚去食飯 the same as `zh-HK` does.
+    locale: 'yue',
+    studyField: 'cantonese',
+    studyLabelKey: 'labelCantonese',
+    // The same heading as Traditional Chinese: these are the same characters,
+    // and what differs — the reading beside each one — is the instruction's
+    // business in `characterBreakdown.ts`, not the heading's.
+    characterSectionKey: 'sectionHanzi',
+    // `yue-HK` is the only Cantonese locale Google Cloud TTS carries. Checked
+    // against the live voice list (2026-10-04): 34 voices, 30 of them Chirp 3:
+    // HD and 4 Standard, so this takes `Charon` like the rest rather than the
+    // older voice `cmn-TW` is left with. Synthesised at the route's rate: 多謝,
+    // 香港, 食飯, 唔該, 廣東話 and 點解 came back 5.4–8.3 kB.
+    ttsLanguageCode: 'yue-HK',
+    ttsVoiceName: 'yue-HK-Chirp3-HD-Charon',
+    // No `ttsShortVoiceName`, and here that is a measurement rather than "not
+    // a normal card" — a lone character is a normal Cantonese card (係, 食, 唔).
+    // The Chirp 3: HD silence that field routes around did not occur: 124
+    // single-character clips, 0 under the floor in `/api/pronounce`, smallest
+    // 3.1 kB, against 11/70 on kana and 9/21 on Korean syllables. One clip of
+    // 唔 came back at 14 kB, three times its usual size, which the floor cannot
+    // see. `yue-HK-Standard-B` is the voice to name here if that turns out to
+    // be audible: it returned byte-identical audio on every repeat.
+    //
+    // What the sizes do not say is *which reading* was spoken. 行 is haang4,
+    // hang4 or hong4 and the voice picks one unprompted; nothing in the
+    // response names it. Unverified by ear as of 2026-10-04.
+  },
   Hanja: {
     code: 'Hanja',
     label: 'Hanja',
@@ -458,6 +503,7 @@ export interface ExamplePair {
   french?: string;
   japanese?: string;
   traditionalChinese?: string;
+  cantonese?: string;
   spanish?: string;
   kikuyu?: string;
   swahili?: string;
@@ -537,6 +583,7 @@ export interface TermCore {
   french?: string;
   japanese?: string;
   traditionalChinese?: string;
+  cantonese?: string;
   spanish?: string;
   kikuyu?: string;
   swahili?: string;
@@ -566,6 +613,16 @@ export interface TermCore {
   gender?: string; // grammatical gender: Swedish 'en'/'ett', French 'le'/'la'
   furigana?: string; // Japanese kana reading, present when the term contains kanji
   pinyin?: string; // Traditional Chinese reading, tone-marked
+  /**
+   * Cantonese reading in Jyutping, tone numbers and all: `gwong2 dung1 waa2`.
+   *
+   * Asked of the model and then checked against a dictionary on the route —
+   * `lookupJyutping` — because the model alone was right on 121 of 143 words
+   * and wrong the same way each time on a third of its misses. The model's
+   * answer survives only where the dictionary lacks the word or lists it among
+   * several readings. Numbers in `apps/web/src/data/README.md`.
+   */
+  jyutping?: string;
   /**
    * Japanese pitch accent as an アクセント核 position — `0` for 平板, otherwise
    * the mora after which the pitch falls. Unlike every other field on this
@@ -785,7 +842,8 @@ export function getExampleStudyLangText(ex: ExamplePair, studyLanguage?: StudyLa
  * The pronunciation aid shown as a badge beside a term.
  *
  * Two things share one badge, in the order a learner needs them: the **reading**
- * (Japanese furigana, with its pitch drop marked; Traditional Chinese pinyin)
+ * (Japanese furigana, with its pitch drop marked; Traditional Chinese pinyin;
+ * Cantonese Jyutping)
  * and then the **transliteration** — the term respelled in the script the
  * reader already uses. `すし · sushi` for an English native, `すし · 스시` for a
  * Korean one, off the same card.
@@ -806,7 +864,7 @@ export function getExampleStudyLangText(ex: ExamplePair, studyLanguage?: StudyLa
  * each of the six render sites.
  */
 export function getReading(
-  card: Pick<TermCore, 'furigana' | 'pinyin' | 'pitchAccent' | 'japanese' | 'kikuyu'>,
+  card: Pick<TermCore, 'furigana' | 'pinyin' | 'jyutping' | 'pitchAccent' | 'japanese' | 'kikuyu'>,
   studyLanguage?: StudyLanguage,
   nativeLanguage?: string | null
 ): string | undefined {
@@ -827,7 +885,7 @@ export function getReading(
     return (isKorean ? kikuyuToHangul : kikuyuToEnglish)(card.kikuyu) || undefined;
   }
 
-  return card.pinyin || undefined;
+  return card.pinyin || card.jyutping || undefined;
 }
 
 /** Splits an example pair into its study-language and translation sides. */
@@ -858,6 +916,7 @@ export function getDepthTarget(
     | 'french'
     | 'japanese'
     | 'traditionalChinese'
+  | 'cantonese'
     | 'spanish'
     | 'kikuyu'
     | 'swahili'
@@ -905,6 +964,7 @@ export interface WordOfTheDay {
   furigana?: string; // Japanese
   pitchAccent?: number; // Japanese, looked up rather than generated
   pinyin?: string; // Traditional Chinese
+  jyutping?: string; // Cantonese, checked against a dictionary
   /**
    * The explanation to show when the card is tapped, generated and stored
    * alongside the word so the tap is a read rather than a second, independently
@@ -979,6 +1039,7 @@ export function wordOfTheDayCore(
     furigana: wotd.furigana,
     pitchAccent: wotd.pitchAccent,
     pinyin: wotd.pinyin,
+    jyutping: wotd.jyutping,
   };
   // A field the model left out must be dropped, not carried as undefined:
   // this object is written to Firestore, which rejects undefined values.

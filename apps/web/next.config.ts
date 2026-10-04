@@ -7,8 +7,13 @@ const nextConfig: NextConfig = {
   // ships without the file, `lookupPitchAccent` swallows the read error, and
   // the only symptom is that every Japanese card quietly loses its badge —
   // locally it keeps working, because the file is on disk.
+  //
+  // The Jyutping table is read the same way and fails the same way: without
+  // its entry every Cantonese card keeps the model's reading, unchecked.
+  // `/api/word-of-the-day` reads both tables too and is listed for that.
   outputFileTracingIncludes: {
-    '/api/explain': ['./src/data/pitch-accents.txt'],
+    '/api/explain': ['./src/data/pitch-accents.txt', './src/data/jyutping.txt'],
+    '/api/word-of-the-day': ['./src/data/pitch-accents.txt', './src/data/jyutping.txt'],
   },
   env: {
     FIREBASE_API_KEY: process.env.FIREBASE_API_KEY,
