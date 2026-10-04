@@ -4,8 +4,8 @@ Open work only, ordered by priority — **except Queued for the next build, whic
 sits first** because it turns over on every merge and is the list worth seeing
 without scrolling. Anything that closes leaves this file:
 shipped work is tracked by git and GitHub, and a decision or cancellation moves
-to Decisions in [status.md](status.md) **with its reasoning**, so a closed call
-doesn't get reopened from here. Priority mirrors the user's Google Tasks list;
+to [decisions/](decisions/) **with its reasoning** (indexed under Decisions in
+[status.md](status.md)), so a closed call doesn't get reopened from here. Priority mirrors the user's Google Tasks list;
 this is the scoped version of it.
 
 **Mobile ships by build — no OTA.** Iterate in Expo Go (`npx expo start`), cut a
@@ -22,19 +22,13 @@ queued, released or unverified is under Builds in [status.md](status.md).
 
 _Merged, not yet in anyone's hands — mobile ships by build, no OTA._
 
-_Kept at the top of the file, ahead of priority order, from 2026-09-22 on the
-user's call — this list changes every time something merges, and it is the one
-section worth seeing without scrolling._
-
 - **User-made vocab packs** (PR #175) — *Make a pack* on Packs, on web and
   mobile. Web is live on merge; mobile needs the build. Packs are labelled as
   made by the user and private to them.
 
-⚠️ **In testers' hands is not the same as seen.** Nothing in that build has been
-opened on a device, which is most of what Munli is. Untracked here by the
-2026-09-04 decision that these checks come from using the app, not a list; the
-two with something hanging on them live with their decisions — the **launch
-stopwatch** (2026-09-22) and the **Slow speed** artifact question.
+What has never been looked at on a device is listed under Unverified in
+[status.md](status.md). It is not tracked here, by the 2026-09-04 decision that
+those checks come from using the app.
 
 ## High
 
@@ -44,30 +38,74 @@ practice session should cover several tenses at once again, which the section
 picker narrowed (#146). Both are written up in their Decisions entries of
 2026-09-22.
 
-- [ ] **User-made vocab packs: what's left after phase 1** — phase 1 (the
-      questions, subtopic picker, background sourcing with a citation per word,
-      on web and mobile) merged in PR #175 on 2026-10-04 and is queued for the
-      next build. The design and the sourcing exception are in
-      `docs/packs/README.md`; the eval is `docs/packs/user-pack-eval.md`
-      (`npm run eval:user-packs`).
-      **Waiting on the user:** whether mild insults (*ortiva*, *chanta*,
-      *mina*) get the vulgar badge too; today only strong ones do.
-      **Left for later, by the user's call 2026-10-02:** a frequency-list
-      level floor (the prompt-stated level is still too low for TOEIC 900)
-      and a second-meanings part for TOEIC.
-      **Known, not fixed:** the model sometimes skips search (that part shows
-      as failed, with a retry), and the finished notice is in-app only, with
-      no push or email.
-      **Later phases**, raised by the user and not yet scoped:
-      - **Profile**, opened from the icon on Progress. It holds why the user is
-        studying, which pre-fills step 1 and shapes suggestions.
-      - **Sharing a pack** with specific people. Packs are already stored with
-        an owner and a visibility for this.
-      - **Finding and connecting with similar learners.** Privacy, moderation
-        and what "connect" means are all open.
-      Open, not blocking: **cost per pack** (several search-backed calls).
-      **Copyright** matters once packs are shared: taking words from a source is
-      fine, but copying a published list wholesale is not.
+- [ ] **Improve onboarding** — added 2026-10-04 from Tasks: *"Prompt login.
+      Have dedicated explanation screens."* Not yet scoped with the user.
+      Today onboarding is two setup questions plus a one-card tour.
+      ⚠️ **Read "Onboarding is not a checklist" (2026-08-02) in
+      [decisions/app-shell.md](decisions/app-shell.md) first.** A checklist
+      card on Learn was built and rejected because it told rather than showed
+      and sat on Learn permanently. Dedicated screens before the app are a
+      different shape, but the same objection is the one they have to answer.
+      To settle: what "prompt login" means (when it appears, and whether
+      anything works before signing in), and what each screen explains.
+
+- [ ] **Add Cantonese** — added 2026-10-04 from Tasks. Not yet scoped.
+      Adding a language is a registry entry, an `/api/explain` prompt branch,
+      i18n keys and example terms, then a security rule and **both** composite
+      indexes in the console ([data-model.md](data-model.md),
+      [lessons.md](lessons.md)).
+      To settle before code: which romanization the reading uses, whether the
+      deck is written in traditional characters, which TTS voice, and how it
+      sits beside the two Chinese decks. Measure the reading against a
+      dictionary before trusting the model for it, as Japanese pitch accent
+      was ([decisions/pronunciation.md](decisions/pronunciation.md)).
+
+- [ ] **Include a brief definition during review** — added 2026-10-04 from
+      Tasks. Not yet scoped. Cards already carry `briefDefinition`. To settle:
+      which face it shows on and in which direction (on the front of a
+      produce-the-word card it could give the answer away), and whether it
+      shows for pack cards, where that field holds the pack's hint.
+
+- [ ] **Settings navigation: a list you skim and click into** — raised to
+      High 2026-10-04, and widened from the web menu item queued 2026-09-09.
+      The user's words: opening settings "feels overwhelming … a huge list.
+      I'd rather a list that I can skim through, and if there's something I
+      want to change, I click into it for more details", as Claude, Instagram
+      and iOS Settings do.
+      **Mobile** (`apps/mobile/app/settings.tsx`) is one long screen today. The
+      wanted shape is a short list of rows, each pushing a detail screen. Which
+      rows, and how they group, is the first thing to settle with the user.
+      **Web** is the rest of this item:
+      Today it toggles `SettingsMenu` inline in a 16rem popover, and that
+      component *is* the settings screen: study language, native language,
+      theme, pronunciation speed, the hanja partition, sign out and delete
+      account, all stacked in one column. The wanted shape is Claude's account
+      menu — the button opens a short list of **rows** (Settings · Language ·
+      Sign out, with the account email at the top), and Settings opens a real
+      settings surface from there.
+      ⚠️ **This is not only a menu; web has no settings *page*.** Mobile does
+      (`apps/mobile/app/settings.tsx`), and web's settings exist only inside
+      that popover — so the Settings row needs somewhere to go. Deciding
+      between a `/settings` route and a modal is the real content of this item:
+      a route is the same surface mobile already has and is linkable, a modal
+      keeps the user where they were. Don't pick it here.
+      **It supersedes a stopgap.** Both popovers were given a viewport max
+      height and scroll on 2026-09-09, after the hanja partition section pushed
+      the panel off screen — the sidebar one grows *upward* from `bottom-4`, so
+      it ran off the top. A four-row menu cannot overflow by construction, and
+      the scroll bound stops being load-bearing.
+      **Two entry points, one treatment.** `Header.tsx` renders the same
+      `SettingsMenu` in a dropdown on narrow screens. `StudyLanguageList` is
+      already extracted from it for exactly this kind of reuse; follow that
+      rather than forking the panel per entry point.
+      Convention to follow, from the user 2026-09-09: an image of Claude's
+      account menu — rows with leading icons, thin separators grouping them,
+      the destructive action last and alone.
+      **It gained a second reason on 2026-09-21.** The mode switcher (PR #135,
+      shipped in 2.0.0) wants a *Switch mode ›* row as its discoverable door,
+      and a row menu is where that row goes — a hold on a tab is not something a user finds by
+      looking. Neither item blocks the other, but landing them together is one
+      menu built once instead of a menu and then a menu edit.
 
 - [ ] **Users add their own French verbs to Munli** — scoped with the user
       2026-09-24. **Any verb, forms from the model**, the way a term lookup
@@ -106,6 +144,32 @@ picker narrowed (#146). Both are written up in their Decisions entries of
 
 ## Medium
 
+- [ ] **User-made vocab packs: refine for testing** — moved to Medium
+      2026-10-04. What's left after phase 1: phase 1 (the
+      questions, subtopic picker, background sourcing with a citation per word,
+      on web and mobile) merged in PR #175 on 2026-10-04 and is queued for the
+      next build. The design and the sourcing exception are in
+      `docs/packs/README.md`; the eval is `docs/packs/user-pack-eval.md`
+      (`npm run eval:user-packs`).
+      **Waiting on the user:** whether mild insults (*ortiva*, *chanta*,
+      *mina*) get the vulgar badge too; today only strong ones do.
+      **Left for later, by the user's call 2026-10-02:** a frequency-list
+      level floor (the prompt-stated level is still too low for TOEIC 900)
+      and a second-meanings part for TOEIC.
+      **Known, not fixed:** the model sometimes skips search (that part shows
+      as failed, with a retry), and the finished notice is in-app only, with
+      no push or email.
+      **Later phases**, raised by the user and not yet scoped:
+      - **Profile**, opened from the icon on Progress. It holds why the user is
+        studying, which pre-fills step 1 and shapes suggestions.
+      - **Sharing a pack** with specific people. Packs are already stored with
+        an owner and a visibility for this.
+      - **Finding and connecting with similar learners.** Privacy, moderation
+        and what "connect" means are all open.
+      Open, not blocking: **cost per pack** (several search-backed calls).
+      **Copyright** matters once packs are shared: taking words from a source is
+      fine, but copying a published list wholesale is not.
+
 - [ ] **Watch the kanji deck on the "All" chip.** The kanji pack is the first
       single-glyph pack laid out as a `list`, because its back carries readings
       that do not fit a tile — and `isGridDeck` exempts only *grid* decks from
@@ -120,47 +184,11 @@ picker narrowed (#146). Both are written up in their Decisions entries of
 
 - [ ] **`/api/explain` has no `try`/`catch`**, so an outage or a malformed
       response is a 500 rather than a handled error.
-      _(`/api/writing` was listed here too and should not have been — checked
-      2026-09-21 while restoring writing: it has had one since it was written,
-      returning 502 on both an unparseable response and a thrown call.)_
 
 - [ ] **Offline term capture** — jot terms to look up later, queued locally and
       resolved on reconnect. No model needed, just a queue and a flush.
 
 - [ ] **Grid view for cards** — denser scanning of a large deck. Nobody's blocked.
-
-- [ ] **The sidebar's bottom button should open a menu, not the whole settings
-      panel** — queued 2026-09-09.
-      Today it toggles `SettingsMenu` inline in a 16rem popover, and that
-      component *is* the settings screen: study language, native language,
-      theme, pronunciation speed, the hanja partition, sign out and delete
-      account, all stacked in one column. The wanted shape is Claude's account
-      menu — the button opens a short list of **rows** (Settings · Language ·
-      Sign out, with the account email at the top), and Settings opens a real
-      settings surface from there.
-      ⚠️ **This is not only a menu; web has no settings *page*.** Mobile does
-      (`apps/mobile/app/settings.tsx`), and web's settings exist only inside
-      that popover — so the Settings row needs somewhere to go. Deciding
-      between a `/settings` route and a modal is the real content of this item:
-      a route is the same surface mobile already has and is linkable, a modal
-      keeps the user where they were. Don't pick it here.
-      **It supersedes a stopgap.** Both popovers were given a viewport max
-      height and scroll on 2026-09-09, after the hanja partition section pushed
-      the panel off screen — the sidebar one grows *upward* from `bottom-4`, so
-      it ran off the top. A four-row menu cannot overflow by construction, and
-      the scroll bound stops being load-bearing.
-      **Two entry points, one treatment.** `Header.tsx` renders the same
-      `SettingsMenu` in a dropdown on narrow screens. `StudyLanguageList` is
-      already extracted from it for exactly this kind of reuse; follow that
-      rather than forking the panel per entry point.
-      Convention to follow, from the user 2026-09-09: an image of Claude's
-      account menu — rows with leading icons, thin separators grouping them,
-      the destructive action last and alone.
-      **It gained a second reason on 2026-09-21.** The mode switcher (PR #135,
-      shipped in 2.0.0) wants a *Switch mode ›* row as its discoverable door,
-      and a row menu is where that row goes — a hold on a tab is not something a user finds by
-      looking. Neither item blocks the other, but landing them together is one
-      menu built once instead of a menu and then a menu edit.
 
 ## Bigger bets
 
@@ -327,51 +355,36 @@ _Empty as of 2026-09-25._
 
 ## Housekeeping — tooling that hides signal
 
-`npm test` (854/854) and `npm run lint` (0 errors, 21 warnings) are green,
-measured 2026-09-23. What's left is what those two now *show*.
+`npm test` (912/912) and `npm run lint` (0 errors, 22 warnings) are green,
+measured 2026-10-04. What's left is what those two now *show*.
 
 - [ ] **The Google consent screen says "Amgi AI".** Rename it to **Amgi** in the
       Google Cloud OAuth consent screen → Branding → App name. Console-side, no
       build, no code — but it is shown to **every** user signing in, on iOS and
       web as much as Android.
 
-- [ ] **Delete `packages/core/src/grammar.ts` and its API route.** ⚠️ **Split
-      2026-09-14 — `writing.ts` is no longer part of this**, and as of 2026-09-21
-      it is not even the same *kind* of case: writing shipped in PR #136, so
-      `writing.ts` has real callers on both platforms again
-      (`WritingReviewPanel`). It is ordinary live code now, which means **its
-      `DO NOT DELETE AS DEAD CODE` header is already false** and should go —
-      it argues from "no callers in this tree", which stopped being true on
-      merge. **Keep `writing.ts` and its route.** `grammar.ts` is the opposite case: `getPatternExercise` and
-      `gradeFromReview` are the generation and model-grading the new design
-      explicitly rejects, so nothing will want them back.
-      **The gate is open**: it was "once no build predating the 2026-08-18 grammar
-      removal is still in use". What is left is not a condition but a fact to
-      check — that testers have actually updated, since an un-updated 1.3.0 device
-      still has the UI compiled in and calls the route. Three releases now sit
-      between them and it as of 2026-09-23, which makes this cheaper to believe
-      than it was, but it is still console state rather than a repo fact. The
-      file carries a
-      `DO NOT DELETE AS DEAD CODE` header; the reasoning is in
-      [status.md](status.md). **`typedAnswer.ts` is not part of this** —
-      `grammar.ts` imports its folding rules rather than owning them, so the
-      deletion takes the importer and leaves the module.
+- [ ] **Delete `packages/core/src/grammar.ts` and `/api/grammar/exercise`.**
+      Nothing in the tree calls them; they stay deployed for any device still
+      on 1.3.0, which has the grammar UI compiled in. The gate ("no build
+      predating the 2026-08-18 removal is still in use") is console state, not
+      a repo fact: seven releases sit above 1.3.0, so check that testers have
+      updated and then delete. The reasoning is in
+      [decisions/grammar-and-writing.md](decisions/grammar-and-writing.md).
+      **`typedAnswer.ts` is not part of this**: `grammar.ts` imports its folding
+      rules, so the deletion takes the importer and leaves the module.
 
-- [ ] **Two callerless functions in `apps/web/src/services/firestore.ts`** —
-      `countUserFlashcards` and `fetchArchivedFlashcards`, neither imported
-      anywhere. Unlike `grammar.ts` these have **no build to keep alive**: they are
-      web-only, so nothing pins them. Left in place while the subscribe change was
-      landing to keep that diff to one subject.
+- [ ] **`writing.ts` still carries a `DO NOT DELETE AS DEAD CODE` header** that
+      stopped being true when writing review came back in PR #136. It is
+      ordinary live code with callers on both platforms. Remove the header;
+      keep the file and its route.
 
-- [ ] **The mobile screen gutter is 20, hardcoded in four stylesheets.**
-      _Munli's screens stopped being part of this on 2026-09-22 (PR #149): they
-      share `SCREEN_GUTTER`, exported from `PageHeader` beside
-      `PAGE_TITLE_SIZE`. So the constant exists and this item is now only
-      Amgi's four — which still needs the decision below before they can take
-      it._ Cards
-      sat at 16 until 2026-09-04, so tabbing to it shifted every left edge by
-      four pixels; that is fixed, but by editing six numbers rather than by
-      sharing one. ⚠️ **A shared constant needs a decision first**, which is why
+- [ ] **`fetchArchivedFlashcards` in `apps/web/src/services/firestore.ts` has
+      no callers.** Web-only, so no build pins it. (`countUserFlashcards` was
+      listed with it and has since gained a caller in `UserContext`.)
+
+- [ ] **The mobile screen gutter is 20, hardcoded across Amgi's screens.**
+      Munli's screens already share `SCREEN_GUTTER`, exported from `PageHeader`,
+      so the constant exists and only Amgi's screens are left. ⚠️ **A shared constant needs a decision first**, which is why
       it wasn't taken then: `review.tsx` is **not uniformly 20** — `ratingRow`
       is 16 where `reviewScroll` is 20, so the rating buttons sit four pixels
       wider than the card above them. Either that is deliberate (a wider tap
@@ -379,15 +392,15 @@ measured 2026-09-23. What's left is what those two now *show*.
       that, then a constant can cover all four screens; skipping review would
       leave the thing a constant exists to prevent.
 
-- [ ] **21 lint warnings**, counted 2026-09-23 — the number has drifted up as
-      the app grew, so recount rather than trusting this line. 17 are React
-      Compiler (`react-hooks/set-state-in-effect` ×15,
+- [ ] **22 lint warnings**, counted 2026-10-04. The number drifts up as the
+      app grows, so recount rather than trusting this line. Most are React
+      Compiler (`react-hooks/set-state-in-effect`, plus
       `react-hooks/immutability` ×2) and they're real: a `useEffect` calling
       `setState` synchronously renders twice on mount. Most want
       `useSyncExternalStore`, so each is a small design call, not a mechanical
       edit. Set to `warn` so landing the lint fix didn't mean landing rushed
       ones — clear them, then delete the override, and **don't silence them
-      further**. The other four: two `<img>` that should be `next/image`
+      further**. The rest include two `<img>` that should be `next/image`
       (`Header.tsx:94`, `SideNav.tsx:187`), one unused binding
       (`decks/[packId]/drill/page.tsx:34`), one missing dep
       (`cards/page.tsx:123`).

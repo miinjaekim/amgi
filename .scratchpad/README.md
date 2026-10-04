@@ -9,571 +9,94 @@ into context without loading everything. Read only what the task needs.
 | [ui-ux.md](ui-ux.md) | Palette, themes, navigation, copy/i18n, open design questions | Styling or laying out a surface |
 | [tech-stack.md](tech-stack.md) | Web + mobile stack, deployment, CI, shared package layout | Setting up, adding a dependency, touching build/deploy |
 | [data-model.md](data-model.md) | Flashcard discriminated union, Firestore collections, `STUDY_LANGUAGE_CONFIGS`, API shapes | Adding a language, changing card fields, touching API routes |
-| [status.md](status.md) | What's live, what's decided and why, known issues, build/console state | Orienting at the start of a session |
-| [backlog.md](backlog.md) | Open work only — prioritized, plus unscoped ideas | Picking the next thing to build |
-| [lessons.md](lessons.md) | Gotchas already paid for — Firestore, Expo monorepo, EAS, Next.js | Debugging something that smells familiar |
+| [status.md](status.md) | What's live, what's unverified, build and console state, and the index of decisions | Orienting at the start of a session |
+| [decisions/](decisions/) | Closed calls with their reasoning, one file per area | Before changing something a decision covers. Find it through the index in `status.md` |
+| [backlog.md](backlog.md) | Open work only, prioritized, plus how to cut a build | Picking the next thing to build |
+| [lessons.md](lessons.md) | Gotchas already paid for: Firestore, Expo monorepo, EAS, Next.js | Debugging something that smells familiar |
 
-Related docs outside this folder:
+## Conventions
 
-- `docs/packs/toeic-pack-draft.md` — source draft for the TOEIC vocabulary pack
-  (referenced from `packages/core/src/packs.ts`)
-- `docs/packs/topik-pack-draft.md` — source draft for the TOPIK 고급 pack
-  (referenced from `packages/core/src/topik.ts`)
-- `docs/packs/military-unit-pack-draft.md`,
-  `docs/packs/military-affairs-pack-draft.md` — the two military packs, 498
-  pairs (referenced from `packages/core/src/military.ts`). Unlike the drafts
-  above these are **bilingual pair lists**, not a study side plus glosses, and
-  they still carry live open questions — read them before changing a term or a
-  hint, and hand *these* to a reviewer rather than the TS.
-- `docs/packs/military-branches-subpack-draft.md` — 병과와 주특기, the 24-pair
-  eleventh section of 부대·참모, added and **approved 2026-09-09**. It is the
-  first military content authored under the sourcing standard, so unlike its
-  parent every row carries a tier and a citation, and it leads with why a branch
-  is written 보병과 rather than 보병. It also records
-  what was cut and why — it started as a whole pack and was reduced to a
-  subpack.
-- `docs/packs/hanja-geupsu-pack-draft.md` — the 급수 pack, 300 characters over
-  five subpacks, **awaiting approval on the word list**. Unlike every draft
-  above it, its rows are *generated* rather than typed:
-  `docs/packs/hanja-geupsu-ingest.py` beside it builds them from the 어문회 list
-  and Unihan, so the tier column can be re-checked instead of believed. Read the
-  draft before touching the pack.
-- `docs/packs/english-articles-draft.md` — Munli's article practice: 8 rules
-  from Cambridge and the British Council, 54 Tatoeba sentences (CC BY 2.0 FR),
-  **awaiting the user's review** of the six calls at its top. The answer in each
-  box is the sentence's own article, and the rule tags are the model's reading,
-  which is what needs checking.
-- `docs/packs/english-articles-generation-research.md` — the 2026-10-02 measurement of
-  whether a model checker could license *generated* article sentences, run on
-  that draft's 54 sentences as the answer key. Numbers only, no decision.
-- `docs/packs/daily-life-pack-draft.md`, `docs/packs/idioms-pack-draft.md`,
-  `docs/packs/kanji-pack-draft.md` — the three packs added 2026-08-24 (referenced
-  from `dailyLife.ts`, `idioms.ts`, `kanji.ts`), **approved 2026-08-24**. Each
-  carries the word list *and* its backs in one file, rather than the list/backs
-  split the older drafts use, and each leads
-  with the calls that need a decision: the daily-life pack sets aside the
-  not-for-beginners rule, the idioms pack's Korean 관용구 matches are judgement
-  calls, and the kanji pack trades the kana grid for a list to fit readings on the
-  back. Hand *these* to a reviewer, not the TS.
-- `docs/packs/README.md` — **how a vocab pack gets built**, set 2026-08-31.
-  Read it before authoring any pack. The rule it exists for: **the model is not a
-  source**, so every entry carries a tier (A/B/C/D) and a citation, sources are
-  ranked before they are trusted, conflicts are recorded rather than resolved
-  quietly, and the list is **rendered through the app's own transforms** before
-  anyone believes it — which is what found the Kikuyu syllabifier bug.
-- `docs/packs/kikuyu-basics-pack-draft.md` — 59 entries, approved 2026-08-31
-  ahead of a speaker's check and **read by a speaker 2026-09-08, unchanged**;
-  the per-entry tiers stay as the record of where each entry came from. The
-  respelling *table* beyond these entries is still unchecked — that list is in
-  [lessons.md](lessons.md). Also the record of two code bugs found by rendering
-  it rather than reading it, one of which reached every existing Kikuyu card.
-- `docs/packs/spanish-basics-pack-draft.md` — the Spanish starter pack, 153
-  entries in five sections, **approved 2026-08-31** (referenced from
-  `spanishBasics.ts`). Same one-file shape as the three above, and the first pack
-  with **English and Korean backs both live**, since on a Spanish deck neither
-  slot is the front. Read its header before the list: the beginner exception, the
-  European-Spanish commitments, and the phrase rule. It also carries a **What
-  review changed** section, which is the part worth reading twice — three
-  defects were found *after* the list was written, and two of them by a test
-  rather than by rereading.
-- `docs/packs/toeic-backs-draft.md`, `docs/packs/topik-backs-draft.md` — the 293
-  card backs, approved 2026-08-02. Kept as the record of what was authored and
-  why; still the place to read before changing a gloss, since each leads with
-  the near-synonym collisions that a bare source diff would not explain.
-- `docs/local-model.md` — the written answer to the "Local model spike" item:
-  the three meanings of "local", what a local model could and couldn't replace
-  route by route, size/RAM limits, fine-tuning vs prompting, and the recommended
-  first step (a shared term cache, not a model). **The item is closed, and so is
-  that first step** — the term cache was cancelled 2026-09-08, which makes the
-  reopen condition the spike set unreachable. §8 is analysis now, not a plan.
-  Read this and both Decisions entries in `status.md` before reopening the
-  on-device question.
-- `docs/grammar-research.md` — what SLA research says about how grammar is
-  learned and practised, written 2026-08-08 after the first grammar-patterns
-  trial failed. **Read it before touching the grammar design**: it confirms
-  three decisions already made (no curriculum, no multiple choice, spacing),
-  contradicts one (free production was made rung one when the evidence puts it
-  third), settles the interleaving question, and documents Bunpro as the closest
-  prior art — including the failure mode Amgi would inherit by copying it.
-  Tracked via an explicit `!docs/grammar-research.md` re-include.
-- `docs/pronunciation-research.md` — the measurement pass behind the
-  pronunciation aid, written 2026-08-30. **Read it before picking up any of the
-  five languages still open**: it carries the per-language numbers, the finding
-  that self-consistency is not evidence of correctness, and two working rule
-  engines (Korean 표준 발음법 at 37/40, Spanish/Swahili stress at 16/16 and 9/9)
-  that are expensive to re-derive. Tracked via an explicit
-  `!docs/pronunciation-research.md` re-include.
-- `docs/testflight-beta-info.md` — TestFlight listing copy, Korean *and*
-  English in one file (the `-ko` suffix was dropped 2026-08-02 for that
-  reason). Tracked, despite `.gitignore` excluding `docs/*`, via an explicit
-  `!docs/testflight-beta-info.md` re-include — so if you rename it again,
-  rename it there too or it silently stops being tracked. **The code blocks are
-  one line per paragraph on purpose** — this is pasted text, not source, and a
-  hard wrap survives into TestFlight to fight the phone's own wrapping. Don't
-  reflow them to match the prose around them.
+`backlog.md` holds **only open work**. When something closes it leaves that
+file:
 
-**Convention:** `backlog.md` holds **only open work**. When something closes it
-leaves that file:
-
-- **Shipped** → nowhere. Git and GitHub already track what shipped and when; a
-  second copy in these notes only goes stale. Delete the bullet.
-- **Decided or cancelled** → the Decisions section in `status.md`, *with the
-  reasoning* — a closed call whose reasoning is lost gets reopened by whoever
-  next notices the symptom.
+- **Shipped** → nowhere. Git and GitHub already track what shipped and when.
+  Delete the bullet. The one exception is "Queued for the next build", which
+  holds merged mobile work until a build carries it.
+- **Decided or cancelled** → a new entry at the top of the matching file in
+  `decisions/`, *with the reasoning*, and a line in the index in `status.md`.
 - **Durable gotcha** → `lessons.md`.
 
 The test these files have to pass: **would GitHub tell me this?** If yes, it
-doesn't belong here. What does belong is reasoning, console and binary state that
-lives outside the repo, and what is currently unverified.
+doesn't belong here. What does belong is reasoning, console and binary state
+that lives outside the repo, and what is currently unverified. That rules out a
+running log of what each session did, which this file used to carry.
 
-Backlog priority mirrors the user's Google Tasks list — `backlog.md` is the
-scoped version of it. Keep entries at the size that says what to do next; the
-argument behind a call goes in `status.md`, not in the item.
+Backlog priority mirrors the user's Google Tasks list, and `backlog.md` is the
+scoped version of it. Open items are the user's: a follow-up noticed while
+building is a note inside an existing item, not a new entry. Keep entries at the
+size that says what to do next; the argument behind a call goes in `decisions/`.
 
-**Parallel agents:** the main checkout is for scoping and planning into
-`backlog.md`; building happens in long-lived lanes
-(`../amgi-ai-2-worktrees/lane-<n>`, made once with `scripts/new-lane.sh <n>`),
-one agent and one task at a time. Each task starts in a fresh chat, and **the
-agent runs `scripts/next-task.sh <branch>` itself** before touching code, not a
-bare `git checkout -b` (the user's call, 2026-09-24). The script branches from
-`origin/main` (so a plan has to be pushed first), deletes the previous branch
-once merged (on origin too, unless something was pushed to it after the merge),
-copies the `.env` files from the main checkout, and reinstalls if
-the lockfile changed. Lane n uses Metro 8081+n and Next 3000+n.
-`scripts/new-worktree.sh <branch>` is still there for a one-off worktree. Changes
-confined to `.scratchpad/` and `docs/` may be committed straight to main (pull
-first); code always goes through a branch and PR. If you are an agent in a
-worktree:
+Update these notes **before** a PR merges, as part of the PR.
+
+## Parallel agents
+
+The main checkout is for scoping and planning into `backlog.md`. Building
+happens in long-lived lanes (`../amgi-ai-2-worktrees/lane-<n>`, made once with
+`scripts/new-lane.sh <n>`), one agent and one task at a time.
+
+Each task starts in a fresh chat, and **the agent runs
+`scripts/next-task.sh <branch>` itself** before touching code, not a bare
+`git checkout -b`. The script branches from `origin/main` (so a plan has to be
+pushed first), deletes the previous branch once merged, copies the `.env` files
+from the main checkout, and reinstalls if the lockfile changed. Lane n uses
+Metro 8081+n and Next 3000+n. `scripts/new-worktree.sh <branch>` is still there
+for a one-off worktree.
+
+Changes confined to `.scratchpad/` and `docs/` may be committed straight to main
+(pull first). Code always goes through a branch and a PR.
+
+If you are an agent in a worktree:
 
 - **Your backlog item is yours to edit.** Rescope it in your PR as the work
-  changes; when it merges, remove it per the convention above, or move it to
+  changes. When it merges, remove it per the convention above, or move it to
   "Queued for the next build" if it's mobile. The planning session leaves a
   handed-off item alone until your PR merges.
 - **Bring your branch up to date with main before the PR merges**
-  (`git pull --rebase origin main`). "Queued for the next build" and its
-  `_Empty as of…_` line are where two PRs usually collide — keep both sides.
+  (`git pull --rebase origin main`). "Queued for the next build" is where two
+  PRs usually collide, so keep both sides.
 
-_This pass **found that the streak chip and the Progress tab were keeping two
-copies of one number**, from a three-review gap the user noticed (202 against
-205). The full diagnosis is in the 2026-09-15 Decisions entry in
-[status.md](status.md) and is worth reading before touching either write path,
-because the instinct is wrong in an interesting way: "cards reviewed" versus
-"reviews" **is** a real distinction in this codebase, but it is not what those
-two numbers were — `advanceStreak` is not even given the card, so it cannot
-dedupe by one. They were the same unit, written twice, drifting in **both**
-directions: dropped transactions and a `Math.max` merge pulled the chip low,
-undo pulled it high. The chip now reads the rollup, so they cannot disagree.
-⚠️ **The two platforms differ, and the cache is why** — web subscribes, mobile
-cannot, because the Firestore cache on React Native is memory-only and a
-listener goes blank exactly when offline._
+## Related docs outside this folder
 
-_Four smaller calls landed with it, all the user's: seven days is the detail
-screen's default (which cost the range hand-off — a default and an inherited
-range cannot coexist), **the stacked bar was reversed a day after shipping** in
-favour of a source filter, the weekly chart's title became a measure dropdown,
-and the chip gained an ⓘ. The stacking reversal is the one to read: the total
-still equals the tile when nothing is selected, so the consistency argument that
-justified stacking survived the change of form._
+`docs/` is gitignored except `docs/packs/` and the four files below, each of
+which has an explicit `!` re-include in `.gitignore`. Rename one and it silently
+stops being tracked unless the re-include is renamed too.
 
-_This pass **made the "By language" row go somewhere** and gave the range chip
-something to govern besides the calendar. Two of the three Progress items are
-built; the third (sharing a chart) is unblocked and still open. **Three calls
-were the user's** and all three are in the 2026-09-15 Decisions entry in
-[status.md](status.md): a dedicated route and pushed screen rather than an
-expanding row, bars that follow the range bucketed by week past 30 days, and
-cards added **stacked** rather than summed — which keeps the bar total equal to
-`progressStatNewCards`, so the chart gained the lookup/pack split without the
-tile and the shared image losing their number._
+| File | What it is |
+|---|---|
+| `docs/grammar-research.md` | What SLA research says about how grammar is learned. Read before touching grammar design |
+| `docs/pronunciation-research.md` | The measurements behind the pronunciation aid, per language, plus two working rule engines. Read before picking up any of the five languages still open |
+| `docs/local-model.md` | Why there is no on-device model. The item is closed, and so is its reopen condition (the term cache was cancelled 2026-09-08) |
+| `docs/testflight-beta-info.md` | TestFlight listing copy, Korean and English. The code blocks are one line per paragraph on purpose, because it is pasted text: don't reflow them |
 
-_Two findings worth knowing before touching the charts. **The learned curve
-reaches one day further back than `DETAILED_HISTORY_START`** — 09-05, not 09-06
-— because walking backwards from today's count needs the crossings *after* a
-day, not on it; a test pins it, since it is exactly the kind of thing that gets
-"corrected" into being wrong. And **neither new chart takes the mark toggle**,
-which dissolves the shared-`amgi_week_chart_mark` hazard the item flagged rather
-than working around it: a stacked pair has no line form and a cumulative curve
-has no bar form, so there is no choice to remember. ⚠️ **Nothing has been looked
-at** — 635/635, both `tsc` clean and `expo export` bundling is the whole of the
-verification._
+**`docs/packs/README.md` is how a pack gets built. Read it before authoring
+one.** Its rule is that the model is not a source: every entry carries a tier
+and a citation, and the list is rendered through the app's own transforms before
+anyone believes it. When a pack needs review, hand the reviewer the draft, not
+the TypeScript.
 
-_This pass **cleaned out the backlog** on the user's call — no code, seven items
-gone. One closed by being finished: **a speaker read the Kikuyu Basics list and
-it stands as written**, which also cut a false clause from tester-facing copy in
-both locales. The other six were cancelled, and two of them are worth knowing
-about before anyone re-derives them. **The shared term cache going takes the
-local-model reopen condition with it**, since that condition was "when the cache
-is live and has a measured hit rate" — so on-device is closed rather than
-waiting, and `docs/local-model.md` §8 is now analysis rather than a plan. And
-**the word-of-the-day gloss divergence was cancelled and then reversed the same
-day** — the user set the ceiling directly (one gloss, a second only when one
-would mislead), so that route is fixed and `/api/explain`'s strict single is now
-the open half of the question. The pack roadmap closed too, so a pack now needs its own case made rather than a
-slot on a list — the MOS pack was left untouched as the only one tracked, and
-the Hanja 급수 packs were added 2026-09-09 by making that case. Full reasoning, item by item, in the 2026-09-08 Decisions entry in
-[status.md](status.md)._
-
-_This pass **shipped the shareable stats asset**, in four commits that are
-worth keeping in that order: the counters, the derivation, the render, then both
-Share controls. **The counters went first and alone** for the reason the item
-itself carried — a rollup keeps only what it counted in advance, so the choice
-was "from today or from never" — and the sharpest thing learned is that
-**`historyStartsMidWindow` now guards only one of two boundaries**. Rollups
-begin 2026-08-20; `cardsMatured`, `studySeconds` and `byHour` begin 2026-09-06,
-and a window reaching past *that* has rows that look complete while reading zero
-for three fields. `buildShareStats` returns `null` rather than an undercount, so
-**the image shows four numbers until 2026-10-06 and five after**, with no code
-change._
-
-_Two things to read before touching it. **Study time turned out to be the cheap
-counter, not the expensive one** — measured per card (shown to rated, capped at
-60s) rather than as a session wall-clock, it attaches to a rating that already
-exists and needs no lifecycle, which is why all three counters fit one
-additive delta. And **the app's heatmap ramp is measurably wrong** — not
-monotonic in lightness, with empty and level-1 ΔE 1.4 apart under deuteranopia.
-The image ships a corrected ramp; `levelColor` is deliberately untouched, since
-fixing it is a visible restyle of a shipped screen. Both in the Decisions
-entries in [status.md](status.md)._
-
-
-_This pass **rebuilt mobile navigation** and closed four of the six
-mobile-UI-redesign items in one go — they moved pieces of the same screen, so
-building them apart would have meant building the first one twice. Settings left
-the tab bar and Progress took its place, which is the whole point: `/progress`
-was reachable only from a streak badge that **hides itself when the streak
-breaks**, so the screen that would tell you was gone exactly when you needed it.
-Settings is now a pushed screen behind a gear. **Read the Decisions entry in
-[status.md](status.md) before touching the tabs**, for two reasons. The fifth
-tab is named **Progress, not Profile** as the item proposed — it names the
-screen rather than the account, costs no new copy, and makes it the same word
-web already uses. And the real decision in a reorder is **not the order but the
-initial route**: the first tab is what every cold open answers "what is this
-for" with, which is why Review leads — and `unstable_settings.initialRouteName`
-is load-bearing, since declaration order sets the bar while `/` still resolves
-to the group's `index`._
-
-_The half that could not have waited is in [data-model.md](data-model.md).
-**Verdict counts moved inside `byLanguage` before any screen wanted them**,
-because a daily rollup keeps only what it counted in advance: the choice was
-never "now or later" but "from today or from never", and every unshipped day was
-a day permanently without the number. So **retention per language is honest only
-from 2026-09-04 on** — `retentionRate` returns `null` rather than `100%` for the
-days before, which is what stops an unrecorded slice from reading as a perfect
-one. Two items remain in [backlog.md](backlog.md): per-context pronunciation
-speed, and the stats asset — whose presentation half the Progress tab has now
-largely answered._
-
-_This pass **re-cut the High section** on the user's call. Both pronunciation
-items were cancelled — the Kikuyu speaker check because no speaker is available
-and what the item really held was a lesson (now in [lessons.md](lessons.md),
-with the known-unchecked list preserved), and the five remaining languages
-because the measurement behind them does not go stale, which makes deferring
-them until a user asks cheap in both directions. Four product items replaced
-them: basic Spanish packs, basic Kikuyu packs, a pronunciation speed dial, and a
-shareable stats asset. **The scoping is most of the value here** and three
-findings are worth knowing before picking any of them up. The **speed dial is a
-playback change, not a synthesis one**: `SPEAKING_RATE` is baked into the
-pronounce route's cache path, so a per-rate request multiplies the TTS bill and
-the bucket, while both players already expose a client-side rate — with one
-caveat that has to be settled by ear, since time-stretching a clip is not the
-same as synthesizing slowly. **"Cards learned" does not exist in the codebase**
-— `sm2.ts` stores `repetitions`/`interval`/`ease` and nothing derives maturity —
-so it needs a definition, and it reads from the card documents rather than the
-daily rollups, which makes it the one stat on that asset that works
-retroactively. And the **Kikuyu pack inherits the item just cancelled**: it
-would be the first thing to put the unchecked half of the respelling table in
-front of a learner at volume._
-
-_This pass **built the pronunciation aid for Japanese and Kikuyu**, the first
-two of the seven the backlog item covers, and the pairing is sharper than it
-looks: neither language's gap is the *reading*. Japanese already has furigana,
-so what was missing is **pitch accent**; Kikuyu's is **tone**. Both are melody,
-and both were measured before any code — the item said plan first, and the
-measurement is what the plan turned out to be. **The finding worth carrying
-past this feature:** Gemini on Japanese pitch accent is not noisy but *stably
-wrong* — 18 of 27 terms identical across three runs, only 6 correct, defaulting
-to [1] and returning **one** accent for 雨 and 飴, 花 and 鼻. So
-**self-consistency is not evidence of correctness**, which is the standard the
-Kikuyu and Swedish probes had to lean on. Japanese now reads its accent from a
-dictionary (27/27) **inside `/api/explain`** — which keeps the rule that
-readings come from the same route furigana does, while proving "from the route"
-and "from the model" were never the same claim. Kikuyu gets a static rule and
-**no tone at all**, for a sharper reason than its noun class: not merely wrong
-but not self-consistent, and respelling ũ/ĩ as ú/í in a language whose entire
-audio story is that the near neighbour is not an acceptable stand-in. Five
-languages remain, and [backlog.md](backlog.md) now carries what the same
-measurement pass already answered for each._
-
-_Last reviewed against the codebase: 2026-09-07, `feat/share-stats-counters`.
-`npm test` 482/482. Mobile has no test script — its half of the freshness work
-is covered by `tsc --noEmit` and an `expo export`, not by tests, and both were
-run on this pass._
-
-_This pass **built typed responses during review**, the last starred item —
-`backlog.md`'s High section is empty again. It was designed before any code, as
-the item asked, and the four questions it posed are answered in the Decisions
-entry in [status.md](status.md). **The one thing to read before touching the
-grader:** it matches accents *strictly*, which is the opposite of what the
-backlog item prescribed — Kikuyu's `ĩ`/`ũ` and French `ou`/`où` are word
-distinctions, and the `STUDY_LANGUAGE_CONFIGS` comment refusing a Swahili voice
-for Kikuyu is the same argument. What makes strictness affordable is that the
-verdict only **preselects** a rating: all four buttons stay live with both
-strings on screen, so the learner corrects a false miss with the tap they were
-making anyway. `sm2.ts` is untouched._
-
-_Two structural notes. The grader is **not new code** — `foldText` and the
-spacing-insensitive compare are the cloze grader's, lifted out of `grammar.ts`
-into `packages/core/src/typedAnswer.ts` so they outlive that module's queued
-deletion; `grammar.ts` imports them back, so the deployed route is unaffected
-and **the deletion takes the importer, not the module**. And typing is a
-**session** property, not a stored preference: a toggle beside the direction
-filter, applying only to the produce-the-word direction, with a per-card way to
-flip instead — which is what keeps a learner with no IME to hand from being
-stuck._
-
-_This pass **made web read its data live** and, in doing so, **retracted two
-claims these notes had asserted**. Both retractions are the more useful half, so
-read the Decisions entry in [status.md](status.md) before the code. The
-`archived` "query bug" — called "one genuine query bug" here and prescribed a
-backfill — **does not exist**: an audit over all seven collections found 1,316
-cards and **zero** missing the field, and `buildFlashcardDoc` is a single
-constructor per platform that hardcodes it, so none can be created. It had been
-reasoned from code and never checked against data. The counts question was
-**decided as what the code already did**. What remained was one real problem —
-nothing pushes — and `onSnapshot` appeared nowhere in the repo._
-
-_The thing worth carrying: **subscribing fixes displaying a stale value and does
-nothing about two writers**. The streak needed a transaction as well as a
-listener, because two tabs both loading `reviewedToday: 0` and reviewing 10 and
-1 times stored `1` — no second device required. And **mobile is the opposite
-case, not the same one later**: its streak is already offline-first and
-reconciled, and the transaction that fixes web *fails offline*, which is the bug
-mobile's cache exists to prevent._
-
-_Mobile then took **step (1) only** — a `users/{uid}` subscription for display,
-merged into what the device holds and never written back from. The scope was set
-before the code and held. Two things came out of it: the cache write is gated on
-nothing being unsent, because `refreshReminders` reads that cached
-`lastReviewDate` and would otherwise nag about work already done; and mobile
-turned out to have web's local-counter bug after all, in a **single-device**
-form — two quick ratings both computing from the same render-old state — fixed
-with a ref rather than a transaction, since a transaction fails offline._
-
-_Step (2) followed the same day, after the streak listener was watched working
-on a phone. **The gate asked for a release and was opened by an Expo Go test** —
-deliberately, and worth knowing which questions that left open. Two things the
-collection listeners needed that the streak one did not: an **empty cached
-snapshot is dropped**, because on a memory-only cache "nothing yet" and "no
-cards" arrive identically and the streak sidesteps it by ignoring missing
-documents; and the offline snapshot is **written on a debounce**, because every
-rating echoes back as a snapshot and writing each would re-serialise the whole
-collection per card. A listener also gives back no **deadline**, so review keeps
-`withTimeout`'s 10s itself — offline on an unloaded language it would otherwise
-spin forever. **What is left is verification on a device**, and
-[backlog.md](backlog.md) lists the four things to watch._
-
-_This pass **cut both tracking files down to what GitHub can't tell you.**
-`status.md` lost its Shipped section entirely (~270 lines), plus the per-PR
-enumerations in Now and Builds — all of it derivable from git. What stayed is
-Decisions, the EAS/TestFlight state that only lives in a console, and the
-unverified-on-binary caveats. `backlog.md` was pruned to items that say what to
-work on next: the Google Tasks sync narration went, the writing-review follow-ups
-went with the feature (recorded in the grammar-removal decision), and the
-remaining items were cut to their actionable core. Two things were **added**
-rather than removed, because nothing else tracked them: deleting the callerless
-`writing.ts`/`grammar.ts` and their routes once no pre-removal build is in use,
-and `/api/explain`'s missing `try`/`catch`, which outlived the writing item that
-carried it._
-
-_This pass **built the progress dashboard** — the first thing the app remembers
-about a day beyond a streak chip. **It is a write-path change before it is a
-screen**, and that ordering is the whole point: everything the app knew was four
-fields on `users/{uid}`, so "which days did I review" was never written down
-rather than merely unsurfaced. The two things to know before touching it are
-both in [data-model.md](data-model.md). **The grain is one document per
-user-day**, not one row per rating — which answers every question actually
-asked at 1/50th the writes, but permanently discards anything not counted in
-advance, so a field added later only collects from the day it ships. And **it is
-a subcollection on purpose**: the Delete User Data extension is configured as
-`users/{UID}` recursive, so a top-level `progress_daily` would have quietly
-survived account deletion._
-
-_Two traps worth reading before debugging it. **The security rule is console
-state and its failure is silent** — writes are fire-and-forget, so a missing
-rule looks like "the dashboard doesn't work" rather than an error; the rule is
-in [tech-stack.md](tech-stack.md) and went live 08-20. And **progress increments
-are not idempotent**, unlike the card-rating queue they sit beside: a
-timed-out-but-committed write over-counts on retry, accepted deliberately
-because the alternative wedges the flush chain and loses whole days.
-`withTimeout` says so at the point of use._
-
-_**History began 2026-08-20 and cannot be backfilled** — review history is
-reconstructible from nothing. So the calendar is near-empty for weeks by
-construction, and the streak shown is still `UserContext`'s stored counter
-rather than `deriveStreak`, which is written and tested for the day the rows
-outlive the longest live streak. Not before ~November 2026._
-
-_This pass **removed grammar and writing from the app** on the user's call, and
-then **reframed the two remaining starred backlog items**. The removal took
-~5,000 lines: pattern practice, writing review, the Cards/Grammar toggle, the
-Learn Word/Passage toggle, the patterns review collection, `core/diff.ts` and
-both `TextDiff`s, and 88 i18n keys per language. **The one thing to know before
-touching `packages/core`:** `grammar.ts` and `writing.ts` are still there with
-**zero callers**, and that is deliberate — `/api/writing` and
-`/api/grammar/exercise` stay deployed so TestFlight 1.3.0, which has the UI
-compiled into its binary and no OTA, keeps working. Both files carry a
-`DO NOT DELETE AS DEAD CODE` header; the condition for removing them is in
-[status.md](status.md). `docs/grammar-research.md` stays too — it is the
-argument, and it outlives the code._
-
-_The backlog rework is the more interesting half. **"Review page discrepancy" was
-never one page's bug**: every surface owns a private copy of the data and nothing
-tells any of them when it changes, which is why the symptom moves — a stale
-deadline, a divergent streak, a card saved and not shown. It is now **Data
-loading and freshness**, with the real architecture written down (no cache layer;
-`useState` + effect per screen; web never refetches on navigation; mobile
-hand-rolls `reloadToken`; the streak is a *local counter* in `UserContext`, not a
-read of the doc) and the actual question posed — invalidate (TanStack Query/SWR)
-or subscribe (`onSnapshot`, already paid for since they are on Firestore). **The
-one genuine query bug is called out separately** so it doesn't hide inside the
-architecture question: `where('archived', '!=', true)` excludes missing fields and
-was never backfilled, so old cards appear nowhere at all. **"Improve stats" is now
-Progress dashboard**, and it is a *write-path* item — there is no per-review
-record anywhere, so history begins the day the write ships, and it depends on the
-loading item because a dashboard is a fourth surface to disagree with the other
-three. **Word order practice was cancelled**, since it was a rung on a ladder
-that no longer exists._
-
-_This pass **synced `backlog.md` with Google Tasks** and scoped the four new
-names against the code, which is most of the value — a one-line task title and a
-grounded item are not the same artifact. **High is no longer empty:** three
-starred items (review page discrepancy, improve stats, word order practice) plus
-*Add Spanish* under Medium. Three findings came out of the scoping and are worth
-knowing before picking any of them up. **The review discrepancy has a concrete
-prime suspect**: `where('archived', '!=', true)` excludes documents where the
-field is missing, `migrateExistingCards` never backfilled it, and review is the
-only surface that filters `archived` at all — so the fix is a backfill plus a
-decision about which count is honest, not a query rewrite. **"Improve stats" is a
-data-model item**, because no per-review record is written anywhere and the two
-fields that do exist are per-user rather than per-language and count directions
-rather than cards. And **word order practice argues against a call already
-made** — the bare transformation drill was dropped deliberately, and a token-
-arranging drill is mechanical in exactly the sense `docs/grammar-research.md`
-warns about, so it has to earn a rung under the cloze rather than beside it._
-
-_Nothing was removed. Tasks lists six open items where `backlog.md` holds
-eighteen; the untracked ones have no decision recorded against them, so they were
-ranked below the Tasks names and left in place rather than deleted, per the
-convention below. The stale `npm test` count in Housekeeping (200/200) was
-corrected to a measured 313/313 in passing._
-
-_This pass **shipped 1.3.0, build 11 — the first build approved for external
-testing**. Every release before it reached internal testers only; 1.2.0 was
-accepted but never cleared Beta App Review. That makes the six PRs it carries the
-first work in this project that is shipped in the sense the no-OTA model means:
-in someone's hands. They left [backlog.md](backlog.md) for the Shipped list on
-this pass and not before, because a merged PR no binary carries is not shipped._
-
-_Two things follow, both in `backlog.md`. **The oldest open items in the project
-are now cheap to close**: the native paths no release has ever verified (audio,
-export, sharing, offline, reminders, account deletion, and 1.3.0's new copy
-button) plus three renders never seen on a device. 1.3.0's What to Test asks
-testers for all of them by name, so reading what comes back beats testing by
-hand. And **the next version bump queues for Beta App Review again** — the
-external approval covers 1.3.0, so batching changes into a build is worth more
-than cutting one per feature._
-
-_`docs/testflight-beta-info.md` was rewritten for this build, then **cut for
-length on the user's call** — the tester-facing copy had grown past what its own
-author would read. The rule that survived: **each bullet names the one thing that
-can go wrong**, since the rationale around it was what made it unreadable. Two
-things in that file are deliberate and easy to undo by accident, so both carry
-warnings in the file itself: the Apple review notes are **left long** (they
-answer rejection reasons — 5.1.1(v) account deletion, notifications off by
-default, third-party processing), and the code blocks are **one line per
-paragraph** because TestFlight keeps every newline it is given and a hard wrap
-fights the phone's own wrapping._
-
-_The previous pass **cleared High**. Both items shipped as separate PRs — term archiving
-during review (#86) and spellcheck on lookup (#87) — and each turned out to be
-one shared function away from being right on both platforms, which is why they
-closed together. Two things are worth reading before touching either area: the
-`removeCardFromQueue` entry in [lessons.md](lessons.md), because the review queue
-is per *direction* and both platforms had independently forgotten it; and the
-spellcheck decision in [status.md](status.md), which records where the correction
-comes from, why the override is a request rather than a filter, and the refusal
-set to re-probe before editing the prompt. The backlog item's open question —
-one round trip or two — closed on the reuse-the-endpoint rule. **`backlog.md`'s
-High section is now empty**; the next thing to pick up is under Medium._
-
-_The pass before that **closed grammar patterns**. The mobile smoke test in Expo Go against
-the deployed API came back clean, so the last item left `backlog.md` and the
-feature is done: `status.md` gained a Shipped line, a closing Decisions entry,
-and an updated Now. **`backlog.md` now has no starred items at all** — all three
-are closed. The one thing worth carrying was the `/api/writing` "+ card"
-fallback, which is inert in current code and must not be deleted until no old
-build is in the wild; it moved into the closing Decisions entry rather than
-vanishing with the backlog item._
-
-_The last pass on that branch **built the redesign and then fixed what testing
-it found**. Shipped: the cloze rung, `PatternKind`, derived stage, the
-Cards/Patterns management surface, manual add, the learner override, `easy` on a
-clean cloze, and interleaving. Two corrections came from real use rather than
-reasoning, and both are in [lessons.md](lessons.md) as one entry: a generated
-exercise has to be **checkable, not just well-prompted** (a cloze rebuilt itself
-into "Mon frère adore au football" and marked the learner wrong for writing
-correct French), and the redundant field added to catch that then broke every
-turn because it did not survive the client's second parse. A third correction
-came from the trial before it: the writing review now offers a **card for a word
-the learner reached for and did not have**, and a pattern offer no longer hides
-it. Two opens remain (vocab-queue interleaving, unprompted tier-1 hint); the
-override closed. **Not verified by anyone yet:** graduation to the production
-rung, which needs about a week of real intervals to reach._
-
-_A follow-on pass **redesigned grammar patterns off the research**, replacing
-the same-day design below rather than sitting beside it. The move: the primary
-axis is not the pattern's kind but the learner's **stage** with it — a cloze
-until it sticks, then free production — because practice runs controlled → free
-and the first cut opened at free, which is where the trial's ambiguity and
-variance both came from. Stage is derived from `repetitions`, so a lapse demotes
-for free. `kind` survives, demoted to deciding whether a pattern ever graduates.
-The bare transformation drill is dropped outright. `vision.md` gained "production
-is the last rung", `data-model.md`'s revision was rewritten, the `status.md`
-entry was replaced with its trail kept, and `backlog.md` restaged (1a′) into five
-pieces with an explicit **not doing** list._
-
-_This pass **built grammar patterns, tried them, and redesigned off the trial**
-— which is the order the previous pass's design could not have produced on its
-own. (1a) shipped to a branch and three things did not survive contact: a
-verdict cannot be derived from `/api/writing` alone (it grades prose without
-knowing the target, so a clean sidestep scored `good`), the entry door is not
-`kind === 'grammar'` (the best patterns arrive as `naturalness` findings), and
-the budgeted composite index was never needed. Then the trial itself found the
-deeper thing: **one exercise format was serving two kinds of grammar point**,
-which is now argued in `vision.md`, typed in `data-model.md` and called in
-`status.md`. `backlog.md` restaged the item as (1a′) in four ordered pieces and
-downgraded (1b) — manual add covers most of what the 12-template Learn door was
-for. Two user calls are recorded: patterns are managed from a Cards/Patterns
-toggle, and can be added by hand. Previously 2026-08-08 @ `f722774` (PR #81)._
-
-_That pass closed **two** of the three starred items. The military terms pack
-grew from a 219-term draft into two registered packs of 474 pairs (#81), and the
-local model spike closed on its own written answer: `docs/local-model.md` says
-don't, so the item went rather than lingering. `backlog.md` lost both, gained
-PR #81 in the build queue, and promoted the shared term cache out of Needs
-clarification because the local-model doc names it the cheapest useful first
-step. `status.md` gained a shipped line and two Decisions entries. Grammar
-patterns is now the only starred item left. Previously 2026-08-03 @ `111da4e`
-(PR #78)._
-
-_That pass did three things. **Grammar was designed** before any code — argument
-in `vision.md`, type in `data-model.md`, design calls in `status.md`, staging in
-`backlog.md` — then re-checked against the files it cites, which corrected six
-claims (12 `/api/explain` prompt templates not 6; `sm2.ts` unedited but its ease
-curve becomes a one-way ratchet without `easy`; a patterns row is a signature
-change to `buildReviewCollections`; `gloss` is optional both sides like
-`PackBack`; a review is two model calls; grading can fail mid-session) and added
-a hint tier. **`status.md` was compressed ~70%** — shipped history cut to one
-line per item and moved below Decisions, since the blow-by-blow is in git and the
-gotchas are in `lessons.md`. **`backlog.md` was reordered** to Queued → High →
-Medium → Bigger bets, with Housekeeping moved down and the lost `## Medium`
-heading restored. Previously 2026-08-02 @ `9a51a6e` (PR #71)._
+| Draft in `docs/packs/` | State |
+|---|---|
+| `toeic-pack-draft.md`, `topik-pack-draft.md` | Word lists for the TOEIC and TOPIK 고급 packs |
+| `toeic-backs-draft.md`, `topik-backs-draft.md` | The 293 card backs, approved 2026-08-02. Each leads with the near-synonym collisions, so read before changing a gloss |
+| `military-unit-pack-draft.md`, `military-affairs-pack-draft.md` | The two military packs, as bilingual pair lists. They still carry open questions |
+| `military-branches-subpack-draft.md` | 병과와 주특기, 24 pairs, approved 2026-09-09. First military content with a tier and citation per row |
+| `daily-life-pack-draft.md`, `idioms-pack-draft.md`, `kanji-pack-draft.md` | Approved 2026-08-24. List and backs in one file, each leading with the calls that needed a decision |
+| `spanish-basics-pack-draft.md` | 153 entries, approved 2026-08-31. Read its "What review changed" section |
+| `kikuyu-basics-pack-draft.md` | 59 entries, read by a speaker 2026-09-08 and unchanged. The respelling table beyond these entries is still unchecked (see `lessons.md`) |
+| `hanja-geupsu-pack-draft.md` + `hanja-geupsu-ingest.py` | The 급수 pack, 300 characters. Rows are generated by the script from the 어문회 list and Unihan, not typed |
+| `french-irregular-verbs-draft.md` | Munli's sourced irregular verbs. A conjugation dataset, not a vocab pack |
+| `french-tense-notes-draft.md` | The three tense notes shown on Munli's Saved tab |
+| `writing-worked-example-draft.md` | The worked example on Munli's Writing tab |
+| `english-articles-draft.md` | Munli's article practice: 8 rules, 54 sentences. Parked, with six calls at its top waiting on the user |
+| `english-articles-generation-research.md` | The 2026-10-02 measurement of a model checker for generated article sentences |
+| `user-pack-eval.md` | Eval of user-made packs against the hand-made ones. Generated by `npm run eval:user-packs`, so re-run it, don't edit it |
