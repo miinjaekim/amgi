@@ -143,6 +143,7 @@ the top of its file and a line here.
 
 The second mode: its shell, conjugation practice, writing review as a tool, English articles. 2026-09-21 on.
 
+- [Verbs are one topic again, and Amgi has a door into it (2026-10-04)](decisions/munli.md#verbs-are-one-topic-again-and-amgi-has-a-door-into-it-2026-10-04)
 - [English articles: a box on every slot, and the rule is what's scheduled (2026-09-28)](decisions/munli.md#english-articles-a-box-on-every-slot-and-the-rule-is-whats-scheduled-2026-09-28)
 - [Munli's practice sets are per language unless marked general (2026-09-25)](decisions/munli.md#munlis-practice-sets-are-per-language-unless-marked-general-2026-09-25)
 - [A right answer says so, and then gets out of the way (2026-09-22)](decisions/munli.md#a-right-answer-says-so-and-then-gets-out-of-the-way-2026-09-22)
