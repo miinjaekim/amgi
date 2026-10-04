@@ -1,10 +1,19 @@
-import React, { useMemo, useState } from 'react';
-import { Modal, View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  SUPPORTED_NATIVE_LANGUAGES, SUPPORTED_STUDY_LANGUAGES,
-  getStudyLanguageConfig, nativeOptionsFor, t,
+  View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet,
+  ActivityIndicator, KeyboardAvoidingView, Platform,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import {
+  SETUP_LOOKUP_TIMEOUT_MS, SETUP_WORDS, SUPPORTED_NATIVE_LANGUAGES, SUPPORTED_STUDY_LANGUAGES,
+  buildLookupCardDraft, directionPrompt, getNextReviewData, getPackTerms, getPackText, getReading,
+  getStudyLanguageConfig, getVocabPacks, lookupCardFaces, nativeOptionsFor, partOfSpeechLabel,
+  setupReturnDay, t,
 } from '@amgi/core';
-import type { StudyLanguage, TranslationKey } from '@amgi/core';
+import type { Flashcard, ReviewTracking, StudyLanguage } from '@amgi/core';
+import { saveFlashcardToFirestore } from '../services/firestore';
+import { applySpellingCorrection, getTermExplanation } from '../services/gemini';
+import type { TermAmbiguous, TermCore } from '../services/gemini';
 import { useUser } from '../context/UserContext';
 import { useTheme } from '../context/ThemeContext';
 import type { Palette } from '../theme';
@@ -23,19 +32,61 @@ import type { Palette } from '../theme';
  * tap — but it is still *asked*, which is what makes it a choice rather than a
  * default nobody was shown.
  *
+ * Then one real lookup, in place of a tour card that only *named* the
+ * surfaces: a word, the explanation Learn would give for it, the card that
+ * becomes, and one flip. See "Onboarding is not a checklist" in
+ * `.scratchpad/decisions/app-shell.md` for why it lives here, full screen and
+ * before the app, rather than on Learn.
+ *
+ * ⚠️ **The lookup is `/api/explain`, through the same client Learn uses** —
+ * not a canned response and not a second prompt, which would drift from what
+ * the app actually says.
+ *
+ * After the card: one real rating, which answers with the day the scheduler
+ * gives and the same card asked the other way round; the packs that exist for
+ * the chosen language; and sign-in, last and optional.
+ *
+ * ⚠️ **The card step can always be skipped.** There is no dismiss, so a lookup
+ * that fails or hangs must not be the only way forward. Skipping drops the
+ * card and carries on to packs and sign-in.
+ *
+ * ⚠️ **The card is kept only by an account being set up here.** Signing in to
+ * an account that already has preferences unmounts this screen through the
+ * gate, and that account keeps its own languages and cards. *Not now* drops
+ * the card: nothing is held on the device and nothing is left on Learn.
+ *
+ * ⚠️ **A plain view over the navigator, not a `Modal`.** It is opaque and full
+ * screen now, so it needs nothing a `Modal` gives, and the last step opens the
+ * system sign-in sheet, which iOS will not reliably present over a `Modal`.
+ * The cost is Android's back button: with no `Modal` to swallow it, it leaves
+ * the app from here, which is what it does on any root screen.
+ *
  * Blocking, with no dismiss, gated on `interfaceLanguage === null`. Every
  * answer is held locally and committed together on the last tap, so the gate
  * stays true for the whole flow and the caller needs no latch to keep this
  * mounted through its own final step.
  */
 export default function LanguageSetupModal() {
-  const { setInterfaceLanguage, addLanguage } = useUser();
+  const { user, preferencesUid, setInterfaceLanguage, addLanguage, handleSignIn } = useUser();
   const { C } = useTheme();
   const s = useMemo(() => makeStyles(C), [C]);
-  const [step, setStep] = useState<'interface' | 'study' | 'native' | 'tour'>('interface');
+  const [step, setStep] = useState<'interface' | 'study' | 'native' | 'word' | 'explain' | 'card' | 'packs' | 'signin'>('interface');
   const [pendingInterface, setPendingInterface] = useState<string | null>(null);
   const [pendingStudy, setPendingStudy] = useState<StudyLanguage | null>(null);
   const [pendingNative, setPendingNative] = useState<string | null>(null);
+  const [ownWord, setOwnWord] = useState('');
+  const [lookedUp, setLookedUp] = useState<{ term: string; context?: string } | null>(null);
+  const [core, setCore] = useState<TermCore | null>(null);
+  const [ambiguity, setAmbiguity] = useState<TermAmbiguous | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const [flipped, setFlipped] = useState(false);
+  /** The front-to-back tracking the one rating produced, once it is given. */
+  const [rated, setRated] = useState<ReviewTracking | null>(null);
+  const [signingIn, setSigningIn] = useState(false);
+  // Which lookup is current. Going back to pick another word leaves the old
+  // request in flight, and its answer must not land on the new one.
+  const request = useRef(0);
 
   // Deliberately not awaited. Both setters apply to state and AsyncStorage
   // before their Firestore write, and that write does not reject offline — it
@@ -48,11 +99,113 @@ export default function LanguageSetupModal() {
     void addLanguage({ study: pendingStudy, native: pendingNative });
   };
 
+  /**
+   * The pending answers stand in for the deck here: nothing is committed until
+   * the last tap, so `studyLanguage` and `deckNativeLanguage` on the context
+   * are still whatever they default to.
+   */
+  const lookUp = async (term: string, context?: string) => {
+    if (!pendingStudy || !pendingNative) return;
+    const current = ++request.current;
+    setLookedUp({ term, context });
+    setCore(null);
+    setAmbiguity(null);
+    setFailed(false);
+    setFlipped(false);
+    setRated(null);
+    setLoading(true);
+    setStep('explain');
+    try {
+      const raw = await Promise.race([
+        getTermExplanation(term, pendingNative, context, pendingStudy),
+        new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), SETUP_LOOKUP_TIMEOUT_MS)),
+      ]);
+      if (current !== request.current) return;
+      // A corrected spelling is taken as the answer, with no banner: there is
+      // nothing to decline it *to* in a flow that makes one card and moves on.
+      const { result } = applySpellingCorrection(raw, term);
+      if ('ambiguous' in result && result.ambiguous) setAmbiguity(result);
+      else setCore(result as TermCore);
+    } catch {
+      if (current === request.current) setFailed(true);
+    } finally {
+      if (current === request.current) setLoading(false);
+    }
+  };
+
+  const pickAnotherWord = () => {
+    request.current++;
+    setLoading(false);
+    setStep('word');
+  };
+
+  /**
+   * Commit the answers, and the card if there is an account to put it in.
+   *
+   * The save is not awaited for the reason `handleDone` awaits nothing. A new
+   * card is due in both directions; the rating moves the one that was asked.
+   */
+  const finish = () => {
+    if (user && core && pendingStudy) {
+      const draft = buildLookupCardDraft(core, pendingStudy, pendingNative) as Omit<Flashcard, 'createdAt' | 'id'>;
+      void saveFlashcardToFirestore(
+        { ...draft, uid: user.uid, ...(rated ? { frontToBack: rated } : {}) },
+        pendingStudy,
+      ).catch(() => {});
+    }
+    handleDone();
+  };
+
+  const packs = pendingStudy ? getVocabPacks(pendingStudy) : [];
+  // Someone already signed in has nothing to be asked on the last step.
+  const goToSignIn = () => (user ? finish() : setStep('signin'));
+  // A language with no packs yet has no pack screen: there is nothing to show.
+  const afterCard = () => (packs.length > 0 ? setStep('packs') : goToSignIn());
+
+  const skipCard = () => {
+    request.current++;
+    setLoading(false);
+    setCore(null);
+    setRated(null);
+    afterCard();
+  };
+
+  // `handleSignIn` resolves when the browser sheet closes, whether or not
+  // anyone signed in, and Firebase's own sign-in follows a moment later.
+  const signIn = async () => {
+    setSigningIn(true);
+    try {
+      await handleSignIn();
+    } catch {
+      // Still on this screen, to try again from.
+    } finally {
+      setSigningIn(false);
+    }
+  };
+
+  // Signed in on the last step, and the account's preferences have been read.
+  // If it already had an interface language the gate has unmounted this screen
+  // and the effect never runs; still being here means it is this setup's
+  // account to finish. See `preferencesUid` for why `user` alone is too early.
+  useEffect(() => {
+    if (step === 'signin' && user && preferencesUid === user.uid) finish();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, user, preferencesUid]);
+
+  const faces = core && pendingStudy ? lookupCardFaces(core, pendingStudy, pendingNative) : null;
+  const reading = core && pendingStudy ? getReading(core, pendingStudy, pendingNative) : undefined;
+  const partOfSpeech = core ? partOfSpeechLabel(pendingNative, core) : undefined;
+  const chips = (partOfSpeech || reading) ? (
+    <View style={s.chips}>
+      {!!partOfSpeech && <Text style={s.chip}>{partOfSpeech}</Text>}
+      {!!reading && <Text style={s.chip}>{reading}</Text>}
+    </View>
+  ) : null;
+
   return (
-    // No `onRequestClose`: Android's back button must not dismiss this.
-    <Modal visible transparent animationType="fade">
-      <View style={s.backdrop}>
-        <View style={s.sheet}>
+    // Opaque and full screen: this comes before the app, not on top of it.
+    <SafeAreaView style={s.backdrop}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={s.sheet}>
           <Text style={s.welcome}>Welcome to Amgi · 암기에 오신 것을 환영합니다</Text>
 
           {step === 'interface' && (
@@ -133,7 +286,7 @@ export default function LanguageSetupModal() {
                   <TouchableOpacity
                     key={option.code}
                     style={[s.option, pendingNative === option.code && s.optionOn]}
-                    onPress={() => { setPendingNative(option.code); setStep('tour'); }}
+                    onPress={() => { setPendingNative(option.code); setStep('word'); }}
                   >
                     <Text style={s.optionText}>{option.label}</Text>
                   </TouchableOpacity>
@@ -145,46 +298,254 @@ export default function LanguageSetupModal() {
             </>
           )}
 
-          {step === 'tour' && (
+          {step === 'word' && pendingStudy && (
             <>
-              <Text style={s.title}>{t(pendingInterface, 'tourTitle')}</Text>
-              <ScrollView style={s.tour} contentContainerStyle={s.tourContent}>
-                {TOUR_ROWS.map(({ labelKey, bodyKey }) => (
-                  <View key={labelKey} style={s.tourRow}>
-                    <Text style={s.tourLabel}>{t(pendingInterface, labelKey)}</Text>
-                    <Text style={s.tourBody}>{t(pendingInterface, bodyKey)}</Text>
+              <Text style={s.title}>{t(pendingInterface, 'setupWordTitle')}</Text>
+              <Text style={s.subtitle}>{t(pendingInterface, 'setupWordSubtitle')}</Text>
+              <TouchableOpacity style={s.primaryBtn} onPress={() => lookUp(SETUP_WORDS[pendingStudy])}>
+                <Text style={s.primaryBtnText}>
+                  {t(pendingInterface, 'setupWordSuggested', { term: SETUP_WORDS[pendingStudy] })}
+                </Text>
+              </TouchableOpacity>
+              <Text style={s.ownLabel}>{t(pendingInterface, 'setupWordOwn')}</Text>
+              <View style={s.ownRow}>
+                <TextInput
+                  style={s.input}
+                  value={ownWord}
+                  onChangeText={setOwnWord}
+                  placeholder={t(pendingInterface, 'inputPlaceholder')}
+                  placeholderTextColor={C.muted}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  returnKeyType="search"
+                  onSubmitEditing={() => { if (ownWord.trim()) lookUp(ownWord.trim()); }}
+                />
+                <TouchableOpacity
+                  style={[s.option, s.ownBtn, !ownWord.trim() && s.disabled]}
+                  disabled={!ownWord.trim()}
+                  onPress={() => lookUp(ownWord.trim())}
+                >
+                  <Text style={s.optionText}>{t(pendingInterface, 'setupLookUp')}</Text>
+                </TouchableOpacity>
+              </View>
+              <View style={s.footer}>
+                <TouchableOpacity onPress={() => setStep('native')}>
+                  <Text style={s.backText}>{t(pendingInterface, 'setupBack')}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={skipCard}>
+                  <Text style={s.backText}>{t(pendingInterface, 'setupSkip')}</Text>
+                </TouchableOpacity>
+              </View>
+            </>
+          )}
+
+          {step === 'explain' && pendingStudy && (
+            <>
+              {loading && (
+                <View style={s.loading}>
+                  <ActivityIndicator color={C.highlight} />
+                  <Text style={s.cardTerm}>{lookedUp?.term}</Text>
+                </View>
+              )}
+
+              {failed && (
+                <>
+                  <Text style={[s.title, s.failedTitle]}>{t(pendingInterface, 'setupLookupFailed')}</Text>
+                  <TouchableOpacity
+                    style={s.primaryBtn}
+                    onPress={() => lookedUp && lookUp(lookedUp.term, lookedUp.context)}
+                  >
+                    <Text style={s.primaryBtnText}>{t(pendingInterface, 'setupRetry')}</Text>
+                  </TouchableOpacity>
+                </>
+              )}
+
+              {ambiguity && (
+                <ScrollView style={s.scroll} contentContainerStyle={s.options}>
+                  <Text style={s.cardTerm}>{ambiguity.term}</Text>
+                  <Text style={s.hint}>{t(pendingInterface, 'disambiguationPrompt')}</Text>
+                  {ambiguity.meanings.map((m, i) => (
+                    <TouchableOpacity key={i} style={s.meaningBtn} onPress={() => lookUp(ambiguity.term, m.label)}>
+                      <Text style={s.meaningLabel}>{m.label}</Text>
+                      <Text style={s.hint}>{m.hint}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              )}
+
+              {core && faces && (
+                <>
+                  {/* The same fields, in the same order, as Learn's result. */}
+                  <ScrollView style={s.scroll} contentContainerStyle={s.card}>
+                    <Text style={s.cardTerm}>{faces.headword}</Text>
+                    {chips}
+                    <Text style={s.sectionLabel}>{t(pendingInterface, 'sectionTranslation')}</Text>
+                    <Text style={s.translation}>{faces.back || t(pendingInterface, 'noTranslation')}</Text>
+                    {!!faces.gloss && <Text style={s.hint}>{faces.gloss}</Text>}
+                    {!!core.briefDefinition && <Text style={s.hint}>{core.briefDefinition}</Text>}
+                  </ScrollView>
+                  <TouchableOpacity style={[s.primaryBtn, s.afterCard]} onPress={() => setStep('card')}>
+                    <Text style={s.primaryBtnText}>{t(pendingInterface, 'setupMakeCard')}</Text>
+                  </TouchableOpacity>
+                </>
+              )}
+
+              <View style={s.footer}>
+                <TouchableOpacity onPress={pickAnotherWord}>
+                  <Text style={s.backText}>{t(pendingInterface, 'setupOtherWord')}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={skipCard}>
+                  <Text style={s.backText}>{t(pendingInterface, 'setupSkip')}</Text>
+                </TouchableOpacity>
+              </View>
+            </>
+          )}
+
+          {step === 'card' && core && faces && pendingStudy && (
+            <>
+              <Text style={s.title}>{t(pendingInterface, 'setupCardTitle')}</Text>
+              <Text style={s.subtitle}>
+                {rated
+                  ? t(pendingInterface, 'setupReturns', { when: setupReturnDay(new Date(rated.nextReview), pendingInterface) })
+                  : t(pendingInterface, flipped ? 'setupRateHint' : 'setupCardHint')}
+              </Text>
+
+              {!rated ? (
+                <>
+                  <TouchableOpacity
+                    style={[s.card, s.flipCard]}
+                    activeOpacity={0.8}
+                    onPress={() => setFlipped(f => !f)}
+                  >
+                    {flipped ? (
+                      <>
+                        <Text style={s.translation}>{faces.back || t(pendingInterface, 'noTranslation')}</Text>
+                        {!!faces.gloss && <Text style={s.hint}>{faces.gloss}</Text>}
+                        {chips}
+                      </>
+                    ) : (
+                      <Text style={s.flipFront}>{faces.headword}</Text>
+                    )}
+                  </TouchableOpacity>
+                  {/* Review's own four buttons and labels, and its scheduler:
+                      the day this answers with is the day the card comes back. */}
+                  {flipped && (
+                    <View style={s.ratings}>
+                      {(['again', 'hard', 'good', 'easy'] as const).map(response => (
+                        <TouchableOpacity
+                          key={response}
+                          style={[s.option, s.rating]}
+                          onPress={() => setRated(getNextReviewData({}, response))}
+                        >
+                          <Text style={s.ratingText}>{t(pendingInterface, RATING_KEYS[response])}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  )}
+                </>
+              ) : (
+                <>
+                  <Text style={s.hint}>{t(pendingInterface, 'setupOtherWay')}</Text>
+                  <View style={[s.card, s.flipCard, s.otherWay]}>
+                    <Text style={s.translation}>{faces.back || t(pendingInterface, 'noTranslation')}</Text>
+                    <Text style={[s.hint, s.prompt]}>
+                      {directionPrompt(pendingInterface, pendingStudy, pendingNative, 'backToFront')}
+                    </Text>
+                  </View>
+                  <TouchableOpacity style={[s.primaryBtn, s.afterCard]} onPress={afterCard}>
+                    <Text style={s.primaryBtnText}>{t(pendingInterface, 'setupNext')}</Text>
+                  </TouchableOpacity>
+                </>
+              )}
+
+              <View style={s.footer}>
+                <TouchableOpacity onPress={() => (rated ? setRated(null) : setStep('explain'))}>
+                  <Text style={s.backText}>{t(pendingInterface, 'setupBack')}</Text>
+                </TouchableOpacity>
+                {/* Skips the rating, not the card: it is already made. */}
+                {!rated && (
+                  <TouchableOpacity onPress={afterCard}>
+                    <Text style={s.backText}>{t(pendingInterface, 'setupSkip')}</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            </>
+          )}
+
+          {step === 'packs' && (
+            <>
+              <Text style={s.title}>{t(pendingInterface, 'setupPacksTitle')}</Text>
+              <Text style={s.subtitle}>{t(pendingInterface, 'setupPacksSubtitle')}</Text>
+              {/* The Packs tab's own names and counts. Not tappable: there is
+                  no app behind this screen yet to open one in. */}
+              <ScrollView style={s.scroll} contentContainerStyle={s.options}>
+                {packs.map(pack => (
+                  <View key={pack.id} style={s.meaningBtn}>
+                    <View style={s.packHeader}>
+                      <Text style={s.packName}>{getPackText(pack.name, pendingInterface)}</Text>
+                      <Text style={s.packCount}>
+                        {t(pendingInterface, 'deckEntryCount', { count: getPackTerms(pack).length })}
+                      </Text>
+                    </View>
+                    <Text style={s.hint}>{getPackText(pack.description, pendingInterface)}</Text>
                   </View>
                 ))}
               </ScrollView>
-              <TouchableOpacity style={s.startBtn} onPress={handleDone}>
-                <Text style={s.startBtnText}>{t(pendingInterface, 'tourStart')}</Text>
+              <TouchableOpacity style={[s.primaryBtn, s.afterCard]} onPress={goToSignIn}>
+                <Text style={s.primaryBtnText}>{t(pendingInterface, 'setupNext')}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={s.back} onPress={() => setStep(core ? 'card' : 'word')}>
+                <Text style={s.backText}>{t(pendingInterface, 'setupBack')}</Text>
               </TouchableOpacity>
             </>
           )}
-        </View>
-      </View>
-    </Modal>
+
+          {step === 'signin' && (
+            <>
+              <Text style={[s.title, s.signInTitle]}>
+                {t(pendingInterface, core ? 'setupSignInTitle' : 'setupSignInTitleNoCard')}
+              </Text>
+              <Text style={[s.hint, s.signInBody]}>{t(pendingInterface, 'setupSignInBody')}</Text>
+              {faces && (
+                <View style={[s.meaningBtn, s.signInCard]}>
+                  <Text style={s.meaningLabel}>{faces.headword}</Text>
+                  <Text style={s.hint}>{faces.back}</Text>
+                </View>
+              )}
+              {/* `user` set means signed in and waiting on the preferences read. */}
+              <TouchableOpacity style={s.primaryBtn} onPress={signIn} disabled={signingIn || !!user}>
+                {signingIn || user
+                  ? <ActivityIndicator color={C.bg} />
+                  : <Text style={s.primaryBtnText}>{t(pendingInterface, 'signIn')}</Text>}
+              </TouchableOpacity>
+              <TouchableOpacity style={[s.option, s.notNow]} onPress={finish}>
+                <Text style={s.optionText}>{t(pendingInterface, 'setupNotNow')}</Text>
+              </TouchableOpacity>
+              {!!core && <Text style={s.dropped}>{t(pendingInterface, 'setupSignInDropped')}</Text>}
+              <TouchableOpacity
+                style={s.back}
+                onPress={() => setStep(packs.length > 0 ? 'packs' : core ? 'card' : 'word')}
+              >
+                <Text style={s.backText}>{t(pendingInterface, 'setupBack')}</Text>
+              </TouchableOpacity>
+            </>
+          )}
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
-// Every row borrows its nav label, so what the tour names is exactly what the
-// nav is called.
-const TOUR_ROWS: { labelKey: TranslationKey; bodyKey: TranslationKey }[] = [
-  { labelKey: 'navLearn', bodyKey: 'tourLearnBody' },
-  { labelKey: 'navReview', bodyKey: 'tourReviewBody' },
-  { labelKey: 'navDecks', bodyKey: 'tourDecksBody' },
-];
+const RATING_KEYS = {
+  again: 'ratingAgain',
+  hard: 'ratingHard',
+  good: 'ratingGood',
+  easy: 'ratingEasy',
+} as const;
 
 function makeStyles(C: Palette) {
   return StyleSheet.create({
-    backdrop: {
-      flex: 1, backgroundColor: 'rgba(0,0,0,0.65)',
-      justifyContent: 'center', alignItems: 'center', padding: 24,
-    },
-    sheet: {
-      width: '100%', maxHeight: '85%', backgroundColor: C.surface,
-      borderRadius: 20, padding: 28, borderWidth: 1, borderColor: C.border,
-    },
+    backdrop: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, backgroundColor: C.bg },
+    sheet: { flex: 1, justifyContent: 'center', padding: 28 },
     welcome: {
       fontSize: 11, color: C.muted, letterSpacing: 1,
       textTransform: 'uppercase', marginBottom: 20,
@@ -198,22 +559,63 @@ function makeStyles(C: Palette) {
     scroll: { flexShrink: 1 },
     option: {
       borderWidth: 1, borderColor: C.border, borderRadius: 10,
-      backgroundColor: C.bg, paddingVertical: 14, alignItems: 'center',
+      backgroundColor: C.surface, paddingVertical: 14, alignItems: 'center',
     },
     optionOn: { borderColor: C.highlight },
     optionText: { fontSize: 16, fontWeight: '600', color: C.text },
     optionNative: { fontWeight: '400', color: C.muted },
     back: { marginTop: 16, alignSelf: 'flex-start' },
     backText: { fontSize: 14, color: C.muted },
-    tour: { marginTop: 20, flexShrink: 1 },
-    tourContent: { gap: 20 },
-    tourRow: { gap: 4 },
-    tourLabel: { fontSize: 14, fontWeight: '700', color: C.highlight },
-    tourBody: { fontSize: 14, lineHeight: 21, color: C.text, opacity: 0.75 },
-    startBtn: {
-      marginTop: 28, backgroundColor: C.highlight, borderRadius: 10,
+    primaryBtn: {
+      backgroundColor: C.highlight, borderRadius: 10,
       paddingVertical: 14, alignItems: 'center',
     },
-    startBtnText: { fontSize: 16, fontWeight: '700', color: C.bg },
+    primaryBtnText: { fontSize: 16, fontWeight: '700', color: C.bg },
+    afterCard: { marginTop: 20 },
+    ownLabel: { fontSize: 14, color: C.muted, marginTop: 28, marginBottom: 8 },
+    ownRow: { flexDirection: 'row', gap: 8 },
+    input: {
+      flex: 1, borderWidth: 1, borderColor: C.border, borderRadius: 10,
+      backgroundColor: C.surface, color: C.text, fontSize: 16,
+      paddingHorizontal: 14, paddingVertical: 12,
+    },
+    ownBtn: { paddingHorizontal: 18 },
+    disabled: { opacity: 0.5 },
+    footer: { marginTop: 28, flexDirection: 'row', justifyContent: 'space-between' },
+    loading: { paddingVertical: 48, alignItems: 'center', gap: 16 },
+    failedTitle: { marginBottom: 28 },
+    card: {
+      backgroundColor: C.surface, borderRadius: 14, padding: 22,
+      borderWidth: 1, borderColor: C.border, gap: 8,
+    },
+    cardTerm: { fontSize: 24, fontWeight: '700', color: C.highlight },
+    chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+    chip: {
+      fontSize: 12, color: C.muted, borderWidth: 1, borderColor: C.border,
+      borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2, overflow: 'hidden',
+    },
+    sectionLabel: { fontSize: 14, fontWeight: '600', color: C.text, marginTop: 8 },
+    translation: { fontSize: 18, fontWeight: '600', color: C.text },
+    hint: { fontSize: 14, lineHeight: 21, color: C.muted },
+    meaningBtn: {
+      borderWidth: 1, borderColor: C.border, borderRadius: 10,
+      backgroundColor: C.surface, padding: 14, gap: 2,
+    },
+    meaningLabel: { fontSize: 16, fontWeight: '600', color: C.highlight },
+    ratings: { flexDirection: 'row', gap: 8, marginTop: 20 },
+    rating: { flex: 1 },
+    ratingText: { fontSize: 14, fontWeight: '600', color: C.text },
+    otherWay: { marginTop: 12 },
+    prompt: { fontStyle: 'italic' },
+    packHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', gap: 12 },
+    packName: { flexShrink: 1, fontSize: 16, fontWeight: '700', color: C.text },
+    packCount: { fontSize: 12, color: C.muted },
+    signInTitle: { marginBottom: 12 },
+    signInBody: { marginBottom: 24 },
+    signInCard: { marginBottom: 24 },
+    notNow: { marginTop: 12 },
+    dropped: { marginTop: 12, fontSize: 12, color: C.muted, textAlign: 'center' },
+    flipCard: { minHeight: 220, alignItems: 'center', justifyContent: 'center' },
+    flipFront: { fontSize: 30, fontWeight: '700', color: C.highlight },
   });
 }

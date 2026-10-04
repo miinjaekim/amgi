@@ -62,6 +62,16 @@ interface UserContextType {
    * to English, matching what `getBackSideConfig` reads a missing value as.
    */
   deckNativeLanguage: string;
+  /**
+   * The account whose preferences have finished being read and applied, or
+   * `null` while signed out or still reading.
+   *
+   * First run's sign-in step needs this. `user` is set before the preferences
+   * read returns, so for that round trip a returning account looks exactly
+   * like a new one: signed in, no interface language. Acting then would write
+   * the setup answers over an account that already has its own.
+   */
+  preferencesUid: string | null;
   /** Every language added, in the order they should be offered. */
   languages: StudyLanguagePair[];
   studyLanguage: StudyLanguage;
@@ -98,6 +108,7 @@ const UserContext = createContext<UserContextType | undefined>(undefined);
 export const UserProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
+  const [preferencesUid, setPreferencesUid] = useState<string | null>(null);
   const [interfaceLanguage, setInterfaceLanguageState] = useState<string | null | undefined>(undefined);
   const [languages, setLanguagesState] = useState<StudyLanguagePair[]>([]);
   const [studyLanguage, setStudyLanguageState] = useState<StudyLanguage>('Korean');
@@ -201,7 +212,9 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
 
         // The streak fields are *not* seeded here — the subscription below owns
         // them, and seeding would only race it to set the same values.
+        setPreferencesUid(firebaseUser.uid);
       } else {
+        setPreferencesUid(null);
         const cached = localStorage.getItem(INTERFACE_LANG_CACHE_KEY)
           ?? localStorage.getItem(LANG_CACHE_KEY);
         setInterfaceLanguageState(cached ?? null);
@@ -417,7 +430,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   const deckNativeLanguage = nativeForStudy(languages, studyLanguage);
 
   return (
-    <UserContext.Provider value={{ user, authLoading, interfaceLanguage, conjugation, conjugationEnrolment, deckNativeLanguage, languages, studyLanguage, hanjaPartition, streak, reviewedToday, setInterfaceLanguage, setStudyLanguage, addLanguage, removeLanguage, setHanjaPartition, recordReview, undoReview, handleSignIn, handleSignOut }}>
+    <UserContext.Provider value={{ user, authLoading, preferencesUid, interfaceLanguage, conjugation, conjugationEnrolment, deckNativeLanguage, languages, studyLanguage, hanjaPartition, streak, reviewedToday, setInterfaceLanguage, setStudyLanguage, addLanguage, removeLanguage, setHanjaPartition, recordReview, undoReview, handleSignIn, handleSignOut }}>
       {children}
     </UserContext.Provider>
   );

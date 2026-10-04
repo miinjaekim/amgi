@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, Image,
-  ScrollView, ActivityIndicator, Alert, Switch, Linking,
+  ScrollView, ActivityIndicator, Alert, Switch, Linking, DevSettings,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -162,6 +162,20 @@ export default function SettingsScreen() {
         },
       ],
     );
+  };
+
+  /**
+   * Development only: put this device back to before first run.
+   *
+   * Signing out is not enough, because the language answers stay cached and
+   * first run is gated on there being none. The reload is what makes it work
+   * signed out too: nothing re-reads the cache without an auth change.
+   * The account itself is untouched, so signing back in to it skips setup.
+   */
+  const resetFirstRun = async () => {
+    if (user) await handleSignOut();
+    await clearAllLocalData();
+    DevSettings.reload();
   };
 
   const runDelete = async () => {
@@ -538,6 +552,13 @@ export default function SettingsScreen() {
               <Text style={s.signInBtnText}>{t(interfaceLanguage, 'settingsSignInWithGoogle')}</Text>
             </TouchableOpacity>
           )}
+          {/* Never in a build: `__DEV__` is false there. English only, since
+              it is not copy anyone but a developer reads. */}
+          {__DEV__ && (
+            <TouchableOpacity style={[s.signOutBtn, s.devReset]} onPress={resetFirstRun}>
+              <Text style={s.signOutBtnText}>Dev: reset to first run</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </ScrollView>
 
@@ -665,6 +686,7 @@ function makeStyles(C: Palette) {
 
   // Auth
   authSection: { marginTop: 8 },
+  devReset: { marginTop: 12 },
   signOutBtn: {
     borderWidth: 1.5, borderColor: C.error, borderRadius: 12,
     paddingVertical: 13, alignItems: 'center',

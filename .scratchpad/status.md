@@ -15,8 +15,9 @@ Housekeeping in [backlog.md](backlog.md)._
 - **2.1.0 is build 18, live in TestFlight and approved for external testing**
   (2026-09-28). External testers can be invited without another review as long
   as the version doesn't change.
-- **Queued for build 19:** user-made vocab packs (PR #175). Web is live; mobile
-  needs the build. The list is kept in [backlog.md](backlog.md).
+- **Queued for build 19:** user-made vocab packs (PR #175), Cantonese (PR #177)
+  and the onboarding walkthrough (PR #178). Web is live; mobile needs the
+  build. The list is kept in [backlog.md](backlog.md).
 - **Web deploys on merge**, so everything on `main` is live there.
 - **`/api/grammar/exercise` stays deployed** for any device still on 1.3.0,
   which has the grammar UI compiled in. The deletion is under Housekeeping in
@@ -264,6 +265,7 @@ The review session: typed answers, undo, readings, decks and drill.
 
 Navigation, titles, mode names, onboarding, help, naming.
 
+- [Onboarding does it once for real (2026-10-04)](decisions/app-shell.md#onboarding-does-it-once-for-real-2026-10-04)
 - [Amgi's titles name the study language; Import removed, Export to Your data (2026-09-25)](decisions/app-shell.md#amgis-titles-name-the-study-language-import-removed-export-to-your-data-2026-09-25)
 - [The modes are named in the reader's language, and 2.0.0 (2026-09-23)](decisions/app-shell.md#the-modes-are-named-in-the-readers-language-and-200-2026-09-23)
 - [Mobile navigation, and verdicts per language (2026-09-04)](decisions/app-shell.md#mobile-navigation-and-verdicts-per-language-2026-09-04)
