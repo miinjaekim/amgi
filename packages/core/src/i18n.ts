@@ -550,15 +550,23 @@ const translations = {
     setupStudyTitle: 'What are you learning?',
     setupStudySubtitle: 'Choose your study language',
     setupBack: '← Back',
-    // First-run tour — one card, shown once, right after the two language
-    // questions. Rows reuse `navLearn`/`navReview`/`navDecks` as their labels
-    // so what the tour names is exactly what the nav is called; a tour that
-    // invents its own vocabulary teaches you a map of a different app.
-    tourTitle: 'What you can do here',
-    tourLearnBody: 'Look up any word or phrase, then keep the explanation as a flashcard.',
-    tourReviewBody: 'Cards come back just before you would forget them — in both directions.',
-    tourDecksBody: 'Curated decks to draw from when no particular word is on your mind.',
-    tourStart: 'Get started',
+    // First-run walkthrough — one real lookup, right after the language
+    // questions, in place of the tour card that only named the surfaces. The
+    // explanation itself comes from `/api/explain`; these are only the words
+    // around it.
+    setupWordTitle: 'Look one word up',
+    setupWordSubtitle: 'Whatever you look up can become a card.',
+    setupWordSuggested: 'Look up {term}',
+    setupWordOwn: 'Or type your own',
+    setupLookUp: 'Look up',
+    setupOtherWord: '← Another word',
+    setupMakeCard: 'Make it a card',
+    setupCardTitle: 'Here is your card',
+    setupCardHint: 'Tap it to turn it over.',
+    setupLookupFailed: "That lookup didn't go through.",
+    setupRetry: 'Try again',
+    setupSkip: 'Skip for now',
+    setupStart: 'Get started',
     // Per-page help, opened from the "?" in a page title. Deliberately answers
     // the question the page actually raises rather than restating its name —
     // a user who taps "?" on Packs already knows the word "packs".
@@ -1011,12 +1019,20 @@ const translations = {
     setupStudyTitle: '어떤 언어를 배우고 싶나요?',
     setupStudySubtitle: '학습할 언어를 선택하세요',
     setupBack: '← 뒤로',
-    // First-run tour
-    tourTitle: '이런 걸 할 수 있어요',
-    tourLearnBody: '모르는 단어나 표현을 찾아보고, 그 설명을 그대로 카드로 저장하세요.',
-    tourReviewBody: '잊어버릴 때쯤 카드가 다시 나타나요. 양방향으로 복습합니다.',
-    tourDecksBody: '딱히 찾을 단어가 없을 땐 정리된 단어팩에서 골라 담으세요.',
-    tourStart: '시작하기',
+    // First-run walkthrough
+    setupWordTitle: '단어 하나 찾아볼까요?',
+    setupWordSubtitle: '찾아본 단어는 그대로 카드가 돼요.',
+    setupWordSuggested: '{term} 찾아보기',
+    setupWordOwn: '직접 입력해도 돼요',
+    setupLookUp: '찾아보기',
+    setupOtherWord: '← 다른 단어',
+    setupMakeCard: '카드로 만들기',
+    setupCardTitle: '카드가 됐어요',
+    setupCardHint: '눌러서 뒤집어 보세요.',
+    setupLookupFailed: '설명을 불러오지 못했어요.',
+    setupRetry: '다시 시도',
+    setupSkip: '건너뛰기',
+    setupStart: '시작하기',
     // Per-page help
     helpButtonLabel: '이 화면은 무엇을 하는 곳인가요?',
     helpClose: '알겠어요',
