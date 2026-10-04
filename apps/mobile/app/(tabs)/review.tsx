@@ -1448,6 +1448,13 @@ export default function ReviewScreen() {
                     </View>
                     {hanjaGloss && <Text style={s.hanjaGloss}>{hanjaGloss}</Text>}
                     {!isFront && readingBadge}
+                    {/* Only ever after the reveal, in both directions: it
+                        defines the word, and on a pack card it is a hint that
+                        can name it outright, so on a prompt it would answer
+                        the card. */}
+                    {!!shownCard.briefDefinition && (
+                      <Text style={s.briefDefinition}>{shownCard.briefDefinition}</Text>
+                    )}
 
                     {/* Both strings on screen. This is what lets the grader be
                         strict: the learner is not appealing a judgement they
@@ -1712,6 +1719,7 @@ function makeStyles(C: Palette, tabBarHeight: number) {
   // Quieter than the 훈음 above it: a second fact about the character, not the
   // answer the deck is asking for.
   hanjaGloss: { fontSize: 16, color: C.muted, marginTop: 6 },
+  briefDefinition: { fontSize: 14, color: C.muted, marginTop: 8, lineHeight: 20 },
   // Shared by the term rows and the example rows. `flexShrink` is what keeps
   // a long term wrapping inside its row instead of pushing the pronounce
   // button off the card. The term row is unconditional so the word sits in

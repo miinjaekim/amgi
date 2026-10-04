@@ -1049,6 +1049,14 @@ export default function ReviewPage() {
                             <div className="text-base mb-3 text-[var(--color-muted)]">{hanjaGloss(currentReview.card)}</div>
                           )}
 
+                          {/* Only ever after the reveal, in both directions:
+                              it defines the word, and on a pack card it is a
+                              hint that can name it outright, so on a prompt it
+                              would answer the card. */}
+                          {currentReview.card.briefDefinition && (
+                            <p className="text-sm mb-3 text-[var(--color-muted)]">{currentReview.card.briefDefinition}</p>
+                          )}
+
                           {(partOfSpeechLabel(deckNativeLanguage, currentReview.card) ||
                             currentReview.card.gender ||
                             getReading(currentReview.card, studyLanguage, deckNativeLanguage)) && (
@@ -1110,6 +1118,10 @@ export default function ReviewPage() {
 
                           {hanjaGloss(currentReview.card) && (
                             <div className="text-base mb-3 text-[var(--color-muted)]">{hanjaGloss(currentReview.card)}</div>
+                          )}
+
+                          {currentReview.card.briefDefinition && (
+                            <p className="text-sm mb-3 text-[var(--color-muted)]">{currentReview.card.briefDefinition}</p>
                           )}
 
                           {/* The two strings side by side. This is what makes
