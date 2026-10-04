@@ -16,6 +16,8 @@ import type { StudyLanguage } from './types';
  *   a flow meant to take a minute. Checked against `/api/explain` on
  *   2026-10-04; re-check a word before swapping it in.
  *
+ * 執生 for Cantonese is the user's choice, checked the same way.
+ *
  * `Record`, not `Partial`: a language added to the registry without a word here
  * should fail to compile rather than fall back to another language's.
  */
@@ -29,6 +31,7 @@ export const SETUP_WORDS: Record<StudyLanguage, string> = {
   Swahili: 'harambee',
   Japanese: '木漏れ日',
   TraditionalChinese: '緣分',
+  Cantonese: '執生',
   Hanja: '水',
 };
 
