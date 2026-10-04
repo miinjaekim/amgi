@@ -50,8 +50,12 @@ Web, in PR #181:
   opens a small menu; its Settings row opens a large modal with the sections
   down the left and the chosen one on the right, each setting a full-width row
   with its control at the end.
-- **The menu**: the email, then Settings · Languages · Switch mode, then Sign
-  out alone. The popover used to *be* the settings screen and had needed a
+- **The menu**: the email, then Settings · Languages · *Switch to Munli*, then
+  Sign out alone. **The mode row is a one-click toggle**, on the user's call:
+  it first unfolded a list of the two modes, which was a second click to make
+  the only choice there is and pushed the menu upward as it opened. It names
+  the mode it goes to. With a third mode it would cycle, which is when a list
+  earns its place back. The popover used to *be* the settings screen and had needed a
   scroll bound since 2026-09-09; a menu this short cannot overflow, so the
   bound is gone. Languages has its own row because on a narrow screen it is
   the only way to switch decks; it opens the modal on that section.

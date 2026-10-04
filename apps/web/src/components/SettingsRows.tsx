@@ -1,10 +1,9 @@
 'use client';
-import React, { useState } from 'react';
-import { usePathname } from 'next/navigation';
-import { getMode, modeFromPath } from '@amgi/core';
-import type { TranslationKey } from '@amgi/core';
+import React from 'react';
+import { usePathname, useRouter } from 'next/navigation';
+import { MODES, modeFromPath } from '@amgi/core';
 import { useUser } from '@/components/UserContext';
-import ModeSwitcher from '@/components/ModeSwitcher';
+import { rememberMode } from '@/lib/mode';
 import { t } from '@/lib/i18n';
 
 /**
@@ -36,36 +35,20 @@ export function SettingsIcon({ name, className = 'w-5 h-5' }: { name: SettingsIc
 
 interface RowProps {
   icon: SettingsIconName;
-  labelKey: TranslationKey;
-  /** What the setting is now, where one word says it. */
-  value?: string;
+  label: string;
   onClick: () => void;
-  /** For a row that opens in place: which way its chevron points. */
-  expanded?: boolean;
 }
 
 /** A menu row: a leading icon and a label, after Claude's account menu. */
-export function MenuRow({ icon, labelKey, value, onClick, expanded }: RowProps) {
-  const { interfaceLanguage } = useUser();
+export function MenuRow({ icon, label, onClick }: RowProps) {
   return (
     <button
       onClick={onClick}
-      aria-expanded={expanded}
       className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-mono text-left transition-colors hover:bg-[var(--color-muted)]/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-highlight)]"
       style={{ color: 'var(--color-text)' }}
     >
       <span style={{ color: 'var(--color-muted)' }}><SettingsIcon name={icon} /></span>
-      <span className="flex-1 min-w-0 truncate">{t(interfaceLanguage, labelKey)}</span>
-      {value && <span className="text-xs flex-shrink-0" style={{ color: 'var(--color-muted)' }}>{value}</span>}
-      {expanded !== undefined && (
-        <svg
-          className={`w-4 h-4 flex-shrink-0 transition-transform ${expanded ? 'rotate-180' : ''}`}
-          style={{ color: 'var(--color-muted)' }}
-          fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-        </svg>
-      )}
+      <span className="flex-1 min-w-0 truncate">{label}</span>
     </button>
   );
 }
@@ -76,31 +59,39 @@ export function RowSeparator() {
 }
 
 /**
- * *Switch mode* — the row that opens in place rather than going anywhere.
+ * *Switch to Munli* — one click, and you are in the other mode.
  *
- * It names the mode you are in, so the row says what it does before it is
- * opened, and the modes appear under it. On web this is how Munli is found at
- * all; see `ModeSwitcher`.
+ * ⚠️ **This is web's primary door into Munli, not a secondary one.** Native
+ * switches by holding the last tab; web has no long-press convention, so the
+ * account menu is where a mode switch is *found* rather than known about.
+ *
+ * **A toggle, not a list**, on the user's call 2026-10-04: with two modes, a
+ * row that unfolds two options is a second click to make the only choice
+ * there is, and unfolding it pushed the whole menu upward. The row names the
+ * mode it goes to, so it says what it does without showing the current one.
+ *
+ * ⚠️ **Written as "the next mode", not "the other mode".** `modes.ts` forbids
+ * assuming there are two. With a third, this cycles through them — which is
+ * the point at which a list earns its place back.
  */
 export function SwitchModeRow({ onSwitch }: { onSwitch?: () => void }) {
   const { interfaceLanguage } = useUser();
-  const current = getMode(modeFromPath(usePathname()));
-  const [open, setOpen] = useState(false);
+  const router = useRouter();
+  const current = modeFromPath(usePathname());
+  const next = MODES[(MODES.findIndex(mode => mode.id === current) + 1) % MODES.length];
 
   return (
-    <>
-      <MenuRow
-        icon="mode"
-        labelKey="modeSwitchTitle"
-        value={t(interfaceLanguage, current.nameKey)}
-        onClick={() => setOpen(v => !v)}
-        expanded={open}
-      />
-      {open && (
-        <div className="px-4 pt-1 pb-2">
-          <ModeSwitcher onSwitch={() => { setOpen(false); onSwitch?.(); }} />
-        </div>
-      )}
-    </>
+    <MenuRow
+      icon="mode"
+      label={t(interfaceLanguage, 'modeSwitchTo', { mode: t(interfaceLanguage, next.nameKey) })}
+      onClick={() => {
+        // Remember first, then navigate: the cookie is what `/` reads on the
+        // next cold open, and a navigation that raced it would leave the two
+        // disagreeing.
+        rememberMode(next.id);
+        router.push(next.home);
+        onSwitch?.();
+      }}
+    />
   );
 }

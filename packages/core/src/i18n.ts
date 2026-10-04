@@ -144,6 +144,8 @@ const translations = {
     modeAmgiTagline: 'Words',
     modeMunliTagline: 'Grammar',
     modeSwitchTitle: 'Switch mode',
+    // Web's menu row, which switches in one click and so names where it goes.
+    modeSwitchTo: 'Switch to {mode}',
     modeCurrent: 'Current mode',
     modeSwitchHint: 'Hold the last tab to switch',
     // Munli's home. It has no tools yet, and says so rather than looking
@@ -1140,6 +1142,8 @@ const translations = {
     modeAmgiTagline: '단어',
     modeMunliTagline: '문법',
     modeSwitchTitle: '모드 전환',
+    // "모드" after the name so no particle has to agree with it.
+    modeSwitchTo: '{mode} 모드로 전환',
     modeCurrent: '현재 모드',
     modeSwitchHint: '마지막 탭을 길게 누르면 전환돼요',
     munliTagline: '문법을 하나씩 연습해요.',

@@ -32,13 +32,13 @@ export default function AccountMenu({ onClose }: { onClose: () => void }) {
         {user?.email ?? t(interfaceLanguage, 'settingsNotSignedIn')}
       </p>
       <RowSeparator />
-      <MenuRow icon="settings" labelKey="settingsTitle" onClick={() => { settings.open(); onClose(); }} />
-      <MenuRow icon="languages" labelKey="settingsLanguages" onClick={() => { settings.open('languages'); onClose(); }} />
+      <MenuRow icon="settings" label={t(interfaceLanguage, 'settingsTitle')} onClick={() => { settings.open(); onClose(); }} />
+      <MenuRow icon="languages" label={t(interfaceLanguage, 'settingsLanguages')} onClick={() => { settings.open('languages'); onClose(); }} />
       <SwitchModeRow onSwitch={onClose} />
       {user && (
         <>
           <RowSeparator />
-          <MenuRow icon="signOut" labelKey="signOut" onClick={() => { handleSignOut(); onClose(); }} />
+          <MenuRow icon="signOut" label={t(interfaceLanguage, 'signOut')} onClick={() => { handleSignOut(); onClose(); }} />
         </>
       )}
     </div>
