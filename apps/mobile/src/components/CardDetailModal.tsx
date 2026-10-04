@@ -13,13 +13,11 @@ import {
   hunEum,
   partOfSpeechLabel,
   resolvePackBack,
+  hasConjugation,
   t,
-  userVerbOutcomeCopy,
-  userVerbTopic,
 } from '@amgi/core';
-import { router } from 'expo-router';
 import { useCardEnrichment } from '../hooks/useCardEnrichment';
-import { useAddVerb } from '../hooks/useAddVerb';
+import AddToMunliButton from './AddToMunliButton';
 import type { ExamplePair, PackEntry, StudyLanguage } from '@amgi/core';
 import { useTheme } from '../context/ThemeContext';
 import PronounceButton from './PronounceButton';
@@ -82,15 +80,6 @@ export default function CardDetailModal({
   });
   /** Non-null while the back is being edited. */
   const [editDraft, setEditDraft] = useState<string | null>(null);
-  /**
-   * A French verb card can be practised in Munli. The card already knows its
-   * group; the lookup is asked again, with the forms, because the group has to
-   * be checked against them before the verb is filed under it.
-   */
-  const { state: verbState, add: addVerb, spec: verbSpec } = useAddVerb();
-  const verbOutcome = verbState.phase === 'done' ? verbState.outcome : undefined;
-  const verbCopy = verbSpec && verbOutcome ? userVerbOutcomeCopy(verbSpec, verbOutcome) : undefined;
-  const verbTopic = verbOutcome && userVerbTopic(verbOutcome);
 
   // The header reads the same whether or not a card exists behind it, so an
   // unsaved entry is projected onto the two fields it can fill.
@@ -249,37 +238,14 @@ export default function CardDetailModal({
                 </Text>
               </TouchableOpacity>
             )}
-            {saved?.partOfSpeech === 'verb' && !!saved.verbGroup && verbSpec?.language === lang && (
-              <TouchableOpacity
-                style={[s.secondaryBtn, verbState.phase === 'working' && s.btnDisabled]}
-                onPress={() => addVerb(studySide, backSide)}
-                disabled={verbState.phase === 'working'}
-              >
-                <Text style={s.secondaryBtnText}>
-                  {t(interfaceLanguage, verbState.phase === 'working' ? 'verbAddWorking' : 'verbPractise')}
-                </Text>
-              </TouchableOpacity>
-            )}
           </View>
 
-          {/* What "Practise its conjugation" came to, and the way to it. The
-              modal closes first: Munli is another navigator, and a modal left
-              open would sit over it. */}
-          {(verbCopy || verbState.phase === 'failed') && (
-            <View style={s.verbNote}>
-              <Text style={s.hint}>
-                {verbCopy ? t(interfaceLanguage, verbCopy.key, verbCopy.params) : t(interfaceLanguage, 'verbAddFailed')}
-              </Text>
-              {verbTopic && (
-                <TouchableOpacity
-                  hitSlop={8}
-                  accessibilityRole="link"
-                  onPress={() => { onClose(); router.push(`/munli/topics/${verbTopic}` as never); }}
-                >
-                  <Text style={s.verbLink}>{t(interfaceLanguage, 'verbOpenInMunli')}</Text>
-                </TouchableOpacity>
-              )}
-            </View>
+          {/* A French verb card can also go to Munli. Its own row: this is a
+              different choice from anything the card's own actions do. The
+              modal closes before leaving: Munli is another navigator, and a
+              modal left open would sit over it. */}
+          {saved?.partOfSpeech === 'verb' && !!saved.verbGroup && hasConjugation(lang) && (
+            <AddToMunliButton key={studySide} verb={studySide} gloss={backSide} style={s.munli} onOpen={onClose} />
           )}
 
           {saved?.id && editDraft === null && (
@@ -406,8 +372,7 @@ function makeStyles(C: Palette) {
     primaryBtnText: { fontSize: 14, fontWeight: '700', color: C.bg },
     secondaryBtn: { borderWidth: 1, borderColor: C.border, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 8 },
     secondaryBtnText: { fontSize: 14, fontWeight: '600', color: C.text },
-    verbNote: { paddingHorizontal: 20, paddingTop: 10, gap: 6 },
-    verbLink: { fontSize: 13, fontWeight: '600', color: C.highlight },
+    munli: { paddingHorizontal: 20, paddingTop: 10 },
     mutedBtnText: { fontSize: 14, fontWeight: '600', color: C.muted },
     btnDisabled: { opacity: 0.5 },
     editRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8, paddingHorizontal: 20, paddingTop: 12 },

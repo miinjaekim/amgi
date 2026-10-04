@@ -15,7 +15,7 @@ import {
   subjectsOfKind,
   summarizeConjugation,
   userVerbOutcomeCopy,
-  userVerbTopic,
+  userVerbSide,
   withUserVerbs,
 } from '@amgi/core';
 import type { ConjugationGroup, UserVerbMap } from '@amgi/core';
@@ -155,12 +155,16 @@ describe('settleUserVerb', () => {
 
   it('says where the verb landed', () => {
     const danser = verb('danser', 'er', DANSER);
-    expect(userVerbTopic(danser)).toBe('regular');
+    expect(userVerbSide(danser)).toBe('regular');
     expect(userVerbOutcomeCopy(spec, danser)).toEqual({ key: 'verbAddedRegular', params: { verb: 'danser', group: '-er' } });
     const prendre = verb('prendre', 'irregular', PRENDRE);
-    expect(userVerbTopic(prendre)).toBe('irregular');
+    expect(userVerbSide(prendre)).toBe('irregular');
+    // From Amgi the first tense is saved with the verb, and the line says so.
+    expect(userVerbOutcomeCopy(spec, prendre, 'présent'))
+      .toEqual({ key: 'verbAddedIrregularSaved', params: { verb: 'prendre', tense: 'présent' } });
+    expect(userVerbOutcomeCopy(spec, danser, 'présent').key).toBe('verbAddedRegular');
     expect(userVerbOutcomeCopy(spec, prendre).key).toBe('verbAddedIrregular');
-    expect(userVerbTopic({ status: 'pronominal' })).toBeUndefined();
+    expect(userVerbSide({ status: 'pronominal' })).toBeUndefined();
   });
 });
 

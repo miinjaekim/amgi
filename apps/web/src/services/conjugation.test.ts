@@ -794,7 +794,7 @@ describe('languages', () => {
   });
 
   it('offers verb topics only to a language with a spec', () => {
-    expect(munliTopics('French').map(topic => topic.id)).toEqual(['regular', 'irregular']);
+    expect(munliTopics('French').map(topic => topic.id)).toEqual(['verbs']);
     expect(munliTopics('TraditionalChinese')).toEqual([]);
     expect(munliTopics('Korean')).toEqual([]);
   });

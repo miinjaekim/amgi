@@ -3,6 +3,39 @@
 The second mode: its shell, conjugation practice, writing review as a tool, English articles. 2026-09-21 on. Newest first. Indexed from
 [status.md](../status.md).
 
+## Verbs are one topic again, and Amgi has a door into it (2026-10-04)
+
+**The user's call, after trying the first cut of adding a verb** (PR #182),
+which put an Add field on Topics → Irregular verbs only.
+
+⚠️ **This reverses "verbs are two rows, not one" in the 2026-09-22 entry
+"Enrolment is pairs, and Verbs is content first".** That split was argued from
+shape: one page holding a handful of patterns and a long list of verbs wanted
+two layouts, and it buried the irregulars at the bottom. What changed is that
+a learner can now add a verb, and they do not know which kind it is before
+adding it. Two rows made them pick a row first.
+
+- **One Verbs row on Topics, and a Regular / Irregular switch inside it.** A
+  switch and not two stacked sections, so each side keeps its own layout and
+  the 2026-09-22 objection still has its answer.
+- **One Add a verb button, above the switch.** It belongs to neither side. The
+  verb is filed by what it is and the page turns to where it landed.
+- **Saved still shelves by kind.** It lists what you have, and the two kinds
+  are still two kinds of thing to learn.
+
+**Add to Munli, from Amgi.** On the Learn result for a French verb and on a
+saved French verb card. Separate from saving the card: keeping a word and
+practising its conjugation are two choices.
+
+- **From Amgi, a new irregular verb is saved in the présent with it.** On the
+  Verbs page the tense pills are under the new table; from Amgi they are a mode
+  away, and a verb nothing asks is not what the button said. This is the one
+  place adding and enrolling happen together.
+- **The forms are fetched when the button is pressed**, not on every French
+  lookup, which would slow every lookup for a button most never use.
+- **"Add to Munli", not "Practise its conjugation".** For a regular verb
+  nothing new is practised: it joins the verbs its group is asked through.
+
 ## English articles: a box on every slot, and the rule is what's scheduled (2026-09-28)
 
 **The user's four calls**, which settle the question the 2026-09-24 backlog

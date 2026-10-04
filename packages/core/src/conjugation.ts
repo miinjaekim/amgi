@@ -403,17 +403,23 @@ export function hasConjugation(language: StudyLanguage): boolean {
   return conjugationSpec(language) !== undefined;
 }
 
+/**
+ * The two sides of the Verbs topic: the patterns, and the verbs that follow
+ * none. Also the value of `?side=` on its page.
+ */
+export type VerbSide = 'regular' | 'irregular';
+
+/** Which kind of subject a side lists. */
+export const VERB_SIDE_KIND: Record<VerbSide, ConjugationSubject['kind']> = {
+  regular: 'group',
+  irregular: 'verb',
+};
+
 /** A row on Munli's Topics tab. `id` is its route segment under `/munli/topics`. */
 export interface MunliTopic {
-  id: 'regular' | 'irregular';
-  kind: ConjugationSubject['kind'];
+  id: 'verbs';
   labelKey: TranslationKey;
 }
-
-const CONJUGATION_TOPICS: readonly MunliTopic[] = [
-  { id: 'regular', kind: 'group', labelKey: 'topicRegularVerbs' },
-  { id: 'irregular', kind: 'verb', labelKey: 'verbsIrregular' },
-];
 
 /**
  * The topics Munli offers for a language.
@@ -421,14 +427,17 @@ const CONJUGATION_TOPICS: readonly MunliTopic[] = [
  * ⚠️ **Language-specific unless a topic says otherwise** — the user's rule,
  * 2026-09-25, after Mandarin showed French's regular and irregular verbs with
  * "nothing for this language" under each. A topic appears where its data
- * exists, not everywhere with an apology. Verb topics come from a conjugation
- * spec, and each only when the spec has subjects of that kind. A topic that
- * genuinely works in any language would be listed here unconditionally.
+ * exists, not everywhere with an apology. A topic that genuinely works in any
+ * language would be listed here unconditionally.
+ *
+ * ⚠️ **Verbs are one topic with two sides, since 2026-10-04**, on the user's
+ * call. They were two rows, because one page holding a handful of patterns and
+ * a long list of verbs wanted two shapes. The page keeps the two shapes behind
+ * a switch (`VerbSide`); what went is having to know which kind a verb is
+ * before knowing which row to open, which adding a verb made a real question.
  */
 export function munliTopics(language: StudyLanguage): MunliTopic[] {
-  const spec = conjugationSpec(language);
-  if (!spec) return [];
-  return CONJUGATION_TOPICS.filter(topic => subjectsOfKind(spec, topic.kind).length > 0);
+  return conjugationSpec(language) ? [{ id: 'verbs', labelKey: 'topicVerbs' }] : [];
 }
 
 /* ── A card's verb group ─────────────────────────────────────────────────── */
@@ -713,6 +722,8 @@ export function withUserVerbs(spec: ConjugationSpec, verbs: UserVerbMap | undefi
 export function userVerbOutcomeCopy(
   spec: ConjugationSpec,
   outcome: UserVerbOutcome,
+  /** The tense saved for practice along with the verb, when one was. */
+  savedTense?: string,
 ): { key: TranslationKey; params?: Record<string, string> } {
   switch (outcome.status) {
     case 'pronominal': return { key: 'verbAddPronominal' };
@@ -721,15 +732,18 @@ export function userVerbOutcomeCopy(
     case 'exists': return { key: 'verbAddExists', params: { verb: outcome.infinitive } };
     case 'added': {
       const subject = findSubject(spec, outcome.subjectKey);
-      return subject?.kind === 'group'
-        ? { key: 'verbAddedRegular', params: { verb: outcome.verb.infinitive, group: subject.label } }
+      if (subject?.kind === 'group') {
+        return { key: 'verbAddedRegular', params: { verb: outcome.verb.infinitive, group: subject.label } };
+      }
+      return savedTense
+        ? { key: 'verbAddedIrregularSaved', params: { verb: outcome.verb.infinitive, tense: savedTense } }
         : { key: 'verbAddedIrregular', params: { verb: outcome.verb.infinitive } };
     }
   }
 }
 
-/** The Topics page an outcome's verb is on, when it is on one. */
-export function userVerbTopic(outcome: UserVerbOutcome): MunliTopic['id'] | undefined {
+/** The side of the Verbs topic an outcome's verb is on, when it is on one. */
+export function userVerbSide(outcome: UserVerbOutcome): VerbSide | undefined {
   if (outcome.status !== 'added' && outcome.status !== 'exists') return undefined;
   return outcome.subjectKey.startsWith('group:') ? 'regular' : 'irregular';
 }

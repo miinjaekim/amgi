@@ -1,6 +1,6 @@
 'use client';
 import Link from 'next/link';
-import { enrolledCountOfKind, getStudyLanguageConfig, munliTopics } from '@amgi/core';
+import { getStudyLanguageConfig, munliTopics } from '@amgi/core';
 import { useUser } from '@/components/UserContext';
 import { useConjugation } from '@/hooks/useConjugation';
 import PageHeader from '@/components/PageHeader';
@@ -17,9 +17,7 @@ import { t } from '@/lib/i18n';
 export default function TopicsPage() {
   const { interfaceLanguage, studyLanguage } = useUser();
   const { spec, enrolment, loading } = useConjugation();
-  // Only this language's topics — see `munliTopics`. Regular and irregular
-  // verbs are two topics, not one with two halves: a rule one example
-  // demonstrates against a fact no other verb tells you anything about.
+  // Only this language's topics — see `munliTopics`.
   const topics = munliTopics(studyLanguage);
 
   return (
@@ -41,7 +39,8 @@ export default function TopicsPage() {
       )}
 
       {topics.map(topic => {
-        const saved = spec && enrolment ? enrolledCountOfKind(spec, enrolment, topic.kind) : 0;
+        // Verbs is the only topic, so everything saved is saved under it.
+        const saved = spec && enrolment ? enrolment.items.length : 0;
         return (
           <Link
             key={topic.id}

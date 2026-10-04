@@ -1,6 +1,5 @@
 'use client';
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
 import {
   Flashcard,
   archiveFlashcard,
@@ -19,11 +18,10 @@ import {
   getStudyLangSide,
   getStudyLanguageConfig,
   resolvePackBack,
-  userVerbOutcomeCopy,
-  userVerbTopic,
+  hasConjugation,
 } from '@amgi/core';
 import { useCardEnrichment } from '@/hooks/useCardEnrichment';
-import { useAddVerb } from '@/hooks/useAddVerb';
+import AddToMunliButton from '@/components/AddToMunliButton';
 import type { PackEntry, StudyLanguage } from '@amgi/core';
 import Markdown from '@/components/Markdown';
 import { t, partOfSpeechLabel } from '@/lib/i18n';
@@ -88,15 +86,6 @@ export default function CardDetailModal({
   });
   /** Non-null while the back is being edited. */
   const [editDraft, setEditDraft] = useState<string | null>(null);
-  /**
-   * A French verb card can be practised in Munli. The card already knows its
-   * group; the lookup is asked again, with the forms, because the group has to
-   * be checked against them before the verb is filed under it.
-   */
-  const { state: verbState, add: addVerb, spec: verbSpec } = useAddVerb();
-  const verbOutcome = verbState.phase === 'done' ? verbState.outcome : undefined;
-  const verbCopy = verbSpec && verbOutcome ? userVerbOutcomeCopy(verbSpec, verbOutcome) : undefined;
-  const verbTopic = verbOutcome && userVerbTopic(verbOutcome);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
@@ -288,17 +277,6 @@ export default function CardDetailModal({
             </button>
           )}
 
-          {saved?.partOfSpeech === 'verb' && saved.verbGroup && verbSpec?.language === lang && (
-            <button
-              onClick={() => addVerb(studySide, backSide)}
-              disabled={verbState.phase === 'working'}
-              className={actionClass}
-              style={{ borderColor: 'var(--color-muted)', color: 'var(--color-text)' }}
-            >
-              {t(interfaceLanguage, verbState.phase === 'working' ? 'verbAddWorking' : 'verbPractise')}
-            </button>
-          )}
-
           {saved?.id && (
             <>
               <span className="flex-1" />
@@ -332,19 +310,10 @@ export default function CardDetailModal({
           )}
         </div>
 
-        {/* What "Practise its conjugation" came to, and the way to it. */}
-        {(verbCopy || verbState.phase === 'failed') && (
-          <p className="px-6 pt-3 text-xs" role="status" style={{ color: 'var(--color-muted)' }}>
-            {verbCopy ? t(interfaceLanguage, verbCopy.key, verbCopy.params) : t(interfaceLanguage, 'verbAddFailed')}
-            {verbTopic && (
-              <>
-                {' '}
-                <Link href={`/munli/topics/${verbTopic}`} className="underline" style={{ color: 'var(--color-highlight)' }}>
-                  {t(interfaceLanguage, 'verbOpenInMunli')}
-                </Link>
-              </>
-            )}
-          </p>
+        {/* A French verb card can also go to Munli. Its own row: this is a
+            different choice from anything the card's own actions do. */}
+        {saved?.partOfSpeech === 'verb' && saved.verbGroup && hasConjugation(lang) && (
+          <AddToMunliButton key={studySide} verb={studySide} gloss={backSide} className="px-6 pt-3" />
         )}
 
         {/* Only the back is editable — see handleEditSave. */}

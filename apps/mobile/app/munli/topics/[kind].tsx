@@ -3,8 +3,8 @@ import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { enrolledTenses, getStudyLanguageConfig, isEnrolled, setEnrolled, subjectKey, subjectsOfKind, t } from '@amgi/core';
-import type { ConjugationSubject } from '@amgi/core';
+import { VERB_SIDE_KIND, enrolledTenses, getStudyLanguageConfig, isEnrolled, setEnrolled, subjectKey, subjectsOfKind, t } from '@amgi/core';
+import type { ConjugationSubject, VerbSide } from '@amgi/core';
 import { useUser } from '../../../src/context/UserContext';
 import { useTheme } from '../../../src/context/ThemeContext';
 import { useConjugation } from '../../../src/context/ConjugationContext';
@@ -16,12 +16,17 @@ import StudyLanguageChip from '../../../src/components/StudyLanguageChip';
 import type { Palette } from '../../../src/theme';
 
 /**
- * One verb topic — regular or irregular. Read any table, save what you want to
- * practise.
+ * The Verbs topic. Read any table, save what you want to practise.
  *
- * ⚠️ **Two topics through one screen, keyed on `kind`.** They differ in what
- * they list, not in how they work: both are subjects with tables, saved the same
- * way. Two files would have been two copies of the same Save semantics.
+ * ⚠️ **One topic with two sides, behind a switch** — the user's call,
+ * 2026-10-04, reversing the two rows of 2026-09-22. The sides still differ in
+ * shape, a handful of patterns against a growing list of verbs, which is why
+ * it is a switch and not one long screen. Adding a verb sits above the switch
+ * because the learner does not choose which side it lands on.
+ *
+ * The route segment only picks the side the screen opens on: `irregular` opens
+ * there, and anything else opens on the patterns. A link into this screen can
+ * therefore still name a side.
  *
  * ⚠️ **Content first, saving second — the decks page's shape, not a form.** It
  * was a list of checkboxes you had to fill in before the page became useful;
@@ -43,10 +48,9 @@ export default function VerbTopicScreen() {
   const { interfaceLanguage, studyLanguage } = useUser();
   const { spec, enrolment, setEnrolment, loading } = useConjugation();
   const router = useRouter();
-  // Anything unrecognised reads as regular rather than erroring: the cost of
-  // being wrong is landing on the topic that has content in it.
   const { kind: param } = useLocalSearchParams<{ kind: string }>();
-  const irregular = param === 'irregular';
+  const [side, setSideState] = useState<VerbSide>(param === 'irregular' ? 'irregular' : 'regular');
+  const irregular = side === 'irregular';
 
   /**
    * Which tenses the tables show. `null` means "has not chosen", which reads as
@@ -62,6 +66,11 @@ export default function VerbTopicScreen() {
    * everything and is what the empty message speaks to.
    */
   const [chosenGroups, setChosenGroups] = useState<string[] | null>(null);
+  /** The group filter lists one side's subjects, so it does not survive a switch. */
+  const setSide = (next: VerbSide) => {
+    setSideState(next);
+    setChosenGroups(null);
+  };
   /** Which filter dropdown is open — one per filter, never both at once. */
   const [openFilter, setOpenFilter] = useState<'tenses' | 'groups' | null>(null);
   /** Which section's verb picker is open, by subject key. */
@@ -81,7 +90,7 @@ export default function VerbTopicScreen() {
         <Ionicons name="chevron-back" size={22} color={C.text} />
       </TouchableOpacity>
       <Text style={s.title}>
-        {t(interfaceLanguage, irregular ? 'verbsIrregular' : 'topicRegularVerbs')}
+        {t(interfaceLanguage, 'topicVerbs')}
       </Text>
       <StudyLanguageChip />
     </View>
@@ -176,7 +185,7 @@ export default function VerbTopicScreen() {
     );
   };
 
-  const allSubjects = subjectsOfKind(spec, irregular ? 'verb' : 'group');
+  const allSubjects = subjectsOfKind(spec, VERB_SIDE_KIND[side]);
   const subjects = allSubjects.filter(
     subject => chosenGroups?.includes(subjectKey(subject)) ?? true,
   );
@@ -225,7 +234,23 @@ export default function VerbTopicScreen() {
   return (
     <SafeAreaView style={s.safe} edges={['top']}>
       {header}
-      <ScrollView contentContainerStyle={s.content} stickyHeaderIndices={[0]} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
+      <ScrollView contentContainerStyle={s.content} stickyHeaderIndices={[2]} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
+        <AddVerbField onLanded={setSide} />
+        <View style={s.sides} accessibilityRole="tablist">
+          {(['regular', 'irregular'] as const).map(option => (
+            <TouchableOpacity
+              key={option}
+              style={[s.side, side === option && s.sideOn]}
+              onPress={() => setSide(option)}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: side === option }}
+            >
+              <Text style={[s.sideText, side === option && s.sideTextOn]}>
+                {t(interfaceLanguage, option === 'regular' ? 'verbsSideRegular' : 'verbsSideIrregular')}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
         <View style={s.filterBar}>
           <TouchableOpacity
             style={s.filterBtn}
@@ -256,8 +281,6 @@ export default function VerbTopicScreen() {
         <Text style={s.intro}>
           {t(interfaceLanguage, irregular ? 'irregularIntro' : 'verbsSaveHint')}
         </Text>
-
-        {irregular && <AddVerbField topic="irregular" />}
 
         {/* Three different empties, and they say different things: a topic with
             no content yet, a filter that excludes everything, and one that has
@@ -313,6 +336,14 @@ function makeStyles(C: Palette) {
     },
     title: { color: C.highlight, fontSize: PAGE_TITLE_SIZE, fontWeight: '700' },
     content: { paddingBottom: 48 },
+    sides: {
+      flexDirection: 'row', marginHorizontal: SCREEN_GUTTER, marginTop: 4, marginBottom: 4,
+      borderWidth: 1, borderColor: C.border, borderRadius: 10, padding: 2,
+    },
+    side: { flex: 1, alignItems: 'center', paddingVertical: 7, borderRadius: 8 },
+    sideOn: { backgroundColor: C.highlight },
+    sideText: { color: C.muted, fontSize: 13, fontWeight: '700' },
+    sideTextOn: { color: C.bg },
     filterBar: {
       flexDirection: 'row', gap: 8, backgroundColor: C.bg,
       paddingHorizontal: SCREEN_GUTTER, paddingTop: 8, paddingBottom: 10,

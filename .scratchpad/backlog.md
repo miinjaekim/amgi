@@ -28,13 +28,15 @@ _Merged, not yet in anyone's hands — mobile ships by build, no OTA._
 - **Cantonese** (PR #177) — an eleventh deck, with Jyutping checked against a
   dictionary and `yue-HK` audio. Web is live on merge; mobile needs the build.
   The security rule and both composite indexes were added 2026-10-04.
-- **Users add their own French verbs to Munli** (PR #182) — an *Add a verb*
-  field on Topics → Irregular verbs and *Practise its conjugation* on a French
-  verb card. A regular verb joins its group's vehicles; an irregular one gets
-  its own table. Forms come from the lookup model and are labelled as not
-  checked; the exception is in `docs/packs/README.md`. Pronominal verbs are
-  refused. Web is live on merge; mobile needs the build. **No screen has been
-  seen rendered, on web or mobile**: see the PR for what was and wasn't run.
+- **Users add their own French verbs to Munli** (PR #182) — Topics has one
+  *Verbs* row with a Regular / Irregular switch and an *Add a verb* button
+  above it; *Add to Munli* is on a French verb's Learn result and saved card.
+  A regular verb joins its group's vehicles; an irregular one gets its own
+  table. Forms come from the lookup model and are labelled as not checked; the
+  exception is in `docs/packs/README.md` and the shape is in
+  `decisions/munli.md` (2026-10-04). Pronominal verbs are refused. Web is live
+  on merge; mobile needs the build. **Mobile has not been run**, and the
+  reworked shape is waiting on the user's look.
 - **Onboarding walkthrough** (PR #178) — first run looks one word up for real,
   makes the card, takes one rating, shows the language's packs and ends on an
   optional sign-in. Web is live on merge; mobile needs the build. The decision

@@ -31,6 +31,7 @@ import StreakBadge, { streakRowStyle } from '../../src/components/StreakBadge';
 import Markdown from '../../src/components/Markdown';
 import { SkeletonBar, SkeletonGroup } from '../../src/components/Skeleton';
 import { t, partOfSpeechLabel } from '@amgi/core';
+import AddToMunliButton from '../../src/components/AddToMunliButton';
 import { useTheme } from '../../src/context/ThemeContext';
 import { useFloatingTabBarHeight } from '../../src/components/FloatingTabBar';
 import type { Palette } from '../../src/theme';
@@ -700,6 +701,13 @@ export default function LearnScreen() {
                   Dig Deeper's prompt assumes it has already been read. */}
               {!!core.briefDefinition && <Text style={s.briefDefinition}>{core.briefDefinition}</Text>}
 
+              {/* A verb can go to Munli whether or not it is saved as a card.
+                  Shown for the verbs the lookup gave a conjugation group, which
+                  is the languages Munli conjugates. */}
+              {core.partOfSpeech === 'verb' && !!core.verbGroup && !!core.french && (
+                <AddToMunliButton key={core.french} verb={core.french} gloss={core.english} style={s.munli} />
+              )}
+
               {!depth ? (
                 <TouchableOpacity style={s.loadBtn} onPress={handleLoadDepth} disabled={loadingDepth}>
                   {loadingDepth
@@ -903,6 +911,7 @@ function makeStyles(C: Palette, tabBarHeight: number) {
     paddingHorizontal: 14, paddingVertical: 8, alignSelf: 'flex-start', marginTop: 12,
   },
   loadBtnText: { fontSize: 14, color: C.text },
+  munli: { marginTop: 14 },
 
   divider: { height: 1, backgroundColor: C.border, marginVertical: 16 },
   saveBtn: { backgroundColor: C.highlight, borderRadius: 10, paddingVertical: 12, alignItems: 'center' },

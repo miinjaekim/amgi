@@ -1,8 +1,8 @@
 'use client';
 import { useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { enrolledTenses, getStudyLanguageConfig, isEnrolled, setEnrolled, subjectKey, subjectsOfKind } from '@amgi/core';
-import type { ConjugationSubject } from '@amgi/core';
+import { VERB_SIDE_KIND, enrolledTenses, getStudyLanguageConfig, isEnrolled, setEnrolled, subjectKey, subjectsOfKind } from '@amgi/core';
+import type { ConjugationSubject, VerbSide } from '@amgi/core';
 import { useUser } from '@/components/UserContext';
 import { useConjugation } from '@/hooks/useConjugation';
 import ParadigmTable from '@/components/ParadigmTable';
@@ -12,12 +12,17 @@ import AddVerbField from '@/components/AddVerbField';
 import { t } from '@/lib/i18n';
 
 /**
- * One verb topic — regular or irregular. Read any table, save what you want to
- * practise.
+ * The Verbs topic. Read any table, save what you want to practise.
  *
- * ⚠️ **Two topics through one page, keyed on `kind`.** They differ in what they
- * list, not in how they work — two files would be two copies of the same Save
- * semantics.
+ * ⚠️ **One topic with two sides, behind a switch** — the user's call,
+ * 2026-10-04, reversing the two rows of 2026-09-22. The sides still differ in
+ * shape, a handful of patterns against a growing list of verbs, which is why
+ * it is a switch and not one long page. Adding a verb sits above the switch
+ * because the learner does not choose which side it lands on.
+ *
+ * The route segment only picks the side the page opens on: `irregular` opens
+ * there, and anything else opens on the patterns. A link into this page can
+ * therefore still name a side.
  *
  * ⚠️ **Content first, saving second — the decks page's shape, not a form.**
  * ⚠️ **The tense chips are a *view*; Save is what commits.** Selecting the
@@ -31,9 +36,9 @@ import { t } from '@/lib/i18n';
 export default function VerbTopicPage() {
   const { interfaceLanguage, studyLanguage } = useUser();
   const { spec, enrolment, setEnrolment, loading } = useConjugation();
-  // Anything unrecognised reads as regular rather than erroring: the cost of
-  // being wrong is landing on the topic that has content in it.
-  const irregular = useParams<{ kind: string }>().kind === 'irregular';
+  const opensOn: VerbSide = useParams<{ kind: string }>().kind === 'irregular' ? 'irregular' : 'regular';
+  const [side, setSideState] = useState<VerbSide>(opensOn);
+  const irregular = side === 'irregular';
   const [chosenTenses, setChosenTenses] = useState<string[] | null>(null);
   const [vehicles, setVehicles] = useState<Record<string, string>>({});
   /**
@@ -42,6 +47,11 @@ export default function VerbTopicPage() {
    * everything.
    */
   const [chosenGroups, setChosenGroups] = useState<string[] | null>(null);
+  /** The group filter lists one side's subjects, so it does not survive a switch. */
+  const setSide = (next: VerbSide) => {
+    setSideState(next);
+    setChosenGroups(null);
+  };
 
   /**
    * `null` reads as the tenses already saved, so the page opens on what is being
@@ -73,7 +83,7 @@ export default function VerbTopicPage() {
   if (loading || !spec || !enrolment) {
     return (
       <div className="max-w-2xl">
-        <PageHeader titleKey={irregular ? 'verbsIrregular' : 'topicRegularVerbs'} />
+        <PageHeader titleKey="topicVerbs" />
         <p className="font-mono text-sm" style={{ color: 'var(--color-muted)' }}>
           {t(interfaceLanguage, loading ? 'munliLoading' : 'munliUnavailable', { language: getStudyLanguageConfig(studyLanguage).label })}
         </p>
@@ -136,17 +146,41 @@ export default function VerbTopicPage() {
     );
   };
 
-  const allSubjects = subjectsOfKind(spec, irregular ? 'verb' : 'group');
+  const allSubjects = subjectsOfKind(spec, VERB_SIDE_KIND[side]);
   const subjects = allSubjects.filter(
     subject => chosenGroups?.includes(subjectKey(subject)) ?? true,
   );
 
   return (
     <div className="max-w-2xl">
-      <PageHeader titleKey={irregular ? 'verbsIrregular' : 'topicRegularVerbs'} className="mb-1" />
+      <PageHeader titleKey="topicVerbs" className="mb-1" />
       <p className="font-mono text-sm mb-6" style={{ color: 'var(--color-muted)' }}>
-        {t(interfaceLanguage, irregular ? 'irregularIntro' : 'verbsIntro')}
+        {t(interfaceLanguage, 'verbsIntro')}
       </p>
+
+      <AddVerbField onLanded={setSide} />
+
+      <div role="tablist" className="inline-flex rounded-lg border p-0.5 mb-3" style={{ borderColor: 'var(--color-muted)' }}>
+        {(['regular', 'irregular'] as const).map(option => (
+          <button
+            key={option}
+            role="tab"
+            aria-selected={side === option}
+            onClick={() => setSide(option)}
+            className="px-4 py-1.5 rounded-md font-mono text-sm font-bold transition-colors"
+            style={side === option
+              ? { background: 'var(--color-highlight)', color: 'var(--color-bg)' }
+              : { color: 'var(--color-muted)' }}
+          >
+            {t(interfaceLanguage, option === 'regular' ? 'verbsSideRegular' : 'verbsSideIrregular')}
+          </button>
+        ))}
+      </div>
+      {irregular && (
+        <p className="font-mono text-sm mb-4" style={{ color: 'var(--color-muted)' }}>
+          {t(interfaceLanguage, 'irregularIntro')}
+        </p>
+      )}
 
       <div className="flex flex-wrap gap-2 mb-2">
         <MultiSelect
@@ -174,11 +208,9 @@ export default function VerbTopicPage() {
           />
         )}
       </div>
-      <p className={`font-mono text-xs ${irregular ? 'mb-4' : 'mb-8'}`} style={{ color: 'var(--color-muted)' }}>
+      <p className="font-mono text-xs mb-8" style={{ color: 'var(--color-muted)' }}>
         {t(interfaceLanguage, 'verbsSaveHint')}
       </p>
-
-      {irregular && <AddVerbField topic="irregular" />}
 
       {/* An empty topic is the irregulars until they are sourced — it says so
           rather than rendering a page with nothing on it. */}
