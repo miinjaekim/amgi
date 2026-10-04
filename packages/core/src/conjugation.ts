@@ -252,7 +252,7 @@ export function conjugationItemId(
 const FRENCH_PERSONS: readonly ConjugationPerson[] = [
   { id: 's1', label: 'je' },
   { id: 's2', label: 'tu' },
-  { id: 's3', label: 'il/elle' },
+  { id: 's3', label: 'il/elle/on' },
   { id: 'p1', label: 'nous' },
   { id: 'p2', label: 'vous' },
   { id: 'p3', label: 'ils/elles' },
@@ -543,8 +543,12 @@ export function carriedSubjectKey(spec: ConjugationSpec, infinitive: string): st
 function bareForm(spec: ConjugationSpec, person: ConjugationPerson, raw: unknown): string | undefined {
   if (typeof raw !== 'string') return undefined;
   let form = raw.normalize('NFC').trim().toLowerCase().replace(/[’ʼ]/g, "'");
-  for (const subject of [person.label, ...person.label.split('/')]) {
-    if (form.startsWith(`${subject} `)) form = form.slice(subject.length).trim();
+  // Any of the label's pronouns, alone or slashed together: `il`, `il/elle`,
+  // `il/elle/on`. A model does not reliably pick the same one the label does.
+  const pronouns = person.label.split('/');
+  const words = form.split(/\s+/);
+  if (words.length > 1 && words[0].split('/').every(word => pronouns.includes(word))) {
+    form = words.slice(1).join(' ');
   }
   // `j'ai`: the elided subject, recognised by the spec's own rule.
   const elided = form.indexOf("'");
