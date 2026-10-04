@@ -18,8 +18,10 @@ import {
   getStudyLangSide,
   getStudyLanguageConfig,
   resolvePackBack,
+  hasConjugation,
 } from '@amgi/core';
 import { useCardEnrichment } from '@/hooks/useCardEnrichment';
+import AddToMunliButton from '@/components/AddToMunliButton';
 import type { PackEntry, StudyLanguage } from '@amgi/core';
 import Markdown from '@/components/Markdown';
 import { t, partOfSpeechLabel } from '@/lib/i18n';
@@ -307,6 +309,12 @@ export default function CardDetailModal({
             </>
           )}
         </div>
+
+        {/* A French verb card can also go to Munli. Its own row: this is a
+            different choice from anything the card's own actions do. */}
+        {saved?.partOfSpeech === 'verb' && saved.verbGroup && hasConjugation(lang) && (
+          <AddToMunliButton key={studySide} verb={studySide} gloss={backSide} className="px-6 pt-3" />
+        )}
 
         {/* Only the back is editable — see handleEditSave. */}
         {editDraft !== null && (

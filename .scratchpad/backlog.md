@@ -28,6 +28,17 @@ _Merged, not yet in anyone's hands — mobile ships by build, no OTA._
 - **Cantonese** (PR #177) — an eleventh deck, with Jyutping checked against a
   dictionary and `yue-HK` audio. Web is live on merge; mobile needs the build.
   The security rule and both composite indexes were added 2026-10-04.
+- **Users add their own French verbs to Munli** (PR #182) — Topics has one
+  *Verbs* row; inside it, a row per pattern and per irregular verb, like the
+  Packs list, each opening a card per tense with its own Save, with an *Add a
+  verb* button on top; *Add to Munli* is on a French verb's Learn result and
+  saved card. A regular verb joins its group's vehicles; an irregular one gets
+  its own table. Forms come from the lookup model and are labelled as not
+  checked; the exception is in `docs/packs/README.md` and the shape is in
+  `decisions/munli.md` (2026-10-04). Pronominal verbs are refused. Web is live
+  on merge; mobile needs the build. The user went through the screens on web
+  and in Expo Go. **Not confirmed on mobile:** adding a verb, and *Add to Munli*
+  from Amgi, which need the lookup route this PR deploys.
 - **Onboarding walkthrough** (PR #178) — first run looks one word up for real,
   makes the card, takes one rating, shows the language's packs and ends on an
   optional sign-in. Web is live on merge; mobile needs the build. The decision
@@ -57,57 +68,26 @@ practice session should cover several tenses at once again, which the section
 picker narrowed (#146). Both are written up in their Decisions entries of
 2026-09-22.
 
-- [ ] **Users add their own French verbs to Munli** — scoped with the user
-      2026-09-24. **Any verb, forms from the model**, the way a term lookup
-      works. What an added verb *becomes* follows the split `conjugation.ts`
-      already turns on:
-      - **A regular verb becomes a vehicle, not an item.** `danser` joins the
-        `-er` group's vehicles *for that user only* — nothing new is scheduled,
-        it just starts turning up in `-er` questions. Scheduling it would drill
-        the `-er` endings again under a new name, which is what the 2026-09-22
-        rework removed.
-      - **An irregular verb gets its own table**, per verb, exactly as `être`,
-        `avoir` and `aller` do — with stored forms for every tense the spec
-        knows (présent, imparfait, futur simple).
-      - **The group comes from the model and is checked locally.** It is not
-        derivable from the ending (`partir`). When the model calls a verb
-        regular, conjugate it by the rule and compare against the model's
-        forms; a mismatch means it is not the group claimed. Irregular forms
-        have no such check.
-      ⚠️ **This is a written exception to `docs/packs/README.md`**, which says
-      the model is not a source. The exception holds only if a user-added verb
-      is **labelled as unverified** wherever its forms are shown, and **never
-      reaches another user**. Write the exception into the README when this is
-      built, not only here.
-      **Two entry points**, per the user: an *Add a verb* field on Topics →
-      Irregular verbs, and a *Practise its conjugation* action on a French verb
-      card in Amgi (a French verb card already carries its conjugation group,
-      #165, so it knows what it would be practised as).
-      **Settled with the user 2026-10-04:**
-      - **Pronominal verbs are refused in the first cut.** `se lever` needs
-        `me`/`te`/`se` and `subjectFor` only knows `je`/`j'`; adding one shows a
-        short "not supported yet" message.
-      - **Two PRs, adding first.** PR 1 is adding a verb (both entry points,
-        web and mobile). PR 2 is the weighted draw below.
-      - **PR 2: a regular verb the user keeps missing is drawn more often.**
-        The user's idea: count how often each regular verb is got wrong and let
-        that decide how often it turns up as its group's vehicle. One count per
-        user per verb, across tenses: +1 for each missed box asked through that
-        verb, cleared once a round through it has no misses (the box tally's own
-        rule). Built-in vehicles count too, not only user-added ones.
-        ⚠️ **It biases the draw and nothing else.** The 2026-09-22 rework removed
-        `pickPerson`'s miss-weighted draw and left `misses` as report-only, and
-        `decisions/munli.md` says "nothing here adapts to the learner". This is
-        a deliberate exception to that, and it holds because the schedule is
-        untouched: a box is still asked because it is due, and the count only
-        chooses which verb it is asked through. Write the exception into
-        `decisions/munli.md` when it is built.
-      Still to decide (defaults, not confirmed with the user):
-      - **An added verb that is already there** — `être`, or a vehicle already
-        in a group. Presumably a no-op that points at the existing table.
-      - **Whether this settles `faire`** (#150): a user can now add it
-        themselves, but a model-generated `faire` is not the sourced one. The
-        curated list and user-added verbs are two different things.
+- [ ] **Regular verbs the user keeps missing are drawn more often** — PR 2 of
+      *Users add their own French verbs to Munli*; adding a verb is PR #182,
+      queued above. The user's idea: count how often each regular verb is got
+      wrong and let that decide how often it turns up as its group's vehicle.
+      One count per user per verb, across tenses: +1 for each missed box asked
+      through that verb, cleared once a round through it has no misses (the
+      box tally's own rule). Built-in vehicles count too, not only user-added
+      ones. The counts sit beside `conjugationVerbs` on the user document, in
+      a map keyed the same way (`conjugationVerbKey`).
+      ⚠️ **It biases the draw and nothing else.** The 2026-09-22 rework removed
+      `pickPerson`'s miss-weighted draw and left `misses` as report-only, and
+      `decisions/munli.md` says "nothing here adapts to the learner". This is
+      a deliberate exception to that, and it holds because the schedule is
+      untouched: a box is still asked because it is due, and the count only
+      chooses which verb it is asked through. Every vehicle stays drawable.
+      The draw stays a pure function of a nonce and a progress snapshot, done
+      at queue-build time. Write the exception into `decisions/munli.md` when
+      it is built.
+      Branch: `scripts/next-task.sh feat/munli-weighted-vehicle-draw`, once
+      #182 is merged.
 
 ## Medium
 

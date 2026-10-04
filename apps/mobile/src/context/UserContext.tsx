@@ -27,7 +27,7 @@ import {
   type HanjaPartition, type StudyLanguage, type StudyLanguagePair,
   type UserPreferences,
 } from '@amgi/core';
-import type { ConjugationEnrolment, ConjugationProgressMap } from '@amgi/core';
+import type { ConjugationEnrolment, ConjugationProgressMap, UserVerbMap } from '@amgi/core';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -174,6 +174,8 @@ interface UserContextType {
    */
   conjugation: ConjugationProgressMap | undefined;
   conjugationEnrolment: ConjugationEnrolment | undefined;
+  /** Verbs the learner added to Munli. Their own document, so nobody else's. */
+  conjugationVerbs: UserVerbMap | undefined;
   user: User | null;
   authLoading: boolean;
   /**
@@ -233,6 +235,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const [hanjaPartition, setHanjaPartitionState] = useState<HanjaPartition>(DEFAULT_HANJA_PARTITION);
   const [conjugation, setConjugation] = useState<ConjugationProgressMap | undefined>(undefined);
   const [conjugationEnrolment, setConjugationEnrolment] = useState<ConjugationEnrolment | undefined>(undefined);
+  const [conjugationVerbs, setConjugationVerbs] = useState<UserVerbMap | undefined>(undefined);
   /**
    * The streak as one value, because every rule that touches it — merging a
    * server copy in, advancing it by a review — is a decision over all four
@@ -566,6 +569,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
         // "not loaded", which the practice surfaces distinguish.
         setConjugation(prefs.conjugation ?? {});
         setConjugationEnrolment(prefs.conjugationEnrolment);
+        setConjugationVerbs(prefs.conjugationVerbs);
 
         // Picked up here as well as at launch, so choosing the partition on one
         // device reaches the other without a restart.
@@ -840,7 +844,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const deckNativeLanguage = nativeForStudy(languages, studyLanguage);
 
   return (
-    <UserContext.Provider value={{ user, authLoading, preferencesUid, interfaceLanguage, conjugation, conjugationEnrolment, deckNativeLanguage, languages, studyLanguage, hanjaPartition, streak: streakState.streak, reviewedToday, setInterfaceLanguage, setStudyLanguage, addLanguage, removeLanguage, setHanjaPartition, recordReview, undoReview, deleteAccount, handleSignIn, handleSignOut }}>
+    <UserContext.Provider value={{ user, authLoading, preferencesUid, interfaceLanguage, conjugation, conjugationEnrolment, conjugationVerbs, deckNativeLanguage, languages, studyLanguage, hanjaPartition, streak: streakState.streak, reviewedToday, setInterfaceLanguage, setStudyLanguage, addLanguage, removeLanguage, setHanjaPartition, recordReview, undoReview, deleteAccount, handleSignIn, handleSignOut }}>
       {children}
     </UserContext.Provider>
   );

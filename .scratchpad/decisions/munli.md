@@ -3,6 +3,57 @@
 The second mode: its shell, conjugation practice, writing review as a tool, English articles. 2026-09-21 on. Newest first. Indexed from
 [status.md](../status.md).
 
+## Verbs are one topic again, and Amgi has a door into it (2026-10-04)
+
+**The user's call, after trying the first cut of adding a verb** (PR #182),
+which put an Add field on Topics → Irregular verbs only.
+
+⚠️ **This reverses "verbs are two rows, not one" in the 2026-09-22 entry
+"Enrolment is pairs, and Verbs is content first".** That split was argued from
+shape: one page holding a handful of patterns and a long list of verbs wanted
+two layouts, and it buried the irregulars at the bottom. What changed is that
+a learner can now add a verb, and they do not know which kind it is before
+adding it. Two rows made them pick a row first.
+
+- **One Verbs row on Topics, and inside it a row per pattern and per verb**,
+  the way Packs lists packs: name, a preview (the pattern's verbs, or the
+  start of an irregular verb's présent), how many tenses are saved, and a bar.
+  Regular and irregular are two headed groups on one list.
+- ⚠️ **Tables are one tap in, not on the list.** The first rework kept every
+  table on the page behind a Regular / Irregular switch and two filters, and
+  the user's words on opening it were "very overwhelmed" and "way too
+  cluttered". **This also reverses "the Verbs page opens on tables" of
+  2026-09-22.** That call was made against a page of checkboxes; a row is
+  neither a checkbox nor a table. The filters are gone with it: a row's page
+  shows every tense, with a save pill each.
+- ⚠️ **On a row's page the tense is a card, not a column.** The page was one
+  table with a column per tense and save chips above it. The user's
+  objections: it scrolled sideways with no sign of how far, a chip had to be
+  matched by name to the column it saved, and a new tense made both worse. Now
+  each tense is a card with its own Save in the header and the six forms in two
+  columns, singular then plural; a new tense is one more card. The pattern is
+  the pack and the tense is its subpack. All cards are open while a language
+  has three tenses; past that, unsaved ones fold to a one-line preview. Saved
+  uses the same card (`TenseCards`, which replaced `ParadigmTable`).
+- **One Add a verb button, above both groups**, drawn as Packs draws "Make a
+  pack". The verb is filed by what it is, and the line under the button links
+  to where it went.
+- **Saved still shelves by kind.** It lists what you have, and the two kinds
+  are still two kinds of thing to learn.
+
+**Add to Munli, from Amgi.** On the Learn result for a French verb and on a
+saved French verb card. Separate from saving the card: keeping a word and
+practising its conjugation are two choices.
+
+- **From Amgi, a new irregular verb is saved in the présent with it.** On the
+  Verbs page the tense pills are under the new table; from Amgi they are a mode
+  away, and a verb nothing asks is not what the button said. This is the one
+  place adding and enrolling happen together.
+- **The forms are fetched when the button is pressed**, not on every French
+  lookup, which would slow every lookup for a button most never use.
+- **"Add to Munli", not "Practise its conjugation".** For a regular verb
+  nothing new is practised: it joins the verbs its group is asked through.
+
 ## English articles: a box on every slot, and the rule is what's scheduled (2026-09-28)
 
 **The user's four calls**, which settle the question the 2026-09-24 backlog

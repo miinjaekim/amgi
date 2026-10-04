@@ -86,8 +86,31 @@ that contains the word corroborates the spelling only as far as that page is
 reliable, and no one ranks the sources. That is why the label is there, and
 why making a user pack official goes through this README like any draft.
 
-This extends the same exception as *Users add their own French verbs to
-Munli*: labelled as user-made, never reaching another user.
+### The exception: verbs a learner adds to Munli
+
+_Added 2026-10-04, with user-added French verbs._
+
+A verb a learner adds to Munli (`UserVerb` in
+`packages/core/src/conjugation.ts`) takes its forms from the lookup model.
+Here **the model is the source**, which the user-pack exception above never
+allows, so this one is narrower and is allowed on two conditions:
+
+- **It says so wherever its forms are shown.** The tense cards on Topics
+  and Saved, the question in Practice, and the weakest-forms list on Progress
+  each label an added verb as added by the learner and not checked by Amgi.
+  The label follows the verb (`userAdded` on a table), not the screen.
+- **It reaches nobody else.** It is stored on the learner's own `users/{uid}`
+  document and is never written anywhere shared.
+
+One thing is checked, and it is not the forms. When the model calls a verb
+regular, it is conjugated by that group's rule and compared with the model's
+forms in every tense; a mismatch files it as irregular instead. That catches a
+wrong **group**. It is the model agreeing with a rule, so it is not a second
+source, and an irregular verb's forms have no check at all.
+
+The three built-in irregulars stay tier A, and a verb the spec carries always
+wins over a stored one of the same name. Making an added verb official goes
+through this README like any draft: a learner's `faire` is not the sourced one.
 
 ## Render the pack before you believe the list
 

@@ -2,12 +2,12 @@ import React, { useMemo, useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { conjugationSpec, daysUntil, getStudyLanguageConfig, listSavedKinds, setEnrolled, t } from '@amgi/core';
+import { daysUntil, getStudyLanguageConfig, listSavedKinds, setEnrolled, t } from '@amgi/core';
 import { useUser } from '../../src/context/UserContext';
 import { useTheme } from '../../src/context/ThemeContext';
 import { useConjugation } from '../../src/context/ConjugationContext';
 import { useFloatingTabBarHeight } from '../../src/components/FloatingTabBar';
-import ParadigmTable from '../../src/components/ParadigmTable';
+import TenseCards from '../../src/components/TenseCards';
 import PageHeader, { PAGE_TITLE_SIZE, SCREEN_GUTTER } from '../../src/components/PageHeader';
 import StudyLanguageChip from '../../src/components/StudyLanguageChip';
 import type { Palette } from '../../src/theme';
@@ -43,8 +43,7 @@ export default function SavedScreen() {
   const tabBarHeight = useFloatingTabBarHeight();
   const s = useMemo(() => makeStyles(C, tabBarHeight), [C, tabBarHeight]);
   const { interfaceLanguage, studyLanguage } = useUser();
-  const { progress, enrolment, setEnrolment, loading } = useConjugation();
-  const spec = conjugationSpec(studyLanguage);
+  const { spec, progress, enrolment, setEnrolment, loading } = useConjugation();
 
   const [openKind, setOpenKind] = useState<string | null>(null);
   const [openSubject, setOpenSubject] = useState<string | null>(null);
@@ -177,7 +176,7 @@ export default function SavedScreen() {
             </Text>
           )}
 
-          <ParadigmTable spec={spec} subject={subject.subject} tenseIds={[tense.tenseId]} />
+          <TenseCards spec={spec} subject={subject.subject} tenseIds={[tense.tenseId]} />
 
           {/* The sourced half — absent rather than invented for a tense with no
               note, which is why the keys are optional on the spec. */}

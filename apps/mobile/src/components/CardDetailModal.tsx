@@ -13,9 +13,11 @@ import {
   hunEum,
   partOfSpeechLabel,
   resolvePackBack,
+  hasConjugation,
   t,
 } from '@amgi/core';
 import { useCardEnrichment } from '../hooks/useCardEnrichment';
+import AddToMunliButton from './AddToMunliButton';
 import type { ExamplePair, PackEntry, StudyLanguage } from '@amgi/core';
 import { useTheme } from '../context/ThemeContext';
 import PronounceButton from './PronounceButton';
@@ -238,6 +240,14 @@ export default function CardDetailModal({
             )}
           </View>
 
+          {/* A French verb card can also go to Munli. Its own row: this is a
+              different choice from anything the card's own actions do. The
+              modal closes before leaving: Munli is another navigator, and a
+              modal left open would sit over it. */}
+          {saved?.partOfSpeech === 'verb' && !!saved.verbGroup && hasConjugation(lang) && (
+            <AddToMunliButton key={studySide} verb={studySide} gloss={backSide} style={s.munli} onOpen={onClose} />
+          )}
+
           {saved?.id && editDraft === null && (
             <View style={s.actions}>
               <TouchableOpacity
@@ -362,6 +372,7 @@ function makeStyles(C: Palette) {
     primaryBtnText: { fontSize: 14, fontWeight: '700', color: C.bg },
     secondaryBtn: { borderWidth: 1, borderColor: C.border, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 8 },
     secondaryBtnText: { fontSize: 14, fontWeight: '600', color: C.text },
+    munli: { paddingHorizontal: 20, paddingTop: 10 },
     mutedBtnText: { fontSize: 14, fontWeight: '600', color: C.muted },
     btnDisabled: { opacity: 0.5 },
     editRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8, paddingHorizontal: 20, paddingTop: 12 },

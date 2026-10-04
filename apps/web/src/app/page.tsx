@@ -16,6 +16,7 @@ import { saveFlashcardToFirestore, Flashcard } from '@/services/firestore';
 import { buildLookupCardDraft, lookupCardFaces, getTermBackSide, getCharacterBreakdown, getExampleSides, getReading, getStudyLanguageConfig, parseStreamedExamples, parseStreamedDepth, pronunciationNote, pronunciationNoteCredit, wordOfTheDayCore } from '@amgi/core';
 import type { WordOfTheDay } from '@amgi/core';
 import { useUser } from '@/components/UserContext';
+import AddToMunliButton from '@/components/AddToMunliButton';
 import { t, partOfSpeechLabel } from '@/lib/i18n';
 import SaveFlashcardModal from '@/components/SaveFlashcardModal';
 import PronounceButton from '@/components/PronounceButton';
@@ -620,6 +621,13 @@ export default function Home() {
               </p>
             )}
           </div>
+
+          {/* A verb can go to Munli whether or not it is saved as a card. Shown
+              for the verbs the lookup gave a conjugation group, which is the
+              languages Munli conjugates. */}
+          {core.partOfSpeech === 'verb' && core.verbGroup && core.french && (
+            <AddToMunliButton key={core.french} verb={core.french} gloss={core.english} className="mb-4" />
+          )}
 
           {/* Depth section */}
           {!depth && !loadingDepth ? (

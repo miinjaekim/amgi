@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { conjugationSpec, enrolledCountOfKind, getStudyLanguageConfig, munliTopics, t } from '@amgi/core';
+import { getStudyLanguageConfig, munliTopics, t } from '@amgi/core';
 import type { MunliTopic } from '@amgi/core';
 import { useUser } from '../../../src/context/UserContext';
 import { useTheme } from '../../../src/context/ThemeContext';
@@ -23,9 +23,8 @@ import type { Palette } from '../../../src/theme';
  * Each row's subtitle says what is enrolled, so the practice set is legible
  * without opening anything.
  */
-const ICONS: Record<MunliTopic['id'], 'repeat-outline' | 'shuffle-outline'> = {
-  regular: 'repeat-outline',
-  irregular: 'shuffle-outline',
+const ICONS: Record<MunliTopic['id'], 'repeat-outline'> = {
+  verbs: 'repeat-outline',
 };
 
 export default function TopicsScreen() {
@@ -33,12 +32,9 @@ export default function TopicsScreen() {
   const tabBarHeight = useFloatingTabBarHeight();
   const s = useMemo(() => makeStyles(C, tabBarHeight), [C, tabBarHeight]);
   const { interfaceLanguage, studyLanguage } = useUser();
-  const { enrolment, loading } = useConjugation();
+  const { spec, enrolment, loading } = useConjugation();
   const router = useRouter();
-  const spec = conjugationSpec(studyLanguage);
-  // Only this language's topics — see `munliTopics`. Regular and irregular
-  // verbs are two topics, not one with two halves: a rule one example
-  // demonstrates against a fact no other verb tells you anything about.
+  // Only this language's topics — see `munliTopics`.
   const topics = munliTopics(studyLanguage);
 
   return (
@@ -57,7 +53,8 @@ export default function TopicsScreen() {
         )}
 
         {topics.map(topic => {
-          const saved = spec && enrolment ? enrolledCountOfKind(spec, enrolment, topic.kind) : 0;
+          // Verbs is the only topic, so everything saved is saved under it.
+          const saved = spec && enrolment ? enrolment.items.length : 0;
           return (
             <TouchableOpacity
               key={topic.id}

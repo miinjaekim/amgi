@@ -4,7 +4,7 @@ import { daysUntil, getStudyLanguageConfig, listSavedKinds, setEnrolled } from '
 import type { ConjugationSavedSubject } from '@amgi/core';
 import { useUser } from '@/components/UserContext';
 import { useConjugation } from '@/hooks/useConjugation';
-import ParadigmTable from '@/components/ParadigmTable';
+import TenseCards from '@/components/TenseCards';
 import PageHeader from '@/components/PageHeader';
 import { t } from '@/lib/i18n';
 
@@ -171,7 +171,7 @@ export default function SavedPage() {
           </p>
         )}
 
-        <ParadigmTable spec={spec} subject={subject.subject} tenseIds={[tense.tenseId]} />
+        <TenseCards spec={spec} subject={subject.subject} tenseIds={[tense.tenseId]} />
 
         {/* The sourced half — absent rather than invented for a tense with no
             note, which is why the keys are optional on the spec. */}
