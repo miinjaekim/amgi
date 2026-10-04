@@ -254,6 +254,7 @@ Card fields, glosses, part of speech, spellcheck, saving, My Cards, export.
 
 The review session: typed answers, undo, readings, decks and drill.
 
+- [The brief definition shows after the reveal, never on the prompt (2026-10-04)](decisions/review.md#the-brief-definition-shows-after-the-reveal-never-on-the-prompt-2026-10-04)
 - [Readings reach mobile review, and no setting comes with them (2026-09-08)](decisions/review.md#readings-reach-mobile-review-and-no-setting-comes-with-them-2026-09-08)
 - [The typed card hides its action row while the keyboard is up (2026-08-29)](decisions/review.md#the-typed-card-hides-its-action-row-while-the-keyboard-is-up-2026-08-29)
 - [The card's dismiss target is a Pressable only when a keyboard can be up (2026-08-29)](decisions/review.md#the-cards-dismiss-target-is-a-pressable-only-when-a-keyboard-can-be-up-2026-08-29)

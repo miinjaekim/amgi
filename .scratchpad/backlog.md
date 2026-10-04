@@ -33,6 +33,11 @@ _Merged, not yet in anyone's hands — mobile ships by build, no OTA._
   optional sign-in. Web is live on merge; mobile needs the build. The decision
   is "Onboarding does it once for real" in
   [decisions/app-shell.md](decisions/app-shell.md).
+- **Brief definition during review** — the card's one-sentence definition (on
+  a pack card, the pack's hint) shows under the answer after the reveal, in
+  both directions. Web is live on merge; mobile needs the build. The decision
+  is "The brief definition shows after the reveal" in
+  [decisions/review.md](decisions/review.md).
 
 What has never been looked at on a device is listed under Unverified in
 [status.md](status.md). It is not tracked here, by the 2026-09-04 decision that
@@ -45,12 +50,6 @@ whether `faire` joins the three sourced irregular verbs (#150), and whether a
 practice session should cover several tenses at once again, which the section
 picker narrowed (#146). Both are written up in their Decisions entries of
 2026-09-22.
-
-- [ ] **Include a brief definition during review** — added 2026-10-04 from
-      Tasks. Not yet scoped. Cards already carry `briefDefinition`. To settle:
-      which face it shows on and in which direction (on the front of a
-      produce-the-word card it could give the answer away), and whether it
-      shows for pack cards, where that field holds the pack's hint.
 
 - [ ] **Settings navigation: a list you skim and click into** — raised to
       High 2026-10-04, and widened from the web menu item queued 2026-09-09.

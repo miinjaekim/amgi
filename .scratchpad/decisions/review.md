@@ -3,6 +3,26 @@
 The review session: typed answers, undo, readings, decks and drill. Newest first. Indexed from
 [status.md](../status.md).
 
+## The brief definition shows after the reveal, never on the prompt (2026-10-04)
+
+Review showed the gloss and, behind *Show details*, the long definition. The
+one-sentence `briefDefinition` every looked-up card carries was not on the
+screen at all. It now sits under the answer, in both directions, on web and
+mobile.
+
+**Answer side only** — _the user's call._ On the front of a recall-the-meaning
+card it is the answer. On a produce-the-word prompt it would help tell two
+similar glosses apart, but a pack hint can name the word outright (`conduct`:
+"to carry out, as in conduct a survey"), so showing it there needs a
+contains-the-word guard. That option was offered and not taken.
+
+**Pack cards are not an exception** — _the user's call._ On a pack card the
+field holds the pack's sense hint (`context`), written in English whatever the
+deck's native language, and prefixed `idiom — …` or `vulgar — …` where that
+applies. It is shown the same way: it is the sense the pack means, which is
+what a learner checking an answer wants. Most pack cards have no hint and show
+nothing.
+
 ## Readings reach mobile review, and no setting comes with them (2026-09-08)
 
 `getReading` renders Kikuyu respelling, Japanese furigana + pitch accent and
