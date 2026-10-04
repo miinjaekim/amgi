@@ -1,8 +1,8 @@
 import React, { useMemo } from 'react';
 import { Modal, View, Text, TouchableOpacity, Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { usePathname } from 'expo-router';
-import { MODES, modeFromPath, t } from '@amgi/core';
+import { useGlobalSearchParams, usePathname } from 'expo-router';
+import { MODES, modeForTheme, t } from '@amgi/core';
 import { useUser } from '../context/UserContext';
 import { useTheme } from '../context/ThemeContext';
 import { useMode } from '../context/ModeContext';
@@ -11,9 +11,9 @@ import type { Palette } from '../theme';
 /**
  * The mode switcher — Instagram's account switcher, for modes.
  *
- * Opened by holding the last tab, and from Munli's own header (which has no tab
- * bar yet to hold). ⚠️ **A hold is invisible**, so it is never the only door;
- * see the discoverability note in `.scratchpad/backlog.md`.
+ * Opened by holding the last tab, from the swap icon on every mode's Progress
+ * header, and from the *Switch mode* row in settings. ⚠️ **A hold is
+ * invisible**, so it is never the only door.
  *
  * Bottom-anchored because the gesture that opens it happens at the bottom of
  * the screen — the list should appear where the thumb already is, not in the
@@ -24,8 +24,10 @@ export default function ModeSwitcherSheet({ visible, onClose }: { visible: boole
   const s = useMemo(() => makeStyles(C), [C]);
   const { interfaceLanguage } = useUser();
   const { switchMode } = useMode();
-  const pathname = usePathname();
-  const current = modeFromPath(pathname);
+  // Not `modeFromPath` alone: settings sits outside every mode's tree and
+  // carries the mode it was opened from in `?mode=`. Read off the path there,
+  // a Munli user would see Amgi ticked and tapping it would do nothing.
+  const current = modeForTheme(usePathname(), useGlobalSearchParams<{ mode?: string }>().mode);
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>

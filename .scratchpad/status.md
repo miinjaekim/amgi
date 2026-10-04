@@ -74,6 +74,10 @@ blank placeholder. On **Android**, only sign-in has ever been exercised.
 - **The Slow pronunciation speed** is a pitch-corrected stretch, not a slow
   synthesis. If it sounds like an artifact, the fallback is written in its
   entry in [pronunciation](decisions/pronunciation.md).
+- **Settings as a list** (PR #PRNUM): typechecked and bundled, never opened,
+  not even in Expo Go. Unseen: the list itself, each detail screen keeping its
+  mode's theme, and *Switch mode* from settings landing in the other mode with
+  no way to swipe back into the old one.
 - **Hanja**: nothing has been enrolled or reviewed on a real account.
 - **Progress display** (calendar, ramp, tiles): colours were computed and
   validated, layouts were not looked at.
@@ -266,6 +270,7 @@ The review session: typed answers, undo, readings, decks and drill.
 
 Navigation, titles, mode names, onboarding, help, naming.
 
+- [Settings is a list of rows, each pushing its own screen (2026-10-04)](decisions/app-shell.md#settings-is-a-list-of-rows-each-pushing-its-own-screen-2026-10-04)
 - [Onboarding does it once for real (2026-10-04)](decisions/app-shell.md#onboarding-does-it-once-for-real-2026-10-04)
 - [Amgi's titles name the study language; Import removed, Export to Your data (2026-09-25)](decisions/app-shell.md#amgis-titles-name-the-study-language-import-removed-export-to-your-data-2026-09-25)
 - [The modes are named in the reader's language, and 2.0.0 (2026-09-23)](decisions/app-shell.md#the-modes-are-named-in-the-readers-language-and-200-2026-09-23)

@@ -54,6 +54,11 @@ export function ModeProvider({ children }: { children: ReactNode }) {
     // `replace`, not `push`: modes are places you are in, not places you went
     // to from somewhere. A back stack that walks you out of a mode into the one
     // you left is the account-switcher bug every app with tabs has had once.
+    //
+    // Settings has a row that switches too, and settings is pushed *above* the
+    // mode. Replacing from there would swap out the settings screen and leave
+    // the old mode underneath, one swipe back — so anything stacked goes first.
+    if (router.canDismiss()) router.dismissAll();
     router.replace(getMode(mode).home as never);
   }, [router]);
 
