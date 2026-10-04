@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
 import { buildParadigm, isUserVerb } from '@amgi/core';
 import type { ConjugationSpec, ConjugationSubject } from '@amgi/core';
 import { useUser } from '@/components/UserContext';
@@ -85,12 +85,14 @@ export default function TenseCards({
             {open ? (
               <div className="mt-3 grid grid-cols-2 gap-x-6 font-mono text-sm">
                 {columns.map((persons, column) => (
-                  <div key={column}>
+                  // The label column is as wide as its longest label and no
+                  // wider, so the form sits right beside its person.
+                  <div key={column} className="grid grid-cols-[max-content_1fr] gap-x-3 content-start">
                     {persons.map(person => (
-                      <div key={person.id} className="flex gap-3 py-1">
-                        <span className="w-20 shrink-0" style={{ color: 'var(--color-muted)' }}>{person.label}</span>
-                        <span style={{ color: 'var(--color-text)' }}>{tense.forms[person.id]}</span>
-                      </div>
+                      <Fragment key={person.id}>
+                        <span className="py-1 whitespace-nowrap" style={{ color: 'var(--color-muted)' }}>{person.label}</span>
+                        <span className="py-1 whitespace-nowrap" style={{ color: 'var(--color-text)' }}>{tense.forms[person.id]}</span>
+                      </Fragment>
                     ))}
                   </div>
                 ))}

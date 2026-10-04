@@ -89,13 +89,21 @@ export default function TenseCards({
             {open ? (
               <View style={s.columns}>
                 {columns.map((persons, column) => (
+                  // Labels and forms are two stacks side by side rather than a
+                  // row per person: the label stack is then as wide as its
+                  // longest label and no wider, so the form sits right beside
+                  // its person. One line height keeps the two stacks level.
                   <View key={column} style={s.column}>
-                    {persons.map(person => (
-                      <View key={person.id} style={s.line}>
-                        <Text style={s.person} numberOfLines={1}>{person.label}</Text>
-                        <Text style={s.form}>{tense.forms[person.id]}</Text>
-                      </View>
-                    ))}
+                    <View>
+                      {persons.map(person => (
+                        <Text key={person.id} style={s.person} numberOfLines={1}>{person.label}</Text>
+                      ))}
+                    </View>
+                    <View style={s.forms}>
+                      {persons.map(person => (
+                        <Text key={person.id} style={s.form} numberOfLines={1}>{tense.forms[person.id]}</Text>
+                      ))}
+                    </View>
                   </View>
                 ))}
               </View>
@@ -129,11 +137,10 @@ function makeStyles(C: Palette) {
     saveText: { color: C.highlight, fontSize: 12, fontWeight: '700' },
     saveTextOn: { color: C.bg },
     columns: { flexDirection: 'row', gap: 12, marginTop: 10 },
-    column: { flex: 1 },
-    line: { flexDirection: 'row', gap: 8, paddingVertical: 4 },
-    // Wide enough for `ils/elles`, the longest label, at this size.
-    person: { width: 68, color: C.muted, fontSize: 13 },
-    form: { flex: 1, color: C.text, fontSize: 14 },
+    column: { flex: 1, flexDirection: 'row', gap: 8 },
+    forms: { flex: 1 },
+    person: { color: C.muted, fontSize: 13, lineHeight: 26 },
+    form: { color: C.text, fontSize: 14, lineHeight: 26 },
     preview: { color: C.muted, fontSize: 13, marginTop: 8 },
     note: { color: C.muted, fontSize: 12, lineHeight: 17, marginTop: 10 },
     unverified: { color: C.muted, fontSize: 11 },
