@@ -1,5 +1,5 @@
 'use client';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useUser } from '@/components/UserContext';
 import { t } from '@/lib/i18n';
 
@@ -19,11 +19,25 @@ import { t } from '@/lib/i18n';
  * Its own control rather than making the chip itself open this: the chip is a
  * link into Progress, and one target that navigates or explains depending on
  * which glyph you hit is worse than two targets.
+ *
+ * **`placement` is the caller's to say.** The same ⓘ sits in a sidebar footer
+ * and in a top bar, and no single direction is on screen in both: below the
+ * footer is off the bottom of the window, above the top bar is off the top.
  */
-export default function StreakInfo() {
+interface Props {
+  /** Which side of the ⓘ the panel opens on. */
+  placement?: 'up' | 'down';
+}
+
+/** Kept clear of the window's edges, and the panel's width is capped to match. */
+const EDGE_GAP = 8;
+
+export default function StreakInfo({ placement = 'down' }: Props) {
   const { interfaceLanguage } = useUser();
   const [open, setOpen] = useState(false);
+  const [shift, setShift] = useState(0);
   const ref = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
 
   // Dismissed by clicking away, matching the two popovers already in SideNav.
   useEffect(() => {
@@ -33,6 +47,25 @@ export default function StreakInfo() {
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
+  }, [open]);
+
+  // The panel starts at the ⓘ's left edge and is slid back by however much of
+  // it would otherwise be past the window's right edge. Measured rather than
+  // chosen per caller: in the top bar the ⓘ's distance from the edge depends on
+  // what else is in the bar, which changes with sign-in state and language.
+  useLayoutEffect(() => {
+    if (!open) return;
+    const place = () => {
+      const anchor = ref.current;
+      const panel = panelRef.current;
+      if (!anchor || !panel) return;
+      const anchorLeft = anchor.getBoundingClientRect().left;
+      const maxLeft = document.documentElement.clientWidth - panel.offsetWidth - EDGE_GAP;
+      setShift(Math.min(0, Math.max(maxLeft, EDGE_GAP) - anchorLeft));
+    };
+    place();
+    window.addEventListener('resize', place);
+    return () => window.removeEventListener('resize', place);
   }, [open]);
 
   return (
@@ -54,12 +87,13 @@ export default function StreakInfo() {
       </button>
 
       {open && (
-        // Anchored to the bottom of the button rather than the top: this sits in
-        // a sidebar footer on desktop and a top bar on mobile, and `bottom-full`
-        // would run off screen in the second.
         <div
-          className="absolute left-0 top-full mt-2 z-50 w-64 p-3 rounded-xl shadow-lg text-xs leading-relaxed"
+          ref={panelRef}
+          className={`absolute z-50 w-64 max-w-[calc(100vw-1rem)] p-3 rounded-xl shadow-lg text-xs leading-relaxed ${
+            placement === 'up' ? 'bottom-full mb-2' : 'top-full mt-2'
+          }`}
           style={{
+            left: shift,
             background: 'var(--color-surface)',
             border: '1px solid var(--color-muted)',
             color: 'var(--color-text)',
