@@ -33,7 +33,7 @@ _Merged, not yet in anyone's hands — mobile ships by build, no OTA._
   optional sign-in. Web is live on merge; mobile needs the build. The decision
   is "Onboarding does it once for real" in
   [decisions/app-shell.md](decisions/app-shell.md).
-- **Brief definition during review** — the card's one-sentence definition (on
+- **Brief definition during review** (PR #179) — the card's one-sentence definition (on
   a pack card, the pack's hint) shows under the answer after the reveal, in
   both directions. Web is live on merge; mobile needs the build. The decision
   is "The brief definition shows after the reveal" in
