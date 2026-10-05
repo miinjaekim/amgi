@@ -3,6 +3,38 @@
 Subscriptions, the launch cache, fallbacks, and why there is no local model. Newest first. Indexed from
 [status.md](../status.md).
 
+## ID tokens are verified without `firebase-admin/auth` (2026-10-05)
+
+**What.** `verifyRequestUid` no longer calls `getAuth().verifyIdToken()`. It
+calls `verifyIdToken` in `apps/web/src/lib/idToken.ts`, which checks the token
+with `jose` against Google's published keys: RS256, issued by
+`https://securetoken.google.com/<project>`, audience the project ID, not
+expired, with a subject. Those are the checks the Admin SDK made. Revocation is
+not checked, and was not before. `jose` is now a direct dependency of the web
+app; it was already installed, as a dependency of `firebase-admin`.
+
+**Why.** Importing `firebase-admin/auth` breaks every route that shares
+`firebaseAdmin.ts` — the mechanism is in [lessons.md](../lessons.md) under
+Firestore. It has now done so twice (PR #55, PR #175), and the second time it
+was live for a day because the only visible symptom was the word of the day
+missing.
+
+**What was not chosen.**
+- *Import it lazily, inside `verifyRequestUid`.* That brings the word of the
+  day and pronunciation back and leaves user-made packs answering 401 to
+  everyone, quietly, wherever the runtime still cannot load it.
+- *Change the runtime* — a newer Node, or `--experimental-require-module`. That
+  is Vercel project state rather than code, it could not be checked from here,
+  and it leaves the app one settings change away from the same outage.
+
+**⚠️ Not confirmed:** that this is what production was doing. Vercel's logs and
+its protected preview URLs were out of reach. What is established is that the
+production build, run locally with `require(esm)` switched off, returns the
+live site's status codes route for route, and returns the right ones after this
+change. A real Google-signed token has not been through the new verifier
+either; the tests sign with their own key. Making a pack on web while signed in
+is the check for both.
+
 ## Launch paints from the device, behind a splash that lets go (2026-09-22)
 
 _⚠️ **Written up after the fact, from the shipped code and the backlog item it

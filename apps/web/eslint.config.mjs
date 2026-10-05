@@ -41,6 +41,20 @@ const eslintConfig = [
       "react-hooks/immutability": "warn",
     },
   },
+  // `firebase-admin/auth` loads an ESM-only package through `require()`, which
+  // fails at module load on the deployed runtime and takes every route that
+  // shares `firebaseAdmin.ts` down with it. It has done that twice, and it
+  // cannot be seen locally. `src/lib/idToken.ts` has the whole story.
+  {
+    rules: {
+      "no-restricted-imports": ["error", {
+        paths: [{
+          name: "firebase-admin/auth",
+          message: "It breaks every firebase-admin route in production. Verify ID tokens with verifyIdToken from @/lib/idToken.",
+        }],
+      }],
+    },
+  },
 ];
 
 export default eslintConfig;

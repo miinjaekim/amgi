@@ -78,8 +78,6 @@ picker narrowed (#146). Both are written up in their Decisions entries of
 _The six below were added from Google Tasks 2026-10-05, at the priority the
 user gave. None is scoped yet beyond the user's own words._
 
-- [ ] **Word of the day isn't displaying on mobile.** Find out why.
-
 - [ ] **Add Arabic.**
 
 - [ ] **Show review times.** When a card is next due for review, or that it is
