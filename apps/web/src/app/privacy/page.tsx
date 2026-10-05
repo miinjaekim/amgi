@@ -12,7 +12,7 @@ export default function PrivacyPage() {
       <div>
         <h1 className="text-2xl font-bold mb-1">Privacy Policy</h1>
         <p className="opacity-70 text-sm">
-          Last updated: September 25, 2026 ·{" "}
+          Last updated: October 5, 2026 ·{" "}
           <Link href="/privacy/ko" className="underline">
             한국어
           </Link>
@@ -42,7 +42,10 @@ export default function PrivacyPage() {
             <strong>Learning data.</strong> Your selected native and study
             languages, saved vocabulary and flashcards (terms, translations,
             example sentences, and spaced-repetition scheduling data), and your
-            study streak and progress.
+            study streak and progress. If you make a vocabulary pack, we store
+            the pack along with the answers you gave to make it, including any
+            text you pasted in. If you add a verb in Munli, we store its
+            conjugated forms.
           </li>
           <li>
             <strong>Local preferences.</strong> Your language settings are also
@@ -60,7 +63,20 @@ export default function PrivacyPage() {
             To generate word explanations and example sentences using Google&apos;s
             Gemini AI — we send the word or phrase, optional sentence context, and
             your language settings (never your name, email, or account ID) to
-            Gemini for this purpose.
+            Gemini for this purpose. A verb you add in Munli is looked up the
+            same way: its conjugated forms come from Gemini and are saved to
+            your account.
+          </li>
+          <li>
+            To build a vocabulary pack you ask for, using Google&apos;s Gemini AI
+            with Google Search — we send your answers to the pack questions, any
+            text you pasted in, your language settings, and a list of words you
+            have already saved (up to 400), so the pack can match your level and
+            leave those words out. We never send your name, email, or account
+            ID. Our server then reads the public web pages the search found, to
+            check each word against them; those sites receive nothing about
+            you. The finished pack is saved to your account and is private to
+            you.
           </li>
           <li>
             To review writing you submit, using Google&apos;s Gemini AI — we send
@@ -83,7 +99,8 @@ export default function PrivacyPage() {
           Amgi is built on Google infrastructure. The following Google services
           process data on our behalf: Firebase Authentication and Cloud Firestore
           (sign-in and app data storage), Firebase Storage (cached pronunciation
-          audio), the Gemini API (word explanations, examples and writing review), and Google Cloud
+          audio), the Gemini API (word explanations, examples, verb forms, writing review, and
+          vocabulary packs, which also use Google Search through Gemini), and Google Cloud
           Text-to-Speech (pronunciation audio). See{" "}
           <a
             href="https://policies.google.com/privacy"
@@ -113,7 +130,7 @@ export default function PrivacyPage() {
           your account at any time from Settings, on the web or in the mobile
           app. Deletion is immediate and permanent: it removes your account,
           every saved card in every language, your review history and streak,
-          and your settings. It cannot be undone, so if you want a copy of your
+          the verbs you added, and your settings. It cannot be undone, so if you want a copy of your
           vocabulary, export it first from the Your data section of Settings,
           which downloads every card in every language.
         </p>
@@ -122,6 +139,12 @@ export default function PrivacyPage() {
           It is stored under a name derived from the word itself rather than
           from your account, contains no personal information, and is shared by
           everyone studying that word.
+        </p>
+        <p>
+          Vocabulary packs you made are not yet removed automatically when you
+          delete your account. You can delete a pack yourself from its page
+          under Packs before you delete your account, or email us and
+          we&apos;ll remove them.
         </p>
         <p>
           If you would rather we handled it, or you can no longer sign in, email{" "}

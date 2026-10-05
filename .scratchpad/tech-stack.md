@@ -58,6 +58,15 @@ naming them, so adding a language needs no change here. It does not match UIDs
 nested in arrays or maps; ours is a flat top-level field, so that limit does not
 bite.
 
+⚠️ **User-made packs are not covered** (found 2026-10-05, while bringing the
+privacy policy up to date). A pack is a top-level `userPacks` document whose
+owner is in `ownerUid`, not `uid`, and it is not under `users/{UID}`, so neither
+the path nor the search field above matches it. As configured here, deleting an
+account leaves that user's packs behind, with the brief and any pasted material
+in them. The policy says so in as many words until this is fixed. Not verified
+against the console, which may differ from this table. A verb added in Munli is
+fine: it is stored in the preferences doc.
+
 ## Mobile (`apps/mobile`)
 
 - **Framework:** Expo SDK 57 / React Native 0.86, Expo Router (file-based)

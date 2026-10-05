@@ -125,12 +125,15 @@ picks one unprompted, as `yue-HK` does for 行.
 - **The Firestore rule and index for `cards_arabic` are console state.** The
   user added the rule on 2026-10-05 and the composite indexes were building at
   the time. Saving an Arabic card was not exercised by the building session.
-- **The normal-use case is unmeasured.** The 102 pairs take their meanings from
-  Wiktionary, rare senses included. What a learner actually does is pick from
-  the app's own list of meanings for an ambiguous word, which should be easier.
-  The user asked for that number alongside the decision to ship; the run was
-  stopped at its first call because the Gemini prepaid credits ran out
-  (2026-10-05), and it is owed.
+- **The normal-use case is unmeasured, and will stay so.** The 102 pairs take
+  their meanings from Wiktionary, rare senses included. What a learner actually
+  does is pick from the app's own list of meanings for an ambiguous word, which
+  should be easier. A run of that case was planned and stopped at its first
+  call when the Gemini prepaid credits ran out. **The user dropped it on
+  2026-10-05**: they do not know Arabic well enough to check the result
+  themselves, will go by what users report, and do not want bulk calls made to
+  the Gemini API. Feedback from users replaces it. Do not run it, or any other
+  batch of model calls on the production key, without the user asking.
 - **Nothing was seen rendered.** Right-to-left layout on web and mobile, the
   tag beside the reading, and typed answers in Arabic have not been looked at
   in a browser or on a device.
