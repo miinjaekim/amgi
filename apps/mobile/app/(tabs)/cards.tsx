@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useFocusEffect } from 'expo-router';
 import {
   View, Text, TextInput, TouchableOpacity, FlatList,
   StyleSheet, Alert,
@@ -12,7 +13,7 @@ import {
 import type { Flashcard } from '../../src/services/firestore';
 import { readCachedLibrary, writeCachedLibrary } from '../../src/services/offlineReview';
 import { SNAPSHOT_WRITE_DEBOUNCE_MS } from '../../src/services/reviewSync';
-import { t, DEFAULT_DECK_FILTER, buildDeckFilters, filterCardsByDeck, getStudyLanguageConfig, getBackSideConfig, getStudyLangSide, getBackSide } from '@amgi/core';
+import { t, DEFAULT_DECK_FILTER, buildDeckFilters, cardReviewStatus, filterCardsByDeck, reviewStatusLabel, getStudyLanguageConfig, getBackSideConfig, getStudyLangSide, getBackSide } from '@amgi/core';
 import type { CardSideField, DeckFilterId } from '@amgi/core';
 import { useTheme } from '../../src/context/ThemeContext';
 import { useFloatingTabBarHeight } from '../../src/components/FloatingTabBar';
@@ -36,6 +37,10 @@ export default function CardsScreen() {
   const backConfig = getBackSideConfig(studyLanguage, deckNativeLanguage);
   const [allCards, setAllCards] = useState<Flashcard[]>([]);
   const [loading, setLoading] = useState(false);
+  // Re-read on focus, not once: a tab stays mounted for as long as the app is
+  // open, and "tomorrow" read on Monday is wrong on Tuesday.
+  const [now, setNow] = useState(() => new Date());
+  useFocusEffect(useCallback(() => { setNow(new Date()); }, []));
   const [search, setSearch] = useState('');
   const [sortKey, setSortKey] = useState<SortKey>('newest');
   const [filterKey, setFilterKey] = useState<FilterKey>('active');
@@ -350,7 +355,11 @@ export default function CardsScreen() {
                   <Text style={s.cardEnglish}>{getBackSide(card, deckNativeLanguage)}</Text>
                   <Text style={s.cardDate}>
                     {t(interfaceLanguage, 'savedAt')} {new Date(card.createdAt).toLocaleDateString()}
-                    {card.archived ? `  ·  ${t(interfaceLanguage, 'cardsFilterArchived')}` : ''}
+                    {/* An archived card is out of review, so it has no place
+                        in the schedule to report. */}
+                    {card.archived
+                      ? `  ·  ${t(interfaceLanguage, 'cardsFilterArchived')}`
+                      : `  ·  ${reviewStatusLabel(interfaceLanguage, cardReviewStatus(card, now), now)}`}
                   </Text>
                 </View>
               </TouchableOpacity>

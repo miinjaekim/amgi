@@ -683,6 +683,14 @@ const translations = {
     goToLearnPage: 'Go to Learn to save your first card →',
     allCaughtUp: 'You\'re all caught up!',
     nextReviewOn: 'Next review:',
+    // A card's place in the schedule, on My Cards and in card detail. The
+    // last three complete `nextReviewOn`: "Next review: in 3 days".
+    cardStatusNew: 'New card',
+    cardStatusNotReviewed: 'Not reviewed yet',
+    cardStatusDue: 'Due now',
+    cardStatusToday: 'today',
+    cardStatusTomorrow: 'tomorrow',
+    cardStatusInDays: 'in {days} days',
     reviewCompleteMessage: 'Good work. Head to Learn to keep building your vocabulary.',
     // Cards page
     cardsPageTitle: 'My Cards',
@@ -1155,6 +1163,12 @@ const translations = {
     goToLearnPage: '학습 페이지에서 첫 카드를 저장해보세요 →',
     allCaughtUp: '모두 완료했습니다!',
     nextReviewOn: '다음 복습:',
+    cardStatusNew: '새 카드',
+    cardStatusNotReviewed: '아직 복습 전',
+    cardStatusDue: '지금 복습할 차례',
+    cardStatusToday: '오늘',
+    cardStatusTomorrow: '내일',
+    cardStatusInDays: '{days}일 후',
     reviewCompleteMessage: '수고했습니다. 학습 페이지에서 어휘를 계속 늘려보세요.',
     // Cards page
     navCards: '카드',
