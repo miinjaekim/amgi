@@ -15,7 +15,7 @@ Housekeeping in [backlog.md](backlog.md)._
 - **2.1.0 is build 18, live in TestFlight and approved for external testing**
   (2026-09-28). External testers can be invited without another review as long
   as the version doesn't change.
-- **2.2.0 is prepared and not yet cut**: `release/2.2.0` bumps the version and
+- **2.2.0 is prepared and not yet cut**: `release/2.2.0` (PR #191) bumps the version and
   rewrites the TestFlight copy, and stops before `eas build`. It carries the
   twelve PRs under Queued for the next build in [backlog.md](backlog.md); web
   already has all of them. Pre-flight on 2026-10-05: no native module or
