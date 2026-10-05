@@ -58,7 +58,7 @@ _Merged, not yet in anyone's hands — mobile ships by build, no OTA._
   [decisions/review.md](decisions/review.md).
 
 - **Munli's Topics and Progress screens are headed by their tab names** (PR
-  #PRNUM) — mobile only. The bar is icon-only, so the heading is where a tab is
+  #185) — mobile only. The bar is icon-only, so the heading is where a tab is
   named; Topics said "Practice set" and Progress "Grammar practice", which are
   web's page titles. The reading of the task is in `decisions/munli.md`
   (2026-10-05). **Not seen on a device.**
