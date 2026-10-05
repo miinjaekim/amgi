@@ -130,7 +130,8 @@ export default function PrivacyPage() {
           your account at any time from Settings, on the web or in the mobile
           app. Deletion is immediate and permanent: it removes your account,
           every saved card in every language, your review history and streak,
-          the verbs you added, and your settings. It cannot be undone, so if you want a copy of your
+          the vocabulary packs you made, the verbs you added, and your
+          settings. It cannot be undone, so if you want a copy of your
           vocabulary, export it first from the Your data section of Settings,
           which downloads every card in every language.
         </p>
@@ -139,12 +140,6 @@ export default function PrivacyPage() {
           It is stored under a name derived from the word itself rather than
           from your account, contains no personal information, and is shared by
           everyone studying that word.
-        </p>
-        <p>
-          Vocabulary packs you made are not yet removed automatically when you
-          delete your account. You can delete a pack yourself from its page
-          under Packs before you delete your account, or email us and
-          we&apos;ll remove them.
         </p>
         <p>
           If you would rather we handled it, or you can no longer sign in, email{" "}
