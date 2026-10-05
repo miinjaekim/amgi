@@ -83,6 +83,9 @@ dictionary's. Mechanically, 279 of 306 answers are some listed vowelling of the
 spelling, the front was the word asked for in 306 of 306, and no front carried
 a mark.
 
+**The user chose to ship on these numbers** (2026-10-05, "go with (a)"): the
+branch as it stands, with the label.
+
 ⚠️ **So two things are true of what ships.** What a learner sees nearly always
 agrees with itself. And choosing a rarer meaning does not always get that
 meaning's card. The second is a property of the shared lookup prompt, not of
@@ -119,9 +122,15 @@ picks one unprompted, as `yue-HK` does for 行.
 
 ### Not done, and not checked
 
-- **The Firestore rule and index for `cards_arabic` are console state** and
-  were not added by this change. Until they are, saving an Arabic card fails
-  `permission-denied`. See [data-model.md](../data-model.md).
+- **The Firestore rule and index for `cards_arabic` are console state.** The
+  user added the rule on 2026-10-05 and the composite indexes were building at
+  the time. Saving an Arabic card was not exercised by the building session.
+- **The normal-use case is unmeasured.** The 102 pairs take their meanings from
+  Wiktionary, rare senses included. What a learner actually does is pick from
+  the app's own list of meanings for an ambiguous word, which should be easier.
+  The user asked for that number alongside the decision to ship; the run was
+  stopped at its first call because the Gemini prepaid credits ran out
+  (2026-10-05), and it is owed.
 - **Nothing was seen rendered.** Right-to-left layout on web and mobile, the
   tag beside the reading, and typed answers in Arabic have not been looked at
   in a browser or on a device.
