@@ -28,6 +28,12 @@ _Merged, not yet in anyone's hands — mobile ships by build, no OTA._
 - **Cantonese** (PR #177) — an eleventh deck, with Jyutping checked against a
   dictionary and `yue-HK` audio. Web is live on merge; mobile needs the build.
   The security rule and both composite indexes were added 2026-10-04.
+- **Regular verbs you keep missing are drawn more often** (PR #184) — each
+  regular verb has a miss count, and it weighs which verb a pattern is asked
+  through (`1 + misses`, capped at 5). What is asked is still what is due. The
+  exception to "nothing here adapts to the learner" is in `decisions/munli.md`
+  (2026-10-05). Web is live on merge; mobile needs the build. The user
+  tested it in Expo Go 2026-10-05.
 - **Users add their own French verbs to Munli** (PR #182) — Topics has one
   *Verbs* row; inside it, a row per pattern and per irregular verb, like the
   Packs list, each opening a card per tense with its own Save, with an *Add a
@@ -67,27 +73,6 @@ whether `faire` joins the three sourced irregular verbs (#150), and whether a
 practice session should cover several tenses at once again, which the section
 picker narrowed (#146). Both are written up in their Decisions entries of
 2026-09-22.
-
-- [ ] **Regular verbs the user keeps missing are drawn more often** — PR 2 of
-      *Users add their own French verbs to Munli*; adding a verb is PR #182,
-      queued above. The user's idea: count how often each regular verb is got
-      wrong and let that decide how often it turns up as its group's vehicle.
-      One count per user per verb, across tenses: +1 for each missed box asked
-      through that verb, cleared once a round through it has no misses (the
-      box tally's own rule). Built-in vehicles count too, not only user-added
-      ones. The counts sit beside `conjugationVerbs` on the user document, in
-      a map keyed the same way (`conjugationVerbKey`).
-      ⚠️ **It biases the draw and nothing else.** The 2026-09-22 rework removed
-      `pickPerson`'s miss-weighted draw and left `misses` as report-only, and
-      `decisions/munli.md` says "nothing here adapts to the learner". This is
-      a deliberate exception to that, and it holds because the schedule is
-      untouched: a box is still asked because it is due, and the count only
-      chooses which verb it is asked through. Every vehicle stays drawable.
-      The draw stays a pure function of a nonce and a progress snapshot, done
-      at queue-build time. Write the exception into `decisions/munli.md` when
-      it is built.
-      Branch: `scripts/next-task.sh feat/munli-weighted-vehicle-draw`, once
-      #182 is merged.
 
 ## Medium
 
