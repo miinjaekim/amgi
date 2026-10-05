@@ -42,7 +42,10 @@ export default function MunliProgressScreen() {
     <SafeAreaView style={s.safe} edges={['top']}>
       <ProgressHeader />
       <ScrollView contentContainerStyle={s.content}>
-        <Text style={s.title}>{t(interfaceLanguage, 'munliProgressTitle')}</Text>
+        {/* ⚠️ The tab's name as web's nav has it, not web's page title
+            ("Grammar practice"): the bar is icon-only, so this is the only
+            place the tab is named. */}
+        <Text style={s.title}>{t(interfaceLanguage, 'navProgress')}</Text>
 
         {/* ⚠️ Waiting is not the same as having none: an absent snapshot
             falls back to the default practice set with everything due, which

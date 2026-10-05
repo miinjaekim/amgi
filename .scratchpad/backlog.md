@@ -57,6 +57,12 @@ _Merged, not yet in anyone's hands — mobile ships by build, no OTA._
   is "The brief definition shows after the reveal" in
   [decisions/review.md](decisions/review.md).
 
+- **Munli's Topics and Progress screens are headed by their tab names** (PR
+  #PRNUM) — mobile only. The bar is icon-only, so the heading is where a tab is
+  named; Topics said "Practice set" and Progress "Grammar practice", which are
+  web's page titles. The reading of the task is in `decisions/munli.md`
+  (2026-10-05). **Not seen on a device.**
+
 - **Settings as a list** (PR #180) — mobile only. Settings opens on the
   account and eight rows; each pushes its own screen, and *Switch mode* opens
   the mode sheet. Account deletion moved to Settings → Account, and the review
@@ -75,7 +81,7 @@ practice session should cover several tenses at once again, which the section
 picker narrowed (#146). Both are written up in their Decisions entries of
 2026-09-22.
 
-_The six below were added from Google Tasks 2026-10-05, at the priority the
+_The five below were added from Google Tasks 2026-10-05, at the priority the
 user gave. None is scoped yet beyond the user's own words._
 
 - [ ] **Word of the day isn't displaying on mobile.** Find out why.
@@ -84,8 +90,6 @@ user gave. None is scoped yet beyond the user's own words._
 
 - [ ] **Show review times.** When a card is next due for review, or that it is
       a new card.
-
-- [ ] **Munli: rename the mobile tabs to match web.**
 
 - [ ] **Munli: change the themes.** The user's words: "It feels like I'm
       looking at the screen from underwater." The themes as they stand are
