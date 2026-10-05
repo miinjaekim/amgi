@@ -26,27 +26,28 @@ already were. Web is untouched: it keeps its page titles, and `verbsTitle` and
 **This is a reading of nine words, not a confirmed scope.** If the user meant
 something else by "tabs" (the icons, or visible labels under them), this entry
 is the thing to revise.
-## Pressing the Saved tab returns to the shelves, like every other tab (2026-10-05)
+## A second tap on the Saved tab returns to the shelves (2026-10-05)
 
 **The user's task**: "clicking the Saved tab takes you to the saved card page
 home." Read as a request, not a report, because **mobile did not do it**:
 Saved's three levels (kind → item → detail) are local state, the route never
 changes, and the screen had no `tabPress` listener. Tapping Saved from inside a
-detail did nothing, and leaving for another tab and coming back returned you to
-the detail.
+detail did nothing.
 
-**The rule already existed.** "Pressing a tab returns to that tab's home" was
-decided 2026-09-22 and built for Practice. Saved became an inventory with
-levels in the same pass and never got the listener. This closes that gap rather
-than deciding anything new.
+**It resets only on a re-tap, on the user's call**: *"i want it to follow how
+tapping tabs on amgi works. reset only after re-tap."* Pressing Saved while
+already on it returns to the shelves; arriving from another tab leaves you on
+the tense you were reading. That is the rule Amgi's Learn and Review follow.
 
-- **It resets whether or not Saved is focused**, as Practice does, so arriving
-  from another tab lands on the shelves too. That is what web does: its nav is
-  plain `<a href>`, so a click on Saved is a document navigation and the state
-  is gone either way. Amgi's Learn and Review reset only on a re-tap, because
-  a lookup or an open pack there is work worth keeping; a tense you were
-  reading is not.
-- **Web needed nothing**, for the reason above.
+⚠️ **This differs from Practice on purpose.** Practice returns to its picker on
+every press ("Pressing a tab returns to that tab's home", 2026-09-22), and the
+first version of this change copied that. The user's call was about Saved
+only, so Practice is unchanged. If the two should agree, that is a question for
+the user, not something to tidy.
+
+**Web is untouched, and now differs from mobile**: its nav is plain `<a href>`,
+so a click on Saved from anywhere is a document navigation and opens on the
+shelves.
 
 ## A verb you keep missing is drawn more often, and that is all it changes (2026-10-05)
 

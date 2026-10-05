@@ -53,16 +53,20 @@ export default function SavedScreen() {
   const [chosenTense, setChosenTense] = useState<string | null>(null);
 
   /**
-   * Pressing the Saved tab comes back to the shelves.
+   * A second tap on the Saved tab comes back to the shelves.
    *
-   * ⚠️ **The rule Practice has had since 2026-09-22, which this screen
-   * missed**: the levels below are local state, so the route never changes and
-   * nothing but the back chevron led out of a detail — twice, from the bottom.
-   * `tabPress` fires whether or not this screen is focused, so arriving from
-   * another tab lands on the shelves too, which is what web's `<a href>` does.
+   * ⚠️ **Only a re-tap, on the user's call of 2026-10-05**: "follow how
+   * tapping tabs on amgi works. reset only after re-tap." Arriving from another
+   * tab leaves you on the tense you were reading, the rule Amgi's Learn and
+   * Review follow. Practice resets on every press, and that difference is
+   * deliberate: the call was about Saved.
+   *
+   * The levels below are local state, so the route never changes and a router
+   * hook cannot see any of this.
    */
   const navigation = useNavigation<BottomTabNavigationProp<Record<string, undefined>>>();
   useEffect(() => navigation.addListener('tabPress', () => {
+    if (!navigation.isFocused()) return;
     setOpenKind(null);
     setOpenSubject(null);
     setChosenTense(null);

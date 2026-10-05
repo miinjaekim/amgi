@@ -62,10 +62,10 @@ _Merged, not yet in anyone's hands — mobile ships by build, no OTA._
   named; Topics said "Practice set" and Progress "Grammar practice", which are
   web's page titles. The reading of the task is in `decisions/munli.md`
   (2026-10-05). **Not seen on a device.**
-- **Pressing Munli's Saved tab returns to the shelves** (PR #186) — mobile
-  only. From inside a kind or a detail, and when coming back from another tab.
-  The rule is Practice's, from 2026-09-22; Saved had missed it. Web already
-  behaves this way. **Not seen on a device.**
+- **A second tap on Munli's Saved tab returns to the shelves** (PR #186) —
+  mobile only. Only a re-tap, as on Amgi's Learn and Review; coming back from
+  another tab keeps your place. Practice still resets on every press. The
+  call is in `decisions/munli.md` (2026-10-05). **Not seen on a device.**
 
 - **Settings as a list** (PR #180) — mobile only. Settings opens on the
   account and eight rows; each pushes its own screen, and *Switch mode* opens
