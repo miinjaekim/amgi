@@ -26,6 +26,28 @@ already were. Web is untouched: it keeps its page titles, and `verbsTitle` and
 **This is a reading of nine words, not a confirmed scope.** If the user meant
 something else by "tabs" (the icons, or visible labels under them), this entry
 is the thing to revise.
+## A second tap on the Saved tab returns to the shelves (2026-10-05)
+
+**The user's task**: "clicking the Saved tab takes you to the saved card page
+home." Read as a request, not a report, because **mobile did not do it**:
+Saved's three levels (kind → item → detail) are local state, the route never
+changes, and the screen had no `tabPress` listener. Tapping Saved from inside a
+detail did nothing.
+
+**It resets only on a re-tap, on the user's call**: *"i want it to follow how
+tapping tabs on amgi works. reset only after re-tap."* Pressing Saved while
+already on it returns to the shelves; arriving from another tab leaves you on
+the tense you were reading. That is the rule Amgi's Learn and Review follow.
+
+⚠️ **This differs from Practice on purpose.** Practice returns to its picker on
+every press ("Pressing a tab returns to that tab's home", 2026-09-22), and the
+first version of this change copied that. The user's call was about Saved
+only, so Practice is unchanged. If the two should agree, that is a question for
+the user, not something to tidy.
+
+**Web is untouched, and now differs from mobile**: its nav is plain `<a href>`,
+so a click on Saved from anywhere is a document navigation and opens on the
+shelves.
 
 ## A verb you keep missing is drawn more often, and that is all it changes (2026-10-05)
 

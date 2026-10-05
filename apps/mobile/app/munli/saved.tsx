@@ -1,7 +1,9 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from 'expo-router';
+import type { BottomTabNavigationProp } from 'expo-router/tabs';
 import { daysUntil, getStudyLanguageConfig, listSavedKinds, setEnrolled, t } from '@amgi/core';
 import { useUser } from '../../src/context/UserContext';
 import { useTheme } from '../../src/context/ThemeContext';
@@ -49,6 +51,26 @@ export default function SavedScreen() {
   const [openSubject, setOpenSubject] = useState<string | null>(null);
   /** `null` reads as "the first tense worth opening" — see `shownTense`. */
   const [chosenTense, setChosenTense] = useState<string | null>(null);
+
+  /**
+   * A second tap on the Saved tab comes back to the shelves.
+   *
+   * ⚠️ **Only a re-tap, on the user's call of 2026-10-05**: "follow how
+   * tapping tabs on amgi works. reset only after re-tap." Arriving from another
+   * tab leaves you on the tense you were reading, the rule Amgi's Learn and
+   * Review follow. Practice resets on every press, and that difference is
+   * deliberate: the call was about Saved.
+   *
+   * The levels below are local state, so the route never changes and a router
+   * hook cannot see any of this.
+   */
+  const navigation = useNavigation<BottomTabNavigationProp<Record<string, undefined>>>();
+  useEffect(() => navigation.addListener('tabPress', () => {
+    if (!navigation.isFocused()) return;
+    setOpenKind(null);
+    setOpenSubject(null);
+    setChosenTense(null);
+  }), [navigation]);
 
   const shelves = useMemo(
     () => (spec && enrolment ? listSavedKinds(spec, enrolment, progress) : []),
