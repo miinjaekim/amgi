@@ -15,14 +15,16 @@ Housekeeping in [backlog.md](backlog.md)._
 - **2.1.0 is build 18, live in TestFlight and approved for external testing**
   (2026-09-28). External testers can be invited without another review as long
   as the version doesn't change.
-- **2.2.0 is prepared and not yet cut**: `release/2.2.0` (PR #191) bumps the version and
-  rewrites the TestFlight copy, and stops before `eas build`. It carries the
+- **2.2.0 is build 19, built and not yet submitted** (2026-10-05), cut from
+  `4f13448` on `main`, the merge of `release/2.2.0` (PR #191). It carries the
   twelve PRs under Queued for the next build in [backlog.md](backlog.md); web
-  already has all of them. Pre-flight on 2026-10-05: no native module or
-  `app.json` native config has changed since 2.1.0, introspect came back
-  `entitlements: {}`, the review notes are 3993 of 4000 characters, and the
-  copy has no character Apple has not already accepted except Hangul
-  syllables. Step 1's device pass has not been done.
+  already has all of them. Pre-flight: no native module or `app.json` native
+  config has changed since 2.1.0, introspect came back `entitlements: {}`, the
+  review notes are 3993 of 4000 characters, and the copy has no character Apple
+  has not already accepted except Hangul syllables. The user smoke-tested in
+  Expo Go before the cut. The build ran without auto-submit, so it is uploaded
+  with `eas submit`. Testers stay on build 18 until approval; the queue turns
+  over then, not now.
 - **Web deploys on merge**, so everything on `main` is live there.
 - **`/api/grammar/exercise` stays deployed** for any device still on 1.3.0,
   which has the grammar UI compiled in. The deletion is under Housekeeping in
@@ -101,6 +103,7 @@ No OTA, so every mobile change reaches users through one of these.
 
 | Version | Build | Date | Cut from |
 |---|---|---|---|
+| 2.2.0 | 19 | 2026-10-05 | `4f13448` on `main`, the merge of `release/2.2.0` (PR #191). Built without auto-submit; not yet submitted |
 | 2.1.0 | 18 | 2026-09-27 | `d1de37e` on `release/2.1.0` (PR #176). External testing approved 09-28 |
 | 2.0.0 | 17 | 2026-09-23 | `69476aa` on `release/1.8.0`. Approved 09-23. The branch name says 1.8.0 because it was cut before the 2.0.0 call |
 | 1.7.0 | 16 | 2026-09-19 | `cb7c19c` on `release/1.7.0`. External approval never reported |
