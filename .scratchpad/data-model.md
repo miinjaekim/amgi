@@ -113,6 +113,7 @@ not use it.
 - `cards_japanese` — Japanese deck
 - `cards_chinese_traditional` — Traditional Chinese (Mandarin) deck
 - `cards_cantonese` — Cantonese deck (Hong Kong, Traditional characters)
+- `cards_arabic` — Arabic deck (Modern Standard, fronts unvowelled)
 - Future languages follow the same `cards_{language}` pattern
 
 **Traditional vs Simplified Chinese are separate study languages**, not one

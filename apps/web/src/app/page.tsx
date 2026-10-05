@@ -34,6 +34,9 @@ const EXAMPLE_TERMS: Record<string, string[]> = {
   Japanese: ['木漏れ日', '積ん読', 'nostalgia', 'awkward', '侘寂'],
   TraditionalChinese: ['緣分', '撒嬌', 'nostalgia', 'awkward', '將就'],
   Cantonese: ['執生', '得閒', 'nostalgia', 'awkward', '肉赤'],
+  // Approved by the user 2026-10-05, in this order. Unvowelled, as a card's
+  // front is.
+  Arabic: ['طرب', 'غربة', 'longing', 'awkward', 'عين'],
   // Single characters, in the traditional forms the 어문회 list assigns —
   // 學, not 学. Nothing here is an English word, unlike every row above:
   // typing "water" into a hanja deck asks for a translation, and the deck
@@ -412,6 +415,7 @@ export default function Home() {
       <form onSubmit={handleSubmit} className="space-y-4 mt-8">
         <div className="flex gap-2">
           <input
+              dir="auto"
             type="text"
             value={term}
             onChange={(e) => setTerm(e.target.value)}
@@ -687,7 +691,7 @@ export default function Home() {
                   return (
                     <li key={i} className="text-[var(--color-text)] opacity-80">
                       {sides.study && (
-                        <div>
+                        <div dir="auto">
                           {sides.study}
                           <PronounceButton text={sides.study} studyLanguage={studyLanguage} kind="sentence" size="sm" className="ml-1 align-middle" />
                         </div>
@@ -734,6 +738,7 @@ export default function Home() {
             ) : (
               <form onSubmit={handleRegenerate} className="flex gap-2">
                 <input
+              dir="auto"
                   type="text"
                   value={contextInput}
                   onChange={e => setContextInput(e.target.value)}

@@ -51,7 +51,7 @@ Grammar lives in a second mode, Munli: practise verb conjugation a tense at a ti
 
 The explanations are AI-generated, so they can be wrong. Telling me when they are is the most useful thing you can do in this beta.
 
-Study languages: English, Japanese, Traditional Chinese, Cantonese, Swedish, French, Spanish, Kikuyu, Swahili, Korean, Hanja (the Chinese characters used in Korean)
+Study languages: English, Japanese, Traditional Chinese, Cantonese, Arabic, Swedish, French, Spanish, Kikuyu, Swahili, Korean, Hanja (the Chinese characters used in Korean)
 Explanation language: chosen per study language (Korean or English)
 Display language: Korean or English (change in Settings)
 

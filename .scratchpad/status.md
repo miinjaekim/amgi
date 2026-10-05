@@ -233,6 +233,7 @@ Audio, playback speed, the pronunciation aid, pitch accent.
 
 Per-language calls: Spanish, Kikuyu, Swahili, Hanja, and a native language per deck.
 
+- [Arabic is Modern Standard, unvowelled on the front, with a reading nobody checked (2026-10-05)](decisions/languages.md#arabic-is-modern-standard-unvowelled-on-the-front-with-a-reading-nobody-checked-2026-10-05)
 - [Cantonese is its own deck, and the model needed no persuading (2026-10-04)](decisions/languages.md#cantonese-is-its-own-deck-and-the-model-needed-no-persuading-2026-10-04)
 - [A native language per deck, and an interface language beside it (2026-09-12)](decisions/languages.md#a-native-language-per-deck-and-an-interface-language-beside-it-2026-09-12)
 - [A phrase on the Hanja deck stays a list of characters (2026-09-09)](decisions/languages.md#a-phrase-on-the-hanja-deck-stays-a-list-of-characters-2026-09-09)

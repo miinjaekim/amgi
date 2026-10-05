@@ -8,6 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useNavigation } from 'expo-router';
 import type { BottomTabNavigationProp } from 'expo-router/tabs';
 import { useUser } from '../../src/context/UserContext';
+import { rtlInline, rtlLine } from '../../src/rtl';
 import { useCardEnrichment } from '../../src/hooks/useCardEnrichment';
 import {
   archiveFlashcard, updateFlashcardFields, subscribeToActiveUserFlashcards,
@@ -1395,12 +1396,12 @@ export default function ReviewScreen() {
               // translate a word they could no longer see. Before the reveal
               // there is nothing to scroll, so there is nothing to scroll away.
               <>
-                <Text style={s.frontText}>{frontText}</Text>
+                <Text style={[s.frontText, rtlInline(frontText)]}>{frontText}</Text>
                 <TextInput
                   // Remounted per card: `autoFocus` fires on mount only, and
                   // this input holds the same slot from one card to the next.
                   key={index}
-                  style={s.typedInput}
+                  style={[s.typedInput, rtlLine(typedAnswer)]}
                   value={typedAnswer}
                   onChangeText={setTypedAnswer}
                   // The submit path whenever the keyboard is up, since 확인 is
@@ -1431,7 +1432,7 @@ export default function ReviewScreen() {
                 keyboardShouldPersistTaps="handled"
               >
                 <View style={s.termRow}>
-                  <Text style={[s.frontText, s.rowText]}>{frontText}</Text>
+                  <Text style={[s.frontText, s.rowText, rtlInline(frontText)]}>{frontText}</Text>
                   {isFront && pronounceButton}
                 </View>
 
@@ -1443,7 +1444,7 @@ export default function ReviewScreen() {
                     {isFront && readingBadge}
                     <View style={s.divider} />
                     <View style={s.termRow}>
-                      <Text style={[s.backText, s.rowText]}>{backText}</Text>
+                      <Text style={[s.backText, s.rowText, rtlInline(backText)]}>{backText}</Text>
                       {!isFront && pronounceButton}
                     </View>
                     {hanjaGloss && <Text style={s.hanjaGloss}>{hanjaGloss}</Text>}
@@ -1506,7 +1507,7 @@ export default function ReviewScreen() {
                               return (
                                 <View key={i} style={s.exampleItem}>
                                   <View style={s.exampleStudyRow}>
-                                    <Text style={[s.exampleStudy, s.rowText]}>{sides.study}</Text>
+                                    <Text style={[s.exampleStudy, s.rowText, rtlLine(sides.study)]}>{sides.study}</Text>
                                     {/* Offline-gated for the same reason as the
                                         term's button above. */}
                                     {isOnline && (

@@ -267,6 +267,7 @@ export default function CardsPage() {
           {/* Search */}
           <div className="mb-4">
             <input
+              dir="auto"
               type="text"
               value={search}
               onChange={e => setSearch(e.target.value)}
@@ -431,12 +432,14 @@ export default function CardsPage() {
                       {editingCardId === card.id && editDraft ? (
                         <div className="space-y-2">
                           <input
+              dir="auto"
                             type="text"
                             value={editDraft.studySide}
                             onChange={e => setEditDraft(d => d ? { ...d, studySide: e.target.value } : d)}
                             className="w-full p-2 rounded-lg bg-[var(--color-bg)] border border-[var(--color-muted)] text-[var(--color-text)]"
                           />
                           <input
+              dir="auto"
                             type="text"
                             value={editDraft.backSide}
                             onChange={e => setEditDraft(d => d ? { ...d, backSide: e.target.value } : d)}
@@ -464,10 +467,10 @@ export default function CardsPage() {
                             className="w-full text-left hover:bg-[var(--color-muted)]/10 rounded-lg -mx-1 px-1 py-1 transition-colors"
                             onClick={() => selectMode && card.id ? toggleSelect(card.id) : setDetailCard(card)}
                           >
-                            <div className="font-semibold text-lg text-[var(--color-text)]">
+                            <div dir="auto" className="font-semibold text-lg text-[var(--color-text)]">
                               {highlight(cardOrder === 'korean-first' ? getStudySide(card) : getBackSide(card, deckNativeLanguage), search)}
                             </div>
-                            <div className="text-[var(--color-highlight)] text-base">
+                            <div dir="auto" className="text-[var(--color-highlight)] text-base">
                               {highlight(cardOrder === 'korean-first' ? getBackSide(card, deckNativeLanguage) : getStudySide(card), search)}
                             </div>
                           </button>

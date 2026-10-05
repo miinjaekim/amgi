@@ -48,6 +48,7 @@ describe('getBackSideConfig', () => {
       Japanese: 'english',
       TraditionalChinese: 'english',
       Cantonese: 'english',
+      Arabic: 'english',
       English: 'korean',
       // Registered after the table was replaced, so this line extends it rather
       // than reproducing it — there are no pre-rule Spanish cards to protect.

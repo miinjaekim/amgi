@@ -33,6 +33,7 @@ export type StudyLanguage =
   | 'Japanese'
   | 'TraditionalChinese'
   | 'Cantonese'
+  | 'Arabic'
   | 'Spanish'
   | 'Kikuyu'
   | 'Swahili'
@@ -52,6 +53,7 @@ export type FieldLabelKey =
   | 'labelJapanese'
   | 'labelTraditionalChinese'
   | 'labelCantonese'
+  | 'labelArabic'
   | 'labelSpanish'
   | 'labelKikuyu'
   | 'labelSwahili'
@@ -65,6 +67,7 @@ export type CardSideField =
   | 'japanese'
   | 'traditionalChinese'
   | 'cantonese'
+  | 'arabic'
   | 'spanish'
   | 'kikuyu'
   | 'swahili'
@@ -123,6 +126,20 @@ export interface StudyLanguageConfig {
    * those is a line here if that changes.
    */
   ttsShortVoiceName?: string;
+  /**
+   * The longest text, in letters, that goes to `ttsShortVoiceName`. Absent
+   * means 1 — a lone character, which is all the field was written for.
+   *
+   * Arabic is why it is a number. Its two-letter words are ordinary cards (لا,
+   * في, هل) and Chirp 3: HD went silent on them the way it does on a lone kana.
+   */
+  ttsShortMaxLetters?: number;
+  /**
+   * Written right to left. The interface stays left to right; this is what a
+   * surface reads to right-align a line of the study language and to set its
+   * direction, so punctuation lands at the correct end.
+   */
+  rtl?: boolean;
 }
 
 export const STUDY_LANGUAGE_CONFIGS: Record<StudyLanguage, StudyLanguageConfig> = {
@@ -305,6 +322,35 @@ export const STUDY_LANGUAGE_CONFIGS: Record<StudyLanguage, StudyLanguageConfig> 
     // What the sizes do not say is *which reading* was spoken. 行 is haang4,
     // hang4 or hong4 and the voice picks one unprompted; nothing in the
     // response names it. Unverified by ear as of 2026-10-04.
+  },
+  Arabic: {
+    code: 'Arabic',
+    label: 'Arabic',
+    labelNative: 'العربية',
+    collection: 'cards_arabic',
+    locale: 'ar',
+    studyField: 'arabic',
+    studyLabelKey: 'labelArabic',
+    rtl: true,
+    // Modern Standard Arabic, and `ar-XA` is the only Arabic locale Google
+    // Cloud TTS carries (checked against the live voice list, 2026-10-05: 30
+    // Chirp 3: HD, 4 WaveNet, 4 Standard, and no Egyptian, Levantine or Gulf
+    // voice). 40 words came back 3.0-7.8 kB unvowelled and 3.9-8.7 kB vowelled,
+    // none under the floor in `/api/pronounce`.
+    ttsLanguageCode: 'ar-XA',
+    ttsVoiceName: 'ar-XA-Chirp3-HD-Charon',
+    // Two letters, not one. Twenty two-letter words three times each on the
+    // voice above: 8 of 60 clips were silence (لا, في, هي, ما, يا, هل, أخ, all
+    // about 1.1 kB). The same twenty on this voice: 0 of 20, smallest 6.0 kB.
+    //
+    // Unverified by ear as of 2026-10-05, like every size-based check here:
+    // the sizes show speech, not which vowelling the voice chose. The button
+    // speaks the card's front, unvowelled, so for a spelling with several
+    // readings (ملك, علم) the voice picks one unprompted, as `yue-HK` does for
+    // 行. Handing it the vowelled reading would only swap its guess for the
+    // model's unchecked one.
+    ttsShortVoiceName: 'ar-XA-Wavenet-B',
+    ttsShortMaxLetters: 2,
   },
   Hanja: {
     code: 'Hanja',
@@ -504,6 +550,7 @@ export interface ExamplePair {
   japanese?: string;
   traditionalChinese?: string;
   cantonese?: string;
+  arabic?: string;
   spanish?: string;
   kikuyu?: string;
   swahili?: string;
@@ -584,6 +631,7 @@ export interface TermCore {
   japanese?: string;
   traditionalChinese?: string;
   cantonese?: string;
+  arabic?: string;
   spanish?: string;
   kikuyu?: string;
   swahili?: string;
@@ -623,6 +671,19 @@ export interface TermCore {
    * several readings. Numbers in `apps/web/src/data/README.md`.
    */
   jyutping?: string;
+  /**
+   * The Arabic word with its vowel marks: `كِتَاب` for a card whose front is
+   * `كتاب`. The front is unvowelled because that is how Arabic is written;
+   * this is the reading beside it, as furigana is.
+   *
+   * ⚠️ **The model's, and not checked against a dictionary** — the user's
+   * decision of 2026-10-05, on a measurement of 91 of 102 right when asked
+   * with the meaning. It is labelled as not checked wherever it shows, which
+   * `getReading` does so that no render site can show it bare. The one check
+   * it does get is `arabicReading`: a reading that is not this word's letters
+   * is dropped.
+   */
+  vowelled?: string;
   /**
    * Japanese pitch accent as an アクセント核 position — `0` for 平板, otherwise
    * the mora after which the pitch falls. Unlike every other field on this
@@ -839,11 +900,63 @@ export function getExampleStudyLangText(ex: ExamplePair, studyLanguage?: StudyLa
 }
 
 /**
+ * The tag on anything shown that came from the model and that nothing checked.
+ *
+ * Here rather than in `i18n.ts` because `getReading` below needs it and
+ * `i18n.ts` imports this file; `verbUnverifiedTag` there reads these, so the
+ * wording on a Munli verb and on an Arabic reading cannot drift apart.
+ */
+export const UNVERIFIED_TAG = { English: 'not checked', Korean: '검토 안 됨' } as const;
+
+/** Arabic vowel marks, the dagger alif and the tatweel: what a reading adds to a word. */
+const ARABIC_MARKS = /[\u064b-\u0652\u0670\u0640]/g;
+
+/** An Arabic word as it is written day to day, with any vowel marks removed. */
+export function stripArabicMarks(text: string): string {
+  return text.normalize('NFC').replace(ARABIC_MARKS, '');
+}
+
+/**
+ * Whether a piece of text reads right to left, judged by its first letter.
+ *
+ * By the text and not by the deck, because a deck's lines are not all in its
+ * language: an Arabic card's back is English, and its search field holds
+ * whatever is being typed. It is the rule `dir="auto"` applies on web, written
+ * out for the places that have no such attribute — React Native.
+ */
+export function isRtlText(text: string | null | undefined): boolean {
+  const first = (text ?? '').match(/[A-Za-z\u00c0-\u024f\u0590-\u08ff\u1100-\u11ff\u3040-\u30ff\u3400-\u9fff\uac00-\ud7af]/);
+  return !!first && /[\u0590-\u08ff]/.test(first[0]);
+}
+
+/**
+ * The vowelled reading for an Arabic word, or `undefined` if what the model
+ * gave is not a reading of that word.
+ *
+ * The vowelling itself cannot be checked here — that takes knowing the word.
+ * What can be is that it is *this* word: with the marks taken off, the reading
+ * has to be the term, letter for letter. Asked for ملك as "possession" the
+ * model has answered مَلَاك, and for حسب it has answered حِسَاب; both are real
+ * words and neither is the one on the card. Measured at 2 of 306 answers under
+ * the prompt the route uses, 8 of 306 under a plainer one.
+ *
+ * A reading with no marks at all is dropped too: it says nothing the front
+ * does not.
+ */
+export function arabicReading(term: string, reading: unknown): string | undefined {
+  if (typeof reading !== 'string') return undefined;
+  const vowelled = reading.normalize('NFC').trim();
+  const bare = stripArabicMarks(vowelled);
+  if (!vowelled || bare === vowelled) return undefined;
+  return bare === stripArabicMarks(term).trim() ? vowelled : undefined;
+}
+
+/**
  * The pronunciation aid shown as a badge beside a term.
  *
  * Two things share one badge, in the order a learner needs them: the **reading**
  * (Japanese furigana, with its pitch drop marked; Traditional Chinese pinyin;
- * Cantonese Jyutping)
+ * Cantonese Jyutping; Arabic with its vowel marks)
  * and then the **transliteration** — the term respelled in the script the
  * reader already uses. `すし · sushi` for an English native, `すし · 스시` for a
  * Korean one, off the same card.
@@ -864,7 +977,7 @@ export function getExampleStudyLangText(ex: ExamplePair, studyLanguage?: StudyLa
  * each of the six render sites.
  */
 export function getReading(
-  card: Pick<TermCore, 'furigana' | 'pinyin' | 'jyutping' | 'pitchAccent' | 'japanese' | 'kikuyu'>,
+  card: Pick<TermCore, 'furigana' | 'pinyin' | 'jyutping' | 'vowelled' | 'pitchAccent' | 'japanese' | 'kikuyu'>,
   studyLanguage?: StudyLanguage,
   nativeLanguage?: string | null
 ): string | undefined {
@@ -883,6 +996,13 @@ export function getReading(
 
   if (studyLanguage === 'Kikuyu' && card.kikuyu) {
     return (isKorean ? kikuyuToHangul : kikuyuToEnglish)(card.kikuyu) || undefined;
+  }
+
+  // The vowelling is the model's and nothing has checked it, so it never
+  // leaves here without saying so — one place, rather than a tag at each of
+  // the eight sites that render a reading.
+  if (card.vowelled) {
+    return `${card.vowelled} · ${UNVERIFIED_TAG[nativeLanguage === 'Korean' ? 'Korean' : 'English']}`;
   }
 
   return card.pinyin || card.jyutping || undefined;
@@ -917,6 +1037,7 @@ export function getDepthTarget(
     | 'japanese'
     | 'traditionalChinese'
   | 'cantonese'
+    | 'arabic'
     | 'spanish'
     | 'kikuyu'
     | 'swahili'
@@ -965,6 +1086,7 @@ export interface WordOfTheDay {
   pitchAccent?: number; // Japanese, looked up rather than generated
   pinyin?: string; // Traditional Chinese
   jyutping?: string; // Cantonese, checked against a dictionary
+  vowelled?: string; // Arabic, the model's and labelled as not checked
   /**
    * The explanation to show when the card is tapped, generated and stored
    * alongside the word so the tap is a read rather than a second, independently
@@ -1040,6 +1162,7 @@ export function wordOfTheDayCore(
     pitchAccent: wotd.pitchAccent,
     pinyin: wotd.pinyin,
     jyutping: wotd.jyutping,
+    vowelled: wotd.vowelled,
   };
   // A field the model left out must be dropped, not carried as undefined:
   // this object is written to Firestore, which rejects undefined values.

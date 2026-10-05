@@ -1,7 +1,7 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/firebaseAdmin';
-import { PART_OF_SPEECH_CODES, getStudyLanguageConfig, getBackSideConfig, isStudyLanguage, normalizePartOfSpeech, parseModelJson, wordOfTheDayCore, type WordOfTheDay } from '@amgi/core';
+import { PART_OF_SPEECH_CODES, stripArabicMarks, getStudyLanguageConfig, getBackSideConfig, isStudyLanguage, normalizePartOfSpeech, parseModelJson, wordOfTheDayCore, type WordOfTheDay } from '@amgi/core';
 import { lookupPitchAccent } from '@/lib/pitchAccentLookup';
 import { lookupJyutping, normalizeJyutping } from '@/lib/jyutpingLookup';
 // The day's word is a card back, so it takes the shared gloss ceiling. It used
@@ -12,6 +12,7 @@ import { lookupJyutping, normalizeJyutping } from '@/lib/jyutpingLookup';
 // stated a rule in all eighteen of its templates. Both read from `GLOSS_RULE`
 // now, so there is nothing left to keep in step.
 import { GLOSS_RULE } from '@/lib/glossRule';
+import { vowelArabic } from '@/lib/arabicVowelling';
 
 /** How far back to look when keeping the daily word from repeating. */
 const EXCLUSION_DAYS = 60;
@@ -134,6 +135,8 @@ export async function GET(req: NextRequest) {
             ? '"pinyin": "tone-marked Hanyu Pinyin reading of the word"'
             : studyLanguage === 'Cantonese'
             ? '"jyutping": "Jyutping reading of the word with tone numbers 1-6, one syllable per character, separated by spaces"'
+            : studyLanguage === 'Arabic'
+            ? '"gender": "m" | "f" | null'
             : studyLanguage === 'Korean'
               ? '"formality": "Casual | Standard | Formal | Honorific | Slang"'
               : null;
@@ -158,7 +161,9 @@ export async function GET(req: NextRequest) {
       ? ' Write it in Traditional characters (繁體字) as used in Taiwan, never Simplified (简体字).'
       : studyLanguage === 'Cantonese'
         ? ' Pick a word Hong Kong speakers actually say, written in Traditional characters, never its Mandarin or Standard Written Chinese equivalent.'
-        : '';
+        : studyLanguage === 'Arabic'
+          ? ' Write it in Modern Standard Arabic, never a dialect, and without vowel marks (كتاب, not كِتَاب), as it is printed. Give a verb in the past tense, third person masculine singular.'
+          : '';
 
   // Each date used to generate in isolation, so the model had no history to
   // vary against and common words recurred. Feed it what it already picked.
@@ -240,6 +245,16 @@ Respond with only this JSON:
     const reading = lookupJyutping(stored.term, stored.jyutping) || (stored.jyutping && normalizeJyutping(stored.jyutping));
     if (reading) stored.jyutping = reading;
     else delete stored.jyutping;
+  }
+  // The Arabic reading, by the step `/api/explain` takes for the same reason:
+  // it is asked once the word and its meaning are settled, and kept only if it
+  // is that word's letters. The term is stripped as it is there.
+  if (studyLanguage === 'Arabic' && stored.term) {
+    stored.term = stripArabicMarks(stored.term).trim();
+    const meaning = [stored.english, stored.briefDefinition].filter(Boolean).join(' — ');
+    const reading = meaning ? await vowelArabic(genAI, stored.term, meaning, stored.partOfSpeech) : undefined;
+    if (reading) stored.vowelled = reading;
+    else delete stored.vowelled;
   }
   stored.core = wordOfTheDayCore(stored, isStudyLanguage(studyLanguage) ? studyLanguage : 'Korean', nativeLanguage);
 

@@ -1,5 +1,5 @@
 import type { CardSides, StudyLanguage, TermCore } from './types';
-import { getStudyLangSide } from './types';
+import { getStudyLangSide, stripArabicMarks } from './types';
 import type { ReviewDirection } from './sm2';
 
 /**
@@ -41,9 +41,15 @@ import type { ReviewDirection } from './sm2';
  * — and French `ou`/`où` and `sur`/`sûr` are different words. Folding them
  * together would teach the learner that the distinction does not matter, which
  * is a worse outcome than a false miss they can correct with one tap.
+ *
+ * Arabic vowel marks are the exception, and they are not diacritics in that
+ * sense: they are an optional layer of the spelling, left off in ordinary
+ * writing, and كتاب and كِتَاب are one word written two ways. The front of an
+ * Arabic card is unvowelled by decision (2026-10-05), so an answer typed with
+ * its marks must still match it.
  */
 export function foldText(text: string): string {
-  return text
+  return stripArabicMarks(text)
     .normalize('NFC')
     .replace(/[‘’ʼ′]/g, "'")
     .replace(/[“”]/g, '"')

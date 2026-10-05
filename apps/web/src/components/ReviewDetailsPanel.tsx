@@ -104,7 +104,7 @@ export default function ReviewDetailsPanel({
                   const sides = getExampleSides(ex, studyLanguage, deckNativeLanguage);
                   return (
                     <li key={i}>
-                      <div>
+                      <div dir="auto">
                         {sides.study}
                         <PronounceButton text={sides.study} studyLanguage={studyLanguage} kind="sentence" size="sm" className="ml-1 align-middle" />
                       </div>
