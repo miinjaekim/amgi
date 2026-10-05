@@ -193,7 +193,7 @@ export default function CardDetailModal({
         <div className="flex items-start justify-between p-6 pb-4 border-b" style={{ borderColor: 'var(--color-muted)' }}>
           <div>
             <div className="flex items-center gap-3 flex-wrap">
-              <h2 className="text-2xl font-bold" style={{ color: 'var(--color-highlight)' }}>{studySide}</h2>
+              <h2 dir="auto" className="text-2xl font-bold" style={{ color: 'var(--color-highlight)' }}>{studySide}</h2>
               <PronounceButton text={studySide} furigana={saved?.furigana} eum={saved?.eum} studyLanguage={lang} />
               {/* A fact about the word, so it reads in the deck's language
                   beside the back it describes. */}
@@ -333,6 +333,7 @@ export default function CardDetailModal({
         {editDraft !== null && (
           <div className="px-6 pt-3 flex flex-wrap items-center gap-2">
             <input
+              dir="auto"
               type="text"
               value={editDraft}
               onChange={e => setEditDraft(e.target.value)}
@@ -416,7 +417,7 @@ export default function CardDetailModal({
                           const sides = getExampleSides(ex, lang, deckNativeLanguage);
                           return (
                             <li key={i}>
-                              <div className="text-sm" style={{ color: 'var(--color-text)' }}>
+                              <div dir="auto" className="text-sm" style={{ color: 'var(--color-text)' }}>
                                 {sides.study}
                                 <PronounceButton text={sides.study} studyLanguage={lang} kind="sentence" size="sm" className="ml-1 align-middle" />
                               </div>

@@ -20,6 +20,7 @@ import { useFloatingTabBarHeight } from '../../src/components/FloatingTabBar';
 import { PAGE_TITLE_SIZE } from '../../src/components/PageHeader';
 import StudyLanguageChip from '../../src/components/StudyLanguageChip';
 import CardDetailModal from '../../src/components/CardDetailModal';
+import { rtlLine } from '../../src/rtl';
 import FilterSheet from '../../src/components/FilterSheet';
 import type { FilterGroup } from '../../src/components/FilterSheet';
 import { SkeletonBar, SkeletonGroup, SkeletonRows } from '../../src/components/Skeleton';
@@ -351,7 +352,7 @@ export default function CardsScreen() {
                 onPress={() => selectMode && card.id ? toggleSelect(card.id) : setDetailCard(card)}
               >
                 <View style={s.cardContent}>
-                  <Text style={s.cardKorean}>{getStudyLangSide(card)}</Text>
+                  <Text style={[s.cardKorean, rtlLine(getStudyLangSide(card))]}>{getStudyLangSide(card)}</Text>
                   <Text style={s.cardEnglish}>{getBackSide(card, deckNativeLanguage)}</Text>
                   <Text style={s.cardDate}>
                     {t(interfaceLanguage, 'savedAt')} {new Date(card.createdAt).toLocaleDateString()}

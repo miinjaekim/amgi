@@ -42,7 +42,9 @@ Generate a new list that addresses the feedback. Keep previous words that still 
       ? ' Write every word in Traditional characters (繁體字) as used in Taiwan, never Simplified (简体字).'
       : studyLanguage === 'Cantonese'
         ? ' Write every word as Hong Kong speakers say it, in Traditional characters, never its Mandarin or Standard Written Chinese equivalent.'
-        : '';
+        : studyLanguage === 'Arabic'
+          ? ' Write every word in Modern Standard Arabic, never a dialect, and without vowel marks (كتاب, not كِتَاب), as it is printed.'
+          : '';
 
   const prompt = `A learner of ${languageName} described why they are learning:
 

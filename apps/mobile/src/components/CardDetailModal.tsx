@@ -22,6 +22,7 @@ import AddToMunliButton from './AddToMunliButton';
 import type { ExamplePair, PackEntry, StudyLanguage } from '@amgi/core';
 import { useTheme } from '../context/ThemeContext';
 import { useUser } from '../context/UserContext';
+import { rtlInline, rtlLine } from '../rtl';
 import PronounceButton from './PronounceButton';
 import Markdown from './Markdown';
 import {
@@ -186,7 +187,7 @@ export default function CardDetailModal({
           <View style={s.header}>
             <View style={s.headerMain}>
               <View style={s.titleRow}>
-                <Text style={s.term}>{studySide}</Text>
+                <Text style={[s.term, rtlInline(studySide)]}>{studySide}</Text>
                 <PronounceButton text={studySide} furigana={saved?.furigana} eum={saved?.eum} studyLanguage={lang} />
                 {badges.map((b, i) => (
                   <View key={i} style={s.badge}><Text style={s.badgeText}>{b}</Text></View>
@@ -343,7 +344,7 @@ export default function CardDetailModal({
                           return (
                             <View key={i} style={s.exampleItem}>
                               <View style={s.exampleStudyRow}>
-                                <Text style={[s.exampleStudy, s.exampleStudyText]}>{sides.study}</Text>
+                                <Text style={[s.exampleStudy, s.exampleStudyText, rtlLine(sides.study)]}>{sides.study}</Text>
                                 <PronounceButton text={sides.study} studyLanguage={lang} kind="sentence" size="sm" />
                               </View>
                               {sides.back ? <Text style={s.exampleBack}>{sides.back}</Text> : null}

@@ -79,6 +79,7 @@ export default function SaveFlashcardModal({
               <PronounceButton text={studyLangValue} furigana={draft.furigana} eum={draft.eum} studyLanguage={studyLanguage} />
             </div>
             <input
+              dir="auto"
               type="text"
               value={studyLangValue}
               onChange={e => onChange(langConfig.studyField, e.target.value)}
@@ -93,6 +94,7 @@ export default function SaveFlashcardModal({
               {t(interfaceLanguage, backConfig.backLabelKey)}
             </label>
             <input
+              dir="auto"
               type="text"
               value={draft[backConfig.backField] || ''}
               onChange={e => onChange(backConfig.backField, e.target.value)}

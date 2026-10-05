@@ -1,4 +1,4 @@
-import { getStudyLanguageConfig, getBackSideConfig, DEFAULT_HANJA_PARTITION } from './types';
+import { getStudyLanguageConfig, getBackSideConfig, DEFAULT_HANJA_PARTITION, UNVERIFIED_TAG } from './types';
 import type { HanjaPartition, StudyLanguage, TermCore } from './types';
 import type { ReviewDirection } from './sm2';
 
@@ -31,6 +31,7 @@ const translations = {
     labelJapanese: 'Japanese',
     labelTraditionalChinese: 'Chinese (Traditional)',
     labelCantonese: 'Cantonese',
+    labelArabic: 'Arabic',
     labelSpanish: 'Spanish',
     labelKikuyu: 'Kikuyu',
     labelSwahili: 'Swahili',
@@ -312,7 +313,7 @@ const translations = {
     verbAddNoForms: 'Could not get a full table for {verb}.',
     verbAddFailed: 'Could not look that up. Try again.',
     verbUnverified: 'Added by you. The forms come from AI and are not checked by Amgi.',
-    verbUnverifiedTag: 'not checked',
+    verbUnverifiedTag: UNVERIFIED_TAG.English,
     verbAddToMunli: 'Add to Munli',
     verbOpenInMunli: 'Open in Munli',
     verbOpen: 'Open',
@@ -660,6 +661,8 @@ const translations = {
       'Readings carry pitch accent: は＼し drops after は (箸), はし＼ drops after し (橋), はし stays level (端).',
     pronunciationNoteCantonese:
       'Readings are in Jyutping. The number ending each syllable is its tone, 1 to 6: si1 詩, si2 史, si3 試, si4 時, si5 市, si6 事.',
+    pronunciationNoteArabic:
+      'Cards are written without vowel marks, as Arabic usually is. The marked reading beside a word comes from AI and is not checked by Amgi.',
     wordOfTheDay: 'Word of the day',
     copy: 'Copy',
     copied: 'Copied',
@@ -894,6 +897,7 @@ const translations = {
     labelJapanese: '일본어',
     labelTraditionalChinese: '중국어(번체)',
     labelCantonese: '광둥어',
+    labelArabic: '아랍어',
     labelSpanish: '스페인어',
     labelKikuyu: '키쿠유어',
     labelSwahili: '스와힐리어',
@@ -1139,6 +1143,8 @@ const translations = {
       '발음 표기에 고저 악센트가 함께 표시됩니다. は＼し는 は 뒤에서 내려가고(箸), はし＼는 し 뒤에서 내려가며(橋), はし는 평판형입니다(端).',
     pronunciationNoteCantonese:
       '발음은 월병(Jyutping)으로 표기합니다. 음절 끝의 숫자는 1부터 6까지의 성조입니다. si1 詩, si2 史, si3 試, si4 時, si5 市, si6 事.',
+    pronunciationNoteArabic:
+      '카드는 아랍어를 평소 쓰는 대로 모음 부호 없이 적어요. 옆에 보이는 모음 부호 표기는 AI가 만든 것이고, Amgi가 검토하지는 않았어요.',
     wordOfTheDay: '오늘의 단어',
     copy: '복사',
     copied: '복사됨',
@@ -1295,7 +1301,7 @@ const translations = {
     verbAddNoForms: '{verb} 동사의 활용표를 다 가져오지 못했어요.',
     verbAddFailed: '찾지 못했어요. 다시 시도해 주세요.',
     verbUnverified: '내가 추가한 동사예요. 활용형은 AI가 만든 것이고, Amgi가 검토하지는 않았어요.',
-    verbUnverifiedTag: '검토 안 됨',
+    verbUnverifiedTag: UNVERIFIED_TAG.Korean,
     verbAddToMunli: '문리에 추가',
     verbOpenInMunli: '문리에서 열기',
     verbOpen: '열기',
@@ -1594,6 +1600,10 @@ export function t(
  *   argument again: `si2` means nothing to someone who has not been told the
  *   digit is a tone. Traditional Chinese has no note because pinyin's tone
  *   marks are drawn on the vowel and read as what they are.
+ * - **Arabic**'s note is a different kind: it is the long form of the "not
+ *   checked" tag `getReading` puts on every vowelled reading, saying once
+ *   where the vowel marks come from. Same wording as `verbUnverified`, which
+ *   labels Munli's model-made verb forms.
  */
 export function pronunciationNote(
   nativeLanguage: string | null | undefined,
@@ -1602,6 +1612,7 @@ export function pronunciationNote(
   if (studyLanguage === 'Kikuyu') return t(nativeLanguage, 'pronunciationNoteKikuyu');
   if (studyLanguage === 'Japanese') return t(nativeLanguage, 'pronunciationNoteJapanese');
   if (studyLanguage === 'Cantonese') return t(nativeLanguage, 'pronunciationNoteCantonese');
+  if (studyLanguage === 'Arabic') return t(nativeLanguage, 'pronunciationNoteArabic');
   return undefined;
 }
 

@@ -3,6 +3,140 @@
 Per-language calls: Spanish, Kikuyu, Swahili, Hanja, and a native language per deck. Newest first. Indexed from
 [status.md](../status.md).
 
+## Arabic is Modern Standard, unvowelled on the front, with a reading nobody checked (2026-10-05)
+
+A twelfth deck, `cards_arabic`. Every call below was the user's, approved
+2026-10-05 on the recommendations put to them; the words were "go with your
+recommendations for arabic".
+
+**Modern Standard Arabic, not a dialect.** Google Cloud TTS carries one Arabic
+locale, `ar-XA` (30 Chirp 3: HD voices, 4 WaveNet, 4 Standard, checked against
+the live list). There is no Egyptian, Levantine or Gulf voice, so a dialect
+deck would ship with standard-Arabic audio or none. The cost is known: nobody
+speaks MSA at home, and Cantonese was added precisely because it is what is
+said.
+
+**The front is unvowelled; the vowelled form is the reading.** كتاب on the
+card, كِتَاب beside it, the way furigana sits beside a kanji word. Arabic is
+printed without its vowel marks, so a vowelled front would teach a form the
+learner does not meet. The route strips marks from the front itself rather than
+trusting the prompt, so a card is never filed under a spelling the next lookup
+of the same word would miss. **No romanisation**: the audience is not
+beginners, and the vowelled Arabic is the reading.
+
+**The interface stays left to right.** No mirroring. A line of Arabic takes its
+own direction and is right-aligned: `dir="auto"` on web, `rtlLine` and
+`rtlInline` on mobile, both judged from the text and not the deck, because an
+Arabic card's back is English. Nothing in the app handled right-to-left text
+before this.
+
+**No pack at launch**, as Cantonese. The five example terms on Learn were
+approved by the user as proposed: طرب, غربة, longing, awkward, عين. The first
+is also the word first run looks up.
+
+**Smaller defaults, taken as listed to the user:** an m/f badge on nouns, no
+root or plural field, English and Korean backs, no worked example on the
+Writing tab.
+
+### The reading: what was measured, and why 55 of 57 was superseded
+
+The reading is the model's. No dictionary checks it. That was decided on
+numbers, and the numbers moved three times, so all of them are here.
+
+The reference throughout is English Wiktionary's Arabic entries: each vowelled
+headword, compared after dropping case endings and optional marks.
+`gemini-2.5-flash`, the lookup's temperature, three runs each.
+
+| what was asked | right on all three runs |
+|---|---|
+| 57 common words, no meaning given, any listed vowelling counted right | 55 / 57 |
+| 102 word-and-meaning pairs, asked plainly | 77 / 102 |
+| the same pairs, with the stricter wording | 91 / 102 |
+| the same pairs through `/api/explain`, reading as one more field | 78 / 102 |
+| through `/api/explain`, reading as a second step with the stricter wording | 77 / 102 |
+| the same, with a rule that the context decides the word (what ships) | **79 / 102** |
+
+**55 of 57 was the wrong question.** It gave the model a bare word and accepted
+any vowelling the dictionary lists. But 28 of those 57 words have more than one
+(ملك is king, angel, dominion, property and "to possess"), so the bare word
+does not determine the reading; the meaning does. Asked with a meaning, the
+plain prompt answered with the most frequent word of that spelling whatever was
+asked: a noun for a verb, a doubled consonant that should be single, and in 8
+of 306 answers a different word altogether.
+
+**The stricter wording** states the part of speech, says to keep every letter,
+to choose the vowelling for this meaning and not the most frequent, and when a
+shadda is allowed. It is in `apps/web/src/lib/arabicVowelling.ts`. On this
+wording, plus a label, the user decided to ship.
+
+**Through the real route it did not hold, and the reason is upstream of the
+reading.** The lookup first settles what the card is about, and for a spelling
+shared by several words it often settles on the common one whatever the context
+said: خبز asked as "to bake" becomes a card for "bread", شمس as "to be sunny"
+becomes "sun". The reading it then gives is right for the card it made. Of the
+23 pairs missed in the last row, read one by one: about 17 are cards whose
+reading agrees with the meaning shown on that same card, 3 have a reading that
+is wrong for their own meaning (سنة shown as "drowsiness" but vowelled as
+"year", درس as "trace", one run of حسب), 2 came back with no reading, and 1 is
+mixed. That sorting is the building session's own reading of the Arabic, not a
+dictionary's. Mechanically, 279 of 306 answers are some listed vowelling of the
+spelling, the front was the word asked for in 306 of 306, and no front carried
+a mark.
+
+**The user chose to ship on these numbers** (2026-10-05, "go with (a)"): the
+branch as it stands, with the label.
+
+⚠️ **So two things are true of what ships.** What a learner sees nearly always
+agrees with itself. And choosing a rarer meaning does not always get that
+meaning's card. The second is a property of the shared lookup prompt, not of
+Arabic, and was not measured on the app's own list of meanings, which is an
+easier case than Wiktionary's rare senses.
+
+**What is enforced.** One thing: `arabicReading` drops a reading that, with its
+marks removed, is not the word on the card. It cannot tell a right vowelling
+from a wrong one.
+
+**The label.** `getReading` appends "not checked" / "검토 안 됨" to every Arabic
+reading, so none of the eight render sites can show one bare. It is the tag
+Munli puts on a verb the model conjugated (PR #182), from one constant. Learn's
+pronunciation note says the same at length.
+
+**Why the reading is a second model call.** Same route, no new endpoint and no
+client change: one extra fast call per Arabic lookup. As a field of the
+lookup's own answer it scored the same, so the second call earns its place only
+by isolating the wording the decision rests on. If that stops being worth a
+call, fold it back.
+
+### Audio
+
+`ar-XA-Chirp3-HD-Charon`, like the rest. 80 words of three letters or more, 0
+under the 2048-byte floor. **Two-letter words are the exception**: 20 of them
+three times each gave 8 silent clips of 60 (لا, في, هي, ما, يا, هل, أخ), and
+0 of 20 on `ar-XA-Wavenet-B`. So `ttsShortMaxLetters: 2` sends words that
+short to WaveNet, counted without vowel marks. Other decks keep the old rule of
+one character.
+
+⚠️ **Unverified by ear.** Sizes show speech, not which reading. The button
+speaks the unvowelled front, so for a spelling with several readings the voice
+picks one unprompted, as `yue-HK` does for 行.
+
+### Not done, and not checked
+
+- **The Firestore rule and index for `cards_arabic` are console state.** The
+  user added the rule on 2026-10-05 and the composite indexes were building at
+  the time. Saving an Arabic card was not exercised by the building session.
+- **The normal-use case is unmeasured.** The 102 pairs take their meanings from
+  Wiktionary, rare senses included. What a learner actually does is pick from
+  the app's own list of meanings for an ambiguous word, which should be easier.
+  The user asked for that number alongside the decision to ship; the run was
+  stopped at its first call because the Gemini prepaid credits ran out
+  (2026-10-05), and it is owed.
+- **Nothing was seen rendered.** Right-to-left layout on web and mobile, the
+  tag beside the reading, and typed answers in Arabic have not been looked at
+  in a browser or on a device.
+- Typed answers ignore vowel marks (`foldText`), so كِتَاب typed against كتاب is
+  right. Search in My Cards does not: a query typed with marks finds nothing.
+
 ## Cantonese is its own deck, and the model needed no persuading (2026-10-04)
 
 **Hong Kong Cantonese in Traditional characters, as its own registry entry and

@@ -9,10 +9,12 @@ import {
   normalizeVerbGroup,
   parseConjugationForms,
   parseModelJson,
+  stripArabicMarks,
 } from '@amgi/core';
 import { lookupPitchAccent } from '@/lib/pitchAccentLookup';
 import { lookupJyutping, normalizeJyutping } from '@/lib/jyutpingLookup';
 import { glossRuleBullet } from '@/lib/glossRule';
+import { vowelArabic } from '@/lib/arabicVowelling';
 
 function detectKorean(term: string): boolean {
   return /[가-힣ᄀ-ᇿ㄰-㆏]/.test(term);
@@ -27,6 +29,12 @@ function detectChinese(term: string): boolean {
   // Han ideographs: CJK Unified Ideographs, Extension A, and the
   // compatibility block. No kana range — a Chinese deck never sees them.
   return /[㐀-䶿一-鿿豈-﫿]/.test(term);
+}
+
+function detectArabic(term: string): boolean {
+  // The Arabic block and its supplement. Persian and Urdu share them, which is
+  // fine here: the deck is Arabic and the prompt says which language to answer in.
+  return /[\u0600-\u06ff\u0750-\u077f]/.test(term);
 }
 
 export async function POST(req: NextRequest) {
@@ -694,6 +702,87 @@ ${glossRuleBullet(false)}
 ${jyutpingRule}${posRule}
 - "briefDefinition" must be a single sentence defining the core meaning. No examples, no cultural context.`;
     }
+  } else if (studyLanguage === 'Arabic') {
+    // Arabic: Modern Standard, and the script is detectable. The card's front
+    // is unvowelled, as Arabic is written, and "vowelled" is the reading that
+    // goes beside it.
+    //
+    // The reading is not asked for here. It depends on which word of this
+    // spelling the card turns out to be about, so it is a second step at the
+    // bottom of this route, once that is known — see `vowelArabic`.
+    const termLanguage = detectArabic(term) ? 'Arabic' : 'English';
+    const arabicRule = '- "arabic" must always be the Modern Standard Arabic word or phrase, written in Arabic script WITHOUT vowel marks (no fatha, damma, kasra, sukun, tanwin or shadda), the way it is printed in a newspaper: كتاب, not كِتَاب. Keep hamza and alif madda (أ, إ, آ, ؤ, ئ), which are letters. Give a verb in the past tense, third person masculine singular (كتب), and a noun in the singular without ال. Modern Standard Arabic only, never a dialect word.';
+    // Without this the context was read as a hint and the commonest word of
+    // the spelling won: خبز with "to bake" came back as the noun "bread", شمس
+    // with "to be sunny" as "sun". The reading step downstream can only be as
+    // right as the meaning this step settles on.
+    const contextRule = '- The context says which meaning is wanted, and it decides the word. One unvowelled Arabic spelling is often several different words (خبز is the noun "bread" and the verb "to bake"). Translate the meaning the context gives, with its part of speech — a context beginning "to ..." asks for the verb, not a noun or adjective spelled the same way — even when another word of this spelling is more common.';
+    const genderRule = '- "gender": if the Arabic term is a noun, set to "m" or "f". Otherwise set to null.';
+
+    if (context) {
+      prompt = `Provide a concise translation for the term "${term}" with this context: "${context}".
+
+IMPORTANT: The "arabic" and "english" fields must ALWAYS be in their respective languages:
+${arabicRule}
+${contextRule}
+- "english" must always be the English word or phrase written in English${nativeBackRule}
+${glossRuleBullet(true)}
+${genderRule}${posRule}
+
+For "briefDefinition", write a single clear sentence defining the term in ${nativeLanguage}. No examples, no cultural context — just the core meaning.
+
+Respond with only this JSON:
+{
+  "term": "${term}",
+  "termLanguage": "${termLanguage}",
+  "arabic": "Arabic word/phrase without vowel marks",
+  "english": "English word/phrase",${nativeBackJson}
+  "gender": "m" | "f" | null,${posJson}
+  "briefDefinition": "one-sentence definition"
+}`;
+    } else {
+      prompt = `You are a language learning assistant for Arabic-English learners studying Modern Standard Arabic.
+
+Given the term "${term}", determine whether it has multiple significantly different meanings that would confuse a language learner.
+
+A term is ambiguous when it has 2 or more distinct common meanings that lead to meaningfully different translations or usage contexts (e.g., عين can mean "eye" or "a spring of water"). An Arabic term typed without vowel marks is also ambiguous when it spells two or more common words that are pronounced differently (e.g., علم can be عِلْم "knowledge" or عَلَم "flag").
+
+A term is NOT ambiguous when:
+- It has one clear primary meaning
+- Secondary meanings are rare or archaic
+- The meanings are closely related variants of the same concept
+
+${spellBlock}
+If AMBIGUOUS, respond with only this JSON:
+{
+  "ambiguous": true,
+  "term": "${term}",${spellJson}
+  "termLanguage": "${termLanguage}",
+  "meanings": [
+    { "label": "short label (3-6 words max)", "hint": "one sentence clarifying this meaning" },
+    { "label": "...", "hint": "..." }
+  ]
+}
+
+Every "label" and "hint" must be written in ${nativeLanguage} — the user may not understand any other language.
+
+If NOT ambiguous, respond with only this JSON:
+{
+  "term": "${term}",${spellJson}
+  "termLanguage": "${termLanguage}",
+  "arabic": "Arabic word/phrase without vowel marks",
+  "english": "English word/phrase",${nativeBackJson}
+  "gender": "m" | "f" | null,${posJson}
+  "briefDefinition": "one-sentence definition in ${nativeLanguage}"
+}
+
+IMPORTANT for the non-ambiguous case:
+${arabicRule}
+- "english" must always be written in English${nativeBackRule}
+${glossRuleBullet(false)}
+${genderRule}${posRule}
+- "briefDefinition" must be a single sentence defining the core meaning. No examples, no cultural context.`;
+    }
   } else if (studyLanguage === 'Hanja') {
     // Hanja: the front is a single Han character, which the script detects. A
     // learner may equally type the 훈 (물), the 음 (수) or the English meaning
@@ -1005,6 +1094,23 @@ ${glossRuleBullet(false)}
     const reading = (cantonese && lookupJyutping(cantonese, said)) || (said && normalizeJyutping(said));
     if (reading) record.jyutping = reading;
     else delete record.jyutping;
+  }
+
+  // The Arabic reading, asked now that the word, its meaning and its part of
+  // speech are settled. The front is stripped here rather than trusted to the
+  // prompt, so a card can never be filed under a vowelled spelling that the
+  // next lookup of the same word would not match.
+  if (
+    studyLanguage === 'Arabic' &&
+    parsed && typeof parsed === 'object' && !('ambiguous' in parsed)
+  ) {
+    const record = parsed as Record<string, unknown>;
+    const arabic = typeof record.arabic === 'string' ? stripArabicMarks(record.arabic).trim() : '';
+    if (arabic) record.arabic = arabic;
+    const meaning = [record.english, record.briefDefinition].filter(part => typeof part === 'string' && part).join(' — ');
+    const reading = arabic && meaning ? await vowelArabic(genAI, arabic, meaning, record.partOfSpeech) : undefined;
+    if (reading) record.vowelled = reading;
+    else delete record.vowelled;
   }
 
   return NextResponse.json(parsed);

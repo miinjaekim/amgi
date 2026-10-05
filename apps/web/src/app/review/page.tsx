@@ -979,6 +979,7 @@ export default function ReviewPage() {
                         {t(interfaceLanguage, langConfig.studyLabelKey)}
                       </label>
                       <input
+              dir="auto"
                         type="text"
                         value={manageEditDraft.studySide}
                         onChange={e => setManageEditDraft(d => d ? { ...d, studySide: e.target.value } : d)}
@@ -988,6 +989,7 @@ export default function ReviewPage() {
                     <div>
                       <label className="block text-xs font-semibold text-[var(--color-muted)] mb-1">{t(interfaceLanguage, backConfig.backLabelKey)}</label>
                       <input
+              dir="auto"
                         type="text"
                         value={manageEditDraft.backSide}
                         onChange={e => setManageEditDraft(d => d ? { ...d, backSide: e.target.value } : d)}
@@ -1035,14 +1037,14 @@ export default function ReviewPage() {
                   {currentReview.direction === 'frontToBack' ? (
                     <>
                       <div className="flex items-center gap-2 mb-2">
-                        <div className="font-semibold text-2xl text-[var(--color-highlight)]">{faces(currentReview.card).front}</div>
+                        <div dir="auto" className="font-semibold text-2xl text-[var(--color-highlight)]">{faces(currentReview.card).front}</div>
                         <PronounceButton text={faces(currentReview.card).front} furigana={currentReview.card.furigana} eum={currentReview.card.eum} studyLanguage={studyLanguage} />
                       </div>
 
                       {showAnswer ? (
                         <>
                           {faces(currentReview.card).back && (
-                            <div className="text-lg mb-3 text-[var(--color-text)] font-semibold">{faces(currentReview.card).back}</div>
+                            <div dir="auto" className="text-lg mb-3 text-[var(--color-text)] font-semibold">{faces(currentReview.card).back}</div>
                           )}
 
                           {hanjaGloss(currentReview.card) && (
@@ -1106,13 +1108,13 @@ export default function ReviewPage() {
                   ) : (
                     <>
                       {faces(currentReview.card).back && (
-                        <div className="text-lg mb-2 text-[var(--color-text)]">{faces(currentReview.card).back}</div>
+                        <div dir="auto" className="text-lg mb-2 text-[var(--color-text)]">{faces(currentReview.card).back}</div>
                       )}
 
                       {showAnswer ? (
                         <>
                           <div className="flex items-center gap-2 mb-3 mt-4">
-                            <div className="font-semibold text-2xl text-[var(--color-highlight)]">{faces(currentReview.card).front}</div>
+                            <div dir="auto" className="font-semibold text-2xl text-[var(--color-highlight)]">{faces(currentReview.card).front}</div>
                             <PronounceButton text={faces(currentReview.card).front} furigana={currentReview.card.furigana} eum={currentReview.card.eum} studyLanguage={studyLanguage} />
                           </div>
 
@@ -1190,6 +1192,7 @@ export default function ReviewPage() {
                           </div>
                           {typingThisCard && (
                             <input
+              dir="auto"
                               type="text"
                               // Remounted per card: `autoFocus` fires on mount
                               // only, and this input holds the same slot from
@@ -1309,6 +1312,7 @@ export default function ReviewPage() {
                   `both` session is typed. */}
               <label className="flex items-center gap-2 mb-6 text-sm text-[var(--color-text)] cursor-pointer">
                 <input
+              dir="auto"
                   type="checkbox"
                   checked={typingEnabled}
                   onChange={e => setTypingEnabled(e.target.checked)}

@@ -22,6 +22,7 @@ import {
 } from '@amgi/core';
 import type { StudyLanguage } from '@amgi/core';
 import type { TermCore, TermDepth, TermAmbiguous, ExamplePair, SpellingCorrection, WordOfTheDay } from '../../src/services/gemini';
+import { rtlLine } from '../../src/rtl';
 import { saveFlashcardToFirestore } from '../../src/services/firestore';
 import type { Flashcard } from '../../src/services/firestore';
 import SaveFlashcardModal from '../../src/components/SaveFlashcardModal';
@@ -72,6 +73,9 @@ const EXAMPLE_TERMS: Record<StudyLanguage, string[]> = {
   Japanese: ['木漏れ日', '積ん読', 'nostalgia', 'awkward', '侘寂'],
   TraditionalChinese: ['緣分', '撒嬌', 'nostalgia', 'awkward', '將就'],
   Cantonese: ['執生', '得閒', 'nostalgia', 'awkward', '肉赤'],
+  // Approved by the user 2026-10-05, in this order. Unvowelled, as a card's
+  // front is.
+  Arabic: ['طرب', 'غربة', 'longing', 'awkward', 'عين'],
   // Single characters, in the traditional forms the 어문회 list assigns —
   // 學, not 学. Nothing here is an English word, unlike every row above:
   // typing "water" into a hanja deck asks for a translation, and the deck
@@ -520,7 +524,7 @@ export default function LearnScreen() {
             )}
             <View style={s.searchRow}>
               <TextInput
-                style={s.searchInput}
+                style={[s.searchInput, rtlLine(term)]}
                 value={term}
                 onChangeText={setTerm}
                 placeholder={t(interfaceLanguage, 'inputPlaceholder')}
@@ -604,7 +608,7 @@ export default function LearnScreen() {
         >
           <View style={s.searchRow}>
             <TextInput
-              style={s.searchInput}
+              style={[s.searchInput, rtlLine(term)]}
               value={term}
               onChangeText={setTerm}
               placeholder={t(interfaceLanguage, 'inputPlaceholder')}
@@ -755,7 +759,7 @@ export default function LearnScreen() {
                       <View key={i} style={s.exampleItem}>
                         {sides.study ? (
                           <View style={s.exampleStudyRow}>
-                            <Text style={[s.bodyText, s.exampleStudyText]}>{sides.study}</Text>
+                            <Text style={[s.bodyText, s.exampleStudyText, rtlLine(sides.study)]}>{sides.study}</Text>
                             <PronounceButton text={sides.study} studyLanguage={studyLanguage} kind="sentence" size="sm" />
                           </View>
                         ) : null}

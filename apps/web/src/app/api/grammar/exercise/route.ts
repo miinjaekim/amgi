@@ -64,7 +64,9 @@ export async function POST(req: NextRequest) {
     ? '\n- Write all Mandarin in Traditional characters (繁體字) as used in Taiwan, never Simplified (简体字).'
     : studyLanguage === 'Cantonese'
       ? '\n- Write all Cantonese as Hong Kong speakers say it (written Cantonese: 係, 唔, 嘅, 佢), in Traditional characters, never Standard Written Chinese or Mandarin.'
-      : '';
+      : studyLanguage === 'Arabic'
+        ? '\n- Write all Arabic in Modern Standard Arabic, never a dialect, and without vowel marks (كتاب, not كِتَاب), as it is printed.'
+        : '';
 
   const patternHeader = `PATTERN: ${pattern}${glossText ? `\nWHAT IT DOES: ${glossText}` : ''}${note ? `\nWHEN TO REACH FOR IT: ${note}` : ''}`;
 

@@ -85,6 +85,12 @@ _Merged, not yet in anyone's hands — mobile ships by build, no OTA._
   says the same, per direction when the two differ. Web is live on merge;
   mobile needs the build. The decision is "A card says where it stands with
   Review" in [decisions/cards-and-lookup.md](decisions/cards-and-lookup.md).
+- **Arabic** (PR #190) — a twelfth deck: Modern Standard, fronts unvowelled,
+  the vowelled reading beside them tagged *not checked*, `ar-XA` audio, and
+  Arabic lines running right to left. Web is live on merge; mobile needs the
+  build. The security rule was added 2026-10-05 and the composite indexes were
+  building then. One measurement of the reading is still owed; it and the
+  decision are in [decisions/languages.md](decisions/languages.md).
 
 What has never been looked at on a device is listed under Unverified in
 [status.md](status.md). It is not tracked here, by the 2026-09-04 decision that
@@ -97,11 +103,6 @@ whether `faire` joins the three sourced irregular verbs (#150), and whether a
 practice session should cover several tenses at once again, which the section
 picker narrowed (#146). Both are written up in their Decisions entries of
 2026-09-22.
-
-_The one below is what is left of the nine added from Google Tasks
-2026-10-05, at the priority the user gave._
-
-- [ ] **Add Arabic.**
 
 ## Medium
 

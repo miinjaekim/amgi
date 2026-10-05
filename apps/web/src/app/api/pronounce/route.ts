@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createHash } from 'crypto';
-import { getStudyLanguageConfig } from '@amgi/core';
+import { getStudyLanguageConfig, stripArabicMarks } from '@amgi/core';
 import { getBucket } from '@/lib/firebaseAdmin';
 
 // Slightly slower than natural speaking speed — easier for learners to hear
@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
   }
 
   const config = getStudyLanguageConfig(studyLanguage);
-  const { ttsLanguageCode, ttsVoiceName, ttsShortVoiceName } = config;
+  const { ttsLanguageCode, ttsVoiceName, ttsShortVoiceName, ttsShortMaxLetters = 1 } = config;
   if (!ttsLanguageCode || !ttsVoiceName) {
     return NextResponse.json({ error: 'Pronunciation not yet available for this language' }, { status: 400 });
   }
@@ -41,8 +41,11 @@ export async function POST(req: NextRequest) {
   // A lone character goes to the non-generative voice — see `ttsShortVoiceName`.
   // Because the voice name is part of the cache path, this also routes around
   // every silent single-character clip already sitting in the bucket.
-  const isSingleCharacter = [...normalized].length === 1;
-  const voiceName = (isSingleCharacter && ttsShortVoiceName) || ttsVoiceName;
+  //
+  // Letters, not code points: an Arabic word's vowel marks are characters of
+  // their own, and لَا is as short an utterance as لا.
+  const isTooShort = [...stripArabicMarks(normalized)].length <= ttsShortMaxLetters;
+  const voiceName = (isTooShort && ttsShortVoiceName) || ttsVoiceName;
 
   const hash = createHash('sha256').update(normalized).digest('hex');
   const path = `pronunciation/${ttsLanguageCode}/${voiceName}-r${SPEAKING_RATE}/${hash}.mp3`;
