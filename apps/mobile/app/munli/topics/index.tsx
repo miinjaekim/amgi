@@ -39,7 +39,11 @@ export default function TopicsScreen() {
 
   return (
     <SafeAreaView style={s.safe} edges={['top']}>
-      <PageHeader titleKey="verbsTitle" />
+      {/* ⚠️ The tab's own name, as web's nav has it — not web's page title
+          ("Practice set"). The bar here is icon-only, so this heading is the
+          only place the tab is named, and Saved's empty state sends people to
+          "Topics" by that name. */}
+      <PageHeader titleKey="munliTabTopics" />
       <ScrollView contentContainerStyle={s.content}>
         <Text style={s.intro}>{t(interfaceLanguage, 'topicsIntro')}</Text>
 

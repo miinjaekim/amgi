@@ -3,6 +3,30 @@
 The second mode: its shell, conjugation practice, writing review as a tool, English articles. 2026-09-21 on. Newest first. Indexed from
 [status.md](../status.md).
 
+## On mobile a tab's heading is its name, and the name is web's (2026-10-05)
+
+**The user's task**: "rename the mobile tabs to match web."
+
+⚠️ **The tab labels already matched.** Mobile's bar and web's nav read the same
+five keys (`munliTabPractice`, `munliTabSaved`, `munliToolWriting`,
+`munliTabTopics`, `navProgress`), and have since the 2.1.0 build. But mobile's
+bar is icon-only, so those labels reach a screen reader and nobody else. **The
+only place a mobile tab is named is the heading of its first screen**, and two
+of the five headings were web's *page titles* rather than web's tab names:
+Topics opened on "Practice set" and Progress on "Grammar practice". On web that
+reads fine, because the nav beside the page says which tab you are on. On
+mobile nothing does, and Saved's empty state sends you to "Topics", a name that
+appeared nowhere on the phone.
+
+**So mobile's Topics and Progress screens are headed "Topics" and "Progress"**
+(주제, 기록), from the same keys web's nav uses. Practice, Saved and Writing
+already were. Web is untouched: it keeps its page titles, and `verbsTitle` and
+`munliProgressTitle` are now web-only.
+
+**This is a reading of nine words, not a confirmed scope.** If the user meant
+something else by "tabs" (the icons, or visible labels under them), this entry
+is the thing to revise.
+
 ## A verb you keep missing is drawn more often, and that is all it changes (2026-10-05)
 
 **The user's idea, approved 2026-10-04**: count how often each regular verb is
