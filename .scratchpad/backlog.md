@@ -5,8 +5,9 @@ sits first** because it turns over on every merge and is the list worth seeing
 without scrolling. Anything that closes leaves this file:
 shipped work is tracked by git and GitHub, and a decision or cancellation moves
 to [decisions/](decisions/) **with its reasoning** (indexed under Decisions in
-[status.md](status.md)), so a closed call doesn't get reopened from here. Priority mirrors the user's Google Tasks list;
-this is the scoped version of it.
+[status.md](status.md)), so a closed call doesn't get reopened from here. Priority mirrors the user's Google Tasks lists
+— one for Amgi and one for Munli — and this is the scoped version of both, in
+one file: an item from the Munli list is tagged **Munli**.
 
 **Mobile ships by build — no OTA.** Iterate in Expo Go (`npx expo start`), cut a
 production build when a batch is worth a release; once one native module is in a
@@ -74,6 +75,25 @@ practice session should cover several tenses at once again, which the section
 picker narrowed (#146). Both are written up in their Decisions entries of
 2026-09-22.
 
+_The six below were added from Google Tasks 2026-10-05, at the priority the
+user gave. None is scoped yet beyond the user's own words._
+
+- [ ] **Word of the day isn't displaying on mobile.** Find out why.
+
+- [ ] **Add Arabic.**
+
+- [ ] **Show review times.** When a card is next due for review, or that it is
+      a new card.
+
+- [ ] **Munli: rename the mobile tabs to match web.**
+
+- [ ] **Munli: change the themes.** The user's words: "It feels like I'm
+      looking at the screen from underwater." The themes as they stand are
+      "Munli gets its own themes" (2026-09-21) in
+      [decisions/munli.md](decisions/munli.md).
+
+- [ ] **Munli: clicking the Saved tab takes you to the saved card page home.**
+
 ## Medium
 
 - [ ] **User-made vocab packs: refine for testing** — moved to Medium
@@ -101,6 +121,19 @@ picker narrowed (#146). Both are written up in their Decisions entries of
       Open, not blocking: **cost per pack** (several search-backed calls).
       **Copyright** matters once packs are shared: taking words from a source is
       fine, but copying a published list wholesale is not.
+
+- [ ] **Change the card flip on review.** Added from Google Tasks 2026-10-05.
+      Today the answer appears at the bottom; the user wants the whole card to
+      flip, as it does in onboarding.
+
+- [ ] **Munli: writing improvements.** Added from Google Tasks 2026-10-05.
+      Three parts, in the user's words: scrolling on writing; an optional save
+      for a piece of writing once it's done; and a record of past writings to
+      compare improvement over time — "similar to Amgi lookup, but for
+      writing".
+
+- [ ] **Munli: cards from writing look different from cards from lookup.**
+      Added from Google Tasks 2026-10-05.
 
 - [ ] **Watch the kanji deck on the "All" chip.** The kanji pack is the first
       single-glyph pack laid out as a `list`, because its back carries readings
