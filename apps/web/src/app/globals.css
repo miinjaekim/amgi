@@ -65,83 +65,80 @@
      you have read a single label. Mobile carries identical values in
      apps/mobile/src/theme.ts; core's themes.ts owns which mode offers which.
 
-     All three come from Monkeytype, the project Amgi's look has always been
-     read against, and each keeps its source's --bg exactly. What is *not*
-     taken verbatim is the rest: Monkeytype's --sub-alt sits darker than its
-     background, while a card here sits above one, and its --main is an
-     accent for a single line of typed text rather than a colour that has to
-     carry buttons and links. So surface / border / muted are rebuilt as steps
-     off --color-bg at the same OKLCH distances Forest, Sonokai and Paper
-     already use, and --color-highlight keeps its source hue while its
-     lightness is snapped to a contrast the whole UI can wear. Sonokai was
-     adapted the same way.
+     All three began as Monkeytype palettes and keep their names, ids and
+     hues. ⚠️ They no longer keep the source's --bg. The first versions did,
+     and read as "looking at the screen from underwater" (the user,
+     2026-10-05): body text near 6:1 where Amgi's is 10-14:1, light
+     backgrounds at 84-86% lightness with no white card, and one blue over
+     background, text, captions and borders alike. So each background moved to
+     the end of its range (near white, or properly dark), cards are white on
+     the light two, text is near black or near white, and --color-muted is
+     greyer and darker than a step off the background would give. Body text is
+     now 12-14:1. The hue that says "Munli" is carried by --color-highlight
+     and by a faint cast in the background, not by everything at once.
      --------------------------------------------------------------------- */
 
   /* Suisei — the set's only dark palette, and what Munli's System resolves to
-     after dark. Pale cyan on navy, both straight from the source. Monkeytype's
-     orange --sub is the one signature colour with nowhere to go here: as
-     `muted` it would put orange on every caption and hairline in the mode, so
-     muted is a step off --color-bg as in Sonokai, and the orange is left out
-     rather than spent badly. */
+     after dark. Pale cyan on a deep navy. Monkeytype's orange --sub still has
+     nowhere to go: as `muted` it would put orange on every caption and
+     hairline in the mode. */
   html.theme-suisei {
-    --color-bg: #3B4A62;
-    --color-surface: #455773;
-    --color-muted: #7287A8;
-    --color-muted-dark: #52627B;
-    --color-text: #DBDEEB;
-    --color-highlight: #BEF0FF;
+    --color-bg: #1E2530;
+    --color-surface: #293241;
+    --color-muted: #8591A3;
+    --color-muted-dark: #364152;
+    --color-text: #E8EBF2;
+    --color-highlight: #9EE3F7;
     /* Same construction as Forest's, and checked the same way: one hue,
-       lightness climbing, adjacent ΔL >= 0.10, --heat-1 at 2.35:1 on this
-       background, hue spread 1.4°. --heat-0 is "no data" — a categorical break
-       rather than the ramp's first step, ΔE 19.0 from --heat-1 in normal vision
-       and 18.6 under deuteranopia. */
-    --heat-0: #464e51;
-    --heat-1: #678892;
-    --heat-2: #83a9b5;
-    --heat-3: #a0ccd9;
-    --heat-4: #bef0ff;
+       lightness climbing, adjacent ΔL >= 0.11, hue spread 1.7°. --heat-1 sits
+       at 3.11:1 here rather than the usual 2.35: on a background this dark the
+       lower figure leaves no room for --heat-0, which has to be a categorical
+       break (ΔE 19.3 from --heat-1, 18.7 under deuteranopia) and still show
+       against a card (1.16:1 on --color-surface). */
+    --heat-0: #343d3f;
+    --heat-1: #477784;
+    --heat-2: #6399a9;
+    --heat-3: #80becf;
+    --heat-4: #9ee3f7;
   }
 
-  /* Shoko — Munli's default, and its System light. Its source --main (#81c4dd)
-     reaches only 1.33:1 on this background, which is fine for one line of typed
-     text and unusable for a button, so the highlight holds that hue and drops
-     to 5.64:1 — the same move Paper's green makes. */
+  /* Shoko — Munli's default, and its System light. The highlight is the
+     source's hue dropped to where it can carry a button: 7.30:1 on this
+     background. */
   html.theme-shoko {
-    --color-bg: #CED7E0;
-    --color-surface: #DFE6EE;
-    --color-muted: #698CA4;
-    --color-muted-dark: #B3BCC5;
-    --color-text: #3B4C58;
+    --color-bg: #EEF2F6;
+    --color-surface: #FFFFFF;
+    --color-muted: #6B7C8A;
+    --color-muted-dark: #D5DDE5;
+    --color-text: #1B2630;
     --color-highlight: #07566C;
     /* A light theme, so the ramp darkens as the day gets busier and --heat-0 is
-       the lightest step. Adjacent ΔL 0.070, --heat-1 at 2.36:1, hue spread
-       2.2°, --heat-0 at ΔE 20.2 from --heat-1 under protanopia. */
-    --heat-0: #c0cfd5;
-    --heat-1: #6491a1;
-    --heat-2: #497d8f;
-    --heat-3: #2e697e;
+       the lightest step. Adjacent ΔL 0.090, --heat-1 at 2.38:1, hue spread
+       1.5°, --heat-0 at ΔE 20.1 from --heat-1 under protanopia. */
+    --heat-0: #d9e3e7;
+    --heat-1: #76a5b7;
+    --heat-2: #558a9e;
+    --heat-3: #347084;
     --heat-4: #07566c;
   }
 
-  /* Godspeed — warm cream, cool slate accent. The source's --text (#646669) is
-     4.52:1 here, the lowest body text anywhere in the app; it keeps its hue and
-     moves to 6.06:1, in line with Shoko's 6.11. The rest of the theme's
-     softness is intact. */
+  /* Godspeed — warm cream, cool slate accent. Body text is 12.11:1; the
+     source's #646669 was 4.52:1 on the old background. */
   html.theme-godspeed {
-    --color-bg: #EAE4CF;
-    --color-surface: #F9F4E1;
-    --color-muted: #969282;
-    --color-muted-dark: #CEC8B3;
-    --color-text: #515356;
-    --color-highlight: #3D5B6B;
-    /* Adjacent ΔL 0.070, --heat-1 at 2.37:1, hue spread 2.1°, --heat-0 at ΔE
-       21.6 from --heat-1 under protanopia. The ramp is the highlight's blue
+    --color-bg: #F4F0E2;
+    --color-surface: #FFFDF5;
+    --color-muted: #7F7C6E;
+    --color-muted-dark: #DDD7C4;
+    --color-text: #2B2D30;
+    --color-highlight: #2F5568;
+    /* Adjacent ΔL 0.086, --heat-1 at 2.36:1, hue spread 0.3°, --heat-0 at ΔE
+       20.1 from --heat-1 under protanopia. The ramp is the highlight's blue
        rather than the background's cream, as Paper's is its green. */
-    --heat-0: #d0dce3;
-    --heat-1: #8198a4;
-    --heat-2: #6a8391;
-    --heat-3: #536f7e;
-    --heat-4: #3d5b6b;
+    --heat-0: #d8e1e6;
+    --heat-1: #84a2b2;
+    --heat-2: #678798;
+    --heat-3: #4b6e80;
+    --heat-4: #2f5568;
   }
 
   body {

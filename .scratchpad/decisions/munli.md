@@ -3,6 +3,58 @@
 The second mode: its shell, conjugation practice, writing review as a tool, English articles. 2026-09-21 on. Newest first. Indexed from
 [status.md](../status.md).
 
+## Munli's themes come up out of the water (2026-10-05)
+
+**The user, on the themes of 2026-09-21**: "It feels like I'm looking at the
+screen from underwater." Three things produced it, all measurable:
+
+- **Body text sat near 6:1** on all three (Suisei 6.7, Shoko 6.1, Godspeed 6.1)
+  where Amgi's Paper is 14.3 and Sonokai 10.5.
+- **The light backgrounds were mid-tone**: 84–86% lightness against Paper's
+  95%, and no card was white.
+- **One blue covered everything** in Suisei and Shoko: background, text,
+  captions and borders all sat between 205° and 229°, with no neutral on
+  screen.
+
+**The user chose direction A of three** ("go with A for the themes"): keep
+Suisei, Shoko and Godspeed, their ids, hues and stored preferences, and clear
+the values. B was a neutral page with an indigo accent, which would have bent
+"a mode's palette is how you know where you are"; C moved Munli to warm
+palettes off blue. Both are on the comparison page the choice was made from.
+
+| | bg | surface | text | highlight | muted | border |
+|---|---|---|---|---|---|---|
+| Suisei | `#1E2530` | `#293241` | `#E8EBF2` | `#9EE3F7` | `#8591A3` | `#364152` |
+| Shoko | `#EEF2F6` | `#FFFFFF` | `#1B2630` | `#07566C` | `#6B7C8A` | `#D5DDE5` |
+| Godspeed | `#F4F0E2` | `#FFFDF5` | `#2B2D30` | `#2F5568` | `#7F7C6E` | `#DDD7C4` |
+
+Body text is now 12.9, 13.7 and 12.1:1; captions 4.8, 3.8 and 3.7:1 (they
+were 2.45).
+
+⚠️ **This overturns one line of the 2026-09-21 entry**: "each keeps its source
+`bg` exactly". None does now. The Monkeytype backgrounds were the mid-tones
+that caused the complaint. The rest of that entry stands: the sets share no
+ids, each mode remembers its own choice, and the theme follows the route.
+
+- **Error colours are unchanged** (`#FF9E99`, `#993F4A`, `#B83645`). On the new
+  backgrounds they measure 7.8, 5.9 and 5.0:1, and 6.5, 6.6 and 5.7:1 on the
+  new surfaces. Mobile only; web has no error variable.
+- **Heat ramps were regenerated** to the same rules as before: one hue,
+  monotone lightness, adjacent ΔL ≥ 0.06, faintest studied step ≥ 2.35:1 on its
+  background, `heat[0]` at ΔE ≥ 18 from `heat[1]` in normal vision, protanopia
+  and deuteranopia. The check reproduces the figures recorded for the old
+  ramps (ΔE in OKLab × 100, Machado simulation), so the numbers are comparable.
+- ⚠️ **Suisei's `heat[1]` is at 3.11:1, not 2.35.** On a background that dark
+  the lower figure leaves no room for a `heat[0]` that is both a categorical
+  break and visible against a card.
+- **Nothing in Munli draws a heat ramp today**; only Amgi's Progress does. The
+  ramps are kept valid for when Munli's Progress gets a calendar.
+- ⚠️ **On web the caption colour is also the border colour** (`--color-muted`
+  as `borderColor` across Munli's pages and the shared components), so the
+  darker captions make web's outlines firmer too. Looked at on web in all
+  three themes and it reads as crisp rather than heavy, but it is a side
+  effect, not a choice. Mobile uses `border` for borders.
+
 ## On mobile a tab's heading is its name, and the name is web's (2026-10-05)
 
 **The user's task**: "rename the mobile tabs to match web."
@@ -763,6 +815,10 @@ cannot disagree with the table practice is graded against; a test asserts the tw
 match for every tense.
 
 ## Munli gets its own themes, and a mode's palette is how you know where you are (2026-09-21)
+
+⚠️ **The colour values below were replaced 2026-10-05** ("Munli's themes come
+up out of the water"), and "each keeps its source `bg` exactly" no longer
+holds. Everything about ids, storage and routing stands.
 
 Munli shipped wearing Amgi's palette, and on a phone that made the two modes
 hard to tell apart at a glance — the tabs change, but the tabs are icon-only, so
