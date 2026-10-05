@@ -15,9 +15,14 @@ Housekeeping in [backlog.md](backlog.md)._
 - **2.1.0 is build 18, live in TestFlight and approved for external testing**
   (2026-09-28). External testers can be invited without another review as long
   as the version doesn't change.
-- **Queued for build 19:** user-made vocab packs (PR #175), Cantonese (PR #177)
-  and the onboarding walkthrough (PR #178). Web is live; mobile needs the
-  build. The list is kept in [backlog.md](backlog.md).
+- **2.2.0 is prepared and not yet cut**: `release/2.2.0` bumps the version and
+  rewrites the TestFlight copy, and stops before `eas build`. It carries the
+  twelve PRs under Queued for the next build in [backlog.md](backlog.md); web
+  already has all of them. Pre-flight on 2026-10-05: no native module or
+  `app.json` native config has changed since 2.1.0, introspect came back
+  `entitlements: {}`, the review notes are 3993 of 4000 characters, and the
+  copy has no character Apple has not already accepted except Hangul
+  syllables. Step 1's device pass has not been done.
 - **Web deploys on merge**, so everything on `main` is live there.
 - **`/api/grammar/exercise` stays deployed** for any device still on 1.3.0,
   which has the grammar UI compiled in. The deletion is under Housekeeping in
