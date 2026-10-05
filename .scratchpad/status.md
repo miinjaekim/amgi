@@ -282,6 +282,7 @@ Navigation, titles, mode names, onboarding, help, naming.
 
 Subscriptions, the launch cache, fallbacks, and why there is no local model.
 
+- [ID tokens are verified without `firebase-admin/auth` (2026-10-05)](decisions/data-loading.md#id-tokens-are-verified-without-firebase-adminauth-2026-10-05)
 - [Launch paints from the device, behind a splash that lets go (2026-09-22)](decisions/data-loading.md#launch-paints-from-the-device-behind-a-splash-that-lets-go-2026-09-22)
 - [A plausible fallback is worse than no fallback (2026-09-22)](decisions/data-loading.md#a-plausible-fallback-is-worse-than-no-fallback-2026-09-22)
 - [Mobile's card surfaces subscribe too — the gate was opened by a test, not a build (2026-08-22)](decisions/data-loading.md#mobiles-card-surfaces-subscribe-too--the-gate-was-opened-by-a-test-not-a-build-2026-08-22)

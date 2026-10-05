@@ -19,6 +19,7 @@
     "@google/generative-ai": "^0.24.0",
     "firebase": "^11.6.1",
     "firebase-admin": "^14.1.0",
+    "jose": "^6.2.3",
     "next": "^16.2.7",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",

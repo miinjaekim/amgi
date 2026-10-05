@@ -1,7 +1,7 @@
 import { getApps, initializeApp, cert, App } from 'firebase-admin/app';
 import { getStorage } from 'firebase-admin/storage';
 import { getFirestore } from 'firebase-admin/firestore';
-import { getAuth } from 'firebase-admin/auth';
+import { verifyIdToken } from '@/lib/idToken';
 
 function getAdminApp(): App {
   if (getApps().length > 0) return getApps()[0];
@@ -33,14 +33,12 @@ export function getDb() {
  * The signed-in user behind a request, from its `Authorization: Bearer <id
  * token>` header, or null. Needed wherever the server writes on a user's
  * behalf; the model routes that write nothing don't ask.
+ *
+ * Verified by `idToken.ts`, not `firebase-admin/auth` — importing that here
+ * takes down every route that imports this file. The reason is written there.
  */
 export async function verifyRequestUid(req: Request): Promise<string | null> {
   const header = req.headers.get('authorization') ?? '';
   const token = header.startsWith('Bearer ') ? header.slice('Bearer '.length) : '';
-  if (!token) return null;
-  try {
-    return (await getAuth(getAdminApp()).verifyIdToken(token)).uid;
-  } catch {
-    return null;
-  }
+  return verifyIdToken(token, process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID);
 }

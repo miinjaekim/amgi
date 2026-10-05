@@ -290,11 +290,31 @@ Three things worth keeping:
   finishes even if the app is closed. This is the documented Firebase pattern
   and it keeps `firebase-admin` out of it entirely — which matters, because the
   attempt that did use `firebase-admin/auth` (PR #55) took `/api/pronounce` and
-  `/api/word-of-the-day` down with it and was reverted. Root cause was never
-  found; the fix was to not need it. Config lives in
+  `/api/word-of-the-day` down with it and was reverted. The root cause was not
+  found then; it was found on 2026-10-05, after PR #175 brought the import back
+  and the same routes went down again — see the next entry. Config lives in
   [tech-stack.md](tech-stack.md) — it is console state, like the rules below.
   Expect `auth/requires-recent-login`: deletion is security-sensitive and needs
   a sign-in from the last ~5 minutes, so both platforms reauthenticate and retry.
+- **`firebase-admin/auth` cannot be imported in the web app, and one bad import
+  takes down routes that never call it.** It loads `jwks-rsa`, which is
+  CommonJS and does `require('jose')`; `jose` is ESM-only. On a runtime that
+  will not `require()` an ES module that is `ERR_REQUIRE_ESM` **at module
+  load**, and `firebaseAdmin.ts` is shared — so `/api/word-of-the-day`,
+  `/api/pronounce` and `/api/user-packs` all answered 500 from the moment PR
+  #175 merged (2026-10-04) until the fix, including to requests that should
+  have been a 400 or a 405. Nothing showed locally: Node 22.12+ loads it.
+  **How it was found:** the word of the day vanished on mobile, and both
+  clients hide that tile on any failure, so the only symptom of three dead
+  routes was a missing nicety. `curl` on the live route is what showed it.
+  **To reproduce a deploy-only module failure**, run the production build with
+  `NODE_OPTIONS=--no-experimental-require-module npx next start` — it gave the
+  live site's exact status codes. The transferable half: a route that returns
+  500 to a request it should reject before doing any work did not fail in its
+  handler; it failed loading. Look at the imports, not the code.
+  ID tokens are verified in `apps/web/src/lib/idToken.ts` now, and eslint
+  refuses the import. The decision is in
+  [decisions/data-loading.md](decisions/data-loading.md).
 - **Extension installs can fail on a service account that plainly exists.**
   Installing *Delete User Data* failed twice with "Default service account
   `<project-number>-compute@developer.gserviceaccount.com` doesn't exist" while
