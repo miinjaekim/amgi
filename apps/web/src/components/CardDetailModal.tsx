@@ -9,6 +9,7 @@ import {
 } from '@/services/firestore';
 import { ExamplePair } from '@/services/gemini';
 import {
+  cardReviewLines,
   getBackSide,
   getBackSideConfig,
   getCharacterBreakdown,
@@ -26,6 +27,7 @@ import type { PackEntry, StudyLanguage } from '@amgi/core';
 import Markdown from '@/components/Markdown';
 import { t, partOfSpeechLabel } from '@/lib/i18n';
 import PronounceButton from '@/components/PronounceButton';
+import { useUser } from '@/components/UserContext';
 
 function isExamplePairArray(arr: unknown[]): arr is ExamplePair[] {
   return arr.length === 0 || (typeof arr[0] === 'object' && arr[0] !== null && ('korean' in arr[0] || 'swedish' in arr[0] || 'english' in arr[0]));
@@ -86,6 +88,8 @@ export default function CardDetailModal({
   });
   /** Non-null while the back is being edited. */
   const [editDraft, setEditDraft] = useState<string | null>(null);
+  const { hanjaPartition } = useUser();
+  const [now] = useState(() => new Date());
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
@@ -226,6 +230,15 @@ export default function CardDetailModal({
                 Deeper's prompt assumes the reader has already seen it. */}
             {senseLine && (
               <p className="text-xs mt-1" style={{ color: 'var(--color-muted)' }}>{senseLine}</p>
+            )}
+            {/* Where the card stands with Review. Nothing for an unsaved
+                entry or an archived card: neither is in the schedule. */}
+            {saved && !saved.archived && (
+              <div className="text-xs mt-2" style={{ color: 'var(--color-muted)' }}>
+                {cardReviewLines(interfaceLanguage, lang, deckNativeLanguage, saved, now, hanjaPartition).map(line => (
+                  <p key={line}>{line}</p>
+                ))}
+              </div>
             )}
           </div>
           <button

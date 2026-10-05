@@ -11,7 +11,7 @@ import {
   getCardsCollection,
   Flashcard,
 } from '@/services/firestore';
-import { DEFAULT_DECK_FILTER, buildDeckFilters, filterCardsByDeck, getBackSide, getBackSideConfig, getStudyLanguageConfig } from '@amgi/core';
+import { DEFAULT_DECK_FILTER, buildDeckFilters, cardReviewStatus, filterCardsByDeck, getBackSide, getBackSideConfig, getStudyLanguageConfig, reviewStatusLabel } from '@amgi/core';
 import type { DeckFilterId } from '@amgi/core';
 import { db } from '@/config/firebase';
 import { doc, updateDoc } from 'firebase/firestore';
@@ -52,6 +52,9 @@ export default function CardsPage() {
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkWorking, setBulkWorking] = useState(false);
+  // Read once: "due now" against the moment the page opened is close enough,
+  // and a clock read during render would differ between renders.
+  const [now] = useState(() => new Date());
   const [cardOrder, setCardOrder] = useState<'korean-first' | 'english-first'>('korean-first');
 
   const langConfig = getStudyLanguageConfig(studyLanguage);
@@ -470,6 +473,11 @@ export default function CardsPage() {
                           </button>
                           <div className="text-xs text-[var(--color-muted)]">
                             {t(interfaceLanguage, 'savedAt')} {card.createdAt instanceof Date ? card.createdAt.toLocaleDateString() : String(card.createdAt)}
+                            {/* An archived card is out of review, so it has no
+                                place in the schedule to report. */}
+                            {!card.archived && (
+                              <span className="ml-2">· {reviewStatusLabel(interfaceLanguage, cardReviewStatus(card, now), now)}</span>
+                            )}
                             {card.archived && (
                               <span className="ml-2 px-1.5 py-0.5 rounded text-xs border border-[var(--color-muted)]">
                                 {t(interfaceLanguage, 'cardsFilterArchived')}

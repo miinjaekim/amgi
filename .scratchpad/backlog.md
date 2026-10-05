@@ -80,6 +80,11 @@ _Merged, not yet in anyone's hands — mobile ships by build, no OTA._
   the mode sheet. Account deletion moved to Settings → Account, and the review
   notes say so. The decision is "Settings is a list of rows" in
   [decisions/app-shell.md](decisions/app-shell.md).
+- **Review times on cards** (PR #189) — each row in My Cards says *New card*,
+  *Due now* or *Next review: in 3 days* beside its saved date, and card detail
+  says the same, per direction when the two differ. Web is live on merge;
+  mobile needs the build. The decision is "A card says where it stands with
+  Review" in [decisions/cards-and-lookup.md](decisions/cards-and-lookup.md).
 
 What has never been looked at on a device is listed under Unverified in
 [status.md](status.md). It is not tracked here, by the 2026-09-04 decision that
@@ -93,13 +98,10 @@ practice session should cover several tenses at once again, which the section
 picker narrowed (#146). Both are written up in their Decisions entries of
 2026-09-22.
 
-_The five below were added from Google Tasks 2026-10-05, at the priority the
-user gave. None is scoped yet beyond the user's own words._
+_The one below is what is left of the nine added from Google Tasks
+2026-10-05, at the priority the user gave._
 
 - [ ] **Add Arabic.**
-
-- [ ] **Show review times.** When a card is next due for review, or that it is
-      a new card.
 
 ## Medium
 

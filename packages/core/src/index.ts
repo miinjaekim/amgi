@@ -8,6 +8,7 @@ export * from './i18n';
 export * from './packs';
 export * from './collections';
 export * from './reviewQueue';
+export * from './reviewStatus';
 export * from './kana';
 export * from './kanji';
 export * from './hanja';

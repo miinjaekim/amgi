@@ -3,6 +3,7 @@ import {
   Modal, View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Alert,
 } from 'react-native';
 import {
+  cardReviewLines,
   getBackSide,
   getBackSideConfig,
   getCharacterBreakdown,
@@ -20,6 +21,7 @@ import { useCardEnrichment } from '../hooks/useCardEnrichment';
 import AddToMunliButton from './AddToMunliButton';
 import type { ExamplePair, PackEntry, StudyLanguage } from '@amgi/core';
 import { useTheme } from '../context/ThemeContext';
+import { useUser } from '../context/UserContext';
 import PronounceButton from './PronounceButton';
 import Markdown from './Markdown';
 import {
@@ -80,6 +82,8 @@ export default function CardDetailModal({
   });
   /** Non-null while the back is being edited. */
   const [editDraft, setEditDraft] = useState<string | null>(null);
+  const { hanjaPartition } = useUser();
+  const [now] = useState(() => new Date());
 
   // The header reads the same whether or not a card exists behind it, so an
   // unsaved entry is projected onto the two fields it can fill.
@@ -195,6 +199,15 @@ export default function CardDetailModal({
                   it is the sense any generated depth is pinned to, and Dig
                   Deeper's prompt assumes the reader has already seen it. */}
               {!!senseLine && <Text style={s.hint}>{senseLine}</Text>}
+              {/* Where the card stands with Review. Nothing for an unsaved
+                  entry or an archived card: neither is in the schedule. */}
+              {!!saved && !saved.archived && (
+                <View style={s.schedule}>
+                  {cardReviewLines(interfaceLanguage, lang, deckNativeLanguage, saved, now, hanjaPartition).map(line => (
+                    <Text key={line} style={s.scheduleLine}>{line}</Text>
+                  ))}
+                </View>
+              )}
             </View>
             <TouchableOpacity onPress={onClose} hitSlop={12}>
               <Text style={s.close}>×</Text>
@@ -365,6 +378,8 @@ function makeStyles(C: Palette) {
     // Quieter than the 훈음 above it: a second fact about the character.
     backGloss: { fontSize: 14, color: C.muted, marginTop: 2 },
     hint: { fontSize: 12, color: C.muted, marginTop: 4 },
+    schedule: { marginTop: 8 },
+    scheduleLine: { fontSize: 12, color: C.muted },
     close: { fontSize: 28, color: C.muted, lineHeight: 30, marginLeft: 12 },
 
     actions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingHorizontal: 20, paddingTop: 14 },
