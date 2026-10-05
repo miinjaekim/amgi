@@ -246,6 +246,7 @@ Per-language calls: Spanish, Kikuyu, Swahili, Hanja, and a native language per d
 
 Card fields, glosses, part of speech, spellcheck, saving, My Cards, export.
 
+- [A card says where it stands with Review (2026-10-05)](decisions/cards-and-lookup.md#a-card-says-where-it-stands-with-review-2026-10-05)
 - [French verbs are tagged with their group, and only their group (2026-09-23)](decisions/cards-and-lookup.md#french-verbs-are-tagged-with-their-group-and-only-their-group-2026-09-23)
 - [My Cards opens on "All", reversing #80 (2026-09-23)](decisions/cards-and-lookup.md#my-cards-opens-on-all-reversing-80-2026-09-23)
 - [The gloss ceiling is one rule, and the semicolon knows about disambiguation (2026-09-08)](decisions/cards-and-lookup.md#the-gloss-ceiling-is-one-rule-and-the-semicolon-knows-about-disambiguation-2026-09-08)

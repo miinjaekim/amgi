@@ -3,6 +3,48 @@
 Card fields, glosses, part of speech, spellcheck, saving, My Cards, export. Newest first. Indexed from
 [status.md](../status.md).
 
+## A card says where it stands with Review (2026-10-05)
+
+**What.** The user asked to "show review times: when a card is next due for
+review, or that it is a new card." Two existing surfaces carry it, on web and
+mobile, and nothing new was added to hold it:
+
+- **My Cards**, on the line that already said when the card was saved: *New
+  card*, *Due now*, or *Next review: tomorrow / in 6 days / Nov 5, 2026*.
+- **Card detail**, under the header. One line when both directions say the same
+  thing; otherwise one per direction, named as Review's direction chips name
+  them (*Korean → English · Next review: in 6 days*, *English → Korean · Not
+  reviewed yet*).
+
+Archived cards and unsaved pack entries show nothing: neither is in the
+schedule. The logic is `reviewStatus.ts` in core, shared by both platforms.
+
+**Why both.** A card has two schedules, one per direction, and a row has room
+for one answer. The row gives the answer to "when does this come up next"; the
+detail is where the two schedules can be told apart. Either alone is wrong
+somewhere: the row alone hides that a card is strong one way and untouched the
+other, and the detail alone means opening every card to find the due ones.
+
+**The three calls inside it.**
+- **A card studied one way and never the other reads *Due now*.** Not *New*,
+  and not the studied direction's date. It is what Review does with it: the
+  unstudied direction is in today's queue. A test holds the row to `isDue`, so
+  the list cannot say "in 6 days" about a card Review is about to ask.
+- **New is an interval of zero**, not the absence of tracking. Saving writes
+  both directions with one, and every rating — *again* included — leaves it at
+  one or more. A card missed on its first try is *Due now*, not new.
+- **Days are calendar days.** A review 13 hours away, at 1am, is *tomorrow*.
+  Past 30 days the date replaces the count.
+
+**⚠️ What it does not know.** The direction filter on Review is a choice made
+per session, not a stored preference, so this assumes both directions, as the
+due counts on Review's own picker do. Someone who only ever studies one
+direction will see *Due now* on every card they have rated, permanently. If the
+filter is ever stored, `cardReviewStatus` should take it.
+
+**⚠️ Never seen rendered** when it merged: both surfaces need a signed-in
+account, so the layout was not looked at in a browser or on a device.
+
 ## French verbs are tagged with their group, and only their group (2026-09-23)
 
 **The backlog item asked for four facts, and one shipped.** They were the

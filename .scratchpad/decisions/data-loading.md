@@ -27,13 +27,16 @@ missing.
   is Vercel project state rather than code, it could not be checked from here,
   and it leaves the app one settings change away from the same outage.
 
-**⚠️ Not confirmed:** that this is what production was doing. Vercel's logs and
-its protected preview URLs were out of reach. What is established is that the
-production build, run locally with `require(esm)` switched off, returns the
-live site's status codes route for route, and returns the right ones after this
-change. A real Google-signed token has not been through the new verifier
-either; the tests sign with their own key. Making a pack on web while signed in
-is the check for both.
+**Confirmed by the merge.** Vercel's logs and its protected preview URLs were
+out of reach beforehand, so the diagnosis rested on the production build, run
+locally with `require(esm)` switched off, returning the live site's status
+codes route for route. Once PR #187 merged (2026-10-05) the live routes
+answered correctly again: 400 and 200 from `/api/word-of-the-day`, 405 to a
+`GET` on `/api/pronounce` and `/api/user-packs`.
+
+**⚠️ Still not confirmed:** a real Google-signed token through the new
+verifier. The tests sign with their own key. Making a pack on web while signed
+in is the check.
 
 ## Launch paints from the device, behind a splash that lets go (2026-09-22)
 
