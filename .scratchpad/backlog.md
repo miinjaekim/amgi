@@ -32,8 +32,8 @@ _Merged, not yet in anyone's hands — mobile ships by build, no OTA._
   regular verb has a miss count, and it weighs which verb a pattern is asked
   through (`1 + misses`, capped at 5). What is asked is still what is due. The
   exception to "nothing here adapts to the learner" is in `decisions/munli.md`
-  (2026-10-05). Web is live on merge; mobile needs the build. **No practice
-  session has been run with it**, on web or mobile.
+  (2026-10-05). Web is live on merge; mobile needs the build. The user
+  tested it in Expo Go 2026-10-05.
 - **Users add their own French verbs to Munli** (PR #182) — Topics has one
   *Verbs* row; inside it, a row per pattern and per irregular verb, like the
   Packs list, each opening a card per tense with its own Save, with an *Add a
