@@ -143,6 +143,7 @@ the top of its file and a line here.
 
 The second mode: its shell, conjugation practice, writing review as a tool, English articles. 2026-09-21 on.
 
+- [Munli's themes come up out of the water (2026-10-05)](decisions/munli.md#munlis-themes-come-up-out-of-the-water-2026-10-05)
 - [On mobile a tab's heading is its name, and the name is web's (2026-10-05)](decisions/munli.md#on-mobile-a-tabs-heading-is-its-name-and-the-name-is-webs-2026-10-05)
 - [A second tap on the Saved tab returns to the shelves (2026-10-05)](decisions/munli.md#a-second-tap-on-the-saved-tab-returns-to-the-shelves-2026-10-05)
 - [A verb you keep missing is drawn more often, and that is all it changes (2026-10-05)](decisions/munli.md#a-verb-you-keep-missing-is-drawn-more-often-and-that-is-all-it-changes-2026-10-05)

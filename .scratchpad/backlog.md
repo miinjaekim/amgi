@@ -67,6 +67,14 @@ _Merged, not yet in anyone's hands — mobile ships by build, no OTA._
   another tab keeps your place. Practice still resets on every press. The
   call is in `decisions/munli.md` (2026-10-05). **Not seen on a device.**
 
+- **Munli's themes, cleared** (PR #187) — Suisei, Shoko and Godspeed keep
+  their names and stored choices with new values: near-white or properly dark
+  backgrounds, white cards, near-black text, greyer captions. Body text goes
+  from about 6:1 to 12–14:1. The user chose this direction 2026-10-05; the
+  values and what caused the "underwater" feel are in `decisions/munli.md`.
+  Web is live on merge; mobile needs the build. **Seen on web in all three
+  themes; not seen on a device.**
+
 - **Settings as a list** (PR #180) — mobile only. Settings opens on the
   account and eight rows; each pushes its own screen, and *Switch mode* opens
   the mode sheet. Account deletion moved to Settings → Account, and the review
@@ -92,11 +100,6 @@ user gave. None is scoped yet beyond the user's own words._
 
 - [ ] **Show review times.** When a card is next due for review, or that it is
       a new card.
-
-- [ ] **Munli: change the themes.** The user's words: "It feels like I'm
-      looking at the screen from underwater." The themes as they stand are
-      "Munli gets its own themes" (2026-09-21) in
-      [decisions/munli.md](decisions/munli.md).
 
 ## Medium
 

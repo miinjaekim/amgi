@@ -83,44 +83,45 @@ export const PALETTES: Record<ThemeId, Palette> = {
   },
   /* ---------------------------------------------------------------------
      Munli's three. Identical to html.theme-suisei / -shoko / -godspeed in the
-     web app's globals.css, which carries the full derivation: all three are
-     Monkeytype palettes keeping their source `bg`, with surface / border /
-     muted rebuilt as OKLCH steps off it and `highlight` snapped to a usable
-     contrast — the same adaptation Sonokai got.
+     web app's globals.css, which carries the full derivation. They began as
+     Monkeytype palettes and keep their names, ids and hues, but not the
+     source backgrounds: those read as "looking at the screen from underwater"
+     (2026-10-05), so each ground moved to the end of its range, cards went
+     white on the light two, and text went near black or near white.
      --------------------------------------------------------------------- */
 
   // Suisei — the set's only dark palette, and Munli's system-dark.
   suisei: {
-    bg: '#3B4A62',
-    surface: '#455773',
-    text: '#DBDEEB',
-    highlight: '#BEF0FF',
-    muted: '#7287A8',
-    border: '#52627B',
+    bg: '#1E2530',
+    surface: '#293241',
+    text: '#E8EBF2',
+    highlight: '#9EE3F7',
+    muted: '#8591A3',
+    border: '#364152',
     error: '#FF9E99',
-    heat: ['#464e51', '#678892', '#83a9b5', '#a0ccd9', '#bef0ff'],
+    heat: ['#343d3f', '#477784', '#6399a9', '#80becf', '#9ee3f7'],
   },
   // Shoko — Munli's default and its system-light.
   shoko: {
-    bg: '#CED7E0',
-    surface: '#DFE6EE',
-    text: '#3B4C58',
+    bg: '#EEF2F6',
+    surface: '#FFFFFF',
+    text: '#1B2630',
     highlight: '#07566C',
-    muted: '#698CA4',
-    border: '#B3BCC5',
+    muted: '#6B7C8A',
+    border: '#D5DDE5',
     error: '#993F4A',
-    heat: ['#c0cfd5', '#6491a1', '#497d8f', '#2e697e', '#07566c'],
+    heat: ['#d9e3e7', '#76a5b7', '#558a9e', '#347084', '#07566c'],
   },
   // Godspeed — warm cream, cool slate accent.
   godspeed: {
-    bg: '#EAE4CF',
-    surface: '#F9F4E1',
-    text: '#515356',
-    highlight: '#3D5B6B',
-    muted: '#969282',
-    border: '#CEC8B3',
+    bg: '#F4F0E2',
+    surface: '#FFFDF5',
+    text: '#2B2D30',
+    highlight: '#2F5568',
+    muted: '#7F7C6E',
+    border: '#DDD7C4',
     error: '#B83645',
-    heat: ['#d0dce3', '#8198a4', '#6a8391', '#536f7e', '#3d5b6b'],
+    heat: ['#d8e1e6', '#84a2b2', '#678798', '#4b6e80', '#2f5568'],
   },
 };
 
