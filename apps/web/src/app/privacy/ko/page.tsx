@@ -12,7 +12,7 @@ export default function PrivacyPageKo() {
       <div>
         <h1 className="text-2xl font-bold mb-1">개인정보처리방침</h1>
         <p className="opacity-70 text-sm">
-          최종 수정일: 2026년 9월 25일 ·{" "}
+          최종 수정일: 2026년 10월 5일 ·{" "}
           <Link href="/privacy" className="underline">
             English
           </Link>
@@ -41,7 +41,9 @@ export default function PrivacyPageKo() {
           <li>
             <strong>학습 데이터.</strong> 이용자가 설정한 모국어와 학습 언어,
             저장한 단어와 플래시카드(단어, 번역, 예문, 복습 주기 데이터), 그리고
-            연속 학습 기록과 진행 상황을 저장합니다.
+            연속 학습 기록과 진행 상황을 저장합니다. 단어팩을 직접 만들면 그
+            단어팩과 함께, 만들 때 입력한 답변과 붙여 넣은 자료도 저장합니다.
+            문리에서 동사를 추가하면 그 동사의 활용형을 저장합니다.
           </li>
           <li>
             <strong>기기에 저장되는 설정.</strong> 언어 설정은 더 빠른 사용을 위해
@@ -63,7 +65,20 @@ export default function PrivacyPageKo() {
           <li>
             Google의 Gemini AI로 단어 설명과 예문을 생성하기 위해 사용합니다. 이때
             단어 또는 표현, 선택적으로 입력한 문맥, 언어 설정만 Gemini에 전송하며
-            이름, 이메일, 계정 ID는 전송하지 않습니다.
+            이름, 이메일, 계정 ID는 전송하지 않습니다. 문리에서 추가한 동사도
+            같은 방식으로 조회합니다. 활용형은 Gemini가 생성하며 이용자의 계정에
+            저장됩니다.
+          </li>
+          <li>
+            이용자가 요청한 단어팩을 만들기 위해 Google 검색을 함께 쓰는 Google의
+            Gemini AI를 사용합니다. 이때 단어팩 질문에 입력한 답변, 붙여 넣은
+            자료, 언어 설정, 그리고 이미 저장한 단어 목록(최대 400개)을
+            전송합니다. 저장한 단어 목록은 수준을 맞추고 이미 아는 단어를 빼기
+            위한 것입니다. 이름, 이메일, 계정 ID는 전송하지 않습니다. 그다음
+            Amgi 서버가 검색으로 찾은 공개 웹페이지를 읽어 단어가 실제로 거기에
+            있는지 확인하며, 해당 사이트에는 이용자에 관한 정보가 전달되지
+            않습니다. 완성된 단어팩은 이용자의 계정에 저장되며 본인만 볼 수
+            있습니다.
           </li>
           <li>
             Google의 Gemini AI로 이용자가 쓴 글을 첨삭하기 위해 사용합니다. 이때
@@ -86,7 +101,8 @@ export default function PrivacyPageKo() {
           Amgi는 Google 인프라 위에서 운영됩니다. 다음 Google 서비스가 Amgi를
           대신해 데이터를 처리합니다: Firebase Authentication 및 Cloud
           Firestore(로그인 및 앱 데이터 저장), Firebase Storage(발음 음성 캐시),
-          Gemini API(단어 설명, 예문 및 글 첨삭), Google Cloud Text-to-Speech(발음 음성).
+          Gemini API(단어 설명, 예문, 동사 활용형, 글 첨삭, 그리고 Gemini를 통해
+          Google 검색도 함께 쓰는 단어팩 만들기), Google Cloud Text-to-Speech(발음 음성).
           Google이 이 데이터를 어떻게 처리하는지는{" "}
           <a
             href="https://policies.google.com/privacy?hl=ko"
@@ -119,8 +135,8 @@ export default function PrivacyPageKo() {
           이용자의 데이터는 계정이 유지되는 동안 보관됩니다. 계정은 웹과 모바일
           앱의 설정 화면에서 언제든지 직접 삭제할 수 있습니다. 삭제는 즉시
           이루어지며 되돌릴 수 없습니다. 계정, 모든 언어의 저장된 카드, 복습
-          기록과 연속 학습 기록, 설정이 모두 지워집니다. 저장한 단어를 남겨두고
-          싶다면 삭제하기 전에 설정의 &apos;내 데이터&apos;에서 내보내 주세요. 모든
+          기록과 연속 학습 기록, 직접 만든 단어팩, 추가한 동사, 설정이 모두
+          지워집니다. 저장한 단어를 남겨두고 싶다면 삭제하기 전에 설정의 &apos;내 데이터&apos;에서 내보내 주세요. 모든
           언어의 카드를 한 번에 내려받을 수 있습니다.
         </p>
         <p>

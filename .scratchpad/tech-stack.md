@@ -45,7 +45,7 @@ Install `firebase/delete-user-data` and set:
 | Cloud Firestore paths | `users/{UID}` | preferences doc, addressed by id |
 | Firestore delete mode | `recursive` | cheap insurance if subcollections ever appear |
 | Enable auto discovery | `yes` | cards are found by field, not by path |
-| Auto discovery search fields | `uid` | every card document carries `uid` |
+| Auto discovery search fields | `uid`, `ownerUid` | every card document carries `uid`; a user-made pack carries `ownerUid` |
 | Auto discovery depth | `3` (default) | cards are top-level; no need to go deeper |
 | Realtime Database / Storage paths | *leave empty* | neither holds per-user data |
 
@@ -57,6 +57,20 @@ Auto discovery is what covers the six per-language card collections without
 naming them, so adding a language needs no change here. It does not match UIDs
 nested in arrays or maps; ours is a flat top-level field, so that limit does not
 bite.
+
+**User-made packs are covered by `ownerUid`**, which the user added to the
+search fields on 2026-10-05. Before that the field list was `uid` alone, and a
+pack — a top-level `userPacks` document owned through `ownerUid`, not under
+`users/{UID}` — matched neither the path nor the field, so deleting an account
+left that user's packs behind with the brief and any pasted material in them.
+That was live from PR #175 until the field was added, and was found while
+bringing the privacy policy up to date. A verb added in Munli never had the
+problem: it is stored in the preferences doc.
+
+⚠️ Not exercised end to end: nobody has deleted an account that owned a pack
+and looked for the pack afterwards. It is listed under Unverified in
+[status.md](status.md). **A new per-user collection has to carry `uid` or
+`ownerUid`, or live under `users/{UID}`**, or it repeats this.
 
 ## Mobile (`apps/mobile`)
 

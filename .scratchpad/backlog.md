@@ -89,8 +89,8 @@ _Merged, not yet in anyone's hands — mobile ships by build, no OTA._
   the vowelled reading beside them tagged *not checked*, `ar-XA` audio, and
   Arabic lines running right to left. Web is live on merge; mobile needs the
   build. The security rule was added 2026-10-05 and the composite indexes were
-  building then. One measurement of the reading is still owed; it and the
-  decision are in [decisions/languages.md](decisions/languages.md).
+  building then. The decision is in
+  [decisions/languages.md](decisions/languages.md).
 
 What has never been looked at on a device is listed under Unverified in
 [status.md](status.md). It is not tracked here, by the 2026-09-04 decision that

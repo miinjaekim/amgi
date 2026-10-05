@@ -81,6 +81,9 @@ blank placeholder. On **Android**, only sign-in has ever been exercised.
   that nothing else in the app produces. Unseen on a device.
 - **The Spanish Basics rows** (article badge, whole-question rows) are the
   longest that pack layout has had to hold. Unseen by a signed-in user.
+- **Account deletion removing a user's packs.** The deletion extension was
+  given `ownerUid` on 2026-10-05 so that it would; nobody has deleted an account
+  that owned a pack and looked. The privacy policy says packs are removed.
 
 **Progress history has two start dates and neither can be backfilled.** Daily
 rollups begin 2026-08-20; `cardsMatured`, `studySeconds` and `byHour` begin
