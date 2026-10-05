@@ -67,7 +67,7 @@ _Merged, not yet in anyone's hands — mobile ships by build, no OTA._
   another tab keeps your place. Practice still resets on every press. The
   call is in `decisions/munli.md` (2026-10-05). **Not seen on a device.**
 
-- **Munli's themes, cleared** (PR #187) — Suisei, Shoko and Godspeed keep
+- **Munli's themes, cleared** (PR #188) — Suisei, Shoko and Godspeed keep
   their names and stored choices with new values: near-white or properly dark
   backgrounds, white cards, near-black text, greyer captions. Body text goes
   from about 6:1 to 12–14:1. The user chose this direction 2026-10-05; the
