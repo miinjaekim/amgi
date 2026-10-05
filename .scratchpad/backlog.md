@@ -62,6 +62,10 @@ _Merged, not yet in anyone's hands — mobile ships by build, no OTA._
   named; Topics said "Practice set" and Progress "Grammar practice", which are
   web's page titles. The reading of the task is in `decisions/munli.md`
   (2026-10-05). **Not seen on a device.**
+- **Pressing Munli's Saved tab returns to the shelves** (PR #186) — mobile
+  only. From inside a kind or a detail, and when coming back from another tab.
+  The rule is Practice's, from 2026-09-22; Saved had missed it. Web already
+  behaves this way. **Not seen on a device.**
 
 - **Settings as a list** (PR #180) — mobile only. Settings opens on the
   account and eight rows; each pushes its own screen, and *Switch mode* opens
@@ -93,8 +97,6 @@ user gave. None is scoped yet beyond the user's own words._
       looking at the screen from underwater." The themes as they stand are
       "Munli gets its own themes" (2026-09-21) in
       [decisions/munli.md](decisions/munli.md).
-
-- [ ] **Munli: clicking the Saved tab takes you to the saved card page home.**
 
 ## Medium
 

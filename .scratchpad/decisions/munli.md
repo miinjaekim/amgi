@@ -26,6 +26,27 @@ already were. Web is untouched: it keeps its page titles, and `verbsTitle` and
 **This is a reading of nine words, not a confirmed scope.** If the user meant
 something else by "tabs" (the icons, or visible labels under them), this entry
 is the thing to revise.
+## Pressing the Saved tab returns to the shelves, like every other tab (2026-10-05)
+
+**The user's task**: "clicking the Saved tab takes you to the saved card page
+home." Read as a request, not a report, because **mobile did not do it**:
+Saved's three levels (kind → item → detail) are local state, the route never
+changes, and the screen had no `tabPress` listener. Tapping Saved from inside a
+detail did nothing, and leaving for another tab and coming back returned you to
+the detail.
+
+**The rule already existed.** "Pressing a tab returns to that tab's home" was
+decided 2026-09-22 and built for Practice. Saved became an inventory with
+levels in the same pass and never got the listener. This closes that gap rather
+than deciding anything new.
+
+- **It resets whether or not Saved is focused**, as Practice does, so arriving
+  from another tab lands on the shelves too. That is what web does: its nav is
+  plain `<a href>`, so a click on Saved is a document navigation and the state
+  is gone either way. Amgi's Learn and Review reset only on a re-tap, because
+  a lookup or an open pack there is work worth keeping; a tense you were
+  reading is not.
+- **Web needed nothing**, for the reason above.
 
 ## A verb you keep missing is drawn more often, and that is all it changes (2026-10-05)
 

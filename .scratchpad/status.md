@@ -144,6 +144,7 @@ the top of its file and a line here.
 The second mode: its shell, conjugation practice, writing review as a tool, English articles. 2026-09-21 on.
 
 - [On mobile a tab's heading is its name, and the name is web's (2026-10-05)](decisions/munli.md#on-mobile-a-tabs-heading-is-its-name-and-the-name-is-webs-2026-10-05)
+- [Pressing the Saved tab returns to the shelves, like every other tab (2026-10-05)](decisions/munli.md#pressing-the-saved-tab-returns-to-the-shelves-like-every-other-tab-2026-10-05)
 - [A verb you keep missing is drawn more often, and that is all it changes (2026-10-05)](decisions/munli.md#a-verb-you-keep-missing-is-drawn-more-often-and-that-is-all-it-changes-2026-10-05)
 - [Verbs are one topic again, and Amgi has a door into it (2026-10-04)](decisions/munli.md#verbs-are-one-topic-again-and-amgi-has-a-door-into-it-2026-10-04)
 - [English articles: a box on every slot, and the rule is what's scheduled (2026-09-28)](decisions/munli.md#english-articles-a-box-on-every-slot-and-the-rule-is-whats-scheduled-2026-09-28)

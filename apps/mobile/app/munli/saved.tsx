@@ -1,7 +1,9 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from 'expo-router';
+import type { BottomTabNavigationProp } from 'expo-router/tabs';
 import { daysUntil, getStudyLanguageConfig, listSavedKinds, setEnrolled, t } from '@amgi/core';
 import { useUser } from '../../src/context/UserContext';
 import { useTheme } from '../../src/context/ThemeContext';
@@ -49,6 +51,22 @@ export default function SavedScreen() {
   const [openSubject, setOpenSubject] = useState<string | null>(null);
   /** `null` reads as "the first tense worth opening" — see `shownTense`. */
   const [chosenTense, setChosenTense] = useState<string | null>(null);
+
+  /**
+   * Pressing the Saved tab comes back to the shelves.
+   *
+   * ⚠️ **The rule Practice has had since 2026-09-22, which this screen
+   * missed**: the levels below are local state, so the route never changes and
+   * nothing but the back chevron led out of a detail — twice, from the bottom.
+   * `tabPress` fires whether or not this screen is focused, so arriving from
+   * another tab lands on the shelves too, which is what web's `<a href>` does.
+   */
+  const navigation = useNavigation<BottomTabNavigationProp<Record<string, undefined>>>();
+  useEffect(() => navigation.addListener('tabPress', () => {
+    setOpenKind(null);
+    setOpenSubject(null);
+    setChosenTense(null);
+  }), [navigation]);
 
   const shelves = useMemo(
     () => (spec && enrolment ? listSavedKinds(spec, enrolment, progress) : []),
