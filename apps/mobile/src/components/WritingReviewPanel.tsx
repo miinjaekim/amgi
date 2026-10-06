@@ -1,7 +1,7 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, ActivityIndicator,
-  ScrollView, StyleSheet, Keyboard,
+  ScrollView, StyleSheet, Keyboard, Platform, useWindowDimensions,
 } from 'react-native';
 import {
   buildWritingCardDraft, getStudyLanguageConfig, offersCard, t, writingExample,
@@ -15,11 +15,29 @@ import { saveFlashcardToFirestore } from '../services/firestore';
 import type { Flashcard } from '../services/firestore';
 import { useUser } from '../context/UserContext';
 import { useTheme } from '../context/ThemeContext';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFloatingTabBarHeight } from './FloatingTabBar';
 import PronounceButton from './PronounceButton';
 import CopyButton from './CopyButton';
 import TextDiff from './TextDiff';
 import type { Palette } from '../theme';
+
+/** Space above the field, and between it and the keyboard while writing. */
+const FIELD_TOP = 4;
+const FIELD_GAP = 10;
+const MIN_FIELD_HEIGHT = 140;
+
+/**
+ * The tallest keyboard this device has shown, once one has been. Module-level
+ * so a remount starts from it, and stored so a relaunch does.
+ */
+const KEYBOARD_HEIGHT_KEY = 'writing:keyboardHeight';
+let rememberedKeyboardHeight: number | null = null;
+
+/** How far a touch may travel on the field and still be a tap, in points. */
+const TAP_SLOP = 8;
 
 const KIND_LABEL_KEY: Record<FindingKind, TranslationKey> = {
   grammar: 'writingKindGrammar',
@@ -41,9 +59,15 @@ const KIND_LABEL_KEY: Record<FindingKind, TranslationKey> = {
  * way saving from a word lookup clears the term, because you keep reading the
  * rest of the findings afterwards.
  */
-export default function WritingReviewPanel() {
+export default function WritingReviewPanel({ onEditingChange }: {
+  /** Told when the passage starts and stops being edited (keyboard up). */
+  onEditingChange?: (editing: boolean) => void;
+}) {
   const { C } = useTheme();
   const tabBarHeight = useFloatingTabBarHeight();
+  // Only until the panel has been measured, which is one frame.
+  const { height: windowHeight } = useWindowDimensions();
+  const fallbackHeight = Math.round(windowHeight * 0.4);
   const s = useMemo(() => makeStyles(C, tabBarHeight), [C, tabBarHeight]);
   // Two languages, not one — see the 2026-09-12 decision. Chrome takes the
   // interface language; the model's notes and the card's back slot take the
@@ -63,6 +87,89 @@ export default function WritingReviewPanel() {
    */
   const [submitted, setSubmitted] = useState('');
   const [showClean, setShowClean] = useState(false);
+  /**
+   * Writing and feedback are two pages of this tab, and never share one.
+   *
+   * The field is sized to the room above the keyboard and does not resize,
+   * which left the feedback a strip under it. So a review takes the whole
+   * page when it arrives, and the passage has the whole page while it is being
+   * written. Little is lost by not seeing both: the feedback opens with the
+   * passage's own diff.
+   *
+   * ⚠️ **No switch at the top** — one was tried 2026-10-06 and the user did not
+   * like it. The way back to the passage is **Edit**, on the rewrite's own row
+   * beside Copy and Final; the way back to the feedback without resubmitting
+   * is the link under the Review button. Editing keeps the review: it is
+   * feedback on the passage as submitted, until the next submission.
+   */
+  const [page, setPage] = useState<'write' | 'feedback'>('write');
+  const [showMeaning, setShowMeaning] = useState(false);
+  /**
+   * Reading the passage and editing it are two states, and only a tap moves
+   * from the first to the second.
+   *
+   * ⚠️ **Why the field is not simply always editable.** React Native focuses a
+   * `TextInput` from a JS press handler, and a press there survives a drag
+   * that stays inside the field. So scrolling a long passage and lifting the
+   * finger opened the keyboard (reported 2026-10-06). While reading, the field
+   * is `editable={false}`, which still scrolls on iOS and never focuses itself;
+   * its `onPress` is ours to judge, and a touch that travelled is a scroll.
+   *
+   * iOS only. A non-editable field on Android does not scroll, and the report
+   * was iOS, so Android keeps the plain always-editable field.
+   */
+  const [editing, setEditing] = useState(false);
+  const inputRef = useRef<TextInput>(null);
+  const touchStartY = useRef<number | null>(null);
+  const readOnly = Platform.OS === 'ios' && !editing;
+  useEffect(() => {
+    // After the commit that made the field editable, never before it.
+    if (editing) inputRef.current?.focus();
+  }, [editing]);
+  useEffect(() => { onEditingChange?.(editing); }, [editing, onEditingChange]);
+
+  /**
+   * The field is sized once, to the room above the keyboard, and stays that
+   * size whether the keyboard is up or not.
+   *
+   * The user's calls, 2026-10-06: let the keyboard cover the Review button
+   * (writing and submitting are two steps now, and the tick in the header ends
+   * the first), and **do not resize the field as the keyboard comes and goes**
+   * — a version that grew to meet the keyboard was tried and disliked.
+   *
+   * iOS does not say how tall the keyboard will be before it first shows, so
+   * the height is an estimate until one has been seen, then the real one,
+   * remembered across launches. It only ever moves up after that (a taller
+   * keyboard, such as emoji), so the field's bottom edge is never under it.
+   *
+   * `keyboardWillShow` is iOS only; Android resizes the window itself and
+   * keeps the estimate.
+   */
+  const insets = useSafeAreaInsets();
+  const [panelHeight, setPanelHeight] = useState(0);
+  const [keyboardHeight, setKeyboardHeight] = useState<number | null>(rememberedKeyboardHeight);
+  useEffect(() => {
+    const learn = (height: number) => {
+      if (!(height > 0)) return;
+      if (rememberedKeyboardHeight !== null && height <= rememberedKeyboardHeight) return;
+      rememberedKeyboardHeight = height;
+      setKeyboardHeight(height);
+      void AsyncStorage.setItem(KEYBOARD_HEIGHT_KEY, String(height)).catch(() => {});
+    };
+    if (rememberedKeyboardHeight === null) {
+      void AsyncStorage.getItem(KEYBOARD_HEIGHT_KEY).then(v => learn(Number(v))).catch(() => {});
+    }
+    const show = Keyboard.addListener('keyboardWillShow', e => learn(e.endCoordinates.height));
+    return () => show.remove();
+  }, []);
+  // Before any keyboard has been seen: the usual portrait heights, with and
+  // without a home indicator.
+  const assumedKeyboard = keyboardHeight ?? (insets.bottom > 0 ? 336 : 260);
+  const writingHeight = panelHeight > 0
+    ? Math.max(MIN_FIELD_HEIGHT, panelHeight - assumedKeyboard - FIELD_TOP - FIELD_GAP)
+    : fallbackHeight;
+
+  const showing = review ? page : 'write';
 
   const languageLabel = t(interfaceLanguage, getStudyLanguageConfig(studyLanguage).studyLabelKey);
   const overLimit = text.length > WRITING_MAX_CHARS;
@@ -83,13 +190,16 @@ export default function WritingReviewPanel() {
     setLoading(true);
     setError(null);
     setReview(null);
+    setPage('write');
     setSavedCards(new Set());
     setShowClean(false);
+    setShowMeaning(false);
     try {
       const passage = text.trim();
       const result = await getWritingReview(passage, deckNativeLanguage ?? 'English', studyLanguage);
       setSubmitted(passage);
       setReview(result);
+      setPage('feedback');
     } catch (err) {
       setError(t(interfaceLanguage, 'errorWritingReview'));
       console.error(err);
@@ -118,23 +228,26 @@ export default function WritingReviewPanel() {
 
 
   return (
-    /**
-     * `automaticallyAdjustKeyboardInsets` rather than a `KeyboardAvoidingView`.
-     *
-     * KAV with `padding` only shrinks the container — it does not scroll the
-     * caret back into view, so on a passage longer than a few lines the text
-     * you are actively typing ends up under the keyboard. Letting the
-     * ScrollView own the keyboard inset keeps the caret visible as the input
-     * grows, and the two mechanisms fight each other if both are present.
-     */
-    <ScrollView
-      style={s.flex}
-      contentContainerStyle={s.scroll}
-      keyboardShouldPersistTaps="handled"
-      keyboardDismissMode="interactive"
-      automaticallyAdjustKeyboardInsets
-    >
+    <View style={s.flex}>
+      {/* Hidden, not unmounted, while the feedback is up: the passage keeps
+          its scroll position and its caret for when you come back. */}
+      <View
+        style={[s.flex, showing === 'feedback' && s.hidden]}
+        onLayout={e => { if (e.nativeEvent.layout.height > 0) setPanelHeight(e.nativeEvent.layout.height); }}
+      >
+      {/* ⚠️ **The field is held in place and is its own scroller; the page
+          below it is a sibling, never a parent.** Reported 2026-10-06:
+          scrolling a long passage was "sticky". The field scrolled inside
+          itself *inside* a page that also scrolled, so one drag had more than
+          one owner. A field that grows with the passage (one scroller, the
+          page) was tried the same day and the user preferred the text moving
+          inside a box that stays put. So: a fixed-height field, then the
+          counter and the submit button, then a ScrollView for everything else.
+          A drag on the field moves the passage; a drag below it moves what is
+          under it; neither can hand off to the other. */}
+      <View style={[s.field, { height: writingHeight }]}>
       <TextInput
+        ref={inputRef}
         style={s.input}
         value={text}
         onChangeText={setText}
@@ -142,12 +255,31 @@ export default function WritingReviewPanel() {
         placeholderTextColor={C.muted}
         multiline
         textAlignVertical="top"
-        editable={!loading}
+        editable={!loading && !readOnly}
+        onPressIn={e => { touchStartY.current = e.nativeEvent.pageY; }}
+        onPress={e => {
+          const start = touchStartY.current;
+          touchStartY.current = null;
+          if (loading || !readOnly) return;
+          if (start !== null && Math.abs(e.nativeEvent.pageY - start) > TAP_SLOP) return;
+          setEditing(true);
+        }}
+        onFocus={() => setEditing(true)}
+        onBlur={() => {
+          setEditing(false);
+          // Edit, then done, with nothing changed: the review on file is still
+          // the review of this passage, so go back to it rather than leaving
+          // them at a Review button with nothing new to review.
+          if (review && text.trim() === submitted) setPage('feedback');
+        }}
       />
+      {/* In the field's corner, so it is still there while the keyboard
+          covers everything under the field. */}
+      <Text style={[s.counter, overLimit && s.counterOver]} pointerEvents="none">
+        {text.length} / {WRITING_MAX_CHARS}
+      </Text>
+      </View>
       <View style={s.actionRow}>
-        <Text style={[s.counter, overLimit && s.counterOver]}>
-          {text.length} / {WRITING_MAX_CHARS}
-        </Text>
         <TouchableOpacity
           style={[s.submitBtn, (loading || !text.trim() || overLimit) && s.submitBtnDisabled]}
           onPress={handleSubmit}
@@ -157,8 +289,34 @@ export default function WritingReviewPanel() {
             ? <ActivityIndicator color={C.bg} size="small" />
             : <Text style={s.submitBtnText}>{t(interfaceLanguage, 'writingButton')}</Text>}
         </TouchableOpacity>
+        {/* Only after Edit: the review you left is still there, and getting
+            back to it should not cost another submission. */}
+        {review && !loading && (
+          <TouchableOpacity
+            style={s.backToFeedback}
+            hitSlop={8}
+            accessibilityRole="button"
+            onPress={() => { Keyboard.dismiss(); setPage('feedback'); }}
+          >
+            <Text style={s.backToFeedbackText}>{t(interfaceLanguage, 'writingBackToFeedback')}</Text>
+          </TouchableOpacity>
+        )}
       </View>
-
+      {/**
+        * ⚠️ **No `keyboardDismissMode`.** It was `interactive`, and a scroll
+        * that wandered over the keyboard put it away, which the user did not
+        * want from a scroll. The keyboard goes on a tap outside the field
+        * (`keyboardShouldPersistTaps="handled"`), on the tick in the header
+        * (`writing.tsx`), or on submit.
+        *
+        * No keyboard inset either: the field is above the keyboard by
+        * construction, and nothing in here takes focus.
+        */}
+      <ScrollView
+        style={s.flex}
+        contentContainerStyle={s.scroll}
+        keyboardShouldPersistTaps="handled"
+      >
       {/* ⚠️ **It demonstrates the gap, deliberately.** The "?" sheet says in
           words that a word you cannot reach can go in in your own language;
           this is the route catching exactly that, which is the one thing about
@@ -196,18 +354,35 @@ export default function WritingReviewPanel() {
         </View>
       )}
 
-      {review && (
-        <>
+      </ScrollView>
+      </View>
+
+      {showing === 'feedback' && review && (
+        <ScrollView style={s.flex} contentContainerStyle={s.scroll}>
+          {/* Above the box, as "What to notice" is above its findings. Inside,
+              it shared a row with three buttons and the last was pushed onto a
+              line of its own. */}
+          <Text style={s.findingsHeading}>{t(interfaceLanguage, 'writingRewriteHeading')}</Text>
           <View style={s.card}>
             <View style={s.rewriteHeaderRow}>
-              <Text style={[s.sectionLabel, s.sectionLabelShrink]}>{t(interfaceLanguage, 'writingRewriteHeading')}</Text>
-              <PronounceButton text={review.rewrite} studyLanguage={studyLanguage} kind="sentence" />
+              {/* ⚠️ No pronounce button here (the user's call, 2026-10-06):
+                  this tool is for writing, not listening. The ones on the
+                  findings stay: hearing the one new word is worth more than
+                  hearing back the passage you just wrote. */}
               {/* Always the clean rewrite, never the diff — copying text with
                   the deletions in it would paste the mistakes back. */}
               <CopyButton text={review.rewrite} interfaceLanguage={interfaceLanguage} />
               {/* The clean rewrite stays reachable — it is the version you
                   would read aloud, and a heavily edited passage is hard to read
                   as a sentence through its own diff. */}
+              {/* Back to the passage as you wrote it, editable. */}
+              <TouchableOpacity
+                style={s.editBtn}
+                accessibilityRole="button"
+                onPress={() => { setPage('write'); setEditing(true); }}
+              >
+                <Text style={s.viewToggleText}>{t(interfaceLanguage, 'edit')}</Text>
+              </TouchableOpacity>
               <TouchableOpacity style={s.viewToggle} onPress={() => setShowClean(v => !v)}>
                 <Text style={s.viewToggleText}>
                   {t(interfaceLanguage, showClean ? 'writingViewChanges' : 'writingViewFinal')}
@@ -221,12 +396,24 @@ export default function WritingReviewPanel() {
             )}
 
             {/* The check that a correction didn't change what they meant.
-                Subordinate to the rewrite, but never behind a tap — a check
-                nobody opens is a check nobody runs. */}
+                ⚠️ Behind a tap since 2026-10-06, on the user's call: open it
+                when you are curious what the rewrite says. It was always
+                shown before, on the argument that a check nobody opens is a
+                check nobody runs; the user weighed that against the room it
+                takes on every review and chose the tap. */}
             {review.rewriteNative && (
               <View style={s.nativeBlock}>
-                <Text style={s.sectionLabel}>{t(interfaceLanguage, 'writingRewriteMeaning')}</Text>
-                <Text style={s.nativeText}>{review.rewriteNative}</Text>
+                <TouchableOpacity
+                  style={s.nativeToggle}
+                  hitSlop={8}
+                  accessibilityRole="button"
+                  accessibilityState={{ expanded: showMeaning }}
+                  onPress={() => setShowMeaning(v => !v)}
+                >
+                  <Text style={s.sectionLabel}>{t(interfaceLanguage, 'writingRewriteMeaning')}</Text>
+                  <Ionicons name={showMeaning ? 'chevron-up' : 'chevron-down'} size={14} color={C.muted} />
+                </TouchableOpacity>
+                {showMeaning && <Text style={s.nativeText}>{review.rewriteNative}</Text>}
               </View>
             )}
           </View>
@@ -291,9 +478,9 @@ export default function WritingReviewPanel() {
               );
             })
           )}
-        </>
+        </ScrollView>
       )}
-    </ScrollView>
+    </View>
   );
 }
 
@@ -303,21 +490,33 @@ function makeStyles(C: Palette, tabBarHeight: number) {
     scroll: { padding: 16, paddingBottom: tabBarHeight + 16 },
 
 
+    hidden: { display: 'none' },
+    field: { marginHorizontal: 16, marginTop: FIELD_TOP },
     input: {
+      flex: 1,
       borderWidth: 1, borderColor: C.border, borderRadius: 12,
-      paddingHorizontal: 14, paddingVertical: 12, fontSize: 16, lineHeight: 23,
+      paddingHorizontal: 14, paddingTop: 12, fontSize: 16, lineHeight: 23,
       color: C.text, backgroundColor: C.surface,
-      // Bounded on both ends. Without a ceiling the field grows with the
-      // passage until the counter and the submit button are pushed off screen,
-      // so past `maxHeight` the text scrolls inside the field instead.
-      minHeight: 150, maxHeight: 260,
+      // The field's height is its wrapper's: past it the passage scrolls
+      // inside the field, which is safe now that no scroller contains it. The
+      // bottom padding is the counter's, so the last line clears it.
+      paddingBottom: 30,
     },
-    actionRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 10, marginBottom: 16 },
-    counter: { fontSize: 12, color: C.muted },
+    // Review across the full width: it is the one thing this screen is for, so
+    // it is sized as that rather than as one item in a row.
+    actionRow: {
+      paddingHorizontal: 16, paddingVertical: 12,
+      borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: C.border,
+    },
+    counter: {
+      position: 'absolute', right: 10, bottom: 8,
+      fontSize: 12, color: C.muted, backgroundColor: C.surface,
+      paddingHorizontal: 4, borderRadius: 4, overflow: 'hidden',
+    },
     counterOver: { color: C.error, fontWeight: '700' },
     submitBtn: {
       backgroundColor: C.highlight, borderRadius: 12,
-      paddingHorizontal: 20, paddingVertical: 10, minWidth: 80, alignItems: 'center',
+      paddingHorizontal: 20, paddingVertical: 13, alignItems: 'center',
     },
     submitBtnDisabled: { opacity: 0.5 },
     submitBtnText: { color: C.bg, fontWeight: '700', fontSize: 15 },
@@ -326,20 +525,26 @@ function makeStyles(C: Palette, tabBarHeight: number) {
     errorText: { color: C.error, fontWeight: '600' },
 
     card: { backgroundColor: C.surface, borderRadius: 16, padding: 18, borderWidth: 1, borderColor: C.border, marginBottom: 20 },
-    // Wraps, because the heading is a full sentence in uppercase and the row
-    // also carries a pronounce button and the Changes/Final toggle — on a
-    // narrow phone the toggle ran off the edge. Wrapping drops it to its own
-    // line rather than truncating a label or shrinking a tap target.
+    // Copy, Edit, and the Changes/Final toggle at the far end. Still wraps, so
+    // a wide label on a narrow phone drops a line rather than running off the
+    // edge; with the heading out of the row it should not need to.
     rewriteHeaderRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6, marginBottom: 8 },
     viewToggle: {
       marginLeft: 'auto', borderWidth: 1, borderColor: C.border, borderRadius: 12,
       paddingHorizontal: 10, paddingVertical: 3,
     },
     viewToggleText: { fontSize: 11, color: C.muted },
+    editBtn: {
+      borderWidth: 1, borderColor: C.border, borderRadius: 12,
+      paddingHorizontal: 10, paddingVertical: 3,
+    },
+    nativeToggle: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+    backToFeedback: { alignSelf: 'center', marginTop: 12 },
+    backToFeedbackText: { color: C.highlight, fontSize: 14, fontWeight: '600' },
     sectionLabel: { fontSize: 11, fontWeight: '700', color: C.muted, textTransform: 'uppercase', letterSpacing: 0.8 },
     // The worked example, in the space an empty passage box leaves.
     example: {
-      marginTop: 28, padding: 16, borderRadius: 14,
+      marginTop: 4, padding: 16, borderRadius: 14,
       borderWidth: 1, borderColor: C.border,
     },
     exampleLabel: { color: C.muted, fontSize: 11, marginTop: 14, marginBottom: 4 },
@@ -353,9 +558,8 @@ function makeStyles(C: Palette, tabBarHeight: number) {
     exampleTagText: { color: C.highlight, fontSize: 10, fontWeight: '700' },
     exampleStudy: { color: C.text, fontSize: 14, fontWeight: '600' },
     exampleBack: { color: C.muted, fontSize: 14 },
-    sectionLabelShrink: { flexShrink: 1 },
     rewriteText: { fontSize: 17, color: C.text, lineHeight: 26 },
-    nativeBlock: { marginTop: 14, paddingTop: 14, borderTopWidth: 1, borderTopColor: C.border, gap: 4 },
+    nativeBlock: { marginTop: 14, paddingTop: 14, borderTopWidth: 1, borderTopColor: C.border, gap: 8 },
     nativeText: { fontSize: 14, color: C.text, opacity: 0.7, lineHeight: 21 },
 
     findingsHeading: { fontSize: 11, fontWeight: '700', color: C.muted, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 10 },

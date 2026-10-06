@@ -48,6 +48,17 @@ is below merged after it._
   badge is on the back in both directions.
   ⚠️ What has and has not been seen is under Unverified in
   [status.md](status.md).
+- **Munli: Writing reworked on mobile** (#193; started as the sticky scroll
+  of a long passage and was shaped on the user's phone in Expo Go,
+  2026-10-06). The passage field is one fixed size, the room above the
+  keyboard, and scrolls inside itself; nothing scrolls around it. A drag
+  scrolls without opening the keyboard and a tap opens it (iOS); a tick in the
+  header closes it, and scrolling never does. Review is full width under the
+  field, with the counter in the field's corner. A review takes the whole
+  page: the heading sits above the box, the row inside is Copy, Edit and
+  Final/Changes, the rewrite's audio button is gone (the findings keep
+  theirs), and "What that says" opens on a tap. Edit returns to the passage;
+  done with nothing changed returns to the feedback. Web is unchanged.
 
 What has never been looked at on a device is listed under Unverified in
 [status.md](status.md). It is not tracked here, by the 2026-09-04 decision that
@@ -62,21 +73,9 @@ picker narrowed (#146). Both are written up in their Decisions entries of
 2026-09-22.
 
 - [ ] **Munli: writing improvements.** Added from Google Tasks 2026-10-05;
-      moved to High and scoped with the user 2026-10-06. Two parts, done as
-      two pieces of work, the scroll fix first (the user's call).
-      **1 · Scrolling a long passage (mobile).** The user's report: scrolling
-      a big passage "feels very sticky"; sometimes the text scrolls, sometimes
-      the text stays and the whole box moves, sometimes nothing happens.
-      Read from the code, not reproduced on a device: the passage field in
-      `apps/mobile/src/components/WritingReviewPanel.tsx` is capped at 260
-      points and scrolls inside itself past that, and it sits inside the page's
-      own `ScrollView`, which also has `keyboardDismissMode="interactive"`. So
-      one drag has three possible owners: the field, the page, and the
-      keyboard dismissal. The cap is there so the counter and the submit button
-      are not pushed off screen. **The fix, confirmed by the user 2026-10-06:** the field grows with the passage
-      and does not scroll itself, the page is the only scroller, and the
-      counter and submit button sit in a bar that stays in view. Web uses a
-      plain `<textarea>` and was not reported.
+      moved to High and scoped with the user 2026-10-06. It had two parts; the
+      scroll fix went first (the user's call) and is under Queued for the next
+      build. What is left:
       **2 · Saving a piece of writing, and reading old ones.** The user's
       calls:
       - **Saving is optional**, offered once a review has come back.

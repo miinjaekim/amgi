@@ -61,6 +61,11 @@ interface Props {
    * Costs nothing on an account without a streak; `StreakBadge` renders null.
    */
   streak?: boolean;
+  /**
+   * A control for the far end of the title row, after the study language.
+   * Writing puts its "done writing" tick here while the keyboard is up.
+   */
+  action?: React.ReactNode;
 }
 
 /**
@@ -82,7 +87,7 @@ interface Props {
  * left to decide. Progress is the exception on both sides, and it does not use
  * this component.
  */
-export default function PageHeader({ titleKey, helpTitleKey, helpLeadKey, helpPointsKey, streak }: Props) {
+export default function PageHeader({ titleKey, helpTitleKey, helpLeadKey, helpPointsKey, streak, action }: Props) {
   const { interfaceLanguage } = useUser();
   const { C } = useTheme();
   const s = useMemo(() => makeStyles(C), [C]);
@@ -110,6 +115,7 @@ export default function PageHeader({ titleKey, helpTitleKey, helpLeadKey, helpPo
           </TouchableOpacity>
         )}
         <StudyLanguageChip />
+        {action}
       </View>
 
       {/* Under the title, not beside it. Sharing the row cost the title the
