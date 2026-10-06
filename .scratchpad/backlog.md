@@ -52,7 +52,7 @@ picker narrowed (#146). Both are written up in their Decisions entries of
       - **A satisfying animation is welcome**, not required.
       - **Tap-to-reveal review only.** Typed-answer review stays as it is; the
         user is not sure how a flip would work with a typed answer.
-      **Proposed, not yet confirmed by the user:** a turn about the vertical
+      **Confirmed by the user 2026-10-06:** a turn about the vertical
       axis with the content swapped at the midpoint, and a cross-fade when the
       system asks for reduced motion; the rating row's space reserved from the
       start so nothing moves when it appears; ratings stay available after
@@ -65,7 +65,8 @@ picker narrowed (#146). Both are written up in their Decisions entries of
       card's content on tap.
 
 - [ ] **Munli: writing improvements.** Added from Google Tasks 2026-10-05;
-      moved to High and scoped with the user 2026-10-06. Two parts.
+      moved to High and scoped with the user 2026-10-06. Two parts, done as
+      two pieces of work, the scroll fix first (the user's call).
       **1 · Scrolling a long passage (mobile).** The user's report: scrolling
       a big passage "feels very sticky"; sometimes the text scrolls, sometimes
       the text stays and the whole box moves, sometimes nothing happens.
@@ -75,7 +76,7 @@ picker narrowed (#146). Both are written up in their Decisions entries of
       own `ScrollView`, which also has `keyboardDismissMode="interactive"`. So
       one drag has three possible owners: the field, the page, and the
       keyboard dismissal. The cap is there so the counter and the submit button
-      are not pushed off screen. **Proposed:** the field grows with the passage
+      are not pushed off screen. **The fix, confirmed by the user 2026-10-06:** the field grows with the passage
       and does not scroll itself, the page is the only scroller, and the
       counter and submit button sit in a bar that stays in view. Web uses a
       plain `<textarea>` and was not reported.
@@ -90,7 +91,7 @@ picker narrowed (#146). Both are written up in their Decisions entries of
       - **For now, reading is enough**: how I wrote then and what feedback I
         got. Statistics (which mistakes, how often, whether they fall over
         time) are wanted later, not in this item.
-      **Proposed, not yet confirmed by the user:** the saved record is the
+      **Confirmed by the user 2026-10-06:** the saved record is the
       submitted passage, the whole `WritingReview` (rewrite, its native
       rendering, findings with their `kind`), the study language and the date,
       so later statistics need no backfill; the Saved row opens a dated list
