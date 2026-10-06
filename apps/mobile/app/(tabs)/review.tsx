@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import {
   View, Text, TouchableOpacity, ActivityIndicator,
   StyleSheet, Animated, TextInput, Alert, ScrollView,
-  Keyboard, Pressable,
+  Keyboard, Pressable, Easing,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useNavigation } from 'expo-router';
@@ -21,6 +21,7 @@ import {
 import { REQUEST_TIMEOUT_MS } from '../../src/services/withTimeout';
 import { enqueueReview } from '../../src/services/offlineReview';
 import { usePendingReviewSync } from '../../src/hooks/usePendingReviewSync';
+import { useReduceMotion } from '../../src/hooks/useReduceMotion';
 import { refreshReminders } from '../../src/services/reminders';
 import {
   DIRECTION_FILTERS, applyPendingReviews, buildReviewCollections,
@@ -45,6 +46,17 @@ import { SkeletonBar, SkeletonGroup, SkeletonRows } from '../../src/components/S
 import type { Palette } from '../../src/theme';
 
 type Rating = 'again' | 'hard' | 'good' | 'easy';
+
+/**
+ * The two halves of the card's turn: face-on to edge-on, where the faces swap,
+ * then back round to face-on. About 190ms in all, and deliberately short. This
+ * runs once for every card in a session, so it has to read as the card
+ * answering the tap, not as something to wait for. The first version took 130ms
+ * out and then a spring that needed about half a second to settle, and on a
+ * phone that was a wait (the user, 2026-10-06).
+ */
+const FLIP_OUT_MS = 70;
+const FLIP_IN_MS = 120;
 
 /**
  * Everything needed to put the last rating back.
@@ -161,6 +173,46 @@ export default function ReviewScreen() {
   const [reviewedCount, setReviewedCount] = useState(0);
   const [lastRating, setLastRating] = useState<UndoableRating | null>(null);
   const revealAnim = useRef(new Animated.Value(0)).current;
+  /**
+   * Which face of a tap-to-reveal card is up. Apart from `revealed`, which
+   * means "the answer has been seen" and is what unlocks the ratings: turning
+   * the card back to its front does not take the ratings away again.
+   *
+   * Typed cards never read it. They keep the stacked reveal, word above answer.
+   */
+  const [showingBack, setShowingBack] = useState(false);
+  /**
+   * The turn, in quarter turns: 0 is face-on, ±1 is edge-on. One value for both
+   * styles of turn, so reduced motion changes what it is mapped to (opacity
+   * instead of rotation) and nothing else.
+   */
+  const flipAnim = useRef(new Animated.Value(0)).current;
+  /**
+   * Which way the card is going out, from the tap until the faces swap: 1
+   * towards the answer, -1 back to the prompt, 0 when it is not. The two turn
+   * opposite ways, so going back reads as undoing the flip rather than as a
+   * second one. Taps while it is non-zero are dropped.
+   */
+  const turningOut = useRef<0 | 1 | -1>(0);
+  const reduceMotion = useReduceMotion();
+  // The second half of the turn, started from here rather than from the first
+  // half's callback so that it cannot begin before the other face has rendered:
+  // swinging the old face back in for a frame is the one thing a flip must not do.
+  useEffect(() => {
+    const direction = turningOut.current;
+    if (!direction) return;
+    turningOut.current = 0;
+    // Carries on round the same way: out through one edge, in from the other.
+    flipAnim.setValue(-direction);
+    Animated.timing(flipAnim, {
+      toValue: 0,
+      duration: FLIP_IN_MS,
+      // A slight overshoot, so the card lands with some weight. Timed rather
+      // than sprung: a spring's tail is what made the first version feel slow.
+      easing: reduceMotion ? Easing.out(Easing.quad) : Easing.out(Easing.back(1.4)),
+      useNativeDriver: true,
+    }).start();
+  }, [showingBack, flipAnim, reduceMotion]);
   /**
    * The keyboard's real height, from the event rather than inferred.
    *
@@ -514,11 +566,36 @@ export default function ReviewScreen() {
     setEditing(false);
     setEditDraft(null);
     revealAnim.setValue(0);
+    setShowingBack(false);
+    // Also stops a turn in progress, so a rating made mid-flip does not carry
+    // the tail of the animation onto the next card.
+    turningOut.current = 0;
+    flipAnim.setValue(0);
   };
 
   const handleReveal = () => {
     setRevealed(true);
     Animated.spring(revealAnim, { toValue: 1, useNativeDriver: true, friction: 8 }).start();
+  };
+
+  /**
+   * Turn a tap-to-reveal card over, either way. The faces swap at the midpoint,
+   * when the card is edge-on and neither can be read.
+   */
+  const handleFlip = () => {
+    if (turningOut.current) return;
+    const direction = showingBack ? -1 : 1;
+    turningOut.current = direction;
+    // On the tap, not at the swap: the ratings are there by the time the thumb
+    // is, instead of arriving with the answer.
+    setRevealed(true);
+    Animated.timing(flipAnim, {
+      toValue: direction, duration: FLIP_OUT_MS, easing: Easing.in(Easing.quad), useNativeDriver: true,
+    }).start(({ finished }) => {
+      // Interrupted by `resetCardState`: the card this turn belonged to is gone.
+      if (!finished) return;
+      setShowingBack(back => !back);
+    });
   };
 
   const handleRate = async (
@@ -649,6 +726,9 @@ export default function ReviewScreen() {
     setTypedGrade(lastRating.typedGrade);
     setRevealed(true);
     revealAnim.setValue(1);
+    setShowingBack(true);
+    turningOut.current = 0;
+    flipAnim.setValue(0);
   };
 
   /**
@@ -1219,10 +1299,129 @@ export default function ReviewScreen() {
   const hasExamples = !!shownCard.examples && shownCard.examples.length > 0;
   const hasDepth = !!(definition || characterBreakdown || shownCard.notes);
 
+  /**
+   * Tap-to-reveal cards turn over in place; typed ones do not flip at all. A
+   * typed session still holds both kinds, since only `backToFront` is typed.
+   */
+  const flips = !typingThisCard;
+  const flipStyle = reduceMotion
+    // Reduced motion: the same swap at the same midpoint, faded instead of turned.
+    ? { opacity: flipAnim.interpolate({ inputRange: [-1, 0, 1], outputRange: [0, 1, 0], extrapolate: 'clamp' }) }
+    : {
+        transform: [
+          { perspective: 1000 },
+          // Not clamped: the overshoot past face-on is the landing.
+          { rotateY: flipAnim.interpolate({ inputRange: [-1, 1], outputRange: ['-90deg', '90deg'] }) },
+        ],
+      };
+
   const revealStyle = {
     opacity: revealAnim,
     transform: [{ translateY: revealAnim.interpolate({ inputRange: [0, 1], outputRange: [12, 0] }) }],
   };
+
+  /**
+   * The details toggle and what it opens. Lifted out because both layouts of
+   * the answer end with it: the back face of a flipped card, and the stacked
+   * reveal a typed card keeps.
+   */
+  const detailsBlock = (
+    <>
+      {/* One toggle for everything, shown whenever there is either
+          something to read or something to write. */}
+      <TouchableOpacity style={s.detailsBtn} onPress={() => setShowDetails(v => !v)}>
+        <Text style={s.detailsBtnText}>
+          {t(interfaceLanguage, showDetails ? 'hideDetails' : 'showDetails')}
+        </Text>
+      </TouchableOpacity>
+
+      {showDetails && (
+        <View style={s.definitionWrap}>
+          {!!definition && (
+            <View style={s.detailSection}>
+              <Text style={s.detailLabel}>{t(interfaceLanguage, 'sectionDefinition')}</Text>
+              <Markdown style={s.definitionText}>{definition}</Markdown>
+            </View>
+          )}
+          {!!characterBreakdown && (
+            <View style={s.detailSection}>
+              <Text style={s.detailLabel}>{t(interfaceLanguage, characterSectionKey)}</Text>
+              <Markdown style={s.definitionText}>{characterBreakdown}</Markdown>
+            </View>
+          )}
+          {!!shownCard.notes && (
+            <View style={s.detailSection}>
+              <Text style={s.detailLabel}>{t(interfaceLanguage, 'sectionNotes')}</Text>
+              <Markdown style={s.definitionText}>{shownCard.notes}</Markdown>
+            </View>
+          )}
+          {hasExamples && (
+            <View style={s.detailSection}>
+              <Text style={s.detailLabel}>{t(interfaceLanguage, 'sectionExamples')}</Text>
+              {shownCard.examples!.map((ex, i) => {
+                const sides = getExampleSides(ex, studyLanguage, deckNativeLanguage);
+                return (
+                  <View key={i} style={s.exampleItem}>
+                    <View style={s.exampleStudyRow}>
+                      <Text style={[s.exampleStudy, s.rowText, rtlLine(sides.study)]}>{sides.study}</Text>
+                      {/* Offline-gated for the same reason as the
+                          term's button above. */}
+                      {isOnline && (
+                        <PronounceButton
+                          text={sides.study}
+                          studyLanguage={studyLanguage}
+                          kind="sentence"
+                          size="sm"
+                        />
+                      )}
+                    </View>
+                    {sides.back ? <Text style={s.exampleBack}>{sides.back}</Text> : null}
+                  </View>
+                );
+              })}
+            </View>
+          )}
+
+          {/* Mid-review is where a one-line gloss most often turns out
+              not to be enough — you find out at the moment you fail to
+              recall it. Offering the write here means that discovery
+              does not cost you the session. Each button waits only on
+              its own request. */}
+          {(!hasDepth || !hasExamples) && (
+            <View style={s.enrichRow}>
+              {!hasDepth && (
+                <TouchableOpacity
+                  style={[s.detailsBtn, enrichRunning('depth') && s.btnDisabled]}
+                  onPress={() => enrich('depth')}
+                  disabled={enrichRunning('depth')}
+                >
+                  <Text style={s.detailsBtnText}>
+                    {enrichRunning('depth')
+                      ? t(interfaceLanguage, 'cardEnriching')
+                      : t(interfaceLanguage, 'loadDefinition')}
+                  </Text>
+                </TouchableOpacity>
+              )}
+              {!hasExamples && (
+                <TouchableOpacity
+                  style={[s.detailsBtn, enrichRunning('examples') && s.btnDisabled]}
+                  onPress={() => enrich('examples')}
+                  disabled={enrichRunning('examples')}
+                >
+                  <Text style={s.detailsBtnText}>
+                    {enrichRunning('examples')
+                      ? t(interfaceLanguage, 'cardEnriching')
+                      : t(interfaceLanguage, 'loadExamples')}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
+          {enrichError && <Text style={s.enrichError}>{enrichError}</Text>}
+        </View>
+      )}
+    </>
+  );
 
   const RATINGS: { key: Rating; label: string; color: string }[] = [
     { key: 'again', label: t(interfaceLanguage, 'ratingAgain'), color: '#c0392b' },
@@ -1319,14 +1518,39 @@ export default function ReviewScreen() {
           {...(canRaiseKeyboard ? { onPress: Keyboard.dismiss } : null)}
         >
           {/* Card */}
-          <View style={[s.cardWrap, typingThisCard && !revealed && s.cardWrapSnug, editing && s.cardWrapEditing]}>
+          <Animated.View
+            style={[
+              s.cardWrap,
+              typingThisCard && !revealed && s.cardWrapSnug,
+              editing && s.cardWrapEditing,
+              flips && flipStyle,
+            ]}
+          >
+            {/* The flip target for everything the scrolling face does not
+                cover: the card's padding and the empty part of the header.
+                Behind the card's content rather than around it, because a
+                ScrollView inside a press handler does not scroll (lessons.md).
+                It is also what a screen reader lands on to turn the card. */}
+            {flips && !editing && (
+              <Pressable
+                style={StyleSheet.absoluteFill}
+                onPress={handleFlip}
+                accessibilityRole="button"
+                accessibilityLabel={t(interfaceLanguage, 'setupCardHint')}
+              />
+            )}
             {/* Card header: the options button alone. The question the card is
                 asking used to be spelled out here — "이것을 영어로 어떻게
                 말하나요?" — and it was saying a third time what the direction
                 label above the card already says and what the front text itself
                 makes obvious. On a typed card it also stood between the word and
                 the field. */}
-            <View style={[s.cardHeader, typingThisCard && !revealed && s.cardHeaderSnug]}>
+            <View
+              style={[s.cardHeader, typingThisCard && !revealed && s.cardHeaderSnug]}
+              // The row spans the card but only the ⋯ is a control, so a tap
+              // beside it passes through to the flip target behind.
+              pointerEvents="box-none"
+            >
               {/* While editing, Save and Cancel take the ⋯'s place. They sat
                   under the form, and the form is the one thing on this card
                   that grows: nothing in it scrolls (see `canRaiseKeyboard`),
@@ -1419,7 +1643,62 @@ export default function ReviewScreen() {
                   spellCheck={false}
                 />
               </>
+            ) : flips ? (
+              // The card is the same box on both faces, so a back taller than
+              // it scrolls inside it. Remounted per face: the front must not
+              // open at whatever offset the back was left scrolled to.
+              <ScrollView
+                key={showingBack ? 'back' : 'front'}
+                style={s.cardScroll}
+                contentContainerStyle={s.faceScrollContent}
+                showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+              >
+                {/* Inside the ScrollView, where a press and a drag do not
+                    compete: the scroll takes the touch the moment it moves.
+                    The ⋯, pronounce, details and enrich buttons are touchables
+                    of their own and take their taps before this does.
+                    `accessible={false}` so those stay reachable one by one
+                    instead of being read out as a single button. */}
+                <Pressable style={s.face} onPress={handleFlip} accessible={false}>
+                  {/* **One face at a time is a trial** (the user, 2026-10-06:
+                      "let's try out hiding the front"). To show the prompt
+                      above the answer again, render the front's row at the top
+                      of the back face; nothing else depends on it being gone. */}
+                  {showingBack ? (
+                    <>
+                      <View style={s.termRow}>
+                        <Text style={[s.backText, s.rowText, rtlInline(backText)]}>{backText}</Text>
+                        {!isFront && pronounceButton}
+                      </View>
+                      {hanjaGloss && <Text style={s.hanjaGloss}>{hanjaGloss}</Text>}
+                      {/* On the back in both directions. On `frontToBack` the
+                          word it reads is on the other face, but the front is
+                          the prompt, and the back is where what you check
+                          yourself against is collected. */}
+                      {readingBadge}
+                      {/* Only ever on the back, in both directions: it defines
+                          the word, and on a pack card it is a hint that can
+                          name it outright, so on a prompt it would answer the
+                          card. */}
+                      {!!shownCard.briefDefinition && (
+                        <Text style={s.briefDefinition}>{shownCard.briefDefinition}</Text>
+                      )}
+                      {detailsBlock}
+                    </>
+                  ) : (
+                    <View style={s.termRow}>
+                      <Text style={[s.frontText, s.rowText, rtlInline(frontText)]}>{frontText}</Text>
+                      {isFront && pronounceButton}
+                    </View>
+                  )}
+                </Pressable>
+              </ScrollView>
             ) : (
+              // A typed card after its reveal: the stacked layout, the word
+              // above the answer, which is what lets the two strings be read
+              // against each other.
+              //
               // Scrollable: a generated definition plus notes and three examples is
               // far taller than a card front, and the fixed-height card used to
               // simply clip it with no way to reach the rest.
@@ -1471,104 +1750,12 @@ export default function ReviewScreen() {
                       </Text>
                     )}
 
-                    {/* One toggle for everything, shown whenever there is either
-                        something to read or something to write. */}
-                    <TouchableOpacity style={s.detailsBtn} onPress={() => setShowDetails(v => !v)}>
-                      <Text style={s.detailsBtnText}>
-                        {t(interfaceLanguage, showDetails ? 'hideDetails' : 'showDetails')}
-                      </Text>
-                    </TouchableOpacity>
-
-                    {showDetails && (
-                      <View style={s.definitionWrap}>
-                        {!!definition && (
-                          <View style={s.detailSection}>
-                            <Text style={s.detailLabel}>{t(interfaceLanguage, 'sectionDefinition')}</Text>
-                            <Markdown style={s.definitionText}>{definition}</Markdown>
-                          </View>
-                        )}
-                        {!!characterBreakdown && (
-                          <View style={s.detailSection}>
-                            <Text style={s.detailLabel}>{t(interfaceLanguage, characterSectionKey)}</Text>
-                            <Markdown style={s.definitionText}>{characterBreakdown}</Markdown>
-                          </View>
-                        )}
-                        {!!shownCard.notes && (
-                          <View style={s.detailSection}>
-                            <Text style={s.detailLabel}>{t(interfaceLanguage, 'sectionNotes')}</Text>
-                            <Markdown style={s.definitionText}>{shownCard.notes}</Markdown>
-                          </View>
-                        )}
-                        {hasExamples && (
-                          <View style={s.detailSection}>
-                            <Text style={s.detailLabel}>{t(interfaceLanguage, 'sectionExamples')}</Text>
-                            {shownCard.examples!.map((ex, i) => {
-                              const sides = getExampleSides(ex, studyLanguage, deckNativeLanguage);
-                              return (
-                                <View key={i} style={s.exampleItem}>
-                                  <View style={s.exampleStudyRow}>
-                                    <Text style={[s.exampleStudy, s.rowText, rtlLine(sides.study)]}>{sides.study}</Text>
-                                    {/* Offline-gated for the same reason as the
-                                        term's button above. */}
-                                    {isOnline && (
-                                      <PronounceButton
-                                        text={sides.study}
-                                        studyLanguage={studyLanguage}
-                                        kind="sentence"
-                                        size="sm"
-                                      />
-                                    )}
-                                  </View>
-                                  {sides.back ? <Text style={s.exampleBack}>{sides.back}</Text> : null}
-                                </View>
-                              );
-                            })}
-                          </View>
-                        )}
-
-                        {/* Mid-review is where a one-line gloss most often turns out
-                            not to be enough — you find out at the moment you fail to
-                            recall it. Offering the write here means that discovery
-                            does not cost you the session. Each button waits only on
-                            its own request. */}
-                        {(!hasDepth || !hasExamples) && (
-                          <View style={s.enrichRow}>
-                            {!hasDepth && (
-                              <TouchableOpacity
-                                style={[s.detailsBtn, enrichRunning('depth') && s.btnDisabled]}
-                                onPress={() => enrich('depth')}
-                                disabled={enrichRunning('depth')}
-                              >
-                                <Text style={s.detailsBtnText}>
-                                  {enrichRunning('depth')
-                                    ? t(interfaceLanguage, 'cardEnriching')
-                                    : t(interfaceLanguage, 'loadDefinition')}
-                                </Text>
-                              </TouchableOpacity>
-                            )}
-                            {!hasExamples && (
-                              <TouchableOpacity
-                                style={[s.detailsBtn, enrichRunning('examples') && s.btnDisabled]}
-                                onPress={() => enrich('examples')}
-                                disabled={enrichRunning('examples')}
-                              >
-                                <Text style={s.detailsBtnText}>
-                                  {enrichRunning('examples')
-                                    ? t(interfaceLanguage, 'cardEnriching')
-                                    : t(interfaceLanguage, 'loadExamples')}
-                                </Text>
-                              </TouchableOpacity>
-                            )}
-                          </View>
-                        )}
-                        {enrichError && <Text style={s.enrichError}>{enrichError}</Text>}
-                      </View>
-                    )}
+                    {detailsBlock}
                   </Animated.View>
                 )}
               </ScrollView>
             )}
-          </View>
+          </Animated.View>
 
           {/* Takes the height the card gave up, so 확인 stays at the bottom and
               the word keeps its position whether or not the keyboard is up — the
@@ -1576,37 +1763,19 @@ export default function ReviewScreen() {
           {typingThisCard && !revealed && <View style={s.typedSpacer} />}
         </DismissArea>
 
-        {/* Bottom action row — same position for both show-answer and ratings.
-            Hidden while the typed card's keyboard is up: the return key submits
-            there, and the height this row was holding is what a multi-line
-            gloss needs. */}
+        {/* Bottom action row. Hidden while the typed card's keyboard is up:
+            the return key submits there, and the height this row was holding
+            is what a multi-line gloss needs.
+
+            **The rating row is laid out from the first frame of a flipping
+            card and only made visible by the first flip.** The card above is
+            `flex: 1`, so its height is whatever this row leaves; holding the
+            row's real height, at the user's own text size, is what keeps the
+            card the same box before and after. Once shown it stays, front or
+            back: you may turn the card back to check the prompt and rate from
+            there. */}
         {!editing && !typedKeyboardUp && (
-          revealed ? (
-            <View style={s.ratingRow}>
-              {RATINGS.map(r => (
-                <TouchableOpacity
-                  key={r.key}
-                  // A ring on what the typed answer earned. Emphasis only —
-                  // every button stays live, because the whole point is that the
-                  // learner can disagree with the grader.
-                  style={[
-                    s.ratingBtn,
-                    { borderColor: r.color },
-                    typedGrade?.suggested === r.key && s.ratingBtnSuggested,
-                  ]}
-                  onPress={() => handleRate(r.key)}
-                  disabled={!!submitting}
-                >
-                  <Text style={[s.ratingBtnText, { color: r.color, opacity: submitting && submitting !== r.key ? 0.4 : submitting === r.key ? 0 : 1 }]}>
-                    {r.label}
-                  </Text>
-                  {submitting === r.key && (
-                    <ActivityIndicator size="small" color={r.color} style={StyleSheet.absoluteFill} />
-                  )}
-                </TouchableOpacity>
-              ))}
-            </View>
-          ) : typingThisCard ? (
+          typingThisCard && !revealed ? (
             <View style={s.typedActions}>
               <TouchableOpacity
                 style={[s.showBtn, !typedAnswer.trim() && s.showBtnOff]}
@@ -1623,9 +1792,46 @@ export default function ReviewScreen() {
               </TouchableOpacity>
             </View>
           ) : (
-            <TouchableOpacity style={s.showBtn} onPress={handleReveal}>
-              <Text style={s.showBtnText}>{t(interfaceLanguage, 'showAnswer')}</Text>
-            </TouchableOpacity>
+            <View>
+              <View
+                style={[s.ratingRow, !revealed && s.ratingRowHeld]}
+                pointerEvents={revealed ? 'auto' : 'none'}
+                accessibilityElementsHidden={!revealed}
+                importantForAccessibility={revealed ? 'auto' : 'no-hide-descendants'}
+              >
+                {RATINGS.map(r => (
+                  <TouchableOpacity
+                    key={r.key}
+                    // A ring on what the typed answer earned. Emphasis only —
+                    // every button stays live, because the whole point is that the
+                    // learner can disagree with the grader.
+                    style={[
+                      s.ratingBtn,
+                      { borderColor: r.color },
+                      typedGrade?.suggested === r.key && s.ratingBtnSuggested,
+                    ]}
+                    onPress={() => handleRate(r.key)}
+                    disabled={!!submitting}
+                  >
+                    <Text style={[s.ratingBtnText, { color: r.color, opacity: submitting && submitting !== r.key ? 0.4 : submitting === r.key ? 0 : 1 }]}>
+                      {r.label}
+                    </Text>
+                    {submitting === r.key && (
+                      <ActivityIndicator size="small" color={r.color} style={StyleSheet.absoluteFill} />
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </View>
+              {/* In the held row's place until the first flip, so the thumb
+                  that shows the answer is already where the ratings will be.
+                  Tapping the card does the same thing; this is the one that
+                  costs no reach. */}
+              {!revealed && (
+                <TouchableOpacity style={s.flipBtn} onPress={handleFlip}>
+                  <Text style={s.showBtnText}>{t(interfaceLanguage, 'showAnswer')}</Text>
+                </TouchableOpacity>
+              )}
+            </View>
           )
         )}
       </View>
@@ -1746,6 +1952,10 @@ function makeStyles(C: Palette, tabBarHeight: number) {
   enrichError: { fontSize: 12, color: C.error, marginTop: 8, textAlign: 'center' },
   cardScroll: { flex: 1 },
   cardScrollContent: { paddingBottom: 8 },
+  // `flexGrow` on both, so the face fills the card when its content is short
+  // and a tap anywhere below the word still turns it.
+  faceScrollContent: { flexGrow: 1 },
+  face: { flexGrow: 1, paddingBottom: 8 },
   definitionWrap: { marginTop: 14 },
   detailSection: { marginBottom: 16 },
   detailLabel: {
@@ -1794,6 +2004,15 @@ function makeStyles(C: Palette, tabBarHeight: number) {
   // A neutral fill on the rating the typed answer earned — emphasis, not a
   // lock: the other three are still tappable.
   ratingBtnSuggested: { backgroundColor: C.border },
+  // Laid out, not shown: see the bottom action row.
+  ratingRowHeld: { opacity: 0 },
+  // Exactly the held row's box, less its own padding, so the button is the
+  // size of the four ratings it stands in for.
+  flipBtn: {
+    position: 'absolute', top: 0, right: 16, bottom: 8, left: 16,
+    borderWidth: 1, borderColor: C.border, borderRadius: 12,
+    alignItems: 'center', justifyContent: 'center',
+  },
 
   pickerScroll: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 24, gap: 12 },
   pickerTitle: { fontSize: 15, color: C.muted, marginBottom: 4 },

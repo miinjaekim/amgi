@@ -117,6 +117,21 @@ export default function ReviewPage() {
   const [lastRating, setLastRating] = useState<UndoableRating | null>(null);
   const [showAnswer, setShowAnswer] = useState(false);
   /**
+   * Which face of a tap-to-reveal card is up. Apart from `showAnswer`, which
+   * means "the answer has been seen" and is what unlocks the ratings: turning
+   * the card back to its front does not take the ratings away again.
+   *
+   * Typed cards never read it. They keep the stacked reveal, prompt above answer.
+   */
+  const [showingBack, setShowingBack] = useState(false);
+  /**
+   * Where the card is in its turn: `out` until it is edge-on, `in` from there,
+   * null at rest. The faces swap between the two, when neither can be read.
+   * The motion itself is the `card-turn-*` classes in globals.css, which is
+   * also where reduced motion turns it into a fade.
+   */
+  const [turn, setTurn] = useState<'out' | 'in' | null>(null);
+  /**
    * Typing is a property of the session, chosen before it starts, like the
    * direction filter beside it. It is not persisted: nothing else about how a
    * session is asked is, and a preference is a settings surface on two
@@ -290,6 +305,8 @@ export default function ReviewPage() {
     setReviewedCount(0);
     setLastRating(null);
     setShowAnswer(false);
+    setShowingBack(false);
+    setTurn(null);
     setShowDetails(false);
   };
 
@@ -340,6 +357,42 @@ export default function ReviewPage() {
     setTypedGrade(grade);
     setShowAnswer(true);
     setShowDetails(false);
+  };
+
+  /** Turn a tap-to-reveal card over, either way. A turn in progress finishes first. */
+  const flipCard = () => {
+    if (turn) return;
+    // On the click, not at the swap: the ratings are there by the time the
+    // pointer is, instead of arriving with the answer.
+    setShowAnswer(true);
+    setTurn('out');
+  };
+
+  const handleCardClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    // Pronounce, the details toggle and everything in the details panel sit on
+    // the card and are not the card.
+    if ((e.target as HTMLElement).closest('button, a, input, textarea, select')) return;
+    // Dragging across the definition to copy it ends in a click on the card.
+    if (window.getSelection()?.toString()) return;
+    flipCard();
+  };
+
+  const handleCardKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    // Only when the card itself has focus, not a control inside it.
+    if (e.target !== e.currentTarget || (e.key !== 'Enter' && e.key !== ' ')) return;
+    e.preventDefault();
+    flipCard();
+  };
+
+  const handleTurnEnd = (e: React.AnimationEvent<HTMLDivElement>) => {
+    // The details panel animates too, and its events bubble through here.
+    if (e.target !== e.currentTarget) return;
+    if (turn === 'out') {
+      setShowingBack(back => !back);
+      setTurn('in');
+    } else {
+      setTurn(null);
+    }
   };
 
   const handleToggleDetails = () => {
@@ -422,6 +475,8 @@ export default function ReviewPage() {
     if (currentReviewIdx + 1 < activeQueue.length) {
       setCurrentReviewIdx(currentReviewIdx + 1);
       setShowAnswer(false);
+      setShowingBack(false);
+      setTurn(null);
       setShowDetails(false);
       setShowManage(false);
       setManageEditDraft(null);
@@ -472,6 +527,8 @@ export default function ReviewPage() {
     setCurrentReviewIdx(lastRating.index);
     setReviewComplete(false);
     setShowAnswer(true);
+    setShowingBack(true);
+    setTurn(null);
     setShowDetails(false);
     setShowManage(false);
     setManageEditDraft(null);
@@ -493,6 +550,8 @@ export default function ReviewPage() {
     setLastRating(null);
     setCurrentReviewIdx(0);
     setShowAnswer(false);
+    setShowingBack(false);
+    setTurn(null);
     setShowDetails(false);
     setShowManage(false);
     setManageEditDraft(null);
@@ -620,6 +679,8 @@ export default function ReviewPage() {
       setActiveQueue(remaining);
       setCurrentReviewIdx(index);
       setShowAnswer(false);
+      setShowingBack(false);
+      setTurn(null);
       setShowDetails(false);
     }
   };
@@ -639,6 +700,108 @@ export default function ReviewPage() {
     ));
     setUserFlashcards(prev => prev.map(c => (c.id === card.id ? { ...c, ...card } : c)));
   }, []);
+
+  /**
+   * A tap-to-reveal card: one box, two faces, turned over by a click.
+   *
+   * The box has a fixed height so it is the same card on both sides and the
+   * ratings under it never move; a back taller than it scrolls inside. Typed
+   * cards do not come through here and are laid out as they always were.
+   *
+   * **One face at a time is a trial** (the user, 2026-10-06: "let's try out
+   * hiding the front"). To show the prompt above the answer again, render
+   * `prompt` at the top of the back face; nothing else depends on it being gone.
+   */
+  const renderFlipCard = ({ card, direction }: ReviewQueueItem) => {
+    const { front, back } = faces(card);
+    const studyFirst = direction === 'frontToBack';
+    const gloss = hanjaGloss(card);
+    const partOfSpeech = partOfSpeechLabel(deckNativeLanguage, card);
+    const reading = getReading(card, studyLanguage, deckNativeLanguage);
+    const chipClass = 'px-2 py-0.5 text-xs rounded-full border border-[var(--color-muted)] text-[var(--color-muted)]';
+
+    const studyWord = (
+      <div className="flex items-center gap-2 mb-3">
+        <div dir="auto" className="font-semibold text-2xl text-[var(--color-highlight)]">{front}</div>
+        <PronounceButton text={front} furigana={card.furigana} eum={card.eum} studyLanguage={studyLanguage} />
+      </div>
+    );
+    const prompt = studyFirst
+      ? studyWord
+      : back && <div dir="auto" className="text-lg mb-3 text-[var(--color-text)]">{back}</div>;
+    const answer = studyFirst
+      ? back && <div dir="auto" className="text-lg mb-3 text-[var(--color-text)] font-semibold">{back}</div>
+      : studyWord;
+
+    return (
+      <div
+        // Focusable, and Enter or Space turns it, but deliberately not
+        // `role="button"`: that role flattens its children, and the card's
+        // text and the controls on it have to stay readable one by one.
+        tabIndex={0}
+        onClick={handleCardClick}
+        onKeyDown={handleCardKeyDown}
+        onAnimationEnd={handleTurnEnd}
+        // Towards the answer the card turns one way, back to the prompt the
+        // other, so going back reads as undoing the flip rather than as a
+        // second one. `showingBack` changes between the two halves, hence the
+        // comparison: out from the front and in onto the back are one turn.
+        style={{ '--card-turn': (turn === 'out') !== showingBack ? 1 : -1 } as React.CSSProperties}
+        className={`mb-4 h-[20rem] rounded-xl bg-[var(--color-bg)] border border-[var(--color-muted)] shadow-lg cursor-pointer hover:border-[var(--color-highlight)] focus-visible:border-[var(--color-highlight)] focus-visible:outline-none transition-colors ${turn ? `card-turn-${turn}` : ''}`}
+      >
+        {/* Keyed by face so the front never opens at whatever offset the back
+            was left scrolled to. */}
+        <div key={showingBack ? 'back' : 'front'} className="h-full overflow-y-auto p-6">
+          {showingBack ? (
+            <>
+              {answer}
+
+              {gloss && <div className="text-base mb-3 text-[var(--color-muted)]">{gloss}</div>}
+
+              {/* Only ever on the back, in both directions: it defines the
+                  word, and on a pack card it is a hint that can name it
+                  outright, so on a prompt it would answer the card. */}
+              {card.briefDefinition && (
+                <p className="text-sm mb-3 text-[var(--color-muted)]">{card.briefDefinition}</p>
+              )}
+
+              {(partOfSpeech || card.gender || reading) && (
+                <div className="mb-3 flex gap-2 flex-wrap">
+                  {partOfSpeech && <span className={chipClass}>{partOfSpeech}</span>}
+                  {card.gender && <span className={chipClass}>{card.gender}</span>}
+                  {reading && <span className={chipClass}>{reading}</span>}
+                </div>
+              )}
+
+              <button
+                onClick={handleToggleDetails}
+                className="text-sm px-3 py-1 bg-[var(--color-muted-dark)] text-[var(--color-text)] rounded hover:bg-[var(--color-muted)] mb-4"
+              >
+                {showDetails ? t(interfaceLanguage, 'hideDetails') : t(interfaceLanguage, 'showDetails')}
+              </button>
+
+              {showDetails && (
+                <ReviewDetailsPanel
+                  card={card}
+                  studyLanguage={studyLanguage}
+                  interfaceLanguage={interfaceLanguage}
+                  deckNativeLanguage={deckNativeLanguage}
+                  onChanged={handleCardEnriched}
+                />
+              )}
+            </>
+          ) : (
+            <>
+              {prompt}
+              <div className="text-[var(--color-muted)] text-lg mt-4 italic">
+                {directionPrompt(interfaceLanguage, studyLanguage, deckNativeLanguage, direction, hanjaPartition)}
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    );
+  };
 
   const currentReview = activeQueue[currentReviewIdx];
   /** Only `backToFront` is ever typed — see `promptsForTyping`. */
@@ -1033,79 +1196,12 @@ export default function ReviewPage() {
                   </div>
                 )}
 
-                <div className="mb-4 p-6 rounded-xl bg-[var(--color-bg)] border border-[var(--color-muted)] shadow-lg min-h-[14rem]">
-                  {currentReview.direction === 'frontToBack' ? (
-                    <>
-                      <div className="flex items-center gap-2 mb-2">
-                        <div dir="auto" className="font-semibold text-2xl text-[var(--color-highlight)]">{faces(currentReview.card).front}</div>
-                        <PronounceButton text={faces(currentReview.card).front} furigana={currentReview.card.furigana} eum={currentReview.card.eum} studyLanguage={studyLanguage} />
-                      </div>
-
-                      {showAnswer ? (
-                        <>
-                          {faces(currentReview.card).back && (
-                            <div dir="auto" className="text-lg mb-3 text-[var(--color-text)] font-semibold">{faces(currentReview.card).back}</div>
-                          )}
-
-                          {hanjaGloss(currentReview.card) && (
-                            <div className="text-base mb-3 text-[var(--color-muted)]">{hanjaGloss(currentReview.card)}</div>
-                          )}
-
-                          {/* Only ever after the reveal, in both directions:
-                              it defines the word, and on a pack card it is a
-                              hint that can name it outright, so on a prompt it
-                              would answer the card. */}
-                          {currentReview.card.briefDefinition && (
-                            <p className="text-sm mb-3 text-[var(--color-muted)]">{currentReview.card.briefDefinition}</p>
-                          )}
-
-                          {(partOfSpeechLabel(deckNativeLanguage, currentReview.card) ||
-                            currentReview.card.gender ||
-                            getReading(currentReview.card, studyLanguage, deckNativeLanguage)) && (
-                            <div className="mb-3 flex gap-2 flex-wrap">
-                              {partOfSpeechLabel(deckNativeLanguage, currentReview.card) && (
-                                <span className="px-2 py-0.5 text-xs rounded-full border border-[var(--color-muted)] text-[var(--color-muted)]">
-                                  {partOfSpeechLabel(deckNativeLanguage, currentReview.card)}
-                                </span>
-                              )}
-                              {currentReview.card.gender && (
-                                <span className="px-2 py-0.5 text-xs rounded-full border border-[var(--color-muted)] text-[var(--color-muted)]">
-                                  {currentReview.card.gender}
-                                </span>
-                              )}
-                              {getReading(currentReview.card, studyLanguage, deckNativeLanguage) && (
-                                <span className="px-2 py-0.5 text-xs rounded-full border border-[var(--color-muted)] text-[var(--color-muted)]">
-                                  {getReading(currentReview.card, studyLanguage, deckNativeLanguage)}
-                                </span>
-                              )}
-                            </div>
-                          )}
-
-                          <button
-                            onClick={handleToggleDetails}
-                            className="text-sm px-3 py-1 bg-[var(--color-muted-dark)] text-[var(--color-text)] rounded hover:bg-[var(--color-muted)] mb-4"
-                          >
-                            {showDetails ? t(interfaceLanguage, 'hideDetails') : t(interfaceLanguage, 'showDetails')}
-                          </button>
-
-                          {showDetails && (
-                            <ReviewDetailsPanel
-                              card={currentReview.card}
-                              studyLanguage={studyLanguage}
-                              interfaceLanguage={interfaceLanguage}
-
-                              deckNativeLanguage={deckNativeLanguage}
-                              onChanged={handleCardEnriched}
-                            />
-                          )}
-                        </>
-                      ) : (
-                        <div className="text-[var(--color-muted)] text-lg mt-4 italic">
-                          {directionPrompt(interfaceLanguage, studyLanguage, deckNativeLanguage, 'frontToBack', hanjaPartition)}
-                        </div>
-                      )}
-                    </>
-                  ) : (
+                {/* Only `backToFront` is ever typed, so the typed card is the
+                    one layout below; everything else flips. */}
+                {!typingThisCard ? (
+                  renderFlipCard(currentReview)
+                ) : (
+                  <div className="mb-4 p-6 rounded-xl bg-[var(--color-bg)] border border-[var(--color-muted)] shadow-lg min-h-[14rem]">
                     <>
                       {faces(currentReview.card).back && (
                         <div dir="auto" className="text-lg mb-2 text-[var(--color-text)]">{faces(currentReview.card).back}</div>
@@ -1217,41 +1313,15 @@ export default function ReviewPage() {
                         </>
                       )}
                     </>
-                  )}
-                </div>
-
-                {showAnswer ? (
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-4">
-                    <button
-                      className="px-4 py-3 rounded-lg bg-red-400 text-white hover:bg-red-500 font-semibold"
-                      onClick={() => handleReviewResponse('again')}
-                      style={ratingEmphasis('again')}
-                    >
-                      {t(interfaceLanguage, 'ratingAgain')}
-                    </button>
-                    <button
-                      className="px-4 py-3 rounded-lg bg-[var(--color-highlight)] text-[var(--color-bg)] hover:bg-[var(--color-text)] font-semibold"
-                      onClick={() => handleReviewResponse('hard')}
-                      style={ratingEmphasis('hard')}
-                    >
-                      {t(interfaceLanguage, 'ratingHard')}
-                    </button>
-                    <button
-                      className="px-4 py-3 rounded-lg bg-[var(--color-muted)] text-[var(--color-text)] hover:bg-[var(--color-muted-dark)] font-semibold"
-                      onClick={() => handleReviewResponse('good')}
-                      style={ratingEmphasis('good')}
-                    >
-                      {t(interfaceLanguage, 'ratingGood')}
-                    </button>
-                    <button
-                      className="px-4 py-3 rounded-lg bg-[var(--color-bg)] text-[var(--color-text)] border border-[var(--color-muted)] hover:bg-[var(--color-muted)] font-semibold"
-                      onClick={() => handleReviewResponse('easy')}
-                      style={ratingEmphasis('easy')}
-                    >
-                      {t(interfaceLanguage, 'ratingEasy')}
-                    </button>
                   </div>
-                ) : typingThisCard ? (
+                )}
+
+                {/* **The rating grid is laid out from the first frame of a
+                    flipping card and only made visible by the first flip**, so
+                    nothing under the card moves when it appears. Once shown it
+                    stays, front or back: you may turn the card back to check
+                    the prompt and rate from there. */}
+                {typingThisCard && !showAnswer ? (
                   <div className="mt-4 flex flex-col gap-2">
                     <button
                       className="w-full px-4 py-3 bg-[var(--color-highlight)] text-[var(--color-bg)] rounded-lg hover:bg-[var(--color-text)] text-lg font-semibold disabled:opacity-40 disabled:cursor-not-allowed"
@@ -1272,12 +1342,49 @@ export default function ReviewPage() {
                     </button>
                   </div>
                 ) : (
-                  <button
-                    className="w-full mt-4 px-4 py-3 bg-[var(--color-muted)] text-[var(--color-text)] rounded-lg hover:bg-[var(--color-muted-dark)] text-lg font-semibold"
-                    onClick={handleShowAnswer}
-                  >
-                    {t(interfaceLanguage, 'showAnswer')}
-                  </button>
+                  <div className="relative mt-4">
+                    <div className={`grid grid-cols-2 sm:grid-cols-4 gap-2 ${showAnswer ? '' : 'invisible'}`}>
+                        <button
+                          className="px-4 py-3 rounded-lg bg-red-400 text-white hover:bg-red-500 font-semibold"
+                          onClick={() => handleReviewResponse('again')}
+                          style={ratingEmphasis('again')}
+                        >
+                          {t(interfaceLanguage, 'ratingAgain')}
+                        </button>
+                        <button
+                          className="px-4 py-3 rounded-lg bg-[var(--color-highlight)] text-[var(--color-bg)] hover:bg-[var(--color-text)] font-semibold"
+                          onClick={() => handleReviewResponse('hard')}
+                          style={ratingEmphasis('hard')}
+                        >
+                          {t(interfaceLanguage, 'ratingHard')}
+                        </button>
+                        <button
+                          className="px-4 py-3 rounded-lg bg-[var(--color-muted)] text-[var(--color-text)] hover:bg-[var(--color-muted-dark)] font-semibold"
+                          onClick={() => handleReviewResponse('good')}
+                          style={ratingEmphasis('good')}
+                        >
+                          {t(interfaceLanguage, 'ratingGood')}
+                        </button>
+                        <button
+                          className="px-4 py-3 rounded-lg bg-[var(--color-bg)] text-[var(--color-text)] border border-[var(--color-muted)] hover:bg-[var(--color-muted)] font-semibold"
+                          onClick={() => handleReviewResponse('easy')}
+                          style={ratingEmphasis('easy')}
+                        >
+                          {t(interfaceLanguage, 'ratingEasy')}
+                        </button>
+                    </div>
+                    {/* In the held grid's place until the first flip, so
+                        the answer and the ratings are under the same hand.
+                        Clicking the card does the same thing. */}
+                    {!showAnswer && (
+                      <button
+                        className="absolute inset-0 w-full px-4 py-3 bg-[var(--color-muted)] text-[var(--color-text)] rounded-lg hover:bg-[var(--color-muted-dark)] text-lg font-semibold"
+                        onClick={flipCard}
+                      >
+                        {t(interfaceLanguage, 'showAnswer')}
+                      </button>
+                    )}
+                  </div>
                 )}
               </>
             )

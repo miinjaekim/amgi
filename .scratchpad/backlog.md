@@ -23,8 +23,31 @@ queued, released or unverified is under Builds in [status.md](status.md).
 
 _Merged, not yet in anyone's hands — mobile ships by build, no OTA._
 
-_Empty since build 19 (2.2.0) was approved for external testing, reported
-2026-10-06._
+_Build 19 (2.2.0) was approved for external testing, reported 2026-10-06; what
+is below merged after it._
+
+- **The review card flips in place** (branch `review-card-flip`). Tap-to-reveal
+  review, web and mobile: tap the card and the back replaces the front in the
+  same box; tap again for the front. The card keeps its size, the rating row's
+  space is held from the start and the ratings stay once shown, a long back
+  scrolls inside the card, and pronounce, ⋯ and the details buttons do not
+  flip it. A turn about the vertical axis with the faces swapped at the
+  midpoint; a fade with reduced motion. Typed-answer review is unchanged.
+  **Hiding the front while the back shows is a trial** (the user, 2026-10-06:
+  "let's try out hiding the front"); putting the prompt back above the answer
+  is one line on each platform, marked in the code.
+  **After the user tried it on a phone (2026-10-06):** the turn was too slow
+  to sit through once per card, so it is about 190ms in all (it was 130ms and
+  then a spring that took about half a second to settle), and the ratings
+  appear on the tap rather than at the swap; the card turns one way towards
+  the answer and the other way back; and "Show answer" is back, in the held
+  rating row, so the thumb that reveals is already where the ratings will be.
+  Tapping the card still flips it.
+  Two things were chosen in the build rather than asked, and are the user's
+  to overrule: web's card is a fixed 20rem tall, and on mobile the reading
+  badge is on the back in both directions.
+  ⚠️ What has and has not been seen is under Unverified in
+  [status.md](status.md).
 
 What has never been looked at on a device is listed under Unverified in
 [status.md](status.md). It is not tracked here, by the 2026-09-04 decision that
@@ -37,32 +60,6 @@ whether `faire` joins the three sourced irregular verbs (#150), and whether a
 practice session should cover several tenses at once again, which the section
 picker narrowed (#146). Both are written up in their Decisions entries of
 2026-09-22.
-
-- [ ] **Change the card flip on review.** Added from Google Tasks 2026-10-05;
-      moved to High and scoped with the user 2026-10-06. Today the answer
-      appears below the prompt; the whole card flips instead, as onboarding's
-      does.
-      **The user's calls:**
-      - **A swap, in place.** The back replaces the front in the same box, and
-        the front is hidden while the back shows ("let's try out hiding the
-        front", so this is a trial, not a settled rule).
-      - **Tap the card to flip, tap again to flip back.**
-      - **The card keeps its dimensions.** The rating buttons appear below it
-        without the question/answer card changing size.
-      - **A satisfying animation is welcome**, not required.
-      - **Tap-to-reveal review only.** Typed-answer review stays as it is; the
-        user is not sure how a flip would work with a typed answer.
-      **Confirmed by the user 2026-10-06:** a turn about the vertical
-      axis with the content swapped at the midpoint, and a cross-fade when the
-      system asks for reduced motion; the rating row's space reserved from the
-      start so nothing moves when it appears; ratings stay available after
-      flipping back to the front; a back longer than the card scrolls inside
-      it; controls on the card (pronounce, edit) do not flip it. Web and
-      mobile both.
-      **Where it is:** `apps/mobile/app/(tabs)/review.tsx` and
-      `apps/web/src/app/review/page.tsx`. Onboarding's flip is in
-      `LanguageSetupModal` on each platform and has no animation: it swaps the
-      card's content on tap.
 
 - [ ] **Munli: writing improvements.** Added from Google Tasks 2026-10-05;
       moved to High and scoped with the user 2026-10-06. Two parts, done as
