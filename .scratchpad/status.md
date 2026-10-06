@@ -122,8 +122,11 @@ No OTA, so every mobile change reaches users through one of these.
 | 1.0.0 | 1 | 2026-07-17 | `db8a6ea` (PR #37) |
 
 - **The table is iOS only.** Android ships as a sideloaded APK with no review
-  ([releases](decisions/releases.md)). Its `versionCode` is at 6 (1.7.0, from
-  `cb7c19c`); 4 was 1.5.0 from `d25b544` and 5 was 1.6.0.
+  ([releases](decisions/releases.md)). Its `versionCode` is at 10 (2.2.0, from
+  `81eaab3`, finished 2026-10-06); 6 was 1.7.0 from `cb7c19c`, 4 was 1.5.0
+  from `d25b544` and 5 was 1.6.0. 7 to 9 were the same 2.2.0 run and produced
+  no APK: 7 errored on EAS ("We've lost connection to the worker", a server
+  error) and 8 and 9 were cancelled.
 - **Build numbers live in EAS** (`appVersionSource: remote`), so they are read
   off the console and recorded here. Gaps are normal: a number is reserved when
   a job is created. Builds 5–7 failed, and 12 was burned by a 1.4.0 run started
@@ -140,6 +143,12 @@ No OTA, so every mobile change reaches users through one of these.
   merges holds only from cut to submission.
 
 ## Known Issues
+
+- **One person had problems downloading the 2.2.0 Android APK**
+  (`versionCode` 10), reported to the user 2026-10-06. Noted on the user's
+  call, to deal with later. **Nothing more is known yet**: not what went wrong
+  (the download link, the install, or the first launch), nor the device or
+  Android version. Start by getting those from the tester.
 
 - **OTA updates never reached the device.** CI published PR #44 successfully
   (run `29892869152`); the change never appeared and debugging dead-ended, so
