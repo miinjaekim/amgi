@@ -38,6 +38,18 @@ practice session should cover several tenses at once again, which the section
 picker narrowed (#146). Both are written up in their Decisions entries of
 2026-09-22.
 
+- [ ] **Change the card flip on review.** Added from Google Tasks 2026-10-05; moved to High 2026-10-06 on the
+      user's call.
+      Today the answer appears at the bottom; the user wants the whole card to
+      flip, as it does in onboarding.
+
+- [ ] **Munli: writing improvements.** Added from Google Tasks 2026-10-05; moved to High 2026-10-06 on the
+      user's call.
+      Three parts, in the user's words: scrolling on writing; an optional save
+      for a piece of writing once it's done; and a record of past writings to
+      compare improvement over time — "similar to Amgi lookup, but for
+      writing".
+
 ## Medium
 
 - [ ] **User-made vocab packs: refine for testing** — moved to Medium
@@ -65,16 +77,6 @@ picker narrowed (#146). Both are written up in their Decisions entries of
       Open, not blocking: **cost per pack** (several search-backed calls).
       **Copyright** matters once packs are shared: taking words from a source is
       fine, but copying a published list wholesale is not.
-
-- [ ] **Change the card flip on review.** Added from Google Tasks 2026-10-05.
-      Today the answer appears at the bottom; the user wants the whole card to
-      flip, as it does in onboarding.
-
-- [ ] **Munli: writing improvements.** Added from Google Tasks 2026-10-05.
-      Three parts, in the user's words: scrolling on writing; an optional save
-      for a piece of writing once it's done; and a record of past writings to
-      compare improvement over time — "similar to Amgi lookup, but for
-      writing".
 
 - [ ] **Munli: cards from writing look different from cards from lookup.**
       Added from Google Tasks 2026-10-05.
