@@ -12,22 +12,21 @@ Housekeeping in [backlog.md](backlog.md)._
 
 ## Now
 
-- **2.1.0 is build 18, live in TestFlight and approved for external testing**
-  (2026-09-28). External testers can be invited without another review as long
-  as the version doesn't change.
-- **2.2.0 is build 19, submitted and waiting on Beta App Review** (2026-10-05), cut from
-  `4f13448` on `main`, the merge of `release/2.2.0` (PR #191). It carries the
-  twelve PRs under Queued for the next build in [backlog.md](backlog.md); web
-  already has all of them. Pre-flight: no native module or `app.json` native
-  config has changed since 2.1.0, introspect came back `entitlements: {}`, the
-  review notes are 3993 of 4000 characters, and the copy has no character Apple
-  has not already accepted except Hangul syllables. The user smoke-tested in
-  Expo Go before the cut. The build ran without auto-submit and was uploaded
-  with `eas submit`, after the Account Holder accepted an updated Apple
-  agreement: until then every upload was refused with "You do not have
-  required contracts to perform an operation (403)", which is not a key or
-  password problem. Testers stay on build 18 until approval; the queue turns
-  over then, not now.
+- **2.2.0 is build 19, live in TestFlight and approved for external testing**
+  (reported 2026-10-06), cut from `4f13448` on `main`, the merge of
+  `release/2.2.0` (PR #191), submitted 2026-10-05. External testers can be
+  invited without another review as long as the version doesn't change. It
+  carries the twelve PRs queued since build 18 (#175, #177, #178, #179, #180,
+  #182, #184, #185, #186, #188, #189, #190); web already had all of them.
+  Pre-flight: no native module or `app.json` native config had changed since
+  2.1.0, introspect came back `entitlements: {}`, the review notes were 3993 of
+  4000 characters, and the copy had no character Apple had not already accepted
+  except Hangul syllables. The user smoke-tested in Expo Go before the cut. The
+  build ran without auto-submit and was uploaded with `eas submit`, after the
+  Account Holder accepted an updated Apple agreement: until then every upload
+  was refused with "You do not have required contracts to perform an operation
+  (403)", which is not a key or password problem. What in it is still unseen
+  on a device is under Unverified.
 - **Web deploys on merge**, so everything on `main` is live there.
 - **`/api/grammar/exercise` stays deployed** for any device still on 1.3.0,
   which has the grammar UI compiled in. The deletion is under Housekeeping in
@@ -79,6 +78,10 @@ blank placeholder. On **Android**, only sign-in has ever been exercised.
 - **Build 18**: the mid-review edit card on a small iPhone with a long gloss,
   and whether the cold-open cache feels faster. Judge the second with the
   launch stopwatch ([data-loading](decisions/data-loading.md)).
+- **Build 19**: Munli's Topics and Progress headings (PR #185), the second tap
+  on Munli's Saved tab (PR #186) and Munli's cleared themes (PR #188, seen on
+  web in all three) have not been seen on a device. Adding a French verb, and
+  *Add to Munli* from Amgi (PR #182), were not confirmed on mobile.
 - **The per-deck language migration** runs on every existing account's first
   load. Nobody has watched it against a real multi-deck account.
 - **The Slow pronunciation speed** is a pitch-corrected stretch, not a slow
@@ -106,7 +109,7 @@ No OTA, so every mobile change reaches users through one of these.
 
 | Version | Build | Date | Cut from |
 |---|---|---|---|
-| 2.2.0 | 19 | 2026-10-05 | `4f13448` on `main`, the merge of `release/2.2.0` (PR #191). Submitted 10-05, waiting on external review |
+| 2.2.0 | 19 | 2026-10-05 | `4f13448` on `main`, the merge of `release/2.2.0` (PR #191). Submitted 10-05, external testing approved, reported 10-06 |
 | 2.1.0 | 18 | 2026-09-27 | `d1de37e` on `release/2.1.0` (PR #176). External testing approved 09-28 |
 | 2.0.0 | 17 | 2026-09-23 | `69476aa` on `release/1.8.0`. Approved 09-23. The branch name says 1.8.0 because it was cut before the 2.0.0 call |
 | 1.7.0 | 16 | 2026-09-19 | `cb7c19c` on `release/1.7.0`. External approval never reported |

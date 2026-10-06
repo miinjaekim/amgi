@@ -23,74 +23,8 @@ queued, released or unverified is under Builds in [status.md](status.md).
 
 _Merged, not yet in anyone's hands — mobile ships by build, no OTA._
 
-- **User-made vocab packs** (PR #175) — *Make a pack* on Packs, on web and
-  mobile. Web is live on merge; mobile needs the build. Packs are labelled as
-  made by the user and private to them.
-- **Cantonese** (PR #177) — an eleventh deck, with Jyutping checked against a
-  dictionary and `yue-HK` audio. Web is live on merge; mobile needs the build.
-  The security rule and both composite indexes were added 2026-10-04.
-- **Regular verbs you keep missing are drawn more often** (PR #184) — each
-  regular verb has a miss count, and it weighs which verb a pattern is asked
-  through (`1 + misses`, capped at 5). What is asked is still what is due. The
-  exception to "nothing here adapts to the learner" is in `decisions/munli.md`
-  (2026-10-05). Web is live on merge; mobile needs the build. The user
-  tested it in Expo Go 2026-10-05.
-- **Users add their own French verbs to Munli** (PR #182) — Topics has one
-  *Verbs* row; inside it, a row per pattern and per irregular verb, like the
-  Packs list, each opening a card per tense with its own Save, with an *Add a
-  verb* button on top; *Add to Munli* is on a French verb's Learn result and
-  saved card. A regular verb joins its group's vehicles; an irregular one gets
-  its own table. Forms come from the lookup model and are labelled as not
-  checked; the exception is in `docs/packs/README.md` and the shape is in
-  `decisions/munli.md` (2026-10-04). Pronominal verbs are refused. Web is live
-  on merge; mobile needs the build. The user went through the screens on web
-  and in Expo Go. **Not confirmed on mobile:** adding a verb, and *Add to Munli*
-  from Amgi, which need the lookup route this PR deploys.
-- **Onboarding walkthrough** (PR #178) — first run looks one word up for real,
-  makes the card, takes one rating, shows the language's packs and ends on an
-  optional sign-in. Web is live on merge; mobile needs the build. The decision
-  is "Onboarding does it once for real" in
-  [decisions/app-shell.md](decisions/app-shell.md).
-- **Brief definition during review** (PR #179) — the card's one-sentence definition (on
-  a pack card, the pack's hint) shows under the answer after the reveal, in
-  both directions. Web is live on merge; mobile needs the build. The decision
-  is "The brief definition shows after the reveal" in
-  [decisions/review.md](decisions/review.md).
-
-- **Munli's Topics and Progress screens are headed by their tab names** (PR
-  #185) — mobile only. The bar is icon-only, so the heading is where a tab is
-  named; Topics said "Practice set" and Progress "Grammar practice", which are
-  web's page titles. The reading of the task is in `decisions/munli.md`
-  (2026-10-05). **Not seen on a device.**
-- **A second tap on Munli's Saved tab returns to the shelves** (PR #186) —
-  mobile only. Only a re-tap, as on Amgi's Learn and Review; coming back from
-  another tab keeps your place. Practice still resets on every press. The
-  call is in `decisions/munli.md` (2026-10-05). **Not seen on a device.**
-
-- **Munli's themes, cleared** (PR #188) — Suisei, Shoko and Godspeed keep
-  their names and stored choices with new values: near-white or properly dark
-  backgrounds, white cards, near-black text, greyer captions. Body text goes
-  from about 6:1 to 12–14:1. The user chose this direction 2026-10-05; the
-  values and what caused the "underwater" feel are in `decisions/munli.md`.
-  Web is live on merge; mobile needs the build. **Seen on web in all three
-  themes; not seen on a device.**
-
-- **Settings as a list** (PR #180) — mobile only. Settings opens on the
-  account and eight rows; each pushes its own screen, and *Switch mode* opens
-  the mode sheet. Account deletion moved to Settings → Account, and the review
-  notes say so. The decision is "Settings is a list of rows" in
-  [decisions/app-shell.md](decisions/app-shell.md).
-- **Review times on cards** (PR #189) — each row in My Cards says *New card*,
-  *Due now* or *Next review: in 3 days* beside its saved date, and card detail
-  says the same, per direction when the two differ. Web is live on merge;
-  mobile needs the build. The decision is "A card says where it stands with
-  Review" in [decisions/cards-and-lookup.md](decisions/cards-and-lookup.md).
-- **Arabic** (PR #190) — a twelfth deck: Modern Standard, fronts unvowelled,
-  the vowelled reading beside them tagged *not checked*, `ar-XA` audio, and
-  Arabic lines running right to left. Web is live on merge; mobile needs the
-  build. The security rule was added 2026-10-05 and the composite indexes were
-  building then. The decision is in
-  [decisions/languages.md](decisions/languages.md).
+_Empty since build 19 (2.2.0) was approved for external testing, reported
+2026-10-06._
 
 What has never been looked at on a device is listed under Unverified in
 [status.md](status.md). It is not tracked here, by the 2026-09-04 decision that
