@@ -47,8 +47,16 @@ import type { Palette } from '../../src/theme';
 
 type Rating = 'again' | 'hard' | 'good' | 'easy';
 
-/** The first half of the card's turn: face-on to edge-on, where the faces swap. */
-const FLIP_OUT_MS = 130;
+/**
+ * The two halves of the card's turn: face-on to edge-on, where the faces swap,
+ * then back round to face-on. About 190ms in all, and deliberately short. This
+ * runs once for every card in a session, so it has to read as the card
+ * answering the tap, not as something to wait for. The first version took 130ms
+ * out and then a spring that needed about half a second to settle, and on a
+ * phone that was a wait (the user, 2026-10-06).
+ */
+const FLIP_OUT_MS = 70;
+const FLIP_IN_MS = 120;
 
 /**
  * Everything needed to put the last rating back.
@@ -174,26 +182,36 @@ export default function ReviewScreen() {
    */
   const [showingBack, setShowingBack] = useState(false);
   /**
-   * The turn, in quarter turns: 0 is face-on, 1 is edge-on on the way out, -1
-   * edge-on on the way in. One value for both styles of turn, so reduced motion
-   * changes what it is mapped to (opacity instead of rotation) and nothing else.
+   * The turn, in quarter turns: 0 is face-on, ±1 is edge-on. One value for both
+   * styles of turn, so reduced motion changes what it is mapped to (opacity
+   * instead of rotation) and nothing else.
    */
   const flipAnim = useRef(new Animated.Value(0)).current;
-  /** True from the tap until the faces swap. Taps in that window are dropped. */
-  const turningOut = useRef(false);
+  /**
+   * Which way the card is going out, from the tap until the faces swap: 1
+   * towards the answer, -1 back to the prompt, 0 when it is not. The two turn
+   * opposite ways, so going back reads as undoing the flip rather than as a
+   * second one. Taps while it is non-zero are dropped.
+   */
+  const turningOut = useRef<0 | 1 | -1>(0);
   const reduceMotion = useReduceMotion();
   // The second half of the turn, started from here rather than from the first
   // half's callback so that it cannot begin before the other face has rendered:
   // swinging the old face back in for a frame is the one thing a flip must not do.
   useEffect(() => {
-    if (!turningOut.current) return;
-    turningOut.current = false;
-    flipAnim.setValue(-1);
-    const settle = reduceMotion
-      ? Animated.timing(flipAnim, { toValue: 0, duration: FLIP_OUT_MS, useNativeDriver: true })
-      // A spring, so the card lands with a little weight instead of stopping dead.
-      : Animated.spring(flipAnim, { toValue: 0, friction: 7, tension: 90, useNativeDriver: true });
-    settle.start();
+    const direction = turningOut.current;
+    if (!direction) return;
+    turningOut.current = 0;
+    // Carries on round the same way: out through one edge, in from the other.
+    flipAnim.setValue(-direction);
+    Animated.timing(flipAnim, {
+      toValue: 0,
+      duration: FLIP_IN_MS,
+      // A slight overshoot, so the card lands with some weight. Timed rather
+      // than sprung: a spring's tail is what made the first version feel slow.
+      easing: reduceMotion ? Easing.out(Easing.quad) : Easing.out(Easing.back(1.4)),
+      useNativeDriver: true,
+    }).start();
   }, [showingBack, flipAnim, reduceMotion]);
   /**
    * The keyboard's real height, from the event rather than inferred.
@@ -551,7 +569,7 @@ export default function ReviewScreen() {
     setShowingBack(false);
     // Also stops a turn in progress, so a rating made mid-flip does not carry
     // the tail of the animation onto the next card.
-    turningOut.current = false;
+    turningOut.current = 0;
     flipAnim.setValue(0);
   };
 
@@ -566,14 +584,17 @@ export default function ReviewScreen() {
    */
   const handleFlip = () => {
     if (turningOut.current) return;
-    turningOut.current = true;
+    const direction = showingBack ? -1 : 1;
+    turningOut.current = direction;
+    // On the tap, not at the swap: the ratings are there by the time the thumb
+    // is, instead of arriving with the answer.
+    setRevealed(true);
     Animated.timing(flipAnim, {
-      toValue: 1, duration: FLIP_OUT_MS, easing: Easing.in(Easing.quad), useNativeDriver: true,
+      toValue: direction, duration: FLIP_OUT_MS, easing: Easing.in(Easing.quad), useNativeDriver: true,
     }).start(({ finished }) => {
       // Interrupted by `resetCardState`: the card this turn belonged to is gone.
       if (!finished) return;
       setShowingBack(back => !back);
-      setRevealed(true);
     });
   };
 
@@ -706,7 +727,7 @@ export default function ReviewScreen() {
     setRevealed(true);
     revealAnim.setValue(1);
     setShowingBack(true);
-    turningOut.current = false;
+    turningOut.current = 0;
     flipAnim.setValue(0);
   };
 
@@ -1289,7 +1310,7 @@ export default function ReviewScreen() {
     : {
         transform: [
           { perspective: 1000 },
-          // Not clamped: the spring's overshoot past face-on is the landing.
+          // Not clamped: the overshoot past face-on is the landing.
           { rotateY: flipAnim.interpolate({ inputRange: [-1, 1], outputRange: ['-90deg', '90deg'] }) },
         ],
       };
@@ -1801,12 +1822,14 @@ export default function ReviewScreen() {
                   </TouchableOpacity>
                 ))}
               </View>
-              {/* In the held row's place until the first flip, and in
-                  onboarding's words, where this gesture was taught. */}
+              {/* In the held row's place until the first flip, so the thumb
+                  that shows the answer is already where the ratings will be.
+                  Tapping the card does the same thing; this is the one that
+                  costs no reach. */}
               {!revealed && (
-                <View style={s.flipHint} pointerEvents="none">
-                  <Text style={s.flipHintText}>{t(interfaceLanguage, 'setupCardHint')}</Text>
-                </View>
+                <TouchableOpacity style={s.flipBtn} onPress={handleFlip}>
+                  <Text style={s.showBtnText}>{t(interfaceLanguage, 'showAnswer')}</Text>
+                </TouchableOpacity>
               )}
             </View>
           )
@@ -1983,11 +2006,13 @@ function makeStyles(C: Palette, tabBarHeight: number) {
   ratingBtnSuggested: { backgroundColor: C.border },
   // Laid out, not shown: see the bottom action row.
   ratingRowHeld: { opacity: 0 },
-  flipHint: {
-    position: 'absolute', top: 0, right: 0, bottom: 0, left: 0,
-    alignItems: 'center', justifyContent: 'center', paddingBottom: 8,
+  // Exactly the held row's box, less its own padding, so the button is the
+  // size of the four ratings it stands in for.
+  flipBtn: {
+    position: 'absolute', top: 0, right: 16, bottom: 8, left: 16,
+    borderWidth: 1, borderColor: C.border, borderRadius: 12,
+    alignItems: 'center', justifyContent: 'center',
   },
-  flipHintText: { fontSize: 13, color: C.muted },
 
   pickerScroll: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 24, gap: 12 },
   pickerTitle: { fontSize: 15, color: C.muted, marginBottom: 4 },

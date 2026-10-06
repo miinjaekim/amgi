@@ -36,12 +36,17 @@ is below merged after it._
   **Hiding the front while the back shows is a trial** (the user, 2026-10-06:
   "let's try out hiding the front"); putting the prompt back above the answer
   is one line on each platform, marked in the code.
-  Three things were chosen in the build rather than asked, and are the user's
-  to overrule: the "Show answer" button is gone and onboarding's hint
-  ("눌러서 뒤집어 보세요.") sits in the held rating row until the first flip;
-  web's card is a fixed 20rem tall; and on mobile the reading badge is on the
-  back in both directions.
-  ⚠️ **Not seen running on either platform**: see Unverified in
+  **After the user tried it on a phone (2026-10-06):** the turn was too slow
+  to sit through once per card, so it is about 190ms in all (it was 130ms and
+  then a spring that took about half a second to settle), and the ratings
+  appear on the tap rather than at the swap; the card turns one way towards
+  the answer and the other way back; and "Show answer" is back, in the held
+  rating row, so the thumb that reveals is already where the ratings will be.
+  Tapping the card still flips it.
+  Two things were chosen in the build rather than asked, and are the user's
+  to overrule: web's card is a fixed 20rem tall, and on mobile the reading
+  badge is on the back in both directions.
+  ⚠️ What has and has not been seen is under Unverified in
   [status.md](status.md).
 
 What has never been looked at on a device is listed under Unverified in

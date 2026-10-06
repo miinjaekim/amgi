@@ -144,7 +144,10 @@ that mode's set, and read that mode's key.
 - The tap-to-reveal review card flips in place: one box, one face at a time,
   turned by tapping the card. The rating row is laid out from the start and
   only made visible by the first flip, so the card never changes size and
-  nothing under it moves; a long back scrolls inside the card. Hiding the front
+  nothing under it moves; until then "Show answer" sits in its place, so
+  revealing and rating are under the same thumb. The turn is about 190ms: it
+  runs once per card, and anything longer is a wait. A long back scrolls
+  inside the card. Hiding the front
   on the back is a trial (2026-10-06). A typed card keeps the stacked reveal,
   and on web its body still reserves `min-h-[14rem]`.
 - Depth and examples stream with a typewriter animation and a `▎` cursor glyph

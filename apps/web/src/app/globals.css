@@ -177,12 +177,19 @@ html.sidenav-collapsed .sidenav-collapse-icon {
    while neither can be read, and it comes back round from the other side
    (`in`). `forwards` holds it edge-on for the frame between the two. The
    page waits on `animationend`, so each class must always run *some*
-   animation: reduced motion swaps the turn for a fade, never for `none`. */
+   animation: reduced motion swaps the turn for a fade, never for `none`.
+
+   `--card-turn` is 1 towards the answer and -1 back to the prompt, set by the
+   page, so the two turn opposite ways.
+
+   About 190ms in all, and deliberately short: this runs once for every card in
+   a session, so it has to read as the card answering the click, not as
+   something to wait for. Mobile's timings in review.tsx are the same. */
 @keyframes card-turn-out {
-  to { transform: perspective(1200px) rotateY(90deg); }
+  to { transform: perspective(1200px) rotateY(calc(var(--card-turn, 1) * 90deg)); }
 }
 @keyframes card-turn-in {
-  from { transform: perspective(1200px) rotateY(-90deg); }
+  from { transform: perspective(1200px) rotateY(calc(var(--card-turn, 1) * -90deg)); }
 }
 @keyframes card-fade-out {
   to { opacity: 0; }
@@ -191,13 +198,13 @@ html.sidenav-collapsed .sidenav-collapse-icon {
   from { opacity: 0; }
 }
 .card-turn-out {
-  animation: card-turn-out 130ms ease-in forwards;
+  animation: card-turn-out 70ms ease-in forwards;
 }
 /* The overshoot past face-on is the landing. */
 .card-turn-in {
-  animation: card-turn-in 260ms cubic-bezier(0.2, 0.9, 0.3, 1.25);
+  animation: card-turn-in 120ms cubic-bezier(0.2, 0.9, 0.3, 1.25);
 }
 @media (prefers-reduced-motion: reduce) {
-  .card-turn-out { animation: card-fade-out 130ms ease-in forwards; }
-  .card-turn-in { animation: card-fade-in 130ms ease-out; }
+  .card-turn-out { animation: card-fade-out 70ms ease-in forwards; }
+  .card-turn-in { animation: card-fade-in 120ms ease-out; }
 }

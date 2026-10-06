@@ -362,6 +362,9 @@ export default function ReviewPage() {
   /** Turn a tap-to-reveal card over, either way. A turn in progress finishes first. */
   const flipCard = () => {
     if (turn) return;
+    // On the click, not at the swap: the ratings are there by the time the
+    // pointer is, instead of arriving with the answer.
+    setShowAnswer(true);
     setTurn('out');
   };
 
@@ -386,7 +389,6 @@ export default function ReviewPage() {
     if (e.target !== e.currentTarget) return;
     if (turn === 'out') {
       setShowingBack(back => !back);
-      setShowAnswer(true);
       setTurn('in');
     } else {
       setTurn(null);
@@ -740,6 +742,11 @@ export default function ReviewPage() {
         onClick={handleCardClick}
         onKeyDown={handleCardKeyDown}
         onAnimationEnd={handleTurnEnd}
+        // Towards the answer the card turns one way, back to the prompt the
+        // other, so going back reads as undoing the flip rather than as a
+        // second one. `showingBack` changes between the two halves, hence the
+        // comparison: out from the front and in onto the back are one turn.
+        style={{ '--card-turn': (turn === 'out') !== showingBack ? 1 : -1 } as React.CSSProperties}
         className={`mb-4 h-[20rem] rounded-xl bg-[var(--color-bg)] border border-[var(--color-muted)] shadow-lg cursor-pointer hover:border-[var(--color-highlight)] focus-visible:border-[var(--color-highlight)] focus-visible:outline-none transition-colors ${turn ? `card-turn-${turn}` : ''}`}
       >
         {/* Keyed by face so the front never opens at whatever offset the back
@@ -1366,12 +1373,16 @@ export default function ReviewPage() {
                           {t(interfaceLanguage, 'ratingEasy')}
                         </button>
                     </div>
-                    {/* In the held grid's place until the first flip, and in
-                        onboarding's words, where this gesture was taught. */}
+                    {/* In the held grid's place until the first flip, so
+                        the answer and the ratings are under the same hand.
+                        Clicking the card does the same thing. */}
                     {!showAnswer && (
-                      <p className="absolute inset-0 flex items-center justify-center text-sm text-[var(--color-muted)] pointer-events-none">
-                        {t(interfaceLanguage, 'setupCardHint')}
-                      </p>
+                      <button
+                        className="absolute inset-0 w-full px-4 py-3 bg-[var(--color-muted)] text-[var(--color-text)] rounded-lg hover:bg-[var(--color-muted-dark)] text-lg font-semibold"
+                        onClick={flipCard}
+                      >
+                        {t(interfaceLanguage, 'showAnswer')}
+                      </button>
                     )}
                   </div>
                 )}
