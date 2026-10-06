@@ -59,6 +59,15 @@ is below merged after it._
   Final/Changes, the rewrite's audio button is gone (the findings keep
   theirs), and "What that says" opens on a tap. Edit returns to the passage;
   done with nothing changed returns to the feedback. Web is unchanged.
+- **Munli: save a piece of writing, and read old ones** (web and mobile). A Save button under a review keeps the
+  submitted passage and the whole review at `users/{uid}/writings`; Saved gets
+  a Writing shelf that opens a dated list, and an entry opens the review as it
+  looked, read-only, with a delete. No statistics. ⚠️ **Saving fails until the
+  security rule in [tech-stack.md](tech-stack.md) is added in the Firebase
+  console.** ⚠️ **Not run signed-in on web or on a device before merge**:
+  typechecked and unit-tested only, so the save, the list, the detail and the
+  delete have never been exercised against Firestore. Web is live on deploy;
+  mobile needs the build.
 
 What has never been looked at on a device is listed under Unverified in
 [status.md](status.md). It is not tracked here, by the 2026-09-04 decision that
@@ -72,32 +81,6 @@ practice session should cover several tenses at once again, which the section
 picker narrowed (#146). Both are written up in their Decisions entries of
 2026-09-22.
 
-- [ ] **Munli: writing improvements.** Added from Google Tasks 2026-10-05;
-      moved to High and scoped with the user 2026-10-06. It had two parts; the
-      scroll fix went first (the user's call) and is under Queued for the next
-      build. What is left:
-      **2 · Saving a piece of writing, and reading old ones.** The user's
-      calls:
-      - **Saving is optional**, offered once a review has come back.
-      - **A save keeps the passage and the feedback together.** The user hopes
-        saved passages later show which Munli topics to add and how to
-        practise them.
-      - **Past writings are a new row on the Saved tab** (the user's lean, and
-        it fits: Saved already shelves by kind).
-      - **For now, reading is enough**: how I wrote then and what feedback I
-        got. Statistics (which mistakes, how often, whether they fall over
-        time) are wanted later, not in this item.
-      **Confirmed by the user 2026-10-06:** the saved record is the
-      submitted passage, the whole `WritingReview` (rewrite, its native
-      rendering, findings with their `kind`), the study language and the date,
-      so later statistics need no backfill; the Saved row opens a dated list
-      (first line, number of findings) and each entry opens the review as it
-      looked, read-only, with a delete; saving needs sign-in, as saving a card
-      does.
-      **Comes with it:** this is the first time a passage is stored (today it
-      is only sent for review, and only the cards made from it are kept), so
-      `/privacy` needs a line, the security rules need the new collection, and
-      account deletion has to remove it.
 
 ## Medium
 

@@ -1,34 +1,21 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import {
+  buildSavedWriting,
   buildWritingCardDraft,
   getStudyLanguageConfig,
   getWritingReview,
-  offersCard,
   writingExample,
   WRITING_MAX_CHARS,
 } from '@amgi/core';
-import type {
-  FindingKind,
-  TranslationKey,
-  WritingCardCandidate,
-  WritingReview,
-} from '@amgi/core';
+import type { WritingCardCandidate, WritingReview } from '@amgi/core';
 import { saveFlashcardToFirestore, Flashcard } from '@/services/firestore';
+import { newSavedWritingId, saveWriting } from '@/services/writings';
 import { useUser } from '@/components/UserContext';
 import { t } from '@/lib/i18n';
 import Spinner from '@/components/Spinner';
-import PronounceButton from '@/components/PronounceButton';
-import TextDiff from '@/components/TextDiff';
-import CopyButton from '@/components/CopyButton';
-
-const KIND_LABEL_KEY: Record<FindingKind, TranslationKey> = {
-  grammar: 'writingKindGrammar',
-  naturalness: 'writingKindNaturalness',
-  register: 'writingKindRegister',
-  vocabulary: 'writingKindVocabulary',
-};
+import WritingReviewView from '@/components/WritingReviewView';
 
 /**
  * Writing review: a passage in, how a native would have written it out, plus an
@@ -76,7 +63,17 @@ export default function WritingReviewPanel() {
    * invent edits nobody made.
    */
   const [submitted, setSubmitted] = useState('');
-  const [showClean, setShowClean] = useState(false);
+  /**
+   * Whether this review has been kept. Per review: a new submission is a new
+   * thing to save or not.
+   */
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('idle');
+  // Its own flag rather than `error`: that banner sits above the review, and
+  // this button is below the last finding.
+  const [saveFailed, setSaveFailed] = useState(false);
+  // The id this review saves under, chosen on the first attempt and kept for
+  // any retry, so a save that failed late cannot land twice.
+  const saveId = useRef<string | null>(null);
 
   const langConfig = getStudyLanguageConfig(studyLanguage);
   const languageLabel = t(interfaceLanguage, langConfig.studyLabelKey);
@@ -99,7 +96,9 @@ export default function WritingReviewPanel() {
     setError(null);
     setReview(null);
     setSavedCards(new Set());
-    setShowClean(false);
+    setSaveState('idle');
+    setSaveFailed(false);
+    saveId.current = null;
     try {
       const passage = text.trim();
       const result = await getWritingReview(passage, deckNativeLanguage ?? 'English', studyLanguage);
@@ -128,6 +127,36 @@ export default function WritingReviewPanel() {
       setError(t(interfaceLanguage, 'errorSaveFlashcard'));
     } finally {
       setSavingCard(null);
+    }
+  };
+
+  /**
+   * Keep this passage with its feedback.
+   *
+   * ⚠️ `submitted`, not `text`: the textarea stays editable after a review, and
+   * a record pairing the feedback with a passage it was not written about would
+   * be wrong the day it is read back. Needs an account, as a card does.
+   */
+  const handleSaveWriting = async () => {
+    if (!review || saveState !== 'idle') return;
+    if (!user) {
+      handleSignIn();
+      return;
+    }
+    setSaveState('saving');
+    setSaveFailed(false);
+    try {
+      saveId.current ??= newSavedWritingId(user.uid);
+      await saveWriting(
+        user.uid,
+        saveId.current,
+        buildSavedWriting(submitted, review, studyLanguage, deckNativeLanguage),
+      );
+      setSaveState('saved');
+    } catch (err) {
+      console.error(err);
+      setSaveState('idle');
+      setSaveFailed(true);
     }
   };
 
@@ -215,145 +244,43 @@ export default function WritingReviewPanel() {
       )}
 
       {review && (
-        <div className="mt-8 space-y-6">
-          <section className="p-6 rounded-xl bg-[var(--color-surface)] shadow-lg border border-[var(--color-muted)]">
-            {/* Wraps: the heading is a full sentence in uppercase and the row
-                also carries a pronounce button, a copy control and the
-                Changes/Final toggle. Narrow enough and they ran off the edge —
-                found on a phone, and the same row on mobile had it too. */}
-            <div className="flex items-center gap-2 mb-3 flex-wrap">
-              <h2 className="text-xs font-semibold uppercase tracking-widest shrink" style={{ color: 'var(--color-muted)' }}>
-                {t(interfaceLanguage, 'writingRewriteHeading')}
-              </h2>
-              <PronounceButton text={review.rewrite} studyLanguage={studyLanguage} kind="sentence" />
-              <div className="ml-auto flex items-center gap-2">
-                {/* Always the clean rewrite, never the diff — copying markup
-                    with deletions in it would paste back the mistakes. */}
-                <CopyButton text={review.rewrite} interfaceLanguage={interfaceLanguage} className="hover:text-[var(--color-text)] hover:border-[var(--color-text)]" />
-                {/* The clean rewrite is still worth reaching — it is the
-                    version you would read aloud, and a heavily edited passage
-                    is hard to read as a sentence through its own diff. */}
-                <button
-                  onClick={() => setShowClean(v => !v)}
-                  className="text-xs px-2.5 py-1 rounded-lg border border-[var(--color-muted)] text-[var(--color-muted)] hover:text-[var(--color-text)] hover:border-[var(--color-text)] transition-colors"
-                >
-                  {t(interfaceLanguage, showClean ? 'writingViewChanges' : 'writingViewFinal')}
-                </button>
-              </div>
-            </div>
-            {showClean ? (
-              <p className="text-lg leading-relaxed whitespace-pre-wrap text-[var(--color-text)]">{review.rewrite}</p>
-            ) : (
-              <TextDiff
-                before={submitted}
-                after={review.rewrite}
-                studyLanguage={studyLanguage}
-                className="text-lg"
-              />
-            )}
+        <div className="mt-8">
+          <WritingReviewView
+            review={review}
+            passage={submitted}
+            studyLanguage={studyLanguage}
+            nativeLanguage={deckNativeLanguage}
+            cards={{ saved: savedCards, saving: savingCard, onAdd: handleAddCard }}
+          />
 
-            {/* Subordinate to the rewrite, not hidden behind a tap: it is how
-                the user verifies a correction didn't change what they meant,
-                and a check nobody opens is a check nobody runs. */}
-            {review.rewriteNative && (
-              <div className="mt-4 pt-4 border-t" style={{ borderColor: 'var(--color-muted)' }}>
-                <h3 className="text-xs font-semibold uppercase tracking-widest mb-1" style={{ color: 'var(--color-muted)' }}>
-                  {t(interfaceLanguage, 'writingRewriteMeaning')}
-                </h3>
-                <p className="text-sm leading-relaxed whitespace-pre-wrap text-[var(--color-text)] opacity-70">
-                  {review.rewriteNative}
-                </p>
-              </div>
-            )}
-          </section>
-
-          <section>
-            <h2
-              className="text-xs font-semibold uppercase tracking-widest mb-3"
-              style={{ color: 'var(--color-muted)' }}
+          {/* Optional, and only here: nothing about a review is kept unless
+              this is pressed. After the findings rather than above them — it is
+              a decision about feedback you have read. */}
+          <div className="mt-8 flex flex-wrap items-center gap-3">
+            <button
+              onClick={handleSaveWriting}
+              disabled={saveState !== 'idle'}
+              className="px-4 py-2 rounded-lg border text-sm font-semibold transition-colors disabled:opacity-60 disabled:cursor-default hover:bg-[var(--color-muted)]/30"
+              style={{ borderColor: 'var(--color-muted)', color: 'var(--color-text)' }}
             >
-              {t(interfaceLanguage, 'writingFindingsHeading')}
-            </h2>
-
-            {review.findings.length === 0 ? (
-              <p className="text-[var(--color-text)] opacity-60 text-sm">{t(interfaceLanguage, 'writingNoFindings')}</p>
+              {saveState === 'saving'
+                ? <Spinner className="w-4 h-4" />
+                : t(interfaceLanguage, saveState === 'saved' ? 'writingSaveDone' : 'writingSave')}
+            </button>
+            {saveFailed ? (
+              <span className="text-sm" style={{ color: 'var(--color-highlight)' }}>
+                {t(interfaceLanguage, 'errorSaveWriting')}
+              </span>
+            ) : saveState === 'saved' ? (
+              <a href="/munli/saved" className="text-sm underline" style={{ color: 'var(--color-muted)' }}>
+                {t(interfaceLanguage, 'savedTitle')} →
+              </a>
             ) : (
-              /* One ordered list, not sections grouped by kind — the order is
-                 the model's judgement of what this writer most needs, which is
-                 what makes the feedback meet them at their level. */
-              <ol className="space-y-3">
-                {review.findings.map((finding, i) => {
-                  const saved = finding.card ? savedCards.has(finding.card.study) : false;
-                  const savingThis = finding.card ? savingCard === finding.card.study : false;
-                  const showCard = offersCard(finding);
-                  return (
-                    <li
-                      key={i}
-                      className="p-4 rounded-xl bg-[var(--color-surface)] border border-[var(--color-muted)]"
-                    >
-                      <span
-                        className="inline-block px-2 py-0.5 rounded-full text-[10px] uppercase tracking-widest border"
-                        style={{ color: 'var(--color-muted)', borderColor: 'var(--color-muted)' }}
-                      >
-                        {t(interfaceLanguage, KIND_LABEL_KEY[finding.kind])}
-                      </span>
-
-                      {(finding.original || finding.suggested) && (
-                        <p className="mt-2 flex flex-wrap items-baseline gap-2">
-                          {finding.original && (
-                            <span className="line-through opacity-50 text-[var(--color-text)]">{finding.original}</span>
-                          )}
-                          {finding.original && finding.suggested && (
-                            <span style={{ color: 'var(--color-muted)' }}>→</span>
-                          )}
-                          {finding.suggested && (
-                            <span className="font-bold" style={{ color: 'var(--color-highlight)' }}>
-                              {finding.suggested}
-                            </span>
-                          )}
-                        </p>
-                      )}
-
-                      <p className="mt-2 text-sm leading-relaxed text-[var(--color-text)] opacity-80">{finding.note}</p>
-
-                      {showCard && finding.card && (
-                        <div className="mt-3 flex flex-wrap items-center gap-3 pt-3 border-t" style={{ borderColor: 'var(--color-muted)' }}>
-                          {/* A word they demonstrably reached for and did not
-                              have. Marked, because it is different evidence
-                              from every other suggestion on the page: not "this
-                              would be worth knowing" but "you needed this and
-                              it wasn't there." */}
-                          {finding.card.gap && (
-                            <span
-                              className="px-2 py-0.5 rounded-full text-[10px] uppercase tracking-widest"
-                              style={{ background: 'var(--color-highlight)', color: 'var(--color-bg)' }}
-                            >
-                              {t(interfaceLanguage, 'writingWordYouNeeded')}
-                            </span>
-                          )}
-                          <span className="font-bold text-[var(--color-text)]">{finding.card.study}</span>
-                          <PronounceButton text={finding.card.study} studyLanguage={studyLanguage} />
-                          <span className="text-sm opacity-60 text-[var(--color-text)]">
-                            {deckNativeLanguage === 'Korean' ? finding.card.back.Korean : finding.card.back.English}
-                          </span>
-                          <button
-                            onClick={() => handleAddCard(finding.card!)}
-                            disabled={saved || savingThis}
-                            className="ml-auto px-3 py-1 rounded-full border text-sm transition-colors disabled:opacity-60 disabled:cursor-default hover:bg-[var(--color-muted)]/30"
-                            style={{ borderColor: 'var(--color-muted)', color: 'var(--color-text)' }}
-                          >
-                            {savingThis
-                              ? <Spinner className="w-4 h-4" />
-                              : t(interfaceLanguage, saved ? 'writingCardSaved' : 'writingAddCard')}
-                          </button>
-                        </div>
-                      )}
-                    </li>
-                  );
-                })}
-              </ol>
+              <span className="text-sm" style={{ color: 'var(--color-muted)' }}>
+                {t(interfaceLanguage, 'writingSaveBlurb')}
+              </span>
             )}
-          </section>
+          </div>
         </div>
       )}
     </div>

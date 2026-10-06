@@ -32,6 +32,19 @@ top-level and match on the `uid` field. If the `users/{uid}` rule is written
 with a bare `match /users/{uid}` and no recursive wildcard, the subcollection is
 *not* covered by it; rules do not cascade to subcollections.
 
+⚠️ **To add for saved writings (branch `munli-writing-save`; not yet confirmed
+in the console):**
+
+```
+match /users/{uid}/writings/{writingId} {
+  allow read, write: if request.auth != null && request.auth.uid == uid;
+}
+```
+
+Until it is in, saving a writing fails `permission-denied` and the Saved tab
+shows no Writing shelf. The list query orders on `createdAt` alone, which is a
+single-field index Firestore keeps automatically: **no composite index**.
+
 ### Delete User Data extension (console config)
 
 Account deletion is `deleteUser()` from the client SDK; this extension does the
