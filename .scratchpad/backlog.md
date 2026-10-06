@@ -79,6 +79,11 @@ picker narrowed (#146). Both are written up in their Decisions entries of
 - [ ] **Munli: cards from writing look different from cards from lookup.**
       Added from Google Tasks 2026-10-05.
 
+- [ ] **Munli: more French verb tenses.** Added from Google Tasks 2026-10-06
+      ("Different verb tenses"). The user's reading: add tenses beyond the
+      three there now (présent, imparfait, futur simple). Which tenses is not
+      decided.
+
 - [ ] **Watch the kanji deck on the "All" chip.** The kanji pack is the first
       single-glyph pack laid out as a `list`, because its back carries readings
       that do not fit a tile — and `isGridDeck` exempts only *grid* decks from
