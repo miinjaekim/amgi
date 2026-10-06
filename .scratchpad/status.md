@@ -82,6 +82,13 @@ blank placeholder. On **Android**, only sign-in has ever been exercised.
   on Munli's Saved tab (PR #186) and Munli's cleared themes (PR #188, seen on
   web in all three) have not been seen on a device. Adding a French verb, and
   *Add to Munli* from Amgi (PR #182), were not confirmed on mobile.
+- **The review card flip** (branch `review-card-flip`) has not been seen
+  running on either platform: not in Expo Go, and on web only signed out, where
+  no card is on screen. Checked: types, tests, lint, and the turn's CSS in
+  headless Chrome (both halves run and end, with and without reduced motion).
+  Worth looking at first on a phone: that a long back scrolls inside the card
+  while a tap still flips it, that the card does not change size at the first
+  flip, and how the turn feels.
 - **The per-deck language migration** runs on every existing account's first
   load. Nobody has watched it against a real multi-deck account.
 - **The Slow pronunciation speed** is a pitch-corrected stretch, not a slow

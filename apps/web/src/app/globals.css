@@ -172,3 +172,32 @@ html.sidenav-collapsed .sidenav-label {
 html.sidenav-collapsed .sidenav-collapse-icon {
   transform: rotate(180deg);
 }
+
+/* Review's card turn. The card goes edge-on (`out`), the page swaps the face
+   while neither can be read, and it comes back round from the other side
+   (`in`). `forwards` holds it edge-on for the frame between the two. The
+   page waits on `animationend`, so each class must always run *some*
+   animation: reduced motion swaps the turn for a fade, never for `none`. */
+@keyframes card-turn-out {
+  to { transform: perspective(1200px) rotateY(90deg); }
+}
+@keyframes card-turn-in {
+  from { transform: perspective(1200px) rotateY(-90deg); }
+}
+@keyframes card-fade-out {
+  to { opacity: 0; }
+}
+@keyframes card-fade-in {
+  from { opacity: 0; }
+}
+.card-turn-out {
+  animation: card-turn-out 130ms ease-in forwards;
+}
+/* The overshoot past face-on is the landing. */
+.card-turn-in {
+  animation: card-turn-in 260ms cubic-bezier(0.2, 0.9, 0.3, 1.25);
+}
+@media (prefers-reduced-motion: reduce) {
+  .card-turn-out { animation: card-fade-out 130ms ease-in forwards; }
+  .card-turn-in { animation: card-fade-in 130ms ease-out; }
+}

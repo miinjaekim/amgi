@@ -1,7 +1,8 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { AccessibilityInfo, Animated, StyleSheet, View } from 'react-native';
+import React, { useEffect, useMemo } from 'react';
+import { Animated, StyleSheet, View } from 'react-native';
 import type { DimensionValue, StyleProp, ViewStyle } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
+import { useReduceMotion } from '../hooks/useReduceMotion';
 
 /**
  * Placeholder bars in the shape of the thing being fetched.
@@ -42,23 +43,6 @@ function useSharedPulse(): Animated.Value {
     };
   }, []);
   return pulse;
-}
-
-/**
- * Read once on mount rather than subscribed to. The setting is a system-level
- * one people change in Settings and not mid-launch, and a loading placeholder
- * that outlives the fetch by long enough to matter is already a bug.
- */
-function useReduceMotion(): boolean {
-  const [reduce, setReduce] = useState(false);
-  useEffect(() => {
-    let alive = true;
-    AccessibilityInfo.isReduceMotionEnabled()
-      .then(on => { if (alive) setReduce(on); })
-      .catch(() => { /* Animate; a pulse is the lesser risk than no feedback. */ });
-    return () => { alive = false; };
-  }, []);
-  return reduce;
 }
 
 interface SkeletonBarProps {

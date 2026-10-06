@@ -141,8 +141,12 @@ that mode's set, and read that mode's key.
 
 ## Interaction details worth preserving
 
-- Review card body reserves `min-h-[14rem]` so "Show answer" and the rating grid
-  share one top anchor — without it the buttons jump on reveal.
+- The tap-to-reveal review card flips in place: one box, one face at a time,
+  turned by tapping the card. The rating row is laid out from the start and
+  only made visible by the first flip, so the card never changes size and
+  nothing under it moves; a long back scrolls inside the card. Hiding the front
+  on the back is a trial (2026-10-06). A typed card keeps the stacked reveal,
+  and on web its body still reserves `min-h-[14rem]`.
 - Depth and examples stream with a typewriter animation and a `▎` cursor glyph
   (both web and native).
 - `PronounceButton` sits next to the study-language term in: search explanation
