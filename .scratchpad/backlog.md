@@ -38,17 +38,69 @@ practice session should cover several tenses at once again, which the section
 picker narrowed (#146). Both are written up in their Decisions entries of
 2026-09-22.
 
-- [ ] **Change the card flip on review.** Added from Google Tasks 2026-10-05; moved to High 2026-10-06 on the
-      user's call.
-      Today the answer appears at the bottom; the user wants the whole card to
-      flip, as it does in onboarding.
+- [ ] **Change the card flip on review.** Added from Google Tasks 2026-10-05;
+      moved to High and scoped with the user 2026-10-06. Today the answer
+      appears below the prompt; the whole card flips instead, as onboarding's
+      does.
+      **The user's calls:**
+      - **A swap, in place.** The back replaces the front in the same box, and
+        the front is hidden while the back shows ("let's try out hiding the
+        front", so this is a trial, not a settled rule).
+      - **Tap the card to flip, tap again to flip back.**
+      - **The card keeps its dimensions.** The rating buttons appear below it
+        without the question/answer card changing size.
+      - **A satisfying animation is welcome**, not required.
+      - **Tap-to-reveal review only.** Typed-answer review stays as it is; the
+        user is not sure how a flip would work with a typed answer.
+      **Proposed, not yet confirmed by the user:** a turn about the vertical
+      axis with the content swapped at the midpoint, and a cross-fade when the
+      system asks for reduced motion; the rating row's space reserved from the
+      start so nothing moves when it appears; ratings stay available after
+      flipping back to the front; a back longer than the card scrolls inside
+      it; controls on the card (pronounce, edit) do not flip it. Web and
+      mobile both.
+      **Where it is:** `apps/mobile/app/(tabs)/review.tsx` and
+      `apps/web/src/app/review/page.tsx`. Onboarding's flip is in
+      `LanguageSetupModal` on each platform and has no animation: it swaps the
+      card's content on tap.
 
-- [ ] **Munli: writing improvements.** Added from Google Tasks 2026-10-05; moved to High 2026-10-06 on the
-      user's call.
-      Three parts, in the user's words: scrolling on writing; an optional save
-      for a piece of writing once it's done; and a record of past writings to
-      compare improvement over time — "similar to Amgi lookup, but for
-      writing".
+- [ ] **Munli: writing improvements.** Added from Google Tasks 2026-10-05;
+      moved to High and scoped with the user 2026-10-06. Two parts.
+      **1 · Scrolling a long passage (mobile).** The user's report: scrolling
+      a big passage "feels very sticky"; sometimes the text scrolls, sometimes
+      the text stays and the whole box moves, sometimes nothing happens.
+      Read from the code, not reproduced on a device: the passage field in
+      `apps/mobile/src/components/WritingReviewPanel.tsx` is capped at 260
+      points and scrolls inside itself past that, and it sits inside the page's
+      own `ScrollView`, which also has `keyboardDismissMode="interactive"`. So
+      one drag has three possible owners: the field, the page, and the
+      keyboard dismissal. The cap is there so the counter and the submit button
+      are not pushed off screen. **Proposed:** the field grows with the passage
+      and does not scroll itself, the page is the only scroller, and the
+      counter and submit button sit in a bar that stays in view. Web uses a
+      plain `<textarea>` and was not reported.
+      **2 · Saving a piece of writing, and reading old ones.** The user's
+      calls:
+      - **Saving is optional**, offered once a review has come back.
+      - **A save keeps the passage and the feedback together.** The user hopes
+        saved passages later show which Munli topics to add and how to
+        practise them.
+      - **Past writings are a new row on the Saved tab** (the user's lean, and
+        it fits: Saved already shelves by kind).
+      - **For now, reading is enough**: how I wrote then and what feedback I
+        got. Statistics (which mistakes, how often, whether they fall over
+        time) are wanted later, not in this item.
+      **Proposed, not yet confirmed by the user:** the saved record is the
+      submitted passage, the whole `WritingReview` (rewrite, its native
+      rendering, findings with their `kind`), the study language and the date,
+      so later statistics need no backfill; the Saved row opens a dated list
+      (first line, number of findings) and each entry opens the review as it
+      looked, read-only, with a delete; saving needs sign-in, as saving a card
+      does.
+      **Comes with it:** this is the first time a passage is stored (today it
+      is only sent for review, and only the cards made from it are kept), so
+      `/privacy` needs a line, the security rules need the new collection, and
+      account deletion has to remove it.
 
 ## Medium
 
