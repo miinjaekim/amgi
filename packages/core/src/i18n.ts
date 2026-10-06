@@ -47,6 +47,9 @@ const translations = {
     restore: 'Restore',
     delete: 'Delete',
     cancel: 'Cancel',
+    // Screen-reader label for the tick that finishes writing in a multiline
+    // field, which has no return key to dismiss with.
+    keyboardDone: 'Done',
     confirmDelete: 'Are you sure you want to delete this flashcard?',
     confirmArchive: 'Archive this card? It will be paused from review but can be restored.',
     savedAt: 'Saved:',
@@ -324,6 +327,9 @@ const translations = {
     writingTaglineSubtitle: 'Grammar where you need it, natural phrasing where you don\'t — pitched at whatever you wrote. Keep the phrases you were reaching for as flashcards.',
     writingPlaceholder: 'Write a few sentences in {language}, and see how a native would put it...',
     writingButton: 'Review',
+    // Under the Review button once you have gone back to edit a reviewed
+    // passage (mobile).
+    writingBackToFeedback: 'Back to feedback',
     writingRewriteHeading: 'Native version',
     writingRewriteMeaning: 'What that says',
     writingViewChanges: 'Changes',
@@ -912,6 +918,7 @@ const translations = {
     restore: '복원',
     delete: '삭제',
     cancel: '취소',
+    keyboardDone: '완료',
     confirmDelete: '이 플래시카드를 삭제하시겠습니까?',
     confirmArchive: '이 카드를 보관하시겠습니까? 복습에서 일시정지되지만 복원할 수 있습니다.',
     savedAt: '저장됨:',
@@ -1309,6 +1316,7 @@ const translations = {
     writingTaglineSubtitle: '문법이 필요하면 문법을, 아니면 더 자연스러운 표현을 — 쓴 글에 맞춰 짚어드려요. 떠올리지 못했던 표현은 카드로 저장하세요.',
     writingPlaceholder: '{language}로 몇 문장 써보세요. 원어민이라면 어떻게 쓸지 보여드릴게요...',
     writingButton: '첨삭',
+    writingBackToFeedback: '첨삭 결과로 돌아가기',
     writingRewriteHeading: '원어민 표현',
     writingRewriteMeaning: '이런 뜻이에요',
     writingViewChanges: '고친 부분',
