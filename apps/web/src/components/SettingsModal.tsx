@@ -5,10 +5,11 @@ import { useTheme } from '@/components/ThemeContext';
 import { usePronunciation } from '@/components/PronunciationContext';
 import { SUPPORTED_NATIVE_LANGUAGES } from '@/services/userPreferences';
 import {
-  HANJA_PARTITIONS, cardsToAnki, cardsToCSV, getStudyLanguageConfig,
+  HANJA_PARTITIONS, cardsToAnki, cardsToCSV, getStudyLanguageConfig, writingsToText,
   type HanjaPartition, type StudyLanguage, type TranslationKey,
 } from '@amgi/core';
 import { fetchAllCardsForExport } from '@/services/firestore';
+import { fetchAllSavedWritings } from '@/services/writings';
 import { downloadFile } from '@/lib/download';
 import { t } from '@/lib/i18n';
 import DeleteAccountModal from '@/components/DeleteAccountModal';
@@ -404,6 +405,28 @@ function DataPane() {
     }
   };
 
+  /**
+   * Saved writing, as one text file. Beside the cards because it is the other
+   * thing the account holds that only this account can give back, and deleting
+   * the account takes it too.
+   */
+  const [writingsState, setWritingsState] = useState<'idle' | 'busy' | 'failed' | 'none'>('idle');
+  const runWritings = async () => {
+    if (!user) return;
+    setWritingsState('busy');
+    try {
+      const writings = await fetchAllSavedWritings(user.uid);
+      if (writings.length === 0) {
+        setWritingsState('none');
+        return;
+      }
+      downloadFile(writingsToText(writings, interfaceLanguage), 'amgi-writing.txt', 'text/plain');
+      setWritingsState('idle');
+    } catch {
+      setWritingsState('failed');
+    }
+  };
+
   return (
     <Group title={t(interfaceLanguage, 'settingsYourData')} desc={t(interfaceLanguage, 'settingsYourDataBlurb')}>
       {user && (
@@ -419,6 +442,23 @@ function DataPane() {
           {failed && (
             <p className="text-sm mt-2" style={{ color: 'var(--color-error, #c0392b)' }}>
               {t(interfaceLanguage, 'settingsExportFailed')}
+            </p>
+          )}
+        </Row>
+      )}
+      {user && (
+        <Row label={t(interfaceLanguage, 'settingsExportWritings')} desc={t(interfaceLanguage, 'settingsExportWritingsDesc')}>
+          <button onClick={runWritings} disabled={writingsState === 'busy'} className={BUTTON_CLASS} style={BUTTON_STYLE}>
+            {t(interfaceLanguage, 'writingsExportText')}
+          </button>
+          {writingsState === 'failed' && (
+            <p className="text-sm mt-2" style={{ color: 'var(--color-error, #c0392b)' }}>
+              {t(interfaceLanguage, 'settingsExportFailed')}
+            </p>
+          )}
+          {writingsState === 'none' && (
+            <p className="text-sm mt-2" style={{ color: 'var(--color-muted)' }}>
+              {t(interfaceLanguage, 'settingsExportWritingsNone')}
             </p>
           )}
         </Row>

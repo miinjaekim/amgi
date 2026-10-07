@@ -371,6 +371,46 @@ review direction chosen on Review is per-session and not persisted anywhere, for
 the same class of reason: a `reviewDirection` on the user doc would have been a
 schema change plus offline-write handling for a one-second choice (PR #65).
 
+
+### `users/{uid}/writings/{id}` — saved writings (2026-10-06)
+
+A piece of writing the learner chose to keep from Munli's Writing tab, with the
+feedback it got. **Nothing is written here unless Save is pressed**; a review is
+otherwise gone with the request.
+
+```
+users/{uid}/writings/{auto id}
+  passage         the passage as submitted (what the review was made against,
+                  not the field's later text)
+  review          the whole WritingReview: rewrite, rewriteNative?, findings[]
+                  (each with kind, original?, suggested?, note, card?, pattern?)
+  studyLanguage   StudyLanguage
+  nativeLanguage  the deck's native language when saved (the notes are in it);
+                  optional
+  createdAt       ms since the epoch
+```
+
+- **The whole review, not a summary** (the user's call). Statistics over old
+  writing are wanted later, and a model's answer cannot be had again, so a
+  record that kept only what the first screen shows could never be backfilled.
+- **A subcollection of `users/{uid}`**, for the reason `progress` is one: the
+  Delete User Data extension takes it with the account, no console change.
+- **One query, no composite index:** everything, ordered by `createdAt`. The
+  study language is narrowed on the client (`savedWritingsFor`), because
+  `where` on the language plus the order would need an index someone has to
+  remember to create.
+- **The id is chosen on the client before the write** and reused on retry
+  (`setDoc`, not `addDoc`), so a save that timed out and landed late cannot
+  become two documents.
+- **No statistics are derived or stored.** Read-only, with a delete.
+- **Exported from Settings → Your data** as one plain-text file, every
+  language, newest first (`writingsToText`). Beside the card export, because
+  account deletion takes both.
+
+⚠️ **The security rule is manual** — see [tech-stack.md](tech-stack.md). Shape
+and parsing are in `packages/core/src/savedWriting.ts`; the Firestore layer is
+`apps/{web,mobile}/src/services/writings.ts`.
+
 ## API shape (term explanation)
 
 - **Fast call** (`/api/explain`) — `term, termLanguage, korean/swedish, english,

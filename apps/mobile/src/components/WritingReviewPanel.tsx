@@ -4,24 +4,20 @@ import {
   ScrollView, StyleSheet, Keyboard, Platform, useWindowDimensions,
 } from 'react-native';
 import {
-  buildWritingCardDraft, getStudyLanguageConfig, offersCard, t, writingExample,
+  buildSavedWriting, buildWritingCardDraft, getStudyLanguageConfig, t, writingExample,
   WRITING_MAX_CHARS,
 } from '@amgi/core';
-import type {
-  FindingKind, TranslationKey, WritingCardCandidate, WritingReview,
-} from '@amgi/core';
+import type { WritingCardCandidate, WritingReview } from '@amgi/core';
 import { getWritingReview } from '../services/gemini';
 import { saveFlashcardToFirestore } from '../services/firestore';
+import { newSavedWritingId, saveWriting } from '../services/writings';
 import type { Flashcard } from '../services/firestore';
 import { useUser } from '../context/UserContext';
 import { useTheme } from '../context/ThemeContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFloatingTabBarHeight } from './FloatingTabBar';
-import PronounceButton from './PronounceButton';
-import CopyButton from './CopyButton';
-import TextDiff from './TextDiff';
+import WritingReviewView from './WritingReviewView';
 import type { Palette } from '../theme';
 
 /** Space above the field, and between it and the keyboard while writing. */
@@ -38,13 +34,6 @@ let rememberedKeyboardHeight: number | null = null;
 
 /** How far a touch may travel on the field and still be a tap, in points. */
 const TAP_SLOP = 8;
-
-const KIND_LABEL_KEY: Record<FindingKind, TranslationKey> = {
-  grammar: 'writingKindGrammar',
-  naturalness: 'writingKindNaturalness',
-  register: 'writingKindRegister',
-  vocabulary: 'writingKindVocabulary',
-};
 
 /**
  * Writing review, native side. Mirrors the web panel — same core types, same
@@ -86,7 +75,18 @@ export default function WritingReviewPanel({ onEditingChange }: {
    * passage the user has since changed would invent edits nobody made.
    */
   const [submitted, setSubmitted] = useState('');
-  const [showClean, setShowClean] = useState(false);
+  /**
+   * Whether this review has been kept. Per review: a new submission is a new
+   * thing to save or not.
+   */
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('idle');
+  // Its own flag rather than `error`: that banner is on the writing page, and
+  // this button is below the last finding.
+  const [saveFailed, setSaveFailed] = useState(false);
+  // The id this review saves under, chosen on the first attempt and kept for
+  // any retry. The write has a deadline and can still land after it, so a
+  // retry must be the same document rather than a second copy.
+  const saveId = useRef<string | null>(null);
   /**
    * Writing and feedback are two pages of this tab, and never share one.
    *
@@ -103,7 +103,6 @@ export default function WritingReviewPanel({ onEditingChange }: {
    * feedback on the passage as submitted, until the next submission.
    */
   const [page, setPage] = useState<'write' | 'feedback'>('write');
-  const [showMeaning, setShowMeaning] = useState(false);
   /**
    * Reading the passage and editing it are two states, and only a tap moves
    * from the first to the second.
@@ -192,8 +191,9 @@ export default function WritingReviewPanel({ onEditingChange }: {
     setReview(null);
     setPage('write');
     setSavedCards(new Set());
-    setShowClean(false);
-    setShowMeaning(false);
+    setSaveState('idle');
+    setSaveFailed(false);
+    saveId.current = null;
     try {
       const passage = text.trim();
       const result = await getWritingReview(passage, deckNativeLanguage ?? 'English', studyLanguage);
@@ -226,6 +226,36 @@ export default function WritingReviewPanel({ onEditingChange }: {
     }
   };
 
+
+  /**
+   * Keep this passage with its feedback.
+   *
+   * ⚠️ `submitted`, not `text`: the field stays editable after a review, and a
+   * record pairing the feedback with a passage it was not written about would
+   * be wrong the day it is read back. Needs an account, as a card does.
+   */
+  const handleSaveWriting = async () => {
+    if (!review || saveState !== 'idle') return;
+    if (!user) {
+      handleSignIn();
+      return;
+    }
+    setSaveState('saving');
+    setSaveFailed(false);
+    try {
+      saveId.current ??= newSavedWritingId(user.uid);
+      await saveWriting(
+        user.uid,
+        saveId.current,
+        buildSavedWriting(submitted, review, studyLanguage, deckNativeLanguage),
+      );
+      setSaveState('saved');
+    } catch (err) {
+      console.error(err);
+      setSaveState('idle');
+      setSaveFailed(true);
+    }
+  };
 
   return (
     <View style={s.flex}>
@@ -359,124 +389,34 @@ export default function WritingReviewPanel({ onEditingChange }: {
 
       {showing === 'feedback' && review && (
         <ScrollView style={s.flex} contentContainerStyle={s.scroll}>
-          {/* Above the box, as "What to notice" is above its findings. Inside,
-              it shared a row with three buttons and the last was pushed onto a
-              line of its own. */}
-          <Text style={s.findingsHeading}>{t(interfaceLanguage, 'writingRewriteHeading')}</Text>
-          <View style={s.card}>
-            <View style={s.rewriteHeaderRow}>
-              {/* ⚠️ No pronounce button here (the user's call, 2026-10-06):
-                  this tool is for writing, not listening. The ones on the
-                  findings stay: hearing the one new word is worth more than
-                  hearing back the passage you just wrote. */}
-              {/* Always the clean rewrite, never the diff — copying text with
-                  the deletions in it would paste the mistakes back. */}
-              <CopyButton text={review.rewrite} interfaceLanguage={interfaceLanguage} />
-              {/* The clean rewrite stays reachable — it is the version you
-                  would read aloud, and a heavily edited passage is hard to read
-                  as a sentence through its own diff. */}
-              {/* Back to the passage as you wrote it, editable. */}
-              <TouchableOpacity
-                style={s.editBtn}
-                accessibilityRole="button"
-                onPress={() => { setPage('write'); setEditing(true); }}
-              >
-                <Text style={s.viewToggleText}>{t(interfaceLanguage, 'edit')}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={s.viewToggle} onPress={() => setShowClean(v => !v)}>
-                <Text style={s.viewToggleText}>
-                  {t(interfaceLanguage, showClean ? 'writingViewChanges' : 'writingViewFinal')}
-                </Text>
-              </TouchableOpacity>
-            </View>
-            {showClean ? (
-              <Text style={s.rewriteText}>{review.rewrite}</Text>
-            ) : (
-              <TextDiff before={submitted} after={review.rewrite} studyLanguage={studyLanguage} />
-            )}
+          <WritingReviewView
+            review={review}
+            passage={submitted}
+            studyLanguage={studyLanguage}
+            nativeLanguage={deckNativeLanguage}
+            onEdit={() => { setPage('write'); setEditing(true); }}
+            cards={{ saved: savedCards, saving: savingCard, onAdd: handleAddCard }}
+          />
 
-            {/* The check that a correction didn't change what they meant.
-                ⚠️ Behind a tap since 2026-10-06, on the user's call: open it
-                when you are curious what the rewrite says. It was always
-                shown before, on the argument that a check nobody opens is a
-                check nobody runs; the user weighed that against the room it
-                takes on every review and chose the tap. */}
-            {review.rewriteNative && (
-              <View style={s.nativeBlock}>
-                <TouchableOpacity
-                  style={s.nativeToggle}
-                  hitSlop={8}
-                  accessibilityRole="button"
-                  accessibilityState={{ expanded: showMeaning }}
-                  onPress={() => setShowMeaning(v => !v)}
-                >
-                  <Text style={s.sectionLabel}>{t(interfaceLanguage, 'writingRewriteMeaning')}</Text>
-                  <Ionicons name={showMeaning ? 'chevron-up' : 'chevron-down'} size={14} color={C.muted} />
-                </TouchableOpacity>
-                {showMeaning && <Text style={s.nativeText}>{review.rewriteNative}</Text>}
-              </View>
-            )}
-          </View>
-
-          <Text style={s.findingsHeading}>{t(interfaceLanguage, 'writingFindingsHeading')}</Text>
-
-          {review.findings.length === 0 ? (
-            <Text style={s.noFindings}>{t(interfaceLanguage, 'writingNoFindings')}</Text>
-          ) : (
-            /* One ordered list, never grouped by kind — the order is the
-               model's judgement of what this writer most needs, which is what
-               makes the feedback meet them at their level. */
-            review.findings.map((finding, i) => {
-              const saved = finding.card ? savedCards.has(finding.card.study) : false;
-              const savingThis = finding.card ? savingCard === finding.card.study : false;
-
-              const showCard = offersCard(finding);
-              return (
-                <View key={i} style={s.finding}>
-                  <View style={s.kindBadge}>
-                    <Text style={s.kindText}>{t(interfaceLanguage, KIND_LABEL_KEY[finding.kind])}</Text>
-                  </View>
-
-                  {(finding.original || finding.suggested) && (
-                    <View style={s.spanRow}>
-                      {finding.original && <Text style={s.original}>{finding.original}</Text>}
-                      {finding.original && finding.suggested && <Text style={s.arrow}>→</Text>}
-                      {finding.suggested && <Text style={s.suggested}>{finding.suggested}</Text>}
-                    </View>
-                  )}
-
-                  <Text style={s.note}>{finding.note}</Text>
-
-                  {showCard && finding.card && (
-                    <View style={s.cardRow}>
-                      {/* A word they demonstrably reached for and did not have.
-                          Marked, because it is different evidence from every
-                          other suggestion: not "this would be worth knowing"
-                          but "you needed this and it wasn't there." */}
-                      {finding.card.gap && (
-                        <View style={s.gapBadge}>
-                          <Text style={s.gapBadgeText}>{t(interfaceLanguage, 'writingWordYouNeeded')}</Text>
-                        </View>
-                      )}
-                      <Text style={s.cardStudy}>{finding.card.study}</Text>
-                      <PronounceButton text={finding.card.study} studyLanguage={studyLanguage} />
-                      <Text style={s.cardBack} numberOfLines={2}>
-                        {deckNativeLanguage === 'Korean' ? finding.card.back.Korean : finding.card.back.English}
-                      </Text>
-                      <TouchableOpacity
-                        style={[s.addBtn, (saved || savingThis) && s.addBtnDisabled]}
-                        onPress={() => finding.card && handleAddCard(finding.card)}
-                        disabled={saved || savingThis}
-                      >
-                        {savingThis
-                          ? <ActivityIndicator color={C.text} size="small" />
-                          : <Text style={s.addBtnText}>{t(interfaceLanguage, saved ? 'writingCardSaved' : 'writingAddCard')}</Text>}
-                      </TouchableOpacity>
-                    </View>
-                  )}
-                </View>
-              );
-            })
+          {/* Optional, and only here: nothing about a review is kept unless
+              this is pressed. After the findings rather than above them — it is
+              a decision about feedback you have read. */}
+          <TouchableOpacity
+            style={[s.saveBtn, saveState !== 'idle' && s.saveBtnDisabled]}
+            onPress={handleSaveWriting}
+            disabled={saveState !== 'idle'}
+            accessibilityRole="button"
+          >
+            {saveState === 'saving'
+              ? <ActivityIndicator color={C.text} size="small" />
+              : <Text style={s.saveBtnText}>
+                  {t(interfaceLanguage, saveState === 'saved' ? 'writingSaveDone' : 'writingSave')}
+                </Text>}
+          </TouchableOpacity>
+          {saveFailed ? (
+            <Text style={[s.saveBlurb, s.saveFailed]}>{t(interfaceLanguage, 'errorSaveWriting')}</Text>
+          ) : saveState !== 'saved' && (
+            <Text style={s.saveBlurb}>{t(interfaceLanguage, 'writingSaveBlurb')}</Text>
           )}
         </ScrollView>
       )}
@@ -524,21 +464,6 @@ function makeStyles(C: Palette, tabBarHeight: number) {
     errorBanner: { backgroundColor: '#fde8e8', borderRadius: 10, padding: 14, marginBottom: 12 },
     errorText: { color: C.error, fontWeight: '600' },
 
-    card: { backgroundColor: C.surface, borderRadius: 16, padding: 18, borderWidth: 1, borderColor: C.border, marginBottom: 20 },
-    // Copy, Edit, and the Changes/Final toggle at the far end. Still wraps, so
-    // a wide label on a narrow phone drops a line rather than running off the
-    // edge; with the heading out of the row it should not need to.
-    rewriteHeaderRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6, marginBottom: 8 },
-    viewToggle: {
-      marginLeft: 'auto', borderWidth: 1, borderColor: C.border, borderRadius: 12,
-      paddingHorizontal: 10, paddingVertical: 3,
-    },
-    viewToggleText: { fontSize: 11, color: C.muted },
-    editBtn: {
-      borderWidth: 1, borderColor: C.border, borderRadius: 12,
-      paddingHorizontal: 10, paddingVertical: 3,
-    },
-    nativeToggle: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
     backToFeedback: { alignSelf: 'center', marginTop: 12 },
     backToFeedbackText: { color: C.highlight, fontSize: 14, fontWeight: '600' },
     sectionLabel: { fontSize: 11, fontWeight: '700', color: C.muted, textTransform: 'uppercase', letterSpacing: 0.8 },
@@ -558,35 +483,15 @@ function makeStyles(C: Palette, tabBarHeight: number) {
     exampleTagText: { color: C.highlight, fontSize: 10, fontWeight: '700' },
     exampleStudy: { color: C.text, fontSize: 14, fontWeight: '600' },
     exampleBack: { color: C.muted, fontSize: 14 },
-    rewriteText: { fontSize: 17, color: C.text, lineHeight: 26 },
-    nativeBlock: { marginTop: 14, paddingTop: 14, borderTopWidth: 1, borderTopColor: C.border, gap: 8 },
-    nativeText: { fontSize: 14, color: C.text, opacity: 0.7, lineHeight: 21 },
 
-    findingsHeading: { fontSize: 11, fontWeight: '700', color: C.muted, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 10 },
-    noFindings: { fontSize: 14, color: C.muted, lineHeight: 21 },
-
-    finding: { backgroundColor: C.surface, borderRadius: 14, borderWidth: 1, borderColor: C.border, padding: 14, marginBottom: 10 },
-    kindBadge: { alignSelf: 'flex-start', borderWidth: 1, borderColor: C.border, borderRadius: 12, paddingHorizontal: 8, paddingVertical: 2 },
-    kindText: { fontSize: 10, color: C.muted, textTransform: 'uppercase', letterSpacing: 0.8 },
-    spanRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginTop: 8 },
-    original: { fontSize: 15, color: C.text, opacity: 0.5, textDecorationLine: 'line-through' },
-    arrow: { fontSize: 15, color: C.muted },
-    suggested: { fontSize: 15, fontWeight: '700', color: C.highlight },
-    note: { fontSize: 14, color: C.text, opacity: 0.8, lineHeight: 21, marginTop: 8 },
-
-    cardRow: {
-      flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8,
-      marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: C.border,
+    saveBtn: {
+      alignSelf: 'flex-start', marginTop: 14, minWidth: 120, alignItems: 'center',
+      borderWidth: 1, borderColor: C.border, borderRadius: 12,
+      paddingHorizontal: 16, paddingVertical: 10,
     },
-    gapBadge: { backgroundColor: C.highlight, borderRadius: 10, paddingHorizontal: 7, paddingVertical: 2 },
-    gapBadgeText: { fontSize: 9, color: C.bg, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.6 },
-    cardStudy: { fontSize: 15, fontWeight: '700', color: C.text },
-    cardBack: { fontSize: 13, color: C.muted, flexShrink: 1 },
-    addBtn: {
-      marginLeft: 'auto', borderWidth: 1, borderColor: C.border, borderRadius: 16,
-      paddingHorizontal: 12, paddingVertical: 5, minWidth: 62, alignItems: 'center',
-    },
-    addBtnDisabled: { opacity: 0.5 },
-    addBtnText: { fontSize: 13, color: C.text },
+    saveBtnDisabled: { opacity: 0.6 },
+    saveBtnText: { color: C.text, fontSize: 14, fontWeight: '600' },
+    saveBlurb: { color: C.muted, fontSize: 12, lineHeight: 17, marginTop: 8 },
+    saveFailed: { color: C.error, fontWeight: '600' },
   });
 }

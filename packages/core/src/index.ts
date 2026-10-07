@@ -33,6 +33,7 @@ export * from './setup';
 // Retained for `/api/writing` and `/api/grammar/exercise` only — see the header
 // comment on each module. Nothing in the current app imports them.
 export * from './writing';
+export * from './savedWriting';
 export * from './grammar';
 export * from './modelJson';
 export * from './userPacks';

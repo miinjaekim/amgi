@@ -1,9 +1,10 @@
 import React, { useMemo, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
-import { cardsToAnki, cardsToCSV, t } from '@amgi/core';
+import { cardsToAnki, cardsToCSV, t, writingsToText } from '@amgi/core';
 import { useUser } from '../../src/context/UserContext';
 import SettingsScreen, { useSettingsStyles } from '../../src/components/SettingsScreen';
 import { fetchAllCardsForExport } from '../../src/services/firestore';
+import { fetchAllSavedWritings } from '../../src/services/writings';
 import { shareFile } from '../../src/services/shareFile';
 import type { Palette } from '../../src/theme';
 
@@ -43,6 +44,28 @@ export default function DataSettings() {
     }
   };
 
+  /**
+   * Saved writing, as one text file. Beside the cards because it is the other
+   * thing the account holds that only this account can give back, and deleting
+   * the account takes it too.
+   */
+  const exportWritings = async () => {
+    if (!user) return;
+    setExporting(true);
+    try {
+      const writings = await fetchAllSavedWritings(user.uid);
+      if (writings.length === 0) {
+        Alert.alert(t(interfaceLanguage, 'settingsExportWritingsNone'));
+        return;
+      }
+      await shareFile(writingsToText(writings, interfaceLanguage), 'amgi-writing.txt', 'text/plain', 'public.plain-text');
+    } catch {
+      Alert.alert(t(interfaceLanguage, 'settingsExportFailed'));
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
     <SettingsScreen titleKey="settingsYourData">
       <View style={s.card}>
@@ -67,6 +90,19 @@ export default function DataSettings() {
                 </TouchableOpacity>
               ))}
               {exporting && <ActivityIndicator size="small" color={C.muted} />}
+            </View>
+            <View style={s.divider} />
+            <Text style={s.rowText}>{t(interfaceLanguage, 'settingsExportWritings')}</Text>
+            <Text style={s.rowDesc}>{t(interfaceLanguage, 'settingsExportWritingsDesc')}</Text>
+            <View style={[s.chipRow, d.exportRow]}>
+              <TouchableOpacity
+                style={[s.chip, exporting && d.exportBusy]}
+                onPress={exportWritings}
+                disabled={exporting}
+                accessibilityRole="button"
+              >
+                <Text style={s.chipText}>{t(interfaceLanguage, 'writingsExportText')}</Text>
+              </TouchableOpacity>
             </View>
           </>
         )}

@@ -12,7 +12,7 @@ export default function PrivacyPage() {
       <div>
         <h1 className="text-2xl font-bold mb-1">Privacy Policy</h1>
         <p className="opacity-70 text-sm">
-          Last updated: October 5, 2026 ·{" "}
+          Last updated: October 7, 2026 ·{" "}
           <Link href="/privacy/ko" className="underline">
             한국어
           </Link>
@@ -45,7 +45,9 @@ export default function PrivacyPage() {
             study streak and progress. If you make a vocabulary pack, we store
             the pack along with the answers you gave to make it, including any
             text you pasted in. If you add a verb in Munli, we store its
-            conjugated forms.
+            conjugated forms. If you choose to save a piece of writing in
+            Munli, we store the passage you wrote together with the review it
+            received.
           </li>
           <li>
             <strong>Local preferences.</strong> Your language settings are also
@@ -81,9 +83,12 @@ export default function PrivacyPage() {
           <li>
             To review writing you submit, using Google&apos;s Gemini AI — we send
             the passage you wrote and your language settings (never your name,
-            email, or account ID). The passage and the review are not stored: they
-            exist only for the length of the request, and nothing is saved unless
-            you choose to keep a phrase as a flashcard.
+            email, or account ID). By default the passage and the review are
+            not stored: they exist only for the length of the request. They are
+            kept only if you choose to — pressing Save stores that passage and
+            its review in your account, where only you can read them and where
+            you can delete them at any time, and keeping a phrase as a flashcard
+            stores that card.
           </li>
           <li>
             To generate pronunciation audio using Google Cloud Text-to-Speech —
@@ -130,10 +135,11 @@ export default function PrivacyPage() {
           your account at any time from Settings, on the web or in the mobile
           app. Deletion is immediate and permanent: it removes your account,
           every saved card in every language, your review history and streak,
-          the vocabulary packs you made, the verbs you added, and your
-          settings. It cannot be undone, so if you want a copy of your
+          the vocabulary packs you made, the verbs you added, the writing you
+          saved, and your settings. It cannot be undone, so if you want a copy of your
           vocabulary, export it first from the Your data section of Settings,
-          which downloads every card in every language.
+          which downloads every card in every language and, separately, the
+          writing you saved.
         </p>
         <p>
           One thing is deliberately not deleted: cached pronunciation audio.

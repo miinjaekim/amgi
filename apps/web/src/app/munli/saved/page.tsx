@@ -1,10 +1,15 @@
 'use client';
 import { useMemo, useState } from 'react';
-import { daysUntil, getStudyLanguageConfig, listSavedKinds, setEnrolled } from '@amgi/core';
+import {
+  daysUntil, getStudyLanguageConfig, listSavedKinds, savedWritingDate, setEnrolled, writingFirstLine,
+} from '@amgi/core';
 import type { ConjugationSavedSubject } from '@amgi/core';
 import { useUser } from '@/components/UserContext';
 import { useConjugation } from '@/hooks/useConjugation';
+import { useSavedWritings } from '@/hooks/useSavedWritings';
+import { deleteSavedWriting } from '@/services/writings';
 import TenseCards from '@/components/TenseCards';
+import WritingReviewView from '@/components/WritingReviewView';
 import PageHeader from '@/components/PageHeader';
 import { t } from '@/lib/i18n';
 
@@ -30,12 +35,26 @@ import { t } from '@/lib/i18n';
  * the destructive action needs a control of its own rather than the same tap
  * meaning two things on two screens.
  *
+ * ⚠️ **Writing is a kind too, and the one kind that is not conjugation**
+ * (2026-10-06). A piece of writing kept from the Writing tab sits on its own
+ * shelf: the item level is a dated list rather than tiles, because what tells
+ * two writings apart is when and how they begin, and the detail is the review
+ * as it looked, read-only, with a delete. It does not depend on the language
+ * having a conjugation spec — writing works in any language — so this page no
+ * longer stops at "nothing to practise" when there is writing to show.
+ *
  * Levels are local state rather than routes, the way Practice's stages are:
  * nothing here is worth linking to, and a nested route per level is the thing
  * that makes expo-router draw a tab icon per screen on native.
  */
+const WRITING_KIND = 'writing';
+
 export default function SavedPage() {
-  const { interfaceLanguage, studyLanguage } = useUser();
+  const { user, interfaceLanguage, studyLanguage } = useUser();
+  const { writings, loading: writingsLoading } = useSavedWritings();
+  const [openWriting, setOpenWriting] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteFailed, setDeleteFailed] = useState(false);
   const { spec, progress, enrolment, setEnrolment, loading } = useConjugation();
   const [openKind, setOpenKind] = useState<string | null>(null);
   const [openSubject, setOpenSubject] = useState<string | null>(null);
@@ -68,8 +87,11 @@ export default function SavedPage() {
     </button>
   );
 
-  /** One tile. Square-ish, a name, what is in it, and what is owed. */
-  const tile = (key: string, label: string, sub: string, due: number, onClick: () => void) => (
+  /**
+   * One tile. Square-ish, a name, what is in it, and what is owed — or `foot`
+   * in place of what is owed, for a kind nothing is ever due on.
+   */
+  const tile = (key: string, label: string, sub: string, due: number, onClick: () => void, foot?: string) => (
     <button
       key={key}
       onClick={onClick}
@@ -80,12 +102,16 @@ export default function SavedPage() {
       <span className="font-mono text-xs" style={{ color: 'var(--color-muted)' }}>{sub}</span>
       <span className="mt-auto font-mono text-xs"
             style={{ color: due > 0 ? 'var(--color-highlight)' : 'var(--color-muted)', fontWeight: due > 0 ? 700 : 400 }}>
-        {due > 0
+        {foot ?? (due > 0
           ? t(interfaceLanguage, 'conjugationDue', { count: due })
-          : t(interfaceLanguage, 'practiceNothingDue')}
+          : t(interfaceLanguage, 'practiceNothingDue'))}
       </span>
     </button>
   );
+
+  const findingsLabel = (count: number) => count > 0
+    ? t(interfaceLanguage, 'savedWritingFindings', { count })
+    : t(interfaceLanguage, 'savedWritingNoFindings');
 
   const grid = 'grid grid-cols-2 sm:grid-cols-3 gap-3';
 
@@ -106,19 +132,118 @@ export default function SavedPage() {
    * The window is one round trip, and it was invisible until the 2026-09-22
    * launch work started painting before the server answered. It was always here.
    */
-  if (loading || !spec || !enrolment) {
+  const waiting = loading || writingsLoading;
+  if (waiting || ((!spec || !enrolment) && writings.length === 0)) {
     return (
       <div className="max-w-2xl">
         <PageHeader titleKey="savedTitle" className="mb-1" />
         <p className="font-mono text-sm mt-6" style={{ color: 'var(--color-muted)' }}>
-          {t(interfaceLanguage, loading ? 'munliLoading' : 'munliUnavailable', { language: getStudyLanguageConfig(studyLanguage).label })}
+          {t(interfaceLanguage, waiting ? 'munliLoading' : 'munliUnavailable', { language: getStudyLanguageConfig(studyLanguage).label })}
         </p>
       </div>
     );
   }
 
+  /* ── A saved writing: the review as it looked ────────────────────────── */
+  const writing = openKind === WRITING_KIND ? writings.find(w => w.id === openWriting) : undefined;
+  if (writing) {
+    const remove = async () => {
+      if (!user || deleting || !window.confirm(t(interfaceLanguage, 'savedWritingDeleteConfirm'))) return;
+      setDeleting(true);
+      setDeleteFailed(false);
+      try {
+        await deleteSavedWriting(user.uid, writing.id);
+        setOpenWriting(null);
+      } catch (err) {
+        console.error(err);
+        setDeleteFailed(true);
+      } finally {
+        setDeleting(false);
+      }
+    };
+    return (
+      <div className="max-w-2xl">
+        <PageHeader titleKey="savedTitle" className="mb-4" />
+        {backLink(t(interfaceLanguage, 'munliToolWriting'), () => { setOpenWriting(null); setDeleteFailed(false); })}
+        <p className="mt-4 font-mono text-xs" style={{ color: 'var(--color-muted)' }}>
+          {savedWritingDate(writing.createdAt, interfaceLanguage)} · {findingsLabel(writing.review.findings.length)}
+        </p>
+
+        <section className="mt-4 mb-6">
+          <h2 className="text-xs font-semibold uppercase tracking-widest mb-2" style={{ color: 'var(--color-muted)' }}>
+            {t(interfaceLanguage, 'savedWritingWrote')}
+          </h2>
+          <p className="text-lg leading-relaxed whitespace-pre-wrap" style={{ color: 'var(--color-text)' }}>
+            {writing.passage}
+          </p>
+        </section>
+
+        <WritingReviewView
+          review={writing.review}
+          passage={writing.passage}
+          studyLanguage={writing.studyLanguage}
+          nativeLanguage={writing.nativeLanguage}
+        />
+
+        <button
+          onClick={remove}
+          disabled={deleting}
+          className="mt-10 px-4 py-2 rounded-lg text-sm font-mono border transition-colors hover:bg-[var(--color-muted)]/20 disabled:opacity-60"
+          style={{ color: 'var(--color-muted)', borderColor: 'var(--color-muted)' }}
+        >
+          {t(interfaceLanguage, 'savedWritingDelete')}
+        </button>
+        {deleteFailed && (
+          <p className="mt-3 text-sm" style={{ color: 'var(--color-highlight)' }}>
+            {t(interfaceLanguage, 'errorDeleteWriting')}
+          </p>
+        )}
+      </div>
+    );
+  }
+
+  /* ── The writing shelf: a dated list ─────────────────────────────────── */
+  if (openKind === WRITING_KIND) {
+    return (
+      <div className="max-w-2xl">
+        <PageHeader titleKey="savedTitle" className="mb-4" />
+        {backLink(t(interfaceLanguage, 'savedTitle'), () => setOpenKind(null))}
+        <h2 className="mt-4 mb-4 font-mono text-xl font-bold" style={{ color: 'var(--color-text)' }}>
+          {t(interfaceLanguage, 'munliToolWriting')}
+        </h2>
+        {writings.length === 0 ? (
+          <p className="font-mono text-sm" style={{ color: 'var(--color-muted)' }}>
+            {t(interfaceLanguage, 'savedWritingsEmpty', { language: getStudyLanguageConfig(studyLanguage).label })}
+          </p>
+        ) : (
+          <ul className="rounded-xl border divide-y overflow-hidden"
+              style={{ background: 'var(--color-surface)', borderColor: 'var(--color-muted)' }}>
+            {writings.map(w => (
+              <li key={w.id} style={{ borderColor: 'var(--color-muted)' }}>
+                <button
+                  onClick={() => setOpenWriting(w.id)}
+                  className="w-full flex items-baseline gap-4 px-4 py-3 text-left transition-colors hover:bg-[var(--color-muted)]/20"
+                >
+                  <span className="shrink-0 w-28 font-mono text-xs tabular-nums" style={{ color: 'var(--color-muted)' }}>
+                    {savedWritingDate(w.createdAt, interfaceLanguage)}
+                  </span>
+                  <span className="flex-1 min-w-0 truncate" style={{ color: 'var(--color-text)' }}>
+                    {writingFirstLine(w.passage)}
+                  </span>
+                  <span className="shrink-0 font-mono text-xs" style={{ color: 'var(--color-muted)' }}>
+                    {findingsLabel(w.review.findings.length)}
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    );
+  }
+
   /* ── The detail: one subject, one tense at a time ────────────────────── */
-  if (shelf && subject && tense && specTense) {
+  if (spec && enrolment && shelf && subject && tense && specTense) {
     return (
       <div className="max-w-2xl">
         <PageHeader titleKey="savedTitle" className="mb-4" />
@@ -236,7 +361,7 @@ export default function SavedPage() {
   return (
     <div className="max-w-2xl">
       <PageHeader titleKey="savedTitle" className="mb-1" />
-      {shelves.length === 0 ? (
+      {shelves.length === 0 && writings.length === 0 ? (
         <p className="font-mono text-sm mt-6" style={{ color: 'var(--color-muted)' }}>
           {t(interfaceLanguage, 'savedEmpty')}
         </p>
@@ -253,6 +378,16 @@ export default function SavedPage() {
               s.due,
               open(() => { setOpenKind(s.kind); setOpenSubject(null); }),
             ))}
+            {/* Last, after what there is to practise: writing is kept to be
+                read, and nothing on it is ever due. */}
+            {writings.length > 0 && tile(
+              WRITING_KIND,
+              t(interfaceLanguage, 'munliToolWriting'),
+              t(interfaceLanguage, 'savedKindSaved', { count: writings.length }),
+              0,
+              open(() => { setOpenKind(WRITING_KIND); setOpenWriting(null); }),
+              savedWritingDate(writings[0].createdAt, interfaceLanguage),
+            )}
           </div>
         </>
       )}
