@@ -8,6 +8,7 @@ import {
   normalizeFormsNote,
   normalizePartOfSpeech,
   normalizeVerbGroup,
+  normalizeWordForms,
   parseConjugationForms,
   parseModelJson,
   stripArabicMarks,
@@ -15,7 +16,7 @@ import {
 import { lookupPitchAccent } from '@/lib/pitchAccentLookup';
 import { lookupJyutping, normalizeJyutping } from '@/lib/jyutpingLookup';
 import { glossRuleBullet } from '@/lib/glossRule';
-import { formsNoteRule } from '@/lib/formsNoteRule';
+import { formsRule as buildFormsRule } from '@/lib/formsRule';
 import { vowelArabic } from '@/lib/arabicVowelling';
 
 function detectKorean(term: string): boolean {
@@ -132,8 +133,8 @@ When you do set it, every other field â€” the meanings too, if it is ambiguous â
     : '';
 
   // Swedish and French only, and empty on every other language: see
-  // `formsNoteRule`. About the study-language word, as `posRule` is.
-  const { rule: formsRule, json: formsJson } = formsNoteRule(studyLanguage, nativeLanguage);
+  // `formsRule`. About the study-language word, as `posRule` is.
+  const { rule: formsRule, json: formsJson } = buildFormsRule(studyLanguage, nativeLanguage);
 
   let prompt: string;
 
@@ -1053,12 +1054,19 @@ ${glossRuleBullet(false)}
     if (forms) record.conjugation = forms;
     else delete record.conjugation;
 
-    // Free text, so narrowed by what surrounds it: asked for on this language,
-    // on a noun or an adjective, and one sentence long. See
-    // `normalizeFormsNote`.
-    const note = formsRule ? normalizeFormsNote(record.formsNote, record.partOfSpeech) : undefined;
+    // The French note is free text, so it is narrowed by what surrounds it:
+    // asked for on this language, on a noun or an adjective, and one sentence
+    // long. See `normalizeFormsNote`.
+    const note = studyLanguage === 'French' ? normalizeFormsNote(record.formsNote, record.partOfSpeech) : undefined;
     if (note) record.formsNote = note;
     else delete record.formsNote;
+
+    // The Swedish table, rebuilt field by field rather than passed through,
+    // and dropped for an adjective whose forms say nothing stor would not:
+    // see `normalizeWordForms`.
+    const wordForms = studyLanguage === 'Swedish' ? normalizeWordForms(record.forms, record.partOfSpeech) : undefined;
+    if (wordForms) record.forms = wordForms;
+    else delete record.forms;
   }
 
   // Japanese pitch accent is the one reading field on any language that this

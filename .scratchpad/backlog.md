@@ -98,16 +98,17 @@ those checks come from using the app.
   Spanish, Kikuyu, Swahili. Sources per sentence are in
   `docs/packs/writing-worked-example-draft.md`. **Not seen on a device:** the
   Arabic line, whose direction mobile leaves to React Native's default.
-- **A forms note on Swedish and French lookups** (branch `forms-note`; from
-  Google Tasks, scoped with the user 2026-10-07). A looked-up noun or
-  adjective can carry one short sentence on how its forms behave, in the
-  definition's language, as a small muted line under the definition: on the
-  Learn page's lookup result, on card details and on the revealed back in
-  review, web and mobile. `bok` → "Plural böcker, with a vowel change;
-  definite boken."; `cheval` → "Irregular plural: chevaux."; `table` →
-  nothing. It is a new field on the existing `/api/explain` call, saved on
-  the card; new lookups only, no backfill. Reasoning and what the model got
-  wrong along the way are in
+- **Forms on Swedish and French lookups** (branch `forms-note`, #199; from
+  Google Tasks, scoped with the user 2026-10-07 and changed 2026-10-08).
+  **Swedish shows a small table** under the definition, on the Learn result
+  and card details, web and mobile: a noun's four forms (en bok, boken,
+  böcker, böckerna), or one row for an adjective whose forms are not word
+  plus -t and -a (gammal, gammalt, gamla). **French shows one sentence**,
+  only on an irregular word ("Irregular plural: chevaux."), in those two
+  places and on the revealed back in review. Both come from the existing
+  `/api/explain` call and are saved on the card; new lookups only, no
+  backfill. Four things were built on the planning session's recommendation
+  and are the user's to overrule; they and the reasoning are in
   [cards-and-lookup](decisions/cards-and-lookup.md). ⚠️ What has and has not
   been seen is under Unverified in [status.md](status.md).
 

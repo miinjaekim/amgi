@@ -3,82 +3,95 @@
 Card fields, glosses, part of speech, spellcheck, saving, My Cards, export. Newest first. Indexed from
 [status.md](../status.md).
 
-## A forms note on Swedish and French lookups: one sentence, or nothing (2026-10-07)
+## Forms on a lookup: a table for Swedish, a sentence for French (2026-10-08)
 
 **What.** The user's Google Tasks item was "Add definite indefinite, singular
 plural form explanations/notes for languages that would benefit from it"
-(Swedish, French). A looked-up noun or adjective in those two languages can now
-carry `formsNote`: one short sentence on how that word's forms behave, written
-in the language the definition is in, and absent when the word is predictable.
+(Swedish, French). A looked-up noun or adjective in those two languages now
+shows how its forms behave, under the definition, in two shapes.
 
-- `bok` → "Plural böcker, with a vowel change; definite boken."
-- `hus` → "The plural is the same as the singular; definite huset."
-- `liten` → "Irregular: litet with ett-words, små in the plural."
-- `cheval` → "Irregular plural: chevaux."
-- `beau` → "bel before a vowel sound; feminine belle, plural beaux."
-- `table` → nothing.
+**Swedish: a small table** (`forms` on the card).
 
-It shows as a small muted line under the definition in three places, on web
-and mobile: the Learn page's lookup result, card details, and the revealed back
-in review. Never on a review prompt, for the reason the definition is not: it
-spells the word's other forms out.
+|            | Singular | Plural   |
+| ---------- | -------- | -------- |
+| Indefinite | en bok   | böcker   |
+| Definite   | boken    | böckerna |
 
-**Decided by the user (2026-10-07).**
+An adjective is one row, `en · ett · Plural` (gammal, gammalt, gamla), and
+only when the forms are not the word plus -t and plus -a. It shows on the
+Learn result and on card details, not on the review card.
 
-- **A note, not chips and not a table of forms.** Chips would crowd a card that
-  already carries part of speech, gender and a reading; a table is Munli's job.
-- **A fact about one word, not a lesson.** How definiteness works in Swedish is
-  grammar teaching. That bok becomes böcker is a fact about bok.
-- **Nouns and adjectives**, covering definite/indefinite, singular/plural and
-  adjective agreement. Swedish and French only in this pass.
-- **Most Swedish nouns carry one, French only the irregular ones.** A Swedish
-  plural cannot be read off the word, so there is no predictable Swedish noun
-  to stay silent on. Accepted.
-- **A field on the existing `/api/explain` call**, not a second route.
-- **No "unverified" label.** The note is the model's and is trusted the way the
-  definition is, unlike the Arabic vowelling and Munli's conjugations.
-- **New lookups only.** No backfill and no batch of model calls for one; next
-  to no Swedish or French cards are in use.
+**French: one sentence** (`formsNote`), and only when the word is irregular:
+`cheval` → "Irregular plural: chevaux."; `beau` → "bel before a vowel sound;
+feminine belle, plural beaux."; `table` → nothing. It shows on the Learn
+result, card details and the revealed back in review. Never on a review
+prompt, for the reason the definition is not.
+
+**How it got here.** The first scoping (2026-10-07) was a sentence for both
+languages, "not chips and not a forms table", and PR #199 was built that way.
+The user looked at it on 2026-10-08 and had pictured a table on the Learn
+result for Swedish; the sentence was a scoping miss. French keeps the sentence.
+
+**Decided by the user.**
+
+- **Swedish is a table of the four forms, on the Learn result before Dig
+  Deeper** (2026-10-08). French keeps the one-sentence note, irregulars only.
+- **A fact about one word, not a lesson.** How definiteness works in Swedish
+  is grammar teaching. That bok becomes böcker is a fact about bok.
+- **Nouns and adjectives**; Swedish and French only in this pass.
+- **Fields on the existing `/api/explain` call**, not a second route or prompt.
+- **No "unverified" label on the French sentence** (2026-10-07): it is trusted
+  the way the definition is.
+- **New lookups only.** No backfill and no batch of model calls for one.
+
+**Built on the planning session's recommendation, not yet the user's call.**
+
+- **Swedish adjectives are one row, shown only when not predictable.**
+- **The table is on Learn and card details, and not on the review card**, which
+  the user was worried about crowding.
+- **A noun with no plural loses the Plural column** (mjölk) rather than
+  showing an invented form or two empty cells.
+- **The table carries the "not checked" tag** (`UNVERIFIED_TAG`, the one on
+  Arabic vowelling and Munli's added verbs). It is four inflected forms from
+  the model with no dictionary behind them, which is what
+  `docs/packs/README.md` says must be labelled wherever it is shown. The
+  French sentence stays unlabelled by the user's earlier decision; whether a
+  table differs from a sentence here is the open question.
 
 **Chosen in the build, and the user's to overrule.**
 
-- **Where "predictable" stops.** French: a plural in -s and a feminine in -e
-  get no note, and neither does a word already ending in -s, -x or -z (`prix`),
-  since its unchanged plural can be read off the spelling. Everything else
-  does, including patterns a grammar calls regular (-al → -aux), which is the
-  bar the user's own `cheval` example sets. Swedish adjectives the same way:
-  `stor, stort, stora` is silent; `röd, rött` and `vacker, vackra` are said.
-- **The examples in the prompt are written out in Korean as well as English**,
-  rather than left for the model to translate, because the terse wording is the
-  thing being fixed. The Korean uses 한정형 for the definite form.
-- **A step smaller than the definition** where the definition is 14px (Learn,
-  review), the same size where it is already 12px (card details).
+- **Where "predictable" stops in French.** A plural in -s and a feminine in -e
+  get no note, and neither does a word already ending in -s, -x or -z (`prix`).
+  Everything else does, including -al → -aux, which is the bar the user's own
+  `cheval` example sets.
+- **The Korean labels**: 단수, 복수, 비한정형, 한정형. `en` and `ett` head the
+  adjective's columns untranslated.
+- **Labels follow the deck's native language**, as the part-of-speech badge
+  beside them does, not the interface language.
 
-**How.** The rule is one module, `apps/web/src/lib/formsNoteRule.ts`, appended
-after the part-of-speech rule in the Swedish and French branches and empty on
-every other language. The answer goes through `normalizeFormsNote` in core
-before it is returned: kept only on a noun or an adjective, a spelled-out
-"null" or "None." read as no note, and anything past 160 characters dropped
-whole rather than cut. The card draft spreads the lookup, so the field reaches
-Firestore with no change to the save. User packs and the word of the day do not
-ask for a note and are unchanged: a user pack's sourcing calls the same route
-and keeps only the fields it names.
+**How.** `apps/web/src/lib/formsRule.ts` holds both rules, appended after the
+part-of-speech rule in the Swedish and French branches and empty elsewhere.
+`normalizeWordForms` and `normalizeFormsNote` in core narrow the answers
+before they are returned. The stored forms are bare; `formsTable()` in core
+lays them out for both apps and puts the article on the indefinite singular
+from `gender`. The card draft spreads the lookup, so both fields reach
+Firestore with no change to the save. User packs and the word of the day ask
+for neither and are unchanged.
 
-⚠️ **The model had to be told to write the forms out before judging.** Asked
-for "null when the adjective is regular", it answered null for `gammal`, `röd`
-and `vacker`, all three of which a learner would get wrong from `stor`. The
-Swedish adjective rule now has it write the ett-form and the plural first and
-names the kinds of change. After that: `gammal`, `ny`, `vacker`, `enkel` and
-`bra` got notes, `stor` and `fin` did not. Anything added to the rule later
-should be probed against a dropped-vowel adjective before it is believed.
+⚠️ **The model is asked what an adjective's forms are, never whether they are
+regular.** The sentence version asked for a note "only when irregular", and it
+answered null for `gammal`, `röd` and `vacker`. Now it returns three forms for
+every adjective and `normalizeWordForms` compares strings: `stor, stort, stora`
+is dropped, anything else is kept. Do not move that judgement back into the
+prompt.
 
-**Measured by hand, not by a batch.** 33 lookups against the local route on
-2026-10-07, about half of them words the prompt does not name (`flicka`, `man`,
-`barn`, `œil`, `journal`, `prix`, `blanc`, and the adjectives above). The final
-wording was right on every word it was tried on, which is 8 words for the last
-revision of the Swedish adjective rule and proves no rate. One lookup of the 33
-(`cheval`, first try) came back with no JSON at all and worked on retry;
-whether the longer prompt makes that more likely is not known.
+**Measured by hand, not by a batch.** 48 lookups against the local route
+across both days (33 on the sentence version, 15 on the table). On the table
+version every Swedish word tried came back right: `bok`, `hus`, `barn`, `man`,
+`mjölk` (no plural), `liten`, `gammal`, `vacker`, and `stor` with no table.
+`pengar`, which has no singular, came back with no table. That is about ten
+words and proves no rate. One lookup of the 48 (`cheval`, first try, day one)
+came back with no JSON and worked on retry; cause unknown.
 
 ## A card says where it stands with Review (2026-10-05)
 

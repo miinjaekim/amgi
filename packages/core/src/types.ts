@@ -647,6 +647,90 @@ export function normalizeFormsNote(value: unknown, partOfSpeech: unknown): strin
   return note;
 }
 
+/**
+ * The forms of a Swedish noun or adjective, as the table a lookup shows.
+ *
+ * Fields rather than a sentence so nothing has to be parsed back out of prose,
+ * and bare forms rather than display text: the article in "en bok" is the
+ * card's `gender`, and `formsTable()` puts the two together where they are
+ * shown. A noun with no plural in use has no plural fields at all.
+ */
+export interface NounForms {
+  kind: 'noun';
+  indefiniteSingular: string;
+  definiteSingular: string;
+  indefinitePlural?: string;
+  definitePlural?: string;
+}
+
+/** `common` goes with en-words, `neuter` with ett-words, `plural` with plurals and definites. */
+export interface AdjectiveForms {
+  kind: 'adjective';
+  common: string;
+  neuter: string;
+  plural: string;
+}
+
+export type WordForms = NounForms | AdjectiveForms;
+
+/** One form: a word or two, never a sentence. */
+function formCell(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  const form = value.replace(/\s+/g, ' ').trim();
+  if (!form || form.length > 40) return undefined;
+  if (/^(null|none|n\/a|[-–—]+)$/i.test(form)) return undefined;
+  return form;
+}
+
+/**
+ * A model's forms answer as the table a card stores, or undefined when there
+ * is none worth storing.
+ *
+ * Rebuilt field by field, so a key the prompt did not ask for never reaches
+ * Firestore, and matched to the part of speech, so a noun's table on an
+ * adjective is dropped rather than drawn with holes in it.
+ *
+ * **A noun needs both singular forms**; a plural the model left null stays
+ * absent rather than invented, which is mjölk. An article the model wrote in
+ * anyway is taken off, since `gender` already carries it.
+ *
+ * **An adjective is kept only when its forms are not what stor's would be.**
+ * Word plus -t and word plus -a is the pattern a learner applies unprompted,
+ * so a table of it teaches nothing; anything else (rött, gamla, små, bra) is
+ * the table's reason for being there. Judged here, on the three strings,
+ * because the model asked to judge it called gammal regular.
+ */
+export function normalizeWordForms(value: unknown, partOfSpeech: unknown): WordForms | undefined {
+  if (!value || typeof value !== 'object') return undefined;
+  const raw = value as Record<string, unknown>;
+
+  if (partOfSpeech === 'noun') {
+    const indefiniteSingular = formCell(raw.indefiniteSingular)?.replace(/^(en|ett)\s+/i, '');
+    const definiteSingular = formCell(raw.definiteSingular);
+    if (!indefiniteSingular || !definiteSingular) return undefined;
+    const indefinitePlural = formCell(raw.indefinitePlural);
+    const definitePlural = formCell(raw.definitePlural);
+    return {
+      kind: 'noun',
+      indefiniteSingular,
+      definiteSingular,
+      ...(indefinitePlural ? { indefinitePlural } : {}),
+      ...(definitePlural ? { definitePlural } : {}),
+    };
+  }
+
+  if (partOfSpeech === 'adjective') {
+    const common = formCell(raw.common);
+    const neuter = formCell(raw.neuter);
+    const plural = formCell(raw.plural);
+    if (!common || !neuter || !plural) return undefined;
+    if (neuter === `${common}t` && plural === `${common}a`) return undefined;
+    return { kind: 'adjective', common, neuter, plural };
+  }
+
+  return undefined;
+}
+
 export interface TermCore {
   term: string;
   termLanguage: StudyLanguage;
@@ -689,17 +773,29 @@ export interface TermCore {
    * word itself would lead a learner to expect: "Irregular plural: chevaux."
    * on cheval, nothing at all on table.
    *
-   * **A fact about one word, never a rule of the language.** How definiteness
-   * works in Swedish is grammar teaching and belongs to no card; that bok
-   * becomes böcker belongs to bok. Written in the language `briefDefinition`
+   * **A fact about one word, never a rule of the language.** How French forms
+   * its plurals is grammar teaching and belongs to no card; that cheval
+   * becomes chevaux belongs to cheval. Written in the language `briefDefinition`
    * is, by the same `/api/explain` call, and trusted the way that is — no
    * "unverified" label (the user's decision of 2026-10-07).
    *
-   * Swedish and French nouns and adjectives only, and only through
-   * `normalizeFormsNote`. Absent on every card saved before it existed, with
-   * no backfill, and on pack and word-of-the-day cards, which ask for none.
+   * French nouns and adjectives only, and only through `normalizeFormsNote`;
+   * Swedish shows a table instead, which is `forms` below. Absent on every
+   * card saved before it existed, with no backfill, and on pack and
+   * word-of-the-day cards, which ask for none.
    */
   formsNote?: string;
+  /**
+   * A Swedish noun's or adjective's forms, shown as a small table on the
+   * lookup result and on card details — and not on the review card, which
+   * the user wanted kept uncrowded (2026-10-08).
+   *
+   * Swedish only, and only through `normalizeWordForms`. The model's, with no
+   * dictionary behind it, so `formsTable()` hands every render site the "not
+   * checked" tag along with the cells. Absent on every card saved before it
+   * existed, with no backfill.
+   */
+  forms?: WordForms;
   furigana?: string; // Japanese kana reading, present when the term contains kanji
   pinyin?: string; // Traditional Chinese reading, tone-marked
   /**

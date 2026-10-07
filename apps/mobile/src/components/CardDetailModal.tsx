@@ -4,6 +4,7 @@ import {
 } from 'react-native';
 import {
   cardReviewLines,
+  formsTable,
   getBackSide,
   getBackSideConfig,
   getCharacterBreakdown,
@@ -24,6 +25,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useUser } from '../context/UserContext';
 import { rtlInline, rtlLine } from '../rtl';
 import PronounceButton from './PronounceButton';
+import FormsTable from './FormsTable';
 import Markdown from './Markdown';
 import {
   archiveFlashcard, deleteFlashcard, restoreFlashcard, updateFlashcardFields,
@@ -200,9 +202,13 @@ export default function CardDetailModal({
                   it is the sense any generated depth is pinned to, and Dig
                   Deeper's prompt assumes the reader has already seen it. */}
               {!!senseLine && <Text style={s.hint}>{senseLine}</Text>}
-              {/* A looked-up Swedish or French card's forms note. Pack entries
-                  author none, so there is nothing to show before a save. */}
+              {/* A looked-up card's forms: a sentence on a French card, a
+                  table on a Swedish one. Pack entries author neither, so
+                  there is nothing to show before a save. */}
               {!!saved?.formsNote && <Text style={s.hint}>{saved.formsNote}</Text>}
+              {!!saved && !!formsTable(deckNativeLanguage, saved) && (
+                <FormsTable table={formsTable(deckNativeLanguage, saved)!} style={s.formsTable} />
+              )}
               {/* Where the card stands with Review. Nothing for an unsaved
                   entry or an archived card: neither is in the schedule. */}
               {!!saved && !saved.archived && (
@@ -382,6 +388,7 @@ function makeStyles(C: Palette) {
     // Quieter than the 훈음 above it: a second fact about the character.
     backGloss: { fontSize: 14, color: C.muted, marginTop: 2 },
     hint: { fontSize: 12, color: C.muted, marginTop: 4 },
+    formsTable: { marginTop: 12 },
     schedule: { marginTop: 8 },
     scheduleLine: { fontSize: 12, color: C.muted },
     close: { fontSize: 28, color: C.muted, lineHeight: 30, marginLeft: 12 },
