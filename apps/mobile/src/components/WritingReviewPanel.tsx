@@ -173,12 +173,13 @@ export default function WritingReviewPanel({ onEditingChange }: {
   const languageLabel = t(interfaceLanguage, getStudyLanguageConfig(studyLanguage).studyLabelKey);
   const overLimit = text.length > WRITING_MAX_CHARS;
   /**
-   * The worked example, if this study language has a sourced one.
+   * The worked example, if this study language has one.
    *
-   * ⚠️ **Most languages have none, and that is the right default.** A learner
-   * of Japanese seeing a French example would be worse than the empty space it
-   * fills, and one invented for Japanese would be worse still — the sentences
-   * are sourced content (`docs/packs/writing-worked-example-draft.md`).
+   * ⚠️ **A language without an entry shows nothing, and so does a gap word
+   * that is absent.** Another language's example would be worse than the empty
+   * space it fills, and the sentences are sourced content
+   * (`docs/packs/writing-worked-example-draft.md`), not something to invent
+   * here.
    */
   const example = writingExample(studyLanguage);
   const gapWord = example?.gap[deckNativeLanguage === 'Korean' ? 'Korean' : 'English'];

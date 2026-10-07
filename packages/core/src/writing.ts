@@ -355,10 +355,10 @@ export function buildWritingCardDraft(
  *
  * ⚠️ **Sourced, because it is a sentence in the study language.** A worked
  * example asserts "this is what a native would write", which is exactly the
- * claim `docs/packs/README.md` forbids the model from being the source of. The
- * French one is **Larousse's own example sentence** under `marché` and the
- * Traditional Chinese one is the MOE 國語辭典's under `腳踏車`, each quoted
- * rather than composed; the citations are in
+ * claim `docs/packs/README.md` forbids the model from being the source of. Every
+ * sentence below is **quoted rather than composed**: most are a dictionary's own
+ * example under the word, and Arabic, Kikuyu and Swahili come from weaker
+ * sources. Which is which, with the links, is in
  * `docs/packs/writing-worked-example-draft.md`.
  *
  * ⚠️ **It demonstrates the gap, deliberately.** The help sheet says in words
@@ -373,23 +373,59 @@ export interface WritingExample {
   rewrite: string;
   /** The study-language word that was missing — the card's front. */
   study: string;
-  /** The missing word in the learner's own language, and the card's back. */
-  gap: { English: string; Korean: string };
+  /**
+   * The missing word in the learner's own language, and the card's back.
+   *
+   * ⚠️ **One side is absent when the study language is English or Korean.**
+   * `nativeOptionsFor` filters the study language out of what a deck can be
+   * explained in, so a Korean deck never has a Korean-speaking learner to show
+   * a Korean gap word to. The panels render nothing without a gap word, which
+   * is the right thing for a pairing that cannot be reached.
+   */
+  gap: { English?: string; Korean?: string };
 }
 
 /**
- * ⚠️ **Per language, and most languages have none.** Writing works in every
- * study language and an example needs a *sourced* sentence in each, so this is
- * deliberately sparse: a learner of Japanese sees no example rather than a
- * French one, and certainly rather than an invented Japanese one. Adding a
+ * ⚠️ **Per language, and Hanja has none.** An example needs a sentence in the
+ * study language with a source, so the record stays partial and a language
+ * without an entry shows no example rather than another language's. Adding a
  * language is a draft row with its citation, then an entry here.
  */
 const WRITING_EXAMPLES: Partial<Record<StudyLanguage, WritingExample>> = {
+  // 한국어기초사전's own example under 도서관. No Korean gap: see `gap` above.
+  Korean: {
+    written: '지수는 주말에도 학교 {gap}에서 공부를 한다.',
+    rewrite: '지수는 주말에도 학교 도서관에서 공부를 한다.',
+    study: '도서관',
+    gap: { English: 'library' },
+  },
+  // Lexin's example under `hus`, which prints it without the capital and the
+  // full stop.
+  Swedish: {
+    written: 'De ska sälja lägenheten och köpa {gap}.',
+    rewrite: 'De ska sälja lägenheten och köpa hus.',
+    study: 'ett hus',
+    gap: { English: 'house', Korean: '집' },
+  },
+  // Cambridge Dictionary's own example under `umbrella`. No English gap.
+  English: {
+    written: 'I left my {gap} on the bus yesterday.',
+    rewrite: 'I left my umbrella on the bus yesterday.',
+    study: 'umbrella',
+    gap: { Korean: '우산' },
+  },
   French: {
     written: "Je l'ai acheté au {gap}.",
     rewrite: "Je l'ai acheté au marché.",
     study: 'le marché',
     gap: { English: 'market', Korean: '시장' },
+  },
+  // A Jreibun sentence, as Jisho shows it under 傘. Spaced like the Chinese one.
+  Japanese: {
+    written: '雨の日は、電車内に {gap} の忘れ物が多い。',
+    rewrite: '雨の日は、電車内に傘の忘れ物が多い。',
+    study: '傘',
+    gap: { English: 'umbrella', Korean: '우산' },
   },
   // The Ministry of Education dictionary's own example under 腳踏車, the
   // Taiwan-standard word. The spaces around `{gap}` belong to the learner's
@@ -399,6 +435,44 @@ const WRITING_EXAMPLES: Partial<Record<StudyLanguage, WritingExample>> = {
     rewrite: '他騎著腳踏車走了。',
     study: '腳踏車',
     gap: { English: 'bicycle', Korean: '자전거' },
+  },
+  // words.hk's own example under 雪櫃.
+  Cantonese: {
+    written: '好頸渴呀，{gap} 有冇嘢飲呀？',
+    rewrite: '好頸渴呀，雪櫃有冇嘢飲呀？',
+    study: '雪櫃',
+    gap: { English: 'fridge', Korean: '냉장고' },
+  },
+  // Wiktionary's usage example under مدرسة, vowel marks as it prints them. The
+  // panels set the line's direction from its first letter, so the dropped-in
+  // word sits inside a right-to-left sentence.
+  Arabic: {
+    written: 'يَجِبُ عَلَيْكَ أَنْ تَذْهَبَ إِلَى {gap}.',
+    rewrite: 'يَجِبُ عَلَيْكَ أَنْ تَذْهَبَ إِلَى ٱلْمَدْرَسَةِ.',
+    study: 'مَدْرَسَة',
+    gap: { English: 'school', Korean: '학교' },
+  },
+  // SpanishDict's own example under `paraguas`.
+  Spanish: {
+    written: 'Me llevaré un {gap} por si llueve.',
+    rewrite: 'Me llevaré un paraguas por si llueve.',
+    study: 'el paraguas',
+    gap: { English: 'umbrella', Korean: '우산' },
+  },
+  // Wikipedia's sample phrase, spelled as it spells it (maaĩ, where Wiktionary
+  // heads the entry maĩ). Not checked by a speaker.
+  Kikuyu: {
+    written: 'He {gap}.',
+    rewrite: 'He maaĩ.',
+    study: 'maaĩ',
+    gap: { English: 'water', Korean: '물' },
+  },
+  // Wikivoyage's phrasebook line.
+  Swahili: {
+    written: 'Nahitaji {gap}.',
+    rewrite: 'Nahitaji daktari.',
+    study: 'daktari',
+    gap: { English: 'doctor', Korean: '의사' },
   },
 };
 
