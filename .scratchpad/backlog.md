@@ -71,9 +71,7 @@ is below merged after it._
   Mobile only: `PronounceButton` draws Ionicons' `volume-medium-outline`, the
   two-wave outline speaker web already has, at 17 and 20 in place of the 14 and
   17 emoji. Colour, error red, spinner, label and hit area are unchanged.
-  ⚠️ **Not seen running**: the sizes were worked out from the row styles, not
-  looked at in Expo Go, so the inline rows (examples, pack rows, review card,
-  Writing findings) want a glance on a phone.
+  Checked by the user, 2026-10-07, and found good.
 
 What has never been looked at on a device is listed under Unverified in
 [status.md](status.md). It is not tracked here, by the 2026-09-04 decision that
