@@ -106,11 +106,12 @@ picker narrowed (#146). Both are written up in their Decisions entries of
         holds two, a leading `to`/`a`/`an`/`the` ignored, and the
         native-language back accepted as well as the English one. The learner
         confirms the rating; nothing is applied for them.
-      - **Anything else is not called wrong.** The grader cannot tell a wrong
-        gloss from a differently worded one, so this shows what was typed
-        beside the card's gloss with **no rating preselected** and no
-        "Not quite" — the red label, the strike-through and the ring on `again`
-        stay on gloss→word only.
+      - **Anything else is a miss, exactly as for a typed word**: "Not quite",
+        what was typed struck through beside the card's gloss, and the ring on
+        `again`, with all four ratings live. The user reversed an earlier
+        "no preselection" call the same day: a differently worded right answer
+        is one tap to override, and that possibility is no reason to drop the
+        negative feedback.
       - Hanja stays untyped; one "Type your answers" toggle covers both
         directions.
       Reverses the direction rule in the 2026-08-24 typed-responses decision
