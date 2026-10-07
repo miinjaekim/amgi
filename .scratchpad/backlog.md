@@ -67,6 +67,11 @@ is below merged after it._
   2026-10-07, who then used it on a phone in Expo Go. ⚠️ **Web has not been
   run signed in, and the export has not been run on either platform.** Web is
   live on deploy; mobile needs the build.
+- **The audio button is an icon, not an emoji** (branch `mobile-audio-icon`).
+  Mobile only: `PronounceButton` draws Ionicons' `volume-medium-outline`, the
+  two-wave outline speaker web already has, at 17 and 20 in place of the 14 and
+  17 emoji. Colour, error red, spinner, label and hit area are unchanged.
+  Checked by the user, 2026-10-07, and found good.
 
 What has never been looked at on a device is listed under Unverified in
 [status.md](status.md). It is not tracked here, by the 2026-09-04 decision that
@@ -86,11 +91,6 @@ whether `faire` joins the three sourced irregular verbs (#150), and whether a
 practice session should cover several tenses at once again, which the section
 picker narrowed (#146). Both are written up in their Decisions entries of
 2026-09-22.
-
-- [ ] **The audio button is an emoji; make it an icon.** `[build]` Added from
-      Google Tasks 2026-10-07. Mobile only: the 🔊 is in
-      `apps/mobile/src/components/PronounceButton.tsx`, and web does not use
-      one.
 
 ## Medium
 
