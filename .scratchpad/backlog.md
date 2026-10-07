@@ -97,16 +97,20 @@ picker narrowed (#146). Both are written up in their Decisions entries of
       `promptsForTyping` leaves flip-and-rate by design. The user's call the
       same day is to type that direction as well, **still with no model
       grader** — the rating row stays the override.
-      - **A hit is `easy`, applied and gone**, as it is for a typed word.
+      Three outcomes, _the user's call 2026-10-07_:
+      - **An exact match is `easy`, applied and gone**, as it is for a typed
+        word. Exact is the back as stored, under the folding typed words
+        already get.
+      - **A near match stops and asks, with the ring on `good`.** Near is a
+        match only under the local leniency rules: either gloss when the back
+        holds two, a leading `to`/`a`/`an`/`the` ignored, and the
+        native-language back accepted as well as the English one. The learner
+        confirms the rating; nothing is applied for them.
       - **Anything else is not called wrong.** The grader cannot tell a wrong
-        gloss from a differently worded one, so this direction shows what was
-        typed beside the card's gloss with **no rating preselected** and no
+        gloss from a differently worded one, so this shows what was typed
+        beside the card's gloss with **no rating preselected** and no
         "Not quite" — the red label, the strike-through and the ring on `again`
         stay on gloss→word only.
-      - **Leniency, local:** either gloss when the back holds two, a leading
-        `to`/`a`/`an`/`the` ignored, and the native-language back accepted as
-        well as the English one. _Proposed, not yet confirmed by the user:_
-        that a match under these rules counts as a hit.
       - Hanja stays untyped; one "Type your answers" toggle covers both
         directions.
       Reverses the direction rule in the 2026-08-24 typed-responses decision
@@ -125,8 +129,8 @@ picker narrowed (#146). Both are written up in their Decisions entries of
         since the plural is not predictable from the word.
       - **Nouns and adjectives**; Swedish and French first.
       - A new field on the existing `/api/explain` call, not a second route.
-      - Shown on card details and on the revealed back in review. _Proposed,
-        not yet confirmed:_ on the Learn page's lookup result too.
+      - Shown on the Learn page's lookup result, on card details and on the
+        revealed back in review.
       - **New lookups only** — no backfill; next to no Swedish or French cards
         are in use.
 
