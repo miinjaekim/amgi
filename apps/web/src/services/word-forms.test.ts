@@ -101,7 +101,6 @@ describe('formsTable', () => {
         { label: 'Indefinite', cells: ['en bok', 'böcker'] },
         { label: 'Definite', cells: ['boken', 'böckerna'] },
       ],
-      caption: 'not checked',
     });
   });
 
@@ -109,7 +108,6 @@ describe('formsTable', () => {
     const table = formsTable('Korean', { forms: bok, gender: 'en' })!;
     expect(table.columns).toEqual(['단수', '복수']);
     expect(table.rows.map(row => row.label)).toEqual(['비한정형', '한정형']);
-    expect(table.caption).toBe('검토 안 됨');
   });
 
   it('drops the plural column for a noun with no plural', () => {
@@ -129,7 +127,6 @@ describe('formsTable', () => {
     expect(formsTable('English', { forms: { kind: 'adjective', common: 'röd', neuter: 'rött', plural: 'röda' } })).toEqual({
       columns: ['en', 'ett', 'Plural'],
       rows: [{ cells: ['röd', 'rött', 'röda'] }],
-      caption: 'not checked',
     });
   });
 

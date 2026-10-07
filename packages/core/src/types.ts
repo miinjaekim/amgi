@@ -790,10 +790,9 @@ export interface TermCore {
    * lookup result and on card details — and not on the review card, which
    * the user wanted kept uncrowded (2026-10-08).
    *
-   * Swedish only, and only through `normalizeWordForms`. The model's, with no
-   * dictionary behind it, so `formsTable()` hands every render site the "not
-   * checked" tag along with the cells. Absent on every card saved before it
-   * existed, with no backfill.
+   * Swedish only, and only through `normalizeWordForms`. The model's, and
+   * shown without a "not checked" tag (the user, 2026-10-08). Absent on every
+   * card saved before it existed, with no backfill.
    */
   forms?: WordForms;
   furigana?: string; // Japanese kana reading, present when the term contains kanji

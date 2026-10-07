@@ -107,7 +107,7 @@ those checks come from using the app.
   only on an irregular word ("Irregular plural: chevaux."), in those two
   places and on the revealed back in review. Both come from the existing
   `/api/explain` call and are saved on the card; new lookups only, no
-  backfill. Four things were built on the planning session's recommendation
+  backfill. Three things were built on the planning session's recommendation
   and are the user's to overrule; they and the reasoning are in
   [cards-and-lookup](decisions/cards-and-lookup.md). ⚠️ What has and has not
   been seen is under Unverified in [status.md](status.md).

@@ -1733,8 +1733,6 @@ export interface FormsTable {
   columns: string[];
   /** `label` is absent on an adjective's single row. */
   rows: { label?: string; cells: string[] }[];
-  /** The "not checked" tag, which goes wherever the cells do. */
-  caption: string;
 }
 
 /**
@@ -1751,9 +1749,9 @@ export interface FormsTable {
  *   ett-words, and the plural. `en` and `ett` head their columns untranslated
  *   because they are the Swedish words the forms go with.
  *
- * ⚠️ **The forms are the model's and nothing has checked them**, so the tag
- * comes back with the cells and no render site can show one without the
- * other — the arrangement `getReading` has for Arabic vowelling.
+ * **No "not checked" tag**, though the forms are the model's (the user,
+ * 2026-10-08): four common forms of one word are a small enough thing to
+ * trust it with, as the definition above them is.
  */
 export function formsTable(
   nativeLanguage: string | null | undefined,
@@ -1761,13 +1759,11 @@ export function formsTable(
 ): FormsTable | undefined {
   const forms = card.forms;
   if (!forms) return undefined;
-  const caption = UNVERIFIED_TAG[nativeLanguage === 'Korean' ? 'Korean' : 'English'];
 
   if (forms.kind === 'adjective') {
     return {
       columns: ['en', 'ett', t(nativeLanguage, 'formsPlural')],
       rows: [{ cells: [forms.common, forms.neuter, forms.plural] }],
-      caption,
     };
   }
 
@@ -1785,7 +1781,6 @@ export function formsTable(
         cells: [forms.definiteSingular, ...(hasPlural ? [forms.definitePlural ?? ''] : [])],
       },
     ],
-    caption,
   };
 }
 

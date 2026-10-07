@@ -37,7 +37,6 @@ export default function FormsTable({ table, style }: { table: FormsTableData; st
           </View>
         ))}
       </View>
-      <Text style={s.caption}>{table.caption}</Text>
     </View>
   );
 }
@@ -51,6 +50,5 @@ function makeStyles(C: Palette) {
     // One line height for a label and a form, so a row reads straight across
     // the columns it is assembled from.
     cellHeight: { lineHeight: 22 },
-    caption: { fontSize: 11, color: C.muted, opacity: 0.7, marginTop: 4 },
   });
 }

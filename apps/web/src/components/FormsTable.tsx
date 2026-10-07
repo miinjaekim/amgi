@@ -39,7 +39,6 @@ export default function FormsTable({ table, className = '' }: { table: FormsTabl
           ))}
         </tbody>
       </table>
-      <p className="mt-1 text-xs text-[var(--color-muted)] opacity-70">{table.caption}</p>
     </div>
   );
 }

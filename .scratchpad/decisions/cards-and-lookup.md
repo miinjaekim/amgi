@@ -40,8 +40,13 @@ result for Swedish; the sentence was a scoping miss. French keeps the sentence.
   is grammar teaching. That bok becomes böcker is a fact about bok.
 - **Nouns and adjectives**; Swedish and French only in this pass.
 - **Fields on the existing `/api/explain` call**, not a second route or prompt.
-- **No "unverified" label on the French sentence** (2026-10-07): it is trusted
-  the way the definition is.
+- **No "unverified" label on either** (the French sentence 2026-10-07, the
+  Swedish table 2026-10-08). The table was first built with the "not checked"
+  tag that Arabic vowelling and Munli's added verbs carry, on the reading that
+  `docs/packs/README.md` wants model-written forms labelled. The user took it
+  off: "i don't think we need the not checked note for something as small as
+  this", and the model can be assumed to do decently on a word's four common
+  forms. The README's rule stays as it is for whole conjugation tables.
 - **New lookups only.** No backfill and no batch of model calls for one.
 
 **Built on the planning session's recommendation, not yet the user's call.**
@@ -51,12 +56,6 @@ result for Swedish; the sentence was a scoping miss. French keeps the sentence.
   the user was worried about crowding.
 - **A noun with no plural loses the Plural column** (mjölk) rather than
   showing an invented form or two empty cells.
-- **The table carries the "not checked" tag** (`UNVERIFIED_TAG`, the one on
-  Arabic vowelling and Munli's added verbs). It is four inflected forms from
-  the model with no dictionary behind them, which is what
-  `docs/packs/README.md` says must be labelled wherever it is shown. The
-  French sentence stays unlabelled by the user's earlier decision; whether a
-  table differs from a sentence here is the open question.
 
 **Chosen in the build, and the user's to overrule.**
 
