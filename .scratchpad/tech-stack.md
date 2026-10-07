@@ -32,8 +32,7 @@ top-level and match on the `uid` field. If the `users/{uid}` rule is written
 with a bare `match /users/{uid}` and no recursive wildcard, the subcollection is
 *not* covered by it; rules do not cascade to subcollections.
 
-⚠️ **To add for saved writings (branch `munli-writing-save`; not yet confirmed
-in the console):**
+Added to the console by the user 2026-10-07, for saved writings:
 
 ```
 match /users/{uid}/writings/{writingId} {
@@ -41,9 +40,8 @@ match /users/{uid}/writings/{writingId} {
 }
 ```
 
-Until it is in, saving a writing fails `permission-denied` and the Saved tab
-shows no Writing shelf. The list query orders on `createdAt` alone, which is a
-single-field index Firestore keeps automatically: **no composite index**.
+The list query orders on `createdAt` alone, which is a single-field index
+Firestore keeps automatically: **no composite index**.
 
 ### Delete User Data extension (console config)
 

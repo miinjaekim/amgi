@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  buildSavedWriting, parseSavedWriting, savedWritingsFor, writingFirstLine,
+  buildSavedWriting, parseSavedWriting, savedWritingsFor, writingFirstLine, writingsToText,
 } from '@amgi/core';
 import type { SavedWriting, WritingReview } from '@amgi/core';
 
@@ -80,5 +80,51 @@ describe('savedWritingsFor', () => {
       ({ id, passage: 'p', review, studyLanguage, createdAt });
     const all = [w('a', 'French', 1), w('b', 'Korean', 2), w('c', 'French', 3)];
     expect(savedWritingsFor(all, 'French').map(x => x.id)).toEqual(['c', 'a']);
+  });
+});
+
+describe('writingsToText', () => {
+  const at = (iso: string) => Date.parse(iso);
+  const one: SavedWriting = {
+    id: 'a', passage: "Hier, j'ai allé au market.", review, studyLanguage: 'French',
+    nativeLanguage: 'English', createdAt: at('2026-10-06T10:00:00Z'),
+  };
+
+  it('writes the passage, the rewrite, its meaning and each finding', () => {
+    expect(writingsToText([one], 'English')).toBe([
+      '2026-10-06 · French',
+      '='.repeat(40),
+      '',
+      '[What you wrote]',
+      "Hier, j'ai allé au market.",
+      '',
+      '[Native version]',
+      'Hier, je suis allé au marché.',
+      '',
+      '[What that says]',
+      'Yesterday I went to the market.',
+      '',
+      '[What to notice]',
+      "1. (grammar) j'ai allé → je suis allé",
+      '   aller takes être.',
+      '2. (vocabulary)',
+      '   The word you were reaching for.',
+      '   + le marché — market',
+      '',
+    ].join('\n'));
+  });
+
+  it('puts the newest first and covers every language', () => {
+    const older: SavedWriting = { ...one, id: 'b', studyLanguage: 'Korean', createdAt: at('2026-09-01T10:00:00Z') };
+    const text = writingsToText([older, one], 'English');
+    expect(text.indexOf('2026-10-06 · French')).toBeLessThan(text.indexOf('2026-09-01 · Korean'));
+  });
+
+  it('reads a card back in the language the writing was saved in', () => {
+    expect(writingsToText([{ ...one, nativeLanguage: 'Korean' }], 'Korean')).toContain('+ le marché — 시장');
+  });
+
+  it('is empty for no writings', () => {
+    expect(writingsToText([], 'English')).toBe('');
   });
 });

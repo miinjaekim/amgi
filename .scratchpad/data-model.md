@@ -403,6 +403,9 @@ users/{uid}/writings/{auto id}
   (`setDoc`, not `addDoc`), so a save that timed out and landed late cannot
   become two documents.
 - **No statistics are derived or stored.** Read-only, with a delete.
+- **Exported from Settings → Your data** as one plain-text file, every
+  language, newest first (`writingsToText`). Beside the card export, because
+  account deletion takes both.
 
 ⚠️ **The security rule is manual** — see [tech-stack.md](tech-stack.md). Shape
 and parsing are in `packages/core/src/savedWriting.ts`; the Firestore layer is

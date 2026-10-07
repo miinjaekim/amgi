@@ -62,12 +62,11 @@ is below merged after it._
 - **Munli: save a piece of writing, and read old ones** (web and mobile). A Save button under a review keeps the
   submitted passage and the whole review at `users/{uid}/writings`; Saved gets
   a Writing shelf that opens a dated list, and an entry opens the review as it
-  looked, read-only, with a delete. No statistics. ⚠️ **Saving fails until the
-  security rule in [tech-stack.md](tech-stack.md) is added in the Firebase
-  console.** ⚠️ **Not run signed-in on web or on a device before merge**:
-  typechecked and unit-tested only, so the save, the list, the detail and the
-  delete have never been exercised against Firestore. Web is live on deploy;
-  mobile needs the build.
+  looked, read-only, with a delete. Settings → Your data exports them as a
+  text file. No statistics. The security rule was added in the console by the user,
+  2026-10-07, who then used it on a phone in Expo Go. ⚠️ **Web has not been
+  run signed in, and the export has not been run on either platform.** Web is
+  live on deploy; mobile needs the build.
 
 What has never been looked at on a device is listed under Unverified in
 [status.md](status.md). It is not tracked here, by the 2026-09-04 decision that

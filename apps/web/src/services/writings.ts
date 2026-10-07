@@ -8,7 +8,7 @@
  * `users/{uid}/writings/{id}` has its own `match` in the console, every read
  * and write here fails `permission-denied`. See `.scratchpad/tech-stack.md`.
  */
-import { collection, deleteDoc, doc, onSnapshot, orderBy, query, setDoc } from 'firebase/firestore';
+import { collection, deleteDoc, doc, getDocs, onSnapshot, orderBy, query, setDoc } from 'firebase/firestore';
 import { db } from '@/config/firebase';
 import { parseSavedWriting, SAVED_WRITINGS_SUBCOLLECTION } from '@amgi/core';
 import type { SavedWriting } from '@amgi/core';
@@ -35,6 +35,12 @@ export function subscribeToSavedWritings(
     snapshot => onChange(snapshot.docs.flatMap(d => parseSavedWriting(d.id, d.data()) ?? [])),
     onError,
   );
+}
+
+/** Every saved writing in every language, once — for the export in Settings. */
+export async function fetchAllSavedWritings(uid: string): Promise<SavedWriting[]> {
+  const snapshot = await getDocs(query(writingsRef(uid), orderBy('createdAt', 'desc')));
+  return snapshot.docs.flatMap(d => parseSavedWriting(d.id, d.data()) ?? []);
 }
 
 /** An id for a writing about to be saved — see `saveWriting`. */

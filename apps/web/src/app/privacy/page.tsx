@@ -12,7 +12,7 @@ export default function PrivacyPage() {
       <div>
         <h1 className="text-2xl font-bold mb-1">Privacy Policy</h1>
         <p className="opacity-70 text-sm">
-          Last updated: October 6, 2026 ·{" "}
+          Last updated: October 7, 2026 ·{" "}
           <Link href="/privacy/ko" className="underline">
             한국어
           </Link>
@@ -138,7 +138,8 @@ export default function PrivacyPage() {
           the vocabulary packs you made, the verbs you added, the writing you
           saved, and your settings. It cannot be undone, so if you want a copy of your
           vocabulary, export it first from the Your data section of Settings,
-          which downloads every card in every language.
+          which downloads every card in every language and, separately, the
+          writing you saved.
         </p>
         <p>
           One thing is deliberately not deleted: cached pronunciation audio.

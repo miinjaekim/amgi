@@ -1,7 +1,9 @@
-import { isStudyLanguage } from './types';
+import { t } from './i18n';
+import type { TranslationKey } from './i18n';
+import { getStudyLanguageConfig, isStudyLanguage } from './types';
 import type { StudyLanguage } from './types';
 import { parseWritingReview } from './writing';
-import type { WritingReview } from './writing';
+import type { FindingKind, WritingReview } from './writing';
 
 /**
  * A piece of writing the learner chose to keep, with the feedback it got.
@@ -107,4 +109,55 @@ export function savedWritingDate(createdAt: number, interfaceLanguage: string | 
     interfaceLanguage === 'Korean' ? 'ko-KR' : 'en-US',
     { year: 'numeric', month: 'short', day: 'numeric' },
   );
+}
+
+const EXPORT_KIND_KEY: Record<FindingKind, TranslationKey> = {
+  grammar: 'writingKindGrammar',
+  naturalness: 'writingKindNaturalness',
+  register: 'writingKindRegister',
+  vocabulary: 'writingKindVocabulary',
+};
+
+/**
+ * Every saved writing as one plain-text file, newest first, in every language.
+ *
+ * The copy of this data that Settings offers beside the card export: a saved
+ * writing is the learner's, and account deletion takes it. Plain text rather
+ * than CSV because it is prose with a list under it, and the point of the file
+ * is to be read. Headings are in the interface language, the way the screen's
+ * are; the date is ISO so the file sorts and reads the same anywhere.
+ */
+export function writingsToText(writings: readonly SavedWriting[], interfaceLanguage: string | null | undefined): string {
+  const rule = '='.repeat(40);
+  return [...writings]
+    .sort((a, b) => b.createdAt - a.createdAt)
+    .map(w => {
+      const lines = [
+        `${new Date(w.createdAt).toISOString().slice(0, 10)} · ${getStudyLanguageConfig(w.studyLanguage).label}`,
+        rule,
+        '',
+        `[${t(interfaceLanguage, 'savedWritingWrote')}]`,
+        w.passage,
+        '',
+        `[${t(interfaceLanguage, 'writingRewriteHeading')}]`,
+        w.review.rewrite,
+      ];
+      if (w.review.rewriteNative) {
+        lines.push('', `[${t(interfaceLanguage, 'writingRewriteMeaning')}]`, w.review.rewriteNative);
+      }
+      if (w.review.findings.length > 0) {
+        lines.push('', `[${t(interfaceLanguage, 'writingFindingsHeading')}]`);
+        w.review.findings.forEach((f, i) => {
+          const span = [f.original, f.suggested].filter(Boolean).join(' → ');
+          lines.push(`${i + 1}. (${t(interfaceLanguage, EXPORT_KIND_KEY[f.kind])})${span ? ` ${span}` : ''}`);
+          lines.push(`   ${f.note}`);
+          if (f.card) {
+            const back = w.nativeLanguage === 'Korean' ? f.card.back.Korean : f.card.back.English;
+            lines.push(`   + ${f.card.study} — ${back}`);
+          }
+        });
+      }
+      return lines.join('\n');
+    })
+    .join('\n\n\n') + (writings.length > 0 ? '\n' : '');
 }

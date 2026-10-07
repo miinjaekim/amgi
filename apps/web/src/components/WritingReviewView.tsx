@@ -52,6 +52,7 @@ interface Props {
 export default function WritingReviewView({ review, passage, studyLanguage, nativeLanguage, cards }: Props) {
   const { interfaceLanguage } = useUser();
   const [showClean, setShowClean] = useState(false);
+  const [showMeaning, setShowMeaning] = useState(false);
 
   return (
     <div className="space-y-6">
@@ -64,7 +65,11 @@ export default function WritingReviewView({ review, passage, studyLanguage, nati
           <h2 className="text-xs font-semibold uppercase tracking-widest shrink" style={{ color: 'var(--color-muted)' }}>
             {t(interfaceLanguage, 'writingRewriteHeading')}
           </h2>
-          <PronounceButton text={review.rewrite} studyLanguage={studyLanguage} kind="sentence" />
+          {/* ⚠️ No pronounce button on the rewrite (the user's call,
+            2026-10-06, made on mobile and carried here): this tool is for
+            writing, not listening. The ones on the findings stay: hearing
+            the one new word is worth more than hearing back the passage you
+            just wrote. */}
           <div className="ml-auto flex items-center gap-2">
             {/* Always the clean rewrite, never the diff — copying markup
                 with deletions in it would paste back the mistakes. */}
@@ -91,17 +96,28 @@ export default function WritingReviewView({ review, passage, studyLanguage, nati
           />
         )}
 
-        {/* Subordinate to the rewrite, not hidden behind a tap: it is how
-            the user verifies a correction didn't change what they meant,
-            and a check nobody opens is a check nobody runs. */}
+        {/* The check that a correction didn't change what they meant.
+            ⚠️ Behind a click since 2026-10-06, on the user's call: open it
+            when you are curious what the rewrite says. It was always shown
+            before, on the argument that a check nobody opens is a check
+            nobody runs; the user weighed that against the room it takes on
+            every review and chose the click. */}
         {review.rewriteNative && (
           <div className="mt-4 pt-4 border-t" style={{ borderColor: 'var(--color-muted)' }}>
-            <h3 className="text-xs font-semibold uppercase tracking-widest mb-1" style={{ color: 'var(--color-muted)' }}>
-              {t(interfaceLanguage, 'writingRewriteMeaning')}
-            </h3>
-            <p className="text-sm leading-relaxed whitespace-pre-wrap text-[var(--color-text)] opacity-70">
-              {review.rewriteNative}
-            </p>
+            <button
+              onClick={() => setShowMeaning(v => !v)}
+              aria-expanded={showMeaning}
+              className="w-full flex items-center justify-between text-xs font-semibold uppercase tracking-widest transition-colors hover:text-[var(--color-text)]"
+              style={{ color: 'var(--color-muted)' }}
+            >
+              <span>{t(interfaceLanguage, 'writingRewriteMeaning')}</span>
+              <span aria-hidden>{showMeaning ? '▴' : '▾'}</span>
+            </button>
+            {showMeaning && (
+              <p className="mt-2 text-sm leading-relaxed whitespace-pre-wrap text-[var(--color-text)] opacity-70">
+                {review.rewriteNative}
+              </p>
+            )}
           </div>
         )}
       </section>
