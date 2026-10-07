@@ -90,7 +90,7 @@ const translations = {
     // support, and this way the copy is right at 1 in both languages.
     reviewStartCount: 'Start review ({count})',
     reviewNothingInDirection: 'Nothing due this way right now.',
-    // Typed responses — produce the word before seeing it. The toggle sits by
+    // Typed responses — produce the answer before seeing it. The toggle sits by
     // the direction filter because it is the same kind of choice: how the
     // session asks, not what it asks about.
     typedReviewToggle: 'Type your answers',
@@ -1803,17 +1803,22 @@ function hanjaPartNames(
 /**
  * Placeholder for the typed-answer input: "type it in Japanese".
  *
- * Always the study language, because typing only ever runs `backToFront` —
- * see `promptsForTyping`. Named the same way `directionPrompt` names it, so
- * the input and the question above it cannot disagree about what to call the
- * language.
+ * The language of the hidden side — the study language when the word is
+ * asked for, the back's when the meaning is. Named the same way
+ * `directionPrompt` names it, so the input and the question above it cannot
+ * disagree about what to call the language.
  */
 export function typedAnswerPlaceholder(
-  nativeLanguage: string | null | undefined,
-  studyLanguage: StudyLanguage | string | undefined
+  interfaceLanguage: string | null | undefined,
+  studyLanguage: StudyLanguage | string | undefined,
+  deckNativeLanguage: string | null | undefined,
+  direction: ReviewDirection,
 ): string {
-  const { studyLabelKey } = getStudyLanguageConfig(studyLanguage);
-  return t(nativeLanguage, 'typedAnswerPlaceholder', {
-    language: t(nativeLanguage, studyLabelKey),
+  const labelKey =
+    direction === 'frontToBack'
+      ? getBackSideConfig(studyLanguage, deckNativeLanguage).backLabelKey
+      : getStudyLanguageConfig(studyLanguage).studyLabelKey;
+  return t(interfaceLanguage, 'typedAnswerPlaceholder', {
+    language: t(interfaceLanguage, labelKey),
   });
 }

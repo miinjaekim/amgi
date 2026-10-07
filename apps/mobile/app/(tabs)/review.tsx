@@ -600,7 +600,7 @@ export default function ReviewScreen() {
 
   const handleRate = async (
     rating: Rating,
-    // The grade behind the rating, for the undo snapshot. A correct typed
+    // The grade behind the rating, for the undo snapshot. An exact typed
     // answer is rated without ever being put into `typedGrade`, so it has to be
     // passed rather than read — otherwise undoing one loses the ring saying
     // which rating the grader applied.
@@ -732,18 +732,21 @@ export default function ReviewScreen() {
   };
 
   /**
-   * Grade what was typed. A hit is rated and gone; only a miss stops to ask.
+   * Grade what was typed. An exact hit is rated and gone; anything else stops
+   * to ask.
    *
    * Local and synchronous — no network, which is the point on a phone: review
    * happens on a commute, and a grader that needs a signal is a grader that
    * stops working exactly where the feature is used.
    *
-   * The asymmetry is deliberate. Producing the word from memory and spelling
-   * it correctly is not a judgement the learner can improve on, so `easy` is
-   * applied rather than offered, and the session moves on. A miss is the
-   * opposite — the grader may simply not know the answer was also right — so
-   * it reveals both strings and keeps the full rating row, which is where the
-   * override lives.
+   * The asymmetry is deliberate. Producing the answer from memory, exactly, is
+   * not a judgement the learner can improve on, so `easy` is applied rather
+   * than offered, and the session moves on. A miss is the opposite — the
+   * grader may simply not know the answer was also right — so it reveals both
+   * strings and keeps the full rating row, which is where the override lives.
+   * A near match, which only a typed meaning can be, reveals the same way with
+   * the ring on `good`: the grader bent a rule to accept it, so the learner
+   * confirms.
    *
    * Declared below `handleRate` rather than above it: an earlier version of
    * this file taught us that referencing a later `const` from a handler is
@@ -752,8 +755,8 @@ export default function ReviewScreen() {
   const handleSubmitTyped = () => {
     const item = queue[index];
     if (!item || !typedAnswer.trim()) return;
-    const grade = gradeTypedAnswer(typedAnswer, item.card);
-    if (grade.correct) {
+    const grade = gradeTypedAnswer(typedAnswer, item.card, item.direction, deckNativeLanguage);
+    if (grade.outcome === 'exact') {
       void handleRate(grade.suggested, grade);
       return;
     }
@@ -1079,8 +1082,7 @@ export default function ReviewScreen() {
             ))}
           </View>
           {/* Same axis as the direction pills above: how the session asks, not
-              what it asks about. Only the produce-the-word half of a `both`
-              session is typed. */}
+              what it asks about. One toggle for both directions. */}
           <TouchableOpacity
             style={[s.pill, s.typingPill, typingEnabled && s.pillOn]}
             onPress={() => setTypingEnabled(v => !v)}
@@ -1262,8 +1264,8 @@ export default function ReviewScreen() {
       <Text style={s.readingText}>{reading}</Text>
     </View>
   ) : null;
-  /** Only `backToFront` is ever typed — see `promptsForTyping`. */
-  const typingThisCard = promptsForTyping(typingEnabled, direction, studyLanguage);
+  /** Either direction, and never Hanja — see `promptsForTyping`. */
+  const typingThisCard = promptsForTyping(typingEnabled, studyLanguage);
 
   // Only the typed field before the reveal and the edit form can raise the
   // keyboard, and those are exactly the two branches that render no
@@ -1275,7 +1277,7 @@ export default function ReviewScreen() {
    * and the keyboard's own return key is what submits.
    *
    * The row was the last fixed thing competing for height on a screen that has
-   * none to give: the front of a typed card is the *gloss*, and a gloss is
+   * none to give: the front of a typed card can be the *gloss*, and a gloss is
    * routinely a phrase — three lines at 32pt — so 확인 and 그냥 정답 보기 ended
    * up drawn across the card and the input. Nothing in that branch scrolls or
    * shrinks by design (the ScrollView that used to be there is what carried the
@@ -1300,8 +1302,7 @@ export default function ReviewScreen() {
   const hasDepth = !!(definition || characterBreakdown || shownCard.notes);
 
   /**
-   * Tap-to-reveal cards turn over in place; typed ones do not flip at all. A
-   * typed session still holds both kinds, since only `backToFront` is typed.
+   * Tap-to-reveal cards turn over in place; typed ones do not flip at all.
    */
   const flips = !typingThisCard;
   const flipStyle = reduceMotion
@@ -1620,7 +1621,16 @@ export default function ReviewScreen() {
               // translate a word they could no longer see. Before the reveal
               // there is nothing to scroll, so there is nothing to scroll away.
               <>
-                <Text style={[s.frontText, rtlInline(frontText)]}>{frontText}</Text>
+                {/* A row only when there is a button to sit in it: a typed
+                    meaning shows the word, and the word can be heard. */}
+                {isFront ? (
+                  <View style={s.termRow}>
+                    <Text style={[s.frontText, s.rowText, rtlInline(frontText)]}>{frontText}</Text>
+                    {pronounceButton}
+                  </View>
+                ) : (
+                  <Text style={[s.frontText, rtlInline(frontText)]}>{frontText}</Text>
+                )}
                 <TextInput
                   // Remounted per card: `autoFocus` fires on mount only, and
                   // this input holds the same slot from one card to the next.
@@ -1632,12 +1642,12 @@ export default function ReviewScreen() {
                   // not on screen then — see `typedKeyboardUp`. Blurring on
                   // submit is what brings the row back for the reveal.
                   onSubmitEditing={handleSubmitTyped}
-                  placeholder={typedAnswerPlaceholder(interfaceLanguage, studyLanguage)}
+                  placeholder={typedAnswerPlaceholder(interfaceLanguage, studyLanguage, deckNativeLanguage, direction)}
                   placeholderTextColor={C.muted}
                   autoFocus
                   returnKeyType="done"
-                  // Off on purpose: a phone completing the word being recalled
-                  // does the exercise for the learner.
+                  // Off on purpose: a phone completing the answer being
+                  // recalled does the exercise for the learner.
                   autoCorrect={false}
                   autoCapitalize="none"
                   spellCheck={false}
@@ -1744,7 +1754,9 @@ export default function ReviewScreen() {
                         <Text style={typedGrade.correct ? s.typedVerdictOk : s.typedVerdictMiss}>
                           {t(interfaceLanguage, typedGrade.correct ? 'typedAnswerCorrect' : 'typedAnswerMissed')}
                         </Text>
-                        {!typedGrade.correct && (
+                        {/* A near match shows what was typed too: it is why
+                            the card stopped to ask. */}
+                        {typedGrade.outcome !== 'exact' && (
                           <Text>{` · ${t(interfaceLanguage, 'typedAnswerYours')}: ${typedAnswer}`}</Text>
                         )}
                       </Text>

@@ -3,6 +3,54 @@
 The review session: typed answers, undo, readings, decks and drill. Newest first. Indexed from
 [status.md](../status.md).
 
+## Meanings are typed too, and a typed meaning has a near match (2026-10-07)
+
+**Reverses the direction rule of the 2026-08-24 entry below.** That one typed
+only gloss→word, on the ground that a back may hold two glosses where a word is
+one string, so the expected answer is ambiguous in a direction the word never
+is. The user met the result as a bug ("Debug typing answers": with typing on,
+half a mixed session still flipped), learned it was by design, and decided to
+type the meaning as well. The ambiguity the old rule avoided is real; this
+answers it with a middle outcome instead of by not asking.
+
+**Three outcomes for a typed meaning**, all the user's call, 2026-10-07:
+
+- **Exact is `easy`, applied and gone**, as a typed word is. Exact is the back
+  the learner is shown, as stored, under `sameFoldedText`.
+- **Near stops and asks, with the ring on `good`.** Near is right only under
+  three local rules: either gloss when the back holds two (the gloss rule's
+  comma or semicolon), a leading `to`/`a`/`an`/`the` ignored on either side,
+  and the card's other back accepted (English beside Korean, when a card has
+  both). Nothing is applied: the grader bent a rule to accept the answer, so
+  the learner says whether "mood" for "atmosphere, mood" was knowing the word.
+- **Anything else is a miss, exactly as for a word**: "Not quite", what was
+  typed beside the back, ring on `again`, all four ratings live. The user
+  considered dropping the negative feedback in this direction, since a
+  differently worded right answer is common here, and kept it: that answer is
+  one tap to override, which is no reason to stop saying a wrong one is wrong.
+
+**Still no model and still no edit distance.** The leniency is three rules a
+learner could recite, which is what keeps a miss legible; the 08-24 reasoning
+for a local grader stands unchanged. The typed word is still all or nothing.
+
+**Unchanged:** gloss→word typing, Hanja untyped in both directions, and one
+"Type your answers" toggle. `promptsForTyping` lost its direction parameter,
+`gradeTypedAnswer` gained the direction and the native language, and
+`TypedAnswerGrade` gained `outcome`; callers apply only `exact`.
+
+**Chosen in the build, not asked — the user's to overrule:**
+
+- Both glosses typed in the other order ("mood, atmosphere") or around the
+  other mark are **near**, not a miss. The rule as stated covers one gloss of
+  two; calling two right glosses "Not quite" for their order would be the
+  grader being wrong on screen.
+- A near match reads **"Correct"** with what was typed beside it, unstruck.
+  No new string: the placeholder reuses "Type it in {language}" with the
+  back's language.
+- Which back is exact: the one on screen. A Korean native on a Japanese deck
+  is exact on the Korean back and near on the English one, and the reverse for
+  an English native.
+
 ## The brief definition shows after the reveal, never on the prompt (2026-10-04)
 
 Review showed the gloss and, behind *Show details*, the long definition. The
@@ -177,6 +225,9 @@ untouched legacy card started from a different ease on each platform.
 directions; web used to assign it the rated direction's date.
 
 ## Typed responses: a local grader, and the rating row is the override (2026-08-24)
+
+⚠️ **The direction rule here was reversed on 2026-10-07**: meanings are typed
+too. See the entry of that date above; everything else in this one stands.
 
 Review can now ask the learner to **produce** the word instead of flipping to
 it. Four calls, all made with the user, and the backlog item's four open

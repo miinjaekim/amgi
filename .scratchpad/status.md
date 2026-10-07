@@ -68,6 +68,10 @@ blank placeholder. On **Android**, only sign-in has ever been exercised.
 
 **Never looked at on a device or a real account:**
 
+- **Typed meanings** (branch `type-meanings`): never run in a browser or on a
+  phone. The grader is unit-tested and both apps typecheck; the typed card in
+  the word→meaning direction, its keyboard on mobile and the pronounce button
+  beside the word above the field have not been looked at.
 - **Munli on a binary.** Expo Go covered the practice loop, the verbs page,
   Tables and Progress (2026-09-22) and the keyboard flow (2026-09-25). Not
   covered: the changes after 09-22 (two-topic split, filter dropdowns, save
@@ -293,6 +297,7 @@ Card fields, glosses, part of speech, spellcheck, saving, My Cards, export.
 
 The review session: typed answers, undo, readings, decks and drill.
 
+- [Meanings are typed too, and a typed meaning has a near match (2026-10-07)](decisions/review.md#meanings-are-typed-too-and-a-typed-meaning-has-a-near-match-2026-10-07)
 - [The brief definition shows after the reveal, never on the prompt (2026-10-04)](decisions/review.md#the-brief-definition-shows-after-the-reveal-never-on-the-prompt-2026-10-04)
 - [Readings reach mobile review, and no setting comes with them (2026-09-08)](decisions/review.md#readings-reach-mobile-review-and-no-setting-comes-with-them-2026-09-08)
 - [The typed card hides its action row while the keyboard is up (2026-08-29)](decisions/review.md#the-typed-card-hides-its-action-row-while-the-keyboard-is-up-2026-08-29)
