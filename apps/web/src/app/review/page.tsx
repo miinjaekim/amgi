@@ -316,13 +316,16 @@ export default function ReviewPage() {
   };
 
   /**
-   * Grade what was typed. A hit is rated and gone; only a miss stops to ask.
+   * Grade what was typed. An exact hit is rated and gone; anything else stops
+   * to ask.
    *
-   * The asymmetry is the point. Producing the word from memory and spelling it
-   * correctly is not a judgement the learner can improve on, so `easy` is
-   * applied rather than offered. A miss is the opposite — the grader may not
-   * know the answer was also right — so it reveals both strings and keeps the
-   * full rating row, which is where the override lives.
+   * The asymmetry is the point. Producing the answer from memory, exactly, is
+   * not a judgement the learner can improve on, so `easy` is applied rather
+   * than offered. A miss is the opposite — the grader may not know the answer
+   * was also right — so it reveals both strings and keeps the full rating row,
+   * which is where the override lives. A near match, which only a typed
+   * meaning can be, reveals the same way with the ring on `good`: the grader
+   * bent a rule to accept it, so the learner confirms.
    */
   /**
    * When the card currently on screen was put there, for `studySeconds`.
@@ -347,10 +350,10 @@ export default function ReviewPage() {
     (cardShownAt.current ? (Date.now() - cardShownAt.current) / 1000 : 0);
 
   const handleSubmitTypedAnswer = () => {
-    const { card } = activeQueue[currentReviewIdx] ?? {};
-    if (!card || !typedAnswer.trim()) return;
-    const grade = gradeTypedAnswer(typedAnswer, card);
-    if (grade.correct) {
+    const { card, direction } = activeQueue[currentReviewIdx] ?? {};
+    if (!card || !direction || !typedAnswer.trim()) return;
+    const grade = gradeTypedAnswer(typedAnswer, card, direction, deckNativeLanguage);
+    if (grade.outcome === 'exact') {
       void handleReviewResponse(grade.suggested, grade);
       return;
     }
@@ -401,7 +404,7 @@ export default function ReviewPage() {
 
   const handleReviewResponse = async (
     response: 'again' | 'hard' | 'good' | 'easy',
-    // The grade behind the rating, for the undo snapshot. A correct typed
+    // The grade behind the rating, for the undo snapshot. An exact typed
     // answer is rated without ever being put into `typedGrade`, so it has to be
     // passed rather than read — otherwise undoing one loses the ring saying
     // which rating the grader applied.
@@ -701,6 +704,17 @@ export default function ReviewPage() {
     setUserFlashcards(prev => prev.map(c => (c.id === card.id ? { ...c, ...card } : c)));
   }, []);
 
+  /** The study side of a card with its pronounce button: the prompt one way, the answer the other. */
+  const renderStudyWord = (card: Flashcard) => {
+    const { front } = faces(card);
+    return (
+      <div className="flex items-center gap-2 mb-3">
+        <div dir="auto" className="font-semibold text-2xl text-[var(--color-highlight)]">{front}</div>
+        <PronounceButton text={front} furigana={card.furigana} eum={card.eum} studyLanguage={studyLanguage} />
+      </div>
+    );
+  };
+
   /**
    * A tap-to-reveal card: one box, two faces, turned over by a click.
    *
@@ -713,19 +727,14 @@ export default function ReviewPage() {
    * `prompt` at the top of the back face; nothing else depends on it being gone.
    */
   const renderFlipCard = ({ card, direction }: ReviewQueueItem) => {
-    const { front, back } = faces(card);
+    const { back } = faces(card);
     const studyFirst = direction === 'frontToBack';
     const gloss = hanjaGloss(card);
     const partOfSpeech = partOfSpeechLabel(deckNativeLanguage, card);
     const reading = getReading(card, studyLanguage, deckNativeLanguage);
     const chipClass = 'px-2 py-0.5 text-xs rounded-full border border-[var(--color-muted)] text-[var(--color-muted)]';
 
-    const studyWord = (
-      <div className="flex items-center gap-2 mb-3">
-        <div dir="auto" className="font-semibold text-2xl text-[var(--color-highlight)]">{front}</div>
-        <PronounceButton text={front} furigana={card.furigana} eum={card.eum} studyLanguage={studyLanguage} />
-      </div>
-    );
+    const studyWord = renderStudyWord(card);
     const prompt = studyFirst
       ? studyWord
       : back && <div dir="auto" className="text-lg mb-3 text-[var(--color-text)]">{back}</div>;
@@ -804,10 +813,10 @@ export default function ReviewPage() {
   };
 
   const currentReview = activeQueue[currentReviewIdx];
-  /** Only `backToFront` is ever typed — see `promptsForTyping`. */
-  const typingThisCard = currentReview
-    ? promptsForTyping(typingEnabled, currentReview.direction, studyLanguage)
-    : false;
+  /** Either direction, and never Hanja — see `promptsForTyping`. */
+  const typingThisCard = !!currentReview && promptsForTyping(typingEnabled, studyLanguage);
+  /** The typed card shows the word and asks for its meaning, rather than the other way round. */
+  const typingMeaning = currentReview?.direction === 'frontToBack';
 
   // Only offered when there is something else to change to — a single
   // collection is not a choice, and a control for it would only be noise.
@@ -1196,23 +1205,27 @@ export default function ReviewPage() {
                   </div>
                 )}
 
-                {/* Only `backToFront` is ever typed, so the typed card is the
-                    one layout below; everything else flips. */}
+                {/* A typed card is the one stacked layout below, prompt above
+                    answer, in whichever direction it is asked; an untyped
+                    card flips. */}
                 {!typingThisCard ? (
                   renderFlipCard(currentReview)
                 ) : (
                   <div className="mb-4 p-6 rounded-xl bg-[var(--color-bg)] border border-[var(--color-muted)] shadow-lg min-h-[14rem]">
                     <>
-                      {faces(currentReview.card).back && (
-                        <div dir="auto" className="text-lg mb-2 text-[var(--color-text)]">{faces(currentReview.card).back}</div>
-                      )}
+                      {typingMeaning
+                        ? renderStudyWord(currentReview.card)
+                        : faces(currentReview.card).back && (
+                          <div dir="auto" className="text-lg mb-2 text-[var(--color-text)]">{faces(currentReview.card).back}</div>
+                        )}
 
                       {showAnswer ? (
                         <>
-                          <div className="flex items-center gap-2 mb-3 mt-4">
-                            <div dir="auto" className="font-semibold text-2xl text-[var(--color-highlight)]">{faces(currentReview.card).front}</div>
-                            <PronounceButton text={faces(currentReview.card).front} furigana={currentReview.card.furigana} eum={currentReview.card.eum} studyLanguage={studyLanguage} />
-                          </div>
+                          {typingMeaning
+                            ? faces(currentReview.card).back && (
+                              <div dir="auto" className="text-lg mb-3 mt-4 text-[var(--color-text)] font-semibold">{faces(currentReview.card).back}</div>
+                            )
+                            : <div className="mt-4">{renderStudyWord(currentReview.card)}</div>}
 
                           {hanjaGloss(currentReview.card) && (
                             <div className="text-base mb-3 text-[var(--color-muted)]">{hanjaGloss(currentReview.card)}</div>
@@ -1233,9 +1246,11 @@ export default function ReviewPage() {
                                   ? t(interfaceLanguage, 'typedAnswerCorrect')
                                   : t(interfaceLanguage, 'typedAnswerMissed')}
                               </span>
-                              {!typedGrade.correct && (
+                              {/* A near match shows what was typed too, unstruck:
+                                  it is why the card stopped to ask. */}
+                              {typedGrade.outcome !== 'exact' && (
                                 <span className="text-[var(--color-muted)]">
-                                  {' · '}{t(interfaceLanguage, 'typedAnswerYours')}: <span className="line-through">{typedAnswer}</span>
+                                  {' · '}{t(interfaceLanguage, 'typedAnswerYours')}: <span className={typedGrade.correct ? undefined : 'line-through'}>{typedAnswer}</span>
                                 </span>
                               )}
                             </div>
@@ -1284,7 +1299,7 @@ export default function ReviewPage() {
                       ) : (
                         <>
                           <div className="text-[var(--color-muted)] text-lg mt-4 italic">
-                            {directionPrompt(interfaceLanguage, studyLanguage, deckNativeLanguage, 'backToFront', hanjaPartition)}
+                            {directionPrompt(interfaceLanguage, studyLanguage, deckNativeLanguage, currentReview.direction, hanjaPartition)}
                           </div>
                           {typingThisCard && (
                             <input
@@ -1298,9 +1313,9 @@ export default function ReviewPage() {
                               value={typedAnswer}
                               onChange={e => setTypedAnswer(e.target.value)}
                               onKeyDown={e => { if (e.key === 'Enter') handleSubmitTypedAnswer(); }}
-                              placeholder={typedAnswerPlaceholder(interfaceLanguage, studyLanguage)}
+                              placeholder={typedAnswerPlaceholder(interfaceLanguage, studyLanguage, deckNativeLanguage, currentReview.direction)}
                               // Autocorrect and capitalisation are off on
-                              // purpose: a phone helpfully completing the word
+                              // purpose: a phone helpfully completing the answer
                               // being recalled is the whole exercise done for
                               // the learner.
                               autoComplete="off"
@@ -1415,8 +1430,7 @@ export default function ReviewPage() {
                 ))}
               </div>
               {/* Same axis as the direction row above it: how the session asks,
-                  not what it asks about. Only the produce-the-word half of a
-                  `both` session is typed. */}
+                  not what it asks about. One toggle for both directions. */}
               <label className="flex items-center gap-2 mb-6 text-sm text-[var(--color-text)] cursor-pointer">
                 <input
               dir="auto"

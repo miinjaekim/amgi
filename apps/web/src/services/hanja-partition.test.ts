@@ -107,15 +107,13 @@ describe('typed answers on Hanja', () => {
   // both are required. On the default partition the expected answer is also a
   // glyph most learners cannot type.
   it('never prompts for typing, in either direction', () => {
-    expect(promptsForTyping(true, 'backToFront', 'Hanja')).toBe(false);
-    expect(promptsForTyping(true, 'frontToBack', 'Hanja')).toBe(false);
+    expect(promptsForTyping(true, 'Hanja')).toBe(false);
   });
 
   it('leaves every other deck as it was', () => {
-    expect(promptsForTyping(true, 'backToFront', 'Japanese')).toBe(true);
-    expect(promptsForTyping(true, 'backToFront')).toBe(true);
-    expect(promptsForTyping(true, 'frontToBack', 'Japanese')).toBe(false);
-    expect(promptsForTyping(false, 'backToFront', 'Japanese')).toBe(false);
+    expect(promptsForTyping(true, 'Japanese')).toBe(true);
+    expect(promptsForTyping(true)).toBe(true);
+    expect(promptsForTyping(false, 'Japanese')).toBe(false);
   });
 });
 

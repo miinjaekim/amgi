@@ -1,5 +1,5 @@
 import type { CardSides, StudyLanguage, TermCore } from './types';
-import { getStudyLangSide, stripArabicMarks } from './types';
+import { getBackSide, getStudyLangSide, getStudyLanguageConfig, stripArabicMarks } from './types';
 import type { ReviewDirection } from './sm2';
 
 /**
@@ -22,6 +22,11 @@ import type { ReviewDirection } from './sm2';
  * are reading two strings and picking the rating themselves. That is the same
  * argument the removed cloze override rested on, and here it costs no extra
  * control at all, because the buttons were already on screen.
+ *
+ * **Both directions are typed** — _the user's call, 2026-10-07_, reversing the
+ * first cut, which typed only the word. A typed word is still all or nothing.
+ * A typed meaning has a middle outcome, because a back is not one string the
+ * way a word is: see `gradeTypedAnswer`.
  */
 
 /**
@@ -99,13 +104,73 @@ export function acceptedAnswers(card: TypedAnswerCard): string[] {
   return answers;
 }
 
+/**
+ * The glosses a back holds: one, or two around the single comma or semicolon
+ * the gloss rule allows (`GLOSS_RULE`, web's `lib/glossRule.ts`).
+ */
+function splitGlosses(back: string): string[] {
+  return back.split(/[,;]/).map(gloss => gloss.trim()).filter(Boolean);
+}
+
+/**
+ * A gloss without the particle English puts in front of it. "to run" and
+ * "run", "a deadline" and "deadline" are one answer; which of them the card
+ * stored is the model's habit, not something the learner was asked.
+ *
+ * Runs on folded text, and on Korean backs too, where it matches nothing.
+ */
+function stripLeadingParticle(folded: string): string {
+  return folded.replace(/^(?:to|an|a|the) (?=\S)/, '');
+}
+
+function sameGloss(a: string, b: string): boolean {
+  return sameFoldedText(stripLeadingParticle(foldText(a)), stripLeadingParticle(foldText(b)));
+}
+
+/**
+ * Every back this card has, the one on screen first.
+ *
+ * A card can carry an English back and a Korean one — a Korean native studying
+ * Japanese has both — and shows only the learner's own. The other is still a
+ * correct meaning. Never the study field: on a Korean deck `korean` is the
+ * word being asked about.
+ */
+function meaningBacks(card: TypedAnswerCard, nativeLanguage: string | null | undefined): string[] {
+  const { studyField } = getStudyLanguageConfig(card.studyLanguage);
+  const others = (['english', 'korean'] as const)
+    .filter(field => field !== studyField)
+    .map(field => card[field] ?? '');
+  return [getBackSide(card, nativeLanguage), ...others]
+    .filter((back, i, all) => back && all.indexOf(back) === i);
+}
+
+/**
+ * Whether a typed meaning is right under the leniency rules, for some back:
+ * every gloss typed is one of that back's glosses, particles aside. So either
+ * gloss of two passes, and so do both in the other order or around the other
+ * separator.
+ */
+function nearMeaning(answer: string, backs: string[]): boolean {
+  const typed = splitGlosses(answer);
+  return typed.length > 0 && backs.some(back => {
+    const glosses = splitGlosses(back);
+    return typed.every(part => glosses.some(gloss => sameGloss(part, gloss)));
+  });
+}
+
 export interface TypedAnswerGrade {
+  /**
+   * `exact` is applied by the caller and the card is gone; `near` and `miss`
+   * both reveal and ask. Only a typed meaning is ever `near`.
+   */
+  outcome: 'exact' | 'near' | 'miss';
+  /** Anything but a miss — what the verdict line on the revealed card reads. */
   correct: boolean;
   /**
    * The rating this answer earns.
    *
-   * **A hit is `easy`, and it is applied rather than offered** — _the user's
-   * call, 2026-08-25._ The reasoning is asymmetry: producing the word from
+   * **An exact hit is `easy`, and it is applied rather than offered** — _the
+   * user's call, 2026-08-25._ The reasoning is asymmetry: producing the word from
    * memory, spelled correctly, is not a judgement the learner can improve on,
    * so asking them to rate it is asking a question with one honest answer.
    * A miss is the opposite — the grader may simply not know the spelling was
@@ -117,39 +182,68 @@ export interface TypedAnswerGrade {
    * is real and unbounded — `getNextReviewData` has no ceiling on `ease` — and
    * was accepted deliberately: a word typed correctly on sight is a word whose
    * interval should be growing quickly.
+   *
+   * **A near match is `good`, and it is offered rather than applied** — _the
+   * user's call, 2026-10-07._ The grader bent a rule to accept it, so the
+   * learner is the one who says whether "mood" for "atmosphere, mood" was
+   * knowing the word.
    */
-  suggested: 'again' | 'easy';
+  suggested: 'again' | 'good' | 'easy';
   /** What the card expected, to show beside what was typed. */
   expected: string;
 }
 
 /**
- * Grades a typed answer against the card's study side.
+ * Grades a typed answer against the side the direction hides.
  *
- * A hit is any accepted spelling under `sameFoldedText`. Callers apply a hit
- * straight to the scheduler and move on; only a miss reveals and asks. There is no partial
- * credit and no "close enough" tier: an edit-distance band needs a threshold
- * per writing system, because one character of a two-character Korean word is
- * a different word where one character of `anniversaire` is a slip of the
- * thumb. The rating row absorbs both cases at no cost.
+ * **`backToFront`, the word.** A hit is any accepted spelling under
+ * `sameFoldedText`, and there is nothing between a hit and a miss: an
+ * edit-distance band needs a threshold per writing system, because one
+ * character of a two-character Korean word is a different word where one
+ * character of `anniversaire` is a slip of the thumb. The rating row absorbs
+ * both cases at no cost.
+ *
+ * **`frontToBack`, the meaning.** Three outcomes, _the user's call,
+ * 2026-10-07_:
+ * - **exact** — the back on screen, as stored, under the same folding.
+ * - **near** — right only under the leniency rules: either gloss when the back
+ *   holds two, a leading `to`/`a`/`an`/`the` ignored, and the card's other
+ *   back (English beside Korean) accepted. On "atmosphere, mood", "mood" is
+ *   near, not exact.
+ * - **miss** — anything else, exactly as for a word.
+ *
+ * Still no edit distance and still no model: the leniency is three rules a
+ * learner could recite, which is what keeps a miss legible.
  */
-export function gradeTypedAnswer(typed: string, card: TypedAnswerCard): TypedAnswerGrade {
-  const expected = getStudyLangSide(card);
+export function gradeTypedAnswer(
+  typed: string,
+  card: TypedAnswerCard,
+  direction: ReviewDirection,
+  nativeLanguage: string | null | undefined,
+): TypedAnswerGrade {
   const answer = typed.trim();
-  const correct = answer.length > 0
-    && acceptedAnswers(card).some(candidate => sameFoldedText(answer, candidate));
-  return { correct, suggested: correct ? 'easy' : 'again', expected };
+  const grade = (outcome: TypedAnswerGrade['outcome'], expected: string): TypedAnswerGrade => ({
+    outcome,
+    correct: outcome !== 'miss',
+    suggested: outcome === 'exact' ? 'easy' : outcome === 'near' ? 'good' : 'again',
+    expected,
+  });
+
+  if (direction === 'backToFront') {
+    const hit = answer.length > 0
+      && acceptedAnswers(card).some(candidate => sameFoldedText(answer, candidate));
+    return grade(hit ? 'exact' : 'miss', getStudyLangSide(card));
+  }
+
+  const [expected = '', ...otherBacks] = meaningBacks(card, nativeLanguage);
+  if (!answer || !expected) return grade('miss', expected);
+  if (sameFoldedText(answer, expected)) return grade('exact', expected);
+  return grade(nearMeaning(answer, [expected, ...otherBacks]) ? 'near' : 'miss', expected);
 }
 
 /**
- * Whether this queue entry is asked by typing.
- *
- * Only ever `backToFront` — producing the study-language word from its gloss.
- * The other way round would have the learner type the gloss, and a back is
- * allowed up to two translations where the study side is one word, so the
- * expected answer is genuinely ambiguous in a direction the target never is.
- * A mixed session is therefore mixed on screen: gloss→word cards get the
- * input, word→gloss cards stay flip-and-rate.
+ * Whether this session's cards are asked by typing — both directions, on one
+ * toggle.
  *
  * **Never on Hanja**, whichever direction. `gradeTypedAnswer` grades input
  * against *a* side, and a hanja card's back is two parts: with 물 and 수 both
@@ -160,8 +254,7 @@ export function gradeTypedAnswer(typed: string, card: TypedAnswerCard): TypedAns
  */
 export function promptsForTyping(
   typingEnabled: boolean,
-  direction: ReviewDirection,
   studyLanguage?: StudyLanguage | string,
 ): boolean {
-  return typingEnabled && direction === 'backToFront' && studyLanguage !== 'Hanja';
+  return typingEnabled && studyLanguage !== 'Hanja';
 }

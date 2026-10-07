@@ -26,6 +26,21 @@ _Merged, not yet in anyone's hands — mobile ships by build, no OTA._
 _Build 19 (2.2.0) was approved for external testing, reported 2026-10-06; what
 is below merged after it._
 
+- **Review asks for the meaning by typing too** (branch `type-meanings`).
+  With "Type your answers" on, word→meaning cards get the input box as well,
+  web and mobile; they used to flip. Three outcomes for a typed meaning: the
+  back exactly as shown is `easy`, applied, next card; a near match (either
+  gloss of two, a leading to/a/an/the dropped, or the card's other-language
+  back) reveals with "Correct", what was typed, and the ring on `good` for
+  the learner to confirm; anything else is "Not quite" with the ring on
+  `again`. Typing the word is unchanged, Hanja is still untyped, and it is
+  still one toggle. No new strings: the placeholder names the back's language
+  in this direction.
+  Two things were chosen in the build rather than asked, and are the user's
+  to overrule: both glosses typed in the other order or around the other
+  mark count as near rather than a miss, and a near match reads "Correct".
+  ⚠️ Not seen in a browser or on a device; under Unverified in
+  [status.md](status.md).
 - **The review card flips in place** (branch `review-card-flip`). Tap-to-reveal
   review, web and mobile: tap the card and the back replaces the front in the
   same box; tap again for the front. The card keeps its size, the rating row's
@@ -91,31 +106,6 @@ whether `faire` joins the three sourced irregular verbs (#150), and whether a
 practice session should cover several tenses at once again, which the section
 picker narrowed (#146). Both are written up in their Decisions entries of
 2026-09-22.
-
-- [ ] **Type meanings too.** Added from Google Tasks 2026-10-07 ("Debug typing
-      answers"). Not a bug: the flips the user saw were word→gloss cards, which
-      `promptsForTyping` leaves flip-and-rate by design. The user's call the
-      same day is to type that direction as well, **still with no model
-      grader** — the rating row stays the override.
-      Three outcomes, _the user's call 2026-10-07_:
-      - **An exact match is `easy`, applied and gone**, as it is for a typed
-        word. Exact is the back as stored, under the folding typed words
-        already get.
-      - **A near match stops and asks, with the ring on `good`.** Near is a
-        match only under the local leniency rules: either gloss when the back
-        holds two, a leading `to`/`a`/`an`/`the` ignored, and the
-        native-language back accepted as well as the English one. The learner
-        confirms the rating; nothing is applied for them.
-      - **Anything else is a miss, exactly as for a typed word**: "Not quite",
-        what was typed struck through beside the card's gloss, and the ring on
-        `again`, with all four ratings live. The user reversed an earlier
-        "no preselection" call the same day: a differently worded right answer
-        is one tap to override, and that possibility is no reason to drop the
-        negative feedback.
-      - Hanja stays untyped; one "Type your answers" toggle covers both
-        directions.
-      Reverses the direction rule in the 2026-08-24 typed-responses decision
-      (`decisions/review.md`) — record it there when it ships.
 
 - [ ] **A forms note on Swedish and French lookups.** Added from Google Tasks
       2026-10-07 ("definite indefinite, singular plural form
