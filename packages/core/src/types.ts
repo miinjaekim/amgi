@@ -622,6 +622,31 @@ export function normalizePartOfSpeech(value: unknown): PartOfSpeech | undefined 
     : undefined;
 }
 
+/** Room for one sentence; the prompt's own examples run to about 55. */
+export const FORMS_NOTE_MAX_LENGTH = 160;
+
+/**
+ * A model's forms note as the sentence a card stores, or undefined when there
+ * is nothing to store.
+ *
+ * The note is free text, so there is no list to check it against; what is
+ * checked is everything around it. It belongs to a noun or an adjective and to
+ * no other part of speech, which is the scope it was asked for and keeps a
+ * stray answer on a verb off the card. A model told to answer null sometimes
+ * answers with the word instead, and "None." under a definition is worse than
+ * nothing there. And it is one sentence: an answer that ran on into a
+ * paragraph is the grammar lesson the note is not, so it is dropped rather
+ * than cut off mid-clause.
+ */
+export function normalizeFormsNote(value: unknown, partOfSpeech: unknown): string | undefined {
+  if (partOfSpeech !== 'noun' && partOfSpeech !== 'adjective') return undefined;
+  if (typeof value !== 'string') return undefined;
+  const note = value.replace(/\s+/g, ' ').trim();
+  if (!note || note.length > FORMS_NOTE_MAX_LENGTH) return undefined;
+  if (/^(null|none|n\/a|없음|해당 없음|-+)[.。]?$/i.test(note)) return undefined;
+  return note;
+}
+
 export interface TermCore {
   term: string;
   termLanguage: StudyLanguage;
@@ -659,6 +684,22 @@ export interface TermCore {
   verbGroup?: VerbGroup;
   formality?: string;
   gender?: string; // grammatical gender: Swedish 'en'/'ett', French 'le'/'la'
+  /**
+   * One sentence on how this word's forms behave, where they are not what the
+   * word itself would lead a learner to expect: "Irregular plural: chevaux."
+   * on cheval, nothing at all on table.
+   *
+   * **A fact about one word, never a rule of the language.** How definiteness
+   * works in Swedish is grammar teaching and belongs to no card; that bok
+   * becomes böcker belongs to bok. Written in the language `briefDefinition`
+   * is, by the same `/api/explain` call, and trusted the way that is — no
+   * "unverified" label (the user's decision of 2026-10-07).
+   *
+   * Swedish and French nouns and adjectives only, and only through
+   * `normalizeFormsNote`. Absent on every card saved before it existed, with
+   * no backfill, and on pack and word-of-the-day cards, which ask for none.
+   */
+  formsNote?: string;
   furigana?: string; // Japanese kana reading, present when the term contains kanji
   pinyin?: string; // Traditional Chinese reading, tone-marked
   /**

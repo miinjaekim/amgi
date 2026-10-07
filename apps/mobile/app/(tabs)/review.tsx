@@ -1694,6 +1694,9 @@ export default function ReviewScreen() {
                       {!!shownCard.briefDefinition && (
                         <Text style={s.briefDefinition}>{shownCard.briefDefinition}</Text>
                       )}
+                      {/* On the back for the same reason: it spells the
+                          word's other forms out. */}
+                      {!!shownCard.formsNote && <Text style={s.formsNote}>{shownCard.formsNote}</Text>}
                       {detailsBlock}
                     </>
                   ) : (
@@ -1745,6 +1748,7 @@ export default function ReviewScreen() {
                     {!!shownCard.briefDefinition && (
                       <Text style={s.briefDefinition}>{shownCard.briefDefinition}</Text>
                     )}
+                    {!!shownCard.formsNote && <Text style={s.formsNote}>{shownCard.formsNote}</Text>}
 
                     {/* Both strings on screen. This is what lets the grader be
                         strict: the learner is not appealing a judgement they
@@ -1939,6 +1943,7 @@ function makeStyles(C: Palette, tabBarHeight: number) {
   // answer the deck is asking for.
   hanjaGloss: { fontSize: 16, color: C.muted, marginTop: 6 },
   briefDefinition: { fontSize: 14, color: C.muted, marginTop: 8, lineHeight: 20 },
+  formsNote: { fontSize: 12, color: C.muted, marginTop: 4, lineHeight: 17 },
   // Shared by the term rows and the example rows. `flexShrink` is what keeps
   // a long term wrapping inside its row instead of pushing the pronounce
   // button off the card. The term row is unconditional so the word sits in

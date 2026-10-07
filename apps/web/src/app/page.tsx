@@ -624,6 +624,14 @@ export default function Home() {
                 {core.briefDefinition}
               </p>
             )}
+            {/* How this word's forms behave, where that is worth saying. A
+                step smaller than the definition so the two read as two
+                facts rather than one paragraph. */}
+            {core.formsNote && (
+              <p className="mt-1 text-xs" style={{ color: 'var(--color-muted)' }}>
+                {core.formsNote}
+              </p>
+            )}
           </div>
 
           {/* A verb can go to Munli whether or not it is saved as a card. Shown

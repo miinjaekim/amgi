@@ -231,6 +231,11 @@ export default function CardDetailModal({
             {senseLine && (
               <p className="text-xs mt-1" style={{ color: 'var(--color-muted)' }}>{senseLine}</p>
             )}
+            {/* A looked-up Swedish or French card's forms note. Pack entries
+                author none, so there is nothing to show before a save. */}
+            {saved?.formsNote && (
+              <p className="text-xs mt-1" style={{ color: 'var(--color-muted)' }}>{saved.formsNote}</p>
+            )}
             {/* Where the card stands with Review. Nothing for an unsaved
                 entry or an archived card: neither is in the schedule. */}
             {saved && !saved.archived && (

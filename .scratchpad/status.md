@@ -92,6 +92,11 @@ blank placeholder. On **Android**, only sign-in has ever been exercised.
   flipped card were all fine. **Not seen since**: the faster timing, the two
   turn directions and the restored "Show answer" button, on either platform.
   Web has only been loaded signed out, where no card is on screen.
+- **The forms note** (branch `forms-note`). Seen: the line on web's Learn
+  result, signed in, with the lookup's answer stubbed in the browser, so the
+  layout is confirmed and nothing was saved. **Not seen**: card details and the
+  revealed back on web, which need a saved Swedish or French card, and none of
+  the three surfaces on a device or in Expo Go.
 - **The per-deck language migration** runs on every existing account's first
   load. Nobody has watched it against a real multi-deck account.
 - **The Slow pronunciation speed** is a pitch-corrected stretch, not a slow
@@ -283,6 +288,7 @@ Per-language calls: Spanish, Kikuyu, Swahili, Hanja, and a native language per d
 
 Card fields, glosses, part of speech, spellcheck, saving, My Cards, export.
 
+- [A forms note on Swedish and French lookups: one sentence, or nothing (2026-10-07)](decisions/cards-and-lookup.md#a-forms-note-on-swedish-and-french-lookups-one-sentence-or-nothing-2026-10-07)
 - [A card says where it stands with Review (2026-10-05)](decisions/cards-and-lookup.md#a-card-says-where-it-stands-with-review-2026-10-05)
 - [French verbs are tagged with their group, and only their group (2026-09-23)](decisions/cards-and-lookup.md#french-verbs-are-tagged-with-their-group-and-only-their-group-2026-09-23)
 - [My Cards opens on "All", reversing #80 (2026-09-23)](decisions/cards-and-lookup.md#my-cards-opens-on-all-reversing-80-2026-09-23)

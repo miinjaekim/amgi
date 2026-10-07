@@ -200,6 +200,9 @@ export default function CardDetailModal({
                   it is the sense any generated depth is pinned to, and Dig
                   Deeper's prompt assumes the reader has already seen it. */}
               {!!senseLine && <Text style={s.hint}>{senseLine}</Text>}
+              {/* A looked-up Swedish or French card's forms note. Pack entries
+                  author none, so there is nothing to show before a save. */}
+              {!!saved?.formsNote && <Text style={s.hint}>{saved.formsNote}</Text>}
               {/* Where the card stands with Review. Nothing for an unsaved
                   entry or an archived card: neither is in the schedule. */}
               {!!saved && !saved.archived && (

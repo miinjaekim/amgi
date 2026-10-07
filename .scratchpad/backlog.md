@@ -98,6 +98,18 @@ those checks come from using the app.
   Spanish, Kikuyu, Swahili. Sources per sentence are in
   `docs/packs/writing-worked-example-draft.md`. **Not seen on a device:** the
   Arabic line, whose direction mobile leaves to React Native's default.
+- **A forms note on Swedish and French lookups** (branch `forms-note`; from
+  Google Tasks, scoped with the user 2026-10-07). A looked-up noun or
+  adjective can carry one short sentence on how its forms behave, in the
+  definition's language, as a small muted line under the definition: on the
+  Learn page's lookup result, on card details and on the revealed back in
+  review, web and mobile. `bok` → "Plural böcker, with a vowel change;
+  definite boken."; `cheval` → "Irregular plural: chevaux."; `table` →
+  nothing. It is a new field on the existing `/api/explain` call, saved on
+  the card; new lookups only, no backfill. Reasoning and what the model got
+  wrong along the way are in
+  [cards-and-lookup](decisions/cards-and-lookup.md). ⚠️ What has and has not
+  been seen is under Unverified in [status.md](status.md).
 
 ## High
 
@@ -106,24 +118,6 @@ whether `faire` joins the three sourced irregular verbs (#150), and whether a
 practice session should cover several tenses at once again, which the section
 picker narrowed (#146). Both are written up in their Decisions entries of
 2026-09-22.
-
-- [ ] **A forms note on Swedish and French lookups.** Added from Google Tasks
-      2026-10-07 ("definite indefinite, singular plural form
-      explanations/notes"). Scoped with the user the same day: **a note, not
-      chips and not a forms table** — chips would crowd the card, and an
-      explanation of how definiteness works is grammar teaching, not a fact
-      about one word.
-      - One short sentence in the definition's language, stored on the card,
-        **empty when the word behaves predictably**: `cheval` → "Irregular
-        plural: chevaux."; `bok` → "Plural böcker, with a vowel change;
-        definite boken."; `table` → nothing. Most Swedish nouns will carry one,
-        since the plural is not predictable from the word.
-      - **Nouns and adjectives**; Swedish and French first.
-      - A new field on the existing `/api/explain` call, not a second route.
-      - Shown on the Learn page's lookup result, on card details and on the
-        revealed back in review.
-      - **New lookups only** — no backfill; next to no Swedish or French cards
-        are in use.
 
 ## Medium
 
