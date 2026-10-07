@@ -80,6 +80,24 @@ practice session should cover several tenses at once again, which the section
 picker narrowed (#146). Both are written up in their Decisions entries of
 2026-09-22.
 
+- [ ] **The audio button is an emoji; make it an icon.** `[build]` Added from
+      Google Tasks 2026-10-07. Mobile only: the 🔊 is in
+      `apps/mobile/src/components/PronounceButton.tsx`, and web does not use
+      one.
+
+- [ ] **Munli: a worked example on Writing for every study language.** Added
+      from Google Tasks 2026-10-07 ("Add examples for Writing"). The user's
+      reading: what French has, for all the others. French and Traditional
+      Chinese have one; the other ten study languages do not (Korean, Swedish,
+      English, Japanese, Cantonese, Arabic, Spanish, Kikuyu, Swahili, Hanja),
+      and the panel renders nothing without one.
+      **Scoped with the user 2026-10-07:** Hanja is skipped for now, so nine.
+      A dictionary's own sentence is still preferred, as in
+      `docs/packs/writing-worked-example-draft.md`, but these are not high
+      stakes: a weaker source is fine, and where none turns up the sentence
+      may be written by the model and marked as such in the draft, for the
+      user to check. Draft and data land in one PR, with no review stop
+      between. No readings on the example, as the Chinese entry decided.
 
 ## Medium
 
@@ -116,6 +134,9 @@ picker narrowed (#146). Both are written up in their Decisions entries of
       ("Different verb tenses"). The user's reading: add tenses beyond the
       three there now (présent, imparfait, futur simple). Which tenses is not
       decided.
+
+- [ ] **Munli: make writing review faster.** Added from Google Tasks
+      2026-10-07. Where the time goes has not been measured.
 
 - [ ] **Watch the kanji deck on the "All" chip.** The kanji pack is the first
       single-glyph pack laid out as a `list`, because its back carries readings
