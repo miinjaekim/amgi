@@ -92,6 +92,44 @@ practice session should cover several tenses at once again, which the section
 picker narrowed (#146). Both are written up in their Decisions entries of
 2026-09-22.
 
+- [ ] **Type meanings too.** Added from Google Tasks 2026-10-07 ("Debug typing
+      answers"). Not a bug: the flips the user saw were word→gloss cards, which
+      `promptsForTyping` leaves flip-and-rate by design. The user's call the
+      same day is to type that direction as well, **still with no model
+      grader** — the rating row stays the override.
+      - **A hit is `easy`, applied and gone**, as it is for a typed word.
+      - **Anything else is not called wrong.** The grader cannot tell a wrong
+        gloss from a differently worded one, so this direction shows what was
+        typed beside the card's gloss with **no rating preselected** and no
+        "Not quite" — the red label, the strike-through and the ring on `again`
+        stay on gloss→word only.
+      - **Leniency, local:** either gloss when the back holds two, a leading
+        `to`/`a`/`an`/`the` ignored, and the native-language back accepted as
+        well as the English one. _Proposed, not yet confirmed by the user:_
+        that a match under these rules counts as a hit.
+      - Hanja stays untyped; one "Type your answers" toggle covers both
+        directions.
+      Reverses the direction rule in the 2026-08-24 typed-responses decision
+      (`decisions/review.md`) — record it there when it ships.
+
+- [ ] **A forms note on Swedish and French lookups.** Added from Google Tasks
+      2026-10-07 ("definite indefinite, singular plural form
+      explanations/notes"). Scoped with the user the same day: **a note, not
+      chips and not a forms table** — chips would crowd the card, and an
+      explanation of how definiteness works is grammar teaching, not a fact
+      about one word.
+      - One short sentence in the definition's language, stored on the card,
+        **empty when the word behaves predictably**: `cheval` → "Irregular
+        plural: chevaux."; `bok` → "Plural böcker, with a vowel change;
+        definite boken."; `table` → nothing. Most Swedish nouns will carry one,
+        since the plural is not predictable from the word.
+      - **Nouns and adjectives**; Swedish and French first.
+      - A new field on the existing `/api/explain` call, not a second route.
+      - Shown on card details and on the revealed back in review. _Proposed,
+        not yet confirmed:_ on the Learn page's lookup result too.
+      - **New lookups only** — no backfill; next to no Swedish or French cards
+        are in use.
+
 ## Medium
 
 - [ ] **User-made vocab packs: refine for testing** — moved to Medium
