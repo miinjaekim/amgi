@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { TouchableOpacity, ActivityIndicator, Text, StyleSheet, StyleProp, ViewStyle } from 'react-native';
+import { TouchableOpacity, ActivityIndicator, StyleSheet, StyleProp, ViewStyle } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { createAudioPlayer, setAudioModeAsync } from 'expo-audio';
 import { getSpokenText, getStudyLanguageConfig } from '@amgi/core';
 import type { PronunciationKind, StudyLanguage } from '@amgi/core';
@@ -70,7 +71,11 @@ export default function PronounceButton({ text, furigana, eum, studyLanguage, ki
     }
   };
 
-  const fontSize = size === 'sm' ? 14 : 17;
+  // An icon's box is its size exactly, where the emoji this replaced drew
+  // larger than its font size. 17 and 20 keep the button the height the 14 and
+  // 17 emoji made it, so the rows it sits in — the tightest is a 21pt example
+  // line — are no taller than before.
+  const iconSize = size === 'sm' ? 17 : 20;
   const color = status === 'error' ? C.error : C.muted;
 
   return (
@@ -83,7 +88,7 @@ export default function PronounceButton({ text, furigana, eum, studyLanguage, ki
     >
       {status === 'loading'
         ? <ActivityIndicator size="small" color={C.muted} />
-        : <Text style={{ fontSize, color }}>🔊</Text>}
+        : <Ionicons name="volume-medium-outline" size={iconSize} color={color} />}
     </TouchableOpacity>
   );
 }
