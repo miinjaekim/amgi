@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   parseWritingReview, buildWritingCardDraft, offersCard, writingExample,
-  FINDING_KINDS, WRITING_MAX_CHARS,
+  FINDING_KINDS, WRITING_MAX_CHARS, SUPPORTED_STUDY_LANGUAGES, nativeOptionsFor,
 } from '@amgi/core';
 import type { FindingKind, WritingFinding } from '@amgi/core';
 
@@ -168,19 +168,19 @@ describe('offersCard', () => {
 /**
  * ⚠️ **The example's sentences are sourced content**, cited in
  * `docs/packs/writing-worked-example-draft.md`. These assertions are about the
- * shape the panel renders, not about the French.
+ * shape the panel renders, not about the sentences.
  */
 describe('writingExample', () => {
-  it('has one for French and none for a language without a sourced sentence', () => {
-    expect(writingExample('French')).toBeDefined();
-    expect(writingExample('TraditionalChinese')).toBeDefined();
-    expect(writingExample('Japanese')).toBeUndefined();
-    expect(writingExample('Kikuyu')).toBeUndefined();
+  const languages = SUPPORTED_STUDY_LANGUAGES.map(l => l.code);
+  const withExample = languages.filter(l => l !== 'Hanja');
+
+  it('has one for every study language except Hanja', () => {
+    for (const language of withExample) expect(writingExample(language), language).toBeDefined();
+    expect(writingExample('Hanja')).toBeUndefined();
   });
 
-  it('marks where the missing word goes, once', () => {
-    const example = writingExample('French')!;
-    expect(example.written.split('{gap}')).toHaveLength(2);
+  it.each(withExample)('%s: marks where the missing word goes, once', (language) => {
+    expect(writingExample(language)!.written.split('{gap}')).toHaveLength(2);
   });
 
   /** The point of the example: the learner's half is missing the word. */
@@ -192,14 +192,29 @@ describe('writingExample', () => {
 
   it('leaves the Chinese study word out of what the learner wrote and in what comes back', () => {
     const example = writingExample('TraditionalChinese')!;
-    expect(example.written.split('{gap}')).toHaveLength(2);
     expect(example.written).not.toContain('腳踏車');
     expect(example.rewrite).toContain(example.study);
   });
 
-  it('gives the gap word in both native languages', () => {
-    const example = writingExample('French')!;
-    expect(example.gap.English).toBeTruthy();
-    expect(example.gap.Korean).toBeTruthy();
+  /** Nothing but the missing word differs, bar the spaces a learner sets it off with. */
+  it.each(withExample)('%s: what comes back is what was written with the gap filled', (language) => {
+    const example = writingExample(language)!;
+    const [before, after] = example.written.split('{gap}').map(part => part.trim());
+    expect(example.rewrite.startsWith(before)).toBe(true);
+    expect(example.rewrite.endsWith(after)).toBe(true);
+    expect(example.rewrite.length).toBeGreaterThan(before.length + after.length);
+  });
+
+  /**
+   * A deck is never explained in its own study language (`nativeOptionsFor`),
+   * so that one gap word is absent and every reachable one is present.
+   */
+  it.each(withExample)('%s: gives the gap word in every native language its deck can have', (language) => {
+    const example = writingExample(language)!;
+    for (const native of ['English', 'Korean'] as const) {
+      const reachable = nativeOptionsFor(language).some(option => option.code === native);
+      if (reachable) expect(example.gap[native], native).toBeTruthy();
+      else expect(example.gap[native], native).toBeUndefined();
+    }
   });
 });

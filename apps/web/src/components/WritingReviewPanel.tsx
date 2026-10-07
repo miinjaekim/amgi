@@ -79,12 +79,13 @@ export default function WritingReviewPanel() {
   const languageLabel = t(interfaceLanguage, langConfig.studyLabelKey);
   const overLimit = text.length > WRITING_MAX_CHARS;
   /**
-   * The worked example, if this study language has a sourced one.
+   * The worked example, if this study language has one.
    *
-   * ⚠️ **Most languages have none, and that is the right default.** A learner
-   * of Japanese seeing a French example would be worse than the empty space it
-   * fills, and one invented for Japanese would be worse still — the sentences
-   * are sourced content (`docs/packs/writing-worked-example-draft.md`).
+   * ⚠️ **A language without an entry shows nothing, and so does a gap word
+   * that is absent.** Another language's example would be worse than the empty
+   * space it fills, and the sentences are sourced content
+   * (`docs/packs/writing-worked-example-draft.md`), not something to invent
+   * here.
    */
   const example = writingExample(studyLanguage);
   const gapWord = example?.gap[deckNativeLanguage === 'Korean' ? 'Korean' : 'English'];
@@ -213,7 +214,9 @@ export default function WritingReviewPanel() {
           <p className="text-xs mb-1" style={{ color: 'var(--color-muted)' }}>
             {t(interfaceLanguage, 'writingExampleWrote')}
           </p>
-          <p className="text-base mb-4" style={{ color: 'var(--color-text)' }}>
+          {/* `dir="auto"` for Arabic: the sentence runs right to left and the
+              word dropped into it does not. */}
+          <p dir="auto" className="text-base mb-4" style={{ color: 'var(--color-text)' }}>
             {example.written.split('{gap}')[0]}
             <span style={{ color: 'var(--color-highlight)', fontWeight: 700 }}>{gapWord}</span>
             {example.written.split('{gap}')[1]}
@@ -222,7 +225,7 @@ export default function WritingReviewPanel() {
           <p className="text-xs mb-1" style={{ color: 'var(--color-muted)' }}>
             {t(interfaceLanguage, 'writingExampleGot')}
           </p>
-          <p className="text-base" style={{ color: 'var(--color-text)' }}>{example.rewrite}</p>
+          <p dir="auto" className="text-base" style={{ color: 'var(--color-text)' }}>{example.rewrite}</p>
 
           {/* The card the finding would offer — the same shape as a real one,
               so what the tab is *for* is legible before anything is submitted. */}

@@ -77,6 +77,13 @@ What has never been looked at on a device is listed under Unverified in
 [status.md](status.md). It is not tracked here, by the 2026-09-04 decision that
 those checks come from using the app.
 
+- **A worked example on Munli's Writing tab for every study language but
+  Hanja** (branch `munli-writing-examples-all-languages`). Nine added to the
+  two there were: Korean, Swedish, English, Japanese, Cantonese, Arabic,
+  Spanish, Kikuyu, Swahili. Sources per sentence are in
+  `docs/packs/writing-worked-example-draft.md`. **Not seen on a device:** the
+  Arabic line, whose direction mobile leaves to React Native's default.
+
 ## High
 
 ⚠️ **Two questions for the user are open**, neither of them a work item:
@@ -84,20 +91,6 @@ whether `faire` joins the three sourced irregular verbs (#150), and whether a
 practice session should cover several tenses at once again, which the section
 picker narrowed (#146). Both are written up in their Decisions entries of
 2026-09-22.
-
-- [ ] **Munli: a worked example on Writing for every study language.** Added
-      from Google Tasks 2026-10-07 ("Add examples for Writing"). The user's
-      reading: what French has, for all the others. French and Traditional
-      Chinese have one; the other ten study languages do not (Korean, Swedish,
-      English, Japanese, Cantonese, Arabic, Spanish, Kikuyu, Swahili, Hanja),
-      and the panel renders nothing without one.
-      **Scoped with the user 2026-10-07:** Hanja is skipped for now, so nine.
-      A dictionary's own sentence is still preferred, as in
-      `docs/packs/writing-worked-example-draft.md`, but these are not high
-      stakes: a weaker source is fine, and where none turns up the sentence
-      may be written by the model and marked as such in the draft, for the
-      user to check. Draft and data land in one PR, with no review stop
-      between. No readings on the example, as the Chinese entry decided.
 
 ## Medium
 

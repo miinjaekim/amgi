@@ -334,6 +334,13 @@ of Japanese is worse than the space it fills, and an invented Japanese one is
 worse still. **This is the shape to copy for any future "just add a nice
 example" request.**
 
+_Superseded in part 2026-10-07:_ the user asked for an example in every study
+language but Hanja and relaxed the sourcing for it ("i don't think these
+examples are high stakes at all"): a dictionary's sentence first, a weaker
+source next, a written one last and marked. Nine were added, none written; the
+draft file says which source each has. The panel still renders nothing for a
+language without an entry.
+
 ## The irregular verbs are sourced, and three is the whole list (2026-09-22)
 
 **The job `FRENCH_IRREGULARS = []` was waiting for**, and it was never a code
