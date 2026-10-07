@@ -13,13 +13,14 @@ import {
 } from '@/services/gemini';
 import Markdown from '@/components/Markdown';
 import { saveFlashcardToFirestore, Flashcard } from '@/services/firestore';
-import { buildLookupCardDraft, lookupCardFaces, getTermBackSide, getCharacterBreakdown, getExampleSides, getReading, getStudyLanguageConfig, parseStreamedExamples, parseStreamedDepth, pronunciationNote, pronunciationNoteCredit, wordOfTheDayCore } from '@amgi/core';
+import { buildLookupCardDraft, formsTable, lookupCardFaces, getTermBackSide, getCharacterBreakdown, getExampleSides, getReading, getStudyLanguageConfig, parseStreamedExamples, parseStreamedDepth, pronunciationNote, pronunciationNoteCredit, wordOfTheDayCore } from '@amgi/core';
 import type { WordOfTheDay } from '@amgi/core';
 import { useUser } from '@/components/UserContext';
 import AddToMunliButton from '@/components/AddToMunliButton';
 import { t, partOfSpeechLabel } from '@/lib/i18n';
 import SaveFlashcardModal from '@/components/SaveFlashcardModal';
 import PronounceButton from '@/components/PronounceButton';
+import FormsTable from '@/components/FormsTable';
 import Spinner from '@/components/Spinner';
 import React from 'react';
 
@@ -623,6 +624,18 @@ export default function Home() {
               <p className="mt-2 text-sm" style={{ color: 'var(--color-muted)' }}>
                 {core.briefDefinition}
               </p>
+            )}
+            {/* How this word's forms behave, where that is worth saying. A
+                step smaller than the definition so the two read as two
+                facts rather than one paragraph. */}
+            {core.formsNote && (
+              <p className="mt-1 text-xs" style={{ color: 'var(--color-muted)' }}>
+                {core.formsNote}
+              </p>
+            )}
+            {/* Swedish shows the forms themselves, as a table. */}
+            {formsTable(deckNativeLanguage, core) && (
+              <FormsTable table={formsTable(deckNativeLanguage, core)!} className="mt-4" />
             )}
           </div>
 

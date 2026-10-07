@@ -5,8 +5,10 @@ import {
   conjugationSpec,
   getBackSideConfig,
   getStudyLanguageConfig,
+  normalizeFormsNote,
   normalizePartOfSpeech,
   normalizeVerbGroup,
+  normalizeWordForms,
   parseConjugationForms,
   parseModelJson,
   stripArabicMarks,
@@ -14,6 +16,7 @@ import {
 import { lookupPitchAccent } from '@/lib/pitchAccentLookup';
 import { lookupJyutping, normalizeJyutping } from '@/lib/jyutpingLookup';
 import { glossRuleBullet } from '@/lib/glossRule';
+import { formsRule as buildFormsRule } from '@/lib/formsRule';
 import { vowelArabic } from '@/lib/arabicVowelling';
 
 function detectKorean(term: string): boolean {
@@ -129,6 +132,10 @@ When you do set it, every other field â€” the meanings too, if it is ambiguous â
     ? `\n  "conjugation": { ${frenchSpec.tenses.map(tense => `"${tense.id}": [${frenchSpec.persons.length} forms: ${personOrder}]`).join(', ')} } | null,`
     : '';
 
+  // Swedish and French only, and empty on every other language: see
+  // `formsRule`. About the study-language word, as `posRule` is.
+  const { rule: formsRule, json: formsJson } = buildFormsRule(studyLanguage, nativeLanguage);
+
   let prompt: string;
 
   if (studyLanguage === 'Swedish') {
@@ -142,7 +149,7 @@ IMPORTANT:
 - "swedish" must always be the Swedish word or phrase written in Swedish
 - "english" must always be the English word or phrase written in English${nativeBackRule}
 ${glossRuleBullet(true)}
-- "gender": if the Swedish term is a noun, set to "en" or "ett". Otherwise set to null.${posRule}
+- "gender": if the Swedish term is a noun, set to "en" or "ett". Otherwise set to null.${posRule}${formsRule}
 - "briefDefinition": a single clear sentence defining the term in ${nativeLanguage}.
 
 Respond with only this JSON:
@@ -151,7 +158,7 @@ Respond with only this JSON:
   "termLanguage": "Swedish or English",
   "swedish": "Swedish word/phrase",
   "english": "English word/phrase",${nativeBackJson}
-  "gender": "en" | "ett" | null,${posJson}
+  "gender": "en" | "ett" | null,${posJson}${formsJson}
   "briefDefinition": "one-sentence definition"
 }`;
     } else {
@@ -186,7 +193,7 @@ If NOT ambiguous, respond with only this JSON:
   "termLanguage": "Swedish or English",
   "swedish": "Swedish word/phrase",
   "english": "English word/phrase",${nativeBackJson}
-  "gender": "en" | "ett" | null,${posJson}
+  "gender": "en" | "ett" | null,${posJson}${formsJson}
   "briefDefinition": "one-sentence definition in ${nativeLanguage}"
 }
 
@@ -194,7 +201,7 @@ IMPORTANT for the non-ambiguous case:
 - "swedish" must always be written in Swedish
 - "english" must always be written in English${nativeBackRule}
 ${glossRuleBullet(false)}
-- "gender": if the Swedish term is a noun, set to "en" or "ett". Otherwise set to null.${posRule}
+- "gender": if the Swedish term is a noun, set to "en" or "ett". Otherwise set to null.${posRule}${formsRule}
 - "briefDefinition" must be a single sentence defining the core meaning. No examples, no cultural context.`;
     }
   } else if (studyLanguage === 'French') {
@@ -208,7 +215,7 @@ IMPORTANT:
 - "french" must always be the French word or phrase written in French
 - "english" must always be the English word or phrase written in English${nativeBackRule}
 ${glossRuleBullet(true)}
-- "gender": if the French term is a noun, set to "le" or "la". Otherwise set to null.${posRule}${verbGroupRule}${conjugationRule}
+- "gender": if the French term is a noun, set to "le" or "la". Otherwise set to null.${posRule}${formsRule}${verbGroupRule}${conjugationRule}
 - "briefDefinition": a single clear sentence defining the term in ${nativeLanguage}.
 
 Respond with only this JSON:
@@ -217,7 +224,7 @@ Respond with only this JSON:
   "termLanguage": "French or English",
   "french": "French word/phrase",
   "english": "English word/phrase",${nativeBackJson}
-  "gender": "le" | "la" | null,${posJson}${verbGroupJson}${conjugationJson}
+  "gender": "le" | "la" | null,${posJson}${formsJson}${verbGroupJson}${conjugationJson}
   "briefDefinition": "one-sentence definition"
 }`;
     } else {
@@ -252,7 +259,7 @@ If NOT ambiguous, respond with only this JSON:
   "termLanguage": "French or English",
   "french": "French word/phrase",
   "english": "English word/phrase",${nativeBackJson}
-  "gender": "le" | "la" | null,${posJson}${verbGroupJson}${conjugationJson}
+  "gender": "le" | "la" | null,${posJson}${formsJson}${verbGroupJson}${conjugationJson}
   "briefDefinition": "one-sentence definition in ${nativeLanguage}"
 }
 
@@ -260,7 +267,7 @@ IMPORTANT for the non-ambiguous case:
 - "french" must always be written in French
 - "english" must always be written in English${nativeBackRule}
 ${glossRuleBullet(false)}
-- "gender": if the French term is a noun, set to "le" or "la". Otherwise set to null.${posRule}${verbGroupRule}${conjugationRule}
+- "gender": if the French term is a noun, set to "le" or "la". Otherwise set to null.${posRule}${formsRule}${verbGroupRule}${conjugationRule}
 - "briefDefinition" must be a single sentence defining the core meaning. No examples, no cultural context.`;
     }
   } else if (studyLanguage === 'Spanish') {
@@ -1046,6 +1053,20 @@ ${glossRuleBullet(false)}
       : undefined;
     if (forms) record.conjugation = forms;
     else delete record.conjugation;
+
+    // The French note is free text, so it is narrowed by what surrounds it:
+    // asked for on this language, on a noun or an adjective, and one sentence
+    // long. See `normalizeFormsNote`.
+    const note = studyLanguage === 'French' ? normalizeFormsNote(record.formsNote, record.partOfSpeech) : undefined;
+    if (note) record.formsNote = note;
+    else delete record.formsNote;
+
+    // The Swedish table, rebuilt field by field rather than passed through,
+    // and dropped for an adjective whose forms say nothing stor would not:
+    // see `normalizeWordForms`.
+    const wordForms = studyLanguage === 'Swedish' ? normalizeWordForms(record.forms, record.partOfSpeech) : undefined;
+    if (wordForms) record.forms = wordForms;
+    else delete record.forms;
   }
 
   // Japanese pitch accent is the one reading field on any language that this

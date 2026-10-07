@@ -317,6 +317,13 @@ const translations = {
     verbAddFailed: 'Could not look that up. Try again.',
     verbUnverified: 'Added by you. The forms come from AI and are not checked by Amgi.',
     verbUnverifiedTag: UNVERIFIED_TAG.English,
+    // The forms table on a Swedish lookup: its two columns and two rows. An
+    // adjective's row has no row label, and its en and ett columns are the
+    // Swedish words themselves.
+    formsSingular: 'Singular',
+    formsPlural: 'Plural',
+    formsIndefinite: 'Indefinite',
+    formsDefinite: 'Definite',
     verbAddToMunli: 'Add to Munli',
     verbOpenInMunli: 'Open in Munli',
     verbOpen: 'Open',
@@ -1326,6 +1333,10 @@ const translations = {
     verbAddFailed: '찾지 못했어요. 다시 시도해 주세요.',
     verbUnverified: '내가 추가한 동사예요. 활용형은 AI가 만든 것이고, Amgi가 검토하지는 않았어요.',
     verbUnverifiedTag: UNVERIFIED_TAG.Korean,
+    formsSingular: '단수',
+    formsPlural: '복수',
+    formsIndefinite: '비한정형',
+    formsDefinite: '한정형',
     verbAddToMunli: '문리에 추가',
     verbOpenInMunli: '문리에서 열기',
     verbOpen: '열기',
@@ -1715,6 +1726,62 @@ export function partOfSpeechLabel(
   }
   const key = `pos${pos.charAt(0).toUpperCase()}${pos.slice(1)}` as TranslationKey;
   return key in translations.English ? t(nativeLanguage, key) : undefined;
+}
+
+/** A card's forms laid out for display: what both apps draw, cell for cell. */
+export interface FormsTable {
+  columns: string[];
+  /** `label` is absent on an adjective's single row. */
+  rows: { label?: string; cells: string[] }[];
+}
+
+/**
+ * The forms table for a card, or undefined when it has none.
+ *
+ * One function for the reason `lookupCardFaces` is one: web and mobile draw
+ * the same grid, and the same fact laid out twice is how they drift.
+ *
+ * - **A noun** is indefinite and definite down, singular and plural across.
+ *   The indefinite singular carries its article ("en bok"), put together here
+ *   from `gender` so the article is stored once. A noun with no plural loses
+ *   the column rather than showing two empty cells.
+ * - **An adjective** is one row: the form for en-words, the form for
+ *   ett-words, and the plural. `en` and `ett` head their columns untranslated
+ *   because they are the Swedish words the forms go with.
+ *
+ * **No "not checked" tag**, though the forms are the model's (the user,
+ * 2026-10-08): four common forms of one word are a small enough thing to
+ * trust it with, as the definition above them is.
+ */
+export function formsTable(
+  nativeLanguage: string | null | undefined,
+  card: Pick<TermCore, 'forms' | 'gender'>
+): FormsTable | undefined {
+  const forms = card.forms;
+  if (!forms) return undefined;
+
+  if (forms.kind === 'adjective') {
+    return {
+      columns: ['en', 'ett', t(nativeLanguage, 'formsPlural')],
+      rows: [{ cells: [forms.common, forms.neuter, forms.plural] }],
+    };
+  }
+
+  const article = card.gender === 'en' || card.gender === 'ett' ? `${card.gender} ` : '';
+  const hasPlural = !!(forms.indefinitePlural || forms.definitePlural);
+  return {
+    columns: [t(nativeLanguage, 'formsSingular'), ...(hasPlural ? [t(nativeLanguage, 'formsPlural')] : [])],
+    rows: [
+      {
+        label: t(nativeLanguage, 'formsIndefinite'),
+        cells: [`${article}${forms.indefiniteSingular}`, ...(hasPlural ? [forms.indefinitePlural ?? ''] : [])],
+      },
+      {
+        label: t(nativeLanguage, 'formsDefinite'),
+        cells: [forms.definiteSingular, ...(hasPlural ? [forms.definitePlural ?? ''] : [])],
+      },
+    ],
+  };
 }
 
 /**

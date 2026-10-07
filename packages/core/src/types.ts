@@ -622,6 +622,115 @@ export function normalizePartOfSpeech(value: unknown): PartOfSpeech | undefined 
     : undefined;
 }
 
+/** Room for one sentence; the prompt's own examples run to about 55. */
+export const FORMS_NOTE_MAX_LENGTH = 160;
+
+/**
+ * A model's forms note as the sentence a card stores, or undefined when there
+ * is nothing to store.
+ *
+ * The note is free text, so there is no list to check it against; what is
+ * checked is everything around it. It belongs to a noun or an adjective and to
+ * no other part of speech, which is the scope it was asked for and keeps a
+ * stray answer on a verb off the card. A model told to answer null sometimes
+ * answers with the word instead, and "None." under a definition is worse than
+ * nothing there. And it is one sentence: an answer that ran on into a
+ * paragraph is the grammar lesson the note is not, so it is dropped rather
+ * than cut off mid-clause.
+ */
+export function normalizeFormsNote(value: unknown, partOfSpeech: unknown): string | undefined {
+  if (partOfSpeech !== 'noun' && partOfSpeech !== 'adjective') return undefined;
+  if (typeof value !== 'string') return undefined;
+  const note = value.replace(/\s+/g, ' ').trim();
+  if (!note || note.length > FORMS_NOTE_MAX_LENGTH) return undefined;
+  if (/^(null|none|n\/a|없음|해당 없음|-+)[.。]?$/i.test(note)) return undefined;
+  return note;
+}
+
+/**
+ * The forms of a Swedish noun or adjective, as the table a lookup shows.
+ *
+ * Fields rather than a sentence so nothing has to be parsed back out of prose,
+ * and bare forms rather than display text: the article in "en bok" is the
+ * card's `gender`, and `formsTable()` puts the two together where they are
+ * shown. A noun with no plural in use has no plural fields at all.
+ */
+export interface NounForms {
+  kind: 'noun';
+  indefiniteSingular: string;
+  definiteSingular: string;
+  indefinitePlural?: string;
+  definitePlural?: string;
+}
+
+/** `common` goes with en-words, `neuter` with ett-words, `plural` with plurals and definites. */
+export interface AdjectiveForms {
+  kind: 'adjective';
+  common: string;
+  neuter: string;
+  plural: string;
+}
+
+export type WordForms = NounForms | AdjectiveForms;
+
+/** One form: a word or two, never a sentence. */
+function formCell(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  const form = value.replace(/\s+/g, ' ').trim();
+  if (!form || form.length > 40) return undefined;
+  if (/^(null|none|n\/a|[-–—]+)$/i.test(form)) return undefined;
+  return form;
+}
+
+/**
+ * A model's forms answer as the table a card stores, or undefined when there
+ * is none worth storing.
+ *
+ * Rebuilt field by field, so a key the prompt did not ask for never reaches
+ * Firestore, and matched to the part of speech, so a noun's table on an
+ * adjective is dropped rather than drawn with holes in it.
+ *
+ * **A noun needs both singular forms**; a plural the model left null stays
+ * absent rather than invented, which is mjölk. An article the model wrote in
+ * anyway is taken off, since `gender` already carries it.
+ *
+ * **An adjective is kept only when its forms are not what stor's would be.**
+ * Word plus -t and word plus -a is the pattern a learner applies unprompted,
+ * so a table of it teaches nothing; anything else (rött, gamla, små, bra) is
+ * the table's reason for being there. Judged here, on the three strings,
+ * because the model asked to judge it called gammal regular.
+ */
+export function normalizeWordForms(value: unknown, partOfSpeech: unknown): WordForms | undefined {
+  if (!value || typeof value !== 'object') return undefined;
+  const raw = value as Record<string, unknown>;
+
+  if (partOfSpeech === 'noun') {
+    const indefiniteSingular = formCell(raw.indefiniteSingular)?.replace(/^(en|ett)\s+/i, '');
+    const definiteSingular = formCell(raw.definiteSingular);
+    if (!indefiniteSingular || !definiteSingular) return undefined;
+    const indefinitePlural = formCell(raw.indefinitePlural);
+    const definitePlural = formCell(raw.definitePlural);
+    return {
+      kind: 'noun',
+      indefiniteSingular,
+      definiteSingular,
+      ...(indefinitePlural ? { indefinitePlural } : {}),
+      ...(definitePlural ? { definitePlural } : {}),
+    };
+  }
+
+  if (partOfSpeech === 'adjective') {
+    const common = formCell(raw.common);
+    const neuter = formCell(raw.neuter);
+    const plural = formCell(raw.plural);
+    if (!common || !neuter || !plural) return undefined;
+    if (neuter === `${common}t` && plural === `${common}a`) return undefined;
+    return { kind: 'adjective', common, neuter, plural };
+  }
+
+  return undefined;
+}
+
 export interface TermCore {
   term: string;
   termLanguage: StudyLanguage;
@@ -659,6 +768,33 @@ export interface TermCore {
   verbGroup?: VerbGroup;
   formality?: string;
   gender?: string; // grammatical gender: Swedish 'en'/'ett', French 'le'/'la'
+  /**
+   * One sentence on how this word's forms behave, where they are not what the
+   * word itself would lead a learner to expect: "Irregular plural: chevaux."
+   * on cheval, nothing at all on table.
+   *
+   * **A fact about one word, never a rule of the language.** How French forms
+   * its plurals is grammar teaching and belongs to no card; that cheval
+   * becomes chevaux belongs to cheval. Written in the language `briefDefinition`
+   * is, by the same `/api/explain` call, and trusted the way that is — no
+   * "unverified" label (the user's decision of 2026-10-07).
+   *
+   * French nouns and adjectives only, and only through `normalizeFormsNote`;
+   * Swedish shows a table instead, which is `forms` below. Absent on every
+   * card saved before it existed, with no backfill, and on pack and
+   * word-of-the-day cards, which ask for none.
+   */
+  formsNote?: string;
+  /**
+   * A Swedish noun's or adjective's forms, shown as a small table on the
+   * lookup result and on card details — and not on the review card, which
+   * the user wanted kept uncrowded (2026-10-08).
+   *
+   * Swedish only, and only through `normalizeWordForms`. The model's, and
+   * shown without a "not checked" tag (the user, 2026-10-08). Absent on every
+   * card saved before it existed, with no backfill.
+   */
+  forms?: WordForms;
   furigana?: string; // Japanese kana reading, present when the term contains kanji
   pinyin?: string; // Traditional Chinese reading, tone-marked
   /**

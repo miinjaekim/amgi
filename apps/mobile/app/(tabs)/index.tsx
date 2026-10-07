@@ -16,7 +16,7 @@ import {
 } from '../../src/services/gemini';
 import {
   getCharacterBreakdown, getDepthTarget, getReading, getStudyLanguageConfig,
-  buildLookupCardDraft, lookupCardFaces, getTermBackSide, getExampleSides,
+  buildLookupCardDraft, formsTable, lookupCardFaces, getTermBackSide, getExampleSides,
   parseStreamedDepth, parseStreamedExamples, pronunciationNote,
   pronunciationNoteCredit, wordOfTheDayCore,
 } from '@amgi/core';
@@ -27,6 +27,7 @@ import { saveFlashcardToFirestore } from '../../src/services/firestore';
 import type { Flashcard } from '../../src/services/firestore';
 import SaveFlashcardModal from '../../src/components/SaveFlashcardModal';
 import PronounceButton from '../../src/components/PronounceButton';
+import FormsTable from '../../src/components/FormsTable';
 import PageHeader from '../../src/components/PageHeader';
 import StreakBadge, { streakRowStyle } from '../../src/components/StreakBadge';
 import Markdown from '../../src/components/Markdown';
@@ -704,6 +705,12 @@ export default function LearnScreen() {
               {/* Web has shown this since the brief definition was added;
                   Dig Deeper's prompt assumes it has already been read. */}
               {!!core.briefDefinition && <Text style={s.briefDefinition}>{core.briefDefinition}</Text>}
+              {/* How this word's forms behave, where that is worth saying. */}
+              {!!core.formsNote && <Text style={s.formsNote}>{core.formsNote}</Text>}
+              {/* Swedish shows the forms themselves, as a table. */}
+              {!!formsTable(deckNativeLanguage, core) && (
+                <FormsTable table={formsTable(deckNativeLanguage, core)!} style={s.formsTable} />
+              )}
 
               {/* A verb can go to Munli whether or not it is saved as a card.
                   Shown for the verbs the lookup gave a conjugation group, which
@@ -900,6 +907,8 @@ function makeStyles(C: Palette, tabBarHeight: number) {
   // Quieter than the 훈음 above it: a second fact about the character.
   hanjaGloss: { fontSize: 16, color: C.muted, marginTop: 2 },
   briefDefinition: { fontSize: 14, color: C.muted, marginTop: 8, lineHeight: 20 },
+  formsNote: { fontSize: 12, color: C.muted, marginTop: 4, lineHeight: 17 },
+  formsTable: { marginTop: 14 },
   bodyText: { fontSize: 15, color: C.text, lineHeight: 22, opacity: 0.85 },
   exampleStudyRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   exampleStudyText: { flexShrink: 1 },

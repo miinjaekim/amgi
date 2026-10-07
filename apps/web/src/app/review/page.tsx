@@ -774,6 +774,12 @@ export default function ReviewPage() {
                 <p className="text-sm mb-3 text-[var(--color-muted)]">{card.briefDefinition}</p>
               )}
 
+              {/* On the back for the same reason: it spells the word's
+                  other forms out, so on a prompt it would answer the card. */}
+              {card.formsNote && (
+                <p className="text-xs mb-3 text-[var(--color-muted)]">{card.formsNote}</p>
+              )}
+
               {(partOfSpeech || card.gender || reading) && (
                 <div className="mb-3 flex gap-2 flex-wrap">
                   {partOfSpeech && <span className={chipClass}>{partOfSpeech}</span>}
@@ -1233,6 +1239,10 @@ export default function ReviewPage() {
 
                           {currentReview.card.briefDefinition && (
                             <p className="text-sm mb-3 text-[var(--color-muted)]">{currentReview.card.briefDefinition}</p>
+                          )}
+
+                          {currentReview.card.formsNote && (
+                            <p className="text-xs mb-3 text-[var(--color-muted)]">{currentReview.card.formsNote}</p>
                           )}
 
                           {/* The two strings side by side. This is what makes

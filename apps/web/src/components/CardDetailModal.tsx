@@ -23,10 +23,12 @@ import {
 } from '@amgi/core';
 import { useCardEnrichment } from '@/hooks/useCardEnrichment';
 import AddToMunliButton from '@/components/AddToMunliButton';
+import { formsTable } from '@amgi/core';
 import type { PackEntry, StudyLanguage } from '@amgi/core';
 import Markdown from '@/components/Markdown';
 import { t, partOfSpeechLabel } from '@/lib/i18n';
 import PronounceButton from '@/components/PronounceButton';
+import FormsTable from '@/components/FormsTable';
 import { useUser } from '@/components/UserContext';
 
 function isExamplePairArray(arr: unknown[]): arr is ExamplePair[] {
@@ -230,6 +232,15 @@ export default function CardDetailModal({
                 Deeper's prompt assumes the reader has already seen it. */}
             {senseLine && (
               <p className="text-xs mt-1" style={{ color: 'var(--color-muted)' }}>{senseLine}</p>
+            )}
+            {/* A looked-up card's forms: a sentence on a French card, a table
+                on a Swedish one. Pack entries author neither, so there is
+                nothing to show before a save. */}
+            {saved?.formsNote && (
+              <p className="text-xs mt-1" style={{ color: 'var(--color-muted)' }}>{saved.formsNote}</p>
+            )}
+            {saved && formsTable(deckNativeLanguage, saved) && (
+              <FormsTable table={formsTable(deckNativeLanguage, saved)!} className="mt-3" />
             )}
             {/* Where the card stands with Review. Nothing for an unsaved
                 entry or an archived card: neither is in the schedule. */}
