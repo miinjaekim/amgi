@@ -86,6 +86,10 @@ blank placeholder. On **Android**, only sign-in has ever been exercised.
   on Munli's Saved tab (PR #186) and Munli's cleared themes (PR #188, seen on
   web in all three) have not been seen on a device. Adding a French verb, and
   *Add to Munli* from Amgi (PR #182), were not confirmed on mobile.
+- **The new rating intervals** (branch `rating-intervals`): unit-tested and
+  both apps typecheck, but no card has been rated under them in a browser or
+  on a phone, and an exact typed answer going out as Good has not been
+  watched on either.
 - **The review card flip** (branch `review-card-flip`). The user tried the
   first version on a phone (2026-10-06) and asked for a faster turn; scrolling a
   long back, the card holding its size, and the options menu and edit form on a
@@ -305,6 +309,7 @@ Card fields, glosses, part of speech, spellcheck, saving, My Cards, export.
 
 The review session: typed answers, undo, readings, decks and drill.
 
+- [Hard, Good and Easy give different waits, and an exact typed answer is Good (2026-10-09)](decisions/review.md#hard-good-and-easy-give-different-waits-and-an-exact-typed-answer-is-good-2026-10-09)
 - [Meanings are typed too, and a typed meaning has a near match (2026-10-07)](decisions/review.md#meanings-are-typed-too-and-a-typed-meaning-has-a-near-match-2026-10-07)
 - [The brief definition shows after the reveal, never on the prompt (2026-10-04)](decisions/review.md#the-brief-definition-shows-after-the-reveal-never-on-the-prompt-2026-10-04)
 - [Readings reach mobile review, and no setting comes with them (2026-09-08)](decisions/review.md#readings-reach-mobile-review-and-no-setting-comes-with-them-2026-09-08)

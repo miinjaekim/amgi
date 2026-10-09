@@ -320,7 +320,7 @@ export default function ReviewPage() {
    * to ask.
    *
    * The asymmetry is the point. Producing the answer from memory, exactly, is
-   * not a judgement the learner can improve on, so `easy` is applied rather
+   * not a judgement the learner can improve on, so `good` is applied rather
    * than offered. A miss is the opposite — the grader may not know the answer
    * was also right — so it reveals both strings and keeps the full rating row,
    * which is where the override lives. A near match, which only a typed

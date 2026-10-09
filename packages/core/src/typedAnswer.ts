@@ -169,26 +169,25 @@ export interface TypedAnswerGrade {
   /**
    * The rating this answer earns.
    *
-   * **An exact hit is `easy`, and it is applied rather than offered** — _the
-   * user's call, 2026-08-25._ The reasoning is asymmetry: producing the word from
-   * memory, spelled correctly, is not a judgement the learner can improve on,
-   * so asking them to rate it is asking a question with one honest answer.
-   * A miss is the opposite — the grader may simply not know the spelling was
-   * also right — so that one keeps the full rating row, which is where the
-   * override lives.
+   * **An exact hit is `good`, and it is applied rather than offered.** Applied
+   * is _the user's call, 2026-08-25_: producing the word from memory, spelled
+   * correctly, is not a judgement the learner can improve on, so asking them
+   * to rate it is asking a question with one honest answer. A miss is the
+   * opposite — the grader may simply not know the spelling was also right — so
+   * that one keeps the full rating row, which is where the override lives.
    *
-   * This reverses an earlier call that capped a hit at `good`, on the ground
-   * that emitting `easy` every time ratchets ease across the deck. That effect
-   * is real and unbounded — `getNextReviewData` has no ceiling on `ease` — and
-   * was accepted deliberately: a word typed correctly on sight is a word whose
-   * interval should be growing quickly.
+   * `good` rather than `easy` is _the user's call, 2026-10-09_, reversing the
+   * 08-25 one. Easy now schedules further than Good on the spot
+   * (`getNextReviewData`), so a word typed right five times running would be
+   * gone for 671 days without the learner ever having chosen that. Easy is
+   * something only the learner picks.
    *
    * **A near match is `good`, and it is offered rather than applied** — _the
    * user's call, 2026-10-07._ The grader bent a rule to accept it, so the
    * learner is the one who says whether "mood" for "atmosphere, mood" was
    * knowing the word.
    */
-  suggested: 'again' | 'good' | 'easy';
+  suggested: 'again' | 'good';
   /** What the card expected, to show beside what was typed. */
   expected: string;
 }
@@ -225,7 +224,7 @@ export function gradeTypedAnswer(
   const grade = (outcome: TypedAnswerGrade['outcome'], expected: string): TypedAnswerGrade => ({
     outcome,
     correct: outcome !== 'miss',
-    suggested: outcome === 'exact' ? 'easy' : outcome === 'near' ? 'good' : 'again',
+    suggested: outcome === 'miss' ? 'again' : 'good',
     expected,
   });
 

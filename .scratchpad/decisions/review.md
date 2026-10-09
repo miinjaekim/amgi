@@ -3,6 +3,77 @@
 The review session: typed answers, undo, readings, decks and drill. Newest first. Indexed from
 [status.md](../status.md).
 
+## Hard, Good and Easy give different waits, and an exact typed answer is Good (2026-10-09)
+
+**Reverses "a hit is rated `easy`" from the 2026-08-25 call in the typed
+responses entry below, and the "Exact is `easy`" line of the 2026-10-07 entry.**
+Everything else in both stands: an exact hit is still applied on the spot and
+the card is gone, a near match still stops with the ring on `good`, a miss
+still stops with it on `again`.
+
+**The intervals.** Until now the three passing buttons gave the same wait (1
+day, then 6, then the last wait × ease) and differed only in what they did to
+the ease, so they parted ways one review later. The user met this while
+scoping review times under the buttons: three buttons, one time. The numbers
+are the user's, 2026-10-09:
+
+- **First review of a new card, or the first after an Again:** Hard 1 day,
+  Good 2, Easy 4.
+- **Every later review**, where W is the last wait: Hard is W × 1.2, Good is
+  W × ease, Easy is W × ease × 1.3.
+- **Each button gives at least one day more than the one below it.** Anki's
+  rule, and what separates the buttons on short waits, where rounding folds
+  them together (1 × 1.2 rounds to 1).
+- **The fixed 6-day second wait is gone.** The second review follows the rule
+  like any other.
+
+Always pressing one button, in days, with the old schedule in brackets: Hard
+1, 2, 3, 4, 5 (1, 6, 13, 27, 52). Good 2, 5, 13, 33, 83 (1, 6, 15, 38, 95).
+Easy 4, 14, 49, 178, 671 (1, 6, 16, 45, ~130). The tests in `sm2.test.ts`
+assert all three.
+
+**Good starts at 2 days, not Anki's 1,** so that it stays close to the old
+schedule: starting at 1 halved every wait after it.
+
+**No learning steps in minutes.** The user looked at Anki's and does not want
+minute intervals. A missed card stays due now, as before, and a session still
+ends when it said it would.
+
+**Unchanged:** Again, and how much each rating moves the ease (Hard −0.14,
+Good 0, Easy +0.1, floor 1.3). **No migration:** a card keeps the wait it has,
+and only ratings made afterwards are computed differently.
+
+**Why an exact typed answer became Good.** The 08-25 call accepted that `easy`
+on every hit ratchets the ease, on the ground that a word typed right on sight
+should grow fast, and named a cap in `sm2.ts` as the lever if it ever needed
+reining in. With the 1.3 bonus the cost is no longer one review away: a word
+typed right five times running would be gone for 671 days without the learner
+ever choosing that. So Easy is something only the learner picks (the user,
+2026-10-09). The ratchet goes with it, since Good leaves the ease where it is.
+
+**Two readings the rule as written needed, both forced by the sequences:**
+
+- *The one below Hard is the last wait itself.* Hard is at least W + 1, which
+  is what makes Hard read 1, 2, 3, 4, 5 and not 1, 1, 1, 1, 1. It is also
+  Anki's floor for Hard.
+- *The ease multiplied is the one the card arrived with,* not the one this
+  rating leaves it with. Easy's second wait is 4 × 2.6 × 1.3 = 14, where 2.6
+  is what the first Easy left behind.
+
+**Follows from sharing the function, the user's to overrule:**
+
+- Munli conjugation practice (`rateBox` in `conjugation.ts`) calls
+  `getNextReviewData` and changes with it. Munli's own grading, including the
+  clean cloze that earns `easy`, was not part of this.
+- Web changes on deploy and mobile on the next build, so until then the same
+  card rated on each is scheduled differently.
+- The first-run card ("it comes back …") reads the same function, so a Good
+  there now names a date two days out instead of "tomorrow".
+
+**Chosen in the build, not asked:** a card already one review in under the old
+rule (a 1-day wait) gets 3 days on Good where it would have got 6. That is the
+6-day wait going, applied to cards in flight; nothing is rewritten.
+
 ## Meanings are typed too, and a typed meaning has a near match (2026-10-07)
 
 **Reverses the direction rule of the 2026-08-24 entry below.** That one typed

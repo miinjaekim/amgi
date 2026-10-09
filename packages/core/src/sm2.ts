@@ -137,6 +137,48 @@ export function maturityChange(
   return isMature ? 1 : -1;
 }
 
+/** The first wait, in days, of a card that is new or was just missed. */
+const FIRST_INTERVAL_DAYS = { hard: 1, good: 2, easy: 4 } as const;
+
+/** What Hard multiplies the last wait by, whatever the ease. */
+const HARD_MULTIPLIER = 1.2;
+
+/** What Easy multiplies Good's wait by. */
+const EASY_BONUS = 1.3;
+
+/**
+ * The next wait, in days, for a card that passed.
+ *
+ * The three passing buttons give three different waits, as Anki's do — _the
+ * user's call, 2026-10-09._ Before that they gave the same wait and differed
+ * only in what they did to the ease, so they parted ways one review later.
+ *
+ * - **First review**, or the first after an Again: Hard 1, Good 2, Easy 4.
+ * - **Every later review**, where W is the last wait: Hard is W × 1.2, Good is
+ *   W × ease, Easy is W × ease × 1.3.
+ *
+ * Each button gives at least one day more than the one below it, Hard's floor
+ * being the last wait itself. That is Anki's rule and it is what separates the
+ * buttons on short waits, where rounding would otherwise fold them together:
+ * 1 × 1.2 rounds back to 1.
+ *
+ * `ease` is the ease the card arrived with, not the one this rating leaves it
+ * with.
+ */
+function passedInterval(
+  response: 'hard' | 'good' | 'easy',
+  lastInterval: number,
+  ease: number,
+  firstReview: boolean,
+): number {
+  if (firstReview) return FIRST_INTERVAL_DAYS[response];
+  const hard = Math.max(Math.round(lastInterval * HARD_MULTIPLIER), lastInterval + 1);
+  if (response === 'hard') return hard;
+  const good = Math.max(Math.round(lastInterval * ease), hard + 1);
+  if (response === 'good') return good;
+  return Math.max(Math.round(lastInterval * ease * EASY_BONUS), good + 1);
+}
+
 export function getNextReviewData(card: CardForReview, response: 'again' | 'hard' | 'good' | 'easy') {
   let interval = card.interval ?? 0;
   let ease = card.ease ?? 2.5;
@@ -149,22 +191,22 @@ export function getNextReviewData(card: CardForReview, response: 'again' | 'hard
   else if (response === 'good') quality = 4;
   else if (response === 'easy') quality = 5;
 
-  if (quality < 3) {
+  if (response === 'again') {
     repetitions = 0;
     interval = 1;
   } else {
+    // A card with no wait behind it is on its first review whatever its count
+    // says: there is nothing to multiply.
+    interval = passedInterval(response, interval, ease, !repetitions || interval < 1);
     repetitions = (repetitions || 0) + 1;
-    if (repetitions === 1) interval = 1;
-    else if (repetitions === 2) interval = 6;
-    else interval = Math.round(interval * ease);
   }
 
   ease = Math.max(1.3, ease + 0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02));
 
   // "Again" means the card is not learned, so it stays due now rather than
   // being pushed out by the reset interval — answering it wrong should not be
-  // what makes it disappear from today's queue. `interval` still resets to 1,
-  // which is what the *next* successful pass schedules from.
+  // what makes it disappear from today's queue. `interval` still resets to 1
+  // and `repetitions` to 0, so the next successful pass is a first review.
   //
   // Staying due is what lets a finished session be restarted to pick up
   // exactly the cards that were missed. It deliberately does not put the card

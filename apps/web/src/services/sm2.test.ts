@@ -46,26 +46,75 @@ describe('getNextReviewData (SM-2)', () => {
     expect(isDue({ frontToBack: result })).not.toContain('frontToBack');
   });
   it('should increment repetitions and interval for "good"', () => {
-    const card = { ...baseCard, interval: 1, repetitions: 1, ease: 2.5 };
+    const card = { ...baseCard, interval: 2, repetitions: 1, ease: 2.5 };
     const result = getNextReviewData(card, 'good');
     expect(result.repetitions).toBe(2);
-    expect(result.interval).toBe(6);
-    expect(result.ease).toBeGreaterThan(2.0);
+    expect(result.interval).toBe(5);
+    expect(result.ease).toBe(2.5);
   });
 
-  it('should increment interval for "easy"', () => {
+  it('multiplies the last wait by the ease and the bonus for "easy"', () => {
     const card = { ...baseCard, interval: 6, repetitions: 2, ease: 2.5 };
     const result = getNextReviewData(card, 'easy');
     expect(result.repetitions).toBe(3);
-    expect(result.interval).toBe(Math.round(6 * 2.5));
-    expect(result.ease).toBeGreaterThan(2.0);
+    expect(result.interval).toBe(20); // 6 × 2.5 × 1.3 = 19.5
+    expect(result.ease).toBeCloseTo(2.6);
   });
 
-  it('should set interval to 1 for first review', () => {
+  it('multiplies the last wait by 1.2 for "hard", whatever the ease', () => {
+    const card = { ...baseCard, interval: 20, repetitions: 4 };
+    expect(getNextReviewData({ ...card, ease: 2.5 }, 'hard').interval).toBe(24);
+    expect(getNextReviewData({ ...card, ease: 1.3 }, 'hard').interval).toBe(24);
+  });
+
+  it('gives a new card 1, 2 or 4 days by the button', () => {
     const card = { ...baseCard, interval: 0, repetitions: 0, ease: 2.5 };
-    const result = getNextReviewData(card, 'good');
-    expect(result.interval).toBe(1);
-    expect(result.repetitions).toBe(1);
+    expect(getNextReviewData(card, 'hard').interval).toBe(1);
+    expect(getNextReviewData(card, 'good').interval).toBe(2);
+    expect(getNextReviewData(card, 'easy').interval).toBe(4);
+    expect(getNextReviewData(card, 'good').repetitions).toBe(1);
+  });
+
+  it('restarts a missed card on the same first waits', () => {
+    const lapsed = getNextReviewData({ ...baseCard, interval: 60, repetitions: 5 }, 'again');
+    expect(getNextReviewData(lapsed, 'hard').interval).toBe(1);
+    expect(getNextReviewData(lapsed, 'good').interval).toBe(2);
+    expect(getNextReviewData(lapsed, 'easy').interval).toBe(4);
+  });
+
+  /** The waits, in days, of a new card rated the same way five times running. */
+  const pressing = (response: 'hard' | 'good' | 'easy') => {
+    let current: { interval: number; ease: number; repetitions: number } = freshTracking();
+    return Array.from({ length: 5 }, () => {
+      current = getNextReviewData(current, response);
+      return current.interval;
+    });
+  };
+
+  it('schedules the sequences the rule was chosen for', () => {
+    // The user's numbers, 2026-10-09. Easy's depend on the ease a rating
+    // multiplies by being the one the card arrived with: 4 × 2.6 × 1.3 is 14.
+    expect(pressing('hard')).toEqual([1, 2, 3, 4, 5]);
+    expect(pressing('good')).toEqual([2, 5, 13, 33, 83]);
+    expect(pressing('easy')).toEqual([4, 14, 49, 178, 671]);
+  });
+
+  it('keeps each button at least a day past the one below it', () => {
+    // On short waits and a low ease the multiplications round to the same
+    // day: 1 × 1.2 is 1, and 2 × 1.3 is 3 where Hard is already 3.
+    for (const interval of [1, 2, 3, 5, 10]) {
+      const card = { interval, ease: 1.3, repetitions: 3 };
+      const hard = getNextReviewData(card, 'hard').interval;
+      const good = getNextReviewData(card, 'good').interval;
+      const easy = getNextReviewData(card, 'easy').interval;
+      expect(hard).toBeGreaterThan(interval);
+      expect(good).toBeGreaterThan(hard);
+      expect(easy).toBeGreaterThan(good);
+    }
+  });
+
+  it('does not use the old fixed second wait of 6 days', () => {
+    expect(getNextReviewData({ interval: 1, ease: 2.5, repetitions: 1 }, 'good').interval).toBe(3);
   });
 });
 
@@ -221,7 +270,7 @@ describe('maturity', () => {
 
   it('matches what SM-2 actually schedules, not a hand-picked interval', () => {
     // Walks a card up through real ratings rather than asserting against a
-    // number typed into the test: 1, 6, then ease-multiplied. The crossing has
+    // number typed into the test: 2, 5, 13, 33. The crossing has
     // to fall on the rating that genuinely takes the interval past 21.
     let current = freshTracking();
     const crossings: number[] = [];

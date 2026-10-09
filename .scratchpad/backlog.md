@@ -29,7 +29,8 @@ is below merged after it._
 - **Review asks for the meaning by typing too** (branch `type-meanings`).
   With "Type your answers" on, word→meaning cards get the input box as well,
   web and mobile; they used to flip. Three outcomes for a typed meaning: the
-  back exactly as shown is `easy`, applied, next card; a near match (either
+  back exactly as shown is `good`, applied, next card (it was `easy` until
+  the `rating-intervals` entry below); a near match (either
   gloss of two, a leading to/a/an/the dropped, or the card's other-language
   back) reveals with "Correct", what was typed, and the ring on `good` for
   the learner to confirm; anything else is "Not quite" with the ring on
@@ -111,6 +112,20 @@ those checks come from using the app.
   and are the user's to overrule; they and the reasoning are in
   [cards-and-lookup](decisions/cards-and-lookup.md). ⚠️ What has and has not
   been seen is under Unverified in [status.md](status.md).
+- **Hard, Good and Easy schedule different next reviews** (branch
+  `rating-intervals`; scoped with the user 2026-10-09). A new card, or one
+  just missed, waits 1 day on Hard, 2 on Good and 4 on Easy. After that,
+  where W is the last wait: Hard is W × 1.2, Good is W × ease, Easy is
+  W × ease × 1.3, each at least a day past the one below it. The fixed 6-day
+  second wait is gone. Always pressing one button, in days: Hard 1, 2, 3, 4,
+  5; Good 2, 5, 13, 33, 83; Easy 4, 14, 49, 178, 671. Again and the ease
+  changes are as they were. No migration: only ratings made from here on are
+  computed this way. **An exact typed answer is now rated Good, not Easy**,
+  still applied on the spot. Munli conjugation practice shares the function
+  and changes with it. Web has this on deploy and mobile on the next build,
+  so until then the same card rated on each is scheduled differently.
+  Reasoning in [review](decisions/review.md). ⚠️ Tested, not seen in a
+  browser or on a device; under Unverified in [status.md](status.md).
 
 ## High
 
@@ -134,41 +149,6 @@ picker narrowed (#146). Both are written up in their Decisions entries of
       three differ only in what they do to the ease, which moves the review
       *after* this one. The user knows and chose to ship the display first;
       the item below is what makes them differ.
-
-- [ ] **Hard, Good and Easy schedule different next reviews, as Anki does.**
-      Scoped with the user 2026-10-09. Today all three give the same wait and
-      differ only in the ease, so they part ways one review later. One change
-      in `getNextReviewData` (`packages/core/src/sm2.ts`); no migration, since
-      only ratings made afterwards are computed differently.
-      **First review of a new card:** Hard 1 day, Good 2 days, Easy 4 days
-      (the user's numbers, 2026-10-09). The same after an Again, which
-      restarts the card.
-      **Every review after that**, where W is the last wait:
-      Hard = W × 1.2, Good = W × ease, Easy = W × ease × 1.3. Each button
-      gives at least one day more than the one below it, which is Anki's rule
-      and is what separates them on short waits. **The fixed 6-day second
-      wait goes**; the second review follows this rule like any other.
-      **What that gives**, always pressing one button, in days (today's in
-      brackets): Hard 1, 2, 3, 4, 5 (1, 6, 13, 27, 52). Good 2, 5, 13, 33, 83
-      (1, 6, 15, 38, 95). Easy 4, 14, 49, 178, 671 (1, 6, 16, 45, ~130).
-      Good stays close to today on purpose: starting it at 1 day, as Anki
-      does, halved every wait.
-      **An exact typed answer is rated Good, not Easy** (the user,
-      2026-10-09). `gradeTypedAnswer` suggests `easy` for an exact hit and
-      the review screen rates it on the spot, so with the 1.3 bonus a word
-      typed right five times running would be gone for 671 days. Easy becomes
-      something only the learner picks. This reverses the earlier call in
-      [review](decisions/review.md) that an exact hit earns `easy`; the PR
-      writes the new entry. Munli's own grading is not part of this.
-      **Not considered again:** Anki's learning steps in minutes. The user
-      looked at them 2026-10-09 and does not want minute intervals.
-      **Not changing:** Again (stays due now), and how much each rating moves
-      the ease.
-      **Follows from sharing the function, the user's to overrule:**
-      - Munli conjugation practice (`conjugation.ts`) calls the same function
-        and changes with it.
-      - Web changes on deploy and mobile on the next build, so until then the
-        same card rated Hard is scheduled differently on each.
 
 - [ ] **Mobile review: part of speech and gender chips.** From Google Tasks
       ("Add term chips to the review flow"), scoped with the user 2026-10-09.
