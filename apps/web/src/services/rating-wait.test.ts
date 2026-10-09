@@ -78,6 +78,22 @@ describe('ratingWaitLabels', () => {
     expect(labels.good).not.toBe('now');
   });
 
+  // The scheduler's own numbers, pinned once here so a change to them shows up
+  // as a change to what the learner reads.
+  it('gives a new card now, 1d, 2d and 4d', () => {
+    expect(ratingWaitLabels('English', freshTracking())).toEqual({
+      again: 'now', hard: '1d', good: '2d', easy: '4d',
+    });
+    expect(ratingWaitLabels('Korean', freshTracking())).toEqual({
+      again: '지금', hard: '1일', good: '2일', easy: '4일',
+    });
+  });
+
+  it('tells Hard, Good and Easy apart on a card already under way', () => {
+    const { hard, good, easy } = ratingWaitLabels('English', tracked);
+    expect(new Set([hard, good, easy]).size).toBe(3);
+  });
+
   it('reads a card with no tracking in that direction the way the rating does', () => {
     const now = new Date();
     const legacy = { interval: 40, ease: 2.5, repetitions: 4 } as Flashcard;
