@@ -2,6 +2,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useUser } from '@/components/UserContext';
+import { useUserPacks } from '@/components/UserPacksContext';
 import PageHeader from '@/components/PageHeader';
 import { subscribeToUserFlashcards, getCardsCollection, Flashcard, migrateExistingCards, archiveFlashcard, deleteFlashcard } from '@/services/firestore';
 import {
@@ -172,9 +173,17 @@ export default function ReviewPage() {
     }
   }, [user, studyLanguage]);
 
+  // The names come from the pack registry, which the provider fills from
+  // `userPacks`, sometimes after the cards have loaded. Depending on it is
+  // what re-runs this then, so a user-made pack does not stay named by its id.
+  // It is touched below only so the dependency is one the linter can see.
+  const { userPacks } = useUserPacks();
   const collections = useMemo(
-    () => buildReviewCollections(userFlashcards, studyLanguage, interfaceLanguage),
-    [userFlashcards, studyLanguage, interfaceLanguage]
+    () => {
+      void userPacks;
+      return buildReviewCollections(userFlashcards, studyLanguage, interfaceLanguage);
+    },
+    [userFlashcards, studyLanguage, interfaceLanguage, userPacks]
   );
 
   /**
