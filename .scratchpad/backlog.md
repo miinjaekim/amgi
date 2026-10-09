@@ -140,27 +140,31 @@ picker narrowed (#146). Both are written up in their Decisions entries of
       differ only in the ease, so they part ways one review later. One change
       in `getNextReviewData` (`packages/core/src/sm2.ts`); no migration, since
       only ratings made afterwards are computed differently.
-      **From a card's second review on**, where W is the last wait:
+      **First review of a new card:** Hard 1 day, Good 2 days, Easy 4 days
+      (the user's numbers, 2026-10-09). The same after an Again, which
+      restarts the card.
+      **Every review after that**, where W is the last wait:
       Hard = W × 1.2, Good = W × ease, Easy = W × ease × 1.3. Each button
       gives at least one day more than the one below it, which is Anki's rule
-      and is what separates them on short waits.
-      **First review of a new card:** Hard 1 day, Good 1 day, Easy 4 days.
-      Anki splits Hard from Good here with steps measured in minutes, which
-      Amgi does not have, so those two still match on a first review.
-      **The fixed 6-day second wait goes**, because Anki has none: the second
-      review follows the rule above, so after a 1-day wait it is Hard 2,
-      Good 3, Easy 4.
-      ⚠️ **This changes Good too**, which the planning session first told the
-      user it would not. Always pressing Good goes from 1, 6, 15, 38, 95 days
-      to 1, 3, 8, 20, 50: about twice the reviews in a card's first months.
-      It is what "match Anki" means; keeping 6 days for Good is the
-      alternative, and the user's to choose.
-      **Not changing:** Again (stays due now, wait restarts), and how much
-      each rating moves the ease.
+      and is what separates them on short waits. **The fixed 6-day second
+      wait goes**; the second review follows this rule like any other.
+      **What that gives**, always pressing one button, in days (today's in
+      brackets): Hard 1, 2, 3, 4, 5 (1, 6, 13, 27, 52). Good 2, 5, 13, 33, 83
+      (1, 6, 15, 38, 95). Easy 4, 14, 49, 178, 671 (1, 6, 16, 45, ~130).
+      Good stays close to today on purpose: starting it at 1 day, as Anki
+      does, halved every wait.
+      **An exact typed answer is rated Good, not Easy** (the user,
+      2026-10-09). `gradeTypedAnswer` suggests `easy` for an exact hit and
+      the review screen rates it on the spot, so with the 1.3 bonus a word
+      typed right five times running would be gone for 671 days. Easy becomes
+      something only the learner picks. This reverses the earlier call in
+      [review](decisions/review.md) that an exact hit earns `easy`; the PR
+      writes the new entry. Munli's own grading is not part of this.
+      **Not considered again:** Anki's learning steps in minutes. The user
+      looked at them 2026-10-09 and does not want minute intervals.
+      **Not changing:** Again (stays due now), and how much each rating moves
+      the ease.
       **Follows from sharing the function, the user's to overrule:**
-      - A correctly typed answer is rated Easy on its own, so every exact hit
-        gets the 1.3 bonus. The cap named in
-        [review](decisions/review.md) is the lever if that grows too fast.
       - Munli conjugation practice (`conjugation.ts`) calls the same function
         and changes with it.
       - Web changes on deploy and mobile on the next build, so until then the
