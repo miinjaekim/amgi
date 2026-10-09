@@ -62,11 +62,11 @@ describe('gradeTypedAnswer, the word', () => {
   const word = (typed: string, card: TypedAnswerCard) =>
     gradeTypedAnswer(typed, card, 'backToFront', 'English');
 
-  it('accepts an exact answer and earns easy, which the caller applies', () => {
+  it('accepts an exact answer and earns good, which the caller applies', () => {
     expect(word('어색하다', korean)).toEqual({
       outcome: 'exact',
       correct: true,
-      suggested: 'easy',
+      suggested: 'good',
       expected: '어색하다',
     });
   });
@@ -113,7 +113,7 @@ describe('gradeTypedAnswer, the meaning', () => {
     expect(meaning('  Atmosphere,  mood ', mood)).toEqual({
       outcome: 'exact',
       correct: true,
-      suggested: 'easy',
+      suggested: 'good',
       expected: 'atmosphere, mood',
     });
     expect(meaning('to run', run).outcome).toBe('exact');

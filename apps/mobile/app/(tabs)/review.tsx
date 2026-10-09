@@ -740,7 +740,7 @@ export default function ReviewScreen() {
    * stops working exactly where the feature is used.
    *
    * The asymmetry is deliberate. Producing the answer from memory, exactly, is
-   * not a judgement the learner can improve on, so `easy` is applied rather
+   * not a judgement the learner can improve on, so `good` is applied rather
    * than offered, and the session moves on. A miss is the opposite — the
    * grader may simply not know the answer was also right — so it reveals both
    * strings and keeps the full rating row, which is where the override lives.

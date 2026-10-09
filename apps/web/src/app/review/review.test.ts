@@ -14,8 +14,6 @@ vi.mock('firebase/firestore', async () => {
 
 describe('Review Scheduling Logic', () => {
   const today = new Date();
-  const tomorrow = new Date(today);
-  tomorrow.setDate(tomorrow.getDate() + 1);
   
   const nextWeek = new Date(today);
   nextWeek.setDate(nextWeek.getDate() + 6);
@@ -60,21 +58,23 @@ describe('Review Scheduling Logic', () => {
     expect(againResult.interval).toBe(1);
     expect(againResult.nextReview.getDate()).toBe(today.getDate());
     
-    // Test "good" response - should be scheduled for tomorrow (1 day) for first review
+    // Test "good" response - should be scheduled 2 days out for first review
     const goodResult = getNextReviewData(sampleCard.frontToBack as ReviewTracking, 'good');
-    expect(goodResult.interval).toBe(1);
-    expect(goodResult.nextReview.getDate()).toBe(tomorrow.getDate());
+    expect(goodResult.interval).toBe(2);
+    expect(goodResult.nextReview.getDate()).toBe(
+      new Date(today.getTime() + 2 * 24 * 60 * 60 * 1000).getDate()
+    );
     
     // Test a follow-up "good" response after an initial "good"
     const followupCard = {
       ...sampleCard.frontToBack,
-      interval: 1,
+      interval: 2,
       repetitions: 1,
     };
     const followupGoodResult = getNextReviewData(followupCard, 'good');
-    expect(followupGoodResult.interval).toBe(6);
+    expect(followupGoodResult.interval).toBe(5); // 2 * 2.5
     expect(followupGoodResult.nextReview.getDate()).toBe(
-      new Date(today.getTime() + 6 * 24 * 60 * 60 * 1000).getDate()
+      new Date(today.getTime() + 5 * 24 * 60 * 60 * 1000).getDate()
     );
 
     // Test "easy" response on a card after multiple reviews
@@ -85,9 +85,9 @@ describe('Review Scheduling Logic', () => {
       ease: 2.5,
     };
     const easyResult = getNextReviewData(experiencedCard, 'easy');
-    expect(easyResult.interval).toBe(15); // 6 * 2.5 rounded
+    expect(easyResult.interval).toBe(20); // 6 * 2.5 * 1.3 rounded
     expect(easyResult.nextReview).toBeInstanceOf(Date);
-    expect(easyResult.nextReview.getTime()).toBeGreaterThan(today.getTime() + 14 * 24 * 60 * 60 * 1000);
+    expect(easyResult.nextReview.getTime()).toBeGreaterThan(today.getTime() + 19 * 24 * 60 * 60 * 1000);
   });
 
   it('should correctly check if a card is due', () => {

@@ -18,30 +18,30 @@ describe('Review Date Calculation Tests', () => {
     expect(againResult.interval).toBe(1);
     expect(againResult.nextReview.getDate()).toBe(now.getDate());
 
-    // Calculate expected date for interval = 1
-    const expectedTomorrowDate = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+    // Calculate expected date for interval = 2
+    const expectedTwoDaysLater = new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000);
     // Compare just the dates, not exact times (may vary slightly during test execution)
     
     // Test "good" response on a new card
     const goodResult = getNextReviewData(testCardData, 'good');
-    expect(goodResult.interval).toBe(1);
+    expect(goodResult.interval).toBe(2);
     expect(goodResult.repetitions).toBe(1);
-    // Should be tomorrow
-    expect(goodResult.nextReview.getDate()).toBe(expectedTomorrowDate.getDate());
+    // Should be the day after tomorrow
+    expect(goodResult.nextReview.getDate()).toBe(expectedTwoDaysLater.getDate());
     
     // Test "good" response on a card that's been reviewed once
     const secondCardData = {
-      interval: 1,
+      interval: 2,
       ease: 2.5,
       repetitions: 1
     };
     const secondGoodResult = getNextReviewData(secondCardData, 'good');
-    expect(secondGoodResult.interval).toBe(6);
+    expect(secondGoodResult.interval).toBe(5); // 2 * 2.5
     expect(secondGoodResult.repetitions).toBe(2);
     
-    // Calculate expected date for interval = 6
-    const expectedSixDaysLater = new Date(now.getTime() + 6 * 24 * 60 * 60 * 1000);
-    expect(secondGoodResult.nextReview.getDate()).toBe(expectedSixDaysLater.getDate());
+    // Calculate expected date for interval = 5
+    const expectedFiveDaysLater = new Date(now.getTime() + 5 * 24 * 60 * 60 * 1000);
+    expect(secondGoodResult.nextReview.getDate()).toBe(expectedFiveDaysLater.getDate());
     
     // Test "easy" response on a card that's been reviewed twice
     const thirdCardData = {
@@ -50,12 +50,12 @@ describe('Review Date Calculation Tests', () => {
       repetitions: 2
     };
     const easyResult = getNextReviewData(thirdCardData, 'easy');
-    expect(easyResult.interval).toBe(16); // Rounded from 6 * 2.6
+    expect(easyResult.interval).toBe(20); // Rounded from 6 * 2.6 * 1.3
     expect(easyResult.repetitions).toBe(3);
     
-    // Calculate expected date for interval = 16
-    const expectedSixteenDaysLater = new Date(now.getTime() + 16 * 24 * 60 * 60 * 1000);
-    expect(easyResult.nextReview.getDate()).toBe(expectedSixteenDaysLater.getDate());
+    // Calculate expected date for interval = 20
+    const expectedTwentyDaysLater = new Date(now.getTime() + 20 * 24 * 60 * 60 * 1000);
+    expect(easyResult.nextReview.getDate()).toBe(expectedTwentyDaysLater.getDate());
   });
   
   it('should never schedule a card for the past', () => {
