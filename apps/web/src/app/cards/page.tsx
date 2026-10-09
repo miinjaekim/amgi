@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useUser } from '@/components/UserContext';
+import { useUserPacks } from '@/components/UserPacksContext';
 import {
   subscribeToAllUserFlashcards,
   archiveFlashcard,
@@ -95,9 +96,17 @@ export default function CardsPage() {
   // offered chips rather than reset by an effect: deleting the last card of a
   // deck retires its chip, and a selection left pointing at a chip that is no
   // longer on screen shows an empty list with no visible reason.
+  //
+  // The chip names come from the pack registry, which the provider fills from
+  // `userPacks`, sometimes after the cards have loaded. It is touched below
+  // only so the dependency is one the linter can see.
+  const { userPacks } = useUserPacks();
   const deckFilters = useMemo(
-    () => buildDeckFilters(allCards, studyLanguage, interfaceLanguage),
-    [allCards, studyLanguage, interfaceLanguage]
+    () => {
+      void userPacks;
+      return buildDeckFilters(allCards, studyLanguage, interfaceLanguage);
+    },
+    [allCards, studyLanguage, interfaceLanguage, userPacks]
   );
   const activeDeck = deckFilters.some(d => d.id === deckKey) ? deckKey : DEFAULT_DECK_FILTER;
   const deckCards = useMemo(
