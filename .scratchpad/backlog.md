@@ -38,6 +38,16 @@ is below merged after it._
   days would otherwise both read 1y).
   ⚠️ Seen on web in English only; mobile is under Unverified in
   [status.md](status.md).
+- **Mobile review: part of speech and gender beside the reading** (branch
+  `review-chips`). The revealed answer on mobile now carries the same three
+  badges web's does, in web's order and in the reading's own pill: part of
+  speech (in the reader's language, from `partOfSpeechLabel`), gender as
+  stored (en/ett, le/la), then the reading. Flip cards show them on the back,
+  typed cards after the reveal; never on a prompt. Web is unchanged.
+  Chosen in the build, the user's to overrule: a verb with a group reads
+  "-ir verb" rather than "Verb", because that is what `partOfSpeechLabel`
+  returns and what web shows. There is no separate verb-group badge.
+  ⚠️ Not seen on a device; under Unverified in [status.md](status.md).
 - **Review asks for the meaning by typing too** (branch `type-meanings`).
   With "Type your answers" on, word→meaning cards get the input box as well,
   web and mobile; they used to flip. Three outcomes for a typed meaning: the
@@ -146,14 +156,6 @@ whether `faire` joins the three sourced irregular verbs (#150), and whether a
 practice session should cover several tenses at once again, which the section
 picker narrowed (#146). Both are written up in their Decisions entries of
 2026-09-22.
-
-- [ ] **Mobile review: part of speech and gender chips.** From Google Tasks
-      ("Add term chips to the review flow"), scoped with the user 2026-10-09.
-      Web review already shows part of speech, gender and the reading as chips
-      on the revealed answer, on flip and typed cards; mobile shows only the
-      reading. Mobile gets the other two, in the same row as the reading and
-      only after the reveal, so nothing on the prompt gives the answer away.
-      Just those two chips: no verb group. Web does not change.
 
 ## Medium
 
