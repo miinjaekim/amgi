@@ -30,7 +30,7 @@ import {
   getBackSide, getNextReviewDate, hanjaFaces,
   getNextReviewData, getStudyLangSide, getStudyLanguageConfig, getBackSideConfig,
   directionLabel, getCharacterBreakdown, getExampleSides, getReading,
-  maturityChange, ratingWaitLabels, removeCardFromQueue, t, trackingFor,
+  maturityChange, partOfSpeechLabel, ratingWaitLabels, removeCardFromQueue, t, trackingFor,
   gradeTypedAnswer, promptsForTyping, typedAnswerPlaceholder,
 } from '@amgi/core';
 import type {
@@ -1262,9 +1262,22 @@ export default function ReviewScreen() {
    * put it in two different places depending on the draw.
    */
   const reading = getReading(card, studyLanguage, deckNativeLanguage);
-  const readingBadge = reading ? (
-    <View style={s.readingBadge}>
-      <Text style={s.readingText}>{reading}</Text>
+  /**
+   * Part of speech and gender ride in the same row, in web's order and from
+   * the same sources as web's chips: `partOfSpeechLabel` in the reader's
+   * language, and the gender as stored. Unlike the reading these two *are*
+   * spoilers on `backToFront`, where "noun · feminine" narrows the word being
+   * asked for, so the reveal gate above is what keeps them off the prompt.
+   */
+  const partOfSpeech = partOfSpeechLabel(deckNativeLanguage, card);
+  const termBadges = [partOfSpeech, card.gender, reading].filter(Boolean);
+  const termBadgeRow = termBadges.length > 0 ? (
+    <View style={s.termBadges}>
+      {termBadges.map((label, i) => (
+        <View key={i} style={s.readingBadge}>
+          <Text style={s.readingText}>{label}</Text>
+        </View>
+      ))}
     </View>
   ) : null;
   /** Either direction, and never Hanja — see `promptsForTyping`. */
@@ -1689,7 +1702,7 @@ export default function ReviewScreen() {
                           word it reads is on the other face, but the front is
                           the prompt, and the back is where what you check
                           yourself against is collected. */}
-                      {readingBadge}
+                      {termBadgeRow}
                       {/* Only ever on the back, in both directions: it defines
                           the word, and on a pack card it is a hint that can
                           name it outright, so on a prompt it would answer the
@@ -1736,14 +1749,14 @@ export default function ReviewScreen() {
                     {/* Rides the study side wherever it landed, like the
                         pronounce button: above the divider on `frontToBack`,
                         under the revealed word on `backToFront`. */}
-                    {isFront && readingBadge}
+                    {isFront && termBadgeRow}
                     <View style={s.divider} />
                     <View style={s.termRow}>
                       <Text style={[s.backText, s.rowText, rtlInline(backText)]}>{backText}</Text>
                       {!isFront && pronounceButton}
                     </View>
                     {hanjaGloss && <Text style={s.hanjaGloss}>{hanjaGloss}</Text>}
-                    {!isFront && readingBadge}
+                    {!isFront && termBadgeRow}
                     {/* Only ever after the reveal, in both directions: it
                         defines the word, and on a pack card it is a hint that
                         can name it outright, so on a prompt it would answer
@@ -1956,10 +1969,11 @@ function makeStyles(C: Palette, tabBarHeight: number) {
   termRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   rowText: { flexShrink: 1 },
   // The pill Learn and the card modal already put a reading in, so the same
-  // string looks the same on all three surfaces. `alignSelf` keeps it the
-  // width of its own text instead of the card's.
+  // string looks the same on all three surfaces. Part of speech and gender
+  // sit beside it in the same pill; the row wraps, since a long reading on a
+  // narrow phone will not fit beside two others.
+  termBadges: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 10 },
   readingBadge: {
-    alignSelf: 'flex-start', marginTop: 10,
     borderWidth: 1, borderColor: C.border, borderRadius: 12,
     paddingHorizontal: 8, paddingVertical: 2,
   },

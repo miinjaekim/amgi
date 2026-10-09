@@ -73,6 +73,10 @@ blank placeholder. On **Android**, only sign-in has ever been exercised.
   mobile rating row at all, where the second line makes each button a little
   taller; the Korean labels on either platform; and the row after a typed
   answer.
+- **Part of speech and gender on mobile review** (branch `review-chips`):
+  never run on a phone. Mobile typechecks; the badge row on the back of a
+  flip card, after a typed reveal, and how it wraps beside a long reading
+  have not been looked at.
 - **Typed meanings** (branch `type-meanings`): never run in a browser or on a
   phone. The grader is unit-tested and both apps typecheck; the typed card in
   the word→meaning direction, its keyboard on mobile and the pronounce button
