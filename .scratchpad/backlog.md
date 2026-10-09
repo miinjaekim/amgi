@@ -133,7 +133,38 @@ picker narrowed (#146). Both are written up in their Decisions entries of
       ⚠️ **Hard, Good and Easy will show the same time on every card.** The
       three differ only in what they do to the ease, which moves the review
       *after* this one. The user knows and chose to ship the display first;
-      whether the scheduler should change is under Needs clarification.
+      the item below is what makes them differ.
+
+- [ ] **Hard, Good and Easy schedule different next reviews, as Anki does.**
+      Scoped with the user 2026-10-09. Today all three give the same wait and
+      differ only in the ease, so they part ways one review later. One change
+      in `getNextReviewData` (`packages/core/src/sm2.ts`); no migration, since
+      only ratings made afterwards are computed differently.
+      **From a card's second review on**, where W is the last wait:
+      Hard = W × 1.2, Good = W × ease, Easy = W × ease × 1.3. Each button
+      gives at least one day more than the one below it, which is Anki's rule
+      and is what separates them on short waits.
+      **First review of a new card:** Hard 1 day, Good 1 day, Easy 4 days.
+      Anki splits Hard from Good here with steps measured in minutes, which
+      Amgi does not have, so those two still match on a first review.
+      **The fixed 6-day second wait goes**, because Anki has none: the second
+      review follows the rule above, so after a 1-day wait it is Hard 2,
+      Good 3, Easy 4.
+      ⚠️ **This changes Good too**, which the planning session first told the
+      user it would not. Always pressing Good goes from 1, 6, 15, 38, 95 days
+      to 1, 3, 8, 20, 50: about twice the reviews in a card's first months.
+      It is what "match Anki" means; keeping 6 days for Good is the
+      alternative, and the user's to choose.
+      **Not changing:** Again (stays due now, wait restarts), and how much
+      each rating moves the ease.
+      **Follows from sharing the function, the user's to overrule:**
+      - A correctly typed answer is rated Easy on its own, so every exact hit
+        gets the 1.3 bonus. The cap named in
+        [review](decisions/review.md) is the lever if that grows too fast.
+      - Munli conjugation practice (`conjugation.ts`) calls the same function
+        and changes with it.
+      - Web changes on deploy and mobile on the next build, so until then the
+        same card rated Hard is scheduled differently on each.
 
 - [ ] **Mobile review: part of speech and gender chips.** From Google Tasks
       ("Add term chips to the review flow"), scoped with the user 2026-10-09.
@@ -427,15 +458,6 @@ measured 2026-10-04. What's left is what those two now *show*.
       dead code web's lint catches on the next commit.
 
 ## Needs clarification
-
-- [ ] **Should Hard, Good and Easy schedule different next reviews?** Raised
-      2026-10-09 while scoping the review times in High. Today all three give
-      the same interval (`getNextReviewData` multiplies by the ease from
-      *before* the rating), and only the ease differs, so the buttons part
-      ways one review later. Showing the times makes that visible. The change
-      would be a shorter interval on Hard and a longer one on Easy, as Anki
-      does; it reschedules every card from then on, on both platforms.
-      _Recommended 2026-10-09: make them differ._ Awaiting the user's call.
 
 - [ ] **Words with several parts of speech.** A card carries one
       `partOfSpeech`, and `normalizePartOfSpeech` keeps only the first of
