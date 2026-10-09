@@ -1,6 +1,6 @@
 import { parseModelJson } from './modelJson';
 import type { PackEntry, VocabPack } from './packs';
-import type { StudyLanguage } from './types';
+import { isStudyLanguage, type StudyLanguage } from './types';
 
 /**
  * Packs a learner makes for themselves.
@@ -488,6 +488,52 @@ export function userPackToVocabPack(pack: UserPack): VocabPack {
         entries: s.entries,
       })),
   };
+}
+
+/** The learner's packs as the registry takes them (`setUserVocabPacks`). */
+export function userVocabPacksByLanguage(packs: readonly UserPack[]): Partial<Record<StudyLanguage, VocabPack[]>> {
+  const byLanguage: Partial<Record<StudyLanguage, VocabPack[]>> = {};
+  for (const pack of packs) (byLanguage[pack.studyLanguage] ??= []).push(userPackToVocabPack(pack));
+  return byLanguage;
+}
+
+/**
+ * The packs to hold after a listener snapshot, given the ones already held.
+ *
+ * **A snapshot from the server always wins**, an empty one included: that is
+ * the learner having deleted their last pack. **A snapshot from the cache
+ * never replaces packs already held.** Mobile's Firestore cache is memory
+ * only, so an app opened without a connection is handed an empty from-cache
+ * snapshot, and taking it at its word left every pack card named by its raw
+ * id. Nothing is lost by ignoring one: the client never writes these
+ * documents, so the cache cannot know anything the last server snapshot did
+ * not. With nothing held, a cache snapshot is still better than waiting.
+ */
+export function settleUserPacks(
+  held: UserPack[] | null,
+  incoming: UserPack[],
+  fromCache: boolean,
+): UserPack[] {
+  return fromCache && held !== null ? held : incoming;
+}
+
+/**
+ * Packs read back from a device snapshot, or null if it is not one.
+ *
+ * Checked only as far as the code that reads a pack would otherwise throw: a
+ * snapshot is this app's own earlier write, so the risk is a half-written or
+ * older-shaped one, and "never cached" is always a safe answer.
+ */
+export function reviveUserPacks(raw: unknown): UserPack[] | null {
+  if (!Array.isArray(raw)) return null;
+  const sound = raw.every(pack =>
+    pack !== null && typeof pack === 'object'
+    && typeof pack.id === 'string'
+    && isStudyLanguage(pack.studyLanguage)
+    && Array.isArray(pack.subtopics)
+    && pack.subtopics.every((s: unknown) =>
+      s !== null && typeof s === 'object' && Array.isArray((s as UserPackSubtopic).entries)));
+  return sound ? (raw as UserPack[]) : null;
 }
 
 /** How far along sourcing is. Done means nothing is pending or running. */

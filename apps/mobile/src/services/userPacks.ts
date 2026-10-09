@@ -11,18 +11,28 @@ import type { PackBrief, ProposedSubtopic, StudyLanguage, SubtopicProposal, User
  */
 const BASE_URL = (process.env.EXPO_PUBLIC_API_BASE_URL ?? '').replace(/\/$/, '');
 
+/**
+ * `fromCache` is passed on because on React Native the cache is memory only:
+ * an app opened offline gets an empty from-cache snapshot, which is not the
+ * learner having no packs. Metadata changes are included so that the server
+ * confirming what the cache already said still arrives as a snapshot —
+ * otherwise an empty cache followed by a genuinely empty server would be
+ * heard once, as the cache.
+ */
 export function subscribeToUserPacks(
   uid: string,
-  onChange: (packs: UserPack[]) => void,
+  onChange: (packs: UserPack[], fromCache: boolean) => void,
   onError: (error: Error) => void,
 ): () => void {
   return onSnapshot(
     query(collection(db, 'userPacks'), where('ownerUid', '==', uid)),
+    { includeMetadataChanges: true },
     snapshot =>
       onChange(
         snapshot.docs
           .map(d => ({ ...(d.data() as Omit<UserPack, 'id'>), id: d.id }))
           .sort((a, b) => a.createdAt - b.createdAt),
+        snapshot.metadata.fromCache,
       ),
     onError,
   );

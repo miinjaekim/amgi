@@ -3,16 +3,17 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import {
-  getPackText, setUserVocabPacks, t, userPackId, userPackProgress, userPackToVocabPack,
-  type StudyLanguage, type UserPack, type VocabPack,
+  getPackText, setUserVocabPacks, settleUserPacks, t, userPackId, userPackProgress,
+  userVocabPacksByLanguage, type UserPack,
 } from '@amgi/core';
 import { useUser } from './UserContext';
 import { useTheme } from './ThemeContext';
 import { subscribeToUserPacks } from '../services/userPacks';
+import { readCachedUserPacks, writeCachedUserPacks } from '../services/offlineReview';
 import type { Palette } from '../theme';
 
 interface UserPacksContextType {
-  /** Null until the first snapshot, and while signed out. */
+  /** Null until the device snapshot or the first listener answer, and while signed out. */
   userPacks: UserPack[] | null;
 }
 
@@ -25,6 +26,12 @@ const UserPacksContext = createContext<UserPacksContextType>({ userPacks: null }
  *
  * The notice is in-app only: it shows if the app is open when sourcing ends.
  * A pack that finishes while the app is closed is simply there on Packs.
+ *
+ * **Offline, the packs come from the device.** Firestore's cache here is
+ * memory only, so an app opened without a connection hears an empty
+ * from-cache snapshot (or an error) where its packs should be. The last
+ * server snapshot is kept in AsyncStorage and seeds this before the listener
+ * answers; `settleUserPacks` is the rule for which answer replaces which.
  */
 export function UserPacksProvider({ children }: { children: ReactNode }) {
   const { user, interfaceLanguage } = useUser();
@@ -42,12 +49,32 @@ export function UserPacksProvider({ children }: { children: ReactNode }) {
       setUserVocabPacks({});
       return;
     }
-    return subscribeToUserPacks(
-      user.uid,
-      packs => {
-        const byLanguage: Partial<Record<StudyLanguage, VocabPack[]>> = {};
-        for (const pack of packs) (byLanguage[pack.studyLanguage] ??= []).push(userPackToVocabPack(pack));
-        setUserVocabPacks(byLanguage);
+    const { uid } = user;
+    let held: UserPack[] | null = null;
+    let serverAnswered = false;
+    let cancelled = false;
+    // The registry first: a screen re-rendering on `userPacks` reads it.
+    const hold = (packs: UserPack[]) => {
+      held = packs;
+      setUserVocabPacks(userVocabPacksByLanguage(packs));
+      setUserPacks(packs);
+    };
+
+    // Over anything the cache said in the meantime, which offline is an empty
+    // list, but never over the server.
+    void readCachedUserPacks(uid).then(cached => {
+      if (!cancelled && cached && !serverAnswered) hold(cached);
+    });
+
+    const unsubscribe = subscribeToUserPacks(
+      uid,
+      (incoming, fromCache) => {
+        const packs = settleUserPacks(held, incoming, fromCache);
+        if (packs === held) return;
+        if (!fromCache) {
+          serverAnswered = true;
+          void writeCachedUserPacks(uid, packs);
+        }
 
         const finished: UserPack[] = [];
         for (const pack of packs) {
@@ -56,10 +83,15 @@ export function UserPacksProvider({ children }: { children: ReactNode }) {
           else if (unfinished.current.delete(pack.id) && ready > 0) finished.push(pack);
         }
         if (finished.length) setNotices(current => [...current, ...finished]);
-        setUserPacks(packs);
+        hold(packs);
       },
-      () => setUserPacks([]),
+      // With nothing held this ends the wait; it does not empty what is.
+      () => { if (held === null) hold([]); },
     );
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
   }, [user]);
 
   const dismiss = (id: string) => setNotices(current => current.filter(p => p.id !== id));

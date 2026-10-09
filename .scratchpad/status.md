@@ -99,6 +99,14 @@ blank placeholder. On **Android**, only sign-in has ever been exercised.
   both apps typecheck, but no card has been rated under them in a browser or
   on a phone, and an exact typed answer going out as Good has not been
   watched on either.
+- **User-made pack names offline** (branch `offline-user-pack-names`). The
+  bug was diagnosed from the code and the Firestore SDK source, never
+  reproduced, and the fix has not run on a phone. To check: make a pack and
+  save a card from it online, open Review once, kill the app, turn on
+  airplane mode, reopen. Review's title, the picker rows, the Cards deck chip
+  and the Packs tab should all show the pack's name, and its page should
+  open. Then go back online and delete the pack on web: it should leave the
+  phone.
 - **The review card flip** (branch `review-card-flip`). The user tried the
   first version on a phone (2026-10-06) and asked for a faster turn; scrolling a
   long back, the card holding its size, and the options menu and edit form on a

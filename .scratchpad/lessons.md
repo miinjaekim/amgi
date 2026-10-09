@@ -436,6 +436,20 @@ Three things worth keeping:
   to outlive the process on mobile needs its own AsyncStorage layer — which is
   what `apps/mobile/src/services/offlineReview.ts` is. Do not assume a Firestore
   behaviour that holds on web holds on the phone.
+- **Cards are not the only thing a phone needs offline.** Anything a screen
+  resolves by id from another collection has to be in AsyncStorage too, or an
+  app opened offline shows the id. User-made packs were the first: the cards
+  were cached and the pack documents were not, so Review was titled
+  `user-WYivyPc…` (2026-10). A listener is no substitute: once the SDK decides
+  it is offline, `onSnapshot` delivers an **empty `fromCache` snapshot**, not
+  silence and not an error, so a handler that trusts it wipes what was there.
+  Check `snapshot.metadata.fromCache`, and pass `includeMetadataChanges` if
+  the server confirming an empty cache has to be heard.
+- **A module-level registry does not re-render anything.** `setUserVocabPacks`
+  fills one, and a `useMemo` that reads it through `buildReviewCollections` or
+  `buildDeckFilters` keeps its old answer until one of its own deps changes.
+  Mobile's Review and Cards list `userPacks` from the context as a dep for
+  that reason. Web's Review does not, and has the same gap in principle.
 - **Neither reads nor writes fail offline, and each lies differently.**
   `getDocs`/`getDoc` fall back to the local cache, so on RN they resolve
   *empty* — indistinguishable from "this user has no data", which is how an

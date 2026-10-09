@@ -148,6 +148,19 @@ those checks come from using the app.
   so until then the same card rated on each is scheduled differently.
   Reasoning in [review](decisions/review.md). ⚠️ Tested, not seen in a
   browser or on a device; under Unverified in [status.md](status.md).
+- **A user-made pack keeps its name offline** (branch
+  `offline-user-pack-names`; a friend's phone, reported by the user
+  2026-10-09). Mobile only. Opened offline, Review titled a user-made pack
+  with its raw id (`user-WYivyPc…`): the cards have a snapshot on the device
+  and the pack documents had none, and the listener's empty from-cache
+  snapshot emptied the pack registry. The packs are now kept whole in
+  AsyncStorage per user, written on every server snapshot and read back on
+  sign-in; a cache snapshot or an error no longer replaces packs already
+  held, and a server snapshot always does. The same cause covered the picker
+  rows, subpack names, the Cards deck chips, the Packs tab and the pack and
+  drill pages. Review and Cards also re-read the names when the packs arrive
+  after the cards. ⚠️ Not reproduced and not seen fixed: it needs a phone.
+  Under Unverified in [status.md](status.md).
 
 ## High
 
