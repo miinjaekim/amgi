@@ -26,6 +26,18 @@ _Merged, not yet in anyone's hands — mobile ships by build, no OTA._
 _Build 19 (2.2.0) was approved for external testing, reported 2026-10-06; what
 is below merged after it._
 
+- **Review times under the rating buttons** (branch `review-times`). Each of
+  Again, Hard, Good and Easy shows under its label when the card comes back
+  if that button is pressed, web and mobile, flip and typed cards: 지금, 6일,
+  3개월, 1.5년 / now, 6d, 3mo, 1.5y. Display only. The time is read off the
+  `nextReview` that `getNextReviewData` returns for `trackingFor`'s tracking
+  (`ratingWaitLabels` in `reviewStatus.ts`), so it follows the scheduler
+  whatever the scheduler does.
+  Chosen in the build rather than asked, and the user's to overrule: days up
+  to 29, whole months up to a year, then years to one decimal (400 and 540
+  days would otherwise both read 1y).
+  ⚠️ Seen on web in English only; mobile is under Unverified in
+  [status.md](status.md).
 - **Review asks for the meaning by typing too** (branch `type-meanings`).
   With "Type your answers" on, word→meaning cards get the input box as well,
   web and mobile; they used to flip. Three outcomes for a typed meaning: the
@@ -134,21 +146,6 @@ whether `faire` joins the three sourced irregular verbs (#150), and whether a
 practice session should cover several tenses at once again, which the section
 picker narrowed (#146). Both are written up in their Decisions entries of
 2026-09-22.
-
-- [ ] **Review times under the rating buttons.** From Google Tasks, scoped
-      with the user 2026-10-09. Each of the four buttons shows, under its
-      label, when the card comes back if that button is pressed. Web and
-      mobile, flip and typed cards. Display only: the scheduler does not
-      change. The time comes from `getNextReviewData` on the tracking the
-      rating would read (`trackingFor`), so the label and the write cannot
-      disagree.
-      **Format:** compact and localised. 1d, 6d, 3mo, 1y in English; 1일,
-      6일, 3개월, 1년 in Korean. Again reads "now" / "지금", since a missed
-      card stays due.
-      ⚠️ **Hard, Good and Easy will show the same time on every card.** The
-      three differ only in what they do to the ease, which moves the review
-      *after* this one. The user knows and chose to ship the display first;
-      the item below is what makes them differ.
 
 - [ ] **Mobile review: part of speech and gender chips.** From Google Tasks
       ("Add term chips to the review flow"), scoped with the user 2026-10-09.

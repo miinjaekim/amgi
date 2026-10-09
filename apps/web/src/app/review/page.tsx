@@ -22,6 +22,7 @@ import {
   legacyNextReview,
   maturityChange,
   trackingFor,
+  ratingWaitLabels,
   removeCardFromQueue,
   getBackSideConfig,
   hanjaFaces,
@@ -819,6 +820,19 @@ export default function ReviewPage() {
   };
 
   const currentReview = activeQueue[currentReviewIdx];
+  // From the tracking `handleReviewResponse` reads, so a button cannot show one
+  // wait and write another.
+  const ratingWaits = currentReview
+    ? ratingWaitLabels(interfaceLanguage, trackingFor(currentReview.card, currentReview.direction))
+    : null;
+  /**
+   * When the card comes back if this rating is the one pressed, as a second
+   * line inside its button. Lighter and smaller than the label, in the
+   * button's own text colour so it holds up on all four fills.
+   */
+  const ratingWait = (rating: 'again' | 'hard' | 'good' | 'easy') => (
+    <span className="block text-xs font-normal opacity-80 tabular-nums">{ratingWaits?.[rating]}</span>
+  );
   /** Either direction, and never Hanja — see `promptsForTyping`. */
   const typingThisCard = !!currentReview && promptsForTyping(typingEnabled, studyLanguage);
   /** The typed card shows the word and asks for its meaning, rather than the other way round. */
@@ -1370,32 +1384,36 @@ export default function ReviewPage() {
                   <div className="relative mt-4">
                     <div className={`grid grid-cols-2 sm:grid-cols-4 gap-2 ${showAnswer ? '' : 'invisible'}`}>
                         <button
-                          className="px-4 py-3 rounded-lg bg-red-400 text-white hover:bg-red-500 font-semibold"
+                          className="px-4 py-2 rounded-lg bg-red-400 text-white hover:bg-red-500 font-semibold"
                           onClick={() => handleReviewResponse('again')}
                           style={ratingEmphasis('again')}
                         >
                           {t(interfaceLanguage, 'ratingAgain')}
+                          {ratingWait('again')}
                         </button>
                         <button
-                          className="px-4 py-3 rounded-lg bg-[var(--color-highlight)] text-[var(--color-bg)] hover:bg-[var(--color-text)] font-semibold"
+                          className="px-4 py-2 rounded-lg bg-[var(--color-highlight)] text-[var(--color-bg)] hover:bg-[var(--color-text)] font-semibold"
                           onClick={() => handleReviewResponse('hard')}
                           style={ratingEmphasis('hard')}
                         >
                           {t(interfaceLanguage, 'ratingHard')}
+                          {ratingWait('hard')}
                         </button>
                         <button
-                          className="px-4 py-3 rounded-lg bg-[var(--color-muted)] text-[var(--color-text)] hover:bg-[var(--color-muted-dark)] font-semibold"
+                          className="px-4 py-2 rounded-lg bg-[var(--color-muted)] text-[var(--color-text)] hover:bg-[var(--color-muted-dark)] font-semibold"
                           onClick={() => handleReviewResponse('good')}
                           style={ratingEmphasis('good')}
                         >
                           {t(interfaceLanguage, 'ratingGood')}
+                          {ratingWait('good')}
                         </button>
                         <button
-                          className="px-4 py-3 rounded-lg bg-[var(--color-bg)] text-[var(--color-text)] border border-[var(--color-muted)] hover:bg-[var(--color-muted)] font-semibold"
+                          className="px-4 py-2 rounded-lg bg-[var(--color-bg)] text-[var(--color-text)] border border-[var(--color-muted)] hover:bg-[var(--color-muted)] font-semibold"
                           onClick={() => handleReviewResponse('easy')}
                           style={ratingEmphasis('easy')}
                         >
                           {t(interfaceLanguage, 'ratingEasy')}
+                          {ratingWait('easy')}
                         </button>
                     </div>
                     {/* In the held grid's place until the first flip, so

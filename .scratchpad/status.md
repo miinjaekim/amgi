@@ -68,6 +68,11 @@ blank placeholder. On **Android**, only sign-in has ever been exercised.
 
 **Never looked at on a device or a real account:**
 
+- **Review times under the rating buttons** (branch `review-times`): seen on
+  web on a flip card with the interface in English (2026-10-09). Not seen: the
+  mobile rating row at all, where the second line makes each button a little
+  taller; the Korean labels on either platform; and the row after a typed
+  answer.
 - **Typed meanings** (branch `type-meanings`): never run in a browser or on a
   phone. The grader is unit-tested and both apps typecheck; the typed card in
   the word→meaning direction, its keyboard on mobile and the pronounce button
