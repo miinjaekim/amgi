@@ -38,6 +38,7 @@ import type {
   ReviewDirection, ReviewQueueItem, TypedAnswerGrade,
 } from '@amgi/core';
 import { useTheme } from '../../src/context/ThemeContext';
+import { useUserPacks } from '../../src/context/UserPacksContext';
 import { useFloatingTabBarHeight } from '../../src/components/FloatingTabBar';
 import PageHeader from '../../src/components/PageHeader';
 import Markdown from '../../src/components/Markdown';
@@ -390,9 +391,13 @@ export default function ReviewScreen() {
     [cards, sessionRatings, studyLanguage]
   );
 
+  // `userPacks` is not read here: the names come from the pack registry, which
+  // the provider fills, sometimes after the cards have loaded. Listing it is
+  // what re-runs this then, so a user-made pack does not stay named by its id.
+  const { userPacks } = useUserPacks();
   const collections = useMemo(
     () => buildReviewCollections(reviewedCards, studyLanguage, interfaceLanguage),
-    [reviewedCards, studyLanguage, interfaceLanguage]
+    [reviewedCards, studyLanguage, interfaceLanguage, userPacks]
   );
 
   /**

@@ -13,12 +13,13 @@
  * The Firestore side is in `reviewSync.ts`.
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import type { Flashcard, PendingReview, StreakState, StudyLanguage } from '@amgi/core';
-import { isStudyLanguage } from '@amgi/core';
+import type { Flashcard, PendingReview, StreakState, StudyLanguage, UserPack } from '@amgi/core';
+import { isStudyLanguage, reviveUserPacks } from '@amgi/core';
 
 const cardsKey = (uid: string, lang: StudyLanguage) => `amgi_cards_${uid}_${lang}`;
 const libraryKey = (uid: string, lang: StudyLanguage) => `amgi_library_${uid}_${lang}`;
 const knownLanguagesKey = (uid: string) => `amgi_known_languages_${uid}`;
+const userPacksKey = (uid: string) => `amgi_user_packs_${uid}`;
 const pendingKey = (uid: string) => `amgi_pending_reviews_${uid}`;
 const streakKey = (uid: string) => `amgi_streak_${uid}`;
 
@@ -142,6 +143,40 @@ async function rememberLanguage(uid: string, studyLanguage: StudyLanguage): Prom
   const known = await readKnownLanguages(uid);
   if (known.includes(studyLanguage)) return;
   await AsyncStorage.setItem(knownLanguagesKey(uid), JSON.stringify([...known, studyLanguage]));
+}
+
+// ---------------------------------------------------------------------------
+// User pack snapshots
+// ---------------------------------------------------------------------------
+
+/**
+ * The learner's own packs, whole, as the server last sent them.
+ *
+ * A card snapshot is not enough to review a user-made pack offline: the card
+ * carries only the pack's id, and its name, its subpacks' names and its page
+ * all come from the pack document. Without this an app opened offline had the
+ * cards and no pack, and showed the id where the name goes.
+ *
+ * One key for all study languages, because the listener is one query. Entries
+ * are kept, since the pack page lists them.
+ */
+/** The packs last seen for this user, or null if this device never loaded them. */
+export async function readCachedUserPacks(uid: string): Promise<UserPack[] | null> {
+  try {
+    const raw = await AsyncStorage.getItem(userPacksKey(uid));
+    return raw ? reviveUserPacks(JSON.parse(raw)) : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Only ever with packs the server sent — see `settleUserPacks`. */
+export async function writeCachedUserPacks(uid: string, packs: UserPack[]): Promise<void> {
+  try {
+    await AsyncStorage.setItem(userPacksKey(uid), JSON.stringify(packs));
+  } catch {
+    // Best-effort; the live list is unaffected.
+  }
 }
 
 // ---------------------------------------------------------------------------

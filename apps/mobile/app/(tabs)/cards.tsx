@@ -16,6 +16,7 @@ import { SNAPSHOT_WRITE_DEBOUNCE_MS } from '../../src/services/reviewSync';
 import { t, DEFAULT_DECK_FILTER, buildDeckFilters, cardReviewStatus, filterCardsByDeck, reviewStatusLabel, getStudyLanguageConfig, getBackSideConfig, getStudyLangSide, getBackSide } from '@amgi/core';
 import type { CardSideField, DeckFilterId } from '@amgi/core';
 import { useTheme } from '../../src/context/ThemeContext';
+import { useUserPacks } from '../../src/context/UserPacksContext';
 import { useFloatingTabBarHeight } from '../../src/components/FloatingTabBar';
 import { PAGE_TITLE_SIZE } from '../../src/components/PageHeader';
 import StudyLanguageChip from '../../src/components/StudyLanguageChip';
@@ -132,9 +133,13 @@ export default function CardsScreen() {
   // offered chips rather than reset by an effect: deleting the last card of a
   // deck retires its chip, and a selection left pointing at a chip that is no
   // longer on screen shows an empty list with no visible reason.
+  //
+  // `userPacks` is listed, not read: the chip names come from the pack registry
+  // the provider fills, which can happen after the cards have loaded.
+  const { userPacks } = useUserPacks();
   const deckFilters = useMemo(
     () => buildDeckFilters(allCards, studyLanguage, interfaceLanguage),
-    [allCards, studyLanguage, interfaceLanguage]
+    [allCards, studyLanguage, interfaceLanguage, userPacks]
   );
   const activeDeck = deckFilters.some(d => d.id === deckKey) ? deckKey : DEFAULT_DECK_FILTER;
   const deckCards = useMemo(

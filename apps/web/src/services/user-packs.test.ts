@@ -8,9 +8,12 @@ import {
   normalizeTerm,
   parsePackLevel,
   parsePackTitle,
+  reviveUserPacks,
   setUserVocabPacks,
+  settleUserPacks,
   userPackProgress,
   userPackToVocabPack,
+  userVocabPacksByLanguage,
   parseKnownTerms,
   parsePackBrief,
   parseSourcedLine,
@@ -195,6 +198,71 @@ describe('stored user packs', () => {
     } finally {
       setUserVocabPacks({});
     }
+  });
+
+  it('groups by study language for the registry', () => {
+    const french = { ...pack([subtopic('a', 'ready', ['bail'])]), id: 'fr', studyLanguage: 'French' as const };
+    const byLanguage = userVocabPacksByLanguage([pack([]), french]);
+    expect(byLanguage.English?.map(p => p.id)).toEqual(['user-abc']);
+    expect(byLanguage.French?.map(p => p.id)).toEqual(['user-fr']);
+    expect(byLanguage.Korean).toBeUndefined();
+  });
+
+  describe('settling a listener snapshot against the packs held', () => {
+    const held = [pack([subtopic('a', 'ready', ['lease'])])];
+    const newer = [{ ...held[0], id: 'newer' }];
+
+    it('keeps what is held over an empty cache, which is what an offline start delivers', () => {
+      expect(settleUserPacks(held, [], true)).toBe(held);
+    });
+
+    it('keeps what is held over any cache snapshot', () => {
+      expect(settleUserPacks(held, newer, true)).toBe(held);
+    });
+
+    it('takes the server over what is held, an empty server included', () => {
+      expect(settleUserPacks(held, newer, false)).toBe(newer);
+      expect(settleUserPacks(held, [], false)).toEqual([]);
+    });
+
+    it('takes whatever arrives when nothing is held', () => {
+      expect(settleUserPacks(null, [], true)).toEqual([]);
+      expect(settleUserPacks(null, newer, true)).toBe(newer);
+      expect(settleUserPacks(null, newer, false)).toBe(newer);
+    });
+
+    it('replaces an empty list the cache left behind only from the server', () => {
+      expect(settleUserPacks([], newer, true)).toEqual([]);
+      expect(settleUserPacks([], newer, false)).toBe(newer);
+    });
+  });
+
+  describe('a device snapshot', () => {
+    it('comes back through JSON as the packs that went in, names resolving again', () => {
+      const stored = [pack([subtopic('a', 'ready', ['lease']), subtopic('b', 'sourcing')])];
+      const revived = reviveUserPacks(JSON.parse(JSON.stringify(stored)));
+      expect(revived).toEqual(stored);
+      setUserVocabPacks(userVocabPacksByLanguage(revived!));
+      try {
+        expect(getVocabPack('English', 'user-abc')?.name).toEqual({ English: 'Mine', Korean: '내 팩' });
+      } finally {
+        setUserVocabPacks({});
+      }
+    });
+
+    it('is an empty list when the learner had no packs', () => {
+      expect(reviveUserPacks([])).toEqual([]);
+    });
+
+    it('is refused when it is not a list of packs', () => {
+      const sound = pack([subtopic('a', 'ready')]);
+      expect(reviveUserPacks(null)).toBeNull();
+      expect(reviveUserPacks({ packs: [] })).toBeNull();
+      expect(reviveUserPacks([null])).toBeNull();
+      expect(reviveUserPacks([{ ...sound, studyLanguage: 'Klingon' }])).toBeNull();
+      expect(reviveUserPacks([{ ...sound, subtopics: undefined }])).toBeNull();
+      expect(reviveUserPacks([{ ...sound, subtopics: [{ id: 'a' }] }])).toBeNull();
+    });
   });
 });
 
