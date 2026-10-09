@@ -30,7 +30,7 @@ import {
   getBackSide, getNextReviewDate, hanjaFaces,
   getNextReviewData, getStudyLangSide, getStudyLanguageConfig, getBackSideConfig,
   directionLabel, getCharacterBreakdown, getExampleSides, getReading,
-  maturityChange, removeCardFromQueue, t, trackingFor,
+  maturityChange, ratingWaitLabels, removeCardFromQueue, t, trackingFor,
   gradeTypedAnswer, promptsForTyping, typedAnswerPlaceholder,
 } from '@amgi/core';
 import type {
@@ -1192,6 +1192,9 @@ export default function ReviewScreen() {
   }
 
   const { card, direction } = queue[index];
+  // From the tracking `handleRate` reads, so a button cannot show one wait and
+  // write another.
+  const ratingWaits = ratingWaitLabels(interfaceLanguage, trackingFor(card, direction));
   const isFront = direction === 'frontToBack';
   const studySide = getStudyLangSide(card);
   const backSide = getBackSide(card, deckNativeLanguage);
@@ -1829,9 +1832,11 @@ export default function ReviewScreen() {
                     onPress={() => handleRate(r.key)}
                     disabled={!!submitting}
                   >
-                    <Text style={[s.ratingBtnText, { color: r.color, opacity: submitting && submitting !== r.key ? 0.4 : submitting === r.key ? 0 : 1 }]}>
-                      {r.label}
-                    </Text>
+                    <View style={{ alignItems: 'center', opacity: submitting && submitting !== r.key ? 0.4 : submitting === r.key ? 0 : 1 }}>
+                      <Text style={[s.ratingBtnText, { color: r.color }]}>{r.label}</Text>
+                      {/* When the card comes back if this is the one pressed. */}
+                      <Text style={s.ratingBtnWait}>{ratingWaits[r.key]}</Text>
+                    </View>
                     {submitting === r.key && (
                       <ActivityIndicator size="small" color={r.color} style={StyleSheet.absoluteFill} />
                     )}
@@ -2015,9 +2020,12 @@ function makeStyles(C: Palette, tabBarHeight: number) {
   },
   ratingBtn: {
     flex: 1, borderWidth: 2, borderRadius: 12,
-    paddingVertical: 12, alignItems: 'center',
+    paddingVertical: 9, alignItems: 'center',
   },
   ratingBtnText: { fontSize: 13, fontWeight: '700' },
+  // Quieter than the label it sits under: the label is what is being chosen,
+  // this is what choosing it does.
+  ratingBtnWait: { fontSize: 11, color: C.muted, marginTop: 1 },
   // A neutral fill on the rating the typed answer earned — emphasis, not a
   // lock: the other three are still tappable.
   ratingBtnSuggested: { backgroundColor: C.border },

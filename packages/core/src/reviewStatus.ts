@@ -1,4 +1,5 @@
 import type { Flashcard } from './types';
+import { getNextReviewData } from './sm2';
 import type { ReviewDirection } from './sm2';
 import { directionLabel, t } from './i18n';
 
@@ -133,4 +134,53 @@ export function cardReviewLines(
     const status = reviewStatusLabel(interfaceLanguage, directionReviewStatus(card, direction, now), now, 'direction');
     return `${label} · ${status}`;
   });
+}
+
+/** The four answers a review can be given. */
+export type ReviewRating = 'again' | 'hard' | 'good' | 'easy';
+
+const DAY_MS = 86_400_000;
+const DAYS_PER_MONTH = 365.25 / 12;
+
+/**
+ * A wait as the few characters that fit under a rating button: "now", "6d",
+ * "3mo", "1.5y" — 지금, 6일, 3개월, 1.5년.
+ *
+ * Days up to a month, whole months up to a year, then years to one decimal,
+ * because at that length a whole number would put 400 days and 540 days under
+ * the same label. Anything that rounds to no days at all is "now".
+ */
+export function formatReviewWait(
+  interfaceLanguage: string | null | undefined,
+  waitMs: number,
+): string {
+  const days = Math.round(waitMs / DAY_MS);
+  if (days <= 0) return t(interfaceLanguage, 'ratingWaitNow');
+  if (days < 30) return t(interfaceLanguage, 'ratingWaitDays', { count: days });
+  const months = Math.round(days / DAYS_PER_MONTH);
+  if (months < 12) return t(interfaceLanguage, 'ratingWaitMonths', { count: months });
+  // `Number` drops a trailing ".0", so a round year reads "1y" and not "1.0y".
+  const years = Number((days / 365.25).toFixed(1));
+  return t(interfaceLanguage, 'ratingWaitYears', { count: years });
+}
+
+/**
+ * What goes under each rating button: when the card comes back if that button
+ * is pressed.
+ *
+ * `tracking` is what the rating itself would read (`trackingFor`), and the
+ * wait is read off the `nextReview` that `getNextReviewData` returns for it,
+ * which is the value the rating writes. So the label cannot promise one thing
+ * and the write do another, whatever the scheduler does inside.
+ */
+export function ratingWaitLabels(
+  interfaceLanguage: string | null | undefined,
+  tracking: Parameters<typeof getNextReviewData>[0],
+  now: Date = new Date(),
+): Record<ReviewRating, string> {
+  const label = (rating: ReviewRating) => formatReviewWait(
+    interfaceLanguage,
+    getNextReviewData(tracking, rating).nextReview.getTime() - now.getTime(),
+  );
+  return { again: label('again'), hard: label('hard'), good: label('good'), easy: label('easy') };
 }

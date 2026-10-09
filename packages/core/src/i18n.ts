@@ -720,6 +720,12 @@ const translations = {
     cardStatusToday: 'today',
     cardStatusTomorrow: 'tomorrow',
     cardStatusInDays: 'in {days} days',
+    // Under each rating button in Review: when the card comes back if that
+    // button is pressed. Compact on purpose, since four of them sit in a row.
+    ratingWaitNow: 'now',
+    ratingWaitDays: '{count}d',
+    ratingWaitMonths: '{count}mo',
+    ratingWaitYears: '{count}y',
     reviewCompleteMessage: 'Good work. Head to Learn to keep building your vocabulary.',
     // Cards page
     cardsPageTitle: 'My Cards',
@@ -1206,6 +1212,10 @@ const translations = {
     cardStatusToday: '오늘',
     cardStatusTomorrow: '내일',
     cardStatusInDays: '{days}일 후',
+    ratingWaitNow: '지금',
+    ratingWaitDays: '{count}일',
+    ratingWaitMonths: '{count}개월',
+    ratingWaitYears: '{count}년',
     reviewCompleteMessage: '수고했습니다. 학습 페이지에서 어휘를 계속 늘려보세요.',
     // Cards page
     navCards: '카드',
