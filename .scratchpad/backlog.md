@@ -120,6 +120,29 @@ practice session should cover several tenses at once again, which the section
 picker narrowed (#146). Both are written up in their Decisions entries of
 2026-09-22.
 
+- [ ] **Review times under the rating buttons.** From Google Tasks, scoped
+      with the user 2026-10-09. Each of the four buttons shows, under its
+      label, when the card comes back if that button is pressed. Web and
+      mobile, flip and typed cards. Display only: the scheduler does not
+      change. The time comes from `getNextReviewData` on the tracking the
+      rating would read (`trackingFor`), so the label and the write cannot
+      disagree.
+      **Format:** compact and localised. 1d, 6d, 3mo, 1y in English; 1일,
+      6일, 3개월, 1년 in Korean. Again reads "now" / "지금", since a missed
+      card stays due.
+      ⚠️ **Hard, Good and Easy will show the same time on every card.** The
+      three differ only in what they do to the ease, which moves the review
+      *after* this one. The user knows and chose to ship the display first;
+      whether the scheduler should change is under Needs clarification.
+
+- [ ] **Mobile review: part of speech and gender chips.** From Google Tasks
+      ("Add term chips to the review flow"), scoped with the user 2026-10-09.
+      Web review already shows part of speech, gender and the reading as chips
+      on the revealed answer, on flip and typed cards; mobile shows only the
+      reading. Mobile gets the other two, in the same row as the reading and
+      only after the reveal, so nothing on the prompt gives the answer away.
+      Just those two chips: no verb group. Web does not change.
+
 ## Medium
 
 - [ ] **User-made vocab packs: refine for testing** — moved to Medium
@@ -404,6 +427,15 @@ measured 2026-10-04. What's left is what those two now *show*.
       dead code web's lint catches on the next commit.
 
 ## Needs clarification
+
+- [ ] **Should Hard, Good and Easy schedule different next reviews?** Raised
+      2026-10-09 while scoping the review times in High. Today all three give
+      the same interval (`getNextReviewData` multiplies by the ease from
+      *before* the rating), and only the ease differs, so the buttons part
+      ways one review later. Showing the times makes that visible. The change
+      would be a shorter interval on Hard and a longer one on Easy, as Anki
+      does; it reschedules every card from then on, on both platforms.
+      _Recommended 2026-10-09: make them differ._ Awaiting the user's call.
 
 - [ ] **Words with several parts of speech.** A card carries one
       `partOfSpeech`, and `normalizePartOfSpeech` keeps only the first of
