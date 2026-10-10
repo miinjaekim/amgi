@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
   }
 
   const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash', generationConfig: { temperature: 0.1 } });
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash', generationConfig: { temperature: 0 } });
 
   // The back side follows native language, but `english` stays populated on
   // every card: it is what documents written before this existed carry, what

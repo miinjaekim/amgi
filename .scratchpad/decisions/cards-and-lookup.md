@@ -3,6 +3,31 @@
 Card fields, glosses, part of speech, spellcheck, saving, My Cards, export. Newest first. Indexed from
 [status.md](../status.md).
 
+## Lookup and Dig Deeper run at temperature 0, as a trial (2026-10-10)
+
+**What.** `/api/explain`, `/api/explain/depth` and `/api/explain/depth-stream`
+go from temperature 0.1 to 0. Nothing else about the three calls changes.
+
+**Decided by the user**, 2026-10-10, as a trial: looking the same term up
+again should come back the same far more often than it does.
+
+- **0 narrows the variation without ending it.** None of the three routes sets
+  a seed or a `thinkingConfig`, and Gemini is not strictly repeatable at 0. A
+  re-lookup can still differ.
+- **Examples stay at 0.4**, both `/api/explain/examples` and
+  `/api/explain/examples-stream`. Variety is the point there.
+- **Caching lookups was offered as the only guarantee and declined**, as more
+  than this needs.
+- **Writing (`/api/writing`, 0.1) was not part of the call** and is unchanged.
+
+**Not measured.** No calls were run to see what 0 changes. The measurements
+taken at the lookup's temperature were all taken at 0.1 and have not been
+re-run: the pitch-accent check in `apps/web/src/data/README.md`, the gloss and
+chip-rate counts in this file, and the checks in
+[pronunciation.md](pronunciation.md) and [languages.md](languages.md) that ran
+"at the route's temperature". Their "0.1" is left as written, since it says
+what was measured.
+
 ## Forms on a lookup: a table for Swedish, a sentence for French (2026-10-08)
 
 **What.** The user's Google Tasks item was "Add definite indefinite, singular

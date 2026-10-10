@@ -311,6 +311,7 @@ Per-language calls: Spanish, Kikuyu, Swahili, Hanja, and a native language per d
 
 Card fields, glosses, part of speech, spellcheck, saving, My Cards, export.
 
+- [Lookup and Dig Deeper run at temperature 0, as a trial (2026-10-10)](decisions/cards-and-lookup.md#lookup-and-dig-deeper-run-at-temperature-0-as-a-trial-2026-10-10)
 - [Forms on a lookup: a table for Swedish, a sentence for French (2026-10-08)](decisions/cards-and-lookup.md#forms-on-a-lookup-a-table-for-swedish-a-sentence-for-french-2026-10-08)
 - [A card says where it stands with Review (2026-10-05)](decisions/cards-and-lookup.md#a-card-says-where-it-stands-with-review-2026-10-05)
 - [French verbs are tagged with their group, and only their group (2026-09-23)](decisions/cards-and-lookup.md#french-verbs-are-tagged-with-their-group-and-only-their-group-2026-09-23)
