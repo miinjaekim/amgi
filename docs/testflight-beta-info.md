@@ -2,7 +2,7 @@
 
 _한국어와 영어 문구가 모두 이 파일에 있습니다. Both languages live here._
 
-_마지막 갱신: 2026-10-05, 2.2.0용._
+_마지막 갱신: 2026-10-10, 2.3.0용._
 
 App Store Connect → TestFlight → **Test Information**에 붙여넣는 문구 모음입니다.
 Test Information은 로컬라이제이션을 지원하므로, 언어 목록에 **Korean (ko)** 과
@@ -85,18 +85,15 @@ kenyamjkim@gmail.com
 ```
 이번 빌드에 새로 들어간 것:
 
-· 아랍어와 광둥어를 공부할 수 있습니다. 아랍어 단어 옆의 모음 부호 표기는 AI가 만든 것이고 검토를 거치지 않았어요.
-· 단어팩을 직접 만들 수 있습니다 — 어디에 쓸 단어인지 알려 주면 실제 출처에서 단어를 찾아 줍니다.
-· 처음 시작할 때 단어 하나를 직접 찾아 카드로 만들고 복습까지 해 봅니다.
-· 복습에서 답을 확인하면 한 줄 뜻이 함께 나옵니다.
-· 카드마다 다음 복습이 언제인지 보입니다.
-· 설정이 항목별 목록으로 바뀌었고, 계정 삭제는 설정 → 계정에 있습니다.
-· 문리에 프랑스어 동사를 직접 추가할 수 있습니다. 활용형은 AI가 만든 것이고 검토를 거치지 않았어요.
-· 문리에서 자주 틀리는 규칙 동사가 더 자주 나옵니다.
-· 문리 테마의 배경이 맑아지고 글자가 또렷해졌습니다.
-· 문리의 저장함 탭을 한 번 더 누르면 첫 화면으로 돌아갑니다.
-
-피드백은 TestFlight의 '피드백 보내기' 또는 kenyamjkim@gmail.com으로.
+· 복습 카드가 제자리에서 뒤집힙니다. 카드나 '정답 보기'를 누르면 앞면 자리에 뒷면이 나와요.
+· '답을 직접 입력하기'를 켜면 단어뿐 아니라 뜻도 입력해서 답합니다.
+· 평가 버튼마다 그 카드가 언제 다시 나오는지 보입니다.
+· 어려움, 보통, 쉬움이 다음 복습 날짜를 서로 다르게 잡습니다.
+· 복습에서 답을 확인하면 읽는 법 옆에 품사와 성이 함께 나옵니다.
+· 스웨덴어 단어를 찾으면 명사와 형용사의 변화형이, 프랑스어는 불규칙형이 함께 나옵니다. 새로 찾는 단어부터요.
+· 문리의 글쓰기 칸이 크기가 고정되고 그 안에서 스크롤됩니다.
+· 쓴 글을 첨삭과 함께 저장하고, 저장함에서 다시 볼 수 있습니다.
+· 한자를 뺀 모든 학습 언어에 글쓰기 예시가 생겼습니다.
 ```
 
 ### English
@@ -104,18 +101,15 @@ kenyamjkim@gmail.com
 ```
 New in this build:
 
-· Arabic and Cantonese are new study languages. The vowelled reading beside an Arabic word comes from AI and is not checked.
-· Make a pack of your own — say what the words are for and Amgi finds them in real sources.
-· First run now takes you through one real lookup, card and rating.
-· Review shows a one-line definition under the answer.
-· Each card says when its next review is.
-· Settings is now a short list of rows; account deletion is under Settings → Account.
-· Add your own French verbs to Munli. Their forms come from AI and are not checked.
-· Munli asks the regular verbs you keep missing more often.
-· Munli's themes have clearer backgrounds and darker text.
-· Tapping Munli's Saved tab again returns to the shelves.
-
-Send feedback via TestFlight's "Send Beta Feedback" or to kenyamjkim@gmail.com.
+· The review card flips in place: tap it, or Show Answer, and the back replaces the front.
+· With "Type your answers" on, you type meanings too, not only words.
+· Each rating button shows when the card would come back.
+· Hard, Good and Easy now set different next reviews.
+· The answer in review shows part of speech and gender beside the reading.
+· Swedish lookups show a noun's or adjective's forms; French ones name an irregular form. New lookups only.
+· Munli's Writing field stays one size and scrolls inside itself.
+· Save a piece of writing with its feedback, and read it again under Saved.
+· Writing has a worked example for every study language except Hanja.
 ```
 
 ---
@@ -166,7 +160,7 @@ Account deletion: Progress tab → the gear icon at its top right → Account, t
 
 Notifications: The app can schedule local reminders for the word of the day and for due reviews. Both are off by default, turned on individually in Settings → Reminders; the permission prompt appears only when one is enabled. They are scheduled on the device — the app sends no remote push and stores no push tokens.
 
-Third-party processing: Word explanations, writing corrections, user-made packs and user-added verb tables are generated with Google's Gemini API, and pronunciation audio with Google Cloud Text-to-Speech. Only the submitted text, optional context, and language settings are sent — never account identifiers. A passage submitted to Munli's Writing tab is not stored: neither it nor the correction is written to the account, unless the user saves a phrase as a flashcard. All of this is described in the privacy policy.
+Third-party processing: Word explanations, writing corrections, user-made packs and user-added verb tables are generated with Google's Gemini API, and pronunciation audio with Google Cloud Text-to-Speech. Only the submitted text, optional context, and language settings are sent — never account identifiers. A passage submitted to Munli's Writing tab and its correction are written to the account only if the user taps Save or saves a phrase as a flashcard. All of this is described in the privacy policy.
 
 The app contains no ads, no analytics, and no tracking. It does not access location, contacts, camera, or photos.
 

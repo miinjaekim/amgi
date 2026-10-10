@@ -27,6 +27,19 @@ Housekeeping in [backlog.md](backlog.md)._
   was refused with "You do not have required contracts to perform an operation
   (403)", which is not a key or password problem. What in it is still unseen
   on a device is under Unverified.
+- **2.3.0 is prepared and not yet cut**: `release/2.3.0` bumps the version and
+  rewrites the TestFlight copy, and stops before `eas build`. It carries the
+  twelve mobile PRs merged since build 19 (#193 to #203, without #204 and
+  #205, which are web and server only), listed under Queued for the next build
+  in [backlog.md](backlog.md); web already has all of them. Pre-flight on
+  2026-10-10: the user smoke-tested in Expo Go; no native module or `app.json`
+  native config has changed since 2.2.0, so introspect was not run; the review
+  notes are 3981 of 4000 characters; and the copy has no character Apple has
+  not already accepted except Hangul syllables and a lowercase `z`. The review
+  notes no longer say a Writing passage is never stored, which stopped being
+  true with saved writing (#195). What to Test drops its closing line on how
+  to send feedback, on the user's call: every tester is someone they know.
+  **iOS only this time**; the user is holding off on an Android APK.
 - **Web deploys on merge**, so everything on `main` is live there.
 - **`/api/grammar/exercise` stays deployed** for any device still on 1.3.0,
   which has the grammar UI compiled in. The deletion is under Housekeeping in
