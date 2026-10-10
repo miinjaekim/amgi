@@ -28,6 +28,22 @@ chip-rate counts in this file, and the checks in
 "at the route's temperature". Their "0.1" is left as written, since it says
 what was measured.
 
+## No reload for lookups, Dig Deeper or examples (2026-10-10)
+
+**What.** The parked backlog item "Reload for term lookups, Dig Deeper and
+examples" is dropped, for all three surfaces. Nothing was built.
+
+**Decided by the user.** They had passed on reload "at least for now" on
+2026-09-24. On 2026-10-10 they chose repeatable answers over a way to ask for
+a different one, and dropped reload along with
+[the move to temperature 0](#lookup-and-dig-deeper-run-at-temperature-0-as-a-trial-2026-10-10).
+
+**If it ever returns.** None of these routes caches, so a reload is just
+another call. At a low temperature that call comes back near the same answer,
+so a reload has to run hotter than the first call or be told what not to
+repeat. Reloading on a *saved* card overwrites stored fields, which the
+lookup-before-save case does not.
+
 ## Forms on a lookup: a table for Swedish, a sentence for French (2026-10-08)
 
 **What.** The user's Google Tasks item was "Add definite indefinite, singular

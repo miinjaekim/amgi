@@ -261,15 +261,6 @@ _Empty as of 2026-09-25._
       set per box; and the two Earth sentences in the draft, which also take
       no article. Start from these when it returns.
 
-- [ ] **Reload for term lookups, Dig Deeper and examples.** ⏸ Passed on "at
-      least for now" by the user, 2026-09-24. Worth keeping for when it
-      returns: none of these routes caches, so a reload is just another call,
-      and the lookup and Dig Deeper now run at temperature 0, so it
-      would come back near-identical. A reload has
-      to run hotter than the first call, or be told what not to repeat.
-      Reloading on a *saved* card overwrites stored fields, which the
-      lookup-before-save case does not.
-
 - [ ] **Amgi on Google Play — internal testing track.** ⏸ **On hold from
       2026-09-22, the same day it was scoped and taken up**, on the user's call.
       Step 1 is blocked: identity verification delivers its code to a **+82**
