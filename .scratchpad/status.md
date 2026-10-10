@@ -27,19 +27,22 @@ Housekeeping in [backlog.md](backlog.md)._
   was refused with "You do not have required contracts to perform an operation
   (403)", which is not a key or password problem. What in it is still unseen
   on a device is under Unverified.
-- **2.3.0 is prepared and not yet cut**: `release/2.3.0` bumps the version and
-  rewrites the TestFlight copy, and stops before `eas build`. It carries the
-  twelve mobile PRs merged since build 19 (#193 to #203, without #204 and
-  #205, which are web and server only), listed under Queued for the next build
-  in [backlog.md](backlog.md); web already has all of them. Pre-flight on
-  2026-10-10: the user smoke-tested in Expo Go; no native module or `app.json`
-  native config has changed since 2.2.0, so introspect was not run; the review
-  notes are 3981 of 4000 characters; and the copy has no character Apple has
-  not already accepted except Hangul syllables and a lowercase `z`. The review
-  notes no longer say a Writing passage is never stored, which stopped being
-  true with saved writing (#195). What to Test drops its closing line on how
-  to send feedback, on the user's call: every tester is someone they know.
-  **iOS only this time**; the user is holding off on an Android APK.
+- **2.3.0 is build 20, submitted and waiting on external review** (2026-10-10),
+  cut from `7a847c6` on `main`, the merge of `release/2.3.0` (PR #206). The
+  build ran with `--auto-submit`, and the user pasted the new Test Information
+  the same day. It carries the twelve mobile PRs merged since build 19 (#193
+  to #203, without #204 and #205, which are web and server only), listed under
+  Queued for the next build in [backlog.md](backlog.md); web already has all
+  of them. Pre-flight: the user smoke-tested in Expo Go; no native module or
+  `app.json` native config had changed since 2.2.0, so introspect was not run;
+  the review notes were 3981 of 4000 characters; and the copy had no character
+  Apple had not already accepted except Hangul syllables and a lowercase `z`.
+  The review notes no longer say a Writing passage is never stored, which
+  stopped being true with saved writing (#195). What to Test drops its closing
+  line on how to send feedback, on the user's call: every tester is someone
+  they know. **iOS only**; the user held off on an Android APK, so Android
+  stays on `versionCode` 10 (2.2.0). External testers stay on build 19 until
+  approval; the queue turns over then, not now.
 - **Web deploys on merge**, so everything on `main` is live there.
 - **`/api/grammar/exercise` stays deployed** for any device still on 1.3.0,
   which has the grammar UI compiled in. The deletion is under Housekeeping in
@@ -160,6 +163,7 @@ No OTA, so every mobile change reaches users through one of these.
 
 | Version | Build | Date | Cut from |
 |---|---|---|---|
+| 2.3.0 | 20 | 2026-10-10 | `7a847c6` on `main`, the merge of `release/2.3.0` (PR #206). Submitted 10-10 with auto-submit; external review pending |
 | 2.2.0 | 19 | 2026-10-05 | `4f13448` on `main`, the merge of `release/2.2.0` (PR #191). Submitted 10-05, external testing approved, reported 10-06 |
 | 2.1.0 | 18 | 2026-09-27 | `d1de37e` on `release/2.1.0` (PR #176). External testing approved 09-28 |
 | 2.0.0 | 17 | 2026-09-23 | `69476aa` on `release/1.8.0`. Approved 09-23. The branch name says 1.8.0 because it was cut before the 2.0.0 call |
