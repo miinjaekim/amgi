@@ -170,6 +170,19 @@ practice session should cover several tenses at once again, which the section
 picker narrowed (#146). Both are written up in their Decisions entries of
 2026-09-22.
 
+- [ ] **Lookup and Dig Deeper run at temperature 0.** Decided by the user
+      2026-10-10, as a trial: a re-lookup of the same term should come back the
+      same far more often than it does. `/api/explain`, `/api/explain/depth`
+      and `/api/explain/depth-stream` go from 0.1 to 0. **Examples stay at
+      0.4**, both routes. Writing (0.1) was not part of the call and stays.
+      Caching lookups was offered as the only guarantee and declined as further
+      than this needs to go. Know going in that 0 narrows the variation
+      without ending it: none of the three routes sets `thinkingConfig` or a
+      seed, and Gemini is not strictly repeatable at 0. The pitch-accent check
+      in `apps/web/src/data/README.md` and the gloss and chip-rate counts in
+      [decisions/cards-and-lookup.md](decisions/cards-and-lookup.md) were
+      measured at 0.1.
+
 ## Medium
 
 - [ ] **User-made vocab packs: refine for testing** — moved to Medium
@@ -221,19 +234,6 @@ picker narrowed (#146). Both are written up in their Decisions entries of
       future single-character pack inherits the grid without being asked. Needs a
       real account with the deck enrolled before deciding.
 
-- [ ] **Lookup and Dig Deeper run at temperature 0.** Decided by the user
-      2026-10-10, as a trial: a re-lookup of the same term should come back the
-      same far more often than it does. `/api/explain`, `/api/explain/depth`
-      and `/api/explain/depth-stream` go from 0.1 to 0. **Examples stay at
-      0.4**, both routes. Writing (0.1) was not part of the call and stays.
-      Caching lookups was offered as the only guarantee and declined as further
-      than this needs to go. Know going in that 0 narrows the variation
-      without ending it: none of the three routes sets `thinkingConfig` or a
-      seed, and Gemini is not strictly repeatable at 0. The pitch-accent check
-      in `apps/web/src/data/README.md` and the gloss and chip-rate counts in
-      [decisions/cards-and-lookup.md](decisions/cards-and-lookup.md) were
-      measured at 0.1.
-
 - [ ] **`/api/explain` has no `try`/`catch`**, so an outage or a malformed
       response is a 500 rather than a handled error.
 
@@ -277,7 +277,7 @@ _Empty as of 2026-09-25._
 - [ ] **Reload for term lookups, Dig Deeper and examples.** ⏸ Passed on "at
       least for now" by the user, 2026-09-24. Worth keeping for when it
       returns: none of these routes caches, so a reload is just another call,
-      and at the lookup's low temperature (0.1, going to 0 — see Medium) it
+      and at the lookup's low temperature (0.1, going to 0 — see High) it
       would come back near-identical. A reload has
       to run hotter than the first call, or be told what not to repeat.
       Reloading on a *saved* card overwrites stored fields, which the
