@@ -27,6 +27,7 @@ import {
   removeCardFromQueue,
   getBackSideConfig,
   hanjaFaces,
+  newCards,
   directionLabel,
   directionPrompt,
   gradeTypedAnswer,
@@ -50,6 +51,7 @@ import { t, partOfSpeechLabel } from '@/lib/i18n';
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 import PronounceButton from '@/components/PronounceButton';
 import ReviewDetailsPanel from '@/components/ReviewDetailsPanel';
+import PreviewSession from '@/components/PreviewSession';
 
 // Direction for review — re-exported from core, where `isDue` lives too.
 export type { ReviewDirection } from '@amgi/core';
@@ -152,6 +154,12 @@ export default function ReviewPage() {
   const [showManage, setShowManage] = useState(false);
   const [manageEditDraft, setManageEditDraft] = useState<{ studySide: string; backSide: string } | null>(null);
   const [manageStatus, setManageStatus] = useState<string | null>(null);
+  /**
+   * A Preview pass is running over the chosen collection's new cards. Apart
+   * from `reviewMode` because it shares none of a review's state: no queue of
+   * directions, no ratings, no undo. Leaving it lands back on the start screen.
+   */
+  const [previewing, setPreviewing] = useState(false);
 
   const isOnline = useOnlineStatus();
   const isDevelopment = process.env.NODE_ENV === 'development';
@@ -236,6 +244,8 @@ export default function ReviewPage() {
   );
 
   const dueCards = useMemo(() => dueReviewItems(collectionCards), [collectionCards]);
+  /** For the Preview option, which is only offered when there is something new to preview. */
+  const newCardCount = useMemo(() => newCards(collectionCards).length, [collectionCards]);
 
   useEffect(() => {
     setNextReviewDate(dueCards.length === 0 ? getNextReviewDate(collectionCards) : null);
@@ -557,6 +567,7 @@ export default function ReviewPage() {
     setTypedAnswer('');
     setTypedGrade(null);
     setReviewMode(false);
+    setPreviewing(false);
     setReviewComplete(false);
     setReviewStopped(false);
     setReviewedCount(0);
@@ -852,7 +863,7 @@ export default function ReviewPage() {
   const canChangeCollection = pickableCollections.length > 1;
   const changeCollectionButton = canChangeCollection && (
     <button
-      onClick={() => { setSelectedKey(undefined); setOpenPack(null); setDirectionFilter('both'); }}
+      onClick={() => { setSelectedKey(undefined); setOpenPack(null); setDirectionFilter('both'); setPreviewing(false); }}
       className="mt-4 text-sm px-3 py-1.5 rounded-lg border border-[var(--color-muted)] text-[var(--color-muted)] hover:text-[var(--color-text)] hover:border-[var(--color-text)] transition-colors"
     >
       {t(interfaceLanguage, 'reviewChangeCollection')}
@@ -876,6 +887,23 @@ export default function ReviewPage() {
   );
 
   const collectionName = selected?.name;
+
+  /**
+   * The way into Preview, beside Start rather than instead of it: Preview is
+   * an option, not a step you have to take before reviewing. Secondary in
+   * weight for the same reason.
+   */
+  const previewButton = newCardCount > 0 && (
+    <div className="mb-4 flex flex-col items-center">
+      <button
+        onClick={() => setPreviewing(true)}
+        className="px-4 py-2 rounded-lg border border-[var(--color-muted)] text-sm font-semibold text-[var(--color-text)] hover:bg-[var(--color-muted)]/20 transition-colors"
+      >
+        {t(interfaceLanguage, 'previewStart', { count: newCardCount })}
+      </button>
+      <p className="mt-2 text-xs text-[var(--color-muted)]">{t(interfaceLanguage, 'previewNote')}</p>
+    </div>
+  );
 
   /**
    * One row of the picker. `label` overrides the name for the whole-pack row,
@@ -1001,6 +1029,12 @@ export default function ReviewPage() {
             </div>
           ) : selectedKey === undefined || !selected ? (
             renderCollectionPicker()
+          ) : previewing ? (
+            <PreviewSession
+              cards={collectionCards}
+              collectionName={canChangeCollection ? collectionName : undefined}
+              onExit={() => setPreviewing(false)}
+            />
           ) : /* A session in progress outranks the due count. Ratings now feed
                  straight back into `dueCards`, so finishing one cleanly drops
                  it to zero — and if that were checked first, the last answer
@@ -1017,6 +1051,7 @@ export default function ReviewPage() {
                   {t(interfaceLanguage, 'nextReviewOn')} {formatRelativeDate(nextReviewDate, interfaceLanguage, clientNow)}
                 </p>
               )}
+              {previewButton && <div className="mt-4">{previewButton}</div>}
               <div>{changeCollectionButton}</div>
               {isDevelopment && (
                 <button
@@ -1485,6 +1520,8 @@ export default function ReviewPage() {
               >
                 {reviewCardsDueLabel}
               </button>
+
+              {previewButton}
 
               {changeCollectionButton && <div className="mb-4 -mt-2">{changeCollectionButton}</div>}
 

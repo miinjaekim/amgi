@@ -30,7 +30,7 @@ import {
   getBackSide, getNextReviewDate, hanjaFaces,
   getNextReviewData, getStudyLangSide, getStudyLanguageConfig, getBackSideConfig,
   directionLabel, getCharacterBreakdown, getExampleSides, getReading,
-  maturityChange, partOfSpeechLabel, ratingWaitLabels, removeCardFromQueue, t, trackingFor,
+  maturityChange, newCards, partOfSpeechLabel, ratingWaitLabels, removeCardFromQueue, t, trackingFor,
   gradeTypedAnswer, promptsForTyping, typedAnswerPlaceholder,
 } from '@amgi/core';
 import type {
@@ -43,6 +43,7 @@ import { useFloatingTabBarHeight } from '../../src/components/FloatingTabBar';
 import PageHeader from '../../src/components/PageHeader';
 import Markdown from '../../src/components/Markdown';
 import PronounceButton from '../../src/components/PronounceButton';
+import PreviewSession from '../../src/components/PreviewSession';
 import { SkeletonBar, SkeletonGroup, SkeletonRows } from '../../src/components/Skeleton';
 import type { Palette } from '../../src/theme';
 
@@ -130,6 +131,12 @@ export default function ReviewScreen() {
   const [typedGrade, setTypedGrade] = useState<TypedAnswerGrade | null>(null);
   /** False on the start screen, true once a queue is running. */
   const [started, setStarted] = useState(false);
+  /**
+   * A Preview pass is running over the chosen collection's new cards. Apart
+   * from `started` because it shares none of a review's state: no queue of
+   * directions, no ratings, no undo. Leaving it lands back on the start screen.
+   */
+  const [previewing, setPreviewing] = useState(false);
   const [queue, setQueue] = useState<ReviewQueueItem[]>([]);
   /**
    * Which collection `queue` was built for. Changing collection renders once
@@ -449,6 +456,12 @@ export default function ReviewScreen() {
     [reviewedCards, collectionId]
   );
 
+  /** For the Preview option, which is only offered when there is something new to preview. */
+  const newCardCount = useMemo(
+    () => collectionId === undefined ? 0 : newCards(cardsInCollection(reviewedCards, collectionId)).length,
+    [reviewedCards, collectionId]
+  );
+
   /** How many of those the chosen direction would actually serve. */
   const filteredDueCount = useMemo(
     () => filterByDirection(dueItems, directionFilter).length,
@@ -536,6 +549,7 @@ export default function ReviewScreen() {
   // user had just chosen and a session they were part-way through.
   useEffect(() => {
     endSession();
+    setPreviewing(false);
     setDirectionFilter('both');
   }, [collectionId, endSession]);
 
@@ -1028,6 +1042,32 @@ export default function ReviewScreen() {
   // collection change, where `started` still belongs to the collection just
   // left and reading its queue would show the wrong deck.
   if (!started || queueFor !== collectionId) {
+    if (previewing) {
+      return (
+        <SafeAreaView style={s.root} edges={['top']}>
+          <PreviewSession
+            cards={cardsInCollection(reviewedCards, cardsCollectionId)}
+            collectionName={pickable.length > 1 ? collectionName : undefined}
+            isOnline={isOnline}
+            onExit={() => setPreviewing(false)}
+          />
+        </SafeAreaView>
+      );
+    }
+
+    /**
+     * The way into Preview, under Start rather than instead of it: Preview is
+     * an option, not a step you have to take before reviewing.
+     */
+    const previewButton = newCardCount > 0 && (
+      <>
+        <TouchableOpacity style={s.changeBtn} onPress={() => setPreviewing(true)}>
+          <Text style={s.changeBtnText}>{t(interfaceLanguage, 'previewStart', { count: newCardCount })}</Text>
+        </TouchableOpacity>
+        <Text style={s.startNote}>{t(interfaceLanguage, 'previewNote')}</Text>
+      </>
+    );
+
     // Nothing due is a state to report, not a choice to offer — a direction
     // picker over an empty collection is a control with no outcome.
     if (dueItems.length === 0) {
@@ -1050,6 +1090,7 @@ export default function ReviewScreen() {
                 {t(interfaceLanguage, 'nextReviewOn')} {nextDate.toLocaleDateString()}
               </Text>
             )}
+            {previewButton}
             {changeCollectionButton}
           </View>
         </SafeAreaView>
@@ -1110,6 +1151,7 @@ export default function ReviewScreen() {
           {filteredDueCount === 0 && (
             <Text style={s.startNote}>{t(interfaceLanguage, 'reviewNothingInDirection')}</Text>
           )}
+          {previewButton}
           {changeCollectionButton}
         </ScrollView>
       </SafeAreaView>

@@ -38,7 +38,7 @@ function shuffle<T>(arr: readonly T[]): T[] {
  * The starting queue: shuffled, then cut to `size`. Shuffling before cutting
  * matters — cutting first would drill the same opening ten kana every time.
  */
-export function startDrillQueue(cards: readonly PackEntry[], size: number | null): PackEntry[] {
+export function startDrillQueue<T>(cards: readonly T[], size: number | null): T[] {
   const shuffled = shuffle(cards);
   return size === null ? shuffled : shuffled.slice(0, size);
 }
@@ -48,7 +48,7 @@ export function startDrillQueue(cards: readonly PackEntry[], size: number | null
  * back in, so a session ends only once everything in it has been answered
  * correctly at least once.
  */
-export function advanceDrillQueue(queue: readonly PackEntry[], knew: boolean): PackEntry[] {
+export function advanceDrillQueue<T>(queue: readonly T[], knew: boolean): T[] {
   const [current, ...rest] = queue;
   if (current === undefined) return [];
   if (knew) return rest;
