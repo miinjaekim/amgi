@@ -34,6 +34,36 @@ practice session should cover several tenses at once again, which the section
 picker narrowed (#146). Both are written up in their Decisions entries of
 2026-09-22.
 
+- [ ] **A low-stakes pass through a deck's new cards, from Review.** Scoped
+      with the user 2026-10-14. A way to get familiar with cards before
+      reviewing them, repeatable and with nothing at stake. **Not a gate in
+      front of Review**: a new card is still due in Review the moment it is
+      saved, exactly as now, whether or not it has been through this.
+      - **Where:** on Review, after choosing a deck, an option to go through
+        that deck's new cards instead of reviewing. Shown only when the deck
+        has new cards.
+      - **Which cards:** new means never rated, in either direction. Today
+        that is `interval` 0 and `repetitions` 0 on both `frontToBack` and
+        `backToFront` (a new card is saved at 0/0; Again sets `interval` to
+        1), so no new field is needed. A card once missed in Review does not
+        come back here.
+      - **The loop:** the card shows its front; a tap flips it, as in Review.
+        Swipe right and the card leaves the queue; swipe left and it stays,
+        coming round again later in the same session. The session ends when
+        the user leaves or every card has been swiped right.
+      - **Nothing is saved.** A right swipe lasts for the session only, and
+        nothing touches scheduling, the progress rollups or the card. Next
+        time, the queue is that deck's new cards again. This is the same rule
+        Packs' drill follows ("Drill writes no SM-2 state", in
+        [review](decisions/review.md), 2026-07-25).
+      - **Web and mobile.** Swiping is mobile's gesture; web wants its own
+        controls, such as two buttons and the arrow keys, not a ported swipe.
+        That is my recommendation, the user's to overrule.
+      - ⚠️ **The name is open.** "Learn" is already the lookup tab, so this
+        cannot simply be called Learn. The user is thinking about it; Preview
+        and Study have been floated, and renaming the lookup tab is also on
+        the table.
+
 ## Medium
 
 - [ ] **User-made vocab packs: refine for testing** — moved to Medium
