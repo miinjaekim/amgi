@@ -890,6 +890,7 @@ const translations = {
     previewDoneBody: 'These cards are waiting for you in Review.',
     previewRestart: 'Preview again',
     previewBackToReview: 'Back to Review',
+    previewUndo: 'Undo',
     previewSwipeHint: 'Tap to flip. Swipe right when you have it, left to see it again.',
     previewKeyHint: 'Space flips · → got it · ← again',
     // Parts of speech — read through `partOfSpeechLabel`, never `t` directly
@@ -1617,6 +1618,7 @@ const translations = {
     previewDoneBody: '이 카드들은 복습에서 기다리고 있어요.',
     previewRestart: '다시 미리 보기',
     previewBackToReview: '복습으로 돌아가기',
+    previewUndo: '되돌리기',
     previewSwipeHint: '탭하면 뒤집혀요. 알겠으면 오른쪽, 다시 보려면 왼쪽으로 넘기세요.',
     previewKeyHint: '스페이스 뒤집기 · → 알겠어요 · ← 다시 보기',
     // 품사 — 학교 문법에서 쓰는 이름 그대로. 배지에 한 단어로 들어가므로

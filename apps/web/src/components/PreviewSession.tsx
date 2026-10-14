@@ -45,26 +45,47 @@ export default function PreviewSession({ cards, collectionName, onExit }: Previe
   const [showingBack, setShowingBack] = useState(false);
   const [turn, setTurn] = useState<'out' | 'in' | null>(null);
   const [showDetails, setShowDetails] = useState(false);
+  /**
+   * The queue and face as they stood before the last answer, for undo. One
+   * slot, as in Review: it is for the click you regret straight away. Nothing
+   * was saved by the answer, so putting this back is all undo has to do.
+   */
+  const [lastAnswer, setLastAnswer] = useState<{ queue: Flashcard[]; showingBack: boolean } | null>(null);
   const cardRef = useRef<HTMLDivElement>(null);
 
   const current = queue[0];
 
   const restart = () => {
     setQueue(startPreviewQueue(cards));
-    setShowingBack(false);
-    setTurn(null);
-  };
-
-  // Setters only, so both are stable and the key listener below never has to
-  // be re-attached. A turn in progress finishes first.
-  const flip = useCallback(() => setTurn(turning => turning ?? 'out'), []);
-
-  const answer = useCallback((gotIt: boolean) => {
-    setQueue(q => (q.length > 0 ? advancePreviewQueue(q, gotIt) : q));
+    setLastAnswer(null);
     setShowingBack(false);
     setShowDetails(false);
     setTurn(null);
-  }, []);
+  };
+
+  // A turn in progress finishes first.
+  const flip = useCallback(() => setTurn(turning => turning ?? 'out'), []);
+
+  const answer = useCallback((gotIt: boolean) => {
+    if (queue.length === 0) return;
+    setLastAnswer({ queue, showingBack });
+    setQueue(advancePreviewQueue(queue, gotIt));
+    setShowingBack(false);
+    setShowDetails(false);
+    setTurn(null);
+  }, [queue, showingBack]);
+
+  /** Back onto the card just answered, on the face it was answered from. */
+  const undo = () => {
+    if (!lastAnswer) return;
+    setQueue(lastAnswer.queue);
+    setShowingBack(lastAnswer.showingBack);
+    setShowDetails(false);
+    setTurn(null);
+    setLastAnswer(null);
+  };
+
+  const headerButtonClass = 'text-lg leading-none px-2.5 py-1 rounded-lg border border-[var(--color-muted)] text-[var(--color-muted)] hover:text-[var(--color-text)] hover:border-[var(--color-text)] transition-colors';
 
   /**
    * Getting to know a card is exactly when its definition and examples help,
@@ -141,6 +162,17 @@ export default function PreviewSession({ cards, collectionName, onExit }: Previe
           >
             {t(interfaceLanguage, 'previewRestart')}
           </button>
+          {/* The last card is where a stray answer has no other way back: it
+              ends the pass. */}
+          {lastAnswer && (
+            <button
+              className="px-5 py-2.5 rounded-lg border font-semibold transition-colors hover:bg-[var(--color-muted)]/20"
+              style={{ borderColor: 'var(--color-muted)', color: 'var(--color-text)' }}
+              onClick={undo}
+            >
+              ↺ {t(interfaceLanguage, 'previewUndo')}
+            </button>
+          )}
         </div>
       </div>
     );
@@ -170,14 +202,28 @@ export default function PreviewSession({ cards, collectionName, onExit }: Previe
             </span>
           </h2>
         </div>
-        <button
-          onClick={onExit}
-          aria-label={t(interfaceLanguage, 'previewEnd')}
-          title={t(interfaceLanguage, 'previewEnd')}
-          className="text-lg leading-none px-2.5 py-1 rounded-lg border border-[var(--color-muted)] text-[var(--color-muted)] hover:text-[var(--color-text)] hover:border-[var(--color-text)] transition-colors"
-        >
-          ✕
-        </button>
+        <div className="flex items-center gap-2">
+          {/* Only while there is something to undo: a control that is
+              usually inert reads as broken. */}
+          {lastAnswer && (
+            <button
+              onClick={undo}
+              aria-label={t(interfaceLanguage, 'previewUndo')}
+              title={t(interfaceLanguage, 'previewUndo')}
+              className={headerButtonClass}
+            >
+              ↺
+            </button>
+          )}
+          <button
+            onClick={onExit}
+            aria-label={t(interfaceLanguage, 'previewEnd')}
+            title={t(interfaceLanguage, 'previewEnd')}
+            className={headerButtonClass}
+          >
+            ✕
+          </button>
+        </div>
       </div>
 
       <div

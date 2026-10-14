@@ -57,6 +57,12 @@ export default function PreviewSession({ cards, collectionName, isOnline, onExit
   const [queue, setQueue] = useState<Flashcard[]>(() => startPreviewQueue(cards));
   const [showingBack, setShowingBack] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
+  /**
+   * The queue and face as they stood before the last answer, for undo. One
+   * slot, as in Review: it is for the swipe you regret straight away. Nothing
+   * was saved by the answer, so putting this back is all undo has to do.
+   */
+  const [lastAnswer, setLastAnswer] = useState<{ queue: Flashcard[]; showingBack: boolean } | null>(null);
 
   const drag = useRef(new Animated.Value(0)).current;
   const flipAnim = useRef(new Animated.Value(0)).current;
@@ -104,19 +110,42 @@ export default function PreviewSession({ cards, collectionName, isOnline, onExit
   const answer = (gotIt: boolean) => {
     if (busy.current) return;
     busy.current = true;
+    const before = { queue, showingBack };
     Animated.timing(drag, {
       toValue: (gotIt ? 1 : -1) * width * 1.2,
       duration: 160,
       easing: Easing.out(Easing.quad),
-      useNativeDriver: true,
+      // JS-driven, unlike the flip. Thrown off on the native side, the value
+      // stayed off-screen there after the reset below, and the next card
+      // rendered where the last one had been thrown: a blank screen.
+      useNativeDriver: false,
     }).start(() => {
       setQueue(q => (q.length > 0 ? advancePreviewQueue(q, gotIt) : q));
+      setLastAnswer(before);
       setShowingBack(false);
       setShowDetails(false);
       drag.setValue(0);
       flipAnim.setValue(0);
       busy.current = false;
     });
+  };
+
+  /** Back onto the card just answered, on the face it was answered from. */
+  const undo = () => {
+    if (!lastAnswer || busy.current) return;
+    setQueue(lastAnswer.queue);
+    setShowingBack(lastAnswer.showingBack);
+    setShowDetails(false);
+    setLastAnswer(null);
+    drag.setValue(0);
+    flipAnim.setValue(0);
+  };
+
+  const restart = () => {
+    setQueue(startPreviewQueue(cards));
+    setLastAnswer(null);
+    setShowingBack(false);
+    setShowDetails(false);
   };
 
   // Rebuilt each render so the handlers see the current card and side. Cheap:
@@ -134,11 +163,11 @@ export default function PreviewSession({ cards, collectionName, isOnline, onExit
       if (far || fast) {
         answer(g.dx > 0);
       } else {
-        Animated.spring(drag, { toValue: 0, friction: 6, useNativeDriver: true }).start();
+        Animated.spring(drag, { toValue: 0, friction: 6, useNativeDriver: false }).start();
       }
     },
     onPanResponderTerminate: () => {
-      Animated.spring(drag, { toValue: 0, friction: 6, useNativeDriver: true }).start();
+      Animated.spring(drag, { toValue: 0, friction: 6, useNativeDriver: false }).start();
     },
   });
 
@@ -154,9 +183,18 @@ export default function PreviewSession({ cards, collectionName, isOnline, onExit
         </Text>
       </View>
       {current ? (
-        <TouchableOpacity onPress={onExit} hitSlop={12} accessibilityLabel={t(interfaceLanguage, 'previewEnd')}>
-          <Text style={s.end}>{t(interfaceLanguage, 'previewEnd')}</Text>
-        </TouchableOpacity>
+        <View style={s.barActions}>
+          {/* Only while there is something to undo: a control that is
+              usually inert reads as broken. */}
+          {lastAnswer ? (
+            <TouchableOpacity onPress={undo} hitSlop={12} accessibilityLabel={t(interfaceLanguage, 'previewUndo')}>
+              <Text style={s.undo}>↺</Text>
+            </TouchableOpacity>
+          ) : null}
+          <TouchableOpacity onPress={onExit} hitSlop={12} accessibilityLabel={t(interfaceLanguage, 'previewEnd')}>
+            <Text style={s.end}>{t(interfaceLanguage, 'previewEnd')}</Text>
+          </TouchableOpacity>
+        </View>
       ) : null}
     </View>
   );
@@ -171,9 +209,16 @@ export default function PreviewSession({ cards, collectionName, isOnline, onExit
           <TouchableOpacity style={s.primaryBtn} onPress={onExit}>
             <Text style={s.primaryBtnText}>{t(interfaceLanguage, 'previewBackToReview')}</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={s.secondaryBtn} onPress={() => setQueue(startPreviewQueue(cards))}>
+          <TouchableOpacity style={s.secondaryBtn} onPress={restart}>
             <Text style={s.secondaryBtnText}>{t(interfaceLanguage, 'previewRestart')}</Text>
           </TouchableOpacity>
+          {/* The last card is where a stray swipe has no other way back: it
+              ends the pass. */}
+          {lastAnswer ? (
+            <TouchableOpacity style={s.secondaryBtn} onPress={undo}>
+              <Text style={s.secondaryBtnText}>↺ {t(interfaceLanguage, 'previewUndo')}</Text>
+            </TouchableOpacity>
+          ) : null}
         </View>
       </View>
     );
@@ -219,8 +264,6 @@ export default function PreviewSession({ cards, collectionName, isOnline, onExit
       {header}
       <View style={s.body}>
         <Animated.View
-          // Keyed by card, so a card's flip and drag never carry to the next.
-          key={current.id}
           style={[s.cardWrap, dragStyle]}
           {...pan.panHandlers}
           accessible
@@ -297,6 +340,8 @@ function makeStyles(C: Palette) {
     collection: { fontSize: 12, color: C.muted, marginBottom: 2 },
     title: { fontSize: 18, fontWeight: '700', color: C.text },
     remaining: { fontSize: 13, fontWeight: '400', color: C.muted },
+    barActions: { flexDirection: 'row', alignItems: 'center', gap: 18 },
+    undo: { fontSize: 20, color: C.muted, lineHeight: 22 },
     end: { fontSize: 13, color: C.muted },
     body: { flex: 1, paddingHorizontal: 20, paddingBottom: 16, justifyContent: 'center' },
     cardWrap: { height: 360 },
