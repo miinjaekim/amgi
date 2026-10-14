@@ -12,37 +12,21 @@ Housekeeping in [backlog.md](backlog.md)._
 
 ## Now
 
-- **2.2.0 is build 19, live in TestFlight and approved for external testing**
-  (reported 2026-10-06), cut from `4f13448` on `main`, the merge of
-  `release/2.2.0` (PR #191), submitted 2026-10-05. External testers can be
-  invited without another review as long as the version doesn't change. It
-  carries the twelve PRs queued since build 18 (#175, #177, #178, #179, #180,
-  #182, #184, #185, #186, #188, #189, #190); web already had all of them.
-  Pre-flight: no native module or `app.json` native config had changed since
-  2.1.0, introspect came back `entitlements: {}`, the review notes were 3993 of
-  4000 characters, and the copy had no character Apple had not already accepted
-  except Hangul syllables. The user smoke-tested in Expo Go before the cut. The
-  build ran without auto-submit and was uploaded with `eas submit`, after the
-  Account Holder accepted an updated Apple agreement: until then every upload
-  was refused with "You do not have required contracts to perform an operation
-  (403)", which is not a key or password problem. What in it is still unseen
-  on a device is under Unverified.
-- **2.3.0 is build 20, submitted and waiting on external review** (2026-10-10),
-  cut from `7a847c6` on `main`, the merge of `release/2.3.0` (PR #206). The
-  build ran with `--auto-submit`, and the user pasted the new Test Information
-  the same day. It carries the twelve mobile PRs merged since build 19 (#193
-  to #203, without #204 and #205, which are web and server only), listed under
-  Queued for the next build in [backlog.md](backlog.md); web already has all
-  of them. Pre-flight: the user smoke-tested in Expo Go; no native module or
-  `app.json` native config had changed since 2.2.0, so introspect was not run;
-  the review notes were 3981 of 4000 characters; and the copy had no character
-  Apple had not already accepted except Hangul syllables and a lowercase `z`.
-  The review notes no longer say a Writing passage is never stored, which
-  stopped being true with saved writing (#195). What to Test drops its closing
-  line on how to send feedback, on the user's call: every tester is someone
-  they know. **iOS only**; the user held off on an Android APK, so Android
-  stays on `versionCode` 10 (2.2.0). External testers stay on build 19 until
-  approval; the queue turns over then, not now.
+- **2.3.0 is build 20, live in TestFlight and approved for external testing**
+  (reported 2026-10-14), cut from `7a847c6` on `main`, the merge of
+  `release/2.3.0` (PR #206), submitted 2026-10-10 with `--auto-submit`.
+  External testers can be invited without another review as long as the
+  version doesn't change. It carries the twelve mobile PRs merged since build
+  19 (#193 to #203, without #204 and #205, which are web and server only); web
+  already had all of them. Pre-flight: the user smoke-tested in Expo Go; no
+  native module or `app.json` native config had changed since 2.2.0, so
+  introspect was not run; the review notes were 3981 of 4000 characters; and
+  the copy had no character Apple had not already accepted except Hangul
+  syllables and a lowercase `z`. What to Test drops its closing line on how to
+  send feedback, on the user's call: every tester is someone they know.
+  **iOS only**: Android stays on `versionCode` 10 (2.2.0), so Android testers
+  do not have this build's changes. What in it is still unseen on a device is
+  under Unverified.
 - **Web deploys on merge**, so everything on `main` is live there.
 - **`/api/grammar/exercise` stays deployed** for any device still on 1.3.0,
   which has the grammar UI compiled in. The deletion is under Housekeeping in
@@ -136,6 +120,11 @@ blank placeholder. On **Android**, only sign-in has ever been exercised.
   any of its three places since the rebase onto typed meanings, and nothing on
   a device or in Expo Go, where the table is a column layout that has only
   been typechecked.
+- **Saved writing** (#195): web has not been run signed in, and the export
+  has not been run on either platform.
+- **The Arabic worked example on Munli's Writing tab** (branch
+  `munli-writing-examples-all-languages`): not seen on a device, where its
+  direction is left to React Native's default.
 - **The per-deck language migration** runs on every existing account's first
   load. Nobody has watched it against a real multi-deck account.
 - **The Slow pronunciation speed** is a pitch-corrected stretch, not a slow
@@ -163,7 +152,7 @@ No OTA, so every mobile change reaches users through one of these.
 
 | Version | Build | Date | Cut from |
 |---|---|---|---|
-| 2.3.0 | 20 | 2026-10-10 | `7a847c6` on `main`, the merge of `release/2.3.0` (PR #206). Submitted 10-10 with auto-submit; external review pending |
+| 2.3.0 | 20 | 2026-10-10 | `7a847c6` on `main`, the merge of `release/2.3.0` (PR #206). Submitted 10-10 with auto-submit, external testing approved, reported 10-14 |
 | 2.2.0 | 19 | 2026-10-05 | `4f13448` on `main`, the merge of `release/2.2.0` (PR #191). Submitted 10-05, external testing approved, reported 10-06 |
 | 2.1.0 | 18 | 2026-09-27 | `d1de37e` on `release/2.1.0` (PR #176). External testing approved 09-28 |
 | 2.0.0 | 17 | 2026-09-23 | `69476aa` on `release/1.8.0`. Approved 09-23. The branch name says 1.8.0 because it was cut before the 2.0.0 call |
