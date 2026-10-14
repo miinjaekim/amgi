@@ -12,6 +12,8 @@ import { useUser } from '../context/UserContext';
 import { useTheme } from '../context/ThemeContext';
 import { useReduceMotion } from '../hooks/useReduceMotion';
 import PronounceButton from './PronounceButton';
+import CardDetailsBlock from './CardDetailsBlock';
+import { useCardEnrichment } from '../hooks/useCardEnrichment';
 import type { Palette } from '../theme';
 
 /** Review's turn, for the same card: out to edge-on, swap faces, back in. */
@@ -54,6 +56,7 @@ export default function PreviewSession({ cards, collectionName, isOnline, onExit
   // changes it, and a snapshot landing mid-session must not reshuffle the pass.
   const [queue, setQueue] = useState<Flashcard[]>(() => startPreviewQueue(cards));
   const [showingBack, setShowingBack] = useState(false);
+  const [showDetails, setShowDetails] = useState(false);
 
   const drag = useRef(new Animated.Value(0)).current;
   const flipAnim = useRef(new Animated.Value(0)).current;
@@ -61,6 +64,23 @@ export default function PreviewSession({ cards, collectionName, isOnline, onExit
   const busy = useRef(false);
 
   const current = queue[0];
+
+  // Getting to know a card is exactly when its definition and examples help,
+  // so the back has Review's details, generated on demand by the same routes.
+  // Generating writes that content onto the card, as it does from Review; it
+  // is the card's content, not its schedule, so Preview still saves no study.
+  // The queue stores what was written, so a card seen again keeps it.
+  const {
+    saved: enrichedCard, isRunning: enrichRunning, error: enrichError, enrich,
+  } = useCardEnrichment({
+    card: current,
+    studyLanguage,
+    interfaceLanguage,
+    deckNativeLanguage,
+    onChanged: card => {
+      setQueue(prev => prev.map(c => (c.id === card.id ? { ...c, ...card } : c)));
+    },
+  });
 
   const flip = () => {
     if (busy.current) return;
@@ -92,6 +112,7 @@ export default function PreviewSession({ cards, collectionName, isOnline, onExit
     }).start(() => {
       setQueue(q => (q.length > 0 ? advancePreviewQueue(q, gotIt) : q));
       setShowingBack(false);
+      setShowDetails(false);
       drag.setValue(0);
       flipAnim.setValue(0);
       busy.current = false;
@@ -232,6 +253,15 @@ export default function PreviewSession({ cards, collectionName, isOnline, onExit
                       ))}
                     </View>
                   )}
+                  <CardDetailsBlock
+                    card={enrichedCard && enrichedCard.id === current.id ? enrichedCard : current}
+                    showDetails={showDetails}
+                    onToggle={() => setShowDetails(v => !v)}
+                    isRunning={enrichRunning}
+                    error={enrichError}
+                    enrich={enrich}
+                    isOnline={isOnline}
+                  />
                 </ScrollView>
               ) : (
                 <View style={[s.face, s.frontFace]}>

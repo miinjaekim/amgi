@@ -11,6 +11,7 @@ import {
 import type { Flashcard } from '@amgi/core';
 import { useUser } from '@/components/UserContext';
 import PronounceButton from '@/components/PronounceButton';
+import ReviewDetailsPanel from '@/components/ReviewDetailsPanel';
 import { t, partOfSpeechLabel } from '@/lib/i18n';
 
 interface PreviewSessionProps {
@@ -43,6 +44,7 @@ export default function PreviewSession({ cards, collectionName, onExit }: Previe
   const [queue, setQueue] = useState<Flashcard[]>(() => startPreviewQueue(cards));
   const [showingBack, setShowingBack] = useState(false);
   const [turn, setTurn] = useState<'out' | 'in' | null>(null);
+  const [showDetails, setShowDetails] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
 
   const current = queue[0];
@@ -60,7 +62,19 @@ export default function PreviewSession({ cards, collectionName, onExit }: Previe
   const answer = useCallback((gotIt: boolean) => {
     setQueue(q => (q.length > 0 ? advancePreviewQueue(q, gotIt) : q));
     setShowingBack(false);
+    setShowDetails(false);
     setTurn(null);
+  }, []);
+
+  /**
+   * Getting to know a card is exactly when its definition and examples help,
+   * so the back has Review's details panel, generating on demand through the
+   * same routes. That writes content onto the card, as it does from Review;
+   * it is the card's content, not its schedule, so Preview still saves no
+   * study. The queue stores what was written, so a card seen again keeps it.
+   */
+  const handleCardEnriched = useCallback((card: Flashcard) => {
+    setQueue(prev => prev.map(c => (c.id === card.id ? { ...c, ...card } : c)));
   }, []);
 
   const handleTurnEnd = (e: React.AnimationEvent<HTMLDivElement>) => {
@@ -191,6 +205,21 @@ export default function PreviewSession({ cards, collectionName, onExit }: Previe
                   {current.gender && <span className={chipClass}>{current.gender}</span>}
                   {reading && <span className={chipClass}>{reading}</span>}
                 </div>
+              )}
+              <button
+                onClick={() => setShowDetails(v => !v)}
+                className="text-sm px-3 py-1 bg-[var(--color-muted-dark)] text-[var(--color-text)] rounded hover:bg-[var(--color-muted)] mb-4"
+              >
+                {showDetails ? t(interfaceLanguage, 'hideDetails') : t(interfaceLanguage, 'showDetails')}
+              </button>
+              {showDetails && (
+                <ReviewDetailsPanel
+                  card={current}
+                  studyLanguage={studyLanguage}
+                  interfaceLanguage={interfaceLanguage}
+                  deckNativeLanguage={deckNativeLanguage}
+                  onChanged={handleCardEnriched}
+                />
               )}
             </>
           ) : (

@@ -29,7 +29,7 @@ import {
   filterByDirection, findCollection, flattenCollections,
   getBackSide, getNextReviewDate, hanjaFaces,
   getNextReviewData, getStudyLangSide, getStudyLanguageConfig, getBackSideConfig,
-  directionLabel, getCharacterBreakdown, getExampleSides, getReading,
+  directionLabel, getReading,
   maturityChange, newCards, partOfSpeechLabel, ratingWaitLabels, removeCardFromQueue, t, trackingFor,
   gradeTypedAnswer, promptsForTyping, typedAnswerPlaceholder,
 } from '@amgi/core';
@@ -41,9 +41,9 @@ import { useTheme } from '../../src/context/ThemeContext';
 import { useUserPacks } from '../../src/context/UserPacksContext';
 import { useFloatingTabBarHeight } from '../../src/components/FloatingTabBar';
 import PageHeader from '../../src/components/PageHeader';
-import Markdown from '../../src/components/Markdown';
 import PronounceButton from '../../src/components/PronounceButton';
 import PreviewSession from '../../src/components/PreviewSession';
+import CardDetailsBlock from '../../src/components/CardDetailsBlock';
 import { SkeletonBar, SkeletonGroup, SkeletonRows } from '../../src/components/Skeleton';
 import type { Palette } from '../../src/theme';
 
@@ -1358,11 +1358,6 @@ export default function ReviewScreen() {
   const DismissArea = canRaiseKeyboard ? Pressable : View;
   // The enriched copy when something was just generated, the queue's otherwise.
   const shownCard = enrichedCard ?? card;
-  const definition = shownCard.definition;
-  const characterBreakdown = getCharacterBreakdown(shownCard);
-  const characterSectionKey = config.characterSectionKey ?? 'sectionHanja';
-  const hasExamples = !!shownCard.examples && shownCard.examples.length > 0;
-  const hasDepth = !!(definition || characterBreakdown || shownCard.notes);
 
   /**
    * Tap-to-reveal cards turn over in place; typed ones do not flip at all.
@@ -1390,101 +1385,15 @@ export default function ReviewScreen() {
    * reveal a typed card keeps.
    */
   const detailsBlock = (
-    <>
-      {/* One toggle for everything, shown whenever there is either
-          something to read or something to write. */}
-      <TouchableOpacity style={s.detailsBtn} onPress={() => setShowDetails(v => !v)}>
-        <Text style={s.detailsBtnText}>
-          {t(interfaceLanguage, showDetails ? 'hideDetails' : 'showDetails')}
-        </Text>
-      </TouchableOpacity>
-
-      {showDetails && (
-        <View style={s.definitionWrap}>
-          {!!definition && (
-            <View style={s.detailSection}>
-              <Text style={s.detailLabel}>{t(interfaceLanguage, 'sectionDefinition')}</Text>
-              <Markdown style={s.definitionText}>{definition}</Markdown>
-            </View>
-          )}
-          {!!characterBreakdown && (
-            <View style={s.detailSection}>
-              <Text style={s.detailLabel}>{t(interfaceLanguage, characterSectionKey)}</Text>
-              <Markdown style={s.definitionText}>{characterBreakdown}</Markdown>
-            </View>
-          )}
-          {!!shownCard.notes && (
-            <View style={s.detailSection}>
-              <Text style={s.detailLabel}>{t(interfaceLanguage, 'sectionNotes')}</Text>
-              <Markdown style={s.definitionText}>{shownCard.notes}</Markdown>
-            </View>
-          )}
-          {hasExamples && (
-            <View style={s.detailSection}>
-              <Text style={s.detailLabel}>{t(interfaceLanguage, 'sectionExamples')}</Text>
-              {shownCard.examples!.map((ex, i) => {
-                const sides = getExampleSides(ex, studyLanguage, deckNativeLanguage);
-                return (
-                  <View key={i} style={s.exampleItem}>
-                    <View style={s.exampleStudyRow}>
-                      <Text style={[s.exampleStudy, s.rowText, rtlLine(sides.study)]}>{sides.study}</Text>
-                      {/* Offline-gated for the same reason as the
-                          term's button above. */}
-                      {isOnline && (
-                        <PronounceButton
-                          text={sides.study}
-                          studyLanguage={studyLanguage}
-                          kind="sentence"
-                          size="sm"
-                        />
-                      )}
-                    </View>
-                    {sides.back ? <Text style={s.exampleBack}>{sides.back}</Text> : null}
-                  </View>
-                );
-              })}
-            </View>
-          )}
-
-          {/* Mid-review is where a one-line gloss most often turns out
-              not to be enough — you find out at the moment you fail to
-              recall it. Offering the write here means that discovery
-              does not cost you the session. Each button waits only on
-              its own request. */}
-          {(!hasDepth || !hasExamples) && (
-            <View style={s.enrichRow}>
-              {!hasDepth && (
-                <TouchableOpacity
-                  style={[s.detailsBtn, enrichRunning('depth') && s.btnDisabled]}
-                  onPress={() => enrich('depth')}
-                  disabled={enrichRunning('depth')}
-                >
-                  <Text style={s.detailsBtnText}>
-                    {enrichRunning('depth')
-                      ? t(interfaceLanguage, 'cardEnriching')
-                      : t(interfaceLanguage, 'loadDefinition')}
-                  </Text>
-                </TouchableOpacity>
-              )}
-              {!hasExamples && (
-                <TouchableOpacity
-                  style={[s.detailsBtn, enrichRunning('examples') && s.btnDisabled]}
-                  onPress={() => enrich('examples')}
-                  disabled={enrichRunning('examples')}
-                >
-                  <Text style={s.detailsBtnText}>
-                    {enrichRunning('examples')
-                      ? t(interfaceLanguage, 'cardEnriching')
-                      : t(interfaceLanguage, 'loadExamples')}
-                  </Text>
-                </TouchableOpacity>
-              )}
-            </View>
-          )}
-          {enrichError && <Text style={s.enrichError}>{enrichError}</Text>}
-        </View>
-      )}
-    </>
+    <CardDetailsBlock
+      card={shownCard}
+      showDetails={showDetails}
+      onToggle={() => setShowDetails(v => !v)}
+      isRunning={enrichRunning}
+      error={enrichError}
+      enrich={enrich}
+      isOnline={isOnline}
+    />
   );
 
   const RATINGS: { key: Rating; label: string; color: string }[] = [
@@ -2025,31 +1934,12 @@ function makeStyles(C: Palette, tabBarHeight: number) {
     paddingHorizontal: 8, paddingVertical: 2,
   },
   readingText: { fontSize: 12, color: C.muted },
-  exampleStudyRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  detailsBtn: {
-    marginTop: 14, borderWidth: 1, borderColor: C.border,
-    borderRadius: 8, paddingVertical: 8, paddingHorizontal: 14, alignSelf: 'flex-start',
-  },
-  detailsBtnText: { fontSize: 13, color: C.muted, fontWeight: '500' },
-  btnDisabled: { opacity: 0.5 },
-  enrichError: { fontSize: 12, color: C.error, marginTop: 8, textAlign: 'center' },
   cardScroll: { flex: 1 },
   cardScrollContent: { paddingBottom: 8 },
   // `flexGrow` on both, so the face fills the card when its content is short
   // and a tap anywhere below the word still turns it.
   faceScrollContent: { flexGrow: 1 },
   face: { flexGrow: 1, paddingBottom: 8 },
-  definitionWrap: { marginTop: 14 },
-  detailSection: { marginBottom: 16 },
-  detailLabel: {
-    fontSize: 11, fontWeight: '700', color: C.muted,
-    textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6,
-  },
-  exampleItem: { marginBottom: 10 },
-  exampleStudy: { fontSize: 14, color: C.text, lineHeight: 21 },
-  exampleBack: { fontSize: 13, color: C.highlight, marginTop: 2 },
-  enrichRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 4 },
-  definitionText: { fontSize: 14, color: C.text, opacity: 0.7, lineHeight: 20 },
   revealWrap: {},
   showBtn: {
     marginHorizontal: 16, paddingBottom: 8,
