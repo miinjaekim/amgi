@@ -34,7 +34,7 @@ practice session should cover several tenses at once again, which the section
 picker narrowed (#146). Both are written up in their Decisions entries of
 2026-09-22.
 
-- [ ] **A low-stakes pass through a deck's new cards, from Review.** Scoped
+- [ ] **Preview: a low-stakes pass through a deck's new cards, from Review.** Scoped
       with the user 2026-10-14. A way to get familiar with cards before
       reviewing them, repeatable and with nothing at stake. **Not a gate in
       front of Review**: a new card is still due in Review the moment it is
@@ -59,10 +59,9 @@ picker narrowed (#146). Both are written up in their Decisions entries of
       - **Web and mobile.** Swiping is mobile's gesture; web wants its own
         controls, such as two buttons and the arrow keys, not a ported swipe.
         That is my recommendation, the user's to overrule.
-      - ⚠️ **The name is open.** "Learn" is already the lookup tab, so this
-        cannot simply be called Learn. The user is thinking about it; Preview
-        and Study have been floated, and renaming the lookup tab is also on
-        the table.
+      - **Named Preview** (the user, 2026-10-14). "Learn" stays the lookup
+        tab. The Korean label is not settled: 미리 보기 is the obvious
+        rendering, and is the user's to confirm.
 
 ## Medium
 
