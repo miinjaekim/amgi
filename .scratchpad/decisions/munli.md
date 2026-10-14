@@ -3,6 +3,21 @@
 The second mode: its shell, conjugation practice, writing review as a tool, English articles. 2026-09-21 on. Newest first. Indexed from
 [status.md](../status.md).
 
+## A tense a learner adds may be model-generated (2026-10-14)
+
+**Narrows the rule** that the model is not a source for conjugation forms
+(the irregular verbs are sourced, 2026-09-22). Set by the user while
+rescoping "more verb tenses" into "let users add verb tenses": *"with
+something as common as verb tenses, i think it's fair to assume that the
+model will be fairly good and reliable at generating what we need. so let's
+try this option out."*
+
+**What it covers:** the forms of a tense the learner adds. The three shipped
+tenses and the sourced irregulars are unchanged. **"Try this out" makes it
+provisional**: the generated forms get checked against a published
+conjugation reference before the feature ships, and the rule stands only if
+they hold up.
+
 ## Munli's themes come up out of the water (2026-10-05)
 
 **The user, on the themes of 2026-09-21**: "It feels like I'm looking at the

@@ -23,8 +23,11 @@ queued, released or unverified is under Builds in [status.md](status.md).
 
 _Merged, not yet in anyone's hands — mobile ships by build, no OTA._
 
-_Empty since build 20 (2.3.0) was approved for external testing, reported
-2026-10-14._
+- **Preview** (PR #207, merged 2026-10-14): a low-stakes pass through a
+  deck's new cards, from Review, as 미리 보기. Swipe and undo on mobile, two
+  buttons and the arrow keys on web. Writes no scheduling; generating details
+  from its card back saves them to the card, as Review does. Tried by hand on
+  web and in Expo Go before merging.
 
 ## High
 
@@ -34,34 +37,28 @@ practice session should cover several tenses at once again, which the section
 picker narrowed (#146). Both are written up in their Decisions entries of
 2026-09-22.
 
-- [ ] **Preview: a low-stakes pass through a deck's new cards, from Review.** Scoped
-      with the user 2026-10-14. A way to get familiar with cards before
-      reviewing them, repeatable and with nothing at stake. **Not a gate in
-      front of Review**: a new card is still due in Review the moment it is
-      saved, exactly as now, whether or not it has been through this.
-      - **Where:** on Review, after choosing a deck, an option to go through
-        that deck's new cards instead of reviewing. Shown only when the deck
-        has new cards.
-      - **Which cards:** new means never rated, in either direction. Today
-        that is `interval` 0 and `repetitions` 0 on both `frontToBack` and
-        `backToFront` (a new card is saved at 0/0; Again sets `interval` to
-        1), so no new field is needed. A card once missed in Review does not
-        come back here.
-      - **The loop:** the card shows its front; a tap flips it, as in Review.
-        Swipe right and the card leaves the queue; swipe left and it stays,
-        coming round again later in the same session. The session ends when
-        the user leaves or every card has been swiped right.
-      - **Nothing is saved.** A right swipe lasts for the session only, and
-        nothing touches scheduling, the progress rollups or the card. Next
-        time, the queue is that deck's new cards again. This is the same rule
-        Packs' drill follows ("Drill writes no SM-2 state", in
-        [review](decisions/review.md), 2026-07-25).
-      - **Web and mobile.** Swiping is mobile's gesture; web wants its own
-        controls, such as two buttons and the arrow keys, not a ported swipe.
-        That is my recommendation, the user's to overrule.
-      - **Named Preview** (the user, 2026-10-14). "Learn" stays the lookup
-        tab. The Korean label is not settled: 미리 보기 is the obvious
-        rendering, and is the user's to confirm.
+- [ ] **User-made packs: fit the pack to the learner's needs and level.**
+      Added from Google Tasks 2026-10-14 as its own item, High, on the user's
+      call; it was a "left for later" line inside the packs item. Widened the
+      same day to the whole pack flow, with that end goal in mind. **Being
+      discussed with the user, not yet scoped**, including how to test it and
+      what it costs. Ideas the user raised: checking off known words on the
+      final list to remove them, inferring level from saved cards, and asking. Where it stands today: there
+      is no level question. Level is read from up to 400 saved cards, and the
+      subtopics step states a CEFR band plus "too easy" examples, which are
+      shown on the parts screen and passed to every sourcing call as a floor.
+      With no saved cards, the stated level is still too low for TOEIC 900
+      (`docs/packs/user-pack-eval.md`). The [packs](decisions/packs.md) rule of
+      2026-09-09 still refuses a level *setting* and a placement test, so any
+      fix must come from the learner's own input or a deterministic floor.
+
+- [ ] **Munli: let users add verb tenses.** Rescoped by the user 2026-10-14
+      from "more French verb tenses": the learner adds a tense, rather than
+      us shipping new ones. Raised to High. **The learner names a tense and
+      the model generates its forms**: the user's call, to be tried out
+      ([munli](decisions/munli.md), 2026-10-14). Forms get checked against a
+      published conjugation reference before shipping. The three shipped
+      tenses and the sourced irregulars stay as they are.
 
 ## Medium
 
@@ -74,9 +71,8 @@ picker narrowed (#146). Both are written up in their Decisions entries of
       (`npm run eval:user-packs`).
       **Waiting on the user:** whether mild insults (*ortiva*, *chanta*,
       *mina*) get the vulgar badge too; today only strong ones do.
-      **Left for later, by the user's call 2026-10-02:** a frequency-list
-      level floor (the prompt-stated level is still too low for TOEIC 900)
-      and a second-meanings part for TOEIC.
+      **Left for later, by the user's call 2026-10-02:** a second-meanings
+      part for TOEIC. (The level floor is now its own High item.)
       **Known, not fixed:** the model sometimes skips search (that part shows
       as failed, with a retry), and the finished notice is in-app only, with
       no push or email.
@@ -93,11 +89,6 @@ picker narrowed (#146). Both are written up in their Decisions entries of
 
 - [ ] **Munli: cards from writing look different from cards from lookup.**
       Added from Google Tasks 2026-10-05.
-
-- [ ] **Munli: more French verb tenses.** Added from Google Tasks 2026-10-06
-      ("Different verb tenses"). The user's reading: add tenses beyond the
-      three there now (présent, imparfait, futur simple). Which tenses is not
-      decided.
 
 - [ ] **Munli: make writing review faster.** Added from Google Tasks
       2026-10-07. Where the time goes has not been measured.

@@ -213,6 +213,7 @@ the top of its file and a line here.
 
 The second mode: its shell, conjugation practice, writing review as a tool, English articles. 2026-09-21 on.
 
+- [A tense a learner adds may be model-generated (2026-10-14)](decisions/munli.md#a-tense-a-learner-adds-may-be-model-generated-2026-10-14)
 - [Munli's themes come up out of the water (2026-10-05)](decisions/munli.md#munlis-themes-come-up-out-of-the-water-2026-10-05)
 - [On mobile a tab's heading is its name, and the name is web's (2026-10-05)](decisions/munli.md#on-mobile-a-tabs-heading-is-its-name-and-the-name-is-webs-2026-10-05)
 - [A second tap on the Saved tab returns to the shelves (2026-10-05)](decisions/munli.md#a-second-tap-on-the-saved-tab-returns-to-the-shelves-2026-10-05)
