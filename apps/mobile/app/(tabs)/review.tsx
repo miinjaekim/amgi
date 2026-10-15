@@ -30,11 +30,11 @@ import {
   getBackSide, getNextReviewDate, hanjaFaces,
   getNextReviewData, getStudyLangSide, getStudyLanguageConfig, getBackSideConfig,
   directionLabel, getReading,
-  maturityChange, newCards, partOfSpeechLabel, ratingWaitLabels, removeCardFromQueue, t, trackingFor,
+  maturityChange, partOfSpeechLabel, previewCounts, ratingWaitLabels, removeCardFromQueue, t, trackingFor,
   gradeTypedAnswer, promptsForTyping, typedAnswerPlaceholder,
 } from '@amgi/core';
 import type {
-  CardSideField, DirectionFilter, PendingReview, RecordedReview, ReviewCollection,
+  CardSideField, DirectionFilter, PendingReview, PreviewScope, RecordedReview, ReviewCollection,
   ReviewDirection, ReviewQueueItem, TypedAnswerGrade,
 } from '@amgi/core';
 import { useTheme } from '../../src/context/ThemeContext';
@@ -43,6 +43,7 @@ import { useFloatingTabBarHeight } from '../../src/components/FloatingTabBar';
 import PageHeader from '../../src/components/PageHeader';
 import PronounceButton from '../../src/components/PronounceButton';
 import PreviewSession from '../../src/components/PreviewSession';
+import PreviewLauncher from '../../src/components/PreviewLauncher';
 import CardDetailsBlock from '../../src/components/CardDetailsBlock';
 import { SkeletonBar, SkeletonGroup, SkeletonRows } from '../../src/components/Skeleton';
 import type { Palette } from '../../src/theme';
@@ -137,6 +138,8 @@ export default function ReviewScreen() {
    * directions, no ratings, no undo. Leaving it lands back on the start screen.
    */
   const [previewing, setPreviewing] = useState(false);
+  /** Which cards the running preview took. */
+  const [previewScope, setPreviewScope] = useState<PreviewScope>('new');
   const [queue, setQueue] = useState<ReviewQueueItem[]>([]);
   /**
    * Which collection `queue` was built for. Changing collection renders once
@@ -456,9 +459,9 @@ export default function ReviewScreen() {
     [reviewedCards, collectionId]
   );
 
-  /** For the Preview option, which is only offered when there is something new to preview. */
-  const newCardCount = useMemo(
-    () => collectionId === undefined ? 0 : newCards(cardsInCollection(reviewedCards, collectionId)).length,
+  /** For the Preview chooser, which is only offered when there is something to preview. */
+  const previewCardCounts = useMemo(
+    () => previewCounts(collectionId === undefined ? [] : cardsInCollection(reviewedCards, collectionId)),
     [reviewedCards, collectionId]
   );
 
@@ -1047,6 +1050,7 @@ export default function ReviewScreen() {
         <SafeAreaView style={s.root} edges={['top']}>
           <PreviewSession
             cards={cardsInCollection(reviewedCards, cardsCollectionId)}
+            scope={previewScope}
             collectionName={pickable.length > 1 ? collectionName : undefined}
             isOnline={isOnline}
             onExit={() => setPreviewing(false)}
@@ -1055,17 +1059,11 @@ export default function ReviewScreen() {
       );
     }
 
-    /**
-     * The way into Preview, under Start rather than instead of it: Preview is
-     * an option, not a step you have to take before reviewing.
-     */
-    const previewButton = newCardCount > 0 && (
-      <>
-        <TouchableOpacity style={s.changeBtn} onPress={() => setPreviewing(true)}>
-          <Text style={s.changeBtnText}>{t(interfaceLanguage, 'previewStart', { count: newCardCount })}</Text>
-        </TouchableOpacity>
-        <Text style={s.startNote}>{t(interfaceLanguage, 'previewNote')}</Text>
-      </>
+    const previewButton = (
+      <PreviewLauncher
+        counts={previewCardCounts}
+        onStart={scope => { setPreviewScope(scope); setPreviewing(true); }}
+      />
     );
 
     // Nothing due is a state to report, not a choice to offer — a direction

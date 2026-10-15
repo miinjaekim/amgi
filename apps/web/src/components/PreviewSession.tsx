@@ -8,22 +8,24 @@ import {
   hanjaFaces,
   startPreviewQueue,
 } from '@amgi/core';
-import type { Flashcard } from '@amgi/core';
+import type { Flashcard, PreviewScope } from '@amgi/core';
 import { useUser } from '@/components/UserContext';
 import PronounceButton from '@/components/PronounceButton';
 import ReviewDetailsPanel from '@/components/ReviewDetailsPanel';
 import { t, partOfSpeechLabel } from '@/lib/i18n';
 
 interface PreviewSessionProps {
-  /** The collection's cards. Which of them are new is decided here, once, on start. */
+  /** The collection's cards. Which of them the scope takes is decided here, once, on start. */
   cards: readonly Flashcard[];
+  /** New cards, due ones, or both. */
+  scope: PreviewScope;
   /** Shown above the card when the user has more than one collection to tell apart. */
   collectionName?: string;
   onExit: () => void;
 }
 
 /**
- * Preview: a pass through a deck's new cards before reviewing them, with
+ * Preview: a pass through a deck's new or due cards before reviewing them, with
  * nothing at stake. See `preview.ts` in core for the rules; the short of it is
  * that nothing here writes anything.
  *
@@ -37,11 +39,11 @@ interface PreviewSessionProps {
  * so it reads as the same card. Unlike Review the answers are there before the
  * flip: getting familiar can be as little as glancing at the front.
  */
-export default function PreviewSession({ cards, collectionName, onExit }: PreviewSessionProps) {
+export default function PreviewSession({ cards, scope, collectionName, onExit }: PreviewSessionProps) {
   const { interfaceLanguage, deckNativeLanguage, studyLanguage, hanjaPartition } = useUser();
   // Built once. The card list behind it is live, but nothing a preview does
   // changes it, and a snapshot landing mid-session must not reshuffle the pass.
-  const [queue, setQueue] = useState<Flashcard[]>(() => startPreviewQueue(cards));
+  const [queue, setQueue] = useState<Flashcard[]>(() => startPreviewQueue(cards, scope));
   const [showingBack, setShowingBack] = useState(false);
   const [turn, setTurn] = useState<'out' | 'in' | null>(null);
   const [showDetails, setShowDetails] = useState(false);
@@ -56,7 +58,7 @@ export default function PreviewSession({ cards, collectionName, onExit }: Previe
   const current = queue[0];
 
   const restart = () => {
-    setQueue(startPreviewQueue(cards));
+    setQueue(startPreviewQueue(cards, scope));
     setLastAnswer(null);
     setShowingBack(false);
     setShowDetails(false);

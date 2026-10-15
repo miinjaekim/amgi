@@ -1,13 +1,13 @@
 import React, { useMemo, useRef, useState } from 'react';
 import {
-  View, Text, TouchableOpacity, StyleSheet, Animated, PanResponder, Easing,
+  View, Text, TouchableOpacity, Pressable, StyleSheet, Animated, PanResponder, Easing,
   ScrollView, useWindowDimensions,
 } from 'react-native';
 import {
   advancePreviewQueue, getBackSide, getReading, getStudyLangSide, hanjaFaces,
   partOfSpeechLabel, startPreviewQueue, t,
 } from '@amgi/core';
-import type { Flashcard } from '@amgi/core';
+import type { Flashcard, PreviewScope } from '@amgi/core';
 import { useUser } from '../context/UserContext';
 import { useTheme } from '../context/ThemeContext';
 import { useReduceMotion } from '../hooks/useReduceMotion';
@@ -27,8 +27,10 @@ const SWIPE_VELOCITY = 0.6;
 const DRAG_SLOP = 8;
 
 interface PreviewSessionProps {
-  /** The collection's cards. Which of them are new is decided here, once, on start. */
+  /** The collection's cards. Which of them the scope takes is decided here, once, on start. */
   cards: readonly Flashcard[];
+  /** New cards, due ones, or both. */
+  scope: PreviewScope;
   /** Shown above the card when the user has more than one collection to tell apart. */
   collectionName?: string;
   /** Pronunciation is a network call, hidden offline as Review hides it. */
@@ -37,15 +39,20 @@ interface PreviewSessionProps {
 }
 
 /**
- * Preview: a pass through a deck's new cards before reviewing them, with
+ * Preview: a pass through a deck's new or due cards before reviewing them, with
  * nothing at stake. See `preview.ts` in core for the rules; nothing here
  * writes anything.
  *
  * Tap flips. Swipe right and the card is out for the session, swipe left and
  * it comes round again a few cards later. Both are also VoiceOver and TalkBack
  * actions on the card, since a swipe is not something a screen reader can do.
+ *
+ * The back face scrolls, since details can run long: a vertical drag is the
+ * scroll view's and a sideways one is the swipe's. Nothing wraps the scroll
+ * view in a touchable; the tap that flips back is a `Pressable` inside it,
+ * which a scroll cancels.
  */
-export default function PreviewSession({ cards, collectionName, isOnline, onExit }: PreviewSessionProps) {
+export default function PreviewSession({ cards, scope, collectionName, isOnline, onExit }: PreviewSessionProps) {
   const { C } = useTheme();
   const s = useMemo(() => makeStyles(C), [C]);
   const { interfaceLanguage, deckNativeLanguage, studyLanguage, hanjaPartition } = useUser();
@@ -54,7 +61,7 @@ export default function PreviewSession({ cards, collectionName, isOnline, onExit
 
   // Built once. The card list behind it is live, but nothing a preview does
   // changes it, and a snapshot landing mid-session must not reshuffle the pass.
-  const [queue, setQueue] = useState<Flashcard[]>(() => startPreviewQueue(cards));
+  const [queue, setQueue] = useState<Flashcard[]>(() => startPreviewQueue(cards, scope));
   const [showingBack, setShowingBack] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
   /**
@@ -64,7 +71,18 @@ export default function PreviewSession({ cards, collectionName, isOnline, onExit
    */
   const [lastAnswer, setLastAnswer] = useState<{ queue: Flashcard[]; showingBack: boolean } | null>(null);
 
-  const drag = useRef(new Animated.Value(0)).current;
+  /**
+   * How many times the front of the queue has changed hands: answers and
+   * undos. The top card is keyed by it and gets a fresh drag value with it, so
+   * a thrown card is never reset to the centre: it unmounts, and the next card,
+   * already drawn underneath, is mounted at rest. Resetting the one value
+   * instead showed the thrown card back in the middle for a frame before the
+   * new one rendered. Keyed by this rather than by card id, since Again on the
+   * last card leaves the same card in front.
+   */
+  const [turn, setTurn] = useState(0);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- a new value per turn is the point
+  const drag = useMemo(() => new Animated.Value(0), [turn]);
   const flipAnim = useRef(new Animated.Value(0)).current;
   /** A turn or a throw is under way; taps and drags wait for it. */
   const busy = useRef(false);
@@ -124,7 +142,7 @@ export default function PreviewSession({ cards, collectionName, isOnline, onExit
       setLastAnswer(before);
       setShowingBack(false);
       setShowDetails(false);
-      drag.setValue(0);
+      setTurn(n => n + 1);
       flipAnim.setValue(0);
       busy.current = false;
     });
@@ -137,13 +155,14 @@ export default function PreviewSession({ cards, collectionName, isOnline, onExit
     setShowingBack(lastAnswer.showingBack);
     setShowDetails(false);
     setLastAnswer(null);
-    drag.setValue(0);
+    setTurn(n => n + 1);
     flipAnim.setValue(0);
   };
 
   const restart = () => {
-    setQueue(startPreviewQueue(cards));
+    setQueue(startPreviewQueue(cards, scope));
     setLastAnswer(null);
+    setTurn(n => n + 1);
     setShowingBack(false);
     setShowDetails(false);
   };
@@ -151,11 +170,13 @@ export default function PreviewSession({ cards, collectionName, isOnline, onExit
   // Rebuilt each render so the handlers see the current card and side. Cheap:
   // `create` only wraps the callbacks.
   const pan = PanResponder.create({
-    // Taps fall through to the card's touchable; only a sideways drag is ours,
-    // so the back face can still scroll up and down. Capture, so that drag is
-    // ours even when it starts on that scroll view.
+    // Taps fall through to the card's touchables; only a clearly sideways drag
+    // is ours, so the back face can still scroll up and down. Capture, so that
+    // drag is ours even when it starts on that scroll view, and kept once
+    // taken, so the scroll view cannot take it back halfway through a throw.
     onMoveShouldSetPanResponderCapture: (_, g) =>
-      !busy.current && Math.abs(g.dx) > DRAG_SLOP && Math.abs(g.dx) > Math.abs(g.dy),
+      !busy.current && Math.abs(g.dx) > DRAG_SLOP && Math.abs(g.dx) > Math.abs(g.dy) * 1.5,
+    onPanResponderTerminationRequest: () => false,
     onPanResponderMove: (_, g) => drag.setValue(g.dx),
     onPanResponderRelease: (_, g) => {
       const far = Math.abs(g.dx) > width * SWIPE_DISTANCE;
@@ -227,16 +248,18 @@ export default function PreviewSession({ cards, collectionName, isOnline, onExit
   // Front is the study side, so a preview always opens on the word being
   // learned. Hanja follows the learner's chosen partition, as Review's forward
   // direction does.
-  const study = getStudyLangSide(current);
-  const { front, back } = studyLanguage === 'Hanja'
-    ? hanjaFaces(current, hanjaPartition)
-    : { front: study, back: getBackSide(current, deckNativeLanguage) };
+  const facesOf = (card: Flashcard) => studyLanguage === 'Hanja'
+    ? hanjaFaces(card, hanjaPartition)
+    : { front: getStudyLangSide(card), back: getBackSide(card, deckNativeLanguage) };
+  const { front, back } = facesOf(current);
   const gloss = studyLanguage === 'Hanja' && deckNativeLanguage !== 'Korean' ? current.english : undefined;
   const badges = [
     partOfSpeechLabel(deckNativeLanguage, current),
     current.gender,
     getReading(current, studyLanguage, deckNativeLanguage),
   ].filter(Boolean);
+  /** Drawn under the top card, so a throw uncovers it rather than an empty space. */
+  const next = queue[1];
 
   const flipStyle = reduceMotion
     ? { opacity: flipAnim.interpolate({ inputRange: [-1, 0, 1], outputRange: [0, 1, 0], extrapolate: 'clamp' }) }
@@ -258,71 +281,89 @@ export default function PreviewSession({ cards, collectionName, isOnline, onExit
   // What letting go would do, fading in as the card goes that way.
   const gotItOpacity = drag.interpolate({ inputRange: [0, width * SWIPE_DISTANCE], outputRange: [0, 1], extrapolate: 'clamp' });
   const againOpacity = drag.interpolate({ inputRange: [-width * SWIPE_DISTANCE, 0], outputRange: [1, 0], extrapolate: 'clamp' });
+  // The card underneath shows only once the top one moves off: a flip turns
+  // the top card edge-on, and the next card must not show through then.
+  const nextOpacity = drag.interpolate({ inputRange: [-1, 0, 1], outputRange: [1, 0, 1] });
 
   return (
     <View style={s.fill}>
       {header}
       <View style={s.body}>
-        <Animated.View
-          style={[s.cardWrap, dragStyle]}
-          {...pan.panHandlers}
-          accessible
-          accessibilityRole="button"
-          accessibilityLabel={showingBack ? back : front}
-          accessibilityHint={t(interfaceLanguage, 'previewSwipeHint')}
-          accessibilityActions={[
-            { name: 'activate' },
-            { name: 'gotIt', label: t(interfaceLanguage, 'previewGotIt') },
-            { name: 'again', label: t(interfaceLanguage, 'previewAgain') },
-          ]}
-          onAccessibilityAction={e => {
-            if (e.nativeEvent.actionName === 'gotIt') answer(true);
-            else if (e.nativeEvent.actionName === 'again') answer(false);
-            else flip();
-          }}
-        >
-          <Animated.View style={[s.card, flipStyle]}>
-            <TouchableOpacity activeOpacity={0.9} onPress={flip} style={s.cardTouch}>
+        <View style={s.stack}>
+          {next ? (
+            <Animated.View
+              pointerEvents="none"
+              accessibilityElementsHidden
+              importantForAccessibility="no-hide-descendants"
+              style={[s.card, s.under, { opacity: nextOpacity }]}
+            >
+              <View style={[s.face, s.frontFace]}>
+                <Text style={s.front}>{facesOf(next).front}</Text>
+              </View>
+            </Animated.View>
+          ) : null}
+          <Animated.View
+            key={turn}
+            style={[s.top, dragStyle]}
+            {...pan.panHandlers}
+            accessible
+            accessibilityRole="button"
+            accessibilityLabel={showingBack ? back : front}
+            accessibilityHint={t(interfaceLanguage, 'previewSwipeHint')}
+            accessibilityActions={[
+              { name: 'activate' },
+              { name: 'gotIt', label: t(interfaceLanguage, 'previewGotIt') },
+              { name: 'again', label: t(interfaceLanguage, 'previewAgain') },
+            ]}
+            onAccessibilityAction={e => {
+              if (e.nativeEvent.actionName === 'gotIt') answer(true);
+              else if (e.nativeEvent.actionName === 'again') answer(false);
+              else flip();
+            }}
+          >
+            <Animated.View style={[s.card, flipStyle]}>
               {showingBack ? (
-                <ScrollView contentContainerStyle={s.face}>
-                  {back ? <Text style={s.back}>{back}</Text> : null}
-                  {gloss ? <Text style={s.gloss}>{gloss}</Text> : null}
-                  {current.briefDefinition ? <Text style={s.brief}>{current.briefDefinition}</Text> : null}
-                  {current.formsNote ? <Text style={s.forms}>{current.formsNote}</Text> : null}
-                  {badges.length > 0 && (
-                    <View style={s.badges}>
-                      {badges.map((label, i) => (
-                        <View key={i} style={s.badge}><Text style={s.badgeText}>{label}</Text></View>
-                      ))}
-                    </View>
-                  )}
-                  <CardDetailsBlock
-                    card={enrichedCard && enrichedCard.id === current.id ? enrichedCard : current}
-                    showDetails={showDetails}
-                    onToggle={() => setShowDetails(v => !v)}
-                    isRunning={enrichRunning}
-                    error={enrichError}
-                    enrich={enrich}
-                    isOnline={isOnline}
-                  />
+                <ScrollView style={s.scroll} contentContainerStyle={s.scrollContent}>
+                  <Pressable onPress={flip} style={s.face}>
+                    {back ? <Text style={s.back}>{back}</Text> : null}
+                    {gloss ? <Text style={s.gloss}>{gloss}</Text> : null}
+                    {current.briefDefinition ? <Text style={s.brief}>{current.briefDefinition}</Text> : null}
+                    {current.formsNote ? <Text style={s.forms}>{current.formsNote}</Text> : null}
+                    {badges.length > 0 && (
+                      <View style={s.badges}>
+                        {badges.map((label, i) => (
+                          <View key={i} style={s.badge}><Text style={s.badgeText}>{label}</Text></View>
+                        ))}
+                      </View>
+                    )}
+                    <CardDetailsBlock
+                      card={enrichedCard && enrichedCard.id === current.id ? enrichedCard : current}
+                      showDetails={showDetails}
+                      onToggle={() => setShowDetails(v => !v)}
+                      isRunning={enrichRunning}
+                      error={enrichError}
+                      enrich={enrich}
+                      isOnline={isOnline}
+                    />
+                  </Pressable>
                 </ScrollView>
               ) : (
-                <View style={[s.face, s.frontFace]}>
+                <TouchableOpacity activeOpacity={0.9} onPress={flip} style={[s.face, s.frontFace]}>
                   <Text style={s.front}>{front}</Text>
                   {isOnline && (
                     <PronounceButton text={front} furigana={current.furigana} eum={current.eum} studyLanguage={studyLanguage} />
                   )}
-                </View>
+                </TouchableOpacity>
               )}
-            </TouchableOpacity>
+            </Animated.View>
+            <Animated.View pointerEvents="none" style={[s.stamp, s.stampRight, { opacity: gotItOpacity }]}>
+              <Text style={s.stampText}>{t(interfaceLanguage, 'previewGotIt')}</Text>
+            </Animated.View>
+            <Animated.View pointerEvents="none" style={[s.stamp, s.stampLeft, { opacity: againOpacity }]}>
+              <Text style={s.stampText}>{t(interfaceLanguage, 'previewAgain')}</Text>
+            </Animated.View>
           </Animated.View>
-          <Animated.View pointerEvents="none" style={[s.stamp, s.stampRight, { opacity: gotItOpacity }]}>
-            <Text style={s.stampText}>{t(interfaceLanguage, 'previewGotIt')}</Text>
-          </Animated.View>
-          <Animated.View pointerEvents="none" style={[s.stamp, s.stampLeft, { opacity: againOpacity }]}>
-            <Text style={s.stampText}>{t(interfaceLanguage, 'previewAgain')}</Text>
-          </Animated.View>
-        </Animated.View>
+        </View>
         <Text style={s.hint}>{t(interfaceLanguage, 'previewSwipeHint')}</Text>
       </View>
     </View>
@@ -344,12 +385,17 @@ function makeStyles(C: Palette) {
     undo: { fontSize: 20, color: C.muted, lineHeight: 22 },
     end: { fontSize: 13, color: C.muted },
     body: { flex: 1, paddingHorizontal: 20, paddingBottom: 16, justifyContent: 'center' },
-    cardWrap: { height: 360 },
+    // Room for a long details panel, without the front becoming a poster on
+    // a tall phone.
+    stack: { flex: 1, maxHeight: 560 },
+    top: { flex: 1 },
     card: {
       flex: 1, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: 20,
       overflow: 'hidden',
     },
-    cardTouch: { flex: 1 },
+    under: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0 },
+    scroll: { flex: 1 },
+    scrollContent: { flexGrow: 1 },
     face: { padding: 24, flexGrow: 1 },
     frontFace: { alignItems: 'center', justifyContent: 'center', gap: 14 },
     front: { fontSize: 40, fontWeight: '600', color: C.highlight, textAlign: 'center' },

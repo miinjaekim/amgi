@@ -2,8 +2,10 @@ import { describe, it, expect } from 'vitest';
 import {
   DRILL_REQUEUE_GAP,
   advancePreviewQueue,
+  isDueRatedCard,
   isNewCard,
-  newCards,
+  previewCards,
+  previewCounts,
   startPreviewQueue,
 } from '@amgi/core';
 import type { Flashcard, ReviewTracking } from '@amgi/core';
@@ -48,18 +50,56 @@ describe('isNewCard', () => {
   });
 });
 
-describe('newCards and startPreviewQueue', () => {
+/** Rated before and not due until well after NOW. */
+const later = (): ReviewTracking => ({
+  nextReview: new Date('2026-11-01T09:00:00Z'), interval: 18, ease: 2.5, repetitions: 3,
+});
+
+describe('isDueRatedCard', () => {
+  it('is a rated card due either way', () => {
+    expect(isDueRatedCard(card('a', { frontToBack: learned(), backToFront: later() }), NOW)).toBe(true);
+    expect(isDueRatedCard(card('a', { frontToBack: later(), backToFront: missed() }), NOW)).toBe(true);
+  });
+
+  it('is not a rated card due neither way', () => {
+    expect(isDueRatedCard(card('a', { frontToBack: later(), backToFront: later() }), NOW)).toBe(false);
+  });
+
+  it('is not a new card, though every new card is due', () => {
+    expect(isDueRatedCard(card('a', { frontToBack: fresh(), backToFront: fresh() }), NOW)).toBe(false);
+  });
+});
+
+describe('previewCards, previewCounts and startPreviewQueue', () => {
   const deck = [
     card('new1', { frontToBack: fresh(), backToFront: fresh() }),
-    card('old', { frontToBack: learned(), backToFront: learned() }),
+    card('due', { frontToBack: learned(), backToFront: later() }),
+    card('notDue', { frontToBack: later(), backToFront: later() }),
     card('new2', { frontToBack: fresh(), backToFront: fresh() }),
   ];
 
-  it('keeps only the new cards', () => {
-    expect(newCards(deck).map(c => c.id)).toEqual(['new1', 'new2']);
+  it('takes only the new cards for new', () => {
+    expect(previewCards(deck, 'new', NOW).map(c => c.id)).toEqual(['new1', 'new2']);
   });
 
-  it('queues every new card once', () => {
+  it('takes only the rated due cards for due', () => {
+    expect(previewCards(deck, 'due', NOW).map(c => c.id)).toEqual(['due']);
+  });
+
+  it('takes both for both, and never a card that is not due', () => {
+    expect(previewCards(deck, 'both', NOW).map(c => c.id)).toEqual(['new1', 'due', 'new2']);
+  });
+
+  it('counts each scope', () => {
+    expect(previewCounts(deck, NOW)).toEqual({ new: 2, due: 1, both: 3 });
+    expect(previewCounts([], NOW)).toEqual({ new: 0, due: 0, both: 0 });
+  });
+
+  it('queues every card in the scope once', () => {
+    expect(startPreviewQueue(deck, 'both', NOW).map(c => c.id).sort()).toEqual(['due', 'new1', 'new2']);
+  });
+
+  it('defaults to the new cards', () => {
     expect(startPreviewQueue(deck).map(c => c.id).sort()).toEqual(['new1', 'new2']);
   });
 });
