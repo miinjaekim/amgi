@@ -27,7 +27,7 @@ import {
   removeCardFromQueue,
   getBackSideConfig,
   hanjaFaces,
-  newCards,
+  previewCounts,
   directionLabel,
   directionPrompt,
   gradeTypedAnswer,
@@ -36,6 +36,7 @@ import {
 } from '@amgi/core';
 import type {
   DirectionFilter,
+  PreviewScope,
   RecordedReview,
   ReviewCollection,
   ReviewDirection,
@@ -52,6 +53,7 @@ import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 import PronounceButton from '@/components/PronounceButton';
 import ReviewDetailsPanel from '@/components/ReviewDetailsPanel';
 import PreviewSession from '@/components/PreviewSession';
+import PreviewLauncher from '@/components/PreviewLauncher';
 
 // Direction for review — re-exported from core, where `isDue` lives too.
 export type { ReviewDirection } from '@amgi/core';
@@ -160,6 +162,8 @@ export default function ReviewPage() {
    * directions, no ratings, no undo. Leaving it lands back on the start screen.
    */
   const [previewing, setPreviewing] = useState(false);
+  /** Which cards the running preview took. */
+  const [previewScope, setPreviewScope] = useState<PreviewScope>('new');
 
   const isOnline = useOnlineStatus();
   const isDevelopment = process.env.NODE_ENV === 'development';
@@ -244,8 +248,8 @@ export default function ReviewPage() {
   );
 
   const dueCards = useMemo(() => dueReviewItems(collectionCards), [collectionCards]);
-  /** For the Preview option, which is only offered when there is something new to preview. */
-  const newCardCount = useMemo(() => newCards(collectionCards).length, [collectionCards]);
+  /** For the Preview chooser, which is only offered when there is something to preview. */
+  const previewCardCounts = useMemo(() => previewCounts(collectionCards), [collectionCards]);
 
   useEffect(() => {
     setNextReviewDate(dueCards.length === 0 ? getNextReviewDate(collectionCards) : null);
@@ -888,21 +892,11 @@ export default function ReviewPage() {
 
   const collectionName = selected?.name;
 
-  /**
-   * The way into Preview, beside Start rather than instead of it: Preview is
-   * an option, not a step you have to take before reviewing. Secondary in
-   * weight for the same reason.
-   */
-  const previewButton = newCardCount > 0 && (
-    <div className="mb-4 flex flex-col items-center">
-      <button
-        onClick={() => setPreviewing(true)}
-        className="px-4 py-2 rounded-lg border border-[var(--color-muted)] text-sm font-semibold text-[var(--color-text)] hover:bg-[var(--color-muted)]/20 transition-colors"
-      >
-        {t(interfaceLanguage, 'previewStart', { count: newCardCount })}
-      </button>
-      <p className="mt-2 text-xs text-[var(--color-muted)]">{t(interfaceLanguage, 'previewNote')}</p>
-    </div>
+  const previewButton = (previewCardCounts.new > 0 || previewCardCounts.due > 0) && (
+    <PreviewLauncher
+      counts={previewCardCounts}
+      onStart={scope => { setPreviewScope(scope); setPreviewing(true); }}
+    />
   );
 
   /**
@@ -1032,6 +1026,7 @@ export default function ReviewPage() {
           ) : previewing ? (
             <PreviewSession
               cards={collectionCards}
+              scope={previewScope}
               collectionName={canChangeCollection ? collectionName : undefined}
               onExit={() => setPreviewing(false)}
             />
