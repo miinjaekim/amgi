@@ -28,6 +28,16 @@ _Merged, not yet in anyone's hands — mobile ships by build, no OTA._
   buttons and the arrow keys on web. Writes no scheduling; generating details
   from its card back saves them to the card, as Review does. Tried by hand on
   web and in Expo Go before merging.
+- **Preview: due cards, scrolling, swipe flash** (PR #208, merged
+  2026-10-15): one Preview button opens New / Due / Both with counts (due
+  means due and rated before; the last pick is remembered per device). On
+  mobile the card back now scrolls rather than flipping, and a swiped card no
+  longer flashes back, since the next card is drawn underneath. The user
+  reviewed the diff and tried the mobile changes by hand in Expo Go; the web
+  chooser hasn't been looked at by hand.
+- **Expo SDK 57 patch updates** (PR #209, merged 2026-10-15): expo 57.0.24 → 57.0.30
+  and the expo-* modules to match. Native modules among them, so they
+  arrive with the build.
 
 ## High
 
@@ -36,38 +46,6 @@ whether `faire` joins the three sourced irregular verbs (#150), and whether a
 practice session should cover several tenses at once again, which the section
 picker narrowed (#146). Both are written up in their Decisions entries of
 2026-09-22.
-
-- [ ] **Preview: due cards, and fix scrolling.** Added from Google Tasks
-      2026-10-15, High and next up, on the user's call. Preview (PR #207) is
-      still queued for the next build, so this can ship in the same build.
-      Two parts:
-      - **Choose which cards.** Today Preview takes only new cards: never
-        rated in either direction (`isNewCard`, `packages/core/src/preview.ts`).
-        The learner picks new only, due only, or both. **"Due" means due and
-        rated before**, the user confirmed 2026-10-15: every new card is
-        already due (`isDue` treats an untracked direction as due), so
-        otherwise "both" would mean nothing. **One Preview button opens a
-        three-way chooser with counts** (user OK'd); an empty option is
-        disabled, the button shows when either count is above zero, and the
-        last choice is remembered per device. Every card still opens on its
-        study side, and Preview still writes nothing. The "New cards stay due"
-        note and the done-screen copy need rewording for due cards, en and ko.
-      - **Fix scrolling: mobile.** Reported by the user 2026-10-15: with
-        details open the card back won't scroll at all, and trying to scroll
-        flips the card. The card is a fixed 360 high, and its `ScrollView`
-        sits inside the flip `TouchableOpacity` and the swipe `PanResponder`,
-        which take the touch. Vertical drags should scroll; sideways ones
-        should swipe; flipping from the back shouldn't wrap the scroll view.
-        Web wasn't reported.
-      - **Swipe flashes: mobile.** Reported by the user 2026-10-15: on a
-        swipe, the card flashes back before the next card shows. Expected: it
-        swipes away and the next card is already there. In `answer()`,
-        `drag.setValue(0)` runs as the throw ends, ahead of the render that
-        brings the next card, so the old card snaps back to centre for a
-        frame. Only one card is drawn, so there is nothing underneath while it
-        flies off. The fix is to draw the next card beneath it and reset the
-        drag only once the new card is in place. Edge case: when one card is
-        left and the answer is Again, the next card is that same card.
 
 - [ ] **User-made packs: fit the pack to the learner's needs and level.**
       Added from Google Tasks 2026-10-14 as its own item, High, on the user's
