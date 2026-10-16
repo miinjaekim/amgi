@@ -73,6 +73,11 @@ export interface ConjugationPerson {
   id: string;
   /** `je`, `nous` — the language's own word, never translated. */
   label: string;
+  /**
+   * The numbers a participle agreeing with this person can take. `vous` is
+   * both, since it is also the polite singular: `vous êtes allée` is right.
+   */
+  numbers: readonly ('singular' | 'plural')[];
 }
 
 /** A tense, named as a learner of that language learns its name. */
@@ -94,6 +99,31 @@ export interface ConjugationTense {
   aboutLeadKey?: TranslationKey;
   /** The uses, one per line, split on `\n` — the help-sheet shape. */
   aboutPointsKey?: TranslationKey;
+  /**
+   * The persons this tense has, when it is not all of the spec's.
+   *
+   * The impératif is why: `parle`, `parlons`, `parlez`, and no `je`. A table in
+   * it has three boxes, and nothing is scheduled for a person it lacks. Read
+   * it through `tensePersons`, never `spec.persons`, wherever a tense is known.
+   */
+  personIds?: readonly string[];
+  /**
+   * Forms are an auxiliary and a second verb: `ai parlé`, `suis allé`, `vais
+   * parler`. Two words exactly, which is what `bareForm` lets through, and
+   * what `acceptedForms` reads the être agreement off.
+   */
+  compound?: true;
+  /**
+   * The forms take no subject pronoun, so none is accepted in front of them.
+   * The impératif again: `parle` is the answer, and `tu parle` is not French.
+   */
+  noPronoun?: true;
+}
+
+/** The persons a tense has, in the spec's order. */
+export function tensePersons(spec: ConjugationSpec, tenseId: string): readonly ConjugationPerson[] {
+  const ids = spec.tenses.find(tense => tense.id === tenseId)?.personIds;
+  return ids ? spec.persons.filter(person => ids.includes(person.id)) : spec.persons;
 }
 
 /** Which rule class a regular group conjugates by. */
@@ -141,6 +171,18 @@ export interface ConjugationSpec {
   subjectFor: (person: ConjugationPerson, form: string) => string;
   /** Forms for a regular group's vehicle, by rule. */
   conjugate: (infinitive: string, group: ConjugationGroupId, tenseId: string) => string[];
+  /**
+   * Words a form may arrive behind that are not part of it, taken off when it
+   * is stored: French `que`, `qu'`, which a subjonctif table prints.
+   */
+  formLeads?: readonly string[];
+  /**
+   * The auxiliary forms a past participle agrees after — French `être`'s, in
+   * every simple tense and mood a compound tense builds on. A compound form
+   * starting with one of these is accepted in each agreement its person
+   * allows; see `acceptedForms`.
+   */
+  agreeingAuxiliaries?: readonly string[];
   /**
    * The infinitives this learner added themselves — see `withUserVerbs`.
    *
@@ -250,12 +292,12 @@ export function conjugationItemId(
 /* ── French ──────────────────────────────────────────────────────────────── */
 
 const FRENCH_PERSONS: readonly ConjugationPerson[] = [
-  { id: 's1', label: 'je' },
-  { id: 's2', label: 'tu' },
-  { id: 's3', label: 'il/elle/on' },
-  { id: 'p1', label: 'nous' },
-  { id: 'p2', label: 'vous' },
-  { id: 'p3', label: 'ils/elles' },
+  { id: 's1', label: 'je', numbers: ['singular'] },
+  { id: 's2', label: 'tu', numbers: ['singular'] },
+  { id: 's3', label: 'il/elle/on', numbers: ['singular'] },
+  { id: 'p1', label: 'nous', numbers: ['plural'] },
+  { id: 'p2', label: 'vous', numbers: ['singular', 'plural'] },
+  { id: 'p3', label: 'ils/elles', numbers: ['plural'] },
 ];
 
 const FRENCH_TENSES: readonly ConjugationTense[] = [
@@ -386,6 +428,18 @@ const FRENCH_SPEC: ConjugationSpec = {
     return FRENCH_VOWELS.includes(first) || first === 'h' ? "j'" : 'je';
   },
   conjugate: frenchConjugate,
+  formLeads: ["qu'", 'que '],
+  // Être's own compound tenses take avoir (`ai été`), so these are its simple
+  // forms only: indicatif, conditionnel, subjonctif and impératif.
+  agreeingAuxiliaries: [
+    'suis', 'es', 'est', 'sommes', 'êtes', 'sont',
+    'étais', 'était', 'étions', 'étiez', 'étaient',
+    'fus', 'fut', 'fûmes', 'fûtes', 'furent',
+    'serai', 'seras', 'sera', 'serons', 'serez', 'seront',
+    'serais', 'serait', 'serions', 'seriez', 'seraient',
+    'sois', 'soit', 'soyons', 'soyez', 'soient',
+    'fusse', 'fusses', 'fût', 'fussions', 'fussiez', 'fussent',
+  ],
 };
 
 /**
@@ -539,10 +593,25 @@ export function carriedSubjectKey(spec: ConjugationSpec, infinitive: string): st
   return subject && subjectKey(subject);
 }
 
-/** A form as it is stored: bare, lowercase, with any subject pronoun taken off. */
-function bareForm(spec: ConjugationSpec, person: ConjugationPerson, raw: unknown): string | undefined {
+/**
+ * A form as it is stored: bare, lowercase, with any subject pronoun taken off.
+ *
+ * One word, or two in a compound tense and never otherwise — a two-word answer
+ * in the présent is a wrong answer, and passing it would store it.
+ */
+function bareForm(
+  spec: ConjugationSpec,
+  tense: ConjugationTense,
+  person: ConjugationPerson,
+  raw: unknown,
+): string | undefined {
   if (typeof raw !== 'string') return undefined;
-  let form = raw.normalize('NFC').trim().toLowerCase().replace(/[’ʼ]/g, "'");
+  let form = raw.normalize('NFC').trim().toLowerCase().replace(/[’ʼ]/g, "'").replace(/\s+/g, ' ');
+  // `que je parle`: the subjonctif as a table prints it. The particle is not
+  // the form, and a model includes it about as often as it leaves it out.
+  for (const lead of spec.formLeads ?? []) {
+    if (form.startsWith(lead)) { form = form.slice(lead.length).trimStart(); break; }
+  }
   // Any of the label's pronouns, alone or slashed together: `il`, `il/elle`,
   // `il/elle/on`. A model does not reliably pick the same one the label does.
   const pronouns = person.label.split('/');
@@ -555,7 +624,7 @@ function bareForm(spec: ConjugationSpec, person: ConjugationPerson, raw: unknown
   if (elided > 0 && spec.subjectFor(person, form.slice(elided + 1)) === form.slice(0, elided + 1)) {
     form = form.slice(elided + 1);
   }
-  return /^\p{L}+$/u.test(form) ? form : undefined;
+  return (tense.compound ? /^\p{L}+ \p{L}+$/u : /^\p{L}+$/u).test(form) ? form : undefined;
 }
 
 /**
@@ -572,12 +641,13 @@ export function parseConjugationForms(spec: ConjugationSpec, raw: unknown): Conj
   for (const tense of spec.tenses) {
     const given = (raw as Record<string, unknown>)[tense.id];
     if (!given || typeof given !== 'object') continue;
-    if (Array.isArray(given) && given.length !== spec.persons.length) continue;
-    const row = spec.persons.map((person, i) => bareForm(
-      spec, person, Array.isArray(given) ? given[i] : (given as Record<string, unknown>)[person.id],
+    const persons = tensePersons(spec, tense.id);
+    if (Array.isArray(given) && given.length !== persons.length) continue;
+    const row = persons.map((person, i) => bareForm(
+      spec, tense, person, Array.isArray(given) ? given[i] : (given as Record<string, unknown>)[person.id],
     ));
     if (row.some(form => form === undefined)) continue;
-    forms[tense.id] = Object.fromEntries(spec.persons.map((person, i) => [person.id, row[i] as string]));
+    forms[tense.id] = Object.fromEntries(persons.map((person, i) => [person.id, row[i] as string]));
   }
   return Object.keys(forms).length > 0 ? forms : undefined;
 }
@@ -1039,7 +1109,7 @@ export function normalizeProgress(
     if (language !== spec.language) continue;
     if (!findSubject(spec, `${kind}:${subjectId}`)) continue;
     if (!spec.tenses.some(tense => tense.id === tenseId)) continue;
-    if (!spec.persons.some(person => person.id === personId)) continue;
+    if (!tensePersons(spec, tenseId).some(person => person.id === personId)) continue;
     if (typeof state?.misses !== 'number' || typeof state?.nextReview !== 'string') continue;
     kept[id] = state;
   }
@@ -1076,7 +1146,7 @@ export function dueBoxes(
   progress: ConjugationProgressMap,
   now: Date = new Date(),
 ): string[] {
-  return spec.persons
+  return tensePersons(spec, table.tenseId)
     .filter(person => {
       const state = progress[boxItemId(spec, table, person.id)];
       return !state || new Date(state.nextReview) <= now;
@@ -1239,14 +1309,45 @@ export function rateVehicle(
  *
  * The bare form is the answer. The form behind its subject pronoun is accepted
  * too, because a learner who has drilled `j'aime` as a unit is not wrong — and
- * accepting more spellings can only ever turn a false miss into a pass.
+ * accepting more spellings can only ever turn a false miss into a pass. A tense
+ * with no pronoun (the impératif) accepts the bare form alone.
+ *
+ * ⚠️ **After an agreeing auxiliary, every agreement the person allows is
+ * right**, because the app never says who the subject is. `je suis allé` is
+ * stored and `je suis allée` is just as correct; `vous` takes all four, being
+ * the polite singular as well. Decided 2026-10-16 — `decisions/munli.md`.
  */
 export function acceptedForms(spec: ConjugationSpec, table: ConjugationTable, personId: string): string[] {
   const person = spec.persons.find(p => p.id === personId);
   const form = table.forms[personId];
   if (!person || !form) return [];
-  const subject = spec.subjectFor(person, form);
-  return [form, subject.endsWith("'") ? `${subject}${form}` : `${subject} ${form}`];
+  const tense = spec.tenses.find(t => t.id === table.tenseId);
+  const forms = tense?.compound ? [form, ...agreements(spec, person, form)] : [form];
+  if (tense?.noPronoun) return forms;
+  return forms.flatMap(bare => {
+    const subject = spec.subjectFor(person, bare);
+    return [bare, subject.endsWith("'") ? `${subject}${bare}` : `${subject} ${bare}`];
+  });
+}
+
+/**
+ * The other agreements of a compound form whose auxiliary agrees, or none.
+ *
+ * The stored participle is taken as masculine, less a plural `-s` on a person
+ * that can be plural (`vous` may come back `allé` or `allés`). Safe for French because the verbs that take être
+ * and are not pronominal — `aller`, `venir`, `naître` … — have no participle
+ * already ending in `-s`, and pronominal verbs are refused (`isPronominalVerb`).
+ * The day they are not, `assis` breaks this.
+ */
+function agreements(spec: ConjugationSpec, person: ConjugationPerson, form: string): string[] {
+  const [auxiliary, participle] = form.split(' ');
+  if (!participle || !spec.agreeingAuxiliaries?.includes(auxiliary)) return [];
+  const masculine = person.numbers.includes('plural') ? participle.replace(/s$/, '') : participle;
+  const variants = [
+    ...(person.numbers.includes('singular') ? [masculine, `${masculine}e`] : []),
+    ...(person.numbers.includes('plural') ? [`${masculine}s`, `${masculine}es`] : []),
+  ];
+  return variants.map(variant => `${auxiliary} ${variant}`).filter(variant => variant !== form);
 }
 
 /** Whether what was typed answers the box. Local, pure, no model. */
@@ -1354,7 +1455,7 @@ export function summarizeConjugation(
     let tenseDue = 0;
 
     for (const table of forTense) {
-      for (const person of spec.persons) {
+      for (const person of tensePersons(spec, tenseId)) {
         const state = progress[boxItemId(spec, table, person.id)];
         if (!state) {
           // Never practised is also never scheduled, which `dueBoxes` reads as
@@ -1381,7 +1482,7 @@ export function summarizeConjugation(
       tenseId,
       label: tense.label,
       practised: tensePractised,
-      total: forTense.length * spec.persons.length,
+      total: forTense.length * tensePersons(spec, tenseId).length,
       due: tenseDue,
     });
     practised += tensePractised;
@@ -1391,7 +1492,7 @@ export function summarizeConjugation(
   weakest.sort((a, b) => b.misses - a.misses);
   return {
     practised,
-    total: tables.length * spec.persons.length,
+    total: byTense.reduce((n, tense) => n + tense.total, 0),
     due,
     byTense,
     weakest: weakest.slice(0, limit),
@@ -1468,7 +1569,7 @@ export function buildConjugationQueue(
   random: () => number = Math.random,
 ): ConjugationRound[] {
   const pool: ConjugationRound[] = options.includeNotDue
-    ? tables.map(table => ({ table, personIds: spec.persons.map(person => person.id) }))
+    ? tables.map(table => ({ table, personIds: tensePersons(spec, table.tenseId).map(person => person.id) }))
     : dueRounds(spec, tables, progress, now);
 
   /** The table as it will be asked — a group gets a vehicle drawn for it. */
@@ -1591,12 +1692,12 @@ export function listPracticeSections(
       tenseId: tense.id,
       label: tense.label,
       due: countDueBoxes(spec, tables, progress, now),
-      total: tables.length * spec.persons.length,
+      total: tables.length * tensePersons(spec, tense.id).length,
       subjects: tables.map(table => ({
         key: `${table.subjectKind}:${table.subjectId}`,
         label: table.subjectLabel,
         due: dueBoxes(spec, table, progress, now).length,
-        total: spec.persons.length,
+        total: tensePersons(spec, tense.id).length,
       })),
     };
   });
@@ -1658,7 +1759,7 @@ export function listPracticeTables(
   now: Date = new Date(),
 ): ConjugationPracticeItem[] {
   const items = buildTables(spec, enrolment).map(table => {
-    const boxes: ConjugationBoxState[] = spec.persons.map(person => {
+    const boxes: ConjugationBoxState[] = tensePersons(spec, table.tenseId).map(person => {
       const state = progress[boxItemId(spec, table, person.id)];
       const dueAt = state ? new Date(state.nextReview) : null;
       // Never practised counts as due, the same rule `dueBoxes` and an
