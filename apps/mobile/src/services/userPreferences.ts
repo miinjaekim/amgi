@@ -1,6 +1,6 @@
 import { db } from '../config/firebase';
-import { doc, getDoc, getDocFromServer, onSnapshot, setDoc } from 'firebase/firestore';
-import type { UserPreferences } from '@amgi/core';
+import { FieldPath, deleteField, doc, getDoc, getDocFromServer, onSnapshot, setDoc, updateDoc } from 'firebase/firestore';
+import type { ConjugationEnrolment, UserPreferences } from '@amgi/core';
 
 export async function getUserPreferences(uid: string): Promise<UserPreferences | null> {
   const snap = await getDoc(doc(db, 'users', uid));
@@ -54,4 +54,23 @@ export function subscribeToUserPreferences(
 
 export async function saveUserPreferences(uid: string, prefs: Partial<UserPreferences>): Promise<void> {
   await setDoc(doc(db, 'users', uid), prefs, { merge: true });
+}
+
+/**
+ * Take an added tense off the learner's document, with its saved entries and
+ * every schedule in it — `removeAddedTense` says which.
+ *
+ * `updateDoc` with field paths rather than a merge: a merge cannot delete a
+ * key inside a map, and these keys (`French:passe-compose`) hold colons, which
+ * a dotted string path would read as part of the name only inside backticks.
+ */
+export async function removeUserTense(
+  uid: string,
+  tenseKey: string,
+  enrolment: ConjugationEnrolment,
+  boxIds: readonly string[],
+): Promise<void> {
+  const rest: unknown[] = [new FieldPath('conjugationEnrolment'), enrolment];
+  for (const id of boxIds) rest.push(new FieldPath('conjugation', id), deleteField());
+  await updateDoc(doc(db, 'users', uid), new FieldPath('conjugationTenses', tenseKey), deleteField(), ...rest);
 }

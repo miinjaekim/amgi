@@ -1,4 +1,4 @@
-export { getTermExplanation, lookUpUserVerb, getTermDepth, getTermExamples, getDepthTarget, applySpellingCorrection } from '@amgi/core';
+export { getTermExplanation, lookUpUserVerb, addUserTense, getTermDepth, getTermExamples, getDepthTarget, applySpellingCorrection } from '@amgi/core';
 export type {
   SpellingCorrection,
   ExamplePair,

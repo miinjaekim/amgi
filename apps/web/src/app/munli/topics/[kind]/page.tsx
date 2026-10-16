@@ -6,6 +6,7 @@ import { useUser } from '@/components/UserContext';
 import { useConjugation } from '@/hooks/useConjugation';
 import PageHeader from '@/components/PageHeader';
 import AddVerbField from '@/components/AddVerbField';
+import AddTenseField from '@/components/AddTenseField';
 import { t } from '@/lib/i18n';
 
 /**
@@ -89,6 +90,7 @@ export default function VerbsTopicPage() {
         {t(interfaceLanguage, 'verbsIntro')}
       </p>
       <AddVerbField />
+      <AddTenseField />
       {group('group', 'topicRegularVerbs')}
       {group('verb', 'verbsIrregular')}
     </div>

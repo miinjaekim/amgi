@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { buildParadigm, isUserVerb, t } from '@amgi/core';
+import { buildParadigm, isUserVerb, t, tensePersons } from '@amgi/core';
 import type { ConjugationSpec, ConjugationSubject } from '@amgi/core';
 import { useTheme } from '../context/ThemeContext';
 import { useUser } from '../context/UserContext';
@@ -69,7 +69,10 @@ export default function TenseCards({
         return (
           <View key={tense.tenseId} style={s.card}>
             <View style={s.head}>
-              <Text style={s.tense}>{tense.label}</Text>
+              <Text style={s.tense}>
+                {tense.label}
+                {specTense?.userAdded && <Text style={s.unverified}>  {t(interfaceLanguage, 'verbUnverifiedTag')}</Text>}
+              </Text>
               {onToggleSave && (
                 <TouchableOpacity
                   style={[s.save, saved && s.saveOn]}
@@ -93,12 +96,12 @@ export default function TenseCards({
               // One line height keeps the two stacks level.
               <View style={s.forms}>
                 <View>
-                  {spec.persons.map(person => (
+                  {tensePersons(spec, tense.tenseId).map(person => (
                     <Text key={person.id} style={s.person} numberOfLines={1}>{person.label}</Text>
                   ))}
                 </View>
                 <View style={s.formStack}>
-                  {spec.persons.map(person => (
+                  {tensePersons(spec, tense.tenseId).map(person => (
                     <Text key={person.id} style={s.form} numberOfLines={1}>{tense.forms[person.id]}</Text>
                   ))}
                 </View>
@@ -106,7 +109,7 @@ export default function TenseCards({
             ) : (
               <TouchableOpacity onPress={() => setOpened(prev => [...prev, tense.tenseId])} accessibilityRole="button">
                 <Text style={s.preview} numberOfLines={1}>
-                  {spec.persons.slice(0, 3).map(person => tense.forms[person.id]).join(', ')}… ▾
+                  {tensePersons(spec, tense.tenseId).slice(0, 3).map(person => tense.forms[person.id]).join(', ')}… ▾
                 </Text>
               </TouchableOpacity>
             )}
@@ -117,7 +120,11 @@ export default function TenseCards({
           </View>
         );
       })}
-      {isUserVerb(spec, shown) && <Text style={s.unverified}>{t(interfaceLanguage, 'verbUnverified')}</Text>}
+      {isUserVerb(spec, shown)
+        ? <Text style={s.unverified}>{t(interfaceLanguage, 'verbUnverified')}</Text>
+        // A sourced verb in a tense the learner added: the forms are still the model's.
+        : tenses.some(tense => spec.tenses.find(x => x.id === tense.tenseId)?.userAdded)
+          && <Text style={s.unverified}>{t(interfaceLanguage, 'tenseUnverified')}</Text>}
     </View>
   );
 }

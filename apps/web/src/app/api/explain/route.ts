@@ -4,6 +4,9 @@ import {
   PART_OF_SPEECH_CODES,
   conjugationSpec,
   getBackSideConfig,
+  tenseFormRule,
+  tensePersons,
+  withCatalogueTenses,
   getStudyLanguageConfig,
   normalizeFormsNote,
   normalizePartOfSpeech,
@@ -41,7 +44,7 @@ function detectArabic(term: string): boolean {
 }
 
 export async function POST(req: NextRequest) {
-  const { term, nativeLanguage = 'English', context, studyLanguage = 'Korean', exact = false, conjugation = false } = await req.json();
+  const { term, nativeLanguage = 'English', context, studyLanguage = 'Korean', exact = false, conjugation = false, conjugationTenses } = await req.json();
 
   if (!term || typeof term !== 'string') {
     return NextResponse.json({ error: 'term is required' }, { status: 400 });
@@ -123,13 +126,28 @@ When you do set it, every other field — the meanings too, if it is ambiguous �
   // ⚠️ What comes back is the model's, and `docs/packs/README.md` says the
   // model is not a source. The exception written there covers this field alone:
   // it goes to the learner who asked, labelled as unverified, and nowhere else.
-  const frenchSpec = conjugation === true ? conjugationSpec('French') : undefined;
+  //
+  // `conjugationTenses` are the tenses the learner added (catalogue ids), so a
+  // verb added after one gets its forms in the same call. The shipped tenses
+  // are asked exactly as they were; each added one says how its forms are
+  // written, in the words the tense route uses (`tenseFormRule`).
+  const frenchSpec = conjugation === true
+    ? withCatalogueTenses(conjugationSpec('French')!, Array.isArray(conjugationTenses) ? conjugationTenses : [])
+    : undefined;
+  const shippedTenses = frenchSpec?.tenses.filter(tense => !tense.userAdded) ?? [];
+  const learnerTenses = frenchSpec?.tenses.filter(tense => tense.userAdded) ?? [];
   const personOrder = frenchSpec?.persons.map(person => person.label).join(', ');
+  const learnerRule = frenchSpec && learnerTenses.length > 0
+    ? ` Also give its forms in each of these tenses, each with its own count and order: ${learnerTenses.map(tense => tenseFormRule(frenchSpec, tense)).join(' ')}`
+    : '';
   const conjugationRule = frenchSpec
-    ? `\n- "conjugation": if the French word is a verb, its indicative forms in each of these tenses: ${frenchSpec.tenses.map(tense => `"${tense.id}" (${tense.label})`).join(', ')}. Exactly ${frenchSpec.persons.length} forms per tense, in the order ${personOrder}. Each is the bare verb form with no subject pronoun — "parle", never "je parle"; "ai", never "j'ai" — spelled exactly as French writes it, with its accents and any stem or spelling change (nous mangeons is "mangeons", j'appelle is "appelle"). Otherwise set to null.`
+    ? `\n- "conjugation": if the French word is a verb, its indicative forms in each of these tenses: ${shippedTenses.map(tense => `"${tense.id}" (${tense.label})`).join(', ')}. Exactly ${frenchSpec.persons.length} forms per tense, in the order ${personOrder}. Each is the bare verb form with no subject pronoun — "parle", never "je parle"; "ai", never "j'ai" — spelled exactly as French writes it, with its accents and any stem or spelling change (nous mangeons is "mangeons", j'appelle is "appelle").${learnerRule} Otherwise set to null.`
     : '';
   const conjugationJson = frenchSpec
-    ? `\n  "conjugation": { ${frenchSpec.tenses.map(tense => `"${tense.id}": [${frenchSpec.persons.length} forms: ${personOrder}]`).join(', ')} } | null,`
+    ? `\n  "conjugation": { ${frenchSpec.tenses.map(tense => {
+        const persons = tensePersons(frenchSpec, tense.id);
+        return `"${tense.id}": [${persons.length} forms: ${persons.map(person => person.label).join(', ')}]`;
+      }).join(', ')} } | null,`
     : '';
 
   // Swedish and French only, and empty on every other language: see

@@ -73,6 +73,11 @@ export interface ConjugationPerson {
   id: string;
   /** `je`, `nous` — the language's own word, never translated. */
   label: string;
+  /**
+   * The numbers a participle agreeing with this person can take. `vous` is
+   * both, since it is also the polite singular: `vous êtes allée` is right.
+   */
+  numbers: readonly ('singular' | 'plural')[];
 }
 
 /** A tense, named as a learner of that language learns its name. */
@@ -94,6 +99,67 @@ export interface ConjugationTense {
   aboutLeadKey?: TranslationKey;
   /** The uses, one per line, split on `\n` — the help-sheet shape. */
   aboutPointsKey?: TranslationKey;
+  /**
+   * The persons this tense has, when it is not all of the spec's.
+   *
+   * The impératif is why: `parle`, `parlons`, `parlez`, and no `je`. A table in
+   * it has three boxes, and nothing is scheduled for a person it lacks. Read
+   * it through `tensePersons`, never `spec.persons`, wherever a tense is known.
+   */
+  personIds?: readonly string[];
+  /**
+   * Forms are an auxiliary and a second verb: `ai parlé`, `suis allé`, `vais
+   * parler`. Two words exactly, which is what `bareForm` lets through, and
+   * what `acceptedForms` reads the être agreement off.
+   */
+  compound?: true;
+  /**
+   * The forms take no subject pronoun, so none is accepted in front of them.
+   * The impératif again: `parle` is the answer, and `tu parle` is not French.
+   */
+  noPronoun?: true;
+  /**
+   * A tense the learner added, so it has no rule and no source: its forms are
+   * the model's, stored per verb, and unverified wherever they are shown. See
+   * `UserTense`.
+   */
+  userAdded?: true;
+}
+
+/** The persons a tense has, in the spec's order. */
+export function tensePersons(spec: ConjugationSpec, tenseId: string): readonly ConjugationPerson[] {
+  const ids = spec.tenses.find(tense => tense.id === tenseId)?.personIds;
+  return ids ? spec.persons.filter(person => ids.includes(person.id)) : spec.persons;
+}
+
+/**
+ * The verbs a subject can be asked through in a tense — empty when it does
+ * not have the tense at all.
+ *
+ * An irregular verb has a tense when it has its forms. A group has every tense
+ * its rule covers, and an added tense only through the vehicles whose forms
+ * were stored for it.
+ */
+export function tenseVehicles(spec: ConjugationSpec, subject: ConjugationSubject, tenseId: string): string[] {
+  const tense = spec.tenses.find(t => t.id === tenseId);
+  if (!tense) return [];
+  if (subject.kind === 'verb') return subject.forms[tenseId] ? [subject.infinitive] : [];
+  if (!tense.userAdded) return [...subject.vehicles];
+  const stored = subject.storedForms?.[tenseId] ?? {};
+  return subject.vehicles.filter(vehicle => stored[vehicle] !== undefined);
+}
+
+/** Whether a subject can be practised in a tense. */
+export function hasTense(spec: ConjugationSpec, subject: ConjugationSubject, tenseId: string): boolean {
+  return tenseVehicles(spec, subject, tenseId).length > 0;
+}
+
+/** A tense a learner can name, with the names it answers to. */
+export interface CatalogueTense extends ConjugationTense {
+  /** `indicatif`, `subjonctif`: said to the model, so `présent` is not ambiguous. */
+  mood: string;
+  /** Other names for it, in any interface language. Matched folded. */
+  aliases: readonly string[];
 }
 
 /** Which rule class a regular group conjugates by. */
@@ -113,6 +179,18 @@ export interface ConjugationGroup {
   /** `-er`. Shown as the subject of a question, so it is the language's own. */
   label: string;
   vehicles: readonly string[];
+  /**
+   * Tense id → vehicle → person id → form, for the tenses the learner added.
+   *
+   * ⚠️ **The group is still the scheduled item in an added tense**, on the
+   * user's call 2026-10-16, but there is no rule to compute its forms from, so
+   * they are stored per vehicle, as the model gave them. In such a tense "the
+   * group is a rule" weakens to "the group is verbs that share a pattern", and
+   * only a vehicle with stored forms can be drawn — see `tenseVehicles`.
+   * Splitting each vehicle into its own subject instead would multiply the
+   * schedule by the vehicles and undo the 2026-09-22 call.
+   */
+  storedForms?: Record<string, Record<string, Record<string, string>>>;
 }
 
 /** An irregular verb: stored forms, because there is no rule to generate them. */
@@ -141,6 +219,20 @@ export interface ConjugationSpec {
   subjectFor: (person: ConjugationPerson, form: string) => string;
   /** Forms for a regular group's vehicle, by rule. */
   conjugate: (infinitive: string, group: ConjugationGroupId, tenseId: string) => string[];
+  /**
+   * Words a form may arrive behind that are not part of it, taken off when it
+   * is stored: French `que`, `qu'`, which a subjonctif table prints.
+   */
+  formLeads?: readonly string[];
+  /**
+   * The auxiliary forms a past participle agrees after — French `être`'s, in
+   * every simple tense and mood a compound tense builds on. A compound form
+   * starting with one of these is accepted in each agreement its person
+   * allows; see `acceptedForms`.
+   */
+  agreeingAuxiliaries?: readonly string[];
+  /** Every tense a learner can add, matched by name — see `matchCatalogueTense`. */
+  catalogue?: readonly CatalogueTense[];
   /**
    * The infinitives this learner added themselves — see `withUserVerbs`.
    *
@@ -250,12 +342,12 @@ export function conjugationItemId(
 /* ── French ──────────────────────────────────────────────────────────────── */
 
 const FRENCH_PERSONS: readonly ConjugationPerson[] = [
-  { id: 's1', label: 'je' },
-  { id: 's2', label: 'tu' },
-  { id: 's3', label: 'il/elle/on' },
-  { id: 'p1', label: 'nous' },
-  { id: 'p2', label: 'vous' },
-  { id: 'p3', label: 'ils/elles' },
+  { id: 's1', label: 'je', numbers: ['singular'] },
+  { id: 's2', label: 'tu', numbers: ['singular'] },
+  { id: 's3', label: 'il/elle/on', numbers: ['singular'] },
+  { id: 'p1', label: 'nous', numbers: ['plural'] },
+  { id: 'p2', label: 'vous', numbers: ['singular', 'plural'] },
+  { id: 'p3', label: 'ils/elles', numbers: ['plural'] },
 ];
 
 const FRENCH_TENSES: readonly ConjugationTense[] = [
@@ -373,6 +465,41 @@ const FRENCH_IRREGULARS: readonly ConjugationIrregularVerb[] = [
   },
 ];
 
+/**
+ * Every French tense a learner can name, the three shipped ones included.
+ *
+ * ⚠️ **A closed list, matched locally**, on the user's call 2026-10-16. The
+ * model generates a tense's forms and never decides what the tense *is*: the
+ * id has to be the same on every device, a learner typing `présent` has to
+ * land on the shipped tense rather than a copy of it, and the impératif's three
+ * persons and a compound tense's auxiliary are facts about the tense that
+ * grading reads. A name not on this list is refused, not tried.
+ *
+ * Names only, which are not sourced content in the sense `docs/packs/README.md`
+ * means: they are the tense's own name in French, the English and the Korean a
+ * grammar uses for it. Two words exactly for every compound tense — which is
+ * why `venir de` + infinitive, three words, is not here.
+ */
+const FRENCH_TENSE_CATALOGUE: readonly CatalogueTense[] = [
+  { id: 'present', label: 'présent', mood: 'indicatif', aliases: ['present', 'present tense', 'indicatif présent', '현재', '직설법 현재'] },
+  { id: 'imparfait', label: 'imparfait', mood: 'indicatif', aliases: ['imperfect', 'indicatif imparfait', '반과거', '직설법 반과거'] },
+  { id: 'futur', label: 'futur simple', mood: 'indicatif', aliases: ['futur', 'future', 'simple future', 'future tense', '미래', '단순미래', '단순 미래'] },
+  { id: 'passe-compose', label: 'passé composé', mood: 'indicatif', compound: true, aliases: ['present perfect', 'compound past', '복합과거', '복합 과거'] },
+  { id: 'plus-que-parfait', label: 'plus-que-parfait', mood: 'indicatif', compound: true, aliases: ['pluperfect', 'past perfect', '대과거'] },
+  { id: 'passe-simple', label: 'passé simple', mood: 'indicatif', aliases: ['simple past', 'past historic', '단순과거', '단순 과거'] },
+  { id: 'passe-anterieur', label: 'passé antérieur', mood: 'indicatif', compound: true, aliases: ['past anterior', '전과거'] },
+  { id: 'futur-anterieur', label: 'futur antérieur', mood: 'indicatif', compound: true, aliases: ['future perfect', '전미래'] },
+  { id: 'futur-proche', label: 'futur proche', mood: 'indicatif', compound: true, aliases: ['near future', '근접미래', '근접 미래'] },
+  { id: 'conditionnel', label: 'conditionnel présent', mood: 'conditionnel', aliases: ['conditionnel', 'conditional', 'present conditional', '조건법', '조건법 현재'] },
+  { id: 'conditionnel-passe', label: 'conditionnel passé', mood: 'conditionnel', compound: true, aliases: ['past conditional', 'conditional perfect', '조건법 과거'] },
+  { id: 'subjonctif', label: 'subjonctif présent', mood: 'subjonctif', aliases: ['subjonctif', 'subjunctive', 'present subjunctive', '접속법', '접속법 현재'] },
+  { id: 'subjonctif-passe', label: 'subjonctif passé', mood: 'subjonctif', compound: true, aliases: ['past subjunctive', '접속법 과거'] },
+  { id: 'subjonctif-imparfait', label: 'subjonctif imparfait', mood: 'subjonctif', aliases: ['imperfect subjunctive', '접속법 반과거'] },
+  { id: 'subjonctif-plus-que-parfait', label: 'subjonctif plus-que-parfait', mood: 'subjonctif', compound: true, aliases: ['pluperfect subjunctive', '접속법 대과거'] },
+  { id: 'imperatif', label: 'impératif', mood: 'impératif', personIds: ['s2', 'p1', 'p2'], noPronoun: true, aliases: ['impératif présent', 'imperative', '명령법', '명령법 현재'] },
+  { id: 'imperatif-passe', label: 'impératif passé', mood: 'impératif', compound: true, personIds: ['s2', 'p1', 'p2'], noPronoun: true, aliases: ['past imperative', '명령법 과거'] },
+];
+
 const FRENCH_VOWELS = 'aeiouéèêëàâîïôöûùü';
 
 const FRENCH_SPEC: ConjugationSpec = {
@@ -386,6 +513,19 @@ const FRENCH_SPEC: ConjugationSpec = {
     return FRENCH_VOWELS.includes(first) || first === 'h' ? "j'" : 'je';
   },
   conjugate: frenchConjugate,
+  catalogue: FRENCH_TENSE_CATALOGUE,
+  formLeads: ["qu'", 'que '],
+  // Être's own compound tenses take avoir (`ai été`), so these are its simple
+  // forms only: indicatif, conditionnel, subjonctif and impératif.
+  agreeingAuxiliaries: [
+    'suis', 'es', 'est', 'sommes', 'êtes', 'sont',
+    'étais', 'était', 'étions', 'étiez', 'étaient',
+    'fus', 'fut', 'fûmes', 'fûtes', 'furent',
+    'serai', 'seras', 'sera', 'serons', 'serez', 'seront',
+    'serais', 'serait', 'serions', 'seriez', 'seraient',
+    'sois', 'soit', 'soyons', 'soyez', 'soient',
+    'fusse', 'fusses', 'fût', 'fussions', 'fussiez', 'fussent',
+  ],
 };
 
 /**
@@ -494,7 +634,8 @@ export type ConjugationForms = Record<string, Record<string, string>>;
  *
  * ⚠️ **What it becomes follows the split this module turns on.** A regular verb
  * is a **vehicle** for its group and nothing more: no forms are stored, because
- * the rule produces them, and nothing new is scheduled. An irregular verb is a
+ * the rule produces them — except in a tense the learner added, which has no
+ * rule — and nothing new is scheduled. An irregular verb is a
  * subject of its own, with stored forms, exactly as `être` is.
  *
  * ⚠️ **Its forms came from the model**, which `docs/packs/README.md` says is
@@ -505,7 +646,10 @@ export type ConjugationForms = Record<string, Record<string, string>>;
 export interface UserVerb {
   infinitive: string;
   group: VerbGroup;
-  /** Irregular verbs only. A regular verb's forms are computed. */
+  /**
+   * Every tense of an irregular verb. A regular verb's forms are computed, so
+   * it stores only the tenses the learner added, which have no rule.
+   */
   forms?: ConjugationForms;
   /** ISO 8601. Orders a learner's verbs the same way on every device. */
   addedAt: string;
@@ -532,6 +676,11 @@ export function isPronominalVerb(term: string): boolean {
 /** One word, ending the way a French infinitive ends. `haïr` is why `ïr` is here. */
 const INFINITIVE = /^\p{L}+(?:-\p{L}+)*(?:er|ir|ïr|re)$/u;
 
+/** Whether a string is shaped like a French infinitive — what a route accepts as a verb to conjugate. */
+export function isInfinitive(term: unknown): term is string {
+  return typeof term === 'string' && INFINITIVE.test(term);
+}
+
 /** The key of the subject a spec already practises this verb under, if any. */
 export function carriedSubjectKey(spec: ConjugationSpec, infinitive: string): string | undefined {
   const subject = spec.subjects.find(s =>
@@ -539,10 +688,25 @@ export function carriedSubjectKey(spec: ConjugationSpec, infinitive: string): st
   return subject && subjectKey(subject);
 }
 
-/** A form as it is stored: bare, lowercase, with any subject pronoun taken off. */
-function bareForm(spec: ConjugationSpec, person: ConjugationPerson, raw: unknown): string | undefined {
+/**
+ * A form as it is stored: bare, lowercase, with any subject pronoun taken off.
+ *
+ * One word, or two in a compound tense and never otherwise — a two-word answer
+ * in the présent is a wrong answer, and passing it would store it.
+ */
+function bareForm(
+  spec: ConjugationSpec,
+  tense: ConjugationTense,
+  person: ConjugationPerson,
+  raw: unknown,
+): string | undefined {
   if (typeof raw !== 'string') return undefined;
-  let form = raw.normalize('NFC').trim().toLowerCase().replace(/[’ʼ]/g, "'");
+  let form = raw.normalize('NFC').trim().toLowerCase().replace(/[’ʼ]/g, "'").replace(/\s+/g, ' ');
+  // `que je parle`: the subjonctif as a table prints it. The particle is not
+  // the form, and a model includes it about as often as it leaves it out.
+  for (const lead of spec.formLeads ?? []) {
+    if (form.startsWith(lead)) { form = form.slice(lead.length).trimStart(); break; }
+  }
   // Any of the label's pronouns, alone or slashed together: `il`, `il/elle`,
   // `il/elle/on`. A model does not reliably pick the same one the label does.
   const pronouns = person.label.split('/');
@@ -555,7 +719,7 @@ function bareForm(spec: ConjugationSpec, person: ConjugationPerson, raw: unknown
   if (elided > 0 && spec.subjectFor(person, form.slice(elided + 1)) === form.slice(0, elided + 1)) {
     form = form.slice(elided + 1);
   }
-  return /^\p{L}+$/u.test(form) ? form : undefined;
+  return (tense.compound ? /^\p{L}+ \p{L}+$/u : /^\p{L}+$/u).test(form) ? form : undefined;
 }
 
 /**
@@ -572,12 +736,13 @@ export function parseConjugationForms(spec: ConjugationSpec, raw: unknown): Conj
   for (const tense of spec.tenses) {
     const given = (raw as Record<string, unknown>)[tense.id];
     if (!given || typeof given !== 'object') continue;
-    if (Array.isArray(given) && given.length !== spec.persons.length) continue;
-    const row = spec.persons.map((person, i) => bareForm(
-      spec, person, Array.isArray(given) ? given[i] : (given as Record<string, unknown>)[person.id],
+    const persons = tensePersons(spec, tense.id);
+    if (Array.isArray(given) && given.length !== persons.length) continue;
+    const row = persons.map((person, i) => bareForm(
+      spec, tense, person, Array.isArray(given) ? given[i] : (given as Record<string, unknown>)[person.id],
     ));
     if (row.some(form => form === undefined)) continue;
-    forms[tense.id] = Object.fromEntries(spec.persons.map((person, i) => [person.id, row[i] as string]));
+    forms[tense.id] = Object.fromEntries(persons.map((person, i) => [person.id, row[i] as string]));
   }
   return Object.keys(forms).length > 0 ? forms : undefined;
 }
@@ -628,22 +793,33 @@ export function settleUserVerb(
   const carried = carriedSubjectKey(spec, infinitive);
   if (carried) return { status: 'exists', infinitive, subjectKey: carried };
 
+  // The shipped tenses are required and are what the rule is checked in. A
+  // tense the learner added is neither: a verb missing one simply lacks it.
   const forms = parseConjugationForms(spec, lookup.conjugation);
-  if (!forms || spec.tenses.some(tense => !forms[tense.id])) return { status: 'noForms', infinitive };
+  const ruled = spec.tenses.filter(tense => !tense.userAdded);
+  if (!forms || ruled.some(tense => !forms[tense.id])) return { status: 'noForms', infinitive };
 
   const claimed = normalizeVerbGroup(lookup.verbGroup, infinitive);
   const group = spec.subjects.find(
     (subject): subject is ConjugationGroup => subject.kind === 'group' && subject.id === claimed,
   );
-  const followsRule = group !== undefined && spec.tenses.every(tense => {
+  const followsRule = group !== undefined && ruled.every(tense => {
     const byRule = spec.conjugate(infinitive, group.id, tense.id);
     return spec.persons.every((person, i) => byRule[i] === forms[tense.id][person.id]);
   });
 
   const addedAt = now.toISOString();
-  return followsRule
-    ? { status: 'added', verb: { infinitive, group: group.id, addedAt }, subjectKey: subjectKey(group) }
-    : { status: 'added', verb: { infinitive, group: 'irregular', forms, addedAt }, subjectKey: `verb:${infinitive}` };
+  if (!followsRule) {
+    return { status: 'added', verb: { infinitive, group: 'irregular', forms, addedAt }, subjectKey: `verb:${infinitive}` };
+  }
+  // A regular verb stores only what its rule cannot give: added tenses.
+  const unruled = Object.fromEntries(Object.entries(forms)
+    .filter(([tenseId]) => spec.tenses.some(tense => tense.id === tenseId && tense.userAdded)));
+  return {
+    status: 'added',
+    verb: { infinitive, group: group.id, ...(Object.keys(unruled).length > 0 ? { forms: unruled } : {}), addedAt },
+    subjectKey: subjectKey(group),
+  };
 }
 
 /**
@@ -665,16 +841,18 @@ export function settleUserVerb(
  */
 export function withUserVerbs(spec: ConjugationSpec, verbs: UserVerbMap | undefined): ConjugationSpec {
   const vehicles = new Map<string, string[]>();
+  /** Group → tense → vehicle → forms, for the added tenses a regular verb carries. */
+  const stored = new Map<string, Record<string, Record<string, Record<string, string>>>>();
   const irregulars: ConjugationIrregularVerb[] = [];
   const added: string[] = [];
 
-  const stored = Object.entries(verbs ?? {})
+  const kept = Object.entries(verbs ?? {})
     .filter(([key, verb]) => typeof verb?.infinitive === 'string'
       && key === conjugationVerbKey(spec.language, verb.infinitive))
     .map(([, verb]) => verb)
     .sort((a, b) => String(a.addedAt).localeCompare(String(b.addedAt)) || a.infinitive.localeCompare(b.infinitive));
 
-  for (const verb of stored) {
+  for (const verb of kept) {
     const { infinitive } = verb;
     if (!INFINITIVE.test(infinitive) || carriedSubjectKey(spec, infinitive)) continue;
     if (verb.group === 'irregular') {
@@ -687,6 +865,13 @@ export function withUserVerbs(spec: ConjugationSpec, verbs: UserVerbMap | undefi
       if (normalizeVerbGroup(verb.group, infinitive) !== verb.group) continue;
       if (!spec.subjects.some(subject => subject.kind === 'group' && subject.id === verb.group)) continue;
       vehicles.set(verb.group, [...(vehicles.get(verb.group) ?? []), infinitive]);
+      const forms = parseConjugationForms(spec, verb.forms) ?? {};
+      for (const tense of spec.tenses) {
+        if (!tense.userAdded || !forms[tense.id]) continue;
+        const byTense = stored.get(verb.group) ?? {};
+        byTense[tense.id] = { ...byTense[tense.id], [infinitive]: forms[tense.id] };
+        stored.set(verb.group, byTense);
+      }
     }
     added.push(infinitive);
   }
@@ -696,7 +881,11 @@ export function withUserVerbs(spec: ConjugationSpec, verbs: UserVerbMap | undefi
     ...spec,
     subjects: [
       ...spec.subjects.map(subject => (subject.kind === 'group' && vehicles.has(subject.id)
-        ? { ...subject, vehicles: [...subject.vehicles, ...(vehicles.get(subject.id) ?? [])] }
+        ? {
+            ...subject,
+            vehicles: [...subject.vehicles, ...(vehicles.get(subject.id) ?? [])],
+            ...(stored.has(subject.id) ? { storedForms: mergeStored(subject.storedForms, stored.get(subject.id)!) } : {}),
+          }
         : subject)),
       ...irregulars,
     ],
@@ -738,6 +927,281 @@ export function userVerbSubjectKey(outcome: UserVerbOutcome): string | undefined
   return outcome.status === 'added' || outcome.status === 'exists' ? outcome.subjectKey : undefined;
 }
 
+/* ── Tenses a learner adds ───────────────────────────────────────────────── */
+
+/**
+ * A tense a learner added, with the forms generated for it.
+ *
+ * ⚠️ **Model-made forms, under the 2026-10-14 decision** (`decisions/munli.md`):
+ * the learner names a tense from `spec.catalogue` and the model conjugates
+ * every verb they have in it. The exception holds on what the verb one holds
+ * on — labelled unverified wherever a form is shown (`ConjugationTense.
+ * userAdded`, and `userAdded` on every table in it), and kept on `users/{uid}`.
+ *
+ * The forms are by infinitive, so the same map serves a group's vehicles and an
+ * irregular verb. A verb added *after* the tense brings its own forms for it,
+ * on `UserVerb.forms`, from the same lookup that adds it.
+ */
+export interface UserTense {
+  /** A `spec.catalogue` id. */
+  tenseId: string;
+  /** Infinitive → person id → form. */
+  forms: Record<string, Record<string, string>>;
+  /** ISO 8601. */
+  addedAt: string;
+}
+
+/** A learner's added tenses, keyed by `conjugationTenseKey`. */
+export type UserTenseMap = Record<string, UserTense>;
+
+export function conjugationTenseKey(language: StudyLanguage, tenseId: string): string {
+  return `${language}:${tenseId}`;
+}
+
+/** Lowercase, unaccented, one space between words — what a typed name is compared as. */
+function foldTenseName(text: string): string {
+  // Back to NFC once the accents are off: NFD also splits Hangul into jamo.
+  return text.normalize('NFD').replace(/\p{M}/gu, '').normalize('NFC').toLowerCase()
+    .replace(/[-_\s]+/g, ' ').trim()
+    .replace(/^(le |la |l')/, '')
+    .replace(/ (tense|시제)$/, '');
+}
+
+/** The catalogue tense a typed name means, if it means one. */
+export function matchCatalogueTense(spec: ConjugationSpec, typed: string): CatalogueTense | undefined {
+  const folded = foldTenseName(typed);
+  if (!folded) return undefined;
+  return spec.catalogue?.find(tense =>
+    [tense.id, tense.label, ...tense.aliases].some(name => foldTenseName(name) === folded));
+}
+
+/** What a typed tense name comes to before any call is made. */
+export type TenseRequest =
+  | { status: 'unknown' }
+  | { status: 'exists'; label: string }
+  | { status: 'ready'; tense: CatalogueTense };
+
+/**
+ * Settle a typed name locally: not a tense, one the learner already has
+ * (shipped or added), or one to generate. Only the last costs a call.
+ */
+export function requestTense(spec: ConjugationSpec, typed: string): TenseRequest {
+  const tense = matchCatalogueTense(spec, typed);
+  if (!tense) return { status: 'unknown' };
+  if (spec.tenses.some(t => t.id === tense.id)) return { status: 'exists', label: tense.label };
+  return { status: 'ready', tense };
+}
+
+/** A catalogue entry as a spec carries it once added. */
+function asAddedTense({ mood: _mood, aliases: _aliases, ...tense }: CatalogueTense): ConjugationTense {
+  return { ...tense, userAdded: true };
+}
+
+/**
+ * A spec with catalogue tenses in it, and no forms for them.
+ *
+ * What a route builds to ask for, and read back, the forms of a tense nobody
+ * has yet: the parsing rules (persons, two words or one) come from the tense.
+ */
+export function withCatalogueTenses(spec: ConjugationSpec, tenseIds: readonly unknown[]): ConjugationSpec {
+  const added = (spec.catalogue ?? []).filter(tense =>
+    tenseIds.includes(tense.id) && !spec.tenses.some(t => t.id === tense.id));
+  return added.length === 0 ? spec : { ...spec, tenses: [...spec.tenses, ...added.map(asAddedTense)] };
+}
+
+/** Every verb a tense is generated for: each group's vehicles, then the irregular verbs. */
+export function tenseVerbs(spec: ConjugationSpec): string[] {
+  return spec.subjects.flatMap(subject => (subject.kind === 'group' ? subject.vehicles : [subject.infinitive]));
+}
+
+/**
+ * How one tense's forms are written, as a prompt says it.
+ *
+ * In core so the tense route and the lookup route (a verb added later) say the
+ * same thing about the same tense — and so it reads off the same flags
+ * `bareForm` and `acceptedForms` do.
+ */
+export function tenseFormRule(spec: ConjugationSpec, tense: ConjugationTense): string {
+  const persons = tensePersons(spec, tense.id);
+  const entry = spec.catalogue?.find(t => t.id === tense.id);
+  const rules = [
+    `"${tense.id}" is the ${tense.label}${entry && !tense.label.includes(entry.mood) ? ` (${entry.mood})` : ''}: exactly ${persons.length} forms, in the order ${persons.map(p => p.label).join(', ')}.`,
+  ];
+  if (tense.compound) {
+    rules.push('Each form is two words, the auxiliary and the second verb ("ai parlé", "suis allé"; for the futur proche, "vais parler"). Use avoir or être as French does for that verb. After être, write the participle in the masculine: singular for je, tu and il, plural for nous, vous and ils ("suis allé", "sommes allés").');
+  }
+  if (tense.noPronoun) rules.push('It has no subject pronoun.');
+  if (entry?.mood === 'subjonctif') rules.push('Leave out que.');
+  return rules.join(' ');
+}
+
+/**
+ * The forms a tense route answered with, verb by verb, narrowed by the tense's
+ * own rules. A verb whose forms do not fit is left out, not guessed at.
+ */
+export function parseTenseForms(
+  spec: ConjugationSpec,
+  tenseId: string,
+  verbs: readonly string[],
+  raw: unknown,
+): Record<string, Record<string, string>> {
+  const given = raw && typeof raw === 'object' ? raw as Record<string, unknown> : {};
+  const forms: Record<string, Record<string, string>> = {};
+  for (const verb of verbs) {
+    const parsed = parseConjugationForms(spec, { [tenseId]: given[verb] })?.[tenseId];
+    if (parsed) forms[verb] = parsed;
+  }
+  return forms;
+}
+
+/** What came of adding a tense. */
+export type UserTenseOutcome =
+  | { status: 'added'; tense: UserTense; label: string; missing: string[] }
+  | { status: 'unknown' }
+  | { status: 'exists'; label: string }
+  | { status: 'noForms'; label: string };
+
+/** The tense as stored, from what the route returned for it. */
+export function settleUserTense(
+  tense: CatalogueTense,
+  verbs: readonly string[],
+  forms: Record<string, Record<string, string>>,
+  now: Date = new Date(),
+): UserTenseOutcome {
+  const missing = verbs.filter(verb => !forms[verb]);
+  if (missing.length === verbs.length) return { status: 'noForms', label: tense.label };
+  return {
+    status: 'added',
+    tense: { tenseId: tense.id, forms, addedAt: now.toISOString() },
+    label: tense.label,
+    missing,
+  };
+}
+
+export function userTenseOutcomeCopy(
+  outcome: UserTenseOutcome,
+): { key: TranslationKey; params?: Record<string, string> } {
+  switch (outcome.status) {
+    case 'unknown': return { key: 'tenseAddUnknown' };
+    case 'exists': return { key: 'tenseAddExists', params: { tense: outcome.label } };
+    case 'noForms': return { key: 'tenseAddNoForms', params: { tense: outcome.label } };
+    case 'added': return outcome.missing.length > 0
+      ? { key: 'tenseAddedMissing', params: { tense: outcome.label, verbs: outcome.missing.join(', ') } }
+      : { key: 'tenseAdded', params: { tense: outcome.label } };
+  }
+}
+
+function mergeStored(
+  into: ConjugationGroup['storedForms'],
+  from: NonNullable<ConjugationGroup['storedForms']>,
+): NonNullable<ConjugationGroup['storedForms']> {
+  const merged = { ...into };
+  for (const [tenseId, byVehicle] of Object.entries(from)) merged[tenseId] = { ...merged[tenseId], ...byVehicle };
+  return merged;
+}
+
+/**
+ * A language's spec with one learner's verbs **and** tenses in it — what every
+ * surface reads. `withUserVerbs` alone is the spec without added tenses.
+ *
+ * The tenses go in first, so a verb added after a tense is parsed with that
+ * tense known and keeps the forms its own lookup brought. The tense's map then
+ * fills whatever the verbs did not: every built-in verb, and every verb added
+ * before the tense. A verb's own forms win where both exist, being the later.
+ *
+ * Added tenses follow the shipped ones, in catalogue order rather than the
+ * order they were added, so a list does not depend on history.
+ */
+export function learnerSpec(
+  spec: ConjugationSpec,
+  verbs: UserVerbMap | undefined,
+  tenses: UserTenseMap | undefined,
+): ConjugationSpec {
+  const added = (spec.catalogue ?? []).filter(tense =>
+    !spec.tenses.some(t => t.id === tense.id)
+    && tenses?.[conjugationTenseKey(spec.language, tense.id)]?.tenseId === tense.id);
+  const withTenses = added.length === 0 ? spec : { ...spec, tenses: [...spec.tenses, ...added.map(asAddedTense)] };
+  const mine = withUserVerbs(withTenses, verbs);
+  if (added.length === 0) return mine;
+
+  // Each tense's map narrowed once, by the tense's own rules.
+  const byTense = new Map(added.map(tense => {
+    const stored = tenses![conjugationTenseKey(spec.language, tense.id)].forms ?? {};
+    return [tense.id, parseTenseForms(mine, tense.id, Object.keys(stored), stored)] as const;
+  }));
+
+  return {
+    ...mine,
+    subjects: mine.subjects.map((subject): ConjugationSubject => {
+      if (subject.kind === 'verb') {
+        const forms = { ...subject.forms };
+        for (const [tenseId, map] of byTense) {
+          if (!forms[tenseId] && map[subject.infinitive]) forms[tenseId] = map[subject.infinitive];
+        }
+        return { ...subject, forms };
+      }
+      const storedForms = { ...subject.storedForms };
+      for (const [tenseId, map] of byTense) {
+        for (const vehicle of subject.vehicles) {
+          if (storedForms[tenseId]?.[vehicle] || !map[vehicle]) continue;
+          storedForms[tenseId] = { ...storedForms[tenseId], [vehicle]: map[vehicle] };
+        }
+      }
+      return { ...subject, storedForms };
+    }),
+  };
+}
+
+/** The tenses this learner added, in the spec's order. */
+export function addedTenses(spec: ConjugationSpec): ConjugationTense[] {
+  return spec.tenses.filter(tense => tense.userAdded);
+}
+
+/**
+ * A new tense into the practice set: every regular pattern that has it — the
+ * set a new learner starts the présent with (`defaultEnrolment`). An irregular
+ * verb is left for the learner to save, as it is when the verb is added.
+ */
+export function enrolAddedTense(
+  spec: ConjugationSpec,
+  enrolment: ConjugationEnrolment,
+  tenseId: string,
+): ConjugationEnrolment {
+  return spec.subjects
+    .filter(subject => subject.kind === 'group' && hasTense(spec, subject, tenseId))
+    .reduce((next, subject) => setEnrolled(next, subject, [tenseId], true), enrolment);
+}
+
+/**
+ * What removing an added tense takes with it: its saved entries, and the ids
+ * of every box scheduled in it, so a tense added again starts clean rather
+ * than on schedules for forms that may have come out differently.
+ *
+ * ⚠️ **The practice set is not left empty.** When the tense was all that was
+ * saved, it falls back to the default set, which is what `normalizeEnrolment`
+ * would read it as anyway — written down rather than left implicit.
+ */
+export function removeAddedTense(
+  spec: ConjugationSpec,
+  enrolment: ConjugationEnrolment,
+  progress: ConjugationProgressMap,
+  tenseId: string,
+): { enrolment: ConjugationEnrolment; boxIds: string[] } {
+  const items = enrolment.items.filter(item => item.slice(item.lastIndexOf(':') + 1) !== tenseId);
+  const boxIds = Object.keys(progress).filter(id => id.split(':')[3] === tenseId);
+  const remaining = { ...spec, tenses: spec.tenses.filter(tense => tense.id !== tenseId) };
+  return { enrolment: items.length > 0 ? { items } : defaultEnrolment(remaining), boxIds };
+}
+
+/**
+ * Which "unverified" line a table's forms need, if any: the verb's when the
+ * learner added the verb, otherwise the tense's.
+ */
+export function unverifiedKey(spec: ConjugationSpec, table: ConjugationTable): TranslationKey | undefined {
+  if (!table.userAdded) return undefined;
+  return isUserVerb(spec, table.infinitive) ? 'verbUnverified' : 'tenseUnverified';
+}
+
 /** One row of the Verbs topic: a pattern or an irregular verb, and how much of it is saved. */
 export interface VerbRow {
   /** The subject's key, which is also its route segment under the topic. */
@@ -766,7 +1230,7 @@ export interface VerbRow {
  */
 export function listVerbRows(spec: ConjugationSpec, enrolment: ConjugationEnrolment): VerbRow[] {
   return spec.subjects.map(subject => {
-    const tenses = spec.tenses.filter(tense => subject.kind === 'group' || subject.forms[tense.id]);
+    const tenses = spec.tenses.filter(tense => hasTense(spec, subject, tense.id));
     const first = subject.kind === 'verb' ? subject.forms[tenses[0]?.id] : undefined;
     return {
       key: subjectKey(subject),
@@ -931,16 +1395,18 @@ export function buildTable(
   const tense = spec.tenses.find(t => t.id === tenseId);
   if (!tense) throw new Error(`Unknown tense: ${tenseId}`);
 
+  const vehicles = tenseVehicles(spec, subject, tenseId);
   const infinitive = subject.kind === 'verb'
     ? subject.infinitive
-    : vehicle && subject.vehicles.includes(vehicle) ? vehicle : subject.vehicles[0];
+    : vehicle && vehicles.includes(vehicle) ? vehicle : vehicles[0];
+  if (infinitive === undefined) throw new Error(`${subject.id} has no ${tenseId}`);
   const common = {
     subjectKind: subject.kind,
     subjectId: subject.id,
     tenseId,
     tenseLabel: tense.label,
     infinitive,
-    ...(isUserVerb(spec, infinitive) ? { userAdded: true as const } : {}),
+    ...(isUserVerb(spec, infinitive) || tense.userAdded ? { userAdded: true as const } : {}),
   };
 
   if (subject.kind === 'verb') {
@@ -949,6 +1415,9 @@ export function buildTable(
     return { ...common, subjectLabel: subject.infinitive, forms };
   }
 
+  if (tense.userAdded) {
+    return { ...common, subjectLabel: subject.label, forms: subject.storedForms![tenseId][infinitive] };
+  }
   const forms = spec.conjugate(infinitive, subject.id, tenseId);
   return {
     ...common,
@@ -979,8 +1448,9 @@ export function buildTables(
     if (selection?.subjects && !selection.subjects.includes(key)) continue;
     const subject = findSubject(spec, key);
     if (!subject) continue;
-    // An irregular verb may simply not have been given this tense yet.
-    if (subject.kind === 'verb' && !subject.forms[tenseId]) continue;
+    // An irregular verb may simply not have been given this tense yet, and a
+    // group has an added tense only through the vehicles stored for it.
+    if (!hasTense(spec, subject, tenseId)) continue;
     tables.push(buildTable(spec, subject, tenseId));
   }
   // Language order rather than the order things were saved in, so a list does
@@ -1039,7 +1509,7 @@ export function normalizeProgress(
     if (language !== spec.language) continue;
     if (!findSubject(spec, `${kind}:${subjectId}`)) continue;
     if (!spec.tenses.some(tense => tense.id === tenseId)) continue;
-    if (!spec.persons.some(person => person.id === personId)) continue;
+    if (!tensePersons(spec, tenseId).some(person => person.id === personId)) continue;
     if (typeof state?.misses !== 'number' || typeof state?.nextReview !== 'string') continue;
     kept[id] = state;
   }
@@ -1076,7 +1546,7 @@ export function dueBoxes(
   progress: ConjugationProgressMap,
   now: Date = new Date(),
 ): string[] {
-  return spec.persons
+  return tensePersons(spec, table.tenseId)
     .filter(person => {
       const state = progress[boxItemId(spec, table, person.id)];
       return !state || new Date(state.nextReview) <= now;
@@ -1239,14 +1709,45 @@ export function rateVehicle(
  *
  * The bare form is the answer. The form behind its subject pronoun is accepted
  * too, because a learner who has drilled `j'aime` as a unit is not wrong — and
- * accepting more spellings can only ever turn a false miss into a pass.
+ * accepting more spellings can only ever turn a false miss into a pass. A tense
+ * with no pronoun (the impératif) accepts the bare form alone.
+ *
+ * ⚠️ **After an agreeing auxiliary, every agreement the person allows is
+ * right**, because the app never says who the subject is. `je suis allé` is
+ * stored and `je suis allée` is just as correct; `vous` takes all four, being
+ * the polite singular as well. Decided 2026-10-16 — `decisions/munli.md`.
  */
 export function acceptedForms(spec: ConjugationSpec, table: ConjugationTable, personId: string): string[] {
   const person = spec.persons.find(p => p.id === personId);
   const form = table.forms[personId];
   if (!person || !form) return [];
-  const subject = spec.subjectFor(person, form);
-  return [form, subject.endsWith("'") ? `${subject}${form}` : `${subject} ${form}`];
+  const tense = spec.tenses.find(t => t.id === table.tenseId);
+  const forms = tense?.compound ? [form, ...agreements(spec, person, form)] : [form];
+  if (tense?.noPronoun) return forms;
+  return forms.flatMap(bare => {
+    const subject = spec.subjectFor(person, bare);
+    return [bare, subject.endsWith("'") ? `${subject}${bare}` : `${subject} ${bare}`];
+  });
+}
+
+/**
+ * The other agreements of a compound form whose auxiliary agrees, or none.
+ *
+ * The stored participle is taken as masculine, less a plural `-s` on a person
+ * that can be plural (`vous` may come back `allé` or `allés`). Safe for French because the verbs that take être
+ * and are not pronominal — `aller`, `venir`, `naître` … — have no participle
+ * already ending in `-s`, and pronominal verbs are refused (`isPronominalVerb`).
+ * The day they are not, `assis` breaks this.
+ */
+function agreements(spec: ConjugationSpec, person: ConjugationPerson, form: string): string[] {
+  const [auxiliary, participle] = form.split(' ');
+  if (!participle || !spec.agreeingAuxiliaries?.includes(auxiliary)) return [];
+  const masculine = person.numbers.includes('plural') ? participle.replace(/s$/, '') : participle;
+  const variants = [
+    ...(person.numbers.includes('singular') ? [masculine, `${masculine}e`] : []),
+    ...(person.numbers.includes('plural') ? [`${masculine}s`, `${masculine}es`] : []),
+  ];
+  return variants.map(variant => `${auxiliary} ${variant}`).filter(variant => variant !== form);
 }
 
 /** Whether what was typed answers the box. Local, pure, no model. */
@@ -1354,7 +1855,7 @@ export function summarizeConjugation(
     let tenseDue = 0;
 
     for (const table of forTense) {
-      for (const person of spec.persons) {
+      for (const person of tensePersons(spec, tenseId)) {
         const state = progress[boxItemId(spec, table, person.id)];
         if (!state) {
           // Never practised is also never scheduled, which `dueBoxes` reads as
@@ -1381,7 +1882,7 @@ export function summarizeConjugation(
       tenseId,
       label: tense.label,
       practised: tensePractised,
-      total: forTense.length * spec.persons.length,
+      total: forTense.length * tensePersons(spec, tenseId).length,
       due: tenseDue,
     });
     practised += tensePractised;
@@ -1391,7 +1892,7 @@ export function summarizeConjugation(
   weakest.sort((a, b) => b.misses - a.misses);
   return {
     practised,
-    total: tables.length * spec.persons.length,
+    total: byTense.reduce((n, tense) => n + tense.total, 0),
     due,
     byTense,
     weakest: weakest.slice(0, limit),
@@ -1468,21 +1969,24 @@ export function buildConjugationQueue(
   random: () => number = Math.random,
 ): ConjugationRound[] {
   const pool: ConjugationRound[] = options.includeNotDue
-    ? tables.map(table => ({ table, personIds: spec.persons.map(person => person.id) }))
+    ? tables.map(table => ({ table, personIds: tensePersons(spec, table.tenseId).map(person => person.id) }))
     : dueRounds(spec, tables, progress, now);
 
   /** The table as it will be asked — a group gets a vehicle drawn for it. */
   const vehicled = (table: ConjugationTable): ConjugationTable => {
     const subject = findSubject(spec, `${table.subjectKind}:${table.subjectId}`);
     if (!subject || subject.kind !== 'group') return table;
-    const weights = subject.vehicles.map(verb =>
+    // Only the verbs this tense has forms for: in an added tense, the vehicles
+    // stored for it.
+    const vehicles = tenseVehicles(spec, subject, table.tenseId);
+    const weights = vehicles.map(verb =>
       vehicleWeight(options.vehicleMisses?.[conjugationVerbKey(spec.language, verb)]));
     // One roll across the weights laid end to end. With nothing missed every
     // weight is 1 and this is the even draw it replaced.
     let roll = random() * weights.reduce((sum, weight) => sum + weight, 0);
     let pick = weights.findIndex(weight => (roll -= weight) < 0);
-    if (pick < 0) pick = subject.vehicles.length - 1;
-    return buildTable(spec, subject, table.tenseId, subject.vehicles[pick]);
+    if (pick < 0) pick = vehicles.length - 1;
+    return buildTable(spec, subject, table.tenseId, vehicles[pick]);
   };
 
   const rounds: ConjugationRound[] = options.wholeTable
@@ -1534,8 +2038,13 @@ export function buildParadigm(
   subject: ConjugationSubject,
   vehicle?: string,
 ): ConjugationParadigmTense[] {
+  // A group's paradigm is one verb's, so a tense that verb has no forms in is
+  // left out rather than shown through a different one.
+  const shown = subject.kind === 'group' && vehicle && subject.vehicles.includes(vehicle)
+    ? vehicle
+    : subject.kind === 'group' ? subject.vehicles[0] : subject.infinitive;
   return spec.tenses
-    .filter(tense => subject.kind === 'group' || subject.forms[tense.id] !== undefined)
+    .filter(tense => tenseVehicles(spec, subject, tense.id).includes(shown))
     .map(tense => {
       const table = buildTable(spec, subject, tense.id, vehicle);
       return { tenseId: tense.id, label: tense.label, forms: table.forms };
@@ -1591,12 +2100,12 @@ export function listPracticeSections(
       tenseId: tense.id,
       label: tense.label,
       due: countDueBoxes(spec, tables, progress, now),
-      total: tables.length * spec.persons.length,
+      total: tables.length * tensePersons(spec, tense.id).length,
       subjects: tables.map(table => ({
         key: `${table.subjectKind}:${table.subjectId}`,
         label: table.subjectLabel,
         due: dueBoxes(spec, table, progress, now).length,
-        total: spec.persons.length,
+        total: tensePersons(spec, tense.id).length,
       })),
     };
   });
@@ -1658,7 +2167,7 @@ export function listPracticeTables(
   now: Date = new Date(),
 ): ConjugationPracticeItem[] {
   const items = buildTables(spec, enrolment).map(table => {
-    const boxes: ConjugationBoxState[] = spec.persons.map(person => {
+    const boxes: ConjugationBoxState[] = tensePersons(spec, table.tenseId).map(person => {
       const state = progress[boxItemId(spec, table, person.id)];
       const dueAt = state ? new Date(state.nextReview) : null;
       // Never practised counts as due, the same rule `dueBoxes` and an

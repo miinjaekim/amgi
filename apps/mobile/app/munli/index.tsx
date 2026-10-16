@@ -9,7 +9,7 @@ import type { BottomTabNavigationProp } from 'expo-router/tabs';
 import {
   boxItemId, buildConjugationQueue, buildTables, conjugationHints,
   countDueBoxes, countQuestions, getStudyLanguageConfig, hintedVerdict, isCorrectForm,
-  listPracticeSections, rateBox, rateVehicle, t,
+  listPracticeSections, rateBox, rateVehicle, t, tensePersons, unverifiedKey,
 } from '@amgi/core';
 import type { ConjugationProgress, ConjugationProgressMap, ConjugationRound, VehicleMisses } from '@amgi/core';
 import { useUser } from '../../src/context/UserContext';
@@ -604,7 +604,7 @@ export default function PracticeScreen() {
             {round.table.subjectKind === 'group' ? ` · ${round.table.subjectLabel}` : ''}
           </Text>
           {/* The answer about to be shown is the model's, not a source's. */}
-          {round.table.userAdded && <Text style={s.unverified}>{t(interfaceLanguage, 'verbUnverified')}</Text>}
+          {spec && unverifiedKey(spec, round.table) && <Text style={s.unverified}>{t(interfaceLanguage, unverifiedKey(spec, round.table)!)}</Text>}
           {!single && !checked && <Text style={s.lead}>{t(interfaceLanguage, 'conjugationFillDue')}</Text>}
 
           {single ? (
@@ -669,7 +669,7 @@ export default function PracticeScreen() {
             </View>
           ) : (
             /* ── A paradigm ─────────────────────────────────────────────── */
-            spec?.persons.map(person => {
+            spec && tensePersons(spec, round.table.tenseId).map(person => {
               const due = round.personIds.includes(person.id);
               const form = round.table.forms[person.id];
               const answer = (typed[person.id] ?? '').trim();

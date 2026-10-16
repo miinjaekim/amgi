@@ -27,7 +27,7 @@ import {
   type HanjaPartition, type StudyLanguage, type StudyLanguagePair,
   type UserPreferences,
 } from '@amgi/core';
-import type { ConjugationEnrolment, ConjugationProgressMap, UserVerbMap, VehicleMisses } from '@amgi/core';
+import type { ConjugationEnrolment, ConjugationProgressMap, UserTenseMap, UserVerbMap, VehicleMisses } from '@amgi/core';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -176,6 +176,8 @@ interface UserContextType {
   conjugationEnrolment: ConjugationEnrolment | undefined;
   /** Verbs the learner added to Munli. Their own document, so nobody else's. */
   conjugationVerbs: UserVerbMap | undefined;
+  /** Tenses the learner added to Munli, with their generated forms. Their own document too. */
+  conjugationTenses: UserTenseMap | undefined;
   /** How often each regular verb has been missed. Weighs the vehicle draw only. */
   conjugationVehicleMisses: VehicleMisses | undefined;
   user: User | null;
@@ -238,6 +240,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const [conjugation, setConjugation] = useState<ConjugationProgressMap | undefined>(undefined);
   const [conjugationEnrolment, setConjugationEnrolment] = useState<ConjugationEnrolment | undefined>(undefined);
   const [conjugationVerbs, setConjugationVerbs] = useState<UserVerbMap | undefined>(undefined);
+  const [conjugationTenses, setConjugationTenses] = useState<UserTenseMap | undefined>(undefined);
   const [conjugationVehicleMisses, setConjugationVehicleMisses] = useState<VehicleMisses | undefined>(undefined);
   /**
    * The streak as one value, because every rule that touches it — merging a
@@ -573,6 +576,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
         setConjugation(prefs.conjugation ?? {});
         setConjugationEnrolment(prefs.conjugationEnrolment);
         setConjugationVerbs(prefs.conjugationVerbs);
+        setConjugationTenses(prefs.conjugationTenses);
         setConjugationVehicleMisses(prefs.conjugationVehicleMisses);
 
         // Picked up here as well as at launch, so choosing the partition on one
@@ -848,7 +852,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const deckNativeLanguage = nativeForStudy(languages, studyLanguage);
 
   return (
-    <UserContext.Provider value={{ user, authLoading, preferencesUid, interfaceLanguage, conjugation, conjugationEnrolment, conjugationVerbs, conjugationVehicleMisses, deckNativeLanguage, languages, studyLanguage, hanjaPartition, streak: streakState.streak, reviewedToday, setInterfaceLanguage, setStudyLanguage, addLanguage, removeLanguage, setHanjaPartition, recordReview, undoReview, deleteAccount, handleSignIn, handleSignOut }}>
+    <UserContext.Provider value={{ user, authLoading, preferencesUid, interfaceLanguage, conjugation, conjugationEnrolment, conjugationVerbs, conjugationTenses, conjugationVehicleMisses, deckNativeLanguage, languages, studyLanguage, hanjaPartition, streak: streakState.streak, reviewedToday, setInterfaceLanguage, setStudyLanguage, addLanguage, removeLanguage, setHanjaPartition, recordReview, undoReview, deleteAccount, handleSignIn, handleSignOut }}>
       {children}
     </UserContext.Provider>
   );

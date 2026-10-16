@@ -1,5 +1,5 @@
 import React, { createContext, useCallback, useContext, useMemo, useRef, useState, ReactNode } from 'react';
-import { conjugationSpec, normalizeEnrolment, normalizeProgress, withUserVerbs } from '@amgi/core';
+import { conjugationSpec, normalizeEnrolment, normalizeProgress, learnerSpec } from '@amgi/core';
 import type { ConjugationEnrolment, ConjugationProgressMap, ConjugationSpec, VehicleMisses } from '@amgi/core';
 import { useUser } from './UserContext';
 import { saveUserPreferences } from '../services/userPreferences';
@@ -56,11 +56,11 @@ const ConjugationContext = createContext<ConjugationContextType>({
 });
 
 export function ConjugationProvider({ children }: { children: ReactNode }) {
-  const { user, studyLanguage, conjugation, conjugationEnrolment, conjugationVerbs, conjugationVehicleMisses } = useUser();
+  const { user, studyLanguage, conjugation, conjugationEnrolment, conjugationVerbs, conjugationTenses, conjugationVehicleMisses } = useUser();
   const spec = useMemo(() => {
     const base = conjugationSpec(studyLanguage);
-    return base && withUserVerbs(base, conjugationVerbs);
-  }, [studyLanguage, conjugationVerbs]);
+    return base && learnerSpec(base, conjugationVerbs, conjugationTenses);
+  }, [studyLanguage, conjugationVerbs, conjugationTenses]);
 
   /** Ratings written but not yet seen coming back. */
   const [pending, setPending] = useState<ConjugationProgressMap>({});
