@@ -23,7 +23,7 @@ queued, released or unverified is under Builds in [status.md](status.md).
 
 _Merged, not yet in anyone's hands — mobile ships by build, no OTA._
 
-- **Munli: add a tense** (PR #PRNUM): on the Verbs topic, under Add a verb,
+- **Munli: add a tense** (PR #210): on the Verbs topic, under Add a verb,
   a learner types a tense's name (French, English or Korean; 17 in the
   catalogue) and every verb they have is conjugated in it in one call. It is
   saved for the regular patterns, labelled unverified wherever its forms show,
