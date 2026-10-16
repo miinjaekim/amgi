@@ -9,7 +9,7 @@ import type { BottomTabNavigationProp } from 'expo-router/tabs';
 import {
   boxItemId, buildConjugationQueue, buildTables, conjugationHints,
   countDueBoxes, countQuestions, getStudyLanguageConfig, hintedVerdict, isCorrectForm,
-  listPracticeSections, rateBox, rateVehicle, t,
+  listPracticeSections, rateBox, rateVehicle, t, tensePersons,
 } from '@amgi/core';
 import type { ConjugationProgress, ConjugationProgressMap, ConjugationRound, VehicleMisses } from '@amgi/core';
 import { useUser } from '../../src/context/UserContext';
@@ -669,7 +669,7 @@ export default function PracticeScreen() {
             </View>
           ) : (
             /* ── A paradigm ─────────────────────────────────────────────── */
-            spec?.persons.map(person => {
+            spec && tensePersons(spec, round.table.tenseId).map(person => {
               const due = round.personIds.includes(person.id);
               const form = round.table.forms[person.id];
               const answer = (typed[person.id] ?? '').trim();

@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react';
 import {
   boxItemId, buildConjugationQueue, buildTables, conjugationHints, countDueBoxes,
   countQuestions, getStudyLanguageConfig, hintedVerdict, isCorrectForm,
-  listPracticeSections, rateBox, rateVehicle,
+  listPracticeSections, rateBox, rateVehicle, tensePersons,
 } from '@amgi/core';
 import type { ConjugationProgressMap, ConjugationRound, TranslationKey } from '@amgi/core';
 import { useUser } from '@/components/UserContext';
@@ -516,7 +516,7 @@ export default function PracticePage() {
         ) : (
           /* ── A paradigm ───────────────────────────────────────────────── */
           <div className="mt-6 flex flex-col gap-2">
-            {spec?.persons.map(person => {
+            {spec && tensePersons(spec, round.table.tenseId).map(person => {
               const due = round.personIds.includes(person.id);
               const form = round.table.forms[person.id];
               const answer = (typed[person.id] ?? '').trim();
