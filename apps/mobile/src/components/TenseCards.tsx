@@ -69,7 +69,10 @@ export default function TenseCards({
         return (
           <View key={tense.tenseId} style={s.card}>
             <View style={s.head}>
-              <Text style={s.tense}>{tense.label}</Text>
+              <Text style={s.tense}>
+                {tense.label}
+                {specTense?.userAdded && <Text style={s.unverified}>  {t(interfaceLanguage, 'verbUnverifiedTag')}</Text>}
+              </Text>
               {onToggleSave && (
                 <TouchableOpacity
                   style={[s.save, saved && s.saveOn]}
@@ -117,7 +120,11 @@ export default function TenseCards({
           </View>
         );
       })}
-      {isUserVerb(spec, shown) && <Text style={s.unverified}>{t(interfaceLanguage, 'verbUnverified')}</Text>}
+      {isUserVerb(spec, shown)
+        ? <Text style={s.unverified}>{t(interfaceLanguage, 'verbUnverified')}</Text>
+        // A sourced verb in a tense the learner added: the forms are still the model's.
+        : tenses.some(tense => spec.tenses.find(x => x.id === tense.tenseId)?.userAdded)
+          && <Text style={s.unverified}>{t(interfaceLanguage, 'tenseUnverified')}</Text>}
     </View>
   );
 }

@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 import {
-  conjugationSpec, conjugationVerbKey, findSubject, normalizeEnrolment, setEnrolled, withUserVerbs,
+  conjugationSpec, conjugationVerbKey, findSubject, normalizeEnrolment, setEnrolled, learnerSpec,
 } from '@amgi/core';
 import type { UserPreferences, UserVerbOutcome } from '@amgi/core';
 import { useUser } from '../context/UserContext';
@@ -27,7 +27,7 @@ export type AddVerbState =
  * is half of what `docs/packs/README.md` allows model-made forms on.
  */
 export function useAddVerb() {
-  const { user, studyLanguage, deckNativeLanguage, conjugation, conjugationEnrolment, conjugationVerbs } = useUser();
+  const { user, studyLanguage, deckNativeLanguage, conjugation, conjugationEnrolment, conjugationVerbs, conjugationTenses } = useUser();
   const [state, setState] = useState<AddVerbState>({ phase: 'idle' });
   const base = conjugationSpec(studyLanguage);
 
@@ -43,7 +43,7 @@ export function useAddVerb() {
     if (!base || !user) return undefined;
     setState({ phase: 'working' });
     try {
-      const outcome = await lookUpUserVerb(withUserVerbs(base, conjugationVerbs), term, {
+      const outcome = await lookUpUserVerb(learnerSpec(base, conjugationVerbs, conjugationTenses), term, {
         nativeLanguage: deckNativeLanguage,
         gloss: options.gloss,
       });
@@ -55,7 +55,7 @@ export function useAddVerb() {
         // normalises to the default set, and writing that would replace the
         // learner's real one.
         if (options.practise && outcome.verb.group === 'irregular' && conjugation !== undefined) {
-          const mine = withUserVerbs(base, { ...conjugationVerbs, ...added });
+          const mine = learnerSpec(base, { ...conjugationVerbs, ...added }, conjugationTenses);
           const subject = findSubject(mine, outcome.subjectKey);
           const tense = mine.tenses[0];
           if (subject) {
@@ -74,7 +74,7 @@ export function useAddVerb() {
       setState({ phase: 'failed' });
       return undefined;
     }
-  }, [base, user, conjugation, conjugationEnrolment, conjugationVerbs, deckNativeLanguage]);
+  }, [base, user, conjugation, conjugationEnrolment, conjugationVerbs, conjugationTenses, deckNativeLanguage]);
 
   /** `spec` is the language's own, for reading an outcome's copy against. */
   return { state, add, spec: base };

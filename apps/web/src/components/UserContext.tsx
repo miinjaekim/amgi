@@ -5,7 +5,7 @@ import { signInWithPopup, signOut, onAuthStateChanged, User } from 'firebase/aut
 import { getUserPreferences, recordReviewStreak, saveUserPreferences, subscribeToUserPreferences } from '@/services/userPreferences';
 import { countUserFlashcards } from '@/services/firestore';
 import { recordProgress, subscribeToProgressDay } from '@/services/progress';
-import { CARD_COLLECTIONS, DEFAULT_HANJA_PARTITION, addLanguagePair, hourKey, isHanjaPartition, isNativeLanguage, isStudyLanguage, nativeForStudy, negateDelta, parseLanguagePairs, removeLanguagePair, reviewDelta, seedLanguagePairs, type ConjugationEnrolment, type ConjugationProgressMap, type HanjaPartition, type UserVerbMap, type VehicleMisses, type RatingContext, type RecordedReview, type ReviewVerdict, type StudyLanguage, type StudyLanguagePair } from '@amgi/core';
+import { CARD_COLLECTIONS, DEFAULT_HANJA_PARTITION, addLanguagePair, hourKey, isHanjaPartition, isNativeLanguage, isStudyLanguage, nativeForStudy, negateDelta, parseLanguagePairs, removeLanguagePair, reviewDelta, seedLanguagePairs, type ConjugationEnrolment, type ConjugationProgressMap, type HanjaPartition, type UserTenseMap, type UserVerbMap, type VehicleMisses, type RatingContext, type RecordedReview, type ReviewVerdict, type StudyLanguage, type StudyLanguagePair } from '@amgi/core';
 
 /**
  * ⚠️ **`amgi_native_language` is deliberately still read and written.**
@@ -89,6 +89,8 @@ interface UserContextType {
   conjugationEnrolment: ConjugationEnrolment | undefined;
   /** Verbs the learner added to Munli. Their own document, so nobody else's. */
   conjugationVerbs: UserVerbMap | undefined;
+  /** Tenses the learner added to Munli, with their generated forms. Their own document too. */
+  conjugationTenses: UserTenseMap | undefined;
   /** How often each regular verb has been missed. Weighs the vehicle draw only. */
   conjugationVehicleMisses: VehicleMisses | undefined;
   streak: number;
@@ -120,6 +122,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   const [conjugation, setConjugation] = useState<ConjugationProgressMap | undefined>(undefined);
   const [conjugationEnrolment, setConjugationEnrolment] = useState<ConjugationEnrolment | undefined>(undefined);
   const [conjugationVerbs, setConjugationVerbs] = useState<UserVerbMap | undefined>(undefined);
+  const [conjugationTenses, setConjugationTenses] = useState<UserTenseMap | undefined>(undefined);
   const [conjugationVehicleMisses, setConjugationVehicleMisses] = useState<VehicleMisses | undefined>(undefined);
   const [streak, setStreak] = useState(0);
   const [reviewedToday, setReviewedToday] = useState(0);
@@ -263,6 +266,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
         setConjugation(prefs?.conjugation ?? {});
         setConjugationEnrolment(prefs?.conjugationEnrolment);
         setConjugationVerbs(prefs?.conjugationVerbs);
+        setConjugationTenses(prefs?.conjugationTenses);
         setConjugationVehicleMisses(prefs?.conjugationVehicleMisses);
         const partition = prefs?.hanjaPartition;
         setHanjaPartitionState(isHanjaPartition(partition) ? partition : DEFAULT_HANJA_PARTITION);
@@ -438,7 +442,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   const deckNativeLanguage = nativeForStudy(languages, studyLanguage);
 
   return (
-    <UserContext.Provider value={{ user, authLoading, preferencesUid, interfaceLanguage, conjugation, conjugationEnrolment, conjugationVerbs, conjugationVehicleMisses, deckNativeLanguage, languages, studyLanguage, hanjaPartition, streak, reviewedToday, setInterfaceLanguage, setStudyLanguage, addLanguage, removeLanguage, setHanjaPartition, recordReview, undoReview, handleSignIn, handleSignOut }}>
+    <UserContext.Provider value={{ user, authLoading, preferencesUid, interfaceLanguage, conjugation, conjugationEnrolment, conjugationVerbs, conjugationTenses, conjugationVehicleMisses, deckNativeLanguage, languages, studyLanguage, hanjaPartition, streak, reviewedToday, setInterfaceLanguage, setStudyLanguage, addLanguage, removeLanguage, setHanjaPartition, recordReview, undoReview, handleSignIn, handleSignOut }}>
       {children}
     </UserContext.Provider>
   );

@@ -10,6 +10,7 @@ import { useTheme } from '../../../../src/context/ThemeContext';
 import { useConjugation } from '../../../../src/context/ConjugationContext';
 import { useFloatingTabBarHeight } from '../../../../src/components/FloatingTabBar';
 import AddVerbField from '../../../../src/components/AddVerbField';
+import AddTenseField from '../../../../src/components/AddTenseField';
 import { PAGE_TITLE_SIZE, SCREEN_GUTTER } from '../../../../src/components/PageHeader';
 import StudyLanguageChip from '../../../../src/components/StudyLanguageChip';
 import type { Palette } from '../../../../src/theme';
@@ -101,6 +102,7 @@ export default function VerbsTopicScreen() {
       <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
         <Text style={s.intro}>{t(interfaceLanguage, 'verbsIntro')}</Text>
         <AddVerbField />
+        <AddTenseField />
         {group('group', 'topicRegularVerbs')}
         {group('verb', 'verbsIrregular')}
       </ScrollView>

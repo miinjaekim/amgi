@@ -1,6 +1,6 @@
 'use client';
 import { useCallback, useMemo, useState } from 'react';
-import { conjugationSpec, normalizeEnrolment, normalizeProgress, withUserVerbs } from '@amgi/core';
+import { conjugationSpec, normalizeEnrolment, normalizeProgress, learnerSpec } from '@amgi/core';
 import type { ConjugationEnrolment, ConjugationProgressMap, VehicleMisses } from '@amgi/core';
 import { useUser } from '@/components/UserContext';
 import { saveUserPreferences } from '@/services/userPreferences';
@@ -21,7 +21,7 @@ import { saveUserPreferences } from '@/services/userPreferences';
  * during a session: pages mount fresh when navigated to.
  */
 export function useConjugation() {
-  const { user, studyLanguage, conjugation, conjugationEnrolment, conjugationVerbs, conjugationVehicleMisses } = useUser();
+  const { user, studyLanguage, conjugation, conjugationEnrolment, conjugationVerbs, conjugationTenses, conjugationVehicleMisses } = useUser();
 
   const [pending, setPending] = useState<ConjugationProgressMap>({});
 
@@ -32,8 +32,8 @@ export function useConjugation() {
    */
   const spec = useMemo(() => {
     const base = conjugationSpec(studyLanguage);
-    return base && withUserVerbs(base, conjugationVerbs);
-  }, [studyLanguage, conjugationVerbs]);
+    return base && learnerSpec(base, conjugationVerbs, conjugationTenses);
+  }, [studyLanguage, conjugationVerbs, conjugationTenses]);
   const [pendingEnrolment, setPendingEnrolment] = useState<ConjugationEnrolment | null>(null);
 
   const progress = useMemo(() => {

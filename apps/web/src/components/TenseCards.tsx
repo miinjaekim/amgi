@@ -68,7 +68,14 @@ export default function TenseCards({
         return (
           <section key={tense.tenseId} className="rounded-xl border p-4" style={{ borderColor: 'var(--color-muted)' }}>
             <div className="flex items-center gap-3">
-              <h3 className="font-mono font-bold flex-1" style={{ color: 'var(--color-text)' }}>{tense.label}</h3>
+              <h3 className="font-mono font-bold flex-1" style={{ color: 'var(--color-text)' }}>
+                {tense.label}
+                {specTense?.userAdded && (
+                  <span className="ml-2 text-xs font-normal" style={{ color: 'var(--color-muted)' }}>
+                    {t(interfaceLanguage, 'verbUnverifiedTag')}
+                  </span>
+                )}
+              </h3>
               {onToggleSave && (
                 <button
                   aria-pressed={saved}
@@ -117,9 +124,14 @@ export default function TenseCards({
           </section>
         );
       })}
-      {isUserVerb(spec, shown) && (
+      {isUserVerb(spec, shown) ? (
         <p className="font-mono text-xs" style={{ color: 'var(--color-muted)' }}>
           {t(interfaceLanguage, 'verbUnverified')}
+        </p>
+      ) : tenses.some(tense => spec.tenses.find(x => x.id === tense.tenseId)?.userAdded) && (
+        // A sourced verb in a tense the learner added: the forms are still the model's.
+        <p className="font-mono text-xs" style={{ color: 'var(--color-muted)' }}>
+          {t(interfaceLanguage, 'tenseUnverified')}
         </p>
       )}
     </div>

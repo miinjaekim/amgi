@@ -7,6 +7,7 @@ import {
   getPronunciationUrl as _pronounce,
   getWritingReview as _writingReview,
   lookUpUserVerb as _lookUpUserVerb,
+  addUserTense as _addUserTense,
 } from '@amgi/core';
 import type { ConjugationSpec, StudyLanguage } from '@amgi/core';
 
@@ -30,6 +31,10 @@ export const lookUpUserVerb = (
   term: string,
   options: { nativeLanguage?: string; gloss?: string } = {},
 ) => _lookUpUserVerb(spec, term, { ...options, baseUrl: BASE_URL });
+
+/** Munli's "add a tense": every verb the learner has, conjugated in one call. */
+export const addUserTense = (spec: ConjugationSpec, typed: string) =>
+  _addUserTense(spec, typed, { baseUrl: BASE_URL });
 
 export const getTermDepth = (
   term: string,

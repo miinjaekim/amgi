@@ -338,8 +338,8 @@ describe('a verb and a tense the learner both added', () => {
 
   it('adds a verb whose lookup missed the added tense, without that tense', () => {
     const before = learnerSpec(base, undefined, addedPasseCompose());
-    const { 'passe-compose': _dropped, ...shipped } = danserLookup.conjugation;
-    const outcome = settleUserVerb(before, { ...danserLookup, conjugation: shipped }, NOW);
+    const { present, imparfait, futur } = danserLookup.conjugation;
+    const outcome = settleUserVerb(before, { ...danserLookup, conjugation: { present, imparfait, futur } }, NOW);
     const verb = (outcome as { verb: UserVerb }).verb;
     expect(verb.forms).toBeUndefined();
     const after = learnerSpec(base, { 'French:danser': verb }, addedPasseCompose());

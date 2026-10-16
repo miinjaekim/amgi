@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react';
 import {
   boxItemId, buildConjugationQueue, buildTables, conjugationHints, countDueBoxes,
   countQuestions, getStudyLanguageConfig, hintedVerdict, isCorrectForm,
-  listPracticeSections, rateBox, rateVehicle, tensePersons,
+  listPracticeSections, rateBox, rateVehicle, tensePersons, unverifiedKey,
 } from '@amgi/core';
 import type { ConjugationProgressMap, ConjugationRound, TranslationKey } from '@amgi/core';
 import { useUser } from '@/components/UserContext';
@@ -446,9 +446,9 @@ export default function PracticePage() {
           {round.table.subjectKind === 'group' ? ` · ${round.table.subjectLabel}` : ''}
         </p>
         {/* The answer about to be shown is the model's, not a source's. */}
-        {round.table.userAdded && (
+        {spec && unverifiedKey(spec, round.table) && (
           <p className="font-mono text-xs mt-1" style={{ color: 'var(--color-muted)' }}>
-            {t(interfaceLanguage, 'verbUnverified')}
+            {t(interfaceLanguage, unverifiedKey(spec, round.table)!)}
           </p>
         )}
         {!single && !checked && (

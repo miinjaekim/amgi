@@ -1,7 +1,9 @@
 import type { ExamplePair, ExplainResult, TermDepth, StudyLanguage, WithCorrection, WordOfTheDay } from './types';
 import { getExampleSides } from './types';
-import { carriedSubjectKey, isPronominalVerb, settleUserVerb } from './conjugation';
-import type { ConjugationSpec, UserVerbOutcome, VerbLookup } from './conjugation';
+import {
+  addedTenses, carriedSubjectKey, isPronominalVerb, requestTense, settleUserTense, settleUserVerb, tenseVerbs,
+} from './conjugation';
+import type { ConjugationSpec, UserTenseOutcome, UserVerbOutcome, VerbLookup } from './conjugation';
 
 /**
  * Fetches the daily featured word for a (date, language pair) from
@@ -115,12 +117,17 @@ export async function getTermExplanation(
   baseUrl = '',
   studyLanguage: StudyLanguage = 'Korean',
   exact = false,
-  conjugation = false
+  conjugation = false,
+  /** Tenses the learner added, so a verb looked up for Munli comes back with them too. */
+  conjugationTenses?: readonly string[],
 ): Promise<ExplainResult> {
   const res = await fetch(`${baseUrl}/api/explain`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ term, nativeLanguage, context, studyLanguage, exact, conjugation }),
+    body: JSON.stringify({
+      term, nativeLanguage, context, studyLanguage, exact, conjugation,
+      ...(conjugationTenses && conjugationTenses.length > 0 ? { conjugationTenses } : {}),
+    }),
   });
 
   if (!res.ok) throw new Error('Failed to get term explanation');
@@ -163,8 +170,34 @@ export async function lookUpUserVerb(
     spec.language,
     true,
     true,
+    addedTenses(spec).map(tense => tense.id),
   );
   return settleUserVerb(spec, lookup as VerbLookup);
+}
+
+/**
+ * Add a tense to a learner's Munli: settled locally when it can be, and
+ * otherwise one call to `/api/conjugation/tense` for every verb they have.
+ *
+ * The typed name never reaches the model — `requestTense` has matched it to a
+ * catalogue tense, or refused it, before anything is sent.
+ */
+export async function addUserTense(
+  spec: ConjugationSpec,
+  typed: string,
+  options: { baseUrl?: string } = {},
+): Promise<UserTenseOutcome> {
+  const request = requestTense(spec, typed);
+  if (request.status !== 'ready') return request;
+  const verbs = tenseVerbs(spec);
+  const res = await fetch(`${options.baseUrl ?? ''}/api/conjugation/tense`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ studyLanguage: spec.language, tenseId: request.tense.id, verbs }),
+  });
+  if (!res.ok) throw new Error('Failed to conjugate the tense');
+  const data = await res.json();
+  return settleUserTense(request.tense, verbs, data?.forms ?? {});
 }
 
 /** A lookup that answered about a different spelling than the one typed. */

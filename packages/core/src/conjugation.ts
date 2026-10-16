@@ -676,6 +676,11 @@ export function isPronominalVerb(term: string): boolean {
 /** One word, ending the way a French infinitive ends. `haïr` is why `ïr` is here. */
 const INFINITIVE = /^\p{L}+(?:-\p{L}+)*(?:er|ir|ïr|re)$/u;
 
+/** Whether a string is shaped like a French infinitive — what a route accepts as a verb to conjugate. */
+export function isInfinitive(term: unknown): term is string {
+  return typeof term === 'string' && INFINITIVE.test(term);
+}
+
 /** The key of the subject a spec already practises this verb under, if any. */
 export function carriedSubjectKey(spec: ConjugationSpec, infinitive: string): string | undefined {
   const subject = spec.subjects.find(s =>
