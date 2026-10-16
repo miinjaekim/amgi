@@ -3,6 +3,69 @@
 The second mode: its shell, conjugation practice, writing review as a tool, English articles. 2026-09-21 on. Newest first. Indexed from
 [status.md](../status.md).
 
+## Adding a tense: named from a list, generated in one call, checked against Larousse (2026-10-16)
+
+**How "the learner names a tense and the model generates its forms" was built**,
+on four calls the user made the same day (raised by the lane, answered yes to
+each):
+
+- **The name is matched locally against a closed catalogue** of 17 French
+  tenses (`FRENCH_TENSE_CATALOGUE` in `conjugation.ts`): the three shipped,
+  plus passé composé, plus-que-parfait, passé simple, passé antérieur, futur
+  antérieur, futur proche, conditionnel présent and passé, the four subjonctif
+  tenses, and impératif présent and passé. Each answers to its French, English
+  and Korean names, folded. The model never decides what a tense *is*: the id
+  has to be stable across devices, `présent` has to land on the shipped tense,
+  and the impératif's three persons and a compound tense's two words are facts
+  grading reads. A name not on the list is refused, not tried. Three-word
+  periphrases (`venir de` + infinitive) are left out, since a compound form is
+  two words.
+- **A route of its own, `POST /api/conjugation/tense`, as an exception to
+  "reuse the AI route".** `/api/explain` answers about one term; a tense is
+  asked of every verb at once. Through `/api/explain` that would be one call
+  per verb (27 or more per tense, each also writing an unread definition). The
+  tense route is one call. A verb added *after* a tense still goes through
+  `/api/explain`, whose `conjugation` field now takes the added tenses, worded
+  by the same `tenseFormRule`.
+- **The group stays the scheduled item in an added tense.** No rule exists to
+  compute the forms, so they are stored per vehicle (`storedForms`), and only a
+  vehicle with forms is drawn. "The group is a rule" weakens to "the group is
+  verbs that share a pattern" there; one subject per vehicle would have
+  multiplied the schedule and undone 2026-09-22.
+- **Grading after être**: the next entry.
+
+**Lane defaults the user did not object to:** an added tense applies to every
+subject, including user verbs (and verbs added later); it is saved for practice
+in every regular pattern when added, like the présent for a new learner; it can
+be removed, which takes its saved entries and schedules with it; web and mobile
+both. There is no note for an added tense (the shipped notes are sourced).
+
+**The reference check, which the 2026-10-14 rule was provisional on: 567 of 567
+forms identical.** Four tenses (passé composé, conditionnel présent, subjonctif
+présent, impératif) across all 27 built-in verbs, one call each through the
+route, compared character for character with Larousse's conjugation pages
+(fetched 2026-10-16; masculine forms, `allé(e)s` read as `allés`). Every
+generated form matched, `aller`'s être forms and `commençons`/`mangeons`
+included. **So the rule stands.** The limits: one reference, not two; the most
+common verbs; and nothing yet on the passé simple or the rarer compound tenses.
+A miss would show up as a learner marked wrong for a right form, and the
+unverified label is what covers that.
+
+## After être, every agreement the person allows is right (2026-10-16)
+
+**The app never says who the subject is**, so `je suis allé` and `je suis
+allée` are both right. The stored form is the masculine one the model gives;
+after a form of être (`agreeingAuxiliaries`), grading also accepts the feminine
+for je, tu, il/elle/on (`allée`), both plurals for nous and ils/elles
+(`allés`, `allées`), and all four for vous, since vous is also the polite
+singular. After avoir nothing extra is accepted (`ai parlée` is wrong).
+Accepting more spellings can only turn a false miss into a pass.
+
+It reads the participle's masculine form by dropping a plural `-s`, which is
+safe only because no non-pronominal être verb has a participle already ending
+in `-s`. Pronominal verbs are refused; the day they are not, `assis` breaks
+this.
+
 ## A tense a learner adds may be model-generated (2026-10-14)
 
 **Narrows the rule** that the model is not a source for conjugation forms
@@ -17,6 +80,9 @@ tenses and the sourced irregulars are unchanged. **"Try this out" makes it
 provisional**: the generated forms get checked against a published
 conjugation reference before the feature ships, and the rule stands only if
 they hold up.
+
+**Checked 2026-10-16: 567 of 567 forms matched Larousse, so the rule stands.**
+See [Adding a tense](#adding-a-tense-named-from-a-list-generated-in-one-call-checked-against-larousse-2026-10-16).
 
 ## Munli's themes come up out of the water (2026-10-05)
 

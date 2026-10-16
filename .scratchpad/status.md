@@ -213,6 +213,8 @@ the top of its file and a line here.
 
 The second mode: its shell, conjugation practice, writing review as a tool, English articles. 2026-09-21 on.
 
+- [Adding a tense: named from a list, generated in one call, checked against Larousse (2026-10-16)](decisions/munli.md#adding-a-tense-named-from-a-list-generated-in-one-call-checked-against-larousse-2026-10-16)
+- [After être, every agreement the person allows is right (2026-10-16)](decisions/munli.md#after-être-every-agreement-the-person-allows-is-right-2026-10-16)
 - [A tense a learner adds may be model-generated (2026-10-14)](decisions/munli.md#a-tense-a-learner-adds-may-be-model-generated-2026-10-14)
 - [Munli's themes come up out of the water (2026-10-05)](decisions/munli.md#munlis-themes-come-up-out-of-the-water-2026-10-05)
 - [On mobile a tab's heading is its name, and the name is web's (2026-10-05)](decisions/munli.md#on-mobile-a-tabs-heading-is-its-name-and-the-name-is-webs-2026-10-05)

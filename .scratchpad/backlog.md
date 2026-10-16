@@ -23,6 +23,14 @@ queued, released or unverified is under Builds in [status.md](status.md).
 
 _Merged, not yet in anyone's hands — mobile ships by build, no OTA._
 
+- **Munli: add a tense** (PR #PRNUM): on the Verbs topic, under Add a verb,
+  a learner types a tense's name (French, English or Korean; 17 in the
+  catalogue) and every verb they have is conjugated in it in one call. It is
+  saved for the regular patterns, labelled unverified wherever its forms show,
+  and removable. Verbs added later come with it. Forms checked against
+  Larousse: 567/567 ([munli](decisions/munli.md), 2026-10-16). Tests and a
+  live run of the routes; **not yet tried in a signed-in app** on either
+  platform.
 - **Preview** (PR #207, merged 2026-10-14): a low-stakes pass through a
   deck's new cards, from Review, as 미리 보기. Swipe and undo on mobile, two
   buttons and the arrow keys on web. Writes no scheduling; generating details
@@ -62,13 +70,6 @@ picker narrowed (#146). Both are written up in their Decisions entries of
       2026-09-09 still refuses a level *setting* and a placement test, so any
       fix must come from the learner's own input or a deterministic floor.
 
-- [ ] **Munli: let users add verb tenses.** Rescoped by the user 2026-10-14
-      from "more French verb tenses": the learner adds a tense, rather than
-      us shipping new ones. Raised to High. **The learner names a tense and
-      the model generates its forms**: the user's call, to be tried out
-      ([munli](decisions/munli.md), 2026-10-14). Forms get checked against a
-      published conjugation reference before shipping. The three shipped
-      tenses and the sourced irregulars stay as they are.
 
 ## Medium
 
