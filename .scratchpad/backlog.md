@@ -23,14 +23,13 @@ queued, released or unverified is under Builds in [status.md](status.md).
 
 _Merged, not yet in anyone's hands — mobile ships by build, no OTA._
 
-- **Munli: add a tense** (PR #210): on the Verbs topic, under Add a verb,
+- **Munli: add a tense** (PR #210, merged 2026-10-16): on the Verbs topic, under Add a verb,
   a learner types a tense's name (French, English or Korean; 17 in the
   catalogue) and every verb they have is conjugated in it in one call. It is
   saved for the regular patterns, labelled unverified wherever its forms show,
   and removable. Verbs added later come with it. Forms checked against
-  Larousse: 567/567 ([munli](decisions/munli.md), 2026-10-16). Tests and a
-  live run of the routes; **not yet tried in a signed-in app** on either
-  platform.
+  Larousse: 567/567 ([munli](decisions/munli.md), 2026-10-16). Tried signed in
+  on mobile (Expo Go, against a local server) by Minjae, 2026-10-16.
 - **Preview** (PR #207, merged 2026-10-14): a low-stakes pass through a
   deck's new cards, from Review, as 미리 보기. Swipe and undo on mobile, two
   buttons and the arrow keys on web. Writes no scheduling; generating details
