@@ -1,6 +1,6 @@
 // Type-only, so it is erased at compile time and the cycle with `conjugation.ts`
 // (which imports `StudyLanguage` from here) never exists at runtime.
-import type { ConjugationEnrolment, ConjugationProgressMap, UserVerbMap, VehicleMisses, VerbGroup } from './conjugation';
+import type { ConjugationEnrolment, ConjugationProgressMap, UserTenseMap, UserVerbMap, VehicleMisses, VerbGroup } from './conjugation';
 import { isAllKana, markPitchAccent } from './pitchAccent';
 import { kanaToHangul, kanaToRomaji, kikuyuToEnglish, kikuyuToHangul } from './transliterate';
 
@@ -1401,6 +1401,15 @@ export interface UserPreferences {
    * field on `users/{uid}` is readable by its owner and nobody else.
    */
   conjugationVerbs?: UserVerbMap;
+  /**
+   * Tenses the learner added to Munli, keyed by `conjugationTenseKey`, with
+   * the forms the model generated for every verb they had. Here for the reason
+   * `conjugationVerbs` is: model-made forms never leave `users/{uid}`.
+   *
+   * The biggest field on the document: a tense is about 30 verbs × 6 forms,
+   * some 6 KB. Seventeen of them would still be a tenth of the 1 MB limit.
+   */
+  conjugationTenses?: UserTenseMap;
   /**
    * How often each regular verb has been got wrong in practice, keyed by
    * `conjugationVerbKey` — the same keys as `conjugationVerbs`, though it
